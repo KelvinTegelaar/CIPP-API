@@ -4,11 +4,21 @@ function Get-CippSamPermissions {
     This script retrieves the CIPP-SAM permissions.
 
     .DESCRIPTION
-    The Get-CippSamManifest function is used to retrieve the CIPP-SAM permissions either from the manifest files or table.
+    Retrieves the CIPP-SAM permissions as a layered set: the permissions defined in the SAM manifest
+    files (SAMManifest.json + AdditionalPermissions.json) are ALWAYS treated as the required base and
+    can never be removed. Any permissions saved in the AppPermissions table are treated as EXTRAS that
+    are layered on top of (not instead of) the manifest base.
+
+    The effective set returned in .Permissions is therefore always manifest ∪ extras. Each permission
+    is annotated with a 'required' boolean so the UI can lock the manifest-defined defaults.
+
+    Unless -NoDiff is used, the function also pulls the live CIPP-SAM application registration from the
+    partner tenant and diffs its requiredResourceAccess against the effective set, surfacing
+    permissions that need to be added to (MissingPermissions) and removed from (PartnerAppDiff) the app.
 
     .EXAMPLE
-    Get-CippSamManifest
-    Retrieves the CIPP SAM manifest located in the module root
+    Get-CippSamPermissions
+    Returns the effective permission set plus the partner app drift diff.
 
     .FUNCTIONALITY
     Internal
@@ -23,6 +33,8 @@ function Get-CippSamPermissions {
         [switch]$NoDiff
     )
 
+    $GuidRegex = '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$'
+
     if (!$SavedOnly.IsPresent) {
         # Return cached result if available and less than 5 minutes old (avoids duplicate partner-tenant Graph calls within same invocation)
         if ($NoDiff.IsPresent -and $script:CippSamPermissionsCache -and
@@ -32,12 +44,12 @@ function Get-CippSamPermissions {
         }
 
         $SamManifestFile = Get-Item (Join-Path $env:CIPPRootPath 'Config\SAMManifest.json')
-        $AdditionalPermissions = Get-Item (Join-Path $env:CIPPRootPath 'Config\AdditionalPermissions.json')
+        $AdditionalPermissionsFile = Get-Item (Join-Path $env:CIPPRootPath 'Config\AdditionalPermissions.json')
 
         $ServicePrincipalList = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$select=id,appId,displayName' -tenantid $env:TenantID -NoAuthCheck $true
 
         $SAMManifest = Get-Content -Path $SamManifestFile.FullName | ConvertFrom-Json
-        $AdditionalPermissions = Get-Content -Path $AdditionalPermissions.FullName | ConvertFrom-Json
+        $AdditionalPermissions = Get-Content -Path $AdditionalPermissionsFile.FullName | ConvertFrom-Json
 
         $RequiredResources = $SAMManifest.requiredResourceAccess
 
@@ -59,14 +71,15 @@ function Get-CippSamPermissions {
             $_.body
         }
 
-        $Permissions = @{}
+        # Build the manifest (required / default) permission set. These are immutable and always required.
+        $ManifestPermissions = @{}
         foreach ($AppId in $AppIds) {
             $ServicePrincipal = $ServicePrincipals | Where-Object -Property appId -EQ $AppId
             $AppPermissions = [System.Collections.Generic.List[object]]@()
-            $ManifestPermissions = ($RequiredResources | Where-Object -Property resourceAppId -EQ $AppId).resourceAccess
+            $ManifestResourceAccess = ($RequiredResources | Where-Object -Property resourceAppId -EQ $AppId).resourceAccess
             $UnpublishedPermissions = ($AdditionalPermissions | Where-Object -Property resourceAppId -EQ $AppId).resourceAccess
 
-            foreach ($Permission in $ManifestPermissions) {
+            foreach ($Permission in $ManifestResourceAccess) {
                 $AppPermissions.Add($Permission)
             }
             if ($UnpublishedPermissions) {
@@ -75,10 +88,10 @@ function Get-CippSamPermissions {
                 }
             }
 
-            $ApplicationPermissions = [system.collections.generic.list[object]]@()
-            $DelegatedPermissions = [system.collections.generic.list[object]]@()
+            $ApplicationPermissions = [System.Collections.Generic.List[object]]@()
+            $DelegatedPermissions = [System.Collections.Generic.List[object]]@()
             foreach ($Permission in $AppPermissions) {
-                if ($Permission.id -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
+                if ($Permission.id -match $GuidRegex) {
                     if ($Permission.type -eq 'Role') {
                         $PermissionName = ($ServicePrincipal.appRoles | Where-Object -Property id -EQ $Permission.id).value
                     } else {
@@ -88,112 +101,175 @@ function Get-CippSamPermissions {
                     $PermissionName = $Permission.id
                 }
 
+                $Entry = [PSCustomObject]@{
+                    id       = $Permission.id
+                    value    = $PermissionName
+                    required = $true
+                }
                 if ($Permission.type -eq 'Role') {
-                    $ApplicationPermissions.Add([PSCustomObject]@{
-                            id    = $Permission.id
-                            value = $PermissionName
-
-                        })
+                    $ApplicationPermissions.Add($Entry)
                 } else {
-                    $DelegatedPermissions.Add([PSCustomObject]@{
-                            id    = $Permission.id
-                            value = $PermissionName
-                        })
+                    $DelegatedPermissions.Add($Entry)
                 }
             }
 
-            $ServicePrincipal = $ServicePrincipals | Where-Object -Property appId -EQ $AppId
-            $Permissions.$AppId = @{
-                applicationPermissions = @($ApplicationPermissions | Sort-Object -Property label)
-                delegatedPermissions   = @($DelegatedPermissions | Sort-Object -Property label)
+            $ManifestPermissions.$AppId = @{
+                applicationPermissions = @($ApplicationPermissions | Sort-Object -Property value)
+                delegatedPermissions   = @($DelegatedPermissions | Sort-Object -Property value)
             }
         }
     }
+
     if ($ManifestOnly) {
         return [PSCustomObject]@{
-            Permissions = $Permissions
+            Permissions = [PSCustomObject]$ManifestPermissions
             Type        = 'Manifest'
         }
     }
 
+    # Load the saved EXTRA permissions (layered on top of the manifest base)
     $Table = Get-CippTable -tablename 'AppPermissions'
-    $SavedPermissions = Get-CippAzDataTableEntity @Table -Filter "PartitionKey eq 'CIPP-SAM' and RowKey eq 'CIPP-SAM'"
-    if ($SavedPermissions.Permissions) {
+    $SavedRow = Get-CippAzDataTableEntity @Table -Filter "PartitionKey eq 'CIPP-SAM' and RowKey eq 'CIPP-SAM'"
+    if ($SavedRow.Permissions) {
         try {
-            $SavedPermissions.Permissions = $SavedPermissions.Permissions | ConvertFrom-Json -ErrorAction Stop
+            $SavedPermissions = $SavedRow.Permissions | ConvertFrom-Json -ErrorAction Stop
         } catch {
-            $SavedPermissions.Permissions = [PSCustomObject]@{}
+            $SavedPermissions = [PSCustomObject]@{}
         }
     } else {
-        $SavedPermissions = @{
-            Permissions = [PSCustomObject]@{}
-        }
+        $SavedPermissions = [PSCustomObject]@{}
     }
 
     if ($SavedOnly.IsPresent) {
-        $SavedPermissions | Add-Member -MemberType NoteProperty -Name Type -Value 'Table'
-        return $SavedPermissions
+        return [PSCustomObject]@{
+            Permissions = $SavedPermissions
+            Type        = 'Table'
+        }
     }
 
-    if (!$NoDiff.IsPresent -and $SavedPermissions.Permissions) {
-        $DiffPermissions = @{}
-        foreach ($AppId in $AppIds) {
-            $ManifestSpPermissions = $Permissions.$AppId
-            $ServicePrincipal = $ServicePrincipals | Where-Object -Property appId -EQ $AppId
-            $SavedSpPermission = $SavedPermissions.Permissions.$AppId
-            $MissingApp = [System.Collections.Generic.List[object]]::new()
-            $MissingDelegated = [System.Collections.Generic.List[object]]::new()
-            foreach ($Permission in $ManifestSpPermissions.applicationPermissions) {
-                if ($SavedSpPermission.applicationPermissions.id -notcontains $Permission.id) {
-                    $AppRole = $ServicePrincipal.appRoles | Where-Object -Property id -EQ $Permission.id | Select-Object id, value
-                    $MissingApp.Add($AppRole ?? $Permission)
-                }
+    # Build the effective set = manifest (required) ∪ saved extras (required = false).
+    # Manifest permissions are always present, so a stale/edited saved set can never drop a required scope.
+    $EffectivePermissions = @{}
+    $AdditionalOnly = @{}
+    $AllAppIds = @(@($ManifestPermissions.Keys) + @($SavedPermissions.PSObject.Properties.Name)) | Where-Object { $_ } | Sort-Object -Unique
+
+    foreach ($AppId in $AllAppIds) {
+        $ManifestApp = $ManifestPermissions.$AppId
+        $SavedApp = $SavedPermissions.$AppId
+
+        $ManifestAppIds = @($ManifestApp.applicationPermissions.id)
+        $ManifestDelIds = @($ManifestApp.delegatedPermissions.id)
+
+        $EffApp = [System.Collections.Generic.List[object]]::new()
+        $EffDel = [System.Collections.Generic.List[object]]::new()
+        $ExtraApp = [System.Collections.Generic.List[object]]::new()
+        $ExtraDel = [System.Collections.Generic.List[object]]::new()
+
+        foreach ($Permission in $ManifestApp.applicationPermissions) { $EffApp.Add($Permission) }
+        foreach ($Permission in $ManifestApp.delegatedPermissions) { $EffDel.Add($Permission) }
+
+        foreach ($Permission in $SavedApp.applicationPermissions) {
+            if ($Permission.id -and $ManifestAppIds -notcontains $Permission.id) {
+                $Extra = [PSCustomObject]@{ id = $Permission.id; value = $Permission.value; required = $false }
+                $EffApp.Add($Extra)
+                $ExtraApp.Add($Extra)
             }
-            foreach ($Permission in $ManifestSpPermissions.delegatedPermissions) {
-                if ($SavedSpPermission.delegatedPermissions.id -notcontains $Permission.id) {
-                    $PermissionScope = $ServicePrincipal.publishedPermissionScopes | Where-Object -Property id -EQ $Permission.id | Select-Object id, value
-                    $MissingDelegated.Add($PermissionScope ?? $Permission)
-                }
+        }
+        foreach ($Permission in $SavedApp.delegatedPermissions) {
+            if ($Permission.id -and $ManifestDelIds -notcontains $Permission.id) {
+                $Extra = [PSCustomObject]@{ id = $Permission.id; value = $Permission.value; required = $false }
+                $EffDel.Add($Extra)
+                $ExtraDel.Add($Extra)
             }
-            if ($MissingApp -or $MissingDelegated) {
-                $DiffPermissions.$AppId = @{
-                    applicationPermissions = $MissingApp
-                    delegatedPermissions   = $MissingDelegated
-                }
+        }
+
+        $EffectivePermissions.$AppId = @{
+            applicationPermissions = @($EffApp | Sort-Object -Property value)
+            delegatedPermissions   = @($EffDel | Sort-Object -Property value)
+        }
+        if ($ExtraApp.Count -gt 0 -or $ExtraDel.Count -gt 0) {
+            $AdditionalOnly.$AppId = @{
+                applicationPermissions = @($ExtraApp)
+                delegatedPermissions   = @($ExtraDel)
             }
         }
     }
 
-    $SamAppPermissions = @{}
-    if (($SavedPermissions.Permissions.PSObject.Properties.Name | Measure-Object).Count -gt 0) {
-        $SamAppPermissions.Permissions = $SavedPermissions.Permissions
-        $SamAppPermissions.UsedServicePrincipals = $UsedServicePrincipals
-        $SamAppPermissions.UpdatedBy = $SavedPermissions.UpdatedBy
-        $SamAppPermissions.Timestamp = $SavedPermissions.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ')
-        $SamAppPermissions.Type = 'Table'
-    } else {
-        $SamAppPermissions.Permissions = $Permissions
-        $SamAppPermissions.UsedServicePrincipals = $UsedServicePrincipals
-        $SamAppPermissions.Type = 'Manifest'
-        $SamAppPermissions.UpdatedBy = 'CIPP'
-        $SamAppPermissions.Timestamp = $SamManifestFile.LastWriteTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-
-        $Entity = @{
-            'PartitionKey' = 'CIPP-SAM'
-            'RowKey'       = 'CIPP-SAM'
-            'Permissions'  = [string]([PSCustomObject]$Permissions | ConvertTo-Json -Depth 10 -Compress)
-            'UpdatedBy'    = 'CIPP'
-        }
-        $Table = Get-CIPPTable -TableName 'AppPermissions'
+    # Diff the effective set against the live CIPP-SAM application registration in the partner tenant.
+    # MissingPermissions = effective perms not yet on the app (need to be added).
+    # PartnerAppDiff also surfaces extra perms on the app that are not in the effective set (need to be removed).
+    $MissingPermissions = @{}
+    $PartnerAppDiff = @{}
+    if (!$NoDiff.IsPresent) {
         try {
-            $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+            $PartnerApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/applications(appId='$($env:ApplicationID)')?`$select=requiredResourceAccess" -tenantid $env:TenantID -NoAuthCheck $true
+            foreach ($AppId in $AllAppIds) {
+                $ServicePrincipal = $ServicePrincipals | Where-Object -Property appId -EQ $AppId
+                $AppRegResource = $PartnerApp.requiredResourceAccess | Where-Object -Property resourceAppId -EQ $AppId
+                $AppRegRoleIds = @(($AppRegResource.resourceAccess | Where-Object { $_.type -eq 'Role' }).id)
+                $AppRegScopeIds = @(($AppRegResource.resourceAccess | Where-Object { $_.type -eq 'Scope' }).id)
+
+                # Only GUID-based permissions live in the app registration's requiredResourceAccess.
+                # String-named scopes (e.g. the .Sdp AdditionalPermissions) are applied as direct grants,
+                # so excluding them here avoids permanent false-positive "missing" entries.
+                $EffApp = @($EffectivePermissions.$AppId.applicationPermissions | Where-Object { $_.id -match $GuidRegex })
+                $EffDel = @($EffectivePermissions.$AppId.delegatedPermissions | Where-Object { $_.id -match $GuidRegex })
+                $EffAppIds = @($EffApp.id)
+                $EffDelIds = @($EffDel.id)
+
+                $MissingApp = @(foreach ($Permission in $EffApp) { if ($AppRegRoleIds -notcontains $Permission.id) { $Permission } })
+                $MissingDel = @(foreach ($Permission in $EffDel) { if ($AppRegScopeIds -notcontains $Permission.id) { $Permission } })
+                $ExtraApp = @(foreach ($Id in $AppRegRoleIds) {
+                        if ($EffAppIds -notcontains $Id) {
+                            [PSCustomObject]@{ id = $Id; value = (($ServicePrincipal.appRoles | Where-Object -Property id -EQ $Id).value) ?? $Id }
+                        }
+                    })
+                $ExtraDel = @(foreach ($Id in $AppRegScopeIds) {
+                        if ($EffDelIds -notcontains $Id) {
+                            [PSCustomObject]@{ id = $Id; value = (($ServicePrincipal.publishedPermissionScopes | Where-Object -Property id -EQ $Id).value) ?? $Id }
+                        }
+                    })
+
+                if ($MissingApp.Count -gt 0 -or $MissingDel.Count -gt 0) {
+                    $MissingPermissions.$AppId = @{
+                        applicationPermissions = $MissingApp
+                        delegatedPermissions   = $MissingDel
+                    }
+                }
+                if ($MissingApp.Count -gt 0 -or $MissingDel.Count -gt 0 -or $ExtraApp.Count -gt 0 -or $ExtraDel.Count -gt 0) {
+                    $PartnerAppDiff.$AppId = @{
+                        missingApplicationPermissions = $MissingApp
+                        missingDelegatedPermissions   = $MissingDel
+                        extraApplicationPermissions   = $ExtraApp
+                        extraDelegatedPermissions     = $ExtraDel
+                    }
+                }
+            }
         } catch {
-            Write-Error "Failed to save the CIPP-SAM permissions: $($_.Exception.Message)"
+            Write-Information "Failed to retrieve partner app registration for permission diff: $($_.Exception.Message)"
         }
     }
 
-    if (!$NoDiff.IsPresent -and $SamAppPermissions.Type -eq 'Table') {
-        $SamAppPermissions.MissingPermissions = $DiffPermissions
+    $Timestamp = $SamManifestFile.LastWriteTime.ToUniversalTime()
+    if ($SavedRow.Timestamp) {
+        $SavedTimestamp = $SavedRow.Timestamp.DateTime.ToUniversalTime()
+        if ($SavedTimestamp -gt $Timestamp) {
+            $Timestamp = $SavedTimestamp
+        }
+    }
+
+    $HasSaved = ($SavedPermissions.PSObject.Properties.Name | Measure-Object).Count -gt 0
+
+    $SamAppPermissions = [PSCustomObject]@{
+        Permissions           = [PSCustomObject]$EffectivePermissions
+        DefaultPermissions    = [PSCustomObject]$ManifestPermissions
+        AdditionalPermissions = [PSCustomObject]$AdditionalOnly
+        MissingPermissions    = [PSCustomObject]$MissingPermissions
+        PartnerAppDiff        = [PSCustomObject]$PartnerAppDiff
+        UsedServicePrincipals = $UsedServicePrincipals
+        Type                  = if ($HasSaved) { 'Table' } else { 'Manifest' }
+        UpdatedBy             = $SavedRow.UpdatedBy ?? 'CIPP'
+        Timestamp             = $Timestamp.ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
 
     $SamAppPermissions = $SamAppPermissions | ConvertTo-Json -Depth 10 -Compress | ConvertFrom-Json
@@ -205,4 +281,3 @@ function Get-CippSamPermissions {
 
     return $SamAppPermissions
 }
-

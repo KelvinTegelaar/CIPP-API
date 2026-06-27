@@ -193,19 +193,9 @@ function Invoke-ExecApiClient {
             }
         }
         'GetAzureConfiguration' {
-            if ($env:WEBSITE_RESOURCE_GROUP) {
-                $RGName = $env:WEBSITE_RESOURCE_GROUP
-            } else {
-                $Owner = $env:WEBSITE_OWNER_NAME
-                if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                    $RGName = $Matches.RGName
-                } else {
-                    Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
-                    $RGName = $null
-                }
-            }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             try {
+                $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $FunctionAppName
                 $APIClients = Get-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName
                 $Results = $ApiClients
             } catch {
@@ -220,17 +210,6 @@ function Invoke-ExecApiClient {
         }
         'SaveToAzure' {
             $TenantId = $env:TenantID
-            if ($env:WEBSITE_RESOURCE_GROUP) {
-                $RGName = $env:WEBSITE_RESOURCE_GROUP
-            } else {
-                $Owner = $env:WEBSITE_OWNER_NAME
-                if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                    $RGName = $Matches.RGName
-                } else {
-                    Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
-                    $RGName = $null
-                }
-            }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
             $ClientIds = $AllClients.RowKey
@@ -238,6 +217,7 @@ function Invoke-ExecApiClient {
             $McpClientIds = @($AllClients | Where-Object { "$($_.MCPAllowed)" -eq 'True' } | ForEach-Object { $_.RowKey })
             Write-Information "[ExecApiClient] MCP clients resolved for audiences/scope: $($McpClientIds -join ', ')"
             try {
+                $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $FunctionAppName
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds -McpClientIds $McpClientIds
 
                 # Advertise the MCP resource scope via App Service PRM so the Claude connector requests
