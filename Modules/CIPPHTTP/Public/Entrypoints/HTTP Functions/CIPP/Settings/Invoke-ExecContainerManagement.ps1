@@ -17,18 +17,18 @@ function Invoke-ExecContainerManagement {
 
     # Helper: resolve ARM site details
     function Get-ContainerSiteInfo {
-        $info = @{
+        $SiteName = $env:WEBSITE_SITE_NAME
+        try {
+            $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $SiteName
+        } catch {
+            Write-Information "Could not determine resource group: $($_.Exception.Message)"
+            $RGName = $null
+        }
+        return @{
             Subscription = Get-CIPPAzFunctionAppSubId
-            SiteName     = $env:WEBSITE_SITE_NAME
-            RGName       = $env:WEBSITE_RESOURCE_GROUP
+            SiteName     = $SiteName
+            RGName       = $RGName
         }
-        if (-not $info.RGName) {
-            $Owner = $env:WEBSITE_OWNER_NAME
-            if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                $info.RGName = $Matches.RGName
-            }
-        }
-        return $info
     }
 
     # Helper: query GHCR for the image at $Tag and return its digest + version label.

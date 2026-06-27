@@ -147,7 +147,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
                         @{ Template = 'hidefromGAL';   Current = $ExistingContact.HiddenFromAddressListsEnabled; IsBool = $true }
                         @{ Template = 'companyName';   Current = $ExtendedContact.Company }
                         @{ Template = 'state';         Current = $ExtendedContact.StateOrProvince }
-                        @{ Template = 'streetAddress'; Current = $ExtendedContact.Office }
+                        @{ Template = 'streetAddress'; Current = $ExtendedContact.StreetAddress }
                         @{ Template = 'businessPhone'; Current = $ExtendedContact.Phone }
                         @{ Template = 'website';       Current = $ExtendedContact.WebPage }
                         @{ Template = 'jobTitle';      Current = $ExtendedContact.Title }
@@ -338,7 +338,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
                             $PropertyMap = @{
                                 'Company'         = $Template.companyName
                                 'StateOrProvince' = $Template.state
-                                'Office'          = $Template.streetAddress
+                                'StreetAddress'   = $Template.streetAddress
                                 'Phone'           = $Template.businessPhone
                                 'WebPage'         = $Template.website
                                 'Title'           = $Template.jobTitle

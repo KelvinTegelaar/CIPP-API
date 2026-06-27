@@ -1945,95 +1945,75 @@ function Invoke-NinjaOneTenantSync {
 
             [System.Collections.Generic.List[PSCustomObject]]$WidgetData = @()
 
-            ### Fetch BPA Data
-            $Table = get-cipptable 'cachebpav2'
-            $BPAData = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Customer.customerId)'")
+            ### Tenant Posture Widgets (CIPP Reporting DB)
+            $PostureTenant = $Customer.defaultDomainName
 
-            if ($Null -ne $BPAData.Timestamp) {
-                ## BPA Data Widgets
-                # Shared Mailboxes with Enabled Users
-                #$WidgetData.add([PSCustomObject]@{
-                #        Value       = $(
-                #            $SharedSendMailboxCount = ($BpaData.SharedMailboxeswithenabledusers | ConvertFrom-Json | Measure-Object).count
-                #            if ($SharedSendMailboxCount -ne 0) {
-                #                $ResultColour = '#D53948'
-                #            } else {
-                #                $ResultColour = '#26A644'
-                #            }
-                #            $SharedSendMailboxCount
-                #        )
-                #        Description = 'Shared Mailboxes with enabled users'
-                #        Colour      = $ResultColour
-                #        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.0+-+Tenant+view&tenantFilter=$($Customer.customerId)"
-                #    })
-
-                # Unused Licenses
-                $WidgetData.add([PSCustomObject]@{
-                        Value       = $(
-                            try {
-                                $BPAUnusedLicenses = (($BpaData.Unusedlicenses | ConvertFrom-Json -ErrorAction SilentlyContinue).availableUnits | Measure-Object -Sum).sum
-                            } catch {
-                                $BPAUnusedLicenses = 'Failed to retrieve unused licenses'
-                            }
-                            if ($BPAUnusedLicenses -ne 0) {
-                                $ResultColour = '#D53948'
-                            } else {
-                                $ResultColour = '#26A644'
-                            }
-                            $BPAUnusedLicenses
-                        )
-                        Description = 'Unused Licenses'
-                        Colour      = $ResultColour
-                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?tenantFilter=$($Customer.defaultDomainName)"
-                    })
-
-
-                # Unified Audit Log
-                $WidgetData.add([PSCustomObject]@{
-                        Value       = $(if ($BPAData.UnifiedAuditLog -eq $True) {
-                                $ResultColour = '#26A644'
-                                '<i class="fas fa-circle-check"></i>'
-                            } else {
-                                $ResultColour = '#D53948'
-                                '<i class="fas fa-circle-xmark"></i>'
-                            }
-                        )
-                        Description = 'Unified Audit Log'
-                        Colour      = $ResultColour
-                        Link        = "https://security.microsoft.com/auditlogsearch?viewid=Async%20Search&tid=$($Customer.customerId)"
-                    })
-
-                # Passwords Never Expire
-                $WidgetData.add([PSCustomObject]@{
-                        Value       = $(if ($BPAData.PasswordNeverExpires -eq $True) {
-                                $ResultColour = '#26A644'
-                                '<i class="fas fa-circle-check"></i>'
-                            } else {
-                                $ResultColour = '#D53948'
-                                '<i class="fas fa-circle-xmark"></i>'
-                            }
-                        )
-                        Description = 'Password Never Expires'
-                        Colour      = $ResultColour
-                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?tenantFilter=$($Customer.defaultDomainName)"
-                    })
-
-                # oAuth App Consent
-                $WidgetData.add([PSCustomObject]@{
-                        Value       = $(if ($BPAData.OAuthAppConsent -eq $True) {
-                                $ResultColour = '#26A644'
-                                '<i class="fas fa-circle-check"></i>'
-                            } else {
-                                $ResultColour = '#D53948'
-                                '<i class="fas fa-circle-xmark"></i>'
-                            }
-                        )
-                        Description = 'OAuth App Consent'
-                        Colour      = $ResultColour
-                        Link        = "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_IAM/ConsentPoliciesMenuBlade/~/UserSettings"
-                    })
-
+            # Reads a reporting DB type and returns the deserialized data objects (count rows excluded).
+            $GetDbData = {
+                param($Tenant, $Type)
+                try {
+                    Get-CIPPDbItem -TenantFilter $Tenant -Type $Type | Where-Object { $_.RowKey -notlike '*-Count' } | ForEach-Object { $_.Data | ConvertFrom-Json -ErrorAction SilentlyContinue }
+                } catch {
+                    Write-Information "NinjaOne: failed to read '$Type' from reporting DB for $Tenant : $($_.Exception.Message)"
+                }
             }
+
+            # OAuth App Consent - user consent restricted (legacy open-consent policy not assigned).
+            $AuthPolicy = (& $GetDbData -Tenant $PostureTenant -Type 'AuthorizationPolicy') | Select-Object -First 1
+            $HasAuthPolicy = $null -ne $AuthPolicy
+            $OAuthConsentRestricted = 'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $AuthPolicy.permissionGrantPolicyIdsAssignedToDefaultUserRole
+
+            # Unified Audit Log - ingestion enabled
+            $AuditConfig = (& $GetDbData -Tenant $PostureTenant -Type 'ExoAdminAuditLogConfig') | Select-Object -First 1
+            $HasAuditConfig = $null -ne $AuditConfig
+            $UnifiedAuditLogEnabled = $AuditConfig.UnifiedAuditLogIngestionEnabled -eq $true
+
+            # Password Never Expires - any domain with password validity set to never (2147483647)
+            $DomainData = & $GetDbData -Tenant $PostureTenant -Type 'Domains'
+            $HasDomainData = ($DomainData | Measure-Object).Count -gt 0
+            $PasswordNeverExpires = [bool]($DomainData | Where-Object { $_.passwordValidityPeriodInDays -eq 2147483647 })
+
+            # Unused Licenses - sum of available units across SKUs with spare licenses
+            $LicenseData = & $GetDbData -Tenant $PostureTenant -Type 'LicenseOverview'
+            $HasLicenseData = ($LicenseData | Measure-Object).Count -gt 0
+            $UnusedLicenseCount = (($LicenseData | Where-Object { $_.availableUnits -gt 0 }).availableUnits | Measure-Object -Sum).Sum
+            if ($null -eq $UnusedLicenseCount) { $UnusedLicenseCount = 0 }
+
+            Write-Information "Tenant posture (reporting DB) - AuthPolicy:$HasAuthPolicy AuditConfig:$HasAuditConfig Domains:$HasDomainData Licenses:$HasLicenseData"
+
+            # Renders a boolean posture widget, with a neutral state when no cached data is available.
+            $NewPostureWidget = {
+                param($Description, $Link, $HasData, $State)
+                if (-not $HasData) {
+                    [PSCustomObject]@{ Value = '<i class="fas fa-circle-question" title="No cached data - run the tenant data cache"></i>'; Description = $Description; Colour = '#CCCCCC'; Link = $Link }
+                } elseif ($State) {
+                    [PSCustomObject]@{ Value = '<i class="fas fa-circle-check"></i>'; Description = $Description; Colour = '#26A644'; Link = $Link }
+                } else {
+                    [PSCustomObject]@{ Value = '<i class="fas fa-circle-xmark"></i>'; Description = $Description; Colour = '#D53948'; Link = $Link }
+                }
+            }
+
+            # Unused Licenses
+            $UnusedLicenseLink = "https://$CIPPUrl/tenant/standards/bpa-report?tenantFilter=$($Customer.defaultDomainName)"
+            if (-not $HasLicenseData) {
+                $WidgetData.add([PSCustomObject]@{ Value = 'No data'; Description = 'Unused Licenses'; Colour = '#CCCCCC'; Link = $UnusedLicenseLink })
+            } else {
+                $WidgetData.add([PSCustomObject]@{
+                        Value       = $UnusedLicenseCount
+                        Description = 'Unused Licenses'
+                        Colour      = $(if ($UnusedLicenseCount -ne 0) { '#D53948' } else { '#26A644' })
+                        Link        = $UnusedLicenseLink
+                    })
+            }
+
+            # Unified Audit Log
+            $WidgetData.add((& $NewPostureWidget -Description 'Unified Audit Log' -Link "https://security.microsoft.com/auditlogsearch?viewid=Async%20Search&tid=$($Customer.customerId)" -HasData $HasAuditConfig -State $UnifiedAuditLogEnabled))
+
+            # Password Never Expires
+            $WidgetData.add((& $NewPostureWidget -Description 'Password Never Expires' -Link "https://$CIPPUrl/tenant/standards/bpa-report?tenantFilter=$($Customer.defaultDomainName)" -HasData $HasDomainData -State $PasswordNeverExpires))
+
+            # OAuth App Consent
+            $WidgetData.add((& $NewPostureWidget -Description 'OAuth App Consent' -Link "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_IAM/ConsentPoliciesMenuBlade/~/UserSettings" -HasData $HasAuthPolicy -State $OAuthConsentRestricted))
 
             # Blocked Senders
             $BlockedSenderCount = ($BlockedSenders | Measure-Object).count
