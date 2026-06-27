@@ -19,6 +19,7 @@ function Invoke-ExecAssignPolicy {
     $PlatformType = $Request.Body.platformType
     $ExcludeGroup = $Request.Body.excludeGroup
     $ExcludeGroupIdsRaw = $Request.Body.ExcludeGroupIds
+    $ExcludeGroupNamesRaw = $Request.Body.ExcludeGroupNames
     $GroupIdsRaw = $Request.Body.GroupIds
     $GroupNamesRaw = $Request.Body.GroupNames
     $AssignmentMode = $Request.Body.assignmentMode
@@ -44,6 +45,7 @@ function Invoke-ExecAssignPolicy {
     $GroupIds = Get-StandardizedList -InputObject $GroupIdsRaw
     $GroupNames = Get-StandardizedList -InputObject $GroupNamesRaw
     $ExcludeGroupIds = Get-StandardizedList -InputObject $ExcludeGroupIdsRaw
+    $ExcludeGroupNames = Get-StandardizedList -InputObject $ExcludeGroupNamesRaw
 
     # Validate and default AssignmentMode
     if ([string]::IsNullOrWhiteSpace($AssignmentMode)) {
@@ -104,6 +106,10 @@ function Invoke-ExecAssignPolicy {
 
             if (@($ExcludeGroupIds).Count -gt 0) {
                 $params.ExcludeGroupIds = @($ExcludeGroupIds)
+            }
+
+            if (@($ExcludeGroupNames).Count -gt 0) {
+                $params.ExcludeGroupNames = @($ExcludeGroupNames)
             }
 
             if ($AssignmentDirection) {

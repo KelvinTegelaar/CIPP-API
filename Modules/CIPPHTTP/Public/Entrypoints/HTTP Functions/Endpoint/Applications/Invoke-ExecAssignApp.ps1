@@ -25,6 +25,7 @@ function Invoke-ExecAssignApp {
     $AssignmentFilterType = $Request.Body.AssignmentFilterType
     $ExcludeGroup = $Request.Body.excludeGroup
     $ExcludeGroupIdsRaw = $Request.Body.ExcludeGroupIds
+    $ExcludeGroupNamesRaw = $Request.Body.ExcludeGroupNames
     $AssignmentDirection = $Request.Body.assignmentDirection
 
     $Intent = if ([string]::IsNullOrWhiteSpace($Intent)) { 'Required' } else { $Intent }
@@ -67,6 +68,7 @@ function Invoke-ExecAssignApp {
     $GroupNames = Get-StandardizedAssignmentList -InputObject $GroupNamesRaw
     $GroupIds = Get-StandardizedAssignmentList -InputObject $GroupIdsRaw
     $ExcludeGroupIds = Get-StandardizedAssignmentList -InputObject $ExcludeGroupIdsRaw
+    $ExcludeGroupNames = Get-StandardizedAssignmentList -InputObject $ExcludeGroupNamesRaw
 
     # 'Clear all exclusions' is a Custom Group Exclude + Replace request with no groups selected.
     $IsClearExclusions = ($AssignmentDirection -eq 'exclude') -and ($AssignmentMode -eq 'replace')
@@ -141,6 +143,10 @@ function Invoke-ExecAssignApp {
 
     if ($ExcludeGroupIds.Count -gt 0) {
         $setParams.ExcludeGroupIds = $ExcludeGroupIds
+    }
+
+    if ($ExcludeGroupNames.Count -gt 0) {
+        $setParams.ExcludeGroupNames = $ExcludeGroupNames
     }
 
     if ($AssignmentDirection) {

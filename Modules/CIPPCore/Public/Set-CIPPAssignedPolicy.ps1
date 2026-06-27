@@ -4,6 +4,7 @@ function Set-CIPPAssignedPolicy {
         $GroupName,
         $ExcludeGroup,
         $ExcludeGroupIds,
+        $ExcludeGroupNames,
         $PolicyId,
         $Type,
         $TenantFilter,
@@ -222,7 +223,8 @@ function Set-CIPPAssignedPolicy {
         $assignmentsObject = @{ $AssignmentPropertyName = @($FinalAssignments) }
 
         $AssignJSON = ConvertTo-Json -InputObject $assignmentsObject -Depth 10 -Compress
-        if ($PSCmdlet.ShouldProcess($GroupName, "Assigning policy $PolicyId")) {
+        $ShouldProcess = $PSCmdlet.ShouldProcess($GroupName, "Assigning policy $PolicyId")
+        if ($ShouldProcess) {
             $uri = "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign"
             $null = New-GraphPOSTRequest -uri $uri -tenantid $TenantFilter -type POST -body $AssignJSON
 
@@ -231,22 +233,34 @@ function Set-CIPPAssignedPolicy {
                 ($GroupNames -join ', ')
             } elseif ($GroupName) {
                 $GroupName
+            } elseif ($GroupIds -and @($GroupIds).Count -gt 0) {
+                @($GroupIds) -join ', '
             } else {
-                'specified groups'
+                $null
             }
 
-            $ExcludedGroupsDisplay = if ($ExcludeGroupIds -and @($ExcludeGroupIds).Count -gt 0) {
+            $ExcludedGroupsDisplay = if ($ExcludeGroupNames -and @($ExcludeGroupNames).Count -gt 0) {
+                ($ExcludeGroupNames -join ', ')
+            } elseif ($ExcludeGroupIds -and @($ExcludeGroupIds).Count -gt 0) {
                 ($ExcludeGroupIds -join ', ')
             } else {
                 $ExcludeGroup
             }
-            if ($ExcludedGroupsDisplay) {
-                Write-LogMessage -headers $Headers -API $APIName -message "Assigned group '$AssignedGroupsDisplay' and excluded group '$ExcludedGroupsDisplay' on Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
-                return "Successfully assigned group '$AssignedGroupsDisplay' and excluded group '$ExcludedGroupsDisplay' on Policy $PolicyId"
+
+            $ResultMessage = if ($ExcludedGroupsDisplay -and $AssignedGroupsDisplay) {
+                "Successfully assigned group '$AssignedGroupsDisplay' and excluded group '$ExcludedGroupsDisplay' on Policy $PolicyId"
+            } elseif ($ExcludedGroupsDisplay) {
+                "Successfully updated exclusions to group '$ExcludedGroupsDisplay' on Policy $PolicyId"
+            } elseif ($AssignmentDirection -eq 'exclude' -and $AssignmentMode -eq 'replace') {
+                "Successfully cleared exclusions on Policy $PolicyId"
             } else {
-                Write-LogMessage -headers $Headers -API $APIName -message "Assigned group '$AssignedGroupsDisplay' on Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
-                return "Successfully assigned group '$AssignedGroupsDisplay' on Policy $PolicyId"
+                "Successfully assigned group '$AssignedGroupsDisplay' on Policy $PolicyId"
             }
+
+            if ($ShouldProcess) {
+                Write-LogMessage -headers $Headers -API $APIName -message $ResultMessage -Sev 'Info' -tenant $TenantFilter
+            }
+            return $ResultMessage
         }
 
     } catch {

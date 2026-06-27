@@ -4,6 +4,7 @@ function Set-CIPPAssignedApplication {
         $GroupName,
         $ExcludeGroup,
         $ExcludeGroupIds,
+        $ExcludeGroupNames,
         $Intent,
         $AppType,
         $ApplicationId,
@@ -266,12 +267,40 @@ function Set-CIPPAssignedApplication {
                 $FinalAssignments
             )
         }
-        if ($PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")) {
+        $ShouldProcess = $PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")
+        if ($ShouldProcess) {
             Start-Sleep -Seconds 1
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($ApplicationId)/assign" -tenantid $TenantFilter -type POST -body ($DefaultAssignmentObject | ConvertTo-Json -Compress -Depth 10)
-            Write-LogMessage -headers $Headers -API $APIName -message "Assigned Application $ApplicationId to $($GroupName)" -Sev 'Info' -tenant $TenantFilter
         }
-        return "Assigned Application $ApplicationId to $($GroupName)"
+
+        $AssignedGroupsDisplay = if ($GroupName) {
+            $GroupName
+        } elseif ($GroupIds -and @($GroupIds).Count -gt 0) {
+            @($GroupIds) -join ', '
+        }
+
+        $ExcludedGroupsDisplay = if ($ExcludeGroupNames -and @($ExcludeGroupNames).Count -gt 0) {
+            @($ExcludeGroupNames) -join ', '
+        } elseif ($ExcludeGroupIds -and @($ExcludeGroupIds).Count -gt 0) {
+            @($ExcludeGroupIds) -join ', '
+        } else {
+            $ExcludeGroup
+        }
+
+        $ResultMessage = if ($ExcludedGroupsDisplay -and $AssignedGroupsDisplay) {
+            "Assigned Application $ApplicationId to $AssignedGroupsDisplay excluding group '$ExcludedGroupsDisplay'"
+        } elseif ($ExcludedGroupsDisplay) {
+            "Updated exclusions for Application $ApplicationId to group '$ExcludedGroupsDisplay'"
+        } elseif ($AssignmentDirection -eq 'exclude' -and $AssignmentMode -eq 'replace') {
+            "Cleared exclusions for Application $ApplicationId"
+        } else {
+            "Assigned Application $ApplicationId to $AssignedGroupsDisplay"
+        }
+
+        if ($ShouldProcess) {
+            Write-LogMessage -headers $Headers -API $APIName -message $ResultMessage -Sev 'Info' -tenant $TenantFilter
+        }
+        return $ResultMessage
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -message "Could not assign application $ApplicationId to $GroupName. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
