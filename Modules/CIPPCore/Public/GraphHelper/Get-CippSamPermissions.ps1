@@ -12,9 +12,11 @@ function Get-CippSamPermissions {
     The effective set returned in .Permissions is therefore always manifest ∪ extras. Each permission
     is annotated with a 'required' boolean so the UI can lock the manifest-defined defaults.
 
-    Unless -NoDiff is used, the function also pulls the live CIPP-SAM application registration from the
-    partner tenant and diffs its requiredResourceAccess against the effective set, surfacing
-    permissions that need to be added to (MissingPermissions) and removed from (PartnerAppDiff) the app.
+    Unless -NoDiff is used, the function also reads what is actually granted on the CIPP-SAM enterprise
+    application (service principal) in the partner tenant - appRoleAssignments (application/Role) and
+    oauth2PermissionGrants (delegated/Scope) - and diffs those grants against the effective set,
+    surfacing permissions that need to be granted (MissingPermissions) and grants that are present but
+    not in the effective set (PartnerAppDiff). The app registration's requiredResourceAccess is not used.
 
     .EXAMPLE
     Get-CippSamPermissions
@@ -195,38 +197,68 @@ function Get-CippSamPermissions {
         }
     }
 
-    # Diff the effective set against the live CIPP-SAM application registration in the partner tenant.
-    # MissingPermissions = effective perms not yet on the app (need to be added).
-    # PartnerAppDiff also surfaces extra perms on the app that are not in the effective set (need to be removed).
+    # Diff the effective set against what is actually GRANTED on the partner CIPP-SAM enterprise
+    # application (service principal): appRoleAssignments for application (Role) permissions and
+    # oauth2PermissionGrants for delegated (Scope) permissions. The app registration's
+    # requiredResourceAccess is intentionally NOT used - permissions are applied as SP grants, so the
+    # grants are the real source of truth for what the app can do.
+    # MissingPermissions = effective perms not yet granted on the SP (need to be added).
+    # PartnerAppDiff also surfaces extra grants on the SP that are not in the effective set.
     $MissingPermissions = @{}
     $PartnerAppDiff = @{}
     if (!$NoDiff.IsPresent) {
         try {
-            $PartnerApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/applications(appId='$($env:ApplicationID)')?`$select=requiredResourceAccess" -tenantid $env:TenantID -NoAuthCheck $true
+            $PartnerSP = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($env:ApplicationID)')?`$select=id" -tenantid $env:TenantID -NoAuthCheck $true
+            $AppRoleAssignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($PartnerSP.id)/appRoleAssignments?`$top=999" -tenantid $env:TenantID -NoAuthCheck $true
+            $OAuthGrants = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($PartnerSP.id)/oauth2PermissionGrants?`$top=999" -tenantid $env:TenantID -NoAuthCheck $true
+
+            # Grants reference the resource SP's object id; map it back to the resource appId the
+            # effective set is keyed on. Use $UsedServicePrincipals - it carries both id and appId
+            # ($ServicePrincipals is selected without id, so its .id is null).
+            $ResourceIdToAppId = @{}
+            foreach ($SP in $UsedServicePrincipals) { if ($SP.id) { $ResourceIdToAppId[$SP.id] = $SP.appId } }
+
+            # Granted application roles (GUIDs) per resource appId.
+            $GrantedRoleIdsByApp = @{}
+            foreach ($Assignment in $AppRoleAssignments) {
+                $ResAppId = $ResourceIdToAppId[$Assignment.resourceId]
+                if (!$ResAppId -or !$Assignment.appRoleId) { continue }
+                if (-not $GrantedRoleIdsByApp.ContainsKey($ResAppId)) { $GrantedRoleIdsByApp[$ResAppId] = [System.Collections.Generic.List[string]]::new() }
+                $GrantedRoleIdsByApp[$ResAppId].Add([string]$Assignment.appRoleId)
+            }
+
+            # Granted delegated scope NAMES per resource appId (oauth2 grants store space-delimited names).
+            $GrantedScopesByApp = @{}
+            foreach ($Grant in $OAuthGrants) {
+                $ResAppId = $ResourceIdToAppId[$Grant.resourceId]
+                if (!$ResAppId) { continue }
+                if (-not $GrantedScopesByApp.ContainsKey($ResAppId)) { $GrantedScopesByApp[$ResAppId] = [System.Collections.Generic.List[string]]::new() }
+                foreach ($ScopeName in @(($Grant.scope -split ' ') | Where-Object { $_ })) { $GrantedScopesByApp[$ResAppId].Add($ScopeName) }
+            }
+
             foreach ($AppId in $AllAppIds) {
                 $ServicePrincipal = $ServicePrincipals | Where-Object -Property appId -EQ $AppId
-                $AppRegResource = $PartnerApp.requiredResourceAccess | Where-Object -Property resourceAppId -EQ $AppId
-                $AppRegRoleIds = @(($AppRegResource.resourceAccess | Where-Object { $_.type -eq 'Role' }).id)
-                $AppRegScopeIds = @(($AppRegResource.resourceAccess | Where-Object { $_.type -eq 'Scope' }).id)
+                $GrantedRoleIds = @($GrantedRoleIdsByApp[$AppId] | Where-Object { $_ })
+                $GrantedScopeNames = @($GrantedScopesByApp[$AppId] | Where-Object { $_ })
 
-                # Only GUID-based permissions live in the app registration's requiredResourceAccess.
-                # String-named scopes (e.g. the .Sdp AdditionalPermissions) are applied as direct grants,
-                # so excluding them here avoids permanent false-positive "missing" entries.
+                # Application (Role) permissions compare by GUID against appRoleAssignments.
                 $EffApp = @($EffectivePermissions.$AppId.applicationPermissions | Where-Object { $_.id -match $GuidRegex })
-                $EffDel = @($EffectivePermissions.$AppId.delegatedPermissions | Where-Object { $_.id -match $GuidRegex })
+                # Delegated (Scope) permissions compare by NAME (value) against oauth2 grant scopes -
+                # this covers both GUID-resolved scopes and the string-named AdditionalPermissions.
+                $EffDel = @($EffectivePermissions.$AppId.delegatedPermissions)
                 $EffAppIds = @($EffApp.id)
-                $EffDelIds = @($EffDel.id)
+                $EffDelNames = @($EffDel.value)
 
-                $MissingApp = @(foreach ($Permission in $EffApp) { if ($AppRegRoleIds -notcontains $Permission.id) { $Permission } })
-                $MissingDel = @(foreach ($Permission in $EffDel) { if ($AppRegScopeIds -notcontains $Permission.id) { $Permission } })
-                $ExtraApp = @(foreach ($Id in $AppRegRoleIds) {
+                $MissingApp = @(foreach ($Permission in $EffApp) { if ($GrantedRoleIds -notcontains $Permission.id) { $Permission } })
+                $MissingDel = @(foreach ($Permission in $EffDel) { if ($Permission.value -and $GrantedScopeNames -notcontains $Permission.value) { $Permission } })
+                $ExtraApp = @(foreach ($Id in ($GrantedRoleIds | Sort-Object -Unique)) {
                         if ($EffAppIds -notcontains $Id) {
                             [PSCustomObject]@{ id = $Id; value = (($ServicePrincipal.appRoles | Where-Object -Property id -EQ $Id).value) ?? $Id }
                         }
                     })
-                $ExtraDel = @(foreach ($Id in $AppRegScopeIds) {
-                        if ($EffDelIds -notcontains $Id) {
-                            [PSCustomObject]@{ id = $Id; value = (($ServicePrincipal.publishedPermissionScopes | Where-Object -Property id -EQ $Id).value) ?? $Id }
+                $ExtraDel = @(foreach ($Name in ($GrantedScopeNames | Sort-Object -Unique)) {
+                        if ($EffDelNames -notcontains $Name) {
+                            [PSCustomObject]@{ id = $Name; value = $Name }
                         }
                     })
 
@@ -246,7 +278,7 @@ function Get-CippSamPermissions {
                 }
             }
         } catch {
-            Write-Information "Failed to retrieve partner app registration for permission diff: $($_.Exception.Message)"
+            Write-Information "Failed to retrieve partner enterprise app grants for permission diff: $($_.Exception.Message)"
         }
     }
 
