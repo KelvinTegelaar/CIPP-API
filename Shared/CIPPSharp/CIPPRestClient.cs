@@ -37,6 +37,88 @@ namespace CIPP
     }
 
     // =====================================================================
+    // CIPPResponseHeaders / CIPPHttpResponse / CIPPHttpRequestException
+    // =====================================================================
+    // When a request returns a non-success status, the PowerShell wrapper
+    // (Invoke-CIPPRestMethod) throws a CIPPHttpRequestException. CIPP's Graph
+    // helpers were written against Invoke-RestMethod's HttpResponseException
+    // and read:
+    //     $_.Exception.Response.StatusCode -eq 429
+    //     $_.Exception.Response.Headers['Retry-After']
+    // The pooled client previously threw a bare HttpRequestException with no
+    // .Response, so those branches were dead. These types restore the expected
+    // shape: a .Response with a StatusCode (HttpStatusCode, so `-eq 429` works)
+    // and Headers that support case-insensitive string indexing returning a
+    // scalar value (so ['Retry-After'] works), matching the old behaviour.
+    // =====================================================================
+
+    /// <summary>
+    /// Case-insensitive response-header view exposed to PowerShell. The string
+    /// indexer returns the (comma-joined) value for a header, or null if absent,
+    /// mirroring how WebHeaderCollection / HttpResponseHeaders were consumed in
+    /// CIPP via $response.Headers['Header-Name'].
+    /// </summary>
+    public sealed class CIPPResponseHeaders
+    {
+        private readonly Dictionary<string, string[]> _headers;
+
+        public CIPPResponseHeaders(Dictionary<string, string[]>? headers)
+        {
+            _headers = headers is not null
+                ? new Dictionary<string, string[]>(headers, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>$resp.Headers['Retry-After'] -> scalar string (joined), or null.</summary>
+        public string? this[string key]
+            => key is not null && _headers.TryGetValue(key, out var v) ? string.Join(", ", v) : null;
+
+        public bool Contains(string key) => key is not null && _headers.ContainsKey(key);
+        public string[]? GetValues(string key) => key is not null && _headers.TryGetValue(key, out var v) ? v : null;
+        public IEnumerable<string> Keys => _headers.Keys;
+        public int Count => _headers.Count;
+    }
+
+    /// <summary>
+    /// Lightweight stand-in for the response object CIPP code reaches through
+    /// $_.Exception.Response. Carries the status code (as HttpStatusCode so
+    /// `-eq 429` works), the headers (string-indexable), and the raw body.
+    /// </summary>
+    public sealed class CIPPHttpResponse
+    {
+        public HttpStatusCode StatusCode { get; }
+        public int StatusCodeValue { get; }
+        public CIPPResponseHeaders Headers { get; }
+        public string Content { get; }
+
+        public CIPPHttpResponse(int statusCode, Dictionary<string, string[]>? headers, string? content)
+        {
+            StatusCode      = (HttpStatusCode)statusCode;
+            StatusCodeValue = statusCode;
+            Headers         = new CIPPResponseHeaders(headers);
+            Content         = content ?? string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// HttpRequestException subclass carrying a .Response (CIPPHttpResponse).
+    /// Subclassing keeps existing `catch [System.Net.Http.HttpRequestException]`
+    /// and `$_.Exception.Message` / `$_.ErrorDetails.Message` handling intact,
+    /// while restoring `$_.Exception.Response.StatusCode` /
+    /// `$_.Exception.Response.Headers['Retry-After']`.
+    /// </summary>
+    public sealed class CIPPHttpRequestException : HttpRequestException
+    {
+        public CIPPHttpResponse Response { get; }
+
+        public CIPPHttpRequestException(string message, int statusCode, Dictionary<string, string[]>? headers, string? content)
+            : base(message, null, (HttpStatusCode)statusCode)
+        {
+            Response = new CIPPHttpResponse(statusCode, headers, content);
+        }
+    }
+
+    // =====================================================================
     // CIPPRestClient
     // =====================================================================
     // Thread-safe, process-scoped HTTP client manager.
