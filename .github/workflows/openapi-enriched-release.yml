@@ -1,0 +1,86 @@
+name: Publish Enriched OpenAPI Spec
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to upload the enriched spec to
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  openapi-enriched-release:
+    if: github.repository_owner == 'KelvinTegelaar'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Select release tag
+        id: release_tag
+        env:
+          RESOLVED_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+        run: printf 'tag=%s\n' "$RESOLVED_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout CIPP-API
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release_tag.outputs.tag }}
+
+      - name: Checkout CIPP frontend
+        uses: actions/checkout@v4
+        with:
+          repository: KelvinTegelaar/CIPP
+          path: _frontend
+
+      - name: Generate enriched OpenAPI spec
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File .build/Add-OpenApiResponseSchemas.ps1 `
+            -FrontendRepoPath ./_frontend `
+            -InputSpec ./openapi.json `
+            -OutputSpec ./openapi.enriched.json
+
+      - name: Strict lint enriched OpenAPI spec
+        run: |
+          set +e
+          npx --yes @redocly/cli@2.35.1 lint ./openapi.enriched.json --format=json > redocly-results.json
+          REDOCLY_STATUS=$?
+          set -e
+
+          node - redocly-results.json "$REDOCLY_STATUS" <<'NODE'
+          const fs = require('fs');
+
+          const resultsPath = process.argv[2];
+          const redoclyStatus = Number(process.argv[3]);
+          const raw = fs.readFileSync(resultsPath, 'utf8').trim();
+          if (!raw) {
+            throw new Error(`${resultsPath} did not contain Redocly JSON output.`);
+          }
+
+          const doc = JSON.parse(raw);
+          const totals = doc.totals || {};
+          const errors = totals.errors || 0;
+          const warnings = totals.warnings || 0;
+          const ignored = totals.ignored || 0;
+          console.log(`Redocly new findings: errors=${errors}, warnings=${warnings}, ignored=${ignored}`);
+
+          if (errors + warnings > 0) {
+            console.error('Enriched spec introduced new Redocly finding(s). Update the enrichment or regenerate the baseline only for legitimate upstream changes.');
+            process.exit(1);
+          }
+
+          if (redoclyStatus !== 0) {
+            console.error(`Redocly exited with status ${redoclyStatus}.`);
+            process.exit(redoclyStatus);
+          }
+          NODE
+
+      - name: Upload enriched OpenAPI spec to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
+        run: gh release upload "$RELEASE_TAG" openapi.enriched.json --clobber
