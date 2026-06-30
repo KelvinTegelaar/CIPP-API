@@ -30,6 +30,32 @@ function Invoke-ListRooms {
 
             # Get-MailboxCalendarConfiguration requires anchor to the room mailbox
             $CalendarConfigurationProperties = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxCalendarConfiguration' -cmdParams @{ Identity = $RoomId } -Anchor $RoomId | Select-Object -ExcludeProperty *@odata.type*
+            $DefaultCalendarPermission = $null
+
+            try {
+                $CalendarFolder = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderStatistics' -cmdParams @{
+                    Identity    = $RoomId
+                    FolderScope = 'Calendar'
+                } -Anchor $RoomId | Where-Object { $_.FolderType -eq 'Calendar' } | Select-Object -First 1 -ExcludeProperty *@odata.type*
+
+                if ($CalendarFolder) {
+                    $CalendarFolderIdentity = if ($CalendarFolder.FolderId) { "$($RoomId):$($CalendarFolder.FolderId)" } else { "$($RoomId):\$($CalendarFolder.Name)" }
+                    $CalendarFolderPermissions = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderPermission' -cmdParams @{
+                        Identity = $CalendarFolderIdentity
+                    } -Anchor $RoomId -UseSystemMailbox $true | Select-Object -ExcludeProperty *@odata.type*
+                    $DefaultCalendarPermissionEntry = $CalendarFolderPermissions | Where-Object { $_.User -eq 'Default' } | Select-Object -First 1
+
+                    if ($DefaultCalendarPermissionEntry) {
+                        $DefaultCalendarPermission = if ($DefaultCalendarPermissionEntry.AccessRights -is [array]) {
+                            $DefaultCalendarPermissionEntry.AccessRights -join ','
+                        } else {
+                            $DefaultCalendarPermissionEntry.AccessRights
+                        }
+                    }
+                }
+            } catch {
+                Write-Warning "Could not retrieve default calendar permission for room $RoomId. $($_.Exception.Message)"
+            }
 
             if ($RoomMailbox -and $PlaceDetails -and $CalendarProperties -and $CalendarConfigurationProperties) {
                 $GraphRequest = @(
@@ -81,8 +107,12 @@ function Invoke-ListRooms {
                         ScheduleOnlyDuringWorkHours    = $CalendarProperties.ScheduleOnlyDuringWorkHours
                         AutomateProcessing             = $CalendarProperties.AutomateProcessing
                         AddOrganizerToSubject          = $CalendarProperties.AddOrganizerToSubject
+                        DeleteComments                 = $CalendarProperties.DeleteComments
                         DeleteSubject                  = $CalendarProperties.DeleteSubject
+                        RemovePrivateProperty          = $CalendarProperties.RemovePrivateProperty
                         RemoveCanceledMeetings         = $CalendarProperties.RemoveCanceledMeetings
+                        RemoveOldMeetingMessages       = $CalendarProperties.RemoveOldMeetingMessages
+                        DefaultCalendarPermission      = $DefaultCalendarPermission
 
                         # Calendar Configuration Properties
                         WorkDays                       = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkDays)) { $null } else { $CalendarConfigurationProperties.WorkDays }

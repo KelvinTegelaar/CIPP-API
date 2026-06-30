@@ -14,6 +14,7 @@ Function Invoke-EditRoomMailbox {
 
     $Results = [System.Collections.Generic.List[Object]]::new()
     $MailboxObject = $Request.Body
+    $DefaultCalendarPermission = $MailboxObject.DefaultCalendarPermission.value ?? $MailboxObject.DefaultCalendarPermission
 
     # First update the mailbox properties
     $UpdateMailboxParams = @{
@@ -59,8 +60,9 @@ Function Invoke-EditRoomMailbox {
     $CalendarProperties = @(
         'AllowConflicts', 'AllowRecurringMeetings', 'BookingWindowInDays',
         'MaximumDurationInMinutes', 'ProcessExternalMeetingMessages', 'EnforceCapacity',
-        'ForwardRequestsToDelegates', 'ScheduleOnlyDuringWorkHours ', 'AutomateProcessing',
-        'AddOrganizerToSubject', 'DeleteSubject', 'RemoveCanceledMeetings'
+        'ForwardRequestsToDelegates', 'ScheduleOnlyDuringWorkHours', 'AutomateProcessing',
+        'AddOrganizerToSubject', 'DeleteComments', 'DeleteSubject', 'RemovePrivateProperty',
+        'RemoveCanceledMeetings', 'RemoveOldMeetingMessages'
     )
 
     foreach ($prop in $CalendarProperties) {
@@ -97,6 +99,30 @@ Function Invoke-EditRoomMailbox {
         # Set-MailboxCalendarConfiguration requires anchor to the room mailbox
         $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxCalendarConfiguration' -cmdParams $UpdateCalendarConfigParams -Anchor $MailboxObject.roomId
         $Results.Add("Successfully updated room: $($MailboxObject.DisplayName) (Calendar Configuration)")
+
+        if (![string]::IsNullOrWhiteSpace($DefaultCalendarPermission)) {
+            $CalendarFolder = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxFolderStatistics' -cmdParams @{
+                Identity    = $MailboxObject.roomId
+                FolderScope = 'Calendar'
+            } -Anchor $MailboxObject.roomId | Where-Object { $_.FolderType -eq 'Calendar' } | Select-Object -First 1 -ExcludeProperty *@odata.type*
+
+            $CalendarFolderIdentity = if ($CalendarFolder -and $CalendarFolder.FolderId) {
+                "$($MailboxObject.roomId):$($CalendarFolder.FolderId)"
+            } elseif ($CalendarFolder -and $CalendarFolder.Name) {
+                "$($MailboxObject.roomId):\$($CalendarFolder.Name)"
+            } else {
+                "$($MailboxObject.roomId):\Calendar"
+            }
+
+            $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxFolderPermission' -cmdParams @{
+                Identity     = $CalendarFolderIdentity
+                User         = 'Default'
+                AccessRights = $DefaultCalendarPermission
+            } -Anchor $MailboxObject.roomId
+
+            Sync-CIPPCalendarPermissionCache -TenantFilter $Tenant -MailboxIdentity $MailboxObject.roomId -FolderName 'Calendar' -User 'Default' -Permissions $DefaultCalendarPermission -Action 'Add'
+            $Results.Add("Successfully updated room: $($MailboxObject.DisplayName) (Default Calendar Permission)")
+        }
 
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message "Updated room $($MailboxObject.DisplayName)" -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
