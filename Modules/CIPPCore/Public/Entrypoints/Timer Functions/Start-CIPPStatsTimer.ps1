@@ -48,6 +48,12 @@ function Start-CIPPStatsTimer {
         $driftStandardsCount = Get-CIPPStatsDriftStandardsCount
         $mobileEnrollment = Get-CIPPStatsMobileEnrollment
 
+        # Feature flags
+        $FeatureFlags = @{}
+        Get-CIPPFeatureFlag | Select-Object -Property Id, Enabled | ForEach-Object {
+            $FeatureFlags[$_.Id] = $_.Enabled
+        }
+
         $SendingObject = [PSCustomObject]@{
             rgid                   = $env:WEBSITE_SITE_NAME
             SetupComplete          = $SetupComplete
@@ -77,6 +83,10 @@ function Start-CIPPStatsTimer {
             PWPush                 = $RawExt.PWPush.Enabled
             CFZTNA                 = $RawExt.CFZTNA.Enabled
             GitHub                 = $RawExt.GitHub.Enabled
+            BestPracticeAnalyser   = $FeatureFlags.BestPracticeAnalyser
+            SuperAdminNG           = $FeatureFlags.SuperAdminNG
+            CopilotAI              = $FeatureFlags.CopilotAI
+            MCPServer              = $FeatureFlags.MCPServer
         } | ConvertTo-Json
 
         try {
