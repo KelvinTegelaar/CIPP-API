@@ -383,5 +383,10 @@
     "type": "ExoTransportConfig",
     "friendlyName": "Exchange Transport Config",
     "description": "Exchange Online transport configuration including SMTP authentication settings"
+  },
+  {
+    "type": "DefenderCVEs",
+    "friendlyName": "Defender CVEs",
+    "description": "All Defender CVEs for Devices"
   }
 ]
