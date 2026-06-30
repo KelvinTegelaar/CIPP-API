@@ -1587,8 +1587,8 @@
       "ZTNA21807",
       "ZTNA21810"
     ],
-    "helpText": "Disables users from being able to consent to applications, except for those specified in the field below",
-    "docsDescription": "Requires users to get administrator consent before sharing data with applications. You can preapprove specific applications.",
+    "helpText": "Disables users from being able to consent to applications, except for those specified in the field below. This standard conflicts with the \"Allow users to consent to applications with low security risk\" standard; only one of the two should be assigned per tenant.",
+    "docsDescription": "Requires users to get administrator consent before sharing data with applications. You can preapprove specific applications. This standard conflicts with the \"Allow users to consent to applications with low security risk\" (OauthConsentLowSec) standard. Enabling both on the same tenant causes a remediation conflict, so only assign one.",
     "executiveText": "Requires administrative approval before employees can grant applications access to company data, preventing unauthorized data sharing and potential security breaches. This protects against malicious applications while allowing approved business tools to function normally.",
     "addedComponent": [
       {
@@ -1609,8 +1609,8 @@
     "name": "standards.OauthConsentLowSec",
     "cat": "Entra (AAD) Standards",
     "tag": ["IntegratedApps"],
-    "helpText": "Sets the default oauth consent level so users can consent to applications that have low risks.",
-    "docsDescription": "Allows users to consent to applications with low assigned risk.",
+    "helpText": "Sets the default oauth consent level so users can consent to applications that have low risks. This standard conflicts with the \"Require admin consent for applications\" standard; only one of the two should be assigned per tenant.",
+    "docsDescription": "Allows users to consent to applications with low assigned risk. This standard conflicts with the \"Require admin consent for applications (Prevent OAuth phishing)\" (OauthConsent) standard. Enabling both on the same tenant causes a remediation conflict, so only assign one.",
     "executiveText": "Allows employees to approve low-risk applications without administrative intervention, balancing security with productivity. This provides a middle ground between complete restriction and open access, enabling business agility while maintaining protection against high-risk applications.",
     "label": "Allow users to consent to applications with low security risk (Prevent OAuth phishing. Lower impact, less secure)",
     "impact": "Medium Impact",
