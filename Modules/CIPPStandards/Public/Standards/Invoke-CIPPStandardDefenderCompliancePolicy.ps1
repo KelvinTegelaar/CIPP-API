@@ -21,12 +21,14 @@ function Invoke-CIPPStandardDefenderCompliancePolicy {
             {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectAndroid","label":"Connect Android devices to MDE","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectAndroidCompliance","label":"Connect Android 6.0.0+ (App-based MAM)","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.androidDeviceBlockedOnMissingPartnerData","label":"Block Android if partner data unavailable","defaultValue":false}
+            {"type":"switch","name":"standards.DefenderCompliancePolicy.grantMobileThreatDefensePartnerRole","label":"Grant MTD role to MDE on enrolled Android COBO/COPE devices","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectIos","label":"Connect iOS/iPadOS devices to MDE","defaultValue":false}
-            {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectIosCompliance","label":"Connect iOS 13.0+ (App-based MAM)","defaultValue":false}
-            {"type":"switch","name":"standards.DefenderCompliancePolicy.appSync","label":"Enable App Sync for iOS","defaultValue":false}
+            {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectIosCompliance","label":"Connect iOS/iPadOS devices for app protection policy evaluation (MAM)","defaultValue":false}
+            {"type":"switch","name":"standards.DefenderCompliancePolicy.appSync","label":"Enable App Sync (sending application inventory) for iOS/iPadOS devices","defaultValue":false}
+            {"type":"switch","name":"standards.DefenderCompliancePolicy.allowPartnerToCollectIosPersonalApplicationMetadata","label":"Send full application inventory data on personally-owned iOS/iPadOS devices","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.iosDeviceBlockedOnMissingPartnerData","label":"Block iOS if partner data unavailable","defaultValue":false}
-            {"type":"switch","name":"standards.DefenderCompliancePolicy.allowPartnerToCollectIosCertificateMetadata","label":"Collect certificate metadata from iOS","defaultValue":false}
-            {"type":"switch","name":"standards.DefenderCompliancePolicy.allowPartnerToCollectIosPersonalCertificateMetadata","label":"Collect personal certificate metadata from iOS","defaultValue":false}
+            {"type":"switch","name":"standards.DefenderCompliancePolicy.allowPartnerToCollectIosCertificateMetadata","label":"Enable Certificate Sync for iOS/iPadOS devices","defaultValue":false}
+            {"type":"switch","name":"standards.DefenderCompliancePolicy.allowPartnerToCollectIosPersonalCertificateMetadata","label":"Send full certificate inventory data on personally-owned iOS/iPadOS devices","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectMac","label":"Connect macOS devices to MDE","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.macDeviceBlockedOnMissingPartnerData","label":"Block macOS if partner data unavailable","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectWindows","label":"Connect Windows 10.0.15063+ to MDE (Note: enabling this forces 'Block Windows if partner data unavailable' to on)","defaultValue":false}
@@ -58,17 +60,18 @@ function Invoke-CIPPStandardDefenderCompliancePolicy {
         windowsEnabled                                      = [bool]$Settings.ConnectWindows
         macEnabled                                          = [bool]$Settings.ConnectMac
         partnerUnsupportedOsVersionBlocked                  = [bool]$Settings.BlockunsupportedOS
-        allowPartnerToCollectIOSApplicationMetadata         = [bool]$Settings.ConnectIosCompliance
-        allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Settings.ConnectIosCompliance
+        allowPartnerToCollectIOSApplicationMetadata         = [bool]$Settings.appSync
+        allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Settings.allowPartnerToCollectIosPersonalApplicationMetadata
         androidDeviceBlockedOnMissingPartnerData            = [bool]$Settings.androidDeviceBlockedOnMissingPartnerData
         iosDeviceBlockedOnMissingPartnerData                = [bool]$Settings.iosDeviceBlockedOnMissingPartnerData
         windowsDeviceBlockedOnMissingPartnerData            = if ([bool]$Settings.ConnectWindows) { $true } else { [bool]$Settings.windowsDeviceBlockedOnMissingPartnerData }
         macDeviceBlockedOnMissingPartnerData                = [bool]$Settings.macDeviceBlockedOnMissingPartnerData
         androidMobileApplicationManagementEnabled           = [bool]$Settings.ConnectAndroidCompliance
-        iosMobileApplicationManagementEnabled               = [bool]$Settings.appSync
+        iosMobileApplicationManagementEnabled               = [bool]$Settings.ConnectIosCompliance
         windowsMobileApplicationManagementEnabled           = [bool]$Settings.windowsMobileApplicationManagementEnabled
         allowPartnerToCollectIosCertificateMetadata         = [bool]$Settings.allowPartnerToCollectIosCertificateMetadata
         allowPartnerToCollectIosPersonalCertificateMetadata = [bool]$Settings.allowPartnerToCollectIosPersonalCertificateMetadata
+        grantMobileThreatDefensePartnerRole                 = [bool]$Settings.grantMobileThreatDefensePartnerRole
         microsoftDefenderForEndpointAttachEnabled           = $true
     }
 
@@ -112,6 +115,7 @@ function Invoke-CIPPStandardDefenderCompliancePolicy {
             windowsMobileApplicationManagementEnabled           = [bool]$CurrentState.windowsMobileApplicationManagementEnabled
             allowPartnerToCollectIosCertificateMetadata         = [bool]$CurrentState.allowPartnerToCollectIosCertificateMetadata
             allowPartnerToCollectIosPersonalCertificateMetadata = [bool]$CurrentState.allowPartnerToCollectIosPersonalCertificateMetadata
+            grantMobileThreatDefensePartnerRole                 = [bool]$CurrentState.grantMobileThreatDefensePartnerRole
             microsoftDefenderForEndpointAttachEnabled           = [bool]$CurrentState.microsoftDefenderForEndpointAttachEnabled
         }
     } else {
@@ -132,6 +136,7 @@ function Invoke-CIPPStandardDefenderCompliancePolicy {
             windowsMobileApplicationManagementEnabled           = $false
             allowPartnerToCollectIosCertificateMetadata         = $false
             allowPartnerToCollectIosPersonalCertificateMetadata = $false
+            grantMobileThreatDefensePartnerRole                 = $false
             microsoftDefenderForEndpointAttachEnabled           = $false
         }
     }
