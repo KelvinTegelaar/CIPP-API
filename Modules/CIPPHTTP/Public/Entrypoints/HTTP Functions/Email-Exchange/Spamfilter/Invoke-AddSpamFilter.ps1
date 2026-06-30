@@ -1,7 +1,7 @@
 Function Invoke-AddSpamFilter {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Exchange.SpamFilter.ReadWrite
     #>
