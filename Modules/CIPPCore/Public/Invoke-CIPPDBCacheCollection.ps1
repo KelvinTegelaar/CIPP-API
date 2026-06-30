@@ -15,6 +15,7 @@ function Invoke-CIPPDBCacheCollection {
         - ConditionalAccess:  CA policies and registration details
         - IdentityProtection: Risky users/SPs, risk detections, PIM
         - Intune:             Managed devices, policies, app protection
+        - Defender:           Defender Vulnerabilities
 
     .PARAMETER CollectionType
         The group of cache functions to execute
@@ -31,7 +32,7 @@ function Invoke-CIPPDBCacheCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'Intune', 'Compliance', 'CopilotUsage', 'SharePoint', 'Teams')]
+        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'Intune', 'Compliance', 'CopilotUsage', 'SharePoint', 'Teams', 'Defender')]
         [string]$CollectionType,
 
         [Parameter(Mandatory = $true)]
@@ -124,6 +125,7 @@ function Invoke-CIPPDBCacheCollection {
             'IntuneScripts'
             'IntuneReusableSettings'
             'DetectedApps'
+            'IntuneAppInstallStatus'
             'MDEOnboarding'
         )
         Compliance         = @(
@@ -152,6 +154,9 @@ function Invoke-CIPPDBCacheCollection {
             'Teams'
             'TeamsActivity'
             'TeamsVoice'
+        )
+        Defender           = @(
+            'DefenderCVEs'
         )
     }
 

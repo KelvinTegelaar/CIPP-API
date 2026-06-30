@@ -87,6 +87,43 @@ function New-CIPPAlertTemplate {
         $ButtonUrl = "$CIPPURL/standards/list-standards"
         $ButtonText = 'Check Standards configuration'
     }
+    if ($InputObject -eq 'customScript') {
+        # $Data is an array of custom-test alert records (one per failing test for this tenant).
+        $Alerts = @($Data)
+        $Count = $Alerts.Count
+        $Title = if ($Count -eq 1) {
+            "$($Tenant) - Custom test '$($Alerts[0].ScriptName)' returned status '$($Alerts[0].Status)'"
+        } else {
+            "$($Tenant) - $Count custom tests need attention"
+        }
+
+        $SummaryRows = foreach ($Alert in $Alerts) {
+            [PSCustomObject]@{
+                Test   = $Alert.ScriptName
+                Status = $Alert.Status
+                Risk   = if ($Alert.Risk) { $Alert.Risk } else { 'Medium' }
+            }
+        }
+        $SummaryHTML = ($SummaryRows | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+        $IntroText = "<p>You're receiving this because you enabled failure alerts for one or more custom tests. The following custom test(s) on tenant <strong>$($Tenant)</strong> need attention:</p>$SummaryHTML"
+
+        foreach ($Alert in $Alerts) {
+            $IntroText += "<h3>$($Alert.ScriptName) — $($Alert.Status)</h3>"
+            if (![string]::IsNullOrWhiteSpace($Alert.ErrorMessage)) {
+                $IntroText += "<p>The test failed to execute: $($Alert.ErrorMessage)</p>"
+            } elseif (![string]::IsNullOrWhiteSpace($Alert.ResultMarkdown)) {
+                $IntroText += "<div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0; white-space: pre-wrap;'>$($Alert.ResultMarkdown)</div>"
+            } elseif ($Alert.FailedRows) {
+                # Normalize string rows to objects so ConvertTo-Html renders a message column
+                # instead of the string's Length property.
+                $Rows = foreach ($r in @($Alert.FailedRows)) { if ($r -is [string]) { [PSCustomObject]@{ message = $r } } else { $r } }
+                $DetailHTML = ($Rows | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+                $IntroText += "<p>Results:</p>$DetailHTML"
+            }
+        }
+        $ButtonUrl = "$CIPPURL/tools/custom-tests"
+        $ButtonText = 'View custom test results'
+    }
     if ($InputObject -eq 'auditlog') {
         $ButtonUrl = "$CIPPURL/identity/administration/users/user/bec?userId=$($data.ObjectId)&tenantFilter=$Tenant"
         $ButtonText = 'User Management'

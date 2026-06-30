@@ -3,6 +3,13 @@ function Get-NinjaOneFieldMapping {
     param (
         $CIPPMapping
     )
+
+    $Unset = [PSCustomObject]@{
+        name  = '--- Do not synchronize ---'
+        value = $null
+        type  = 'unset'
+    }
+
     try {
         #Get available mappings
         $Mappings = [pscustomobject]@{}
@@ -94,13 +101,9 @@ function Get-NinjaOneFieldMapping {
         if ($Null -eq $NinjaCustomFieldsOrg) {
             [System.Collections.Generic.List[object]]$NinjaCustomFieldsOrg = @()
         }
-        $Unset = [PSCustomObject]@{
-            name  = '--- Do not synchronize ---'
-            value = $null
-            type  = 'unset'
-        }
 
     } catch {
+        Write-Information "Get-NinjaOneFieldMapping: failed to retrieve NinjaOne custom fields: $($_.Exception.Message)"
         [System.Collections.Generic.List[object]]$NinjaCustomFieldsNode = @()
         [System.Collections.Generic.List[object]]$NinjaCustomFieldsOrg = @()
     }

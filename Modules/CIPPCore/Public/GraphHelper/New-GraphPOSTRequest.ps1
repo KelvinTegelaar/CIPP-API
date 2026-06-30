@@ -38,7 +38,6 @@ function New-GraphPOSTRequest {
 
         if (!$headers['User-Agent']) {
             $headers['User-Agent'] = Get-CippUserAgent
-            Write-Information "User-Agent: $($headers['User-Agent'])"
         }
 
         if (!$contentType) {
@@ -50,12 +49,13 @@ function New-GraphPOSTRequest {
         $RawErrorBody = $null
         do {
             try {
-                Write-Information "$($type.ToUpper()) [ $uri ] | tenant: $tenantid | attempt: $($RetryCount + 1) of $maxRetries"
+                Write-Information "$($type.ToUpper()) [ $uri ] | tenant: $tenantid | user-agent: $($headers['User-Agent']) | attempt: $($RetryCount + 1) of $maxRetries"
                 $ReturnedData = (Invoke-CIPPRestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors -ResponseHeadersVariable responseHeaders)
                 $RequestSuccessful = $true
             } catch {
                 $ShouldRetry = $false
                 $WaitTime = 0
+                $RetryReason = ''
                 $RawErrorBody = $_.ErrorDetails.Message
                 $Message = if ($_.ErrorDetails.Message) {
                     Get-NormalizedError -Message $_.ErrorDetails.Message
@@ -68,20 +68,24 @@ function New-GraphPOSTRequest {
                     $RetryAfterHeader = $_.Exception.Response.Headers['Retry-After']
                     if ($RetryAfterHeader) {
                         $WaitTime = [int]$RetryAfterHeader
-                        Write-Warning "Rate limited (429). Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $maxRetries"
-                        $ShouldRetry = $true
+                        $RetryReason = 'Rate limited (429).'
+                    } else {
+                        $WaitTime = Get-Random -Minimum 1.1 -Maximum 4.1
+                        $RetryReason = 'Rate limited (429) with no Retry-After header.'
                     }
+                    $ShouldRetry = $true
                 }
                 # Check for "Resource temporarily unavailable"
                 elseif ($Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*') {
                     $WaitTime = Get-Random -Minimum 1.1 -Maximum 3.1
-                    Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $maxRetries"
+                    $RetryReason = 'Resource temporarily unavailable.'
                     $ShouldRetry = $true
                 }
 
                 if ($ShouldRetry) {
                     $RetryCount++
                     if ($RetryCount -lt $maxRetries) {
+                        Write-Warning "$RetryReason Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $maxRetries"
                         Start-Sleep -Seconds $WaitTime
                     }
                 } else {

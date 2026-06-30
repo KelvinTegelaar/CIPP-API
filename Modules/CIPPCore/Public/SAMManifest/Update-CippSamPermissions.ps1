@@ -1,9 +1,19 @@
 function Update-CippSamPermissions {
     <#
     .SYNOPSIS
-        Updates CIPP-SAM app permissions by merging missing permissions.
+        Reconciles the saved CIPP-SAM additional-permission set in the AppPermissions table.
     .DESCRIPTION
-        Retrieves current SAM permissions, merges any missing permissions, and updates the AppPermissions table.
+        The SAM manifest is the immutable permission base and is always layered in at read time by
+        Get-CippSamPermissions, so the AppPermissions table only ever needs to hold the EXTRA
+        permissions an admin layered on top. This function keeps that row clean: it drops any saved
+        entries the manifest now covers (e.g. legacy rows that stored the full manifest+extras set)
+        so the table stays "extras only".
+
+        It deliberately does NOT write the partner CIPP-SAM app registration's requiredResourceAccess.
+        Permissions reach the CIPP-SAM service principal(s) - partner and clients - through the grant
+        flow (Add-CIPPApplicationPermission / Add-CIPPDelegatedPermission, which read this table), not
+        through the app registration. Refreshing those grants is handled by the caller
+        (Invoke-ExecPermissionRepair for the partner, the per-tenant permission refresh for clients).
     .PARAMETER UpdatedBy
         The user or system that is performing the update. Defaults to 'CIPP-API'.
     .OUTPUTS
@@ -16,64 +26,70 @@ function Update-CippSamPermissions {
     )
 
     try {
-        $CurrentPermissions = Get-CippSamPermissions
+        # Manifest base - always-required permissions that are layered in at read time, so they never
+        # need to live in the saved extras row.
+        $ManifestPermissions = (Get-CippSamPermissions -ManifestOnly).Permissions
 
-        if (($CurrentPermissions.MissingPermissions | Measure-Object).Count -eq 0) {
-            return 'No permissions to update'
+        $Table = Get-CIPPTable -TableName 'AppPermissions'
+        $SavedRow = Get-CippAzDataTableEntity @Table -Filter "PartitionKey eq 'CIPP-SAM' and RowKey eq 'CIPP-SAM'"
+        if (-not $SavedRow.Permissions) {
+            return 'No additional permissions saved. CIPP default (manifest) permissions are always applied.'
         }
 
-        Write-Information 'Missing permissions found'
-        $MissingPermissions = $CurrentPermissions.MissingPermissions
-        $Permissions = $CurrentPermissions.Permissions
+        try {
+            $Saved = $SavedRow.Permissions | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            return 'Saved additional permissions could not be parsed; nothing to reconcile.'
+        }
 
-        $AppIds = @($Permissions.PSObject.Properties.Name + $MissingPermissions.PSObject.Properties.Name)
-        $NewPermissions = @{}
+        # Keep only the entries the manifest does NOT already cover.
+        $Extras = @{}
+        $RemovedCount = 0
+        foreach ($AppId in $Saved.PSObject.Properties.Name) {
+            $ManifestApp = $ManifestPermissions.$AppId
+            $ManifestAppIds = @($ManifestApp.applicationPermissions.id)
+            $ManifestDelIds = @($ManifestApp.delegatedPermissions.id)
 
-        foreach ($AppId in $AppIds) {
-            if (!$AppId) { continue }
-            $ApplicationPermissions = [system.collections.generic.list[object]]::new()
-            $DelegatedPermissions = [system.collections.generic.list[object]]::new()
-
-            foreach ($Permission in $Permissions.$AppId.applicationPermissions) {
-                $ApplicationPermissions.Add($Permission)
+            $ExtraApp = [System.Collections.Generic.List[object]]::new()
+            foreach ($Permission in $Saved.$AppId.applicationPermissions) {
+                if ($Permission.id -and $ManifestAppIds -notcontains $Permission.id) {
+                    $ExtraApp.Add([PSCustomObject]@{ id = $Permission.id; value = $Permission.value })
+                } else {
+                    $RemovedCount++
+                }
             }
-            if (($MissingPermissions.$AppId.applicationPermissions | Measure-Object).Count -gt 0) {
-                foreach ($MissingPermission in $MissingPermissions.$AppId.applicationPermissions) {
-                    Write-Host "Adding missing permission: $MissingPermission"
-                    $ApplicationPermissions.Add($MissingPermission)
+            $ExtraDel = [System.Collections.Generic.List[object]]::new()
+            foreach ($Permission in $Saved.$AppId.delegatedPermissions) {
+                if ($Permission.id -and $ManifestDelIds -notcontains $Permission.id) {
+                    $ExtraDel.Add([PSCustomObject]@{ id = $Permission.id; value = $Permission.value })
+                } else {
+                    $RemovedCount++
                 }
             }
 
-            foreach ($Permission in $Permissions.$AppId.delegatedPermissions) {
-                $DelegatedPermissions.Add($Permission)
-            }
-            if (($MissingPermissions.$AppId.delegatedPermissions | Measure-Object).Count -gt 0) {
-                foreach ($MissingPermission in $MissingPermissions.$AppId.delegatedPermissions) {
-                    Write-Host "Adding missing permission: $MissingPermission"
-                    $DelegatedPermissions.Add($MissingPermission)
+            if ($ExtraApp.Count -gt 0 -or $ExtraDel.Count -gt 0) {
+                $Extras.$AppId = @{
+                    applicationPermissions = @($ExtraApp)
+                    delegatedPermissions   = @($ExtraDel)
                 }
             }
+        }
 
-            $NewPermissions.$AppId = @{
-                applicationPermissions = @($ApplicationPermissions | Sort-Object -Property label)
-                delegatedPermissions   = @($DelegatedPermissions | Sort-Object -Property label)
-            }
+        if ($RemovedCount -eq 0) {
+            return 'Saved additional permissions already reconciled; no manifest-covered entries to remove.'
         }
 
         $Entity = @{
             'PartitionKey' = 'CIPP-SAM'
             'RowKey'       = 'CIPP-SAM'
-            'Permissions'  = [string]([PSCustomObject]$NewPermissions | ConvertTo-Json -Depth 10 -Compress)
+            'Permissions'  = [string]([PSCustomObject]$Extras | ConvertTo-Json -Depth 10 -Compress)
             'UpdatedBy'    = $UpdatedBy
         }
-
-        $Table = Get-CIPPTable -TableName 'AppPermissions'
         $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
-        Write-LogMessage -API 'UpdateCippSamPermissions' -message 'CIPP-SAM Permissions Updated' -Sev 'Info' -LogData $NewPermissions
-
-        return 'Permissions Updated'
+        $Plural = if ($RemovedCount -eq 1) { 'entry' } else { 'entries' }
+        return "Reconciled saved additional permissions: removed $RemovedCount $Plural now covered by the CIPP manifest."
     } catch {
-        throw "Failed to update permissions: $($_.Exception.Message)"
+        throw "Failed to reconcile permissions: $($_.Exception.Message)"
     }
 }

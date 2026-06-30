@@ -13,6 +13,18 @@ function Invoke-ExecCIPPUsers {
     $Action = $Request.Query.Action ?? $Request.Body.Action
     $Table = Get-CippTable -tablename 'allowedUsers'
 
+    # Returns $true if a row carries a manually-assigned 'superadmin' role.
+    # Superadmin granted via Entra group sync (AutoRoles) does NOT count — group
+    # membership can change, so it must never be the sole source of superadmin.
+    # Match is case-sensitive: the built-in role is exactly 'superadmin'; a custom
+    # role like 'SuperAdmin' is a different role and must not trip this protection.
+    $HasManualSuperAdmin = {
+        param($Entity)
+        if (-not $Entity.ManualRoles) { return $false }
+        try { return (@($Entity.ManualRoles | ConvertFrom-Json -ErrorAction Stop) -ccontains 'superadmin') }
+        catch { return $false }
+    }
+
     switch ($Action) {
         'AddUpdate' {
             try {
@@ -20,7 +32,8 @@ function Invoke-ExecCIPPUsers {
                 if ([string]::IsNullOrWhiteSpace($UPN)) {
                     throw 'UPN (email) is required'
                 }
-                $UPN = $UPN.Trim()
+                # Squash casing so the RowKey is canonical and case-variant duplicates can't form
+                $UPN = $UPN.Trim().ToLower()
 
                 $Roles = @($Request.Body.Roles)
                 if ($Roles.Count -eq 0) {
@@ -45,26 +58,41 @@ function Invoke-ExecCIPPUsers {
                     }
                 }
 
-                # Check if user already exists to preserve auto-synced roles
-                $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$UPN'"
-                $AutoRoles = @()
-                $Source = 'Manual'
+                # Find every existing row for this user (case-insensitive) so auto-synced
+                # roles are preserved and any case-variant duplicates collapse into one
+                # canonical lowercase row.
+                $AllUsers = @(Get-CIPPAzDataTableEntity @Table | Where-Object { -not $_.RowKey.StartsWith('_') })
+                $MatchingEntities = @($AllUsers | Where-Object { $_.RowKey -and $_.RowKey.ToLower() -eq $UPN })
 
-                if ($ExistingEntity -and $ExistingEntity.AutoRoles) {
-                    try {
-                        $AutoRoles = @($ExistingEntity.AutoRoles | ConvertFrom-Json -ErrorAction Stop)
-                    } catch {
-                        $AutoRoles = @()
-                    }
-                    if ($AutoRoles.Count -gt 0) {
-                        $Source = 'Both'
+                # Invariant: at least one user must always keep a manually-assigned superadmin.
+                # Block an update that would strip the last manual superadmin.
+                if (@($Roles) -cnotcontains 'superadmin') {
+                    $TargetHadManualSuperAdmin = @($MatchingEntities | Where-Object { & $HasManualSuperAdmin $_ }).Count -gt 0
+                    if ($TargetHadManualSuperAdmin) {
+                        $OtherManualSuperAdmins = @($AllUsers | Where-Object { $_.RowKey.ToLower() -ne $UPN -and (& $HasManualSuperAdmin $_) })
+                        if ($OtherManualSuperAdmins.Count -eq 0) {
+                            throw 'Cannot remove the superadmin role from the last user that has it manually assigned. Grant superadmin manually to another user first (superadmin from Entra group sync does not count).'
+                        }
                     }
                 }
 
-                # Compute effective roles = union of manual + auto
-                $EffectiveRoles = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                foreach ($R in $Roles) { [void]$EffectiveRoles.Add($R) }
-                foreach ($R in $AutoRoles) { [void]$EffectiveRoles.Add($R) }
+                # Preserve + merge auto roles across all case-variants (case-sensitive dedupe)
+                $AutoRoles = [System.Collections.Generic.List[string]]::new()
+                foreach ($Existing in $MatchingEntities) {
+                    if ($Existing.AutoRoles) {
+                        try {
+                            foreach ($R in @($Existing.AutoRoles | ConvertFrom-Json -ErrorAction Stop)) {
+                                if (-not $AutoRoles.Contains($R)) { $AutoRoles.Add($R) }
+                            }
+                        } catch {}
+                    }
+                }
+                $Source = if ($AutoRoles.Count -gt 0) { 'Both' } else { 'Manual' }
+
+                # Compute effective roles = manual ∪ auto (case-sensitive dedupe)
+                $EffectiveRoles = [System.Collections.Generic.List[string]]::new()
+                foreach ($R in $Roles) { if (-not $EffectiveRoles.Contains($R)) { $EffectiveRoles.Add($R) } }
+                foreach ($R in $AutoRoles) { if (-not $EffectiveRoles.Contains($R)) { $EffectiveRoles.Add($R) } }
                 $EffectiveRolesArray = @($EffectiveRoles | Sort-Object)
 
                 $Entity = @{
@@ -72,10 +100,17 @@ function Invoke-ExecCIPPUsers {
                     RowKey       = $UPN
                     Roles        = [string]($EffectiveRolesArray | ConvertTo-Json -Compress -AsArray)
                     ManualRoles  = [string](@($Roles) | ConvertTo-Json -Compress -AsArray)
-                    AutoRoles    = [string]($AutoRoles | ConvertTo-Json -Compress -AsArray)
+                    AutoRoles    = [string](@($AutoRoles) | ConvertTo-Json -Compress -AsArray)
                     Source       = $Source
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
+
+                # Remove any case-variant duplicate rows now merged into the canonical row
+                foreach ($Existing in $MatchingEntities) {
+                    if ($Existing.RowKey -cne $UPN) {
+                        Remove-AzDataTableEntity -Force @Table -Entity $Existing
+                    }
+                }
 
                 # Trigger a user sync to reconcile auto + manual roles
                 try { Start-UserSyncTimer } catch {}
@@ -100,7 +135,7 @@ function Invoke-ExecCIPPUsers {
                 if ([string]::IsNullOrWhiteSpace($UPN)) {
                     throw 'UPN (email) is required'
                 }
-                $UPN = $UPN.Trim()
+                $UPN = $UPN.Trim().ToLower()
 
                 # Self-lockout protection: prevent removing yourself
                 $CurrentUser = $Request.Headers.'x-ms-client-principal-name'
@@ -108,12 +143,28 @@ function Invoke-ExecCIPPUsers {
                     throw 'Cannot remove your own user account. This would lock you out.'
                 }
 
-                $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$UPN'"
-                if (-not $ExistingEntity) {
+                # Fetch all users once so we can locate the target (case-insensitively)
+                # and enforce the "at least one manual superadmin" invariant.
+                $AllUsers = @(Get-CIPPAzDataTableEntity @Table | Where-Object { -not $_.RowKey.StartsWith('_') })
+                $MatchingEntities = @($AllUsers | Where-Object { $_.RowKey -and $_.RowKey.ToLower() -eq $UPN })
+                if ($MatchingEntities.Count -eq 0) {
                     throw "User $UPN not found in the allowed users table"
                 }
 
-                Remove-AzDataTableEntity -Force @Table -Entity $ExistingEntity
+                # Invariant: don't remove the last user holding a manually-assigned superadmin.
+                # (Superadmin granted via Entra group sync does not count — it can disappear
+                # when group membership changes.)
+                $TargetHasManualSuperAdmin = @($MatchingEntities | Where-Object { & $HasManualSuperAdmin $_ }).Count -gt 0
+                if ($TargetHasManualSuperAdmin) {
+                    $OtherManualSuperAdmins = @($AllUsers | Where-Object { $_.RowKey.ToLower() -ne $UPN -and (& $HasManualSuperAdmin $_) })
+                    if ($OtherManualSuperAdmins.Count -eq 0) {
+                        throw 'Cannot remove the last user with a manually assigned superadmin role. Grant superadmin manually to another user first (superadmin from Entra group sync does not count).'
+                    }
+                }
+
+                foreach ($Existing in $MatchingEntities) {
+                    Remove-AzDataTableEntity -Force @Table -Entity $Existing
+                }
                 try { [Craft.Services.AuthBridge]::InvalidateUsers() } catch {}
 
                 $Result = "Successfully removed user $UPN"

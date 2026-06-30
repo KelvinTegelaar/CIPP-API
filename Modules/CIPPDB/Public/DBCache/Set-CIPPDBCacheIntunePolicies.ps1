@@ -28,7 +28,7 @@ function Set-CIPPDBCacheIntunePolicies {
 
         $PolicyTypes = @(
             @{ Type = 'DeviceCompliancePolicies'; Uri = '/deviceManagement/deviceCompliancePolicies?$top=999&$expand=assignments'; FetchDeviceStatuses = $true }
-            @{ Type = 'DeviceConfigurations'; Uri = '/deviceManagement/deviceConfigurations?$top=999&$expand=assignments' }
+            @{ Type = 'DeviceConfigurations'; Uri = '/deviceManagement/deviceConfigurations?$top=999&$expand=assignments'; FetchDeviceStatuses = $true }
             @{ Type = 'ConfigurationPolicies'; Uri = '/deviceManagement/configurationPolicies?$top=999&$expand=assignments,settings' }
             @{ Type = 'GroupPolicyConfigurations'; Uri = '/deviceManagement/groupPolicyConfigurations?$top=999&$expand=assignments' }
             @{ Type = 'MobileAppConfigurations'; Uri = '/deviceManagement/mobileAppConfigurations?$top=999&$expand=assignments' }
@@ -107,9 +107,8 @@ function Set-CIPPDBCacheIntunePolicies {
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type "Intune$($PolicyType.Type)" -Data $Policies -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Policies.Count) $($PolicyType.Type)" -sev Debug
 
-                # Fetch device statuses for compliance policies using bulk requests
                 if ($PolicyType.FetchDeviceStatuses -and ($Policies | Measure-Object).Count -gt 0) {
-                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Fetching device statuses for $($Policies.Count) compliance policies using bulk request" -sev Debug
+                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Fetching device statuses for $($Policies.Count) $($PolicyType.Type) using bulk request" -sev Debug
 
                     $BaseUri = ($PolicyType.Uri -split '\?')[0]
                     # Build bulk request array

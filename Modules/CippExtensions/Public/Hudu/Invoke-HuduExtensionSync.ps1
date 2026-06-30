@@ -8,7 +8,7 @@ function Invoke-HuduExtensionSync {
         $TenantFilter
     )
     try {
-        Connect-HuduAPI -configuration $Configuration
+        Connect-HuduAPI -configuration $Configuration | Out-Null
         $Configuration = $Configuration.Hudu
         $Tenant = Get-Tenants -TenantFilter $TenantFilter -IncludeErrors
         $CompanyResult = [PSCustomObject]@{
@@ -47,6 +47,18 @@ function Invoke-HuduExtensionSync {
         # Include mailboxes if needed for Hudu sync
         $ExtensionCache = Get-CippExtensionReportingData -TenantFilter $Tenant.defaultDomainName -IncludeMailboxes
         $company_id = $TenantMap.IntegrationId
+        $HuduCompany = Get-HuduCompanies -Id $company_id
+        if ($HuduCompany.archived -eq $true) {
+            Write-Host "Company $($HuduCompany.name) is archived. Skipping sync."
+            $ReturnObject = [PSCustomObject]@{
+                Name    = $Tenant.displayName
+                Users   = 0
+                Devices = 0
+                Errors  = [System.Collections.Generic.List[string]]@("Company $($HuduCompany.name) is archived. Skipping sync.")
+                Logs    = [System.Collections.Generic.List[string]]@("Company $($HuduCompany.name) is archived. Skipping sync.")
+            }
+            return $ReturnObject
+        }
 
         # If tenant not found in mapping table, return error
         if (!$TenantMap) {
@@ -121,7 +133,7 @@ function Invoke-HuduExtensionSync {
         }
 
         $HuduRelations = Get-HuduRelations
-        [System.Collections.ArrayList]$Links = @(
+        [System.Collections.Generic.List[object]]$Links = @(
             @{
                 Title = 'M365 Admin Portal'
                 URL   = 'https://admin.cloud.microsoft?delegatedOrg={0}' -f $Tenant.initialDomainName
@@ -153,29 +165,26 @@ function Invoke-HuduExtensionSync {
                 Icon  = 'fas fa-server'
             }
         )
-        if($Configuration.IncludeDefenderLink)
-        {
+        if ($Configuration.IncludeDefenderLink) {
             $Links.Add(@{
-                Title = 'Defender Portal'
-                URL   = 'https://security.microsoft.com/?tid={0}' -f $Tenant.customerId
-                Icon  = 'fas fa-shield'
-            })
+                    Title = 'Defender Portal'
+                    URL   = 'https://security.microsoft.com/?tid={0}' -f $Tenant.customerId
+                    Icon  = 'fas fa-shield'
+                })
         }
-        if($Configuration.IncludeComplianceLink)
-        {
+        if ($Configuration.IncludeComplianceLink) {
             $Links.Add(@{
-                Title = 'Compliance Portal'
-                URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
-                Icon  = 'fas fa-caret-up'
-            })
+                    Title = 'Compliance Portal'
+                    URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
+                    Icon  = 'fas fa-caret-up'
+                })
         }
-        if($Configuration.IncludeParterCenterLink)
-        {
+        if ($Configuration.IncludeParterCenterLink) {
             $Links.Add(@{
-                Title = 'Partner Center Portals'
-                URL   = 'https://partner.microsoft.com/dashboard/v2/customers/{0}/servicemanagementpage' -f $Tenant.customerId
-                Icon  = 'fas fa-arrow-up-right-from-square'
-            })
+                    Title = 'Partner Center Portals'
+                    URL   = 'https://partner.microsoft.com/dashboard/v2/customers/{0}/servicemanagementpage' -f $Tenant.customerId
+                    Icon  = 'fas fa-arrow-up-right-from-square'
+                })
         }
 
         $FormattedLinks = foreach ($Link in $Links) {
@@ -209,7 +218,7 @@ function Invoke-HuduExtensionSync {
 
         $post = '</div>'
 
-        if($Configuration.HideEmptyRoles) {
+        if ($Configuration.HideEmptyRoles) {
             $Roles = $Roles | Where-Object { $_.ParsedMembers }
         }
 

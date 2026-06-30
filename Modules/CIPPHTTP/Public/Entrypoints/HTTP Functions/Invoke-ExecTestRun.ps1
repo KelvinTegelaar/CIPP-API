@@ -72,9 +72,6 @@ function Invoke-ExecTestRun {
 
         $StatusCode = [HttpStatusCode]::OK
         $Body = [PSCustomObject]@{ Results = $ResultMessage }
-
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Mode '$Mode' orchestration started. Instance ID: $InstanceId" -sev Info
-
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to start data collection/test run: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

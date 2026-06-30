@@ -20,6 +20,8 @@ function Get-CIPPAlertInactiveLicensedUsers {
 
             if ($InputValue -is [hashtable] -or $InputValue -is [pscustomobject]) {
                 $excludeDisabled = [bool]$InputValue.ExcludeDisabled
+                # Allow the alert configuration to opt in to reporting users who have never signed in (e.g. accounts with sign-in blocked)
+                if ([bool]$InputValue.IncludeNeverSignedIn) { $IncludeNeverSignedIn = $true }
                 if ($null -ne $InputValue.DaysSinceLastLogin -and $InputValue.DaysSinceLastLogin -ne '') {
                     $parsedDays = 0
                     if ([int]::TryParse($InputValue.DaysSinceLastLogin.ToString(), [ref]$parsedDays) -and $parsedDays -gt 0) {

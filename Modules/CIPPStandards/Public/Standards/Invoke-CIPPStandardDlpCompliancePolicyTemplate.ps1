@@ -50,37 +50,53 @@ function Invoke-CIPPStandardDlpCompliancePolicyTemplate {
         return
     }
 
-    if ($Settings.remediate -eq $true) {
-        foreach ($Template in @($Templates)) {
-            $null = Set-CIPPDlpCompliancePolicy -TenantFilter $Tenant -Template $Template -APIName 'Standards'
+    # Compare each template against the live policy + rules. Remediate only what actually drifts (or is
+    # missing) - an in-sync policy is left untouched. After a successful remediation we re-compare so the
+    # report/alert reflect the corrected state. A PendingDeletion policy can't be modified, so it is
+    # surfaced as non-compliant rather than redeployed (the deploy would just fail).
+    $Comparisons = foreach ($Template in @($Templates)) {
+        $Comparison = Compare-CIPPDlpCompliancePolicy -TenantFilter $Tenant -Template $Template
+
+        if ($Settings.remediate -eq $true -and $Comparison.State -in @('Missing', 'Drift')) {
+            $DeployResult = Set-CIPPDlpCompliancePolicy -TenantFilter $Tenant -Template $Template -APIName 'Standards'
+            if ($DeployResult -match '^(Could not deploy|Failed)') {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message $DeployResult -sev Error
+                $Comparison | Add-Member -NotePropertyName DeployError -NotePropertyValue "$DeployResult" -Force
+            } else {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Remediated DLP policy '$($Comparison.Name)' ($($Comparison.State)): $DeployResult" -sev Info
+                $Comparison = Compare-CIPPDlpCompliancePolicy -TenantFilter $Tenant -Template $Template
+            }
         }
+        $Comparison
     }
 
-    # Determine which templated policies are present in the tenant for alert/report modes
-    $ExistingPolicyNames = try {
-        @(New-ExoRequest -tenantid $Tenant -cmdlet 'Get-DlpCompliancePolicy' -Compliance | Select-Object -ExpandProperty Name)
-    } catch { @() }
-
-    $MissingPolicies = @(foreach ($Template in @($Templates)) {
-            $TemplateName = $Template.Name ?? $Template.name
-            if ($ExistingPolicyNames -notcontains $TemplateName) { $TemplateName }
-        })
+    $NonCompliant = @($Comparisons | Where-Object { $_.State -ne 'InSync' })
 
     if ($Settings.alert -eq $true) {
-        if ($MissingPolicies.Count -eq 0) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All selected DLP compliance policy templates are deployed.' -sev Info
+        if ($NonCompliant.Count -eq 0) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All selected DLP compliance policy templates are deployed and in sync.' -sev Info
         } else {
-            $AlertMessage = "DLP compliance policies not deployed in tenant: $($MissingPolicies -join ', ')"
-            Write-StandardsAlert -message $AlertMessage -object @{ MissingPolicies = $MissingPolicies } -tenant $Tenant -standardName 'DlpCompliancePolicyTemplate' -standardId $Settings.standardId
+            $Summary = $NonCompliant | ForEach-Object {
+                if ($_.State -eq 'Drift') {
+                    $Fields = @($_.Differences | ForEach-Object { "$($_.Scope)/$($_.Field)" }) -join ', '
+                    "$($_.Name): drift in $Fields"
+                } else {
+                    "$($_.Name): $($_.State)"
+                }
+            }
+            $AlertMessage = "DLP compliance policy templates not in sync: $($Summary -join '; ')"
+            Write-StandardsAlert -message $AlertMessage -object @{ NonCompliantPolicies = $NonCompliant } -tenant $Tenant -standardName 'DlpCompliancePolicyTemplate' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message $AlertMessage -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        $CurrentValue = @{ MissingPolicies = $MissingPolicies }
-        $ExpectedValue = @{ MissingPolicies = @() }
+        # Expose the actual drift (per policy: state + the differing fields with expected vs current
+        # values) rather than just a list of missing names.
+        $CurrentValue = @{ NonCompliantPolicies = $NonCompliant }
+        $ExpectedValue = @{ NonCompliantPolicies = @() }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DlpCompliancePolicyTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DlpCompliancePolicyTemplate' -FieldValue ($MissingPolicies.Count -eq 0) -StoreAs bool -Tenant $Tenant
+        Add-CIPPBPAField -FieldName 'DlpCompliancePolicyTemplate' -FieldValue ($NonCompliant.Count -eq 0) -StoreAs bool -Tenant $Tenant
     }
 }
