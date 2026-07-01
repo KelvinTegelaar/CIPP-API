@@ -6,6 +6,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Identity/Administration/Users/Invoke-EditUser.ps1'
+    $CorePath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Set-CIPPUser.ps1'
 
     class HttpResponseContext {
         [object]$StatusCode
@@ -23,6 +24,10 @@ BeforeAll {
     function New-GraphPostRequest {
         param($uri, $tenantid, $type, $body, [switch]$verbose)
         if ($null -eq $script:lastBody) { $script:lastBody = $body }
+    }
+    function Add-CIPPScheduledTask {
+        param($Task, $hidden, $DisallowDuplicateName, $Headers)
+        $script:lastScheduledTask = $Task
     }
 
     function New-EditRequest {
@@ -44,6 +49,7 @@ BeforeAll {
         }
     }
 
+    . $CorePath
     . $FunctionPath
 }
 
@@ -90,5 +96,23 @@ Describe 'Invoke-EditUser body construction' {
         $null = Invoke-EditUser -Request $request -TriggerMetadata $null
 
         $script:lastBody | Should -Not -Match '"displayName":(null|"")'
+    }
+}
+
+Describe 'Invoke-EditUser scheduling' {
+    BeforeEach {
+        $script:lastBody = $null
+        $script:lastScheduledTask = $null
+    }
+
+    It 'schedules a Set-CIPPUser task instead of editing immediately when Scheduled.Enabled is set' {
+        $request = New-EditRequest -Extra @{ Scheduled = @{ Enabled = $true; date = 1234567890 } }
+
+        $null = Invoke-EditUser -Request $request -TriggerMetadata $null
+
+        $script:lastBody | Should -BeNullOrEmpty
+        $script:lastScheduledTask.Command.value | Should -Be 'Set-CIPPUser'
+        $script:lastScheduledTask.Parameters.UserObj.id | Should -Be $request.Body.id
+        $script:lastScheduledTask.ScheduledTime | Should -Be 1234567890
     }
 }

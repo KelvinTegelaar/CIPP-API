@@ -234,6 +234,7 @@ function Add-CIPPScheduledTask {
                 Results              = 'Planned'
                 AlertComment         = [string]$task.AlertComment
                 CustomSubject        = [string]$task.CustomSubject
+                PsaTicketStrategy    = [string]($task.PsaTicketStrategy.value ?? $task.PsaTicketStrategy)
             }
 
 

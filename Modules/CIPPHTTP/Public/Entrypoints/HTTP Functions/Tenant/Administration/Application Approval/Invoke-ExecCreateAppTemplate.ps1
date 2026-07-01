@@ -34,12 +34,12 @@ function Invoke-ExecCreateAppTemplate {
             [PSCustomObject]@{
                 id     = 'app'
                 method = 'GET'
-                url    = "/applications(appId='$AppId')?`$select=id,appId,displayName,requiredResourceAccess"
+                url    = "/applications(appId='$AppId')?`$select=id,appId,displayName,signInAudience,requiredResourceAccess"
             }
             [PSCustomObject]@{
                 id     = 'splist'
                 method = 'GET'
-                url    = '/servicePrincipals?$top=999&$select=id,appId,displayName'
+                url    = '/servicePrincipals?$top=999&$select=id,appId,displayName,signInAudience'
             }
         )
 
@@ -51,6 +51,20 @@ function Invoke-ExecCreateAppTemplate {
 
         # Find the specific service principal in the list
         $SPResult = $TenantInfo | Where-Object { $_.appId -eq $AppId } | Select-Object -First 1
+
+        # Determine the source app's sign-in audience so we only build Enterprise App
+        # templates for genuinely multi-tenant apps. A single-tenant app (AzureADMyOrg)
+        # cannot be deployed via an appId-based service principal, and copying it to the
+        # partner tenant as multi-tenant produces a template that fails to deploy. Those
+        # apps must use a Manifest (single-tenant) template instead.
+        $MultiTenantAudiences = @('AzureADMultipleOrgs', 'AzureADandPersonalMicrosoftAccount')
+        $SignInAudience = $AppResult.body.signInAudience
+        if ([string]::IsNullOrWhiteSpace($SignInAudience)) {
+            $SignInAudience = $SPResult.signInAudience
+        }
+        if (-not [string]::IsNullOrWhiteSpace($SignInAudience) -and $SignInAudience -notin $MultiTenantAudiences) {
+            throw "Application '$DisplayName' is single-tenant (signInAudience '$SignInAudience') and cannot be used as an Enterprise App template. Create a Manifest (single-tenant) template for this app instead."
+        }
 
         # Get the app details based on type
         if ($Type -eq 'servicePrincipal') {
