@@ -38,6 +38,15 @@ function Invoke-ExecDeviceAction {
                 Write-Host "ActionBody: $ActionBody"
                 break
             }
+            'createDeviceLogCollectionRequest' {
+                $ActionBody = @{
+                    templateType = @{
+                        '@odata.type' = '#microsoft.graph.deviceLogCollectionRequest'
+                        templateType  = 'predefined'
+                    }
+                } | ConvertTo-Json -Compress -Depth 5
+                break
+            }
             default { $ActionBody = $Request.Body | ConvertTo-Json -Compress }
         }
 
