@@ -137,6 +137,11 @@ function Send-CIPPScheduledTaskAlert {
         $NotificationFilter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
         $NotificationConfig = [pscustomobject](Get-CIPPAzDataTableEntity @NotificationTable -Filter $NotificationFilter)
         $UseStandardizedSchema = [boolean]$NotificationConfig.UseStandardizedSchema
+        $TaskParameters = $TaskInfo.Parameters
+        if ($TaskParameters -is [string] -and $TaskParameters) {
+            try { $TaskParameters = $TaskParameters | ConvertFrom-Json -ErrorAction Stop } catch { $TaskParameters = $null }
+        }
+        $ExecutingUser = $TaskParameters.Headers.'x-ms-client-principal-name'
 
         # Send to configured alert targets
         switch -wildcard ($TaskInfo.PostExecution) {
@@ -181,10 +186,11 @@ function Send-CIPPScheduledTaskAlert {
 
                 $Webhook = if ($UseStandardizedSchema) {
                     $obj = [PSCustomObject]@{
-                        tenantId     = $TenantInfo.customerId
-                        tenant       = $TenantFilter
-                        taskType     = $TaskType
-                        task         = [PSCustomObject]@{
+                        tenantId      = $TenantInfo.customerId
+                        tenant        = $TenantFilter
+                        taskType      = $TaskType
+                        executingUser = $ExecutingUser
+                        task          = [PSCustomObject]@{
                             id        = $TaskInfo.RowKey
                             name      = $TaskInfo.Name
                             command   = $TaskInfo.Command
@@ -194,8 +200,8 @@ function Send-CIPPScheduledTaskAlert {
                             executed  = $TaskInfo.ExecutedTime
                             partition = $TaskInfo.PartitionKey
                         }
-                        results      = $Results
-                        alertComment = $TaskInfo.AlertComment
+                        results       = $Results
+                        alertComment  = $TaskInfo.AlertComment
                     }
                     if ($SnoozeInfo) { $obj | Add-Member -NotePropertyName 'snooze' -NotePropertyValue $SnoozeInfo }
                     $obj
