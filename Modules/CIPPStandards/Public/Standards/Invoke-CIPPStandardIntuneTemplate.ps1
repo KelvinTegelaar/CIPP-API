@@ -116,7 +116,7 @@ function Invoke-CIPPStandardIntuneTemplate {
 
     if ($ExistingPolicy) {
         try {
-            $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant
+            $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant -EscapeForJson
             $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json
             $JSONTemplate = $RawJSON | ConvertFrom-Json
             $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $TemplateType -ErrorAction SilentlyContinue
