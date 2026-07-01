@@ -122,7 +122,7 @@ Describe 'Get-CIPPAlertIntunePolicyConflicts' {
 
         $AppIssue = $CapturedData | Where-Object { $_.Type -eq 'Application' }
         $AppIssue.FailedDeviceCount | Should -Be 3
-        $AppIssue.Message | Should -Match "failed to install on 3 device"
+        $AppIssue.Message | Should -Match 'failed to install on 3 device'
     }
 
     It 'skips processing when license check fails' {
