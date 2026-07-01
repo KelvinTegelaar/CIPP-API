@@ -89,7 +89,7 @@ function Set-CIPPAssignedPolicy {
                     $resolvedGroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter |
                         ForEach-Object {
                             foreach ($SingleName in $GroupNames) {
-                                if ($_.displayName -like $SingleName) {
+                                if ($_.displayName -like ($SingleName -replace '\[', '`[' -replace '\]', '`]')) {
                                     $_.id
                                 }
                             }
@@ -129,7 +129,7 @@ function Set-CIPPAssignedPolicy {
                 $ResolvedExcludeIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter |
                     ForEach-Object {
                         foreach ($SingleName in $ExcludeGroupNames) {
-                            if ($_.displayName -like $SingleName) {
+                            if ($_.displayName -like ($SingleName -replace '\[', '`[' -replace '\]', '`]')) {
                                 $_.id
                             }
                         }

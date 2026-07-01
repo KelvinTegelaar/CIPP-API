@@ -80,7 +80,7 @@ function Compare-CIPPIntuneAssignments {
             $ExpectedGroupIds = @(
                 $ExpectedCustomGroup.Split(',').Trim() | ForEach-Object {
                     $name = $_
-                    $AllGroupsCache | Where-Object { $_.displayName -like $name } | Select-Object -ExpandProperty id
+                    $AllGroupsCache | Where-Object { $_.displayName -like ($name -replace '\[', '`[' -replace '\]', '`]') } | Select-Object -ExpandProperty id
                 } | Where-Object { $_ }
             )
             $MissingIds = @($ExpectedGroupIds | Where-Object { $_ -notin $ExistingIncludeGroupIds })
@@ -97,7 +97,7 @@ function Compare-CIPPIntuneAssignments {
             $ExpectedExcludeIds = @(
                 $ExpectedExcludeGroup.Split(',').Trim() | ForEach-Object {
                     $name = $_
-                    $AllGroupsCache | Where-Object { $_.displayName -like $name } | Select-Object -ExpandProperty id
+                    $AllGroupsCache | Where-Object { $_.displayName -like ($name -replace '\[', '`[' -replace '\]', '`]') } | Select-Object -ExpandProperty id
                 } | Where-Object { $_ }
             )
             $MissingExcludeIds = @($ExpectedExcludeIds | Where-Object { $_ -notin $ExistingExcludeGroupIds })
