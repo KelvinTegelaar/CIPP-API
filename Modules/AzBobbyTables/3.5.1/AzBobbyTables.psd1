@@ -110,11 +110,12 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-          ReleaseNotes = '## [3.5.1] - 2026-04-22
+          ReleaseNotes = '## [3.5.1] - 2026-07-01
 
-### Changed
+### Added
 
-- Share a single HttpClient across all TableClient/TableServiceClient instances via HttpClientTransport, enabling TCP connection pooling and reducing socket churn in high-concurrency scenarios
+- Added a `-MaxConnectionsPerServer` parameter to `New-AzDataTableContext` to cap the number of concurrent connections per server endpoint on the shared HTTP client pool. Applied process-wide on first use; default is unlimited.
+- Added a `-MaxRetries` parameter to the table operation cmdlets (`Add-`, `Get-`, `Remove-`, `Update-AzDataTableEntity`, `Clear-`, `Get-`, `New-`, `Remove-AzDataTable`) to retry throttled requests (HTTP 429), waiting for the service''s Retry-After hint between attempts. Defaults to `0` (no retries).
 
 '
 

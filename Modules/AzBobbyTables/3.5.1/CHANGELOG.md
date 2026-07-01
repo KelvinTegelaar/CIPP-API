@@ -4,9 +4,17 @@ The format is based on and uses the types of changes according to [Keep a Change
 
 ## [Unreleased]
 
+### Added
+
+- Added a `-MaxConnectionsPerServer` parameter to `New-AzDataTableContext` to cap the number of concurrent connections per server endpoint on the shared HTTP client pool. Applied process-wide on first use; default is unlimited.
+- Added a `-MaxRetries` parameter to the table operation cmdlets (`Add-`, `Get-`, `Remove-`, `Update-AzDataTableEntity`, `Clear-`, `Get-`, `New-`, `Remove-AzDataTable`) to retry throttled requests (HTTP 429), waiting for the service's Retry-After hint between attempts. Defaults to `0` (no retries).
+
+## [3.5.0] - 2026-04-20
+
 ### Changed
 
-- Share a single HttpClient across all TableClient/TableServiceClient instances via HttpClientTransport, enabling TCP connection pooling and reducing socket churn in high-concurrency scenarios
+- Now shares a single HttpClient across all TableClient/TableServiceClient instances via HttpClientTransport, enabling TCP connection pooling and reducing socket churn in high-concurrency scenarios [#122](https://github.com/PalmEmanuel/AzBobbyTables/pull/122)
+- Bump System.Linq.Async from 7.0.0 to 7.0.1
 
 ## [3.4.2] - 2026-03-30
 
@@ -92,7 +100,8 @@ The format is based on and uses the types of changes according to [Keep a Change
 
 ## 3.1.1 - 2023-05-03
 
-[unreleased]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.4.2...HEAD
+[unreleased]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.5.0...HEAD
+[3.5.0]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.4.2...v3.5.0
 [3.4.2]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.4.1...v3.4.2
 [3.4.1]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.4.0...v3.4.1
 [3.4.0]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.3.2...v3.4.0
