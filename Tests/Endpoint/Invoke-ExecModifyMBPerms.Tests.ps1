@@ -34,6 +34,7 @@ BeforeAll {
     function New-ExoBulkRequest { param($tenantid, $cmdletArray, $ReturnWithCommand) }
     function Get-CippException { param($Exception) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
+    function Sync-CIPPMailboxPermissionCache { param($TenantFilter, $MailboxIdentity, $User, $PermissionType, $Action) }
 
     . $PermissionFunctionPath
     . $FunctionPath
@@ -82,6 +83,7 @@ Describe 'Invoke-ExecModifyMBPerms' {
         }
         Mock -CommandName Get-CippException -MockWith { [pscustomobject]@{ NormalizedError = 'boom' } }
         Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Sync-CIPPMailboxPermissionCache -MockWith { }
     }
 
     Context 'Single-operation execution and per-level mapping' {
@@ -244,6 +246,82 @@ Describe 'Invoke-ExecModifyMBPerms' {
             $response = Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
 
             ($response.Body.Results -join "`n") | Should -Match 'Could not find user ghost@contoso.com'
+        }
+    }
+
+    Context 'Cache sync' {
+        # The endpoint executes cmdlets itself (bypassing Set-CIPPMailboxPermission's execute-mode
+        # sync), so it must sync the reporting-DB cache for every operation that succeeded.
+        It 'syncs the cache after a successful single Remove' {
+            $req = New-ModifyRequest -Mailboxes @(New-Mailbox -Permissions @(New-Perm -Level 'FullAccess' -Modification 'Remove'))
+
+            Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
+
+            Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter {
+                $TenantFilter -eq 'contoso.com' -and $MailboxIdentity -eq 'shared@contoso.com' -and
+                $User -eq 'user@contoso.com' -and $PermissionType -eq 'FullAccess' -and $Action -eq 'Remove'
+            }
+        }
+
+        It 'syncs with Action Add for additions' {
+            $req = New-ModifyRequest -Mailboxes @(New-Mailbox -Permissions @(New-Perm -Level 'SendAs' -Modification 'Add'))
+
+            Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
+
+            Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter {
+                $PermissionType -eq 'SendAs' -and $Action -eq 'Add'
+            }
+        }
+
+        It 'syncs every successful operation in a bulk request' {
+            $req = New-ModifyRequest -Mailboxes @(New-Mailbox -Permissions @(
+                (New-Perm -Level 'FullAccess' -Modification 'Remove')
+                (New-Perm -Level 'SendOnBehalf' -Modification 'Remove')
+            ))
+
+            Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
+
+            Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter { $PermissionType -eq 'FullAccess' }
+            Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter { $PermissionType -eq 'SendOnBehalf' }
+        }
+
+        It 'does not sync operations that failed in the bulk response' {
+            # FullAccess Remove (Remove-MailboxPermission) succeeds; SendAs Remove
+            # (Remove-RecipientPermission) comes back with an error attached.
+            Mock -CommandName New-ExoBulkRequest -MockWith {
+                param($tenantid, $cmdletArray, $ReturnWithCommand)
+                $h = @{}
+                foreach ($c in $cmdletArray) {
+                    $name = $c.CmdletInput.CmdletName
+                    if (-not $h.ContainsKey($name)) { $h[$name] = @() }
+                    $entry = [pscustomobject]@{ OperationGuid = $c.OperationGuid }
+                    if ($name -eq 'Remove-RecipientPermission') {
+                        $entry | Add-Member -NotePropertyName error -NotePropertyValue 'denied'
+                    }
+                    $h[$name] += $entry
+                }
+                $h
+            }
+            $req = New-ModifyRequest -Mailboxes @(New-Mailbox -Permissions @(
+                (New-Perm -Level 'FullAccess' -Modification 'Remove')
+                (New-Perm -Level 'SendAs' -Modification 'Remove')
+            ))
+
+            Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
+
+            Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly
+            Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter { $PermissionType -eq 'FullAccess' }
+        }
+
+        It 'does not sync non-cacheable permission levels' {
+            # Comma-joined levels are split per operation; ReadPermission executes but has no
+            # cache representation, so only the FullAccess half syncs.
+            $req = New-ModifyRequest -Mailboxes @(New-Mailbox -Permissions @(New-Perm -Level 'FullAccess, ReadPermission' -Modification 'Remove'))
+
+            Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
+
+            Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly
+            Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter { $PermissionType -eq 'FullAccess' }
         }
     }
 
