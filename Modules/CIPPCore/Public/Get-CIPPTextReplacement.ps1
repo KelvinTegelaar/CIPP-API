@@ -29,6 +29,8 @@ function Get-CIPPTextReplacement {
         '%serial%',
         '%systemroot%',
         '%systemdrive%',
+        '%system32%',
+        '%osdrive%',
         '%temp%',
         '%tenantid%',
         '%tenantfilter%',
