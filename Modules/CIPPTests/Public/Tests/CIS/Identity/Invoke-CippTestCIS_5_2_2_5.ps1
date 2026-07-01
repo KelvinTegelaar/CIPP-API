@@ -7,7 +7,7 @@ function Invoke-CippTestCIS_5_2_2_5 {
 
     try {
         $CA = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
-        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
+        $Roles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
         $Strengths = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationStrengths'
 
         if (-not $CA -or -not $Roles) {
@@ -15,7 +15,8 @@ function Invoke-CippTestCIS_5_2_2_5 {
             return
         }
 
-        $PrivRoleIds = ($Roles | Where-Object { $_.isPrivileged -eq $true }).id
+        # Conditional Access includeRoles reference role template IDs, not directory role instance IDs.
+        $PrivRoleIds = @($Roles | ForEach-Object { if ($_.roleTemplateId) { [string]$_.roleTemplateId } elseif ($_.RoletemplateId) { [string]$_.RoletemplateId } })
         $PhishResistantId = '00000000-0000-0000-0000-000000000004'  # Built-in 'Phishing-resistant MFA' strength
 
         $Matching = $CA | Where-Object {
