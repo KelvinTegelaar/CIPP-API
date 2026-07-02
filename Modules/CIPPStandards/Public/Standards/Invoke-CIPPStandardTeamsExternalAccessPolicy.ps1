@@ -45,7 +45,7 @@ function Invoke-CIPPStandardTeamsExternalAccessPolicy {
     } #we're done.
 
     try {
-        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global' } |
+        $CurrentState = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'ExternalAccessPolicy' -Action Get -Identity 'Global' |
             Select-Object *
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -70,7 +70,7 @@ function Invoke-CIPPStandardTeamsExternalAccessPolicy {
             }
 
             try {
-                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsExternalAccessPolicy' -CmdParams $cmdParams
+                $null = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'ExternalAccessPolicy' -Action Set -Parameters $cmdParams
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated External Access Policy' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

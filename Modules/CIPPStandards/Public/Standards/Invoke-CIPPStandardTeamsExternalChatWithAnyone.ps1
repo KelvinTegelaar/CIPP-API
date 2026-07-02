@@ -45,7 +45,7 @@ function Invoke-CIPPStandardTeamsExternalChatWithAnyone {
     }
 
     try {
-        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMessagingPolicy' -CmdParams @{ Identity = 'Global' } | Select-Object -Property Identity, UseB2BInvitesToAddExternalUsers
+        $CurrentState = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TeamsMessagingPolicy' -Action Get -Identity 'Global' | Select-Object -Property Identity, UseB2BInvitesToAddExternalUsers
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the Teams external chat state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
@@ -67,7 +67,7 @@ function Invoke-CIPPStandardTeamsExternalChatWithAnyone {
             }
 
             try {
-                $null = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTeamsMessagingPolicy' -CmdParams $cmdParams
+                $null = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TeamsMessagingPolicy' -Action Set -Parameters $cmdParams
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully updated Teams external chat with anyone setting to UseB2BInvitesToAddExternalUsers: $DesiredState" -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_

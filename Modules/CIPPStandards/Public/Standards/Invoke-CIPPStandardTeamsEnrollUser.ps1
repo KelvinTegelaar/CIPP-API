@@ -47,7 +47,7 @@ function Invoke-CIPPStandardTeamsEnrollUser {
     $enrollUserOverride = $Settings.EnrollUserOverride.value ?? $Settings.EnrollUserOverride
 
     try {
-        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -cmdParams @{Identity = 'Global' } |
+        $CurrentState = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TeamsMeetingPolicy' -Action Get -Identity 'Global' |
             Select-Object EnrollUserOverride
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -67,7 +67,7 @@ function Invoke-CIPPStandardTeamsEnrollUser {
             }
 
             try {
-                $null = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTeamsMeetingPolicy' -cmdParams $cmdParams
+                $null = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TeamsMeetingPolicy' -Action Set -Parameters $cmdParams
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Teams Enroll User Override setting to $enrollUserOverride." -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_

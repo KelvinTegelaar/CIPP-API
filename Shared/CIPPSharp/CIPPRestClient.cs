@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -704,7 +705,7 @@ namespace CIPP
                 try
                 {
                     content = response.Content is not null
-                        ? await response.Content.ReadAsStringAsync(token).ConfigureAwait(false)
+                        ? await ReadDecodedContentAsync(response.Content, token).ConfigureAwait(false)
                         : string.Empty;
                 }
                 catch (Exception ex) when (ex is InvalidDataException || ex is IOException)
@@ -771,6 +772,46 @@ namespace CIPP
                     ResponseHeaders = allHeaders,
                 };
             }
+        }
+
+        // -----------------------------------------------------------------
+        // Content decoding
+        // -----------------------------------------------------------------
+        // Reads the response body as a string, decompressing explicitly based on
+        // the Content-Encoding header. SocketsHttpHandler.AutomaticDecompression
+        // normally handles this transparently AND strips Content-Encoding, in
+        // which case ContentEncoding is empty here and we just read the string.
+        // But AutomaticDecompression silently no-ops whenever a request carries a
+        // caller-supplied Accept-Encoding header (HttpClient assumes the caller
+        // will decode), and some endpoints (e.g. the Teams ConfigAPI) return gzip
+        // even when unprompted. When Content-Encoding survives, we decode it here
+        // so callers never receive raw compressed bytes. Idempotent: if the
+        // handler already decoded, there's nothing left to do.
+        // -----------------------------------------------------------------
+        private static async Task<string> ReadDecodedContentAsync(HttpContent httpContent, CancellationToken token)
+        {
+            var encodings = httpContent.Headers.ContentEncoding;
+            if (encodings is null || encodings.Count == 0)
+                return await httpContent.ReadAsStringAsync(token).ConfigureAwait(false);
+
+            var raw = await httpContent.ReadAsStreamAsync(token).ConfigureAwait(false);
+            Stream decoded = raw;
+            // Content-Encoding lists encodings in the order applied; decode in reverse.
+            foreach (var enc in encodings.Reverse())
+            {
+                decoded = enc?.Trim().ToLowerInvariant() switch
+                {
+                    "gzip" or "x-gzip" => new GZipStream(decoded, CompressionMode.Decompress),
+                    "deflate"          => new DeflateStream(decoded, CompressionMode.Decompress),
+                    "br"               => new BrotliStream(decoded, CompressionMode.Decompress),
+                    "identity" or "" or null => decoded,
+                    _                  => decoded,
+                };
+            }
+            using var reader = new StreamReader(decoded, Encoding.UTF8);
+            var result = await reader.ReadToEndAsync(token).ConfigureAwait(false);
+            decoded.Dispose();
+            return result;
         }
 
         // =================================================================
