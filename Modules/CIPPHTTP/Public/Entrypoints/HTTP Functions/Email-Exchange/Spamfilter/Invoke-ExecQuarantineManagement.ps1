@@ -9,6 +9,7 @@ function Invoke-ExecQuarantineManagement {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     # Interact with query parameters or the body of the request.
     try {
         $TenantFilter = $Request.Body.tenantFilter | Select-Object -First 1
@@ -24,28 +25,29 @@ function Invoke-ExecQuarantineManagement {
         )
         $params = @{}
 
-        if ($ActionType -eq 'Release') {
-            $params['ReleaseToAll'] = $true
-            if ($Request.Body.Identity -is [string]) {
-                $params['Identity'] = $Request.Body.Identity
-            } else {
-                $params['Identities'] = $Request.Body.Identity
-                $params['Identity'] = '000'
-            }
+        if ($Request.Body.Identity -is [string]) {
+            $params['Identity'] = $Request.Body.Identity
         } else {
-            $params['ActionType'] = $ActionType
-            if ($Request.Body.Identity -is [string]) {
-                $params['Identity'] = $Request.Body.Identity
+            $params['Identities'] = $Request.Body.Identity
+            # For -Identities, Exchange requires -Identity to be present, but ignores its value.
+            $params['Identity'] = '000'
+        }
+
+        # Delete is a separate cmdlet; Release-QuarantineMessage only accepts Release/Request/Approve/Deny.
+        if ($ActionType -eq 'Delete') {
+            $Cmdlet = 'Delete-QuarantineMessage'
+        } else {
+            $Cmdlet = 'Release-QuarantineMessage'
+            if ($ActionType -eq 'Release') {
+                $params['ReleaseToAll'] = $true
             } else {
-                $params['Identities'] = $Request.Body.Identity
-                # For -Identities, Exchange requires -Identity to be present, but ignores its value.
-                $params['Identity'] = '000'
-            }
-            if ($ActionType -eq 'Deny' -and $UserRecipients.Count -gt 0) {
-                $params['User'] = $UserRecipients
+                $params['ActionType'] = $ActionType
+                if ($ActionType -eq 'Deny' -and $UserRecipients.Count -gt 0) {
+                    $params['User'] = $UserRecipients
+                }
             }
         }
-        New-ExoRequest -tenantid $TenantFilter -cmdlet 'Release-QuarantineMessage' -cmdParams $params
+        New-ExoRequest -tenantid $TenantFilter -cmdlet $Cmdlet -cmdParams $params
 
         # AllowSender via HostedContentFilterPolicy since -AllowSender switch fails in REST API
         if ($AllowSender) {
@@ -69,21 +71,25 @@ function Invoke-ExecQuarantineManagement {
                             AllowedSenders = $UpdatedSenders
                         }
                     }
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Added $SenderAddress to allowed senders on policy $PolicyName" -Sev 'Info'
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Added $SenderAddress to allowed senders on policy $PolicyName" -Sev 'Info'
                 }
             } catch {
-                Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Failed to add sender to allow list: $($_.Exception.Message)" -Sev 'Error' -LogData $_
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add sender to allow list: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
             }
         }
 
         $Results = [pscustomobject]@{'Results' = "Successfully processed $($Request.Body.Identity)" }
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Successfully processed Quarantine ID $($Request.Body.Identity)" -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully processed Quarantine ID $($Request.Body.Identity)" -Sev 'Info'
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Quarantine Management failed: $($_.Exception.Message)" -Sev 'Error' -LogData $_
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Quarantine Management failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $Results = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
+        $StatusCode = [HttpStatusCode]::BadRequest
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

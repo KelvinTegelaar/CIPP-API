@@ -1,5 +1,19 @@
 [
   {
+    "description": "Allows the app to read email metadata and security detection details for all emails in your organization, without a signed-in user.",
+    "displayName": "Read metadata and detection details for all emails in your organization",
+    "id": "b48f7ac2-044d-4281-b02f-75db744d6f5f",
+    "origin": "Application",
+    "value": "SecurityAnalyzedMessage.Read.All"
+  },
+  {
+    "description": "Allows the app to read email metadata and security detection details, and execute remediation actions like deleting an email, for all emails in your organization, without a signed-in user.",
+    "displayName": "Read metadata, detection details, and execute remediation actions on all emails in your organization",
+    "id": "04c55753-2244-4c25-87fc-704ab82a4f69",
+    "origin": "Application",
+    "value": "SecurityAnalyzedMessage.ReadWrite.All"
+  },
+  {
     "description": "Allows the app to impersonate the signed-in user to access the Partner Center API.",
     "displayName": "Partner Center as User",
     "id": "1cebfa2a-fb4d-419e-b5f9-839b4383e05a",
