@@ -263,6 +263,18 @@ Describe 'Invoke-ExecModifyMBPerms' {
             }
         }
 
+        It 'syncs with the resolved UPN when the request identifies the mailbox by object id' {
+            # Cached permission rows are keyed by mailbox UPN, so the sync must use what the
+            # Graph lookup resolved (BeforeEach mock: shared@contoso.com), not the raw request id.
+            $req = New-ModifyRequest -Mailboxes @(New-Mailbox -UserID '11111111-2222-3333-4444-555555555555' -Permissions @(New-Perm -Level 'FullAccess' -Modification 'Remove'))
+
+            Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
+
+            Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter {
+                $MailboxIdentity -eq 'shared@contoso.com'
+            }
+        }
+
         It 'syncs with Action Add for additions' {
             $req = New-ModifyRequest -Mailboxes @(New-Mailbox -Permissions @(New-Perm -Level 'SendAs' -Modification 'Add'))
 

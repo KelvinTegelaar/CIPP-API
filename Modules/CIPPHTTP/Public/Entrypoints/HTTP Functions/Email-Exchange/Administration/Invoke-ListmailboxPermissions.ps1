@@ -29,7 +29,9 @@ function Invoke-ListmailboxPermissions {
             }
             try {
                 $GraphRequest = Get-CIPPMailboxPermissionReport @ReportParams
-                if ($User) {
+                if ($User -and $ByUser -eq 'true') {
+                    # Only the user-grouped report has a top-level User property; in the
+                    # mailbox-grouped shape this filter would empty the whole result set.
                     $GraphRequest = @($GraphRequest | Where-Object { $_.User -eq $User })
                 }
                 $StatusCode = [HttpStatusCode]::OK

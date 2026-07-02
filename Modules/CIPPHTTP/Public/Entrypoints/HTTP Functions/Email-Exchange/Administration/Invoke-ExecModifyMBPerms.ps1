@@ -151,9 +151,11 @@ function Invoke-ExecModifyMBPerms {
                             OperationGuid = $OperationGuid  # Add GUID to cmdlet object
                         }
 
+                        # Use the resolved UPN, not the raw request identifier (which may be an
+                        # object id) - the cache sync below matches cached rows by mailbox UPN.
                         $CmdletMetadata = [PSCustomObject]@{
                             ExpectedResult = $Mapping.ExpectedResult
-                            Mailbox        = $Username
+                            Mailbox        = $UserId
                             TargetUser     = $TargetUser
                             Permission     = $PermissionLevel
                             Action         = $Action
