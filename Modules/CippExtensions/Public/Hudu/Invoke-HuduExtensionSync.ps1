@@ -32,6 +32,12 @@ function Invoke-HuduExtensionSync {
         # Get Asset cache
         $HuduAssetCache = Get-CippTable -tablename 'CacheHuduAssets'
 
+        # Get Relations cache - Hudu's relations API has no per-company filter, so this is cached
+        # globally and shared across every tenant's sync instead of pulling the full relations
+        # table (30s+ on large instances) on every single sync run.
+        $HuduRelationsCache = Get-CippTable -tablename 'CacheHuduRelations'
+        $HuduRelationsCacheTTLMinutes = 15
+
         # Import license mapping
         $LicTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
 
@@ -132,7 +138,49 @@ function Invoke-HuduExtensionSync {
             $ExcludeSerials = $DefaultSerials
         }
 
-        $HuduRelations = Get-HuduRelations
+        $RelationsCacheMeta = Get-CIPPAzDataTableEntity @HuduRelationsCache -Filter "PartitionKey eq 'CacheMetadata' and RowKey eq 'LastRefresh'"
+        $RelationsCacheAgeMinutes = if ($RelationsCacheMeta.LastRefresh) { ((Get-Date).ToUniversalTime() - [datetime]$RelationsCacheMeta.LastRefresh).TotalMinutes } else { $null }
+
+        if ($null -ne $RelationsCacheAgeMinutes -and $RelationsCacheAgeMinutes -lt $HuduRelationsCacheTTLMinutes) {
+            $CachedRelationRows = Get-CIPPAzDataTableEntity @HuduRelationsCache -Filter "PartitionKey eq 'HuduRelation'"
+            $HuduRelations = foreach ($CachedRelationRow in $CachedRelationRows) {
+                [PSCustomObject]@{
+                    id            = $CachedRelationRow.RowKey
+                    fromable_type = $CachedRelationRow.FromableType
+                    fromable_id   = $CachedRelationRow.FromableId
+                    toable_type   = $CachedRelationRow.ToableType
+                    toable_id     = $CachedRelationRow.ToableId
+                }
+            }
+        } else {
+            $HuduRelations = Get-HuduRelations
+
+            $ExistingRelationRows = Get-CIPPAzDataTableEntity @HuduRelationsCache -Filter "PartitionKey eq 'HuduRelation'"
+            if ($ExistingRelationRows) {
+                Remove-AzDataTableEntity @HuduRelationsCache -Entity $ExistingRelationRows -Force
+            }
+
+            $RelationEntities = foreach ($Relation in $HuduRelations) {
+                [PSCustomObject]@{
+                    PartitionKey  = 'HuduRelation'
+                    RowKey        = [string]$Relation.id
+                    FromableType  = [string]$Relation.fromable_type
+                    FromableId    = [string]$Relation.fromable_id
+                    ToableType    = [string]$Relation.toable_type
+                    ToableId      = [string]$Relation.toable_id
+                }
+            }
+            if ($RelationEntities) {
+                Add-CIPPAzDataTableEntity @HuduRelationsCache -Entity $RelationEntities -Force
+            }
+
+            $RelationsCacheMetaEntity = [PSCustomObject]@{
+                PartitionKey = 'CacheMetadata'
+                RowKey       = 'LastRefresh'
+                LastRefresh  = (Get-Date).ToUniversalTime().ToString('o')
+            }
+            Add-CIPPAzDataTableEntity @HuduRelationsCache -Entity $RelationsCacheMetaEntity -Force
+        }
         [System.Collections.Generic.List[object]]$Links = @(
             @{
                 Title = 'M365 Admin Portal'
