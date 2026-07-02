@@ -1656,27 +1656,38 @@
     "name": "standards.StaleEntraDevices",
     "cat": "Entra (AAD) Standards",
     "tag": ["Essential 8 (1501)", "NIST CSF 2.0 (ID.AM-08)", "NIST CSF 2.0 (PR.PS-03)"],
-    "helpText": "**Remediate is currently not available**. Cleans up Entra devices that have not connected/signed in for the specified number of days.",
-    "docsDescription": "Remediate is currently not available. Cleans up Entra devices that have not connected/signed in for the specified number of days. First disables and later deletes the devices. More info can be found in the [Microsoft documentation](https://learn.microsoft.com/en-us/entra/identity/devices/manage-stale-devices)",
+    "helpText": "Cleans up Entra devices that have not connected/signed in for the specified number of days. Remediation first disables stale enabled devices and, on a later run, deletes stale devices that are already disabled. Hybrid-joined, Intune-managed and Autopilot devices are skipped. Deleting a device permanently removes any BitLocker recovery keys stored on it.",
+    "docsDescription": "Cleans up Entra devices that have not connected/signed in for the specified number of days. Remediation first disables stale enabled devices once they pass the disable threshold, and later deletes devices that are already disabled once they have been inactive for the disable threshold plus the configured grace delta (deletion age = disable threshold + grace days). The disable-before-delete grace period is further guaranteed by never deleting a device in the same pass it was disabled. Hybrid-joined (on-premises synced), Intune-managed/compliant, and system-managed Autopilot devices are excluded, in line with the [Microsoft guidance](https://learn.microsoft.com/en-us/entra/identity/devices/manage-stale-devices). **Warning:** deleting a device permanently removes any BitLocker recovery keys stored on that device object.",
     "executiveText": "Automatically identifies and removes inactive devices that haven't connected to company systems for a specified period, reducing security risks from abandoned or lost devices. This maintains a clean device inventory and prevents potential unauthorized access through dormant device registrations.",
     "addedComponent": [
       {
         "type": "number",
         "name": "standards.StaleEntraDevices.deviceAgeThreshold",
-        "label": "Days before stale(Do not set below 30)",
+        "required": true,
+        "defaultValue": 90,
+        "label": "Days before stale (disables the device after this many days of inactivity, minimum 30)",
         "validators": {
           "min": { "value": 30, "message": "Minimum value is 30" }
         }
+      },
+      {
+        "type": "number",
+        "name": "standards.StaleEntraDevices.deviceDeleteThreshold",
+        "defaultValue": 0,
+        "label": "Grace days after disable before deletion (0 = never delete). Devices are deleted once inactive for the disable threshold plus this many additional days.",
+        "validators": {
+          "min": { "value": 0, "message": "Minimum value is 0" }
+        }
       }
     ],
-    "disabledFeatures": { "report": false, "warn": false, "remediate": true },
+    "disabledFeatures": { "report": false, "warn": false, "remediate": false },
     "label": "Cleanup stale Entra devices",
     "impact": "High Impact",
     "impactColour": "danger",
     "addedDate": "2025-01-19",
     "powershellEquivalent": "Remove-MgDevice, Update-MgDevice or Graph API",
     "recommendedBy": [],
-    "requiredCapabilities": ["INTUNE_A", "MDM_Services", "EMS", "SCCM", "MICROSOFTINTUNEPLAN1"]
+    "requiredCapabilities": []
   },
   {
     "name": "standards.UndoOauth",
