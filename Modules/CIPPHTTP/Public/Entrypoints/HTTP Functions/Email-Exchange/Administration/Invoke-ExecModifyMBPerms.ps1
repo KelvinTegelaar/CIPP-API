@@ -15,6 +15,7 @@ function Invoke-ExecModifyMBPerms {
     # Extract mailbox requests - handle all three formats
     $MailboxRequests = $null
     $Results = [System.Collections.ArrayList]::new()
+    $SuccessfulOps = [System.Collections.ArrayList]::new()
 
     # Direct array format
     if ($Request.Body -is [array]) {
@@ -150,12 +151,14 @@ function Invoke-ExecModifyMBPerms {
                             OperationGuid = $OperationGuid  # Add GUID to cmdlet object
                         }
 
+                        # Use the resolved UPN, not the raw request identifier (which may be an
+                        # object id) - the cache sync below matches cached rows by mailbox UPN.
                         $CmdletMetadata = [PSCustomObject]@{
                             ExpectedResult = $Mapping.ExpectedResult
-                            Mailbox        = $Username
+                            Mailbox        = $UserId
                             TargetUser     = $TargetUser
                             Permission     = $PermissionLevel
-                            Action         = $Modification
+                            Action         = $Action
                             OperationGuid  = $OperationGuid
                         }
 
@@ -202,6 +205,7 @@ function Invoke-ExecModifyMBPerms {
                                 Write-LogMessage -headers $Headers -API $APIName -message "Error for operation $operationGuid`: $ErrorMessage" -Sev 'Error' -tenant $TenantFilter
                             } else {
                                 $null = $Results.Add($metadata.ExpectedResult)
+                                $null = $SuccessfulOps.Add($metadata)
                                 Write-LogMessage -headers $Headers -API $APIName -message "Success for operation $operationGuid`: $($metadata.ExpectedResult)" -Sev 'Info' -tenant $TenantFilter
                             }
                         } else {
@@ -222,6 +226,7 @@ function Invoke-ExecModifyMBPerms {
                 foreach ($CmdletMetadata in $CmdletMetadataArray) {
                     if ($CmdletMetadata.ExpectedResult) {
                         $null = $Results.Add($CmdletMetadata.ExpectedResult)
+                        $null = $SuccessfulOps.Add($CmdletMetadata)
                     }
                 }
             }
@@ -237,6 +242,7 @@ function Invoke-ExecModifyMBPerms {
                 try {
                     $null = New-ExoRequest -Anchor $CmdletMetadata.Mailbox -tenantid $TenantFilter -cmdlet $CmdletObj.CmdletInput.CmdletName -cmdParams $CmdletObj.CmdletInput.Parameters
                     $null = $Results.Add($CmdletMetadata.ExpectedResult)
+                    $null = $SuccessfulOps.Add($CmdletMetadata)
                 } catch {
                     $null = $Results.Add("Error processing $($CmdletMetadata.Permission) for $($CmdletMetadata.TargetUser) on $($CmdletMetadata.Mailbox): $($_.Exception.Message)")
                 }
@@ -249,10 +255,24 @@ function Invoke-ExecModifyMBPerms {
         try {
             $null = New-ExoRequest -Anchor $CmdletMetadata.Mailbox -tenantid $TenantFilter -cmdlet $CmdletObj.CmdletInput.CmdletName -cmdParams $CmdletObj.CmdletInput.Parameters
             $null = $Results.Add($CmdletMetadata.ExpectedResult)
+            $null = $SuccessfulOps.Add($CmdletMetadata)
             Write-LogMessage -headers $Headers -API $APIName -message "Executed $($CmdletMetadata.Permission) permission modification" -Sev 'Info' -tenant $TenantFilter
         } catch {
             Write-LogMessage -headers $Headers -API $APIName -message "Permission modification failed: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
             $null = $Results.Add("Error processing $($CmdletMetadata.Permission) for $($CmdletMetadata.TargetUser) on $($CmdletMetadata.Mailbox): $($_.Exception.Message)")
+        }
+    }
+
+    # Keep the reporting DB cache in step with what actually changed. The bulk path bypasses
+    # Set-CIPPMailboxPermission's own execute-mode sync (-AsCmdletObject returns early), so
+    # without this the cached permission report goes stale after every bulk change.
+    foreach ($Op in $SuccessfulOps) {
+        if ($Op.Permission -in @('FullAccess', 'SendAs', 'SendOnBehalf')) {
+            try {
+                Sync-CIPPMailboxPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $Op.Mailbox -User $Op.TargetUser -PermissionType $Op.Permission -Action $Op.Action
+            } catch {
+                Write-Information "Cache sync warning: $($_.Exception.Message)"
+            }
         }
     }
 
