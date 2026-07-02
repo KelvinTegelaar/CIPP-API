@@ -4,8 +4,7 @@ function Add-CIPPApplicationPermission {
         $RequiredResourceAccess,
         $TemplateId,
         $ApplicationId,
-        $TenantFilter,
-        [bool]$AsApp = $false
+        $TenantFilter
     )
     if ($ApplicationId -eq $env:ApplicationID -and $TenantFilter -eq $env:TenantID) {
         $RequiredResourceAccess = 'CIPPDefaults'
@@ -58,37 +57,22 @@ function Add-CIPPApplicationPermission {
 
     Write-Information "Adding application permissions to application $ApplicationId in tenant $TenantFilter"
 
-    # Use app auth when requested, but fall back to delegated on the first failure - the app may not
-    # hold the application permissions needed. $UseAsApp latches to $false for the rest of the run.
-    $UseAsApp = $AsApp
-    $GetServicePrincipalList = { New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true -AsApp $UseAsApp }
-
     $ServicePrincipalList = [System.Collections.Generic.List[object]]::new()
-    try {
-        $SPList = & $GetServicePrincipalList
-    } catch {
-        if ($UseAsApp) {
-            Write-Information "App-auth request failed, falling back to delegated permissions: $($_.Exception.Message)"
-            $UseAsApp = $false
-            $SPList = & $GetServicePrincipalList
-        } else {
-            throw
-        }
-    }
+    $SPList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
     foreach ($SP in $SPList) { $ServicePrincipalList.Add($SP) }
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
     if (!$ourSVCPrincipal) {
         #Our Service Principal isn't available yet. We do a sleep and reexecute after 3 seconds.
         Start-Sleep -Seconds 5
         $ServicePrincipalList.Clear()
-        $SPList = & $GetServicePrincipalList
+        $SPList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
         foreach ($SP in $SPList) { $ServicePrincipalList.Add($SP) }
         $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
     }
 
     $Results = [System.Collections.Generic.List[string]]::new()
 
-    $CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true -AsApp $UseAsApp
+    $CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
 
     # Collect missing service principals and prepare bulk request
     $MissingServicePrincipals = [System.Collections.Generic.List[object]]::new()
@@ -118,7 +102,7 @@ function Add-CIPPApplicationPermission {
     # Create missing service principals in bulk
     if ($MissingServicePrincipals.Count -gt 0) {
         try {
-            $BulkResults = New-GraphBulkRequest -Requests $MissingServicePrincipals -tenantid $TenantFilter -NoAuthCheck $true -AsApp $UseAsApp
+            $BulkResults = New-GraphBulkRequest -Requests $MissingServicePrincipals -tenantid $TenantFilter -NoAuthCheck $true
             foreach ($Result in $BulkResults) {
                 if ($Result.status -eq 201) {
                     $ServicePrincipalList.Add($Result.body)
@@ -166,7 +150,7 @@ function Add-CIPPApplicationPermission {
         }
 
         try {
-            $BulkResults = New-GraphBulkRequest -Requests $GrantRequests -tenantid $TenantFilter -NoAuthCheck $true -AsApp $UseAsApp
+            $BulkResults = New-GraphBulkRequest -Requests $GrantRequests -tenantid $TenantFilter -NoAuthCheck $true
             foreach ($Result in $BulkResults) {
                 if ($Result.status -eq 201) {
                     $counter++
