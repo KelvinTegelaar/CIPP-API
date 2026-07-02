@@ -5,7 +5,8 @@ function Add-CIPPDelegatedPermission {
         $TemplateId,
         $ApplicationId,
         $NoTranslateRequired,
-        $TenantFilter
+        $TenantFilter,
+        [bool]$AsApp = $false
     )
     Write-Information 'Adding Delegated Permissions'
     $ApplicationId = $ApplicationId ?? $env:ApplicationID
@@ -71,19 +72,34 @@ function Add-CIPPDelegatedPermission {
     }
 
     $Translator = Get-Content (Join-Path $env:CIPPRootPath 'Config\PermissionsTranslator.json') | ConvertFrom-Json
-    $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=appId,id,displayName&`$top=999" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
+
+    # Use app auth when requested, but fall back to delegated on the first failure - the app may not
+    # hold the application permissions needed. $UseAsApp latches to $false for the rest of the run.
+    $UseAsApp = $AsApp
+    $GetServicePrincipalList = { New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=appId,id,displayName&`$top=999" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true -AsApp $UseAsApp }
+    try {
+        $ServicePrincipalList = & $GetServicePrincipalList
+    } catch {
+        if ($UseAsApp) {
+            Write-Information "App-auth request failed, falling back to delegated permissions: $($_.Exception.Message)"
+            $UseAsApp = $false
+            $ServicePrincipalList = & $GetServicePrincipalList
+        } else {
+            throw
+        }
+    }
     $Results = [System.Collections.Generic.List[string]]::new()
 
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId | Select-Object -First 1
     if (!$ourSVCPrincipal) {
-        $ourSvcPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$ApplicationId')?`$select=appId,id,displayName" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
+        $ourSvcPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$ApplicationId')?`$select=appId,id,displayName" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true -AsApp $UseAsApp
     }
     if (!$ourSVCPrincipal) {
         $Results.Add("Failed to find service principal for application $ApplicationId in tenant $TenantFilter")
         return $Results
     }
 
-    $CurrentDelegatedScopes = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/oauth2PermissionGrants" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
+    $CurrentDelegatedScopes = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/oauth2PermissionGrants" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true -AsApp $UseAsApp
 
     foreach ($App in $RequiredResourceAccess) {
         if (!$App) {
@@ -95,7 +111,7 @@ function Add-CIPPDelegatedPermission {
                 $Body = @{
                     appId = $App.resourceAppId
                 } | ConvertTo-Json -Compress
-                $svcPrincipalId = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -body $Body -type POST -NoAuthCheck $true
+                $svcPrincipalId = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -body $Body -type POST -NoAuthCheck $true -AsApp $UseAsApp
             } catch {
                 $Results.add("Failed to create service principal for $($App.resourceAppId): $(Get-NormalizedError -message $_.Exception.Message)")
                 continue
@@ -134,7 +150,7 @@ function Add-CIPPDelegatedPermission {
                     resourceId  = $svcPrincipalId.id
                     scope       = $NewScope
                 } | ConvertTo-Json -Compress
-                $CreateRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants' -tenantid $TenantFilter -body $Createbody -type POST -NoAuthCheck $true
+                $CreateRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants' -tenantid $TenantFilter -body $Createbody -type POST -NoAuthCheck $true -AsApp $UseAsApp
                 $Results.add("Successfully added permissions for $($svcPrincipalId.displayName)")
             } catch {
                 $Results.add("Failed to add permissions for $($svcPrincipalId.displayName): $(Get-NormalizedError -message $_.Exception.Message)")
@@ -147,7 +163,7 @@ function Add-CIPPDelegatedPermission {
                 $OldScope.id | ForEach-Object {
                     if ($_ -ne $OldScopeId) {
                         try {
-                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$_" -tenantid $TenantFilter -type DELETE -NoAuthCheck $true
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$_" -tenantid $TenantFilter -type DELETE -NoAuthCheck $true -AsApp $UseAsApp
                         } catch {
                         }
                     }
@@ -171,7 +187,7 @@ function Add-CIPPDelegatedPermission {
                 scope = "$NewScope"
             } | ConvertTo-Json -Compress
             try {
-                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$($OldScopeId)" -tenantid $TenantFilter -body $Patchbody -type PATCH -NoAuthCheck $true
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$($OldScopeId)" -tenantid $TenantFilter -body $Patchbody -type PATCH -NoAuthCheck $true -AsApp $UseAsApp
             } catch {
                 $Results.add("Failed to update permissions for $($svcPrincipalId.displayName): $(Get-NormalizedError -message $_.Exception.Message)")
                 continue

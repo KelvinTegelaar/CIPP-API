@@ -25,8 +25,8 @@ function Invoke-ExecPermissionRepair {
 
         # 2) Refresh the grants on the partner CIPP-SAM service principal so the effective set
         #    (manifest + extras, read from the table) is actually consented on the SP.
-        $AppResults = Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -TenantFilter $env:TenantID
-        $DelegatedResults = Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -TenantFilter $env:TenantID
+        $AppResults = Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -TenantFilter $env:TenantID -AsApp $true
+        $DelegatedResults = Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -TenantFilter $env:TenantID -AsApp $true
 
         $Results = @($TableResult) + @($AppResults) + @($DelegatedResults) | Where-Object { $_ }
         Write-LogMessage -Headers $Request.Headers -API 'ExecPermissionRepair' -message "CIPP-SAM permissions repaired by $UpdatedBy" -Sev 'Info' -LogData @{ Results = @($Results) }
