@@ -21,6 +21,7 @@ function Invoke-ExecCompareIntunePolicy {
         'WindowsFeatureUpdateProfiles' = 'windowsFeatureUpdateProfiles'
         'windowsQualityUpdatePolicies' = 'windowsQualityUpdatePolicies'
         'windowsQualityUpdateProfiles' = 'windowsQualityUpdateProfiles'
+        'Intents'                      = 'Intents'
     }
 
     try {
@@ -125,6 +126,7 @@ function Invoke-ExecCompareIntunePolicy {
                         '*configurationPolicies*' { 'Catalog' }
                         '*managedAppPolicies*' { 'AppProtection' }
                         '*deviceAppManagement*' { 'AppProtection' }
+                        '*intents*' { 'Intents' }
                         default { 'Unknown' }
                     }
                     $PolicyObj = $ParsedJson

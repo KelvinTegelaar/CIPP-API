@@ -429,6 +429,55 @@ function Get-CIPPIntunePolicy {
                     return $policies
                 }
             }
+            'Intents' {
+                $PlatformType = 'deviceManagement'
+                $TemplateTypeURL = 'intents'
+
+                if ($DisplayName) {
+                    $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
+                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
+                    if ($policy) {
+                        $settings = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')/settings" -tenantid $tenantFilter
+                        $policyDetails = [PSCustomObject]@{
+                            displayName = $policy.displayName
+                            description = $policy.description
+                            templateId  = $policy.templateId
+                            settings    = @($settings)
+                        }
+                        $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
+                        $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                    }
+                    return $policy
+                } elseif ($PolicyId) {
+                    $policy = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')" -tenantid $tenantFilter
+                    if ($policy) {
+                        $settings = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')/settings" -tenantid $tenantFilter
+                        $policyDetails = [PSCustomObject]@{
+                            displayName = $policy.displayName
+                            description = $policy.description
+                            templateId  = $policy.templateId
+                            settings    = @($settings)
+                        }
+                        $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
+                        $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                    }
+                    return $policy
+                } else {
+                    $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
+                    foreach ($policy in $policies) {
+                        $settings = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')/settings" -tenantid $tenantFilter
+                        $policyDetails = [PSCustomObject]@{
+                            displayName = $policy.displayName
+                            description = $policy.description
+                            templateId  = $policy.templateId
+                            settings    = @($settings)
+                        }
+                        $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
+                        $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                    }
+                    return $policies
+                }
+            }
             default {
                 return $null
             }
