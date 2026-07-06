@@ -49,8 +49,8 @@ function Get-CIPPDrift {
     $IntuneTemplatesByGuid = @{}
     $AllIntuneTemplates = foreach ($RawTemplate in $RawIntuneTemplates) {
         try {
-            $JSONData = $RawTemplate.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
-            $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+            $JSONData = $RawTemplate.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+            $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
             $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
             $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
             $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
@@ -409,12 +409,22 @@ function Get-CIPPDrift {
             # Persist newly detected deviations to the tenantDrift table so the summary page can count them
             $NewDriftEntities = [System.Collections.Generic.List[object]]::new()
             foreach ($Deviation in $AllDeviations) {
-                if (-not $ExistingDriftStates.ContainsKey($Deviation.standardName)) {
-                    $RowKey = $Deviation.standardName -replace '\.', '_'
+                # Diagnostic: standardName must be a scalar string. Azure Tables cannot store a PSObject,
+                # so a non-string here is what causes "Unsupported property types found: StandardName".
+                # Log the offending value (with tenant) so the producing standard can be identified.
+                if ($Deviation.standardName -isnot [string]) {
+                    Write-Warning "Drift deviation for tenant '$TenantFilter' has a non-string standardName (type $($Deviation.standardName.GetType().FullName)): $(ConvertTo-Json -InputObject $Deviation.standardName -Depth 5 -Compress -ErrorAction SilentlyContinue)"
+                }
+                # Coerce to string so the table write never fails on this property. RowKey already
+                # coerces via -replace; this makes the stored StandardName column match.
+                $StandardNameValue = [string]$Deviation.standardName
+                if ([string]::IsNullOrWhiteSpace($StandardNameValue)) { continue }
+                if (-not $ExistingDriftStates.ContainsKey($StandardNameValue)) {
+                    $RowKey = $StandardNameValue -replace '\.', '_'
                     $NewDriftEntities.Add(@{
                             PartitionKey = $TenantFilter
                             RowKey       = $RowKey
-                            StandardName = $Deviation.standardName
+                            StandardName = $StandardNameValue
                             Status       = 'New'
                             LastModified = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                         })

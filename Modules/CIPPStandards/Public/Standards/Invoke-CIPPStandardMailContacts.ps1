@@ -46,9 +46,10 @@ function Invoke-CIPPStandardMailContacts {
     $contacts = $settings
     $TechAndSecurityContacts = @(@($contacts.SecurityContact, $contacts.TechContact) | Where-Object { $_ } | Select-Object -Unique)
 
-    $marketingMatch = @($CurrentInfo.marketingNotificationEmails) -contains $contacts.MarketingContact
-    $techMatch = -not (Compare-Object @($CurrentInfo.technicalNotificationMails) $TechAndSecurityContacts)
-    $generalMatch = $CurrentInfo.privacyProfile.contactEmail -eq $contacts.GeneralContact
+    # If an input value is null/empty, ignore the target tenant's current state and treat it as compliant.
+    $marketingMatch = [string]::IsNullOrWhiteSpace($contacts.MarketingContact) -or (@($CurrentInfo.marketingNotificationEmails) -contains $contacts.MarketingContact)
+    $techMatch = $TechAndSecurityContacts.Count -eq 0 -or (-not (Compare-Object @($CurrentInfo.technicalNotificationMails) $TechAndSecurityContacts))
+    $generalMatch = [string]::IsNullOrWhiteSpace($contacts.GeneralContact) -or ($CurrentInfo.privacyProfile.contactEmail -eq $contacts.GeneralContact)
 
     $state = $marketingMatch -and $techMatch -and $generalMatch
 
@@ -74,7 +75,7 @@ function Invoke-CIPPStandardMailContacts {
 
     if ($Settings.alert -eq $true) {
 
-        if ($CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact) {
+        if (!$Contacts.MarketingContact -or $CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Marketing contact email is set to $($Contacts.MarketingContact)" -sev Info
         } else {
             $Object = $CurrentInfo | Select-Object marketingNotificationEmails
@@ -95,7 +96,7 @@ function Invoke-CIPPStandardMailContacts {
             Write-StandardsAlert -message "Technical contact email is not set to $($Contacts.TechContact)" -object $Object -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Technical contact email is not set to $($Contacts.TechContact)" -sev Info
         }
-        if ($CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact) {
+        if (!$Contacts.GeneralContact -or $CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "General contact email is set to $($Contacts.GeneralContact)" -sev Info
         } else {
             $Object = $CurrentInfo | Select-Object privacyProfile
@@ -110,10 +111,11 @@ function Invoke-CIPPStandardMailContacts {
             technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails | Where-Object { [string]::IsNullOrWhiteSpace($_) -eq $false } | Sort-Object -Unique)
             contactEmail                = $CurrentInfo.privacyProfile.contactEmail
         }
+        # When an input value is null/empty, mirror the current state so the field is reported as compliant.
         $ExpectedValue = @{
-            marketingNotificationEmails = @($Contacts.MarketingContact | Sort-Object -Unique)
-            technicalNotificationMails  = @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { [string]::IsNullOrWhiteSpace($_) -eq $false } | Sort-Object -Unique)
-            contactEmail                = $Contacts.GeneralContact
+            marketingNotificationEmails = @(if ([string]::IsNullOrWhiteSpace($Contacts.MarketingContact)) { $CurrentValue.marketingNotificationEmails } else { $Contacts.MarketingContact | Sort-Object -Unique })
+            technicalNotificationMails  = @(if ($TechAndSecurityContacts.Count -eq 0) { $CurrentValue.technicalNotificationMails } else { $TechAndSecurityContacts | Where-Object { [string]::IsNullOrWhiteSpace($_) -eq $false } | Sort-Object -Unique })
+            contactEmail                = if ([string]::IsNullOrWhiteSpace($Contacts.GeneralContact)) { $CurrentValue.contactEmail } else { $Contacts.GeneralContact }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'MailContacts' -FieldValue $CurrentInfo -StoreAs json -Tenant $tenant

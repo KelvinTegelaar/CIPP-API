@@ -35,32 +35,66 @@ function Remove-CIPPLicense {
         try {
             $ConvertTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
             $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -tenantid $tenantFilter
-            $GroupMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/memberOf/microsoft.graph.group?`$select=id,displayName,assignedLicenses" -tenantid $tenantFilter
+            $GroupMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/memberOf/microsoft.graph.group?`$select=id,displayName,assignedLicenses,mailEnabled,groupTypes" -tenantid $tenantFilter
             $LicenseGroups = $GroupMemberships | Where-Object { ($_.assignedLicenses | Measure-Object).Count -gt 0 }
 
             if ($LicenseGroups) {
-                # remove user from groups with licenses, these can only be graph groups
-                $RemoveRequests = foreach ($LicenseGroup in $LicenseGroups) {
-                    @{
-                        id     = $LicenseGroup.id
-                        method = 'DELETE'
-                        url    = "groups/$($LicenseGroup.id)/members/$($User.id)/`$ref"
+                # remove user from license groups. Mail-enabled security groups can't be modified through Graph, so those go through Exchange Online instead
+                $GraphRemoveRequests = [System.Collections.Generic.List[object]]::new()
+                $ExoRemoveRequests = [System.Collections.Generic.List[object]]::new()
+                $ExoGroups = [System.Collections.Generic.List[object]]::new()
+
+                foreach ($LicenseGroup in $LicenseGroups) {
+                    $IsM365Group = $LicenseGroup.groupTypes -contains 'Unified'
+                    if ($LicenseGroup.mailEnabled -and -not $IsM365Group) {
+                        $ExoRemoveRequests.Add(@{
+                                CmdletInput = @{
+                                    CmdletName = 'Remove-DistributionGroupMember'
+                                    Parameters = @{
+                                        Identity                        = $LicenseGroup.id
+                                        Member                          = $User.id
+                                        BypassSecurityGroupManagerCheck = $true
+                                    }
+                                }
+                            })
+                        $ExoGroups.Add($LicenseGroup)
+                    } else {
+                        $GraphRemoveRequests.Add(@{
+                                id     = $LicenseGroup.id
+                                method = 'DELETE'
+                                url    = "groups/$($LicenseGroup.id)/members/$($User.id)/`$ref"
+                            })
                     }
                 }
 
                 Write-Information 'Removing user from groups with licenses'
-                $RemoveResults = New-GraphBulkRequest -tenantid $tenantFilter -requests @($RemoveRequests)
-                Write-Information ($RemoveResults | ConvertTo-Json -Depth 5)
-                foreach ($Result in $RemoveResults) {
-                    $Group = $LicenseGroups | Where-Object { $_.id -eq $Result.id }
-                    $GroupName = $Group.displayName
 
-                    if ($Result.status -eq 204) {
-                        Write-LogMessage -headers $Headers -API $APIName -message "Removed $($User.displayName) from license group $GroupName" -Sev 'Info' -tenant $TenantFilter
-                        "Removed $($User.displayName) from license group $GroupName"
-                    } else {
-                        Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove $($User.displayName) from license group $GroupName. This is likely because its a Dynamic Group or synced with active directory." -Sev 'Error' -tenant $TenantFilter
-                        "Failed to remove $($User.displayName) from license group $GroupName. This is likely because its a Dynamic Group or synced with active directory."
+                if ($GraphRemoveRequests.Count -gt 0) {
+                    $RemoveResults = New-GraphBulkRequest -tenantid $tenantFilter -requests @($GraphRemoveRequests)
+                    Write-Information ($RemoveResults | ConvertTo-Json -Depth 5)
+                    foreach ($Result in $RemoveResults) {
+                        $GroupName = ($LicenseGroups | Where-Object { $_.id -eq $Result.id }).displayName
+                        if ($Result.status -eq 204) {
+                            Write-LogMessage -headers $Headers -API $APIName -message "Removed $($User.displayName) from license group $GroupName" -Sev 'Info' -tenant $TenantFilter
+                            "Removed $($User.displayName) from license group $GroupName"
+                        } else {
+                            Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove $($User.displayName) from license group $GroupName. This is likely because its a Dynamic Group or synced with active directory." -Sev 'Error' -tenant $TenantFilter
+                            "Failed to remove $($User.displayName) from license group $GroupName. This is likely because its a Dynamic Group or synced with active directory."
+                        }
+                    }
+                }
+
+                if ($ExoRemoveRequests.Count -gt 0) {
+                    $RawExoRequest = New-ExoBulkRequest -tenantid $tenantFilter -cmdletArray @($ExoRemoveRequests)
+                    $LastError = $RawExoRequest | Select-Object -Last 1
+                    foreach ($ExoGroup in $ExoGroups) {
+                        if (!$LastError -or ($LastError.error -and $LastError.target -notcontains $User.id)) {
+                            Write-LogMessage -headers $Headers -API $APIName -message "Removed $($User.displayName) from mail-enabled license group $($ExoGroup.displayName)" -Sev 'Info' -tenant $TenantFilter
+                            "Removed $($User.displayName) from mail-enabled license group $($ExoGroup.displayName)"
+                        } else {
+                            Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove $($User.displayName) from mail-enabled license group $($ExoGroup.displayName). This is likely because its a Dynamic Group or synced with active directory." -Sev 'Error' -tenant $TenantFilter
+                            "Failed to remove $($User.displayName) from mail-enabled license group $($ExoGroup.displayName)."
+                        }
                     }
                 }
             }

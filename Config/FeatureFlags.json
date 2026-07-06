@@ -45,6 +45,31 @@
     "Hidden": true
   },
   {
+    "Id": "CopilotAI",
+    "Name": "Copilot & AI",
+    "Description": "Under Development: Microsoft 365 Copilot and AI management pages including settings, usage reports, Agent365 packages, and Shadow AI analysis.",
+    "Enabled": false,
+    "AllowUserToggle": false,
+    "Timers": [],
+    "Endpoints": [
+      "ListCopilotSettings",
+      "ExecCopilotSettings",
+      "ListCopilotUsage",
+      "ListAgent365Packages",
+      "ListAgent365PackageDetail",
+      "ListShadowAI"
+    ],
+    "Pages": [
+      "/copilot/settings",
+      "/copilot/shadow-ai",
+      "/copilot/agent365/packages",
+      "/copilot/reports/copilot-adoption",
+      "/copilot/reports/copilot-usage",
+      "/copilot/reports/copilot-trend"
+    ],
+    "Hidden": true
+  },
+  {
     "Id": "MCPServer",
     "Name": "MCP Server",
     "Description": "Model Context Protocol (MCP) server endpoint that exposes CIPP's read-only API surface as tools for AI clients. Disabled by default; enable to allow MCP access.",
@@ -56,5 +81,20 @@
     ],
     "Pages": [],
     "Hidden": false
+  },
+  {
+    "Id": "AppInsights",
+    "Name": "App Insights",
+    "Description": "App Insights page not used in NG",
+    "Enabled": true,
+    "AllowUserToggle": false,
+    "Timers": [],
+    "Endpoints": [
+      "ExecAppInsightsQuery"
+    ],
+    "Pages": [
+      "/cipp/advanced/diagnostics"
+    ],
+    "Hidden": true
   }
 ]

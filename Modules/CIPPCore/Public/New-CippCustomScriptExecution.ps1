@@ -4,12 +4,15 @@ function New-CippCustomScriptExecution {
         Executes a custom PowerShell script in a restricted environment
 
     .DESCRIPTION
-        Runs user-provided PowerShell scripts with strict security constraints:
-        - Only data manipulation cmdlets allowed
-        - Read-only access to CIPPDB via Get-CIPPTestData
-        - No file system, network, or write operations
-        - PowerShell 7.4 syntax supported
-        - Script output can be produced via pipeline output or explicit return
+        Runs user-provided PowerShell scripts inside an isolated ConstrainedLanguage
+        sandbox runspace:
+        - LanguageMode = ConstrainedLanguage blocks New-Object on arbitrary types and all
+          .NET method/reflection access (the real containment boundary).
+        - A command allowlist (Get-CippCustomScriptAllowedCommand) hides everything else.
+        - Read-only data access via a Get-CIPPTestData proxy that serves only pre-fetched,
+          tenant-locked cache data — the script cannot reach storage or other tenants.
+        - No file system, network, or write operations.
+        - Script output can be produced via pipeline output or explicit return.
 
     .PARAMETER ScriptGuid
         The GUID of the script to execute from the database
@@ -56,8 +59,6 @@ function New-CippCustomScriptExecution {
         # Get script content
         $ScriptContent = $Script.ScriptContent
 
-        Write-LogMessage -API 'CustomScript' -tenant $TenantFilter -message "Executing custom script: $($Script.ScriptName) (Version: $($Script.Version))" -sev Info
-
         # Convert Parameters to hashtable if it's a PSCustomObject (from JSON)
         if ($Parameters -is [PSCustomObject]) {
             $ParamsHash = @{}
@@ -69,24 +70,22 @@ function New-CippCustomScriptExecution {
             $Parameters = @{}
         }
 
-        # Validate script security constraints using AST parsing
-        Test-CustomScriptSecurity -ScriptContent $ScriptContent
-
-        # Replace %variable% placeholders with tenant/custom values
+        # Replace %variable% placeholders FIRST, then validate the final text. Validating
+        # before replacement would let substituted content bypass the check.
         $ScriptContent = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $ScriptContent
 
-        # Create script block from user content
-        $ScriptBlock = [scriptblock]::Create($ScriptContent)
+        # Fast static pre-check (friendly errors). ConstrainedLanguage is the real boundary.
+        Test-CustomScriptSecurity -ScriptContent $ScriptContent
 
-        # Lock tenant for data access functions — scripts cannot query other tenants
-        # Module-scoped variable: isolated per runspace (no cross-invocation interference)
-        # and inaccessible to user scripts (AST blocks $script: access)
-        $script:CIPPLockedTenant = $TenantFilter
+        # Pre-fetch the tenant-locked cache data the script asks for (trusted side), so the
+        # sandbox proxy can serve it. The sandbox itself has no storage/tenant access.
+        $SandboxData = Get-CippSandboxData -ScriptContent $ScriptContent -TenantFilter $TenantFilter
+
+        # Build script parameters (TenantFilter + custom). TenantFilter is supplied for
+        # scripts that declare it; data access is tenant-locked regardless.
         $ScriptParams = @{
             TenantFilter = $TenantFilter
         }
-
-        # Add custom parameters if any
         foreach ($key in $Parameters.Keys) {
             if ($key -ne 'TenantFilter' -and $key -ne 'tenantFilter') {
                 $ScriptParams[$key] = $Parameters[$key]
@@ -95,13 +94,26 @@ function New-CippCustomScriptExecution {
 
         Write-LogMessage -API 'CustomScript' -tenant $TenantFilter -message "Executing script with parameters: $($ScriptParams.Keys -join ', ')" -sev 'Debug'
 
-        # Execute the script in current session (already has CIPP functions loaded)
-        # The AST validation ensures only safe commands are used
-        # Use splatting to pass named parameters
-        try {
-            $Result = & $ScriptBlock @ScriptParams
-        } finally {
-            $script:CIPPLockedTenant = $null
+        # Execute inside the ConstrainedLanguage sandbox.
+        $Execution = Invoke-CippSandboxScript -ScriptContent $ScriptContent -SandboxData $SandboxData -ScriptParameters $ScriptParams
+
+        # Deduplicate errors: a single bad expression in a pipeline (e.g. [pscustomobject]
+        # inside ForEach-Object) emits the same error once per item, which is just noise.
+        $ErrorText = (@($Execution.Errors | ForEach-Object { $_.ToString() }) | Select-Object -Unique) -join '; '
+
+        $Result = $Execution.Output
+        # Treat a null-only result as "no output" — a failed expression (e.g. [type]::new()
+        # under CLM) emits a single $null, which must not mask the error as a real result.
+        $HasOutput = @($Result | Where-Object { $null -ne $_ }).Count -gt 0
+
+        # Surface failures to the caller (e.g. the Run Test UI) instead of returning null and
+        # leaving the error only in the logbook. Terminating errors always fail; non-terminating
+        # errors fail only when they left no usable output (the typical CLM-rejection case).
+        if ($Execution.Terminating -or ($Execution.HadErrors -and -not $HasOutput)) {
+            throw "Custom script execution failed: $ErrorText"
+        }
+        if ($Execution.HadErrors) {
+            Write-LogMessage -API 'CustomScript' -tenant $TenantFilter -message "Custom script produced non-terminating errors: $ErrorText" -sev 'Warning'
         }
 
         # Convert result to array if it's not already
@@ -114,7 +126,6 @@ function New-CippCustomScriptExecution {
         }
 
     } catch {
-        $script:CIPPLockedTenant = $null
         Write-LogMessage -API 'CustomScript' -tenant $TenantFilter -message "Failed to execute custom script: $($_.Exception.Message)" -sev 'Error'
         throw
     }

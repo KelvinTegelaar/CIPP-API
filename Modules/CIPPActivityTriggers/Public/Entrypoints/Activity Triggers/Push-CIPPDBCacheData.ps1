@@ -65,6 +65,14 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Compliance license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
         }
 
+        $DefenderCapable = $false
+        try {
+            $DefenderCapable = Test-CIPPStandardLicense -StandardName Compliance'DefenderLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('MDE_SMB', 'WIN_DEF_ATP', 'DEFENDER_ENDPOINT_P1') -SkipLog
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Compliance license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
+        }
+
         $SharePointCapable = $false
         try {
             $SharePointCapable = Test-CIPPStandardLicense -StandardName 'SharePointLicenseCheck' -TenantFilter $TenantFilter -Preset SharePoint -SkipLog
@@ -189,6 +197,18 @@ function Push-CIPPDBCacheData {
                 })
         } else {
             Write-Host "Skipping Compliance data collection for $TenantFilter - no required license"
+        }
+        
+        if ($DefenderCapable) {
+            $Tasks.Add(@{
+                    FunctionName   = 'ExecCIPPDBCache'
+                    CollectionType = 'Defender'
+                    TenantFilter   = $TenantFilter
+                    QueueId        = $QueueId
+                    QueueName      = "DB Cache Defender - $TenantFilter"
+                })
+        } else {
+            Write-Host "Skipping Defender data collection for $TenantFilter - no required license"
         }
 
         if ($SharePointCapable) {

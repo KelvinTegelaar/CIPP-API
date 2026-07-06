@@ -14,14 +14,30 @@ function Invoke-listStandardTemplates {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+        $RowKey = $_.RowKey
         $JSON = $_.JSON -replace '"Action":', '"action":'
         try {
-            $RowKey = $_.RowKey
-            $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
-
+            $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
         } catch {
-            Write-Host "$($RowKey) standard could not be loaded: $($_.Exception.Message)"
-            return
+            try {
+                $RepairedJSON = Repair-CippStandardsTemplate -Json $JSON -Reference $RowKey
+            } catch {
+                Write-LogMessage -headers $Request.Headers -API 'Standards' -message "Standards template '$($RowKey)' was omitted from the response: $($_.Exception.Message)" -Sev 'Error'
+                return
+            }
+            $Data = $RepairedJSON | ConvertFrom-Json -Depth 100
+            try {
+                $null = Add-CIPPAzDataTableEntity @Table -Entity @{
+                    JSON         = "$RepairedJSON"
+                    RowKey       = "$RowKey"
+                    PartitionKey = 'StandardsTemplateV2'
+                    GUID         = "$RowKey"
+                } -Force
+                Write-LogMessage -headers $Request.Headers -API 'Standards' -message "Standards template '$($RowKey)' contained corrupt data (case-duplicate keys) and was automatically repaired and re-saved." -Sev 'Warning'
+            } catch {
+                Write-LogMessage -headers $Request.Headers -API 'Standards' -message "Standards template '$($RowKey)' was repaired but could not be re-saved, so it was omitted from the response: $($_.Exception.Message)" -Sev 'Error'
+                return
+            }
         }
         if ($Data) {
             $Data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force

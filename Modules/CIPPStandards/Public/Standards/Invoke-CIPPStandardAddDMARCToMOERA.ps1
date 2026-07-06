@@ -46,7 +46,7 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
     try {
         $DomainsResponse = New-GraphGetRequest -TenantID $Tenant -Uri 'https://graph.microsoft.com/beta/domains'
         Write-Warning ($DomainsResponse | ConvertTo-Json -Depth 5)
-        $Domains = @($DomainsResponse | Where-Object { $_.id -like '*.onmicrosoft.com' } | ForEach-Object { $_.id })
+        $Domains = @($DomainsResponse | Where-Object { $_.id -like '*.onmicrosoft.com' -and $_.id -notlike '*.mail.onmicrosoft.com' } | ForEach-Object { $_.id })
         Write-Information "Detected $($Domains.Count) MOERA domains: $($Domains -join ', ')"
 
         $CurrentInfo = foreach ($Domain in $Domains) {

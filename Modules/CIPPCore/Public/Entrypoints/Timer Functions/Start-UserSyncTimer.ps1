@@ -20,8 +20,6 @@ function Start-UserSyncTimer {
     $ApiName = 'UserSync'
 
     try {
-        Write-LogMessage -API $ApiName -tenant 'none' -message 'Starting user sync from partner tenant.' -sev Info
-
         # Load the role-to-group mappings
         $AccessGroupsTable = Get-CippTable -TableName AccessRoleGroups
         $AccessGroups = @(Get-CIPPAzDataTableEntity @AccessGroupsTable -Filter "PartitionKey eq 'AccessRoleGroups'")
@@ -57,7 +55,7 @@ function Start-UserSyncTimer {
                     $Upn = $Upn.Trim().ToLower()
 
                     if (-not $UserRoleMap.ContainsKey($Upn)) {
-                        $UserRoleMap[$Upn] = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                        $UserRoleMap[$Upn] = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
                     }
                     foreach ($Role in $RolesForGroup) {
                         [void]$UserRoleMap[$Upn].Add($Role)
@@ -69,123 +67,164 @@ function Start-UserSyncTimer {
             }
         }
 
-        if ($UserRoleMap.Count -eq 0 -and $RoleGroupIds.Count -gt 0) {
-            Write-LogMessage -API $ApiName -tenant 'none' -message 'No users found in any role groups.' -sev Info
-        } elseif ($RoleGroupIds.Count -eq 0) {
-            Write-LogMessage -API $ApiName -tenant 'none' -message 'No Entra groups mapped to roles — will clean up any stale auto-provisioned users.' -sev Info
-        }
-
         # Load existing allowedUsers table
         $UsersTable = Get-CippTable -tablename 'allowedUsers'
         $ExistingUsers = @(Get-CIPPAzDataTableEntity @UsersTable | Where-Object { -not $_.RowKey.StartsWith('_') })
 
-        # Build lookup of existing users
+        # Group existing rows by lowercased UPN so case-variant duplicate rows
+        # are reconciled into one canonical row.
         $ExistingLookup = @{}
         foreach ($Existing in $ExistingUsers) {
-            $ExistingLookup[$Existing.RowKey.ToLower()] = $Existing
+            $Key = $Existing.RowKey.ToLower()
+            if (-not $ExistingLookup.ContainsKey($Key)) {
+                $ExistingLookup[$Key] = [System.Collections.Generic.List[object]]::new()
+            }
+            $ExistingLookup[$Key].Add($Existing)
         }
 
         $Now = (Get-Date).ToUniversalTime().ToString('o')
-        $UpsertCount = 0
         $RemoveCount = 0
         $EntitiesToUpsert = [System.Collections.Generic.List[object]]::new()
+        $EntitiesToRemove = [System.Collections.Generic.List[object]]::new()
 
-        # Upsert users from Graph
+        # Upsert users that are members of a mapped role group
         foreach ($Upn in $UserRoleMap.Keys) {
             $AutoRoles = @($UserRoleMap[$Upn] | Sort-Object)
 
-            $ManualRoles = @()
-            $Source = 'Auto'
-
+            # Merge manual roles from every case-variant of this user (case-sensitive dedupe)
+            $ManualRoles = [System.Collections.Generic.List[string]]::new()
             if ($ExistingLookup.ContainsKey($Upn)) {
-                $Existing = $ExistingLookup[$Upn]
-
-                # Preserve manual roles if they exist
-                if ($Existing.ManualRoles) {
-                    try {
-                        $ManualRoles = @($Existing.ManualRoles | ConvertFrom-Json -ErrorAction Stop)
-                    } catch {
-                        $ManualRoles = @()
+                foreach ($Existing in $ExistingLookup[$Upn]) {
+                    if ($Existing.ManualRoles) {
+                        try {
+                            foreach ($R in @($Existing.ManualRoles | ConvertFrom-Json -ErrorAction Stop)) {
+                                if (-not $ManualRoles.Contains($R)) { $ManualRoles.Add($R) }
+                            }
+                        } catch {}
                     }
-                }
-
-                # If user was previously manual-only and now also auto, mark as Both
-                if ($ManualRoles.Count -gt 0) {
-                    $Source = 'Both'
+                    # Any row that isn't the canonical lowercase key is a duplicate to remove
+                    if ($Existing.RowKey -cne $Upn) { $EntitiesToRemove.Add($Existing) }
                 }
             }
+            $Source = if ($ManualRoles.Count -gt 0) { 'Both' } else { 'Auto' }
 
-            # Compute effective roles = union of auto + manual
-            $EffectiveRoles = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-            foreach ($Role in $AutoRoles) { [void]$EffectiveRoles.Add($Role) }
-            foreach ($Role in $ManualRoles) { [void]$EffectiveRoles.Add($Role) }
+            # Compute effective roles = auto ∪ manual (case-sensitive dedupe)
+            $EffectiveRoles = [System.Collections.Generic.List[string]]::new()
+            foreach ($Role in $AutoRoles) { if (-not $EffectiveRoles.Contains($Role)) { $EffectiveRoles.Add($Role) } }
+            foreach ($Role in $ManualRoles) { if (-not $EffectiveRoles.Contains($Role)) { $EffectiveRoles.Add($Role) } }
             $EffectiveRolesArray = @($EffectiveRoles | Sort-Object)
 
             $Entity = @{
                 PartitionKey = 'User'
                 RowKey       = $Upn
                 Roles        = [string]($EffectiveRolesArray | ConvertTo-Json -Compress -AsArray)
-                AutoRoles    = [string]($AutoRoles | ConvertTo-Json -Compress -AsArray)
-                ManualRoles  = [string](($ManualRoles.Count -gt 0 ? $ManualRoles : @()) | ConvertTo-Json -Compress -AsArray)
+                AutoRoles    = [string](@($AutoRoles) | ConvertTo-Json -Compress -AsArray)
+                ManualRoles  = [string]((($ManualRoles.Count -gt 0) ? @($ManualRoles) : @()) | ConvertTo-Json -Compress -AsArray)
                 Source       = $Source
                 LastSync     = $Now
             }
 
             $EntitiesToUpsert.Add($Entity)
-            $UpsertCount++
         }
 
-        # Handle users that were auto-provisioned but are no longer in any role group
-        foreach ($Existing in $ExistingUsers) {
-            $ExistingUpn = $Existing.RowKey.ToLower()
-            if ($UserRoleMap.ContainsKey($ExistingUpn)) { continue } # Still in a group, already handled
+        # Reconcile existing users that are NOT in any mapped role group
+        foreach ($Key in $ExistingLookup.Keys) {
+            if ($UserRoleMap.ContainsKey($Key)) { continue } # Still in a group, already handled
 
-            if ($Existing.Source -eq 'Auto') {
-                # Purely auto-provisioned user no longer in any group — remove
-                Remove-AzDataTableEntity -Force @UsersTable -Entity $Existing
-                $RemoveCount++
-            } elseif ($Existing.Source -eq 'Both') {
-                # Was both auto + manual — clear auto roles, keep manual only
-                $ManualRoles = @()
+            $Variants = $ExistingLookup[$Key]
+            $NeedsNormalize = ($Variants.Count -gt 1) -or ($Variants[0].RowKey -cne $Key)
+
+            # Merge manual roles across all case-variants (case-sensitive dedupe)
+            $ManualRoles = [System.Collections.Generic.List[string]]::new()
+            foreach ($Existing in $Variants) {
                 if ($Existing.ManualRoles) {
                     try {
-                        $ManualRoles = @($Existing.ManualRoles | ConvertFrom-Json -ErrorAction Stop)
-                    } catch {
-                        $ManualRoles = @()
-                    }
-                }
-
-                if ($ManualRoles.Count -gt 0) {
-                    $Entity = @{
-                        PartitionKey = 'User'
-                        RowKey       = $Existing.RowKey
-                        Roles        = [string]($ManualRoles | ConvertTo-Json -Compress -AsArray)
-                        AutoRoles    = '[]'
-                        ManualRoles  = [string]($ManualRoles | ConvertTo-Json -Compress -AsArray)
-                        Source       = 'Manual'
-                        LastSync     = $Now
-                    }
-                    $EntitiesToUpsert.Add($Entity)
-                } else {
-                    # No manual roles either — remove
-                    Remove-AzDataTableEntity -Force @UsersTable -Entity $Existing
-                    $RemoveCount++
+                        foreach ($R in @($Existing.ManualRoles | ConvertFrom-Json -ErrorAction Stop)) {
+                            if (-not $ManualRoles.Contains($R)) { $ManualRoles.Add($R) }
+                        }
+                    } catch {}
                 }
             }
-            # Source = 'Manual' (or unset) — leave untouched, these are purely manual entries
+
+            if (-not $NeedsNormalize) {
+                # Single clean lowercase row — apply the original cleanup rules
+                $Existing = $Variants[0]
+                if ($Existing.Source -eq 'Auto') {
+                    # Purely auto-provisioned user no longer in any group — remove
+                    $EntitiesToRemove.Add($Existing)
+                } elseif ($Existing.Source -eq 'Both') {
+                    if ($ManualRoles.Count -gt 0) {
+                        # Was both auto + manual — clear auto roles, keep manual only
+                        $ManualArray = @($ManualRoles | Sort-Object)
+                        $EntitiesToUpsert.Add(@{
+                            PartitionKey = 'User'
+                            RowKey       = $Key
+                            Roles        = [string]($ManualArray | ConvertTo-Json -Compress -AsArray)
+                            AutoRoles    = '[]'
+                            ManualRoles  = [string]($ManualArray | ConvertTo-Json -Compress -AsArray)
+                            Source       = 'Manual'
+                            LastSync     = $Now
+                        })
+                    } else {
+                        $EntitiesToRemove.Add($Existing)
+                    }
+                }
+                # Source = 'Manual' (or unset) — leave untouched, these are purely manual entries
+                continue
+            }
+
+            # Duplicates or non-lowercase casing present — collapse to one canonical lowercase row
+            if ($ManualRoles.Count -gt 0) {
+                $ManualArray = @($ManualRoles | Sort-Object)
+                $EntitiesToUpsert.Add(@{
+                    PartitionKey = 'User'
+                    RowKey       = $Key
+                    Roles        = [string]($ManualArray | ConvertTo-Json -Compress -AsArray)
+                    AutoRoles    = '[]'
+                    ManualRoles  = [string]($ManualArray | ConvertTo-Json -Compress -AsArray)
+                    Source       = 'Manual'
+                    LastSync     = $Now
+                })
+                # Remove every case-variant except the canonical one (overwritten by the upsert)
+                foreach ($Existing in $Variants) {
+                    if ($Existing.RowKey -cne $Key) { $EntitiesToRemove.Add($Existing) }
+                }
+            } else {
+                # No manual roles anywhere — purely auto-provisioned; remove all variants
+                foreach ($Existing in $Variants) { $EntitiesToRemove.Add($Existing) }
+            }
         }
 
-        # Batch upsert
-        if ($EntitiesToUpsert.Count -gt 0) {
-            foreach ($Entity in $EntitiesToUpsert) {
-                Add-CIPPAzDataTableEntity @UsersTable -Entity $Entity -Force
+        # Apply upserts first (write canonical rows), then removals (drop duplicates/stale rows).
+        # Only count an upsert as a change when the role data actually differs from the
+        # existing canonical row — LastSync alone changing every run isn't a real change.
+        $ChangedCount = 0
+        foreach ($Entity in $EntitiesToUpsert) {
+            $Canonical = $null
+            if ($ExistingLookup.ContainsKey($Entity.RowKey)) {
+                $Canonical = $ExistingLookup[$Entity.RowKey] | Where-Object { $_.RowKey -ceq $Entity.RowKey } | Select-Object -First 1
             }
+            if (-not $Canonical -or
+                $Canonical.Roles -ne $Entity.Roles -or
+                $Canonical.AutoRoles -ne $Entity.AutoRoles -or
+                $Canonical.ManualRoles -ne $Entity.ManualRoles -or
+                $Canonical.Source -ne $Entity.Source) {
+                $ChangedCount++
+            }
+            Add-CIPPAzDataTableEntity @UsersTable -Entity $Entity -Force
+        }
+        foreach ($Entity in $EntitiesToRemove) {
+            Remove-AzDataTableEntity -Force @UsersTable -Entity $Entity
+            $RemoveCount++
         }
 
         # Invalidate CRAFT's in-memory user cache so changes apply
         try { [Craft.Services.AuthBridge]::InvalidateUsers() } catch {}
 
-        Write-LogMessage -API $ApiName -tenant 'none' -message "User sync completed: $UpsertCount users synced, $RemoveCount auto-only users removed." -sev Info
+        # Only log when something actually changed — no noise on steady-state runs.
+        if ($ChangedCount -gt 0 -or $RemoveCount -gt 0) {
+            Write-LogMessage -API $ApiName -tenant 'none' -message "User sync completed: $ChangedCount users added/updated, $RemoveCount duplicate/stale rows removed." -sev Info
+        }
 
     } catch {
         $ErrorData = Get-CippException -Exception $_

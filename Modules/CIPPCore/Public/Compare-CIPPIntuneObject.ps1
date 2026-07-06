@@ -35,7 +35,8 @@ function Compare-CIPPIntuneObject {
             'isSynced'
             'locationInfo',
             'templateId',
-            'source'
+            'source',
+            'package'
         )
 
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties
@@ -173,11 +174,12 @@ function Compare-CIPPIntuneObject {
                 if (ShouldCompareAsUnorderedSet -PropertyPath $PropertyPath) {
                     # For unordered sets, compare contents regardless of order
                     if ($Object1.Count -ne $Object2.Count) {
-                        # Different lengths - report the difference
+                        # Different lengths - report the actual values so a technician
+                        # can see exactly what differs and decide on the action.
                         $result.Add([PSCustomObject]@{
                                 Property      = $PropertyPath
-                                ExpectedValue = "Array with $($Object1.Count) items"
-                                ReceivedValue = "Array with $($Object2.Count) items"
+                                ExpectedValue = ($Object1 -join ', ')
+                                ReceivedValue = ($Object2 -join ', ')
                             })
                     } else {
                         # Same length - check if all items exist in both arrays

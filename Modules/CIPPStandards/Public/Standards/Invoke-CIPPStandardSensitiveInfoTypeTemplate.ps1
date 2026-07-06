@@ -50,36 +50,52 @@ function Invoke-CIPPStandardSensitiveInfoTypeTemplate {
         return
     }
 
-    if ($Settings.remediate -eq $true) {
-        foreach ($Template in @($Templates)) {
-            $null = Set-CIPPSensitiveInfoType -TenantFilter $Tenant -Template $Template -APIName 'Standards'
+    # Compare each template against the live SIT's rule pack and remediate only what drifts (or is
+    # missing). After a successful remediation, re-compare so the report/alert reflect the fixed state.
+    $Comparisons = foreach ($Template in @($Templates)) {
+        $Comparison = Compare-CIPPSensitiveInfoType -TenantFilter $Tenant -Template $Template
+
+        if ($Settings.remediate -eq $true -and $Comparison.State -in @('Missing', 'Drift')) {
+            $DeployResult = Set-CIPPSensitiveInfoType -TenantFilter $Tenant -Template $Template -APIName 'Standards'
+            if ($DeployResult -match '^(Created|Updated)') {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Remediated SIT '$($Comparison.Name)' ($($Comparison.State)): $DeployResult" -sev Info
+                $Comparison = Compare-CIPPSensitiveInfoType -TenantFilter $Tenant -Template $Template
+            } else {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message $DeployResult -sev Error
+                $Comparison | Add-Member -NotePropertyName DeployError -NotePropertyValue "$DeployResult" -Force
+            }
         }
+        $Comparison
     }
 
-    $ExistingSitNames = try {
-        @(New-ExoRequest -tenantid $Tenant -cmdlet 'Get-DlpSensitiveInformationType' -Compliance | Select-Object -ExpandProperty Name)
-    } catch { @() }
-
-    $MissingSits = @(foreach ($Template in @($Templates)) {
-            $TemplateName = $Template.Name ?? $Template.name
-            if ($ExistingSitNames -notcontains $TemplateName) { $TemplateName }
-        })
+    # Non-compliant when the SIT is missing, drifted, or the template is invalid. Built-in and in-sync
+    # SITs are compliant.
+    $NonCompliant = @($Comparisons | Where-Object { $_.State -in @('Missing', 'Drift', 'Invalid') })
 
     if ($Settings.alert -eq $true) {
-        if ($MissingSits.Count -eq 0) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All selected Sensitive Information Type templates are deployed.' -sev Info
+        if ($NonCompliant.Count -eq 0) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All selected Sensitive Information Type templates are deployed and in sync.' -sev Info
         } else {
-            $AlertMessage = "Sensitive Information Types not deployed in tenant: $($MissingSits -join ', ')"
-            Write-StandardsAlert -message $AlertMessage -object @{ MissingSensitiveInfoTypes = $MissingSits } -tenant $Tenant -standardName 'SensitiveInfoTypeTemplate' -standardId $Settings.standardId
+            $Summary = $NonCompliant | ForEach-Object {
+                if ($_.State -eq 'Drift') {
+                    $Fields = @($_.Differences | ForEach-Object { "$($_.Scope)/$($_.Field)" }) -join ', '
+                    "$($_.Name): drift in $Fields"
+                } else {
+                    "$($_.Name): $($_.State)"
+                }
+            }
+            $AlertMessage = "Sensitive Information Type templates not in sync: $($Summary -join '; ')"
+            Write-StandardsAlert -message $AlertMessage -object @{ NonCompliantSensitiveInfoTypes = $NonCompliant } -tenant $Tenant -standardName 'SensitiveInfoTypeTemplate' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message $AlertMessage -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        $CurrentValue = @{ MissingSensitiveInfoTypes = $MissingSits }
-        $ExpectedValue = @{ MissingSensitiveInfoTypes = @() }
+        # Expose the actual drift (per SIT: state + the differing fields with expected vs current values).
+        $CurrentValue = @{ NonCompliantSensitiveInfoTypes = $NonCompliant }
+        $ExpectedValue = @{ NonCompliantSensitiveInfoTypes = @() }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.SensitiveInfoTypeTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SensitiveInfoTypeTemplate' -FieldValue ($MissingSits.Count -eq 0) -StoreAs bool -Tenant $Tenant
+        Add-CIPPBPAField -FieldName 'SensitiveInfoTypeTemplate' -FieldValue ($NonCompliant.Count -eq 0) -StoreAs bool -Tenant $Tenant
     }
 }

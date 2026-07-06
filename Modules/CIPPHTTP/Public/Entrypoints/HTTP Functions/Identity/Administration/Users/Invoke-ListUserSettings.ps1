@@ -45,6 +45,25 @@ function Invoke-ListUserSettings {
             Write-Warning "Failed to convert UserSpecificSettings JSON: $($_.Exception.Message)"
         }
 
+        $TestOffboardingConfigured = {
+            param($Offboarding)
+            if (-not $Offboarding) { return $false }
+            foreach ($Property in $Offboarding.PSObject.Properties) {
+                if ($Property.Value -eq $true) { return $true }
+            }
+            return $false
+        }
+
+        $AllUsersOffboardingConfigured = & $TestOffboardingConfigured $UserSettings.offboardingDefaults
+        $UserOffboardingConfigured = & $TestOffboardingConfigured $UserSpecificSettings.offboardingDefaults
+
+        $OffboardingDefaultsSource = 'allUsers'
+        if (-not $AllUsersOffboardingConfigured -and $UserOffboardingConfigured) {
+            $UserSettings | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value $UserSpecificSettings.offboardingDefaults -Force | Out-Null
+            $OffboardingDefaultsSource = 'user'
+        }
+        $UserSettings | Add-Member -MemberType NoteProperty -Name 'offboardingDefaultsSource' -Value $OffboardingDefaultsSource -Force | Out-Null
+
         # Get user bookmarks
         try {
             $UserBookmarks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserBookmarks' and RowKey eq '$Username'"

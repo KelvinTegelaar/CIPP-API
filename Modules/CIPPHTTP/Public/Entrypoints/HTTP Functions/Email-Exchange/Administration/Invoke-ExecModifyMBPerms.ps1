@@ -1,4 +1,4 @@
-Function Invoke-ExecModifyMBPerms {
+function Invoke-ExecModifyMBPerms {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,41 +9,43 @@ Function Invoke-ExecModifyMBPerms {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Extract mailbox requests - handle all three formats
     $MailboxRequests = $null
     $Results = [System.Collections.ArrayList]::new()
+    $SuccessfulOps = [System.Collections.ArrayList]::new()
 
     # Direct array format
-    if ($request.body -is [array]) {
-        $MailboxRequests = $request.body
+    if ($Request.Body -is [array]) {
+        $MailboxRequests = $Request.Body
     }
     # Bulk format with mailboxRequests property
-    elseif ($request.body.mailboxRequests) {
-        $MailboxRequests = $request.body.mailboxRequests
+    elseif ($Request.Body.mailboxRequests) {
+        $MailboxRequests = $Request.Body.mailboxRequests
     }
     # Legacy single mailbox format
-    elseif ($request.body.userID -and $request.body.permissions) {
+    elseif ($Request.Body.userID -and $Request.Body.permissions) {
         $MailboxRequests = @([PSCustomObject]@{
-            userID = $request.body.userID
-            tenantFilter = $request.body.tenantFilter
-            permissions = $request.body.permissions
-        })
+                userID       = $Request.Body.userID
+                tenantFilter = $Request.Body.tenantFilter
+                permissions  = $Request.Body.permissions
+            })
     }
 
     if (-not $MailboxRequests -or $MailboxRequests.Count -eq 0) {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'No mailbox requests provided' -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = @("No mailbox requests provided") }
+        Write-LogMessage -headers $Headers -API $APIName -message 'No mailbox requests provided' -Sev 'Error'
+        $body = [pscustomobject]@{'Results' = @('No mailbox requests provided') }
         return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::BadRequest
-            Body       = $Body
-        })
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = $Body
+            })
         return
     }
 
-    $TenantFilter = $Request.body.tenantFilter
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message "Processing permission changes for $($MailboxRequests.Count) mailboxes" -Sev 'Info' -tenant $TenantFilter
+    $TenantFilter = $Request.Body.tenantFilter
+    Write-LogMessage -headers $Headers -API $APIName -message "Processing permission changes for $($MailboxRequests.Count) mailboxes" -Sev 'Info' -tenant $TenantFilter
 
     # Build cmdlet array for processing
     $CmdletArray = [System.Collections.ArrayList]::new()
@@ -51,12 +53,16 @@ Function Invoke-ExecModifyMBPerms {
     $GuidToMetadataMap = @{}  # Map GUIDs to our metadata
     $UserLookupCache = @{}
 
+    # Permission levels Set-CIPPMailboxPermission understands (its ValidateSet). Levels outside this
+    # set are silently skipped, matching the behaviour of the inline switch this used to carry.
+    $SupportedPermissionLevels = @('FullAccess', 'SendAs', 'SendOnBehalf', 'ReadPermission', 'ExternalAccount', 'DeleteItem', 'ChangePermission', 'ChangeOwner')
+
     foreach ($MailboxRequest in $MailboxRequests) {
         $Username = $MailboxRequest.userID
         $Permissions = $MailboxRequest.permissions
 
         if ([string]::IsNullOrEmpty($Username)) {
-            $null = $Results.Add("Skipped mailbox with missing userID")
+            $null = $Results.Add('Skipped mailbox with missing userID')
             continue
         }
 
@@ -65,18 +71,16 @@ Function Invoke-ExecModifyMBPerms {
             try {
                 $UserObject = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)" -tenantid $TenantFilter
                 $UserLookupCache[$Username] = $UserObject.userPrincipalName
-            }
-            catch {
+            } catch {
                 try {
                     $UserObject = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=userPrincipalName eq '$Username'" -tenantid $TenantFilter
                     if ($UserObject.value -and $UserObject.value.Count -gt 0) {
                         $UserLookupCache[$Username] = $UserObject.value[0].userPrincipalName
                     } else {
-                        throw "User not found"
+                        throw 'User not found'
                     }
-                }
-                catch {
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not find user $($Username)" -Sev 'Error' -tenant $TenantFilter
+                } catch {
+                    Write-LogMessage -headers $Headers -API $APIName -message "Could not find user $($Username)" -Sev 'Error' -tenant $TenantFilter
                     $null = $Results.Add("Could not find user $($Username)")
                     continue
                 }
@@ -99,7 +103,7 @@ Function Invoke-ExecModifyMBPerms {
             $AutoMap = if ($Permission.PSObject.Properties.Name -contains 'AutoMap') { $Permission.AutoMap } else { $true }
 
             # Handle multiple permission levels
-            $PermissionLevelArray = if ($PermissionLevels -like "*,*") {
+            $PermissionLevelArray = if ($PermissionLevels -like '*,*') {
                 $PermissionLevels -split ',' | ForEach-Object { $_.Trim() }
             } else {
                 @($PermissionLevels.Trim())
@@ -125,160 +129,37 @@ Function Invoke-ExecModifyMBPerms {
             foreach ($TargetUser in $TargetUsers) {
                 foreach ($PermissionLevel in $PermissionLevelArray) {
 
-                    # Create cmdlet parameters based on permission type and action
-                    $CmdletParams = @{}
-                    $CmdletName = ""
-                    $ExpectedResult = ""
+                    # Build the EXO cmdlet for this change via Set-CIPPMailboxPermission's
+                    # -AsCmdletObject mode - the single source of truth for the permission-level ->
+                    # cmdlet/parameter mapping. It returns @{ CmdletName; Parameters; ExpectedResult }
+                    # for supported combinations, or a plain string for unsupported ones (e.g. an Add
+                    # on a remove-only level), which we skip. The bulk machinery below is unchanged.
+                    if ($PermissionLevel -notin $SupportedPermissionLevels) { continue }
+                    $Action = if ($Modification -eq 'Remove') { 'Remove' } else { 'Add' }
 
-                    switch ($PermissionLevel) {
-                        'FullAccess' {
-                            if ($Modification -eq 'Remove') {
-                                $CmdletName = 'Remove-MailboxPermission'
-                                $CmdletParams = @{
-                                    Identity     = $UserId
-                                    user         = $TargetUser
-                                    accessRights = @('FullAccess')
-                                    Confirm      = $false
-                                }
-                                $ExpectedResult = "Removed $($TargetUser) from $($Username) FullAccess permissions"
-                            } else {
-                                $CmdletName = 'Add-MailboxPermission'
-                                $CmdletParams = @{
-                                    Identity     = $UserId
-                                    user         = $TargetUser
-                                    accessRights = @('FullAccess')
-                                    automapping  = $AutoMap
-                                    Confirm      = $false
-                                }
-                                $ExpectedResult = "Granted $($TargetUser) FullAccess to $($Username) with automapping $($AutoMap)"
-                            }
-                        }
-                        'SendAs' {
-                            if ($Modification -eq 'Remove') {
-                                $CmdletName = 'Remove-RecipientPermission'
-                                $CmdletParams = @{
-                                    Identity     = $UserId
-                                    Trustee      = $TargetUser
-                                    accessRights = @('SendAs')
-                                    Confirm      = $false
-                                }
-                                $ExpectedResult = "Removed $($TargetUser) SendAs permissions from $($Username)"
-                            } else {
-                                $CmdletName = 'Add-RecipientPermission'
-                                $CmdletParams = @{
-                                    Identity     = $UserId
-                                    Trustee      = $TargetUser
-                                    accessRights = @('SendAs')
-                                    Confirm      = $false
-                                }
-                                $ExpectedResult = "Granted $($TargetUser) SendAs permissions to $($Username)"
-                            }
-                        }
-                        'SendOnBehalf' {
-                            $CmdletName = 'Set-Mailbox'
-                            if ($Modification -eq 'Remove') {
-                                $CmdletParams = @{
-                                    Identity            = $UserId
-                                    GrantSendonBehalfTo = @{
-                                        '@odata.type' = '#Exchange.GenericHashTable'
-                                        remove        = $TargetUser
-                                    }
-                                    Confirm             = $false
-                                }
-                                $ExpectedResult = "Removed $($TargetUser) SendOnBehalf permissions from $($Username)"
-                            } else {
-                                $CmdletParams = @{
-                                    Identity            = $UserId
-                                    GrantSendonBehalfTo = @{
-                                        '@odata.type' = '#Exchange.GenericHashTable'
-                                        add           = $TargetUser
-                                    }
-                                    Confirm             = $false
-                                }
-                                $ExpectedResult = "Granted $($TargetUser) SendOnBehalf permissions to $($Username)"
-                            }
-                        }
-                        'ReadPermission' {
-                            if ($Modification -eq 'Remove') {
-                                $CmdletName = 'Remove-MailboxPermission'
-                                $CmdletParams = @{
-                                    Identity     = $UserId
-                                    user         = $TargetUser
-                                    accessRights = @('ReadPermission')
-                                    Confirm      = $false
-                                }
-                                $ExpectedResult = "Removed $($TargetUser) ReadPermission from $($Username)"
-                            }
-                        }
-                        'ExternalAccount' {
-                            if ($Modification -eq 'Remove') {
-                                $CmdletName = 'Remove-MailboxPermission'
-                                $CmdletParams = @{
-                                    Identity     = $UserId
-                                    user         = $TargetUser
-                                    accessRights = @('ExternalAccount')
-                                    Confirm      = $false
-                                }
-                                $ExpectedResult = "Removed $($TargetUser) ExternalAccount permissions from $($Username)"
-                            }
-                        }
-                        'DeleteItem' {
-                            if ($Modification -eq 'Remove') {
-                                $CmdletName = 'Remove-MailboxPermission'
-                                $CmdletParams = @{
-                                    Identity     = $UserId
-                                    user         = $TargetUser
-                                    accessRights = @('DeleteItem')
-                                    Confirm      = $false
-                                }
-                                $ExpectedResult = "Removed $($TargetUser) DeleteItem permissions from $($Username)"
-                            }
-                        }
-                        'ChangePermission' {
-                            if ($Modification -eq 'Remove') {
-                                $CmdletName = 'Remove-MailboxPermission'
-                                $CmdletParams = @{
-                                    Identity     = $UserId
-                                    user         = $TargetUser
-                                    accessRights = @('ChangePermission')
-                                    Confirm      = $false
-                                }
-                                $ExpectedResult = "Removed $($TargetUser) ChangePermission from $($Username)"
-                            }
-                        }
-                        'ChangeOwner' {
-                            if ($Modification -eq 'Remove') {
-                                $CmdletName = 'Remove-MailboxPermission'
-                                $CmdletParams = @{
-                                    Identity     = $UserId
-                                    user         = $TargetUser
-                                    accessRights = @('ChangeOwner')
-                                    Confirm      = $false
-                                }
-                                $ExpectedResult = "Removed $($TargetUser) ChangeOwner permissions from $($Username)"
-                            }
-                        }
-                    }
+                    $Mapping = Set-CIPPMailboxPermission -UserId $UserId -AccessUser $TargetUser -PermissionLevel $PermissionLevel -Action $Action -AutoMap $AutoMap -TenantFilter $TenantFilter -AsCmdletObject
 
-                    if ($CmdletName) {
+                    if ($Mapping -is [hashtable] -and $Mapping.CmdletName) {
                         # Generate unique GUID for this operation
                         $OperationGuid = [Guid]::NewGuid().ToString()
 
                         $CmdletObj = @{
-                            CmdletInput = @{
-                                CmdletName = $CmdletName
-                                Parameters = $CmdletParams
+                            CmdletInput   = @{
+                                CmdletName = $Mapping.CmdletName
+                                Parameters = $Mapping.Parameters
                             }
                             OperationGuid = $OperationGuid  # Add GUID to cmdlet object
                         }
 
+                        # Use the resolved UPN, not the raw request identifier (which may be an
+                        # object id) - the cache sync below matches cached rows by mailbox UPN.
                         $CmdletMetadata = [PSCustomObject]@{
-                            ExpectedResult = $ExpectedResult
-                            Mailbox = $Username
-                            TargetUser = $TargetUser
-                            Permission = $PermissionLevel
-                            Action = $Modification
-                            OperationGuid = $OperationGuid
+                            ExpectedResult = $Mapping.ExpectedResult
+                            Mailbox        = $UserId
+                            TargetUser     = $TargetUser
+                            Permission     = $PermissionLevel
+                            Action         = $Action
+                            OperationGuid  = $OperationGuid
                         }
 
                         $null = $CmdletArray.Add($CmdletObj)
@@ -293,12 +174,12 @@ Function Invoke-ExecModifyMBPerms {
     }
 
     if ($CmdletArray.Count -eq 0) {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'No valid cmdlets to process' -sev 'Warning' -tenant $TenantFilter
-        $body = [pscustomobject]@{'Results' = @("No valid permission changes to process") }
+        Write-LogMessage -headers $Headers -API $APIName -message 'No valid cmdlets to process' -sev 'Warning' -tenant $TenantFilter
+        $body = [pscustomobject]@{'Results' = @('No valid permission changes to process') }
         return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+                StatusCode = [HttpStatusCode]::OK
+                Body       = $Body
+            })
         return
     }
 
@@ -306,7 +187,7 @@ Function Invoke-ExecModifyMBPerms {
     if ($CmdletArray.Count -gt 1) {
         # Use bulk processing with GUID tracking
         try {
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Executing bulk request with $($CmdletArray.Count) cmdlets" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Headers -API $APIName -message "Executing bulk request with $($CmdletArray.Count) cmdlets" -Sev 'Info' -tenant $TenantFilter
             $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($CmdletArray) -ReturnWithCommand $true
 
             # Process bulk results using GUID mapping
@@ -321,13 +202,14 @@ Function Invoke-ExecModifyMBPerms {
                             if ($result.error) {
                                 $ErrorMessage = try { (Get-CippException -Exception $result.error).NormalizedError } catch { $result.error }
                                 $null = $Results.Add("Error processing $($metadata.Permission) for $($metadata.TargetUser) on $($metadata.Mailbox): $ErrorMessage")
-                                Write-LogMessage -headers $Request.Headers -API $APINAME -message "Error for operation $operationGuid`: $ErrorMessage" -Sev 'Error' -tenant $TenantFilter
+                                Write-LogMessage -headers $Headers -API $APIName -message "Error for operation $operationGuid`: $ErrorMessage" -Sev 'Error' -tenant $TenantFilter
                             } else {
                                 $null = $Results.Add($metadata.ExpectedResult)
-                                Write-LogMessage -headers $Request.Headers -API $APINAME -message "Success for operation $operationGuid`: $($metadata.ExpectedResult)" -Sev 'Info' -tenant $TenantFilter
+                                $null = $SuccessfulOps.Add($metadata)
+                                Write-LogMessage -headers $Headers -API $APIName -message "Success for operation $operationGuid`: $($metadata.ExpectedResult)" -Sev 'Info' -tenant $TenantFilter
                             }
                         } else {
-                            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not map result to operation. GUID: $operationGuid, Available GUIDs: $($GuidToMetadataMap.Keys -join ', ')" -sev 'Warning' -tenant $TenantFilter
+                            Write-LogMessage -headers $Headers -API $APIName -message "Could not map result to operation. GUID: $operationGuid, Available GUIDs: $($GuidToMetadataMap.Keys -join ', ')" -sev 'Warning' -tenant $TenantFilter
 
                             # Fallback for unmapped results
                             if ($result.error) {
@@ -344,14 +226,14 @@ Function Invoke-ExecModifyMBPerms {
                 foreach ($CmdletMetadata in $CmdletMetadataArray) {
                     if ($CmdletMetadata.ExpectedResult) {
                         $null = $Results.Add($CmdletMetadata.ExpectedResult)
+                        $null = $SuccessfulOps.Add($CmdletMetadata)
                     }
                 }
             }
 
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Bulk request completed successfully" -Sev 'Info' -tenant $TenantFilter
-        }
-        catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Bulk request failed, using fallback: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Headers -API $APIName -message 'Bulk request completed successfully' -Sev 'Info' -tenant $TenantFilter
+        } catch {
+            Write-LogMessage -headers $Headers -API $APIName -message "Bulk request failed, using fallback: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
 
             # Fallback to individual processing
             for ($i = 0; $i -lt $CmdletArray.Count; $i++) {
@@ -360,31 +242,43 @@ Function Invoke-ExecModifyMBPerms {
                 try {
                     $null = New-ExoRequest -Anchor $CmdletMetadata.Mailbox -tenantid $TenantFilter -cmdlet $CmdletObj.CmdletInput.CmdletName -cmdParams $CmdletObj.CmdletInput.Parameters
                     $null = $Results.Add($CmdletMetadata.ExpectedResult)
-                }
-                catch {
+                    $null = $SuccessfulOps.Add($CmdletMetadata)
+                } catch {
                     $null = $Results.Add("Error processing $($CmdletMetadata.Permission) for $($CmdletMetadata.TargetUser) on $($CmdletMetadata.Mailbox): $($_.Exception.Message)")
                 }
             }
         }
-    }
-    else {
+    } else {
         # Use individual processing for single operation
         $CmdletObj = $CmdletArray[0]
         $CmdletMetadata = $CmdletMetadataArray[0]
         try {
             $null = New-ExoRequest -Anchor $CmdletMetadata.Mailbox -tenantid $TenantFilter -cmdlet $CmdletObj.CmdletInput.CmdletName -cmdParams $CmdletObj.CmdletInput.Parameters
             $null = $Results.Add($CmdletMetadata.ExpectedResult)
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Executed $($CmdletMetadata.Permission) permission modification" -Sev 'Info' -tenant $TenantFilter
-        }
-        catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Permission modification failed: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
+            $null = $SuccessfulOps.Add($CmdletMetadata)
+            Write-LogMessage -headers $Headers -API $APIName -message "Executed $($CmdletMetadata.Permission) permission modification" -Sev 'Info' -tenant $TenantFilter
+        } catch {
+            Write-LogMessage -headers $Headers -API $APIName -message "Permission modification failed: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
             $null = $Results.Add("Error processing $($CmdletMetadata.Permission) for $($CmdletMetadata.TargetUser) on $($CmdletMetadata.Mailbox): $($_.Exception.Message)")
+        }
+    }
+
+    # Keep the reporting DB cache in step with what actually changed. The bulk path bypasses
+    # Set-CIPPMailboxPermission's own execute-mode sync (-AsCmdletObject returns early), so
+    # without this the cached permission report goes stale after every bulk change.
+    foreach ($Op in $SuccessfulOps) {
+        if ($Op.Permission -in @('FullAccess', 'SendAs', 'SendOnBehalf')) {
+            try {
+                Sync-CIPPMailboxPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $Op.Mailbox -User $Op.TargetUser -PermissionType $Op.Permission -Action $Op.Action
+            } catch {
+                Write-Information "Cache sync warning: $($_.Exception.Message)"
+            }
         }
     }
 
     $body = [pscustomobject]@{'Results' = @($Results) }
     return ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = $Body
-    })
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Body
+        })
 }

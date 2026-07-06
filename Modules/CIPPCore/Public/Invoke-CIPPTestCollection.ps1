@@ -17,6 +17,7 @@ function Invoke-CIPPTestCollection {
         - CIS              → Invoke-CippTestCIS_*
         - SMB1001          → Invoke-CippTestSMB1001_*
         - CopilotReadiness → Invoke-CippTestCopilotReady*
+        - E8               → Invoke-CippTestE8_*
         - Custom           → Special: enumerates enabled ScriptGuids from DB and calls
                              Invoke-CippTestCustomScripts once per guid (the function
                              requires a ScriptGuid parameter to filter the table query)
@@ -33,7 +34,7 @@ function Invoke-CIPPTestCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'SMB1001', 'CopilotReadiness', 'GenericTests', 'Custom')]
+        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'SMB1001', 'CopilotReadiness', 'GenericTests', 'E8', 'Custom')]
         [string]$SuiteName,
 
         [Parameter(Mandatory = $true)]
@@ -51,6 +52,7 @@ function Invoke-CIPPTestCollection {
         SMB1001          = 'Invoke-CippTestSMB1001_*'
         CopilotReadiness = 'Invoke-CippTestCopilotReady*'
         GenericTests     = 'Invoke-CippTestGenericTest*'
+        E8               = 'Invoke-CippTestE8_*'
     }
 
     $SuiteStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -104,6 +106,7 @@ function Invoke-CIPPTestCollection {
 
         $Table = Get-CippTable -tablename 'CippTestResults'
         $ResultBatch = [System.Collections.Generic.List[hashtable]]::new()
+        $AlertBatch = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Guid in $EnabledGuids) {
             $ItemStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -113,6 +116,8 @@ function Invoke-CIPPTestCollection {
                 foreach ($Entity in $TestOutput) {
                     if ($Entity -is [hashtable] -and $Entity.PartitionKey -and $Entity.RowKey) {
                         $ResultBatch.Add($Entity)
+                    } elseif ($Entity -isnot [hashtable] -and $Entity.PSObject.Properties['CippCustomTestAlert']) {
+                        $AlertBatch.Add($Entity)
                     }
                 }
                 if ($ResultBatch.Count -ge 100) {
@@ -139,6 +144,12 @@ function Invoke-CIPPTestCollection {
         if ($ResultBatch.Count -gt 0) {
             Add-CIPPAzDataTableEntity @Table -Entity @($ResultBatch) -Force
             Write-Information "  [Custom] Flushed final $($ResultBatch.Count) results to table"
+        }
+
+        # Ship a single aggregated alert for the tenant covering all alert-worthy results.
+        if ($AlertBatch.Count -gt 0) {
+            Write-Information "  [Custom] Shipping $($AlertBatch.Count) custom test alert(s) for $TenantFilter"
+            Send-CIPPCustomTestAlert -TenantFilter $TenantFilter -Alerts @($AlertBatch)
         }
 
         $SuiteStopwatch.Stop()

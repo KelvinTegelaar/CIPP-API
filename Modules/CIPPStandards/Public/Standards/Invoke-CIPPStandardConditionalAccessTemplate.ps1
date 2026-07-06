@@ -67,6 +67,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         return
     }
 
+    $DeployError = $null
     if ($Settings.remediate -eq $true) {
         try {
             $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$($Settings.TemplateList.value)'"
@@ -76,7 +77,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 $TestP2 = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_p2' -TenantFilter $Tenant -Preset EntraP2 -SkipLog
                 if (!$TestP2) {
                     Write-Information "Skipping policy $($Policy.displayName) as it requires AAD Premium P2 license."
-                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue "Policy $($Policy.displayName) requires AAD Premium P2 license." -Tenant $Tenant
+                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -CurrentValue @{ Differences = 'Policy requires an AAD Premium P2 license, which this tenant does not have.' } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
                     return $true
                 }
             }
@@ -97,58 +98,90 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
 
             $null = New-CIPPCAPolicy @NewCAPolicy
         } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $ErrorMessage" -sev 'Error'
+            # Capture the Graph deploy error (e.g. invalid CA policy 1011/1085) so the report
+            # section below surfaces the reason in the compare fields instead of just "missing".
+            $DeployError = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $DeployError" -sev 'Error'
         }
     }
     if ($Settings.report -eq $true -or $Settings.remediate -eq $true) {
+        $FieldName = "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)"
         $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$($Settings.TemplateList.value)'"
         $Policy = (Get-CippAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 10
+
+        if ($null -eq $Policy) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Conditional Access template '$($Settings.TemplateList.label)' ($($Settings.TemplateList.value)) could not be loaded from the template store - skipping." -Sev 'Error'
+            Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = "Template '$($Settings.TemplateList.label)' could not be loaded from the template store." } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
+            return
+        }
 
         # Override the template's state with the Drift Standard's state if specified
         # This ensures drift detection compares against the desired state, not the original template state
         if ($Settings.state -and $Settings.state -ne 'donotchange') {
             Write-Information "Overriding template state from '$($Policy.state)' to '$($Settings.state)' for drift comparison"
-            $Policy.state = $Settings.state
+            $Policy | Add-Member -NotePropertyName 'state' -NotePropertyValue $Settings.state -Force
+        }
+
+        # Resolve the template's location GUIDs to display names so they compare like-for-like
+        # with the deployed policy. The template's own LocationInfo carries the id->name map
+        # (the GUID is the source tenant's id); fall back to this tenant's named-location cache.
+        if ($Policy.conditions.locations) {
+            $LocNameById = @{}
+            foreach ($li in @($Policy.LocationInfo)) { if ($li.id -and $li.displayName) { $LocNameById[$li.id] = $li.displayName } }
+            foreach ($pl in @($PreloadedLocations)) { if ($pl.id -and $pl.displayName -and -not $LocNameById.ContainsKey($pl.id)) { $LocNameById[$pl.id] = $pl.displayName } }
+            foreach ($LocDir in 'includeLocations', 'excludeLocations') {
+                if ($Policy.conditions.locations.PSObject.Properties.Name -contains $LocDir -and $Policy.conditions.locations.$LocDir) {
+                    $Policy.conditions.locations.$LocDir = @($Policy.conditions.locations.$LocDir | ForEach-Object {
+                            if ($LocNameById.ContainsKey($_)) { $LocNameById[$_] } else { $_ }
+                        })
+                }
+            }
         }
 
         $CheckExististing = $AllCAPolicies | Where-Object -Property displayName -EQ $Settings.TemplateList.label
+        # Duplicate display names would pass an array to New-CIPPCATemplate (breaking its single-object
+        # conversion and dumping the whole template). Compare against the first match instead.
+        if ($CheckExististing -is [array] -and $CheckExististing.Count -gt 1) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Found $($CheckExististing.Count) Conditional Access policies named '$($Settings.TemplateList.label)' in $Tenant. Comparing against the first; duplicate policies should be cleaned up." -Sev 'Warning'
+            $CheckExististing = $CheckExististing[0]
+        }
         if (!$CheckExististing) {
-            if ($Policy.conditions.userRiskLevels.Count -gt 0 -or $Policy.conditions.signInRiskLevels.Count -gt 0) {
+            if ($DeployError) {
+                # Attempted but the Graph deployment errored (e.g. invalid CA policy) - surface the reason
+                Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = "Failed to deploy: $DeployError" } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
+            } elseif ($Policy.conditions.userRiskLevels.Count -gt 0 -or $Policy.conditions.signInRiskLevels.Count -gt 0) {
                 $TestP2 = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_p2' -TenantFilter $Tenant -Preset EntraP2 -SkipLog
                 if (!$TestP2) {
-                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue "Policy $($Settings.TemplateList.label) requires AAD Premium P2 license." -Tenant $Tenant
+                    Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = 'Policy requires an AAD Premium P2 license, which this tenant does not have.' } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
                 } else {
-                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue "Policy $($Settings.TemplateList.label) is missing from this tenant." -Tenant $Tenant
+                    Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = 'Policy is missing from this tenant.' } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
                 }
             } else {
-                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue "Policy $($Settings.TemplateList.label) is missing from this tenant." -Tenant $Tenant
+                Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = 'Policy is missing from this tenant.' } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
             }
         } else {
-            $templateResult = New-CIPPCATemplate -TenantFilter $tenant -JSON $CheckExististing -preloadedLocations $preloadedLocations
+            $templateResult = New-CIPPCATemplate -TenantFilter $tenant -JSON $CheckExististing -preloadedLocations $PreloadedLocations
             $CompareObj = ConvertFrom-Json -ErrorAction SilentlyContinue -InputObject $templateResult
-            if ($null -eq $Policy -or $null -eq $CompareObj) {
-                $nullSide = if ($null -eq $Policy) { 'template policy' } else { 'tenant policy conversion' }
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Cannot compare CA policy: $nullSide returned null for $($Settings.TemplateList.label)" -sev Error
-                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue "Error comparing policy: $nullSide returned null" -Tenant $Tenant
+            if ($null -eq $CompareObj) {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Cannot compare CA policy: tenant policy conversion returned null for $($Settings.TemplateList.label)" -sev Error
+                Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = 'Tenant policy conversion returned null.' } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
                 return
             }
             try {
                 $Compare = Compare-CIPPIntuneObject -ReferenceObject $Policy -DifferenceObject $CompareObj -CompareType 'ca'
             } catch {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Error comparing CA policy: $($_.Exception.Message)" -sev Error
-                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue "Error comparing policy: $($_.Exception.Message)" -Tenant $Tenant
+                Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = "Error comparing policy: $($_.Exception.Message)" } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
                 return
             }
             if (!$Compare) {
                 $ExpectedValue = @{ 'Differences' = 'No Differences found' }
                 $CurrentValue = @{ 'Differences' = 'No Differences found' }
-                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue $true -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
+                Set-CIPPStandardsCompareField -FieldName $FieldName -FieldValue $true -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
             } else {
-                #this can still be prettified but is for later.
                 $ExpectedValue = @{ 'Differences' = @() }
                 $CurrentValue = @{ 'Differences' = $Compare }
-                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
+                Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
             }
         }
     }

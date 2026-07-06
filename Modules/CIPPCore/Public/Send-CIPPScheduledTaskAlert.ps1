@@ -137,11 +137,74 @@ function Send-CIPPScheduledTaskAlert {
         $NotificationFilter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
         $NotificationConfig = [pscustomobject](Get-CIPPAzDataTableEntity @NotificationTable -Filter $NotificationFilter)
         $UseStandardizedSchema = [boolean]$NotificationConfig.UseStandardizedSchema
+        $TaskParameters = $TaskInfo.Parameters
+        if ($TaskParameters -is [string] -and $TaskParameters) {
+            try { $TaskParameters = $TaskParameters | ConvertFrom-Json -ErrorAction Stop } catch { $TaskParameters = $null }
+        }
+        $ExecutingUser = $TaskParameters.Headers.'x-ms-client-principal-name'
 
         # Send to configured alert targets
         switch -wildcard ($TaskInfo.PostExecution) {
             '*psa*' {
-                Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML -TenantFilter $TenantFilter
+                $PsaSplitSent = $false
+                if ($TaskType -eq 'Alert' -and $Results -is [array] -and $Results.Count -gt 0 -and $Results[0] -isnot [string]) {
+                    try {
+                        $ExtConfigTable = Get-CIPPTable -TableName Extensionsconfig
+                        $ExtConfig = (Get-CIPPAzDataTableEntity @ExtConfigTable).config | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        $HaloConfig = $ExtConfig.HaloPSA
+
+                        # Per-task PsaTicketStrategy (configured on the alert) overrides the global
+                        # HaloPSA.LinkTicketsToUsers toggle. Lets MSPs decide on a per-alert basis
+                        # whether a wide alert (e.g. "users without MFA") should produce one ticket
+                        # per user or one consolidated ticket per tenant.
+                        $TaskStrategy = $TaskInfo.PsaTicketStrategy
+                        $ShouldSplit = switch ($TaskStrategy) {
+                            'split' { $true }
+                            'consolidated' { $false }
+                            default { [bool]$HaloConfig.LinkTicketsToUsers }
+                        }
+
+                        if ($HaloConfig -and $HaloConfig.Enabled -and $ShouldSplit) {
+                            $UpnFieldCandidates = @('UserPrincipalName', 'userPrincipalName', 'UPN', 'userId', 'Userkey')
+                            $RowProperties = $Results[0].PSObject.Properties.Name
+                            $UpnField = $UpnFieldCandidates | Where-Object { $_ -in $RowProperties } | Select-Object -First 1
+
+                            if ($UpnField) {
+                                $DisplayFieldCandidates = @('DisplayName', 'displayName', 'userDisplayName')
+                                $DisplayField = $DisplayFieldCandidates | Where-Object { $_ -in $RowProperties } | Select-Object -First 1
+
+                                $Groups = $Results | Group-Object -Property $UpnField
+
+                                foreach ($Group in $Groups) {
+                                    $GroupKey = $Group.Name
+                                    $GroupHTMLFragment = $Group.Group | ConvertTo-Html -Fragment
+                                    $GroupHTML = $GroupHTMLFragment -replace '<table>', "This alert is for tenant $TenantFilter. <br /><br /> $TableDesign<table class=adaptiveTable>" | Out-String
+
+                                    if ([string]::IsNullOrWhiteSpace($GroupKey)) {
+                                        # Rows without a usable user identifier - send as a single tenant-scoped ticket.
+                                        Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $GroupHTML -TenantFilter $TenantFilter
+                                    } else {
+                                        $GroupDisplayName = if ($DisplayField) { $Group.Group[0].$DisplayField } else { $null }
+                                        $UserLabel = if ($GroupDisplayName) { "$GroupDisplayName ($GroupKey)" } else { $GroupKey }
+                                        $UserTitle = "$title - $UserLabel"
+                                        $AffectedUser = [pscustomobject]@{
+                                            UPN         = $GroupKey
+                                            DisplayName = $GroupDisplayName
+                                        }
+                                        Send-CIPPAlert -Type 'psa' -Title $UserTitle -HTMLContent $GroupHTML -TenantFilter $TenantFilter -AffectedUser $AffectedUser
+                                    }
+                                }
+                                $PsaSplitSent = $true
+                            }
+                        }
+                    } catch {
+                        Write-Information "Failed to split PSA alert by user, falling back to consolidated ticket: $($_.Exception.Message)"
+                    }
+                }
+
+                if (-not $PsaSplitSent) {
+                    Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML -TenantFilter $TenantFilter
+                }
             }
             '*email*' {
                 $EmailParams = @{
@@ -181,10 +244,11 @@ function Send-CIPPScheduledTaskAlert {
 
                 $Webhook = if ($UseStandardizedSchema) {
                     $obj = [PSCustomObject]@{
-                        tenantId     = $TenantInfo.customerId
-                        tenant       = $TenantFilter
-                        taskType     = $TaskType
-                        task         = [PSCustomObject]@{
+                        tenantId      = $TenantInfo.customerId
+                        tenant        = $TenantFilter
+                        taskType      = $TaskType
+                        executingUser = $ExecutingUser
+                        task          = [PSCustomObject]@{
                             id        = $TaskInfo.RowKey
                             name      = $TaskInfo.Name
                             command   = $TaskInfo.Command
@@ -194,8 +258,8 @@ function Send-CIPPScheduledTaskAlert {
                             executed  = $TaskInfo.ExecutedTime
                             partition = $TaskInfo.PartitionKey
                         }
-                        results      = $Results
-                        alertComment = $TaskInfo.AlertComment
+                        results       = $Results
+                        alertComment  = $TaskInfo.AlertComment
                     }
                     if ($SnoozeInfo) { $obj | Add-Member -NotePropertyName 'snooze' -NotePropertyValue $SnoozeInfo }
                     $obj

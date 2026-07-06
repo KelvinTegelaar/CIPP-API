@@ -11,6 +11,27 @@ function Push-CIPPStandard {
 
     $Tenant = $Item.Tenant
     $Standard = $Item.Standard
+
+    # FUTURE USE - ZAC
+    # Grouped Conditional Access batch: deploy all of a tenant's CA templates in one sequential
+    # pass. Per-template rerun checks and standard-info context are handled inside the batch
+    # function, so we bypass the generic per-item dispatch below.
+    # if ($Item.BatchTemplates) {
+    #     $TemplateCount = @($Item.BatchTemplates).Count
+    #     Write-Information "Received Conditional Access batch for $Tenant with $TemplateCount template(s)."
+    #     Set-CippUserAgentContext -Source 'standard' -TemplateId $Item.TemplateId
+    #     $QueuedTime = if ($Item.QueuedTime) { [int64]$Item.QueuedTime } else { 0 }
+    #     try {
+    #         Invoke-CIPPCATemplateBatch -Tenant $Tenant -Templates $Item.BatchTemplates -QueuedTime $QueuedTime
+    #         Write-Information "Conditional Access batch completed for tenant $Tenant"
+    #     } catch {
+    #         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Error running Conditional Access batch for tenant $Tenant - $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
+    #         Write-Warning "Error running Conditional Access batch for tenant $Tenant - $($_.Exception.Message)"
+    #         throw $_.Exception.Message
+    #     }
+    #     return
+    # }
+
     $FunctionName = 'Invoke-CIPPStandard{0}' -f $Standard
 
     Write-Information "We'll be running $FunctionName"

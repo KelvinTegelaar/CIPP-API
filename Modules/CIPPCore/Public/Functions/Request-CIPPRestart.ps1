@@ -19,13 +19,7 @@ function Request-CIPPRestart {
     try {
         $Subscription = Get-CIPPAzFunctionAppSubId
         $SiteName = $env:WEBSITE_SITE_NAME
-        $RGName = $env:WEBSITE_RESOURCE_GROUP
-        if (-not $RGName) {
-            $Owner = $env:WEBSITE_OWNER_NAME
-            if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                $RGName = $Matches.RGName
-            }
-        }
+        $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $SiteName
         if (-not ($Subscription -and $RGName -and $SiteName)) {
             throw 'Azure App Service details could not be determined from environment'
         }

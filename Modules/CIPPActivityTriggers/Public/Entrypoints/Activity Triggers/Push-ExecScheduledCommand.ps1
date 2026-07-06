@@ -50,48 +50,17 @@ function Push-ExecScheduledCommand {
     # Task should be 'Pending' (queued by orchestrator) or 'Running' (retry/recovery)
     # We accept both to handle edge cases
 
-    # Check for rerun protection - prevent duplicate executions within the recurrence interval
-    # Do this BEFORE updating state to 'Running' to avoid getting stuck
-    if ($task.Recurrence -and $task.Recurrence -ne '0' -and !$IsMultiTenantExecution) {
-        # Calculate interval in seconds from recurrence string
-        $IntervalSeconds = switch -Regex ($task.Recurrence) {
-            '^(\d+)$' { [int64]$matches[1] * 86400 }  # Plain number = days
-            '(\d+)m$' { [int64]$matches[1] * 60 }
-            '(\d+)h$' { [int64]$matches[1] * 3600 }
-            '(\d+)d$' { [int64]$matches[1] * 86400 }
-            default { 0 }
-        }
+    # NOTE: Recurring scheduled tasks intentionally have NO rerun-cache protection here.
+    # Duplicate execution is already prevented by the orchestrator's own state machine:
+    #   - the ETag claim flips the task to 'Pending' atomically (no concurrent dispatch),
+    #   - 'Pending'/'Running' tasks are not re-picked until they go stale (1h/4h),
+    #   - ScheduledTime is advanced on completion so the task isn't eligible again until due.
+    # A separate rerun cache (Test-CIPPRerun) was a second, independent clock that drifted out
+    # of sync with ScheduledTime whenever a run didn't finish advancing the schedule, which both
+    # deadlocked tasks and blocked the orchestrator's stuck-task recovery. ScheduledTime is the
+    # single source of truth.
 
-        if ($IntervalSeconds -gt 0) {
-            # Round down to nearest 15-minute interval (900 seconds) since that's when orchestrator runs
-            # This prevents rerun blocking issues due to slight timing variations
-            $FifteenMinutes = 900
-            $AdjustedInterval = [Math]::Floor($IntervalSeconds / $FifteenMinutes) * $FifteenMinutes
-
-            # Ensure we have at least one 15-minute interval
-            if ($AdjustedInterval -lt $FifteenMinutes) {
-                $AdjustedInterval = $FifteenMinutes
-            }
-            # Use task RowKey as API identifier for rerun cache
-            $RerunParams = @{
-                TenantFilter = $Tenant
-                Type         = 'ScheduledTask'
-                API          = $task.RowKey
-                Interval     = $AdjustedInterval
-                BaseTime     = [int64]$task.ScheduledTime
-                Headers      = $Headers
-            }
-
-            $IsRerun = Test-CIPPRerun @RerunParams
-            if ($IsRerun) {
-                Write-Information "Scheduled task $($task.Name) for tenant $Tenant was recently executed. Skipping to prevent duplicate execution."
-                Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
-                return
-            }
-        }
-    }
-
-    # Also check for one-time task rerun protection based on ExecutedTime
+    # One-time task rerun protection based on ExecutedTime (the task's own field, not a cache)
     if ((!$task.Recurrence -or $task.Recurrence -eq '0') -and $task.ExecutedTime -and !$IsMultiTenantExecution) {
         $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         $timeSinceExecution = $currentUnixTime - [int64]$task.ExecutedTime

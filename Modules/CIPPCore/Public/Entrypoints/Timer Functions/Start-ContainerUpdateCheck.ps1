@@ -86,12 +86,11 @@ function Start-ContainerUpdateCheck {
             # Resolve ARM site details
             $Subscription = Get-CIPPAzFunctionAppSubId
             $SiteName = $env:WEBSITE_SITE_NAME
-            $RGName = $env:WEBSITE_RESOURCE_GROUP
-            if (-not $RGName) {
-                $Owner = $env:WEBSITE_OWNER_NAME
-                if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                    $RGName = $Matches.RGName
-                }
+            try {
+                $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $SiteName
+            } catch {
+                Write-Information "Could not determine resource group: $($_.Exception.Message)"
+                $RGName = $null
             }
 
             $ImageTag = $env:IMAGE_TAG ?? 'unknown'
@@ -130,19 +129,27 @@ function Start-ContainerUpdateCheck {
             $authHeader = @{ Authorization = "Bearer $($tokenResp.token)" }
             $manifestAccept = 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'
 
+            # PS7's Invoke-WebRequest returns .Content as byte[] when the response lacks a charset
+            # (GHCR manifest media types omit it), so piping straight to ConvertFrom-Json yields
+            # an int array — leaving RemoteVersion null and UpdateAvailable always false. Decode bytes first.
+            function ConvertFrom-RawJson($Content) {
+                if ($Content -is [byte[]]) { $Content = [System.Text.Encoding]::UTF8.GetString($Content) }
+                return $Content | ConvertFrom-Json
+            }
+
             # GET the channel tag's manifest — extract digest + version label set by CI
             # (org.opencontainers.image.version mirrors $env:APP_VERSION in the running container).
             $manifestHeaders = $authHeader + @{ Accept = $manifestAccept }
             $resp = Invoke-WebRequest -Uri "https://ghcr.io/v2/$imagePath/manifests/$CheckTag" -Method GET -Headers $manifestHeaders -ErrorAction Stop
             $RemoteDigest = $resp.Headers['Docker-Content-Digest']
             if ($RemoteDigest -is [array]) { $RemoteDigest = $RemoteDigest[0] }
-            $manifest = $resp.Content | ConvertFrom-Json
+            $manifest = ConvertFrom-RawJson $resp.Content
 
             if ($manifest.manifests) {
                 $child = $manifest.manifests | Where-Object { $_.platform.architecture -eq 'amd64' -and $_.platform.os -eq 'linux' } | Select-Object -First 1
                 if (-not $child) { $child = $manifest.manifests | Select-Object -First 1 }
                 $childResp = Invoke-WebRequest -Uri "https://ghcr.io/v2/$imagePath/manifests/$($child.digest)" -Method GET -Headers $manifestHeaders -ErrorAction Stop
-                $manifest = $childResp.Content | ConvertFrom-Json
+                $manifest = ConvertFrom-RawJson $childResp.Content
             }
 
             $RemoteVersion = $manifest.annotations.'org.opencontainers.image.version'
