@@ -81,6 +81,12 @@ function Get-CippMcpToolList {
                     $InputSchema['required'] = @($RequiredList | Select-Object -Unique)
                 }
 
+                # openapi.json is auto-generated and may yield schema nodes that are invalid JSON
+                # Schema draft 2020-12 (a $null from an unresolved $ref, a non-standard 'type', a
+                # leaked OpenAPI-only keyword). A single invalid tool schema makes the LLM provider
+                # reject the entire tools/list, so guarantee validity before advertising it.
+                $InputSchema = Repair-CippMcpSchema -Node $InputSchema
+
                 $Tag = @($Op['tags'])[0]
                 $Category = if ($Tag) { ([string]$Tag -split '\s*>\s*')[0].Trim() } else { 'Uncategorized' }
 
@@ -176,6 +182,91 @@ function Resolve-CippMcpRef {
         }
     }
     return $Node
+}
+
+function Repair-CippMcpSchema {
+    # Normalises a JSON Schema node into valid draft 2020-12 before it is advertised to an MCP
+    # client. openapi.json is auto-generated from PowerShell param blocks, so a node can be $null
+    # (an unresolved $ref), carry a non-standard 'type', hold OpenAPI-only keywords the LLM provider
+    # rejects, or use tuple-form 'items'. Because one invalid tool schema causes the provider to
+    # reject the whole tools/list, every node is repaired here. Recursive; internal helper.
+    param($Node)
+
+    # $null, scalars and arrays can never be a valid schema object -> permissive string schema.
+    if ($Node -isnot [System.Collections.IDictionary]) {
+        return [ordered]@{ type = 'string' }
+    }
+
+    $ValidTypes = @('string', 'number', 'integer', 'boolean', 'object', 'array', 'null')
+    $DropKeys = @('$ref', 'nullable', 'example', 'examples', 'discriminator', 'xml', 'externalDocs', 'readOnly', 'writeOnly', 'deprecated')
+
+    $Out = [ordered]@{}
+    foreach ($Entry in $Node.GetEnumerator()) {
+        if ($DropKeys -contains $Entry.Key) { continue }
+        $Out[[string]$Entry.Key] = $Entry.Value
+    }
+
+    # 'type' must be a standard JSON Schema type (or an array of them); drop anything else so the
+    # node degrades to a permissive-but-valid schema rather than an invalid one.
+    if ($Out.Contains('type')) {
+        $Type = $Out['type']
+        if ($Type -is [string]) {
+            if ($ValidTypes -notcontains $Type) { $Out.Remove('type') }
+        } elseif ($Type -is [System.Collections.IEnumerable]) {
+            $Kept = @($Type | Where-Object { $ValidTypes -contains $_ })
+            if ($Kept.Count -gt 0) { $Out['type'] = $Kept } else { $Out.Remove('type') }
+        } else {
+            $Out.Remove('type')
+        }
+    }
+
+    # Recurse into every nested schema location.
+    if ($Out.Contains('properties')) {
+        if ($Out['properties'] -is [System.Collections.IDictionary]) {
+            $Props = [ordered]@{}
+            foreach ($Prop in $Out['properties'].GetEnumerator()) {
+                $Props[[string]$Prop.Key] = Repair-CippMcpSchema -Node $Prop.Value
+            }
+            $Out['properties'] = $Props
+        } else {
+            $Out.Remove('properties')
+        }
+    }
+
+    # 'items' as an array is tuple form (invalid in 2020-12 without prefixItems); Repair collapses
+    # a non-dictionary to a valid single-schema form.
+    if ($Out.Contains('items')) {
+        $Out['items'] = Repair-CippMcpSchema -Node $Out['items']
+    }
+
+    if ($Out.Contains('additionalProperties') -and $Out['additionalProperties'] -is [System.Collections.IDictionary]) {
+        $Out['additionalProperties'] = Repair-CippMcpSchema -Node $Out['additionalProperties']
+    }
+
+    foreach ($Combinator in @('allOf', 'anyOf', 'oneOf')) {
+        if ($Out.Contains($Combinator)) {
+            if ($Out[$Combinator] -is [System.Collections.IEnumerable] -and $Out[$Combinator] -isnot [string]) {
+                $Out[$Combinator] = @($Out[$Combinator] | ForEach-Object { Repair-CippMcpSchema -Node $_ })
+            } else {
+                $Out.Remove($Combinator)
+            }
+        }
+    }
+
+    if ($Out.Contains('not')) {
+        $Out['not'] = Repair-CippMcpSchema -Node $Out['not']
+    }
+
+    # 'required' must be an array of property-name strings.
+    if ($Out.Contains('required')) {
+        if ($Out['required'] -is [System.Collections.IEnumerable] -and $Out['required'] -isnot [string]) {
+            $Out['required'] = @($Out['required'] | Where-Object { $_ -is [string] })
+        } else {
+            $Out.Remove('required')
+        }
+    }
+
+    return $Out
 }
 
 function Get-CippMcpDescription {
