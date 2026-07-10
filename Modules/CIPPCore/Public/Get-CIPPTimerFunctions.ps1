@@ -28,12 +28,14 @@ function Get-CIPPTimerFunctions {
 
     $FunctionName = $env:WEBSITE_SITE_NAME
     $MainFunctionVersion = ($Nodes | Where-Object { $_.RowKey -eq $FunctionName }).Version
-    $AvailableNodes = $Nodes | Where-Object { $_.RowKey -match '-' -and $_.Version -eq $MainFunctionVersion } | ForEach-Object { ($_.RowKey -split '-')[1] }
+    # Offloaded nodes: RowKey is '<mainname>-<suffix>'. Use the known offload suffix as the
+    # node name (Get-CippOffloadSuffix), NOT the second dash segment - a dashed main-app name
+    # (e.g. 'compaction-01-z2ir2') would otherwise yield a wrong node like '01'.
+    $AvailableNodes = $Nodes | Where-Object { (Test-CippOffloadFunctionApp -SiteName $_.RowKey) -and $_.Version -eq $MainFunctionVersion } | ForEach-Object { Get-CippOffloadSuffix -SiteName $_.RowKey }
 
-    # Get node name
-    if ($FunctionName -match '-') {
-        $Node = ($FunctionName -split '-')[1]
-    } else {
+    # Get node name for the current app: the offload suffix, or 'http' for the main app.
+    $Node = Get-CippOffloadSuffix -SiteName $FunctionName
+    if (-not $Node) {
         $Node = 'http'
     }
 

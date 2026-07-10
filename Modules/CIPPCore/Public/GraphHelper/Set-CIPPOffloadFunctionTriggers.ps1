@@ -3,10 +3,10 @@ function Set-CIPPOffloadFunctionTriggers {
     .SYNOPSIS
         Manages non-HTTP triggers on function apps based on offloading configuration.
     .DESCRIPTION
-        Automatically detects if running on an offloaded function app (contains hyphen in name).
-        If this is the main function app (no hyphen), checks the offloading state from Config table
-        and disables/enables timer, activity, orchestrator, and queue triggers accordingly.
-        Offloaded function apps (with hyphen) are skipped as they should have triggers enabled.
+        Automatically detects if running on an offloaded function app (name ends with a known
+        offload suffix). If this is the main function app, checks the offloading state from the
+        Config table and disables/enables timer, activity, orchestrator, and queue triggers
+        accordingly. Offloaded function apps are skipped as they should have triggers enabled.
     .EXAMPLE
         Set-CIPPOffloadFunctionTriggers
         Automatically manages triggers based on current function app context and offloading state.
@@ -17,8 +17,9 @@ function Set-CIPPOffloadFunctionTriggers {
     # Get current function app name
     $FunctionAppName = $env:WEBSITE_SITE_NAME
 
-    # Check if this is an offloaded function app (contains hyphen)
-    if ($FunctionAppName -match '-') {
+    # Check if this is an offloaded function app (name ends with a known offload suffix).
+    # A dashed main-app name (e.g. 'compaction-01-z2ir2') is NOT offloaded.
+    if (Test-CippOffloadFunctionApp -SiteName $FunctionAppName) {
         return $true
     }
 

@@ -30,8 +30,11 @@ function Set-CIPPDBCacheIntuneAppInstallStatus {
         $JobRow = Get-CIPPAzDataTableEntity @JobsTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$ReportName'"
 
         if (-not $JobRow) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "No $ReportName job submitted - skipping app install status cache" -sev Info
-            return
+            # No pending job - the nightly submission was already consumed by a previous cache run
+            # or never ran. Submit a new export job now so forced cache runs are self-sufficient.
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "No $ReportName export job pending - submitting a new one" -sev Info
+            $null = New-CIPPIntuneReportExportJob -TenantFilter $TenantFilter -ReportName $ReportName
+            $JobRow = Get-CIPPAzDataTableEntity @JobsTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$ReportName'"
         }
 
         $JobId = $JobRow.JobId
@@ -41,26 +44,32 @@ function Set-CIPPDBCacheIntuneAppInstallStatus {
             return
         }
 
-        try {
-            $Job = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs/$JobId" -tenantid $TenantFilter
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId not retrievable: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
-            Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
-            return
-        }
+        # Poll the export job until it completes. Jobs submitted by the nightly orchestrator are
+        # long since completed and pass on the first check; freshly self-submitted jobs get a
+        # bounded wait so a forced run still returns fresh data.
+        $Deadline = [datetime]::UtcNow.AddMinutes(4)
+        while ($true) {
+            try {
+                $Job = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs/$JobId" -tenantid $TenantFilter
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId not retrievable: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
+                Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+                return
+            }
 
-        switch ($Job.status) {
-            'completed' { }
-            'failed' {
+            if ($Job.status -eq 'completed') { break }
+            if ($Job.status -eq 'failed') {
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId failed" -sev Error
                 Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
                 return
             }
-            default {
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId still '$($Job.status)' - skipping" -sev Info
+            if ([datetime]::UtcNow -ge $Deadline) {
+                # Keep the job row so the next cache run can consume the result
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId still '$($Job.status)' after waiting - the result will be cached on the next run" -sev Info
                 return
             }
+            Start-Sleep -Seconds 20
         }
 
         if (-not $Job.url) {

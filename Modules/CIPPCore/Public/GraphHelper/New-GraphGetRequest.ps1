@@ -19,6 +19,13 @@ function New-GraphGetRequest {
         [hashtable]$extraHeaders,
         [switch]$ReturnRawResponse,
         [switch]$SkipValueExtraction,
+        # Emit each page straight to the pipeline instead of buffering the whole
+        # paginated result. Peak memory becomes one page rather than the entire
+        # dataset — use for large collections piped into a streaming consumer
+        # (e.g. Set-CIPPDBCache* | Add-CIPPDbItem). Trade-off: on a mid-pagination
+        # failure, pages already emitted have flowed downstream before the throw.
+        [switch]$Stream,
+        [switch]$UseCertificate,
         $Headers
     )
 
@@ -32,11 +39,10 @@ function New-GraphGetRequest {
         if ($headers) {
             $headers = $Headers
         } else {
-            if ($scope -eq 'ExchangeOnline') {
-                $headers = Get-GraphToken -tenantid $tenantid -scope 'https://outlook.office365.com/.default' -AsApp $asapp -SkipCache $skipTokenCache
-            } else {
-                $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
-            }
+            $TokenScope = if ($scope -eq 'ExchangeOnline') { 'https://outlook.office365.com/.default' } else { $scope }
+            # -UseCertificate authenticates the app with the SAM certificate instead of the
+            # client secret: delegated (refresh token) by default, app-only with -AsApp $true
+            $headers = Get-GraphToken -tenantid $tenantid -scope $TokenScope -AsApp $asapp -SkipCache $skipTokenCache -UseCertificate:$UseCertificate
         }
         if ($ComplexFilter) {
             $headers['ConsistencyLevel'] = 'eventual'
@@ -58,7 +64,11 @@ function New-GraphGetRequest {
         }
 
 
-        $ReturnedData = do {
+        # Pagination loop. Its per-page output ($data.value etc.) is either buffered
+        # into $ReturnedData and returned (default), or streamed straight to the
+        # pipeline (-Stream). Same loop body either way — see the dispatch below.
+        $Pager = {
+            do {
             $RetryCount = 0
             $MaxRetries = 3
             $RequestSuccessful = $false
@@ -180,7 +190,14 @@ function New-GraphGetRequest {
                 }
             } while (-not $RequestSuccessful -and $RetryCount -le $MaxRetries)
         } until ([string]::IsNullOrEmpty($NextURL) -or $NextURL -is [object[]] -or ' ' -eq $NextURL)
-        return $ReturnedData
+        }
+
+        if ($Stream) {
+            & $Pager
+        } else {
+            $ReturnedData = & $Pager
+            return $ReturnedData
+        }
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
     }

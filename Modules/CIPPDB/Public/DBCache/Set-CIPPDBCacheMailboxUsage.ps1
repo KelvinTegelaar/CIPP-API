@@ -19,9 +19,8 @@ function Set-CIPPDBCacheMailboxUsage {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching mailbox usage' -sev Debug
 
-        $MailboxUsage = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')?`$format=application%2fjson" -tenantid $TenantFilter
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxUsage' -Data $MailboxUsage -AddCount
-        $MailboxUsage = $null
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')?`$format=application%2fjson" -tenantid $TenantFilter -Stream |
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxUsage' -AddCount
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached mailbox usage successfully' -sev Debug
 
     } catch {

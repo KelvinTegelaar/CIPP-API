@@ -295,6 +295,11 @@
     "description": "SharePoint site usage statistics"
   },
   {
+    "type": "SharePointSharingLinks",
+    "friendlyName": "SharePoint & OneDrive Sharing Links",
+    "description": "Sharing links and external grants on SharePoint and OneDrive files and folders"
+  },
+  {
     "type": "OfficeActivations",
     "friendlyName": "Office Activations",
     "description": "Microsoft 365 app activation counts per user per platform (Windows, Mac, Mobile)"
@@ -383,5 +388,10 @@
     "type": "ExoTransportConfig",
     "friendlyName": "Exchange Transport Config",
     "description": "Exchange Online transport configuration including SMTP authentication settings"
+  },
+  {
+    "type": "DefenderCVEs",
+    "friendlyName": "Defender CVEs",
+    "description": "All Defender CVEs for Devices"
   }
 ]

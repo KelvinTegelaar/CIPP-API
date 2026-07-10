@@ -1,0 +1,1074 @@
+{
+  "metadata": {
+    "name": "CIPP Malicious Applications",
+    "description": "Curated list of OAuth / Entra ID enterprise applications that have been observed being abused by threat actors against Microsoft 365 tenants. Entries are matched on appId (the Application/Client ID of the service principal that appears in a tenant after consent).",
+    "permissionTypes": [
+      "Delegated",
+      "Application"
+    ],
+    "resources": [
+      "Microsoft Graph",
+      "Office 365 Exchange Online",
+      "SharePoint"
+    ],
+    "categoryDefinitions": {
+      "Mailbox exfiltration": "Application synchronizes or exports the contents of a user's mailbox, enabling bulk theft of email.",
+      "Address book exfiltration": "Application harvests contacts or directory information for reconnaissance and follow-on phishing.",
+      "Sharepoint/OneDrive exfiltration": "Application reads or downloads files from SharePoint Online or OneDrive for Business.",
+      "Data exfiltration": "Application is used to move data out of the tenant to an attacker-controlled location.",
+      "Reconnaissance": "Application is used to enumerate users, contacts, or organizational data to identify targets.",
+      "Phishing": "Application is used to send phishing email or otherwise facilitate phishing campaigns.",
+      "Persistence": "Application grants the attacker durable, consent-based access that survives a password reset.",
+      "Business Email Compromise": "Application observed as part of a BEC intrusion (mailbox access, fraudulent email, financial redirection)."
+    },
+    "applicationFields": {
+      "name": "Display name of the application as it appears on the consent screen / enterprise application.",
+      "appId": "Application (client) ID of the service principal. Primary key used for detection.",
+      "description": "What the application is / does.",
+      "categories": "Controlled-vocabulary classifications (see categoryDefinitions).",
+      "tags": "Free-form labels.",
+      "permissions": "Array of { scope, type, resource } granted to or requested by the app.",
+      "mitreAttackIds": "Relevant MITRE ATT&CK technique IDs.",
+      "publisher": "Publisher identity { name, id, verified } where known.",
+      "appOwnerOrganizationId": "Tenant ID that owns the multi-tenant application, where known.",
+      "references": "Write-ups, threat-intel articles, or official documentation.",
+      "detection": "Hunting / detection guidance specific to this application.",
+      "relatedAppIds": "appIds of related entries (e.g. renamed versions of the same app).",
+      "notes": "Caveats, data-quality flags, or additional context."
+    }
+  },
+  "applications": [
+    {
+      "name": "CloudSponge",
+      "appId": "a43e5392-f48b-46a4-a0f1-098b5eeb4757",
+      "description": "CloudSponge is a software-as-a-service product that imports contacts from all the major address books. It is embedded by websites so that users do not have to type email addresses into referral / invite forms.",
+      "categories": [
+        "Address book exfiltration"
+      ],
+      "tags": [],
+      "permissions": [],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "CubeBackup",
+      "appId": "412445a2-0794-487e-9dd6-d57d9593b249",
+      "description": "CubeBackup is a self-hosted cloud backup solution that integrates with Microsoft 365, including Exchange Online, SharePoint and OneDrive. With sufficient privileges it can be leveraged by threat actors to conduct automated, mass exfiltration from a victim's environment.",
+      "categories": [
+        "Data exfiltration",
+        "Mailbox exfiltration",
+        "Sharepoint/OneDrive exfiltration",
+        "Business Email Compromise"
+      ],
+      "tags": [
+        "BEC",
+        "Exfiltration"
+      ],
+      "permissions": [
+        {
+          "scope": "Calendars.ReadWrite",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Channel.Create",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Channel.ReadBasic.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "ChannelMember.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "ChannelMessage.Read.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "ChannelSettings.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Contacts.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Directory.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Files.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Group.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.ReadWrite",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Sites.FullControl.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Team.Create",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Team.ReadBasic.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "TeamMember.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "TeamSettings.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "TeamsTab.Create",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "TeamsTab.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "TeamsAppInstallation.ReadWriteForTeam.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "User.ReadWrite.All",
+          "type": "Application",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "full_access_as_app",
+          "type": "Application",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "Sites.FullControl.All",
+          "type": "Application",
+          "resource": "SharePoint"
+        }
+      ],
+      "mitreAttackIds": [
+        "T1537",
+        "T1567",
+        "T1020"
+      ],
+      "publisher": {
+        "name": "CubeBackup, Inc.",
+        "id": "cubebackupinc1662619479161",
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [
+        "https://www.cubebackup.com/"
+      ],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "Edison Mail",
+      "appId": "62db40a4-2c7e-4373-a609-eda138798962",
+      "description": "Email client with full Microsoft 365 synchronization capabilities.",
+      "categories": [
+        "Mailbox exfiltration"
+      ],
+      "tags": [],
+      "permissions": [],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [],
+      "detection": "Unified Audit Log typically records synced items as MailItemsAccessed events. Hunt by App ID.",
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "eM Client",
+      "appId": "e9a7fea1-1cc0-4cd9-a31b-9137ca5deedd",
+      "description": "eM Client is a desktop email client with full Microsoft Office 365 synchronization. Abused to bulk-synchronize and exfiltrate a compromised mailbox and to maintain access.",
+      "categories": [
+        "Mailbox exfiltration",
+        "Persistence"
+      ],
+      "tags": [],
+      "permissions": [
+        {
+          "scope": "EWS.AccessAsUser.All",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "email",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "openid",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [
+        "https://www.huntress.com/blog/legitimate-apps-as-traitorware-for-persistent-microsoft-365-compromise",
+        "https://cybercorner.tech/malicious-usage-of-em-client-in-business-email-compromise/"
+      ],
+      "detection": "Unified Audit Log typically records synced items as MailItemsAccessed events. Hunt by App ID.",
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "Fastmail",
+      "appId": "77468577-4f6e-40e7-b745-11d3d0c28095",
+      "description": "Fastmail is an alternative email service that allows import/export from various email providers, including Microsoft 365. If a victim consents, all email can be exfiltrated to an attacker-controlled Fastmail account, with the option to continue exfiltrating mail post-consent.",
+      "categories": [
+        "Mailbox exfiltration",
+        "Persistence"
+      ],
+      "tags": [
+        "Persistence",
+        "Exfiltration"
+      ],
+      "permissions": [
+        {
+          "scope": "openid",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "email",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "IMAP.AccessAsUser.All",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "SMTP.Send",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        }
+      ],
+      "mitreAttackIds": [
+        "T1114.002",
+        "T1567.002",
+        "T1136.003",
+        "T1098.001"
+      ],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": false
+      },
+      "appOwnerOrganizationId": "9188040d-6c67-4c5b-b112-36a304b66dad",
+      "references": [
+        "https://x.com/mwaski88/status/1775904383382802502",
+        "https://cybercorner.tech/common-oauth-apps-used-in-business-email-compromise/#Fastmail",
+        "https://www.fastmail.help/hc/en-us/articles/360060590593-Migrate-to-Fastmail-from-another-provider"
+      ],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": "appOwnerOrganizationId 9188040d-6c67-4c5b-b112-36a304b66dad is the Microsoft consumer (personal accounts) tenant. Publisher reported as not verified."
+    },
+    {
+      "name": "Foxmail",
+      "appId": "231575bc-9f6c-4539-9241-5cfae696b630",
+      "description": "Foxmail is a desktop email client. Observed consented in a business email compromise with the full set of legacy Exchange protocol scopes, enabling full mailbox synchronization.",
+      "categories": [
+        "Mailbox exfiltration",
+        "Business Email Compromise"
+      ],
+      "tags": [
+        "BEC"
+      ],
+      "permissions": [
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "openid",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "email",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "profile",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "POP.AccessAsUser.All",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "IMAP.AccessAsUser.All",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "SMTP.Send",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "EAS.AccessAsUser.All",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "EWS.AccessAsUser.All",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        }
+      ],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "Horizon Tech",
+      "appId": "b1c4926a-5fb6-4aad-b920-709c957be148",
+      "description": "Pulls email and contacts and sends phishing emails from the compromised mailbox.",
+      "categories": [
+        "Mailbox exfiltration",
+        "Address book exfiltration",
+        "Phishing",
+        "Persistence",
+        "Business Email Compromise"
+      ],
+      "tags": [
+        "BEC",
+        "persistence",
+        "spam",
+        "phishing",
+        "email abuse"
+      ],
+      "permissions": [
+        {
+          "scope": "Mail.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "User.ReadBasic.All",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.Send",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "MailboxSettings.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [
+        "T1114",
+        "T1566",
+        "T1071.001"
+      ],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "Jotform",
+      "appId": "9af771d1-1288-43f0-91a6-adadcbd212b5",
+      "description": "Jotform is an online form and survey builder. Abused as a native phishing / spam vector after Microsoft 365 SSO consent.",
+      "categories": [
+        "Phishing",
+        "Business Email Compromise"
+      ],
+      "tags": [
+        "BEC",
+        "spam",
+        "phishing"
+      ],
+      "permissions": [
+        {
+          "scope": "User.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "openid",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "profile",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": "261450de-982f-4efb-a5fe-0fc2d9d08717",
+      "references": [
+        "https://www.jotform.com",
+        "https://www.bleepingcomputer.com/news/security/the-rise-of-native-phishing-microsoft-365-apps-abused-in-attacks/"
+      ],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "Mail_Backup",
+      "appId": "2ef68ccc-8a4d-42ff-ae88-2d7bb89ad139",
+      "description": "Exports mailboxes for backup purposes; used by threat actors to exfiltrate email. This is the renamed successor to PerfectData Software.",
+      "categories": [
+        "Mailbox exfiltration"
+      ],
+      "tags": [],
+      "permissions": [
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "profile",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "User.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "openid",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "MailboxFolder.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Contacts.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Calendars.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "MailboxSettings.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "MailboxFolder.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [
+        "https://cybercorner.tech/malicious-azure-application-perfectdata-software-and-office365-business-email-compromise/",
+        "https://darktrace.com/blog/how-abuse-of-perfectdata-software-may-create-a-perfect-storm-an-emerging-trend-in-account-takeovers",
+        "https://www.secureworks.com/blog/qr-phishing-leads-to-microsoft-365-account-compromise"
+      ],
+      "detection": "Updated version of PerfectData Software. Unified Audit Log surfaces synced items as MailItemsAccessed events. Hunt by App ID.",
+      "relatedAppIds": [
+        "ff8d92dc-3d82-41d6-bcbd-b9174d163620"
+      ],
+      "notes": null
+    },
+    {
+      "name": "Newsletter Software Supermailer",
+      "appId": "a245e8c0-b53c-4b67-9b45-751d1dff8e6b",
+      "description": "Bulk email sending software. Abused to send phishing / spam from a compromised mailbox.",
+      "categories": [
+        "Phishing"
+      ],
+      "tags": [],
+      "permissions": [
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.Send",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Contacts.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [
+        "https://www.huntress.com/blog/legitimate-apps-as-traitorware-for-persistent-microsoft-365-compromise"
+      ],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "PerfectData Software",
+      "appId": "ff8d92dc-3d82-41d6-bcbd-b9174d163620",
+      "description": "Exports mailboxes for backup purposes. Widely abused for Office 365 business email compromise to bulk-export a victim mailbox.",
+      "categories": [
+        "Mailbox exfiltration"
+      ],
+      "tags": [],
+      "permissions": [
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "profile",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "User.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "openid",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "EWS.AccessAsUser.All",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        }
+      ],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [
+        "https://cybercorner.tech/malicious-azure-application-perfectdata-software-and-office365-business-email-compromise/",
+        "https://darktrace.com/blog/how-abuse-of-perfectdata-software-may-create-a-perfect-storm-an-emerging-trend-in-account-takeovers",
+        "https://www.secureworks.com/blog/qr-phishing-leads-to-microsoft-365-account-compromise"
+      ],
+      "detection": "The Unified Audit Log initially did not record items synced by this app; it now surfaces them as MailItemsAccessed events. Hunt by App ID.",
+      "relatedAppIds": [
+        "2ef68ccc-8a4d-42ff-ae88-2d7bb89ad139"
+      ],
+      "notes": "Renamed/superseded by 'Mail_Backup' (2ef68ccc-8a4d-42ff-ae88-2d7bb89ad139)."
+    },
+    {
+      "name": "PostBox",
+      "appId": "179d5108-412b-4c95-8e34-06786784ab39",
+      "description": "Desktop email client with full Microsoft 365 synchronization capabilities. Abused for mailbox exfiltration and persistence.",
+      "categories": [
+        "Mailbox exfiltration",
+        "Persistence"
+      ],
+      "tags": [],
+      "permissions": [
+        {
+          "scope": "IMAP.AccessAsUser.All",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "POP.AccessAsUser.All",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "SMTP.Send",
+          "type": "Delegated",
+          "resource": "Office 365 Exchange Online"
+        },
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "rclone",
+      "appId": "4761b959-9780-4c2d-87a3-512b4638f767",
+      "description": "rclone is a command-line program for managing files across cloud storage providers. Abused to bulk-download SharePoint Online / OneDrive content from a compromised tenant.",
+      "categories": [
+        "Data exfiltration",
+        "Sharepoint/OneDrive exfiltration"
+      ],
+      "tags": [],
+      "permissions": [
+        {
+          "scope": "Files.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Files.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Files.Read.All",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Files.ReadWrite.All",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "User.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Sites.Read.All",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [
+        "https://www.kroll.com/en/insights/publications/cyber/new-m365-business-email-compromise-attacks-with-rclone"
+      ],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "SigParser",
+      "appId": "caffae8c-0882-4c81-9a27-d1803af53a40",
+      "description": "SigParser scans emails, calendars, address books, spreadsheets and more to automatically generate profiles on the people and companies who have interacted with a business. Abused for address-book / contact harvesting.",
+      "categories": [
+        "Address book exfiltration"
+      ],
+      "tags": [],
+      "permissions": [],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [
+        "https://sigparser.com/"
+      ],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "Spike",
+      "appId": "946c777c-bc85-489e-b034-392389ae23d6",
+      "description": "Spike is a conversational email client and team-collaboration app. Abused for mailbox exfiltration, persistence and phishing.",
+      "categories": [
+        "Mailbox exfiltration",
+        "Persistence",
+        "Phishing"
+      ],
+      "tags": [],
+      "permissions": [
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.Send",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "User.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "People.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "MailboxSettings.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Calendars.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": null,
+      "references": [
+        "https://darktrace.com/blog/breakdown-of-a-multi-account-compromise-within-office-365"
+      ],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "Teleforge Directory",
+      "appId": "1a9b8d93-0d60-4835-896f-83016de95ff5",
+      "description": "Used for business email compromise. Installed shortly after a breach and after an additional MFA authentication device was added; data was collected for roughly a week, after which fraudulent emails were sent.",
+      "categories": [
+        "Business Email Compromise",
+        "Mailbox exfiltration"
+      ],
+      "tags": [
+        "BEC"
+      ],
+      "permissions": [
+        {
+          "scope": "Mail.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "User.ReadBasic.All",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.Send",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "MailboxSettings.ReadWrite",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [
+        "T1119"
+      ],
+      "publisher": {
+        "name": "Unknown (deleted before recorded)",
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": "aa68a5d2-2ee2-4ff7-8193-3d037ab704b1",
+      "references": [],
+      "detection": null,
+      "relatedAppIds": [],
+      "notes": null
+    },
+    {
+      "name": "ZoomInfo Communitiez Login",
+      "appId": "497ac034-5120-4c1a-929a-0351f5c09918",
+      "description": "Service principal consented to when the 'My Connections' feature within ZoomInfo is used. This feature extracts address-book and other contact information from the victim account, enabling target discovery, exfiltration and targeted phishing.",
+      "categories": [
+        "Address book exfiltration",
+        "Reconnaissance",
+        "Phishing",
+        "Persistence"
+      ],
+      "tags": [
+        "Discovery",
+        "Exfiltration",
+        "Persistence",
+        "Phishing"
+      ],
+      "permissions": [
+        {
+          "scope": "User.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "openid",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Contacts.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "Mail.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "User.ReadBasic.All",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "email",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "offline_access",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "profile",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "MailboxSettings.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [
+        "T1530",
+        "T1567",
+        "T1087.003"
+      ],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": "945a9641-35c7-435c-a5a0-c8753e6dff88",
+      "references": [
+        "https://cybercorner.tech/common-oauth-apps-used-in-business-email-compromise/#ZoomInfo"
+      ],
+      "detection": null,
+      "relatedAppIds": [
+        "858d7e42-35f0-44b7-9033-df309239a47f"
+      ],
+      "notes": null
+    },
+    {
+      "name": "Zoominfo Login",
+      "appId": "858d7e42-35f0-44b7-9033-df309239a47f",
+      "description": "ZoomInfo is a B2B business-intelligence platform with a large database of company and contact information. It can be used via SSO with a Microsoft 365 account, which creates this service principal in the tenant and can be abused for persistence and contact harvesting.",
+      "categories": [
+        "Address book exfiltration",
+        "Persistence"
+      ],
+      "tags": [
+        "persistence"
+      ],
+      "permissions": [
+        {
+          "scope": "User.Read",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "email",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "openid",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        },
+        {
+          "scope": "profile",
+          "type": "Delegated",
+          "resource": "Microsoft Graph"
+        }
+      ],
+      "mitreAttackIds": [
+        "T1136.003"
+      ],
+      "publisher": {
+        "name": null,
+        "id": null,
+        "verified": null
+      },
+      "appOwnerOrganizationId": "945a9641-35c7-435c-a5a0-c8753e6dff88",
+      "references": [
+        "https://cybercorner.tech/common-oauth-apps-used-in-business-email-compromise/#ZoomInfo",
+        "https://abnormalsecurity.com/blog/cybercriminals-exploit-b2b-lead-generation-tools"
+      ],
+      "detection": null,
+      "relatedAppIds": [
+        "497ac034-5120-4c1a-929a-0351f5c09918"
+      ],
+      "notes": null
+    }
+  ]
+}

@@ -6,7 +6,7 @@ function Invoke-CippTestCIS_1_1_4 {
     param($Tenant)
 
     try {
-        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
+        $Roles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
         $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
@@ -18,9 +18,10 @@ function Invoke-CippTestCIS_1_1_4 {
         $PrivilegedRoleIds = [System.Collections.Generic.HashSet[string]]::new()
         $PrivilegedUserIds = [System.Collections.Generic.HashSet[string]]::new()
 
-        foreach ($Role in @($Roles.Where({ $_.isPrivileged -eq $true }))) {
-            if ($Role.id) {
-                [void]$PrivilegedRoleIds.Add([string]$Role.id)
+        foreach ($Role in @($Roles)) {
+            $RoleTemplateId = if ($Role.roleTemplateId) { [string]$Role.roleTemplateId } elseif ($Role.RoletemplateId) { [string]$Role.RoletemplateId } else { $null }
+            if ($RoleTemplateId) {
+                [void]$PrivilegedRoleIds.Add($RoleTemplateId)
             }
 
             foreach ($Member in @($Role.members)) {

@@ -48,6 +48,17 @@ function Start-CIPPStatsTimer {
         $driftStandardsCount = Get-CIPPStatsDriftStandardsCount
         $mobileEnrollment = Get-CIPPStatsMobileEnrollment
 
+        # Feature flags
+        $FeatureFlags = @{}
+        Get-CIPPFeatureFlag | Select-Object -Property Id, Enabled | ForEach-Object {
+            $FeatureFlags[$_.Id] = $_.Enabled
+        }
+
+        # SSO migration status
+        $MigrationTable = Get-CIPPTable -tablename 'SSOMigration'
+        $MigrationConfig = Get-CIPPAzDataTableEntity @MigrationTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue
+        $MigrationStatus = $MigrationConfig.Status
+
         $SendingObject = [PSCustomObject]@{
             rgid                   = $env:WEBSITE_SITE_NAME
             SetupComplete          = $SetupComplete
@@ -77,6 +88,10 @@ function Start-CIPPStatsTimer {
             PWPush                 = $RawExt.PWPush.Enabled
             CFZTNA                 = $RawExt.CFZTNA.Enabled
             GitHub                 = $RawExt.GitHub.Enabled
+            BestPracticeAnalyser   = $FeatureFlags.BestPracticeAnalyser
+            SuperAdminNG           = $FeatureFlags.SuperAdminNG
+            MCPServer              = $FeatureFlags.MCPServer
+            SSOMigrationStatus     = $MigrationStatus
         } | ConvertTo-Json
 
         try {

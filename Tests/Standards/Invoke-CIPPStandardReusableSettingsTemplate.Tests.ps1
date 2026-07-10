@@ -3,7 +3,10 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $StandardPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Standards/Invoke-CIPPStandardReusableSettingsTemplate.ps1'
+    # Resolve by name under Modules/ so the test survives the function moving between modules.
+    $StandardPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-CIPPStandardReusableSettingsTemplate.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $StandardPath) { throw 'Could not locate Invoke-CIPPStandardReusableSettingsTemplate.ps1 under Modules/' }
 
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $RequiredCapabilities) }
     function Get-CippTable { param($tablename) }

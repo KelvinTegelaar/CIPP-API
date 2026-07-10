@@ -20,8 +20,6 @@ function Start-UserSyncTimer {
     $ApiName = 'UserSync'
 
     try {
-        Write-LogMessage -API $ApiName -tenant 'none' -message 'Starting user sync from partner tenant.' -sev Info
-
         # Load the role-to-group mappings
         $AccessGroupsTable = Get-CippTable -TableName AccessRoleGroups
         $AccessGroups = @(Get-CIPPAzDataTableEntity @AccessGroupsTable -Filter "PartitionKey eq 'AccessRoleGroups'")
@@ -69,12 +67,6 @@ function Start-UserSyncTimer {
             }
         }
 
-        if ($UserRoleMap.Count -eq 0 -and $RoleGroupIds.Count -gt 0) {
-            Write-LogMessage -API $ApiName -tenant 'none' -message 'No users found in any role groups.' -sev Info
-        } elseif ($RoleGroupIds.Count -eq 0) {
-            Write-LogMessage -API $ApiName -tenant 'none' -message 'No Entra groups mapped to roles — will clean up any stale auto-provisioned users.' -sev Info
-        }
-
         # Load existing allowedUsers table
         $UsersTable = Get-CippTable -tablename 'allowedUsers'
         $ExistingUsers = @(Get-CIPPAzDataTableEntity @UsersTable | Where-Object { -not $_.RowKey.StartsWith('_') })
@@ -91,7 +83,6 @@ function Start-UserSyncTimer {
         }
 
         $Now = (Get-Date).ToUniversalTime().ToString('o')
-        $UpsertCount = 0
         $RemoveCount = 0
         $EntitiesToUpsert = [System.Collections.Generic.List[object]]::new()
         $EntitiesToRemove = [System.Collections.Generic.List[object]]::new()
@@ -134,7 +125,6 @@ function Start-UserSyncTimer {
             }
 
             $EntitiesToUpsert.Add($Entity)
-            $UpsertCount++
         }
 
         # Reconcile existing users that are NOT in any mapped role group
@@ -205,8 +195,22 @@ function Start-UserSyncTimer {
             }
         }
 
-        # Apply upserts first (write canonical rows), then removals (drop duplicates/stale rows)
+        # Apply upserts first (write canonical rows), then removals (drop duplicates/stale rows).
+        # Only count an upsert as a change when the role data actually differs from the
+        # existing canonical row — LastSync alone changing every run isn't a real change.
+        $ChangedCount = 0
         foreach ($Entity in $EntitiesToUpsert) {
+            $Canonical = $null
+            if ($ExistingLookup.ContainsKey($Entity.RowKey)) {
+                $Canonical = $ExistingLookup[$Entity.RowKey] | Where-Object { $_.RowKey -ceq $Entity.RowKey } | Select-Object -First 1
+            }
+            if (-not $Canonical -or
+                $Canonical.Roles -ne $Entity.Roles -or
+                $Canonical.AutoRoles -ne $Entity.AutoRoles -or
+                $Canonical.ManualRoles -ne $Entity.ManualRoles -or
+                $Canonical.Source -ne $Entity.Source) {
+                $ChangedCount++
+            }
             Add-CIPPAzDataTableEntity @UsersTable -Entity $Entity -Force
         }
         foreach ($Entity in $EntitiesToRemove) {
@@ -217,7 +221,10 @@ function Start-UserSyncTimer {
         # Invalidate CRAFT's in-memory user cache so changes apply
         try { [Craft.Services.AuthBridge]::InvalidateUsers() } catch {}
 
-        Write-LogMessage -API $ApiName -tenant 'none' -message "User sync completed: $UpsertCount users synced, $RemoveCount duplicate/stale rows removed." -sev Info
+        # Only log when something actually changed — no noise on steady-state runs.
+        if ($ChangedCount -gt 0 -or $RemoveCount -gt 0) {
+            Write-LogMessage -API $ApiName -tenant 'none' -message "User sync completed: $ChangedCount users added/updated, $RemoveCount duplicate/stale rows removed." -sev Info
+        }
 
     } catch {
         $ErrorData = Get-CippException -Exception $_

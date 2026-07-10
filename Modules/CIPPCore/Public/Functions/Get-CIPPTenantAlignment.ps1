@@ -228,7 +228,10 @@ function Get-CIPPTenantAlignment {
                                 $TagValue = if ($Tag.value) { $Tag.value } else { $Tag }
                                 $TagTemplate = if ($TagValue -and $TemplatesByPackage.ContainsKey($TagValue)) { $TemplatesByPackage[$TagValue] } else { @() }
                                 $TagTemplate | ForEach-Object {
-                                    $TagStandardId = "standards.IntuneTemplate.$($_.GUID)"
+                                    # RowKey, not the GUID column: the standards engine deploys tag members with
+                                    # TemplateList.value = RowKey and writes the compare row under that id, so the
+                                    # expected id must match it. The GUID column can be missing or stale.
+                                    $TagStandardId = "standards.IntuneTemplate.$($_.RowKey)"
                                     [PSCustomObject]@{
                                         StandardId       = $TagStandardId
                                         ReportingEnabled = $IntuneReportingEnabled
@@ -260,11 +263,28 @@ function Get-CIPPTenantAlignment {
                                 $TagValue = if ($Tag.value) { $Tag.value } else { $Tag }
                                 $TagTemplate = if ($CATemplatesByPackage.ContainsKey($TagValue)) { $CATemplatesByPackage[$TagValue] } else { @() }
                                 $TagTemplate | ForEach-Object {
-                                    $TagStandardId = "standards.ConditionalAccessTemplate.$($_.GUID)"
+                                    # RowKey, not the GUID column - must match the id the standards engine
+                                    # deploys with and writes the compare row under (see Intune block above)
+                                    $TagStandardId = "standards.ConditionalAccessTemplate.$($_.RowKey)"
                                     [PSCustomObject]@{
                                         StandardId       = $TagStandardId
                                         ReportingEnabled = $CAReportingEnabled
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+                # Handle Reusable Settings templates — TemplateList is multi-select, one key per template id
+                elseif ($StandardKey -eq 'ReusableSettingsTemplate' -and $StandardConfig) {
+                    foreach ($RSTemplate in @($StandardConfig)) {
+                        $RSActions = if ($RSTemplate.action) { $RSTemplate.action } else { @() }
+                        $RSReportingEnabled = ($RSActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
+                        foreach ($RSTemplateId in @($RSTemplate.TemplateList.value)) {
+                            if ($RSTemplateId) {
+                                [PSCustomObject]@{
+                                    StandardId       = "standards.ReusableSettingsTemplate.$RSTemplateId"
+                                    ReportingEnabled = $RSReportingEnabled
                                 }
                             }
                         }

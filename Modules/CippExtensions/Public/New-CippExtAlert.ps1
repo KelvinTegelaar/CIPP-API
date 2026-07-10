@@ -20,7 +20,37 @@ function New-CippExtAlert {
                     Write-Host "MappedId: $MappedId"
                     if (!$mappedId) { $MappedId = 1 }
                     Write-Host "MappedId: $MappedId"
-                    New-HaloPSATicket -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $mappedId
+
+                    $TicketParams = @{
+                        Title       = $Alert.AlertTitle
+                        Description = $Alert.AlertText
+                        Client      = $MappedId
+                    }
+
+                    if ($Alert.AffectedUser -and $Configuration.HaloPSA.LinkTicketsToUsers) {
+                        $UPN = $Alert.AffectedUser.UPN
+                        $OID = $Alert.AffectedUser.AzureOID
+                        $Display = $Alert.AffectedUser.DisplayName
+
+                        # Best-effort: resolve UPN -> Azure Object ID via Graph if we don't already have it.
+                        # Failure here is non-fatal; Get-HaloUser will still try the email-based lookup.
+                        if (-not $OID -and $UPN -and $Alert.TenantId) {
+                            try {
+                                $EncodedUPN = [System.Uri]::EscapeDataString($UPN)
+                                $GraphUser = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$EncodedUPN`?`$select=id,displayName,userPrincipalName" -tenantid $Alert.TenantId -AsApp $true
+                                if ($GraphUser.id) { $OID = $GraphUser.id }
+                                if (-not $Display -and $GraphUser.displayName) { $Display = $GraphUser.displayName }
+                            } catch {
+                                Write-Information "Could not resolve Graph user for $UPN in tenant $($Alert.TenantId): $($_.Exception.Message)"
+                            }
+                        }
+
+                        if ($UPN) { $TicketParams.UserUPN = $UPN }
+                        if ($OID) { $TicketParams.AzureOID = $OID }
+                        if ($Display) { $TicketParams.DisplayName = $Display }
+                    }
+
+                    New-HaloPSATicket @TicketParams
                 }
             }
             'Gradient' {

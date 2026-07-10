@@ -47,27 +47,54 @@ function Invoke-AddAPDevice {
             $Amount++
             Start-Sleep 1
             $NewStatus = New-GraphGetRequest -uri "https://api.partnercenter.microsoft.com/v1/$($GraphRequest.Location)" -scope 'https://api.partnercenter.microsoft.com/user_impersonation'
-        } until ($NewStatus.status -eq 'finished' -or $Amount -eq 4)
-        if ($NewStatus.status -ne 'finished') { throw 'Could not retrieve status of import - This job might still be running. Check the autopilot device list in 10 minutes for the latest status.' }
-        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($Request.body.TenantFilter.value) -message "Created Autopilot devices group. Group ID is $GroupName" -Sev 'Info'
+        } until ($NewStatus.status -in @('finished', 'finished_with_errors') -or $Amount -eq 4)
+        if ($NewStatus.status -notin @('finished', 'finished_with_errors')) { throw 'Could not retrieve status of import - This job might still be running. Check the autopilot device list in 10 minutes for the latest status.' }
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($Request.body.TenantFilter.value) -message "Created Autopilot devices group. Group ID is $GroupName" -Sev 'Info'
 
-        [PSCustomObject]@{
-            Status  = 'Import Job Completed'
-            Devices = @($NewStatus.devicesStatus)
+        # DEBUG: dump the raw status so we can inspect what Partner Center returns per device.
+        Write-Host "RAW NewStatus: $($NewStatus | ConvertTo-Json -Depth 10)"
+
+        # Build one result per device (DeviceUploadDetails) so the frontend renders a
+        # single bar each, instead of flattening raw device fields into many stray bars.
+        $Index = 0
+        $DeviceResults = foreach ($Device in @($NewStatus.devicesStatus)) {
+            $Index++
+            # Hash-only uploads return no serial/productKey/deviceId; fall back to a number.
+            $DeviceId = $Device.serialNumber ?? $Device.productKey ?? $Device.deviceId
+            $Label = $DeviceId ?? "Device $Index"
+            $IsError = $Device.status -match 'error'
+            $Text = "$($Label): $($Device.status)"
+            if ($IsError -and $Device.errorDescription) {
+                $Text += " - $($Device.errorCode) $($Device.errorDescription)"
+            }
+            # Log each device with the input data that was submitted for it (matched by position).
+            $InputDevice = @($rawDevices)[$Index - 1]
+            Write-LogMessage -headers $Headers -API $APIName -tenant $($Request.Body.TenantFilter.value) -message "Autopilot import - $Text" -Sev $(if ($IsError) { 'Error' } else { 'Info' }) -LogData $InputDevice
+            [PSCustomObject]@{
+                resultText = $Text
+                state      = if ($IsError) { 'error' } else { 'success' }
+                copyField  = $DeviceId
+                details    = $Device
+            }
+        }
+        if (-not $DeviceResults) {
+            $DeviceResults = [PSCustomObject]@{ resultText = "Import job '$($NewStatus.status)' for group $GroupName"; state = 'success' }
         }
         $StatusCode = [HttpStatusCode]::OK
+        # Emit as the try block's value so the outer `$Result = try {...}` captures it.
+        $DeviceResults
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $StatusCode = [HttpStatusCode]::InternalServerError
         [PSCustomObject]@{
-            Status  = "$($Request.Body.TenantFilter.value): Failed to create autopilot devices. $($ErrorMessage.NormalizedError)"
-            Devices = @()
+            resultText = "$($Request.Body.TenantFilter.value): Failed to create autopilot devices. $($ErrorMessage.NormalizedError)"
+            state      = 'error'
         }
         Write-LogMessage -headers $Headers -API $APIName -tenant $($Request.Body.TenantFilter.value) -message "Failed to create autopilot devices. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
     }
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
+            Body       = @{'Results' = @($Result) }
         })
 }

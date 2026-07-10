@@ -51,7 +51,7 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
     }
 
     try {
-        $CurrentExpirationDays = (New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' }).NewMeetingRecordingExpirationDays
+        $CurrentExpirationDays = (New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TeamsMeetingPolicy' -Action Get -Identity 'Global').NewMeetingRecordingExpirationDays
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsMeetingRecordingExpiration state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -70,7 +70,7 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
             }
 
             try {
-                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTeamsMeetingPolicy' -CmdParams $cmdParams
+                $null = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TeamsMeetingPolicy' -Action Set -Parameters $cmdParams
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully updated Teams Meeting Recording Expiration Policy to $ExpirationDays days." -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
