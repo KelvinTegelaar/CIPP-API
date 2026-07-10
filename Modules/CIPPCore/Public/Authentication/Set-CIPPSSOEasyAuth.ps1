@@ -71,8 +71,7 @@ function Set-CIPPSSOEasyAuth {
     # Set AUTH_SECRET as a KV reference when requested (initial setup)
     # Skip for implicit auth (no client secret needed — e.g. central migration app)
     if ($UseKvReferences -and -not $ImplicitAuth) {
-        $KV = $env:WEBSITE_DEPLOYMENT_ID
-        $VaultName = if ($KV) { ($KV -split '-')[0] } else { $null }
+        $VaultName = Get-CippKeyVaultName
         if ($VaultName) {
             $MergedSettings['AUTH_SECRET'] = "@Microsoft.KeyVault(VaultName=$VaultName;SecretName=SSOAppSecret)"
         }

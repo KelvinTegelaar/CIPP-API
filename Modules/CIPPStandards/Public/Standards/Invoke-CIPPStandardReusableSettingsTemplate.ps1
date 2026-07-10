@@ -65,15 +65,16 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
     $TestResult = Test-CIPPStandardLicense -StandardName 'ReusableSettingsTemplate_general' -TenantFilter $Tenant -Preset Intune
     if ($TestResult -eq $false) {
         $settings.TemplateList | ForEach-Object {
-            $MissingLicenseMessage = "This tenant is missing one or more required licenses for this standard: $($RequiredCapabilities -join ', ')."
-            Set-CIPPStandardsCompareField -FieldName "standards.ReusableSettingsTemplate.$($_.value)" -FieldValue $MissingLicenseMessage -Tenant $Tenant
+            $MissingLicenseMessage = 'License Missing: This tenant is missing the required Intune license for this standard.'
+            Set-CIPPStandardsCompareField -FieldName "standards.ReusableSettingsTemplate.$($_.value)" -FieldValue $MissingLicenseMessage -LicenseAvailable $false -TenantFilter $Tenant
         }
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Exiting as the correct license is not present for this standard. Missing: $($RequiredCapabilities -join ', ')" -sev 'Warning'
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Exiting as the correct license is not present for this standard.' -sev 'Warning'
         return $true
     }
 
     $Table = Get-CippTable -tablename 'templates'
-    $ExistingReusableSettings = New-GraphGETRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/reusablePolicySettings?$top=999' -tenantid $Tenant
+    # The list endpoint omits settingInstance unless explicitly selected, which would make every compare fail
+    $ExistingReusableSettings = New-GraphGETRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/reusablePolicySettings?$top=999&$select=id,displayName,description,settingDefinitionId,settingInstance,version' -tenantid $Tenant
 
     # Align with other template standards by resolving all selected templates upfront
     $SelectedTemplateIds = @($Settings.TemplateList.value)
@@ -169,8 +170,15 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
     if ($true -in $Settings.report) {
         foreach ($Template in $CompareList | Where-Object { $_.report -eq $true -or $_.remediate -eq $true }) {
             $id = $Template.templateId
-            $state = $Template.compare ? $Template.compare : $true
-            Set-CIPPStandardsCompareField -FieldName "standards.ReusableSettingsTemplate.$id" -FieldValue $state -TenantFilter $Tenant
+            $CurrentValue = @{
+                displayName = $Template.displayname
+                isCompliant = if ($Template.compare) { $false } else { $true }
+            }
+            $ExpectedValue = @{
+                displayName = $Template.displayname
+                isCompliant = $true
+            }
+            Set-CIPPStandardsCompareField -FieldName "standards.ReusableSettingsTemplate.$id" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         }
     }
 }

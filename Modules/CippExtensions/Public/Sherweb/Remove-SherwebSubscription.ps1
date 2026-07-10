@@ -15,18 +15,28 @@ function Remove-SherwebSubscription {
         $Config = $ExtensionConfig.Sherweb
 
         $AllowedRoles = $Config.AllowedCustomRoles.value
-        if ($AllowedRoles -and $Headers.'x-ms-client-principal') {
-            $UserRoles = Get-CIPPAccessRole -Headers $Headers
+        if ($AllowedRoles) {
+            # Resolve caller roles for both interactive users and direct API clients,
+            # mirroring the principal detection Test-CIPPAccess/Test-CippApiClientRoleGrant use.
+            if ($Headers.'x-ms-client-principal-idp' -eq 'aad' -and $Headers.'x-ms-client-principal-name' -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+                $Client = Get-CippApiClient -AppId $Headers.'x-ms-client-principal-name'
+                $CallerRoles = if ($Client.Role) { @($Client.Role) } else { @('cipp-api') }
+            } elseif ($Headers.'x-ms-client-principal') {
+                $CallerRoles = @(Get-CIPPAccessRole -Headers $Headers)
+            } else {
+                $CallerRoles = @()
+            }
+
             $Allowed = $false
-            foreach ($Role in $UserRoles) {
+            foreach ($Role in $CallerRoles) {
                 if ($AllowedRoles -contains $Role) {
-                    Write-Information "User has allowed CIPP role: $Role"
+                    Write-Information "Caller has allowed CIPP role: $Role"
                     $Allowed = $true
                     break
                 }
             }
             if (-not $Allowed) {
-                throw 'This user is not allowed to modify Sherweb Licenses.'
+                throw 'This caller is not allowed to modify Sherweb Licenses.'
             }
         }
     }

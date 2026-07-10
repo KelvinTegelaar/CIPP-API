@@ -23,7 +23,7 @@ function Initialize-CIPPAuth {
     # -- Entry logging --
     $EasyAuthEnabled = [Craft.Services.AppLifecycleBridge]::IsEasyAuthConfigured()
     $IsDevStorage = ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') -or ($env:NonLocalHostAzurite -eq 'true')
-    $KVName = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+    $KVName = Get-CippKeyVaultName
 
     Write-Information "[Auth-Init] Starting — EasyAuth=$EasyAuthEnabled, DevStorage=$IsDevStorage, KVName='$KVName', DeploymentId='$env:WEBSITE_DEPLOYMENT_ID'"
 

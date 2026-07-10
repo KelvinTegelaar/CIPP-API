@@ -124,6 +124,38 @@ function Invoke-CippWebhookProcessing {
     $AuditLogLink = '{0}/tenant/administration/audit-logs/log?logId={1}&tenantFilter={2}' -f $CIPPURL, $LogId, $Tenant.defaultDomainName
     $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -Tenant $Tenant.defaultDomainName -AuditLogLink $AuditLogLink -AlertComment $AlertComment -CustomSubject $Data.CIPPCustomSubject
 
+    # Derive the affected end-user from the audit record so PSA tickets can be linked to the
+    # right HaloPSA contact when HaloPSA.LinkTicketsToUsers is enabled. The upstream GUID mapper
+    # has already attached CIPP-prefixed properties (e.g. CIPPObjectId) holding the resolved UPN
+    # for any property that contained a user's Object ID; the raw property usually still holds
+    # the original GUID, which we can use directly as the AzureOID for the Halo lookup.
+    $AffectedUser = $null
+    $GuidRegex = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    $UserCandidates = @(
+        @{ Raw = 'ObjectId'; Mapped = 'CIPPObjectId' }
+        @{ Raw = 'UserId';   Mapped = 'CIPPUserId' }
+        @{ Raw = 'Userkey';  Mapped = 'CIPPUserkey' }
+    )
+    foreach ($Candidate in $UserCandidates) {
+        $RawValue = $Data.$($Candidate.Raw)
+        $MappedValue = $Data.$($Candidate.Mapped)
+        if (-not $RawValue -and -not $MappedValue) { continue }
+
+        $UPN = $null; $OID = $null
+        if ($MappedValue -is [string] -and $MappedValue -match '@') { $UPN = $MappedValue }
+        elseif ($RawValue -is [string] -and $RawValue -match '@')   { $UPN = $RawValue }
+
+        if ($RawValue -is [string] -and $RawValue -match $GuidRegex) { $OID = $RawValue }
+
+        if ($UPN -or $OID) {
+            $AffectedUser = [pscustomobject]@{
+                UPN      = $UPN
+                AzureOID = $OID
+            }
+            break
+        }
+    }
+
     Write-Host 'Going to create the content'
     foreach ($action in $ActionList ) {
         switch ($action) {
@@ -144,6 +176,9 @@ function Invoke-CippWebhookProcessing {
                     Title        = $GenerateEmail.title
                     HTMLContent  = $GenerateEmail.htmlcontent
                     TenantFilter = $TenantFilter
+                }
+                if ($AffectedUser) {
+                    $CIPPAlert.AffectedUser = $AffectedUser
                 }
                 Send-CIPPAlert @CIPPAlert
             }

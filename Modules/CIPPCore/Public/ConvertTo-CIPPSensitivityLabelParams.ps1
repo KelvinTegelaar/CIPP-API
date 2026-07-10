@@ -15,6 +15,11 @@ function ConvertTo-CIPPSensitivityLabelParams {
         arrays (which are not valid input in their read form). A flat object (manual JSON authored against
         the deploy schema) has no 'LabelActions' and passes through unchanged.
 
+        Applied -AdvancedSettings values (e.g. a custom label color) are only readable through the same
+        read-only 'Settings' array, so before dropping it the writable advanced settings are lifted into
+        an 'AdvancedSettings' dictionary that New-/Set-Label accept. An explicit 'AdvancedSettings' value
+        already on the template wins over captured values.
+
         Deploy-time validation/allowlisting still happens in Set-CIPPSensitivityLabel via
         Get-CIPPSensitivityLabelField; this function only reshapes.
     .PARAMETER Label
@@ -40,6 +45,39 @@ function ConvertTo-CIPPSensitivityLabelParams {
 
     if (-not $HasActions) {
         return [pscustomobject]$Flat
+    }
+
+    # Writable advanced settings that Get-Label only reports inside the read-only Settings array
+    # ([key, value] pairs). The rest of Settings is system metadata (displayname, contenttype,
+    # tooltip, ...) that must not be echoed back to New-/Set-Label. Extend this list as more
+    # -AdvancedSettings keys gain first-class support.
+    $WritableAdvancedSettings = @('color')
+    $CapturedAdvanced = @{}
+    foreach ($Entry in @($Label.Settings)) {
+        if ($null -eq $Entry) { continue }
+        $Key = $null
+        $Value = $null
+        if ($Entry -isnot [string] -and $Entry.PSObject.Properties['Key']) {
+            $Key = $Entry.Key
+            $Value = $Entry.Value
+        } elseif ("$Entry" -match '^\[\s*(.+?)\s*,\s*(.*?)\s*\]$') {
+            # Get-Label serializes each entry as the string '[key, value]'
+            $Key = $Matches[1]
+            $Value = $Matches[2]
+        }
+        if ($Key -and $Key.ToLower() -in $WritableAdvancedSettings -and -not [string]::IsNullOrWhiteSpace("$Value")) {
+            $CapturedAdvanced[$Key.ToLower()] = "$Value"
+        }
+    }
+    if ($CapturedAdvanced.Count -gt 0) {
+        # Explicit AdvancedSettings on the template win over values captured from Settings.
+        $Explicit = $Flat['AdvancedSettings']
+        if ($Explicit -is [System.Collections.IDictionary]) {
+            foreach ($ExplicitKey in @($Explicit.Keys)) { $CapturedAdvanced[$ExplicitKey] = $Explicit[$ExplicitKey] }
+        } elseif ($null -ne $Explicit) {
+            foreach ($ExplicitProp in $Explicit.PSObject.Properties) { $CapturedAdvanced[$ExplicitProp.Name] = $ExplicitProp.Value }
+        }
+        $Flat['AdvancedSettings'] = $CapturedAdvanced
     }
 
     foreach ($Raw in @($Label.LabelActions)) {

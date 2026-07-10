@@ -19,7 +19,7 @@ function Remove-ExtensionAPIKey {
             Write-Information "No existing DevSecrets row found for '$Extension' to delete."
         }
     } else {
-        $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+        $keyvaultname = Get-CippKeyVaultName
         try {
             $null = Remove-CippKeyVaultSecret -VaultName $keyvaultname -Name $Extension
         } catch {

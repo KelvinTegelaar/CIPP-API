@@ -18,9 +18,8 @@ function Set-CIPPDBCacheRoleAssignmentScheduleInstances {
 
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching role assignment schedule instances' -sev Debug
-        $RoleAssignmentScheduleInstances = New-GraphGetRequest -Uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleInstances' -tenantid $TenantFilter
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RoleAssignmentScheduleInstances' -Data @($RoleAssignmentScheduleInstances) -AddCount
-        $RoleAssignmentScheduleInstances = $null
+        New-GraphGetRequest -Uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleInstances' -tenantid $TenantFilter -Stream |
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RoleAssignmentScheduleInstances' -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached role assignment schedule instances successfully' -sev Debug
     } catch {

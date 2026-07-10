@@ -54,6 +54,22 @@ function Invoke-CIPPStandardBranding {
     $Localizations = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations" -tenantID $Tenant -AsApp $true
     # Get layoutTemplateType value using null-coalescing operator
     $layoutTemplateType = $Settings.layoutTemplateType.value ?? $Settings.layoutTemplateType
+
+    $SetSignInPageText = -not [string]::IsNullOrEmpty($Settings.signInPageText)
+    $SetUsernameHintText = -not [string]::IsNullOrEmpty($Settings.usernameHintText)
+
+    $BrandingBody = [ordered]@{
+        loginPageTextVisibilitySettings = [pscustomobject]@{
+            hideAccountResetCredentials = $Settings.hideAccountResetCredentials
+        }
+        loginPageLayoutConfiguration    = [pscustomobject]@{
+            layoutTemplateType = $layoutTemplateType
+            isHeaderShown      = $Settings.isHeaderShown
+            isFooterShown      = $Settings.isFooterShown
+        }
+    }
+    if ($SetSignInPageText) { $BrandingBody['signInPageText'] = $Settings.signInPageText }
+    if ($SetUsernameHintText) { $BrandingBody['usernameHintText'] = $Settings.usernameHintText }
     # If default localization (id "0") exists, use that to get the currentState. Otherwise we have to create it first.
     if ($Localizations | Where-Object { $_.id -eq '0' }) {
         try {
@@ -71,18 +87,7 @@ function Invoke-CIPPStandardBranding {
                 AsApp       = $true
                 Type        = 'POST'
                 ContentType = 'application/json; charset=utf-8'
-                Body        = [pscustomobject]@{
-                    signInPageText                  = $Settings.signInPageText
-                    usernameHintText                = $Settings.usernameHintText
-                    loginPageTextVisibilitySettings = [pscustomobject]@{
-                        hideAccountResetCredentials = $Settings.hideAccountResetCredentials
-                    }
-                    loginPageLayoutConfiguration    = [pscustomobject]@{
-                        layoutTemplateType = $layoutTemplateType
-                        isHeaderShown      = $Settings.isHeaderShown
-                        isFooterShown      = $Settings.isFooterShown
-                    }
-                } | ConvertTo-Json -Compress
+                Body        = [pscustomobject]$BrandingBody | ConvertTo-Json -Compress
             }
             $CurrentState = New-GraphPostRequest @GraphRequest
         } catch {
@@ -92,22 +97,18 @@ function Invoke-CIPPStandardBranding {
         }
     }
 
-    $StateIsCorrect = ($CurrentState.signInPageText -eq $Settings.signInPageText) -and
-    ($CurrentState.usernameHintText -eq $Settings.usernameHintText) -and
-    ($CurrentState.loginPageTextVisibilitySettings.hideAccountResetCredentials -eq $Settings.hideAccountResetCredentials) -and
+    $StateIsCorrect = ($CurrentState.loginPageTextVisibilitySettings.hideAccountResetCredentials -eq $Settings.hideAccountResetCredentials) -and
     ($CurrentState.loginPageLayoutConfiguration.layoutTemplateType -eq $layoutTemplateType) -and
     ($CurrentState.loginPageLayoutConfiguration.isHeaderShown -eq $Settings.isHeaderShown) -and
-    ($CurrentState.loginPageLayoutConfiguration.isFooterShown -eq $Settings.isFooterShown)
+    ($CurrentState.loginPageLayoutConfiguration.isFooterShown -eq $Settings.isFooterShown) -and
+    (-not $SetSignInPageText -or ($CurrentState.signInPageText -eq $Settings.signInPageText)) -and
+    (-not $SetUsernameHintText -or ($CurrentState.usernameHintText -eq $Settings.usernameHintText))
 
-    $CurrentValue = [PSCustomObject]@{
-        signInPageText                  = $CurrentState.signInPageText
-        usernameHintText                = $CurrentState.usernameHintText
+    $CurrentValue = [ordered]@{
         loginPageTextVisibilitySettings = $CurrentState.loginPageTextVisibilitySettings | Select-Object -Property hideAccountResetCredentials
         loginPageLayoutConfiguration    = $CurrentState.loginPageLayoutConfiguration | Select-Object -Property layoutTemplateType, isHeaderShown, isFooterShown
     }
-    $ExpectedValue = [PSCustomObject]@{
-        signInPageText                  = $Settings.signInPageText
-        usernameHintText                = $Settings.usernameHintText
+    $ExpectedValue = [ordered]@{
         loginPageTextVisibilitySettings = [pscustomobject]@{
             hideAccountResetCredentials = $Settings.hideAccountResetCredentials
         }
@@ -117,6 +118,16 @@ function Invoke-CIPPStandardBranding {
             isFooterShown      = $Settings.isFooterShown
         }
     }
+    if ($SetSignInPageText) {
+        $CurrentValue['signInPageText'] = $CurrentState.signInPageText
+        $ExpectedValue['signInPageText'] = $Settings.signInPageText
+    }
+    if ($SetUsernameHintText) {
+        $CurrentValue['usernameHintText'] = $CurrentState.usernameHintText
+        $ExpectedValue['usernameHintText'] = $Settings.usernameHintText
+    }
+    $CurrentValue = [pscustomobject]$CurrentValue
+    $ExpectedValue = [pscustomobject]$ExpectedValue
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -129,18 +140,7 @@ function Invoke-CIPPStandardBranding {
                     AsApp       = $true
                     Type        = 'PATCH'
                     ContentType = 'application/json; charset=utf-8'
-                    Body        = [pscustomobject]@{
-                        signInPageText                  = $Settings.signInPageText
-                        usernameHintText                = $Settings.usernameHintText
-                        loginPageTextVisibilitySettings = [pscustomobject]@{
-                            hideAccountResetCredentials = $Settings.hideAccountResetCredentials
-                        }
-                        loginPageLayoutConfiguration    = [pscustomobject]@{
-                            layoutTemplateType = $layoutTemplateType
-                            isHeaderShown      = $Settings.isHeaderShown
-                            isFooterShown      = $Settings.isFooterShown
-                        }
-                    } | ConvertTo-Json -Compress
+                    Body        = [pscustomobject]$BrandingBody | ConvertTo-Json -Compress
                 }
                 $null = New-GraphPostRequest @GraphRequest
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated branding.' -Sev Info

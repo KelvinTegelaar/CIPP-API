@@ -3,13 +3,19 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $AlertPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Alerts/Get-CIPPAlertGlobalAdminAllowList.ps1'
+    # Resolve by name under Modules/ so the test survives the function moving between modules.
+    $AlertPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Get-CIPPAlertGlobalAdminAllowList.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $AlertPath) { throw 'Could not locate Get-CIPPAlertGlobalAdminAllowList.ps1 under Modules/' }
 
     # Provide minimal stubs so Mock has commands to replace during tests
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
     function Write-AlertTrace { param($cmdletName, $tenantFilter, $data) }
     function Write-AlertMessage { param($tenant, $message) }
     function Get-NormalizedError { param($message) $message }
+    # The error path now normalises via Get-CippException and logs via Write-LogMessage.
+    function Get-CippException { param($Exception) @{ NormalizedError = $Exception } }
+    function Write-LogMessage { param($API, $tenant, $message, $sev, $Headers, $LogData) }
 
     . $AlertPath
 }
@@ -45,6 +51,12 @@ Describe 'Get-CIPPAlertGlobalAdminAllowList' {
 
         Mock -CommandName Write-AlertMessage -MockWith {
             param($tenant, $message)
+            $script:CapturedErrorMessage = $message
+        }
+
+        # The function logs failures through Write-LogMessage, so capture the error from there.
+        Mock -CommandName Write-LogMessage -MockWith {
+            param($API, $tenant, $message, $sev, $Headers, $LogData)
             $script:CapturedErrorMessage = $message
         }
     }

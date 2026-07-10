@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,15 +13,31 @@ namespace CIPP
     /// Host-scoped, thread-safe LRU cache for test data lookups. The DLL is
     /// loaded once per Azure Functions host, so every PowerShell worker
     /// process on that host shares this exact instance. Bounded by both a
-    /// byte-size cap (default 100 MB) and a short TTL (default 5 minutes)
+    /// byte-size cap (default 300 MB) and a short TTL (default 5 minutes)
     /// so that test suites running against a single tenant get fast cache
     /// hits without accumulating stale Gen2 roots that cause GC thrashing.
     /// </summary>
     public static class TestDataCache
     {
         // ── Configuration ──
-        private static long _maxBytes = 100L * 1024 * 1024;  // 100 MB default
+        // Defaults are 300 MB / 5 min. Both are overridable per deployment via
+        // Azure Functions app settings (environment variables) resolved once at
+        // load, or programmatically via Configure() for tests. The cap now maps to
+        // real managed-heap bytes (see EstimateValueSize), so 300 MB means ~300 MB.
+        private static long _maxBytes = 300L * 1024 * 1024;  // 300 MB default
         private static TimeSpan _ttl = TimeSpan.FromMinutes(5);
+
+        static TestDataCache()
+        {
+            try
+            {
+                if (long.TryParse(Environment.GetEnvironmentVariable("CIPPTestCacheMaxMB"), out var maxMB) && maxMB > 0)
+                    _maxBytes = maxMB * 1024L * 1024L;
+                if (int.TryParse(Environment.GetEnvironmentVariable("CIPPTestCacheTtlSeconds"), out var ttlSec) && ttlSec > 0)
+                    _ttl = TimeSpan.FromSeconds(ttlSec);
+            }
+            catch { /* keep defaults if app settings are unreadable */ }
+        }
 
         // ── State ──
         private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
@@ -56,7 +71,7 @@ namespace CIPP
         }
 
         /// <summary>Configure the cache limits. Call before first use or between test runs.</summary>
-        public static void Configure(long maxBytes = 100L * 1024 * 1024, int ttlSeconds = 300)
+        public static void Configure(long maxBytes = 300L * 1024 * 1024, int ttlSeconds = 300)
         {
             _maxBytes = maxBytes;
             _ttl = TimeSpan.FromSeconds(ttlSeconds);
@@ -258,8 +273,31 @@ namespace CIPP
         private static PropertyInfo? s_psPropsProp;   // PSObject.Properties
         private static PropertyInfo? s_psPropName;     // PSPropertyInfo.Name
         private static PropertyInfo? s_psPropValue;    // PSPropertyInfo.Value
-        private const int SampleSize = 5;
-        private const int MaxDepth = 4;
+        // ── Managed-heap size model (x64 CoreCLR) ──
+        // The cache stores *parsed PSObject graphs*, whose live heap footprint is
+        // many times their JSON text size (measured ≈8× on real Graph data). Sizing
+        // by JSON serialization therefore under-counts by ~8× and lets the byte cap
+        // balloon far past its nominal limit. Instead we walk the object graph and
+        // sum approximate per-object heap costs. Constants below are calibrated
+        // against real GC heap growth (see tools/measure-testcache.ps1).
+        private const int ObjectHeader = 16;            // sync block + method table ptr
+        private const int RefSlot = 8;                  // one reference (array/field slot)
+        private const int StringBaseOverhead = 22;      // header(16)+length(4)+terminator(2)
+        private const int BoxedPrimitive = 24;          // header(16)+<=8 payload, aligned
+        private const int BoxedLarge = 32;              // header(16)+16 payload (decimal/Guid)
+        private const int PSObjectBase = 192;           // PSObject wrapper + base + member collections
+        private const int PSNotePropertyOverhead = 132; // PSNoteProperty + name-lookup entry (excl. name string + value)
+        private const int DictBase = 80;                // buckets + entries baseline
+        private const int DictEntryOverhead = 48;       // per-entry slot incl. capacity slack (excl. key + value)
+        private const int CollectionBase = 56;          // list/array object + backing array baseline
+
+        // Bound the walk on pathological payloads: full-walk small collections for
+        // accuracy, but stride-sample very large ones so a 100k-item array can't
+        // turn a single Set() into a multi-second reflection storm.
+        private const int LargeCollectionThreshold = 512;
+        private const int LargeCollectionSamples = 256;
+        private const int MaxDepth = 32;
+        private const long NodeBudget = 2_000_000;      // hard ceiling on nodes visited per Set()
 
         private static void EnsurePSResolved()
         {
@@ -289,82 +327,127 @@ namespace CIPP
             }
         }
 
+        private static long Align8(long bytes) => (bytes + 7) & ~7L;
+
         /// <summary>
-        /// Estimate the serialized size of a cached value. For large collections,
-        /// samples a few items and extrapolates. Handles PSObject by unwrapping
-        /// NoteProperties into dictionaries via reflection.
+        /// Estimate the live managed-heap footprint of a cached value by walking the
+        /// object graph and summing approximate per-object costs. This tracks real
+        /// memory (parsed PSObjects, boxed primitives, strings, dictionaries and
+        /// collections) rather than JSON text size, so the byte cap corresponds to
+        /// actual process memory. <paramref name="itemCount"/> is accepted for call
+        /// compatibility but the walk recomputes counts itself.
         /// </summary>
         private static long EstimateValueSize(object? value, int itemCount)
         {
             if (value == null) return 0;
             EnsurePSResolved();
-
             try
             {
-                // Large collection: sample a few items, extrapolate
-                if (itemCount > SampleSize && value is IEnumerable enumerable)
-                {
-                    var sample = new List<object?>();
-                    foreach (var item in enumerable)
-                    {
-                        sample.Add(Unwrap(item, 0));
-                        if (sample.Count >= SampleSize) break;
-                    }
-                    if (sample.Count == 0) return 0;
-                    var sampleBytes = JsonSerializer.SerializeToUtf8Bytes(sample).LongLength;
-                    return sampleBytes * itemCount / sample.Count;
-                }
-
-                // Small collection or single value: unwrap everything
-                var unwrapped = Unwrap(value, 0);
-                return JsonSerializer.SerializeToUtf8Bytes(unwrapped).LongLength;
+                long budget = NodeBudget;
+                return SizeOf(value, 0, ref budget);
             }
             catch { return 0; }
         }
 
         /// <summary>
-        /// Recursively unwrap PSObject → Dictionary and IEnumerable → List
-        /// so System.Text.Json can serialize them.
+        /// Recursively sum the approximate managed-heap bytes of <paramref name="value"/>
+        /// and everything it owns. Returns the object's own heap size; the reference
+        /// slot that points at it is accounted for by the owning object/collection.
         /// </summary>
-        private static object? Unwrap(object? value, int depth)
+        private static long SizeOf(object? value, int depth, ref long budget)
         {
-            if (value == null || depth > MaxDepth) return value;
+            if (value == null) return 0;
+            if (--budget <= 0 || depth > MaxDepth) return 0;
 
-            // PSObject → extract NoteProperties as Dictionary
-            if (s_psObjectType != null && s_psObjectType.IsInstanceOfType(value))
-                return UnwrapPSObject(value, depth);
-
-            // Collection → unwrap each element
-            if (value is IEnumerable enumerable && value is not string && value is not byte[])
+            switch (value)
             {
-                var list = new List<object?>();
-                foreach (var item in enumerable)
-                    list.Add(Unwrap(item, depth + 1));
-                return list;
+                case string s:
+                    return Align8(StringBaseOverhead + 2L * s.Length);
+                case bool: case byte: case sbyte: case char:
+                case short: case ushort: case int: case uint:
+                case long: case ulong: case float: case double:
+                case DateTime: case DateTimeOffset: case TimeSpan: case Enum:
+                    return BoxedPrimitive;
+                case decimal: case Guid:
+                    return BoxedLarge;
+                case byte[] bytes:
+                    return Align8(ObjectHeader + RefSlot + bytes.LongLength);
             }
 
-            return value;
+            // PSObject → wrapper cost + each NoteProperty (name string + value + overhead)
+            if (s_psObjectType != null && s_psObjectType.IsInstanceOfType(value))
+                return SizeOfPSObject(value, depth, ref budget);
+
+            // Dictionary / Hashtable → base + per-entry overhead + keys + values
+            if (value is IDictionary dict)
+            {
+                long total = ObjectHeader + DictBase;
+                foreach (DictionaryEntry de in dict)
+                {
+                    total += DictEntryOverhead;
+                    total += SizeOf(de.Key, depth + 1, ref budget);
+                    total += SizeOf(de.Value, depth + 1, ref budget);
+                    if (budget <= 0) break;
+                }
+                return total;
+            }
+
+            // Other collections (object[], List<object>, …). Stride-sample very large
+            // ones to bound the walk; full-walk the rest for accuracy.
+            if (value is IEnumerable enumerable && value is not string)
+            {
+                int count = value is ICollection col ? col.Count : -1;
+
+                if (count > LargeCollectionThreshold && value is IList list)
+                {
+                    long step = count / (long)LargeCollectionSamples;
+                    if (step < 1) step = 1;
+                    long sampled = 0, sampledBytes = 0;
+                    for (long i = 0; i < count && sampled < LargeCollectionSamples; i += step)
+                    {
+                        sampledBytes += SizeOf(list[(int)i], depth + 1, ref budget);
+                        sampled++;
+                        if (budget <= 0) break;
+                    }
+                    long avgItem = sampled > 0 ? sampledBytes / sampled : 0;
+                    // backing array slots + extrapolated element payloads
+                    return ObjectHeader + CollectionBase + count * (RefSlot + avgItem);
+                }
+
+                long total = ObjectHeader + CollectionBase;
+                foreach (var item in enumerable)
+                {
+                    total += RefSlot;
+                    total += SizeOf(item, depth + 1, ref budget);
+                    if (budget <= 0) break;
+                }
+                return total;
+            }
+
+            // Unknown reference type: header plus a small nominal for its fields.
+            return ObjectHeader + 32;
         }
 
-        private static Dictionary<string, object?> UnwrapPSObject(object psObj, int depth)
+        private static long SizeOfPSObject(object psObj, int depth, ref long budget)
         {
-            var dict = new Dictionary<string, object?>();
+            long total = PSObjectBase;
             if (s_psPropsProp == null || s_psPropName == null || s_psPropValue == null)
-                return dict;
-
-            if (s_psPropsProp.GetValue(psObj) is not IEnumerable props) return dict;
+                return total;
+            if (s_psPropsProp.GetValue(psObj) is not IEnumerable props) return total;
 
             foreach (var prop in props)
             {
+                if (--budget <= 0) break;
+                total += PSNotePropertyOverhead;
                 try
                 {
-                    var name = s_psPropName.GetValue(prop)?.ToString();
-                    if (name != null)
-                        dict[name] = Unwrap(s_psPropValue.GetValue(prop), depth + 1);
+                    if (s_psPropName.GetValue(prop) is string name)
+                        total += Align8(StringBaseOverhead + 2L * name.Length);
+                    total += SizeOf(s_psPropValue.GetValue(prop), depth + 1, ref budget);
                 }
                 catch { /* skip properties that throw on access */ }
             }
-            return dict;
+            return total;
         }
 
         /// <summary>

@@ -43,13 +43,18 @@ function Set-CIPPSPOSite {
     $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
     $AdminUrl = $SharePointInfo.AdminUrl
 
-    $AllowedTypes = @('Boolean', 'String', 'Int32')
+    $AllowedTypes = @('Boolean', 'String', 'Int32', 'Int64')
+    # Properties that are CSOM enums; their (numeric) value must be sent as Type="Enum".
+    $EnumProperties = @('SharingCapability', 'DefaultSharingLinkType', 'DefaultLinkPermission', 'SharingDomainRestrictionMode', 'ConditionalAccessPolicy')
     $SetProperty = [System.Collections.Generic.List[string]]::new()
     $x = 106
     foreach ($Property in $Properties.Keys) {
         $PropertyType = $Properties[$Property].GetType().Name
-        if ($PropertyType -in $AllowedTypes) {
-            $PropertyToSet = if ($PropertyType -eq 'Boolean') { $Properties[$Property].ToString().ToLower() } else { $Properties[$Property] }
+        if ($Property -in $EnumProperties) {
+            $SetProperty.Add("<SetProperty Id=`"$x`" ObjectPathId=`"104`" Name=`"$Property`"><Parameter Type=`"Enum`">$([int]$Properties[$Property])</Parameter></SetProperty>")
+            $x++
+        } elseif ($PropertyType -in $AllowedTypes) {
+            $PropertyToSet = if ($PropertyType -eq 'Boolean') { $Properties[$Property].ToString().ToLower() } else { [System.Security.SecurityElement]::Escape([string]$Properties[$Property]) }
             $SetProperty.Add("<SetProperty Id=`"$x`" ObjectPathId=`"104`" Name=`"$Property`"><Parameter Type=`"$PropertyType`">$PropertyToSet</Parameter></SetProperty>")
             $x++
         }
