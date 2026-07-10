@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -34,6 +35,88 @@ namespace CIPP
         /// shape that Invoke-RestMethod surfaces via -ResponseHeadersVariable.
         /// </summary>
         public Dictionary<string, string[]> ResponseHeaders { get; init; } = new();
+    }
+
+    // =====================================================================
+    // CIPPResponseHeaders / CIPPHttpResponse / CIPPHttpRequestException
+    // =====================================================================
+    // When a request returns a non-success status, the PowerShell wrapper
+    // (Invoke-CIPPRestMethod) throws a CIPPHttpRequestException. CIPP's Graph
+    // helpers were written against Invoke-RestMethod's HttpResponseException
+    // and read:
+    //     $_.Exception.Response.StatusCode -eq 429
+    //     $_.Exception.Response.Headers['Retry-After']
+    // The pooled client previously threw a bare HttpRequestException with no
+    // .Response, so those branches were dead. These types restore the expected
+    // shape: a .Response with a StatusCode (HttpStatusCode, so `-eq 429` works)
+    // and Headers that support case-insensitive string indexing returning a
+    // scalar value (so ['Retry-After'] works), matching the old behaviour.
+    // =====================================================================
+
+    /// <summary>
+    /// Case-insensitive response-header view exposed to PowerShell. The string
+    /// indexer returns the (comma-joined) value for a header, or null if absent,
+    /// mirroring how WebHeaderCollection / HttpResponseHeaders were consumed in
+    /// CIPP via $response.Headers['Header-Name'].
+    /// </summary>
+    public sealed class CIPPResponseHeaders
+    {
+        private readonly Dictionary<string, string[]> _headers;
+
+        public CIPPResponseHeaders(Dictionary<string, string[]>? headers)
+        {
+            _headers = headers is not null
+                ? new Dictionary<string, string[]>(headers, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>$resp.Headers['Retry-After'] -> scalar string (joined), or null.</summary>
+        public string? this[string key]
+            => key is not null && _headers.TryGetValue(key, out var v) ? string.Join(", ", v) : null;
+
+        public bool Contains(string key) => key is not null && _headers.ContainsKey(key);
+        public string[]? GetValues(string key) => key is not null && _headers.TryGetValue(key, out var v) ? v : null;
+        public IEnumerable<string> Keys => _headers.Keys;
+        public int Count => _headers.Count;
+    }
+
+    /// <summary>
+    /// Lightweight stand-in for the response object CIPP code reaches through
+    /// $_.Exception.Response. Carries the status code (as HttpStatusCode so
+    /// `-eq 429` works), the headers (string-indexable), and the raw body.
+    /// </summary>
+    public sealed class CIPPHttpResponse
+    {
+        public HttpStatusCode StatusCode { get; }
+        public int StatusCodeValue { get; }
+        public CIPPResponseHeaders Headers { get; }
+        public string Content { get; }
+
+        public CIPPHttpResponse(int statusCode, Dictionary<string, string[]>? headers, string? content)
+        {
+            StatusCode      = (HttpStatusCode)statusCode;
+            StatusCodeValue = statusCode;
+            Headers         = new CIPPResponseHeaders(headers);
+            Content         = content ?? string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// HttpRequestException subclass carrying a .Response (CIPPHttpResponse).
+    /// Subclassing keeps existing `catch [System.Net.Http.HttpRequestException]`
+    /// and `$_.Exception.Message` / `$_.ErrorDetails.Message` handling intact,
+    /// while restoring `$_.Exception.Response.StatusCode` /
+    /// `$_.Exception.Response.Headers['Retry-After']`.
+    /// </summary>
+    public sealed class CIPPHttpRequestException : HttpRequestException
+    {
+        public CIPPHttpResponse Response { get; }
+
+        public CIPPHttpRequestException(string message, int statusCode, Dictionary<string, string[]>? headers, string? content)
+            : base(message, null, (HttpStatusCode)statusCode)
+        {
+            Response = new CIPPHttpResponse(statusCode, headers, content);
+        }
     }
 
     // =====================================================================
@@ -599,7 +682,33 @@ namespace CIPP
             HttpResponseMessage response;
             try
             {
-                response = await client.SendAsync(request, token).ConfigureAwait(false);
+                // ResponseHeadersRead: do NOT buffer the body inside SendAsync. With the
+                // default (ResponseContentRead) the body is downloaded and auto-decompressed
+                // here, so a mislabeled Content-Encoding (EXO error responses declare gzip on
+                // a plain body) throws InvalidDataException from SendAsync and bypasses the
+                // defensive body read below — masking the HTTP status the caller needs.
+                response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cts is not null && cts.IsCancellationRequested)
+            {
+                // Our per-request timeout CTS actually fired — this is a genuine
+                // client-side timeout after timeoutSec. Let it propagate as an
+                // OperationCanceledException so the PowerShell wrapper reports it
+                // as a timeout (and the "timed out after {timeoutSec}s" message is true).
+                TrackTransportError(selection.Pool);
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                // Cancellation was NOT triggered by our timeout token. The server
+                // reset/closed the request before our timeout elapsed — common for
+                // slow EXO InvokeCommand cmdlets (Search-UnifiedAuditLog,
+                // Get-MessageTraceV2) which the service cuts off well under 100s.
+                // Surface it as a transport error so it is not mislabeled as a
+                // client timeout and is correctly treated as a retryable failure.
+                TrackTransportError(selection.Pool);
+                throw new HttpRequestException(
+                    $"The request to '{uri}' was canceled by the server before completing.", ex);
             }
             catch
             {
@@ -622,7 +731,7 @@ namespace CIPP
                 try
                 {
                     content = response.Content is not null
-                        ? await response.Content.ReadAsStringAsync(token).ConfigureAwait(false)
+                        ? await ReadDecodedContentAsync(response.Content, token).ConfigureAwait(false)
                         : string.Empty;
                 }
                 catch (Exception ex) when (ex is InvalidDataException || ex is IOException)
@@ -689,6 +798,46 @@ namespace CIPP
                     ResponseHeaders = allHeaders,
                 };
             }
+        }
+
+        // -----------------------------------------------------------------
+        // Content decoding
+        // -----------------------------------------------------------------
+        // Reads the response body as a string, decompressing explicitly based on
+        // the Content-Encoding header. SocketsHttpHandler.AutomaticDecompression
+        // normally handles this transparently AND strips Content-Encoding, in
+        // which case ContentEncoding is empty here and we just read the string.
+        // But AutomaticDecompression silently no-ops whenever a request carries a
+        // caller-supplied Accept-Encoding header (HttpClient assumes the caller
+        // will decode), and some endpoints (e.g. the Teams ConfigAPI) return gzip
+        // even when unprompted. When Content-Encoding survives, we decode it here
+        // so callers never receive raw compressed bytes. Idempotent: if the
+        // handler already decoded, there's nothing left to do.
+        // -----------------------------------------------------------------
+        private static async Task<string> ReadDecodedContentAsync(HttpContent httpContent, CancellationToken token)
+        {
+            var encodings = httpContent.Headers.ContentEncoding;
+            if (encodings is null || encodings.Count == 0)
+                return await httpContent.ReadAsStringAsync(token).ConfigureAwait(false);
+
+            var raw = await httpContent.ReadAsStreamAsync(token).ConfigureAwait(false);
+            Stream decoded = raw;
+            // Content-Encoding lists encodings in the order applied; decode in reverse.
+            foreach (var enc in encodings.Reverse())
+            {
+                decoded = enc?.Trim().ToLowerInvariant() switch
+                {
+                    "gzip" or "x-gzip" => new GZipStream(decoded, CompressionMode.Decompress),
+                    "deflate"          => new DeflateStream(decoded, CompressionMode.Decompress),
+                    "br"               => new BrotliStream(decoded, CompressionMode.Decompress),
+                    "identity" or "" or null => decoded,
+                    _                  => decoded,
+                };
+            }
+            using var reader = new StreamReader(decoded, Encoding.UTF8);
+            var result = await reader.ReadToEndAsync(token).ConfigureAwait(false);
+            decoded.Dispose();
+            return result;
         }
 
         // =================================================================

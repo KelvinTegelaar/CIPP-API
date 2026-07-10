@@ -15,14 +15,44 @@ function Invoke-ListUserSettings {
 
     try {
         $Table = Get-CippTable -tablename 'UserSettings'
-        $UserSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq 'allUsers'"
-        if (!$UserSettings) { $UserSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'" }
-
-        try {
-            $UserSettings = $UserSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
-        } catch {
-            Write-Warning "Failed to convert UserSettings JSON: $($_.Exception.Message)"
+        $ConvertUserSettings = {
+            param($Entity)
+            if (!$Entity -or !$Entity.JSON) { return $null }
+            try {
+                return $Entity.JSON | ConvertFrom-Json -Depth 10 -ErrorAction Stop
+            } catch {
+                Write-Warning "UserSettings JSON for '$($Entity.RowKey)' had a key case collision, self-healing: $($_.Exception.Message)"
+                try {
+                    $Hash = $Entity.JSON | ConvertFrom-Json -Depth 10 -AsHashtable
+                    if ($Hash.offboardingDefaults -is [System.Collections.IDictionary]) {
+                        $Offboarding = $Hash.offboardingDefaults
+                        $Variants = @($Offboarding.Keys | Where-Object { $_ -ieq 'keepCopy' })
+                        if ($Variants.Count -gt 0) {
+                            $CanonicalValue = if ($Offboarding.Contains('KeepCopy')) { $Offboarding['KeepCopy'] } else { $Offboarding[$Variants[0]] }
+                            foreach ($Variant in $Variants) { $null = $Offboarding.Remove($Variant) }
+                            $Offboarding['KeepCopy'] = $CanonicalValue
+                        }
+                    }
+                    $HealedJson = $Hash | ConvertTo-Json -Depth 10 -Compress
+                    $Healed = $HealedJson | ConvertFrom-Json -Depth 10 -ErrorAction Stop
+                    $HealTable = Get-CippTable -tablename 'UserSettings'
+                    $HealTable.Force = $true
+                    Add-CIPPAzDataTableEntity @HealTable -Entity @{
+                        JSON         = "$HealedJson"
+                        RowKey       = "$($Entity.RowKey)"
+                        PartitionKey = "$($Entity.PartitionKey)"
+                    }
+                    return $Healed
+                } catch {
+                    Write-Warning "Failed to self-heal UserSettings JSON for '$($Entity.RowKey)': $($_.Exception.Message)"
+                    return $null
+                }
+            }
         }
+
+        $UserSettingsEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq 'allUsers'"
+        if (!$UserSettingsEntity) { $UserSettingsEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'" }
+        $UserSettings = & $ConvertUserSettings $UserSettingsEntity
 
         if (!$UserSettings) {
             $UserSettings = [pscustomobject]@{
@@ -38,12 +68,27 @@ function Invoke-ListUserSettings {
             }
         }
 
-        try {
-            $UserSpecificSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'"
-            $UserSpecificSettings = $UserSpecificSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
-        } catch {
-            Write-Warning "Failed to convert UserSpecificSettings JSON: $($_.Exception.Message)"
+        $UserSpecificEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'"
+        $UserSpecificSettings = & $ConvertUserSettings $UserSpecificEntity
+
+        $TestOffboardingConfigured = {
+            param($Offboarding)
+            if (-not $Offboarding) { return $false }
+            foreach ($Property in $Offboarding.PSObject.Properties) {
+                if ($Property.Value -eq $true) { return $true }
+            }
+            return $false
         }
+
+        $AllUsersOffboardingConfigured = & $TestOffboardingConfigured $UserSettings.offboardingDefaults
+        $UserOffboardingConfigured = & $TestOffboardingConfigured $UserSpecificSettings.offboardingDefaults
+
+        $OffboardingDefaultsSource = 'allUsers'
+        if (-not $AllUsersOffboardingConfigured -and $UserOffboardingConfigured) {
+            $UserSettings | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value $UserSpecificSettings.offboardingDefaults -Force | Out-Null
+            $OffboardingDefaultsSource = 'user'
+        }
+        $UserSettings | Add-Member -MemberType NoteProperty -Name 'offboardingDefaultsSource' -Value $OffboardingDefaultsSource -Force | Out-Null
 
         # Get user bookmarks
         try {

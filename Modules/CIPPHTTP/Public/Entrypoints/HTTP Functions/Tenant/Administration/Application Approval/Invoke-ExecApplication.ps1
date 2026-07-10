@@ -62,7 +62,8 @@ function Invoke-ExecApplication {
     }
 
     if ($Request.Body) {
-        $PostParams.Body = $Request.Body.Payload | ConvertTo-Json -Compress
+        # Depth 10 so nested payloads (e.g. web/spa/publicClient redirectUris and implicitGrantSettings) aren't truncated.
+        $PostParams.Body = $Request.Body.Payload | ConvertTo-Json -Depth 10 -Compress
     }
 
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter

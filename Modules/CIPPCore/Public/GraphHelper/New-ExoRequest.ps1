@@ -20,7 +20,7 @@ function New-ExoRequest {
         [Parameter(Mandatory = $false, ParameterSetName = 'ExoRequest')]
         [bool]$useSystemMailbox,
 
-        [string]$tenantid,
+        [string]$tenantid = $env:TenantID,
 
         [bool]$NoAuthCheck,
 
@@ -32,7 +32,8 @@ function New-ExoRequest {
         [switch]$AvailableCmdlets,
 
         $ModuleVersion = '3.9.2',
-        [switch]$AsApp
+        [switch]$AsApp,
+        [switch]$UseCertificate
     )
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         if ($Compliance.IsPresent) {
@@ -40,7 +41,9 @@ function New-ExoRequest {
         } else {
             $Resource = 'https://outlook.office365.com'
         }
-        $token = Get-GraphToken -Tenantid $tenantid -scope "$Resource/.default" -AsApp:$AsApp.IsPresent
+        # -UseCertificate authenticates the app with the SAM certificate instead of the
+        # client secret: delegated (refresh token) by default, app-only with -AsApp
+        $token = Get-GraphToken -Tenantid $tenantid -scope "$Resource/.default" -AsApp:$AsApp.IsPresent -UseCertificate:$UseCertificate
 
         if ($cmdParams) {
             #if cmdParams is a pscustomobject, convert to hashtable, otherwise leave as is

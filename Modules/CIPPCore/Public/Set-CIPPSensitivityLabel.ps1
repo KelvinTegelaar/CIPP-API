@@ -36,6 +36,11 @@ function Set-CIPPSensitivityLabel {
     $PolicySource = $Template.PolicyParams
     $LabelName = $LabelParams.Name
 
+    # PswsHashtable parameters need the Exchange.GenericHashTable odata type to bind over the AdminApi.
+    if ($LabelParams.ContainsKey('AdvancedSettings')) {
+        $LabelParams['AdvancedSettings'] = ConvertTo-CIPPExoHashtable -InputObject $LabelParams['AdvancedSettings']
+    }
+
     # Priority is valid on Set-Label but not New-Label, so it is applied via a dedicated Set-Label call below.
     $LabelPriority = $null
     if ($LabelParams.ContainsKey('Priority')) {
@@ -44,6 +49,16 @@ function Set-CIPPSensitivityLabel {
     }
 
     try {
+        # A custom label color travels as the 'color' advanced setting. Validate the hex format up front
+        # so a bad value fails with a clear message instead of an opaque compliance-endpoint error.
+        # An empty string is valid: it clears a previously set color.
+        if ($LabelParams.ContainsKey('AdvancedSettings')) {
+            $ColorValue = $LabelParams['AdvancedSettings']['color']
+            if (-not [string]::IsNullOrEmpty("$ColorValue") -and "$ColorValue" -notmatch '^#[0-9A-Fa-f]{6}$') {
+                throw "Invalid label color '$ColorValue' in the AdvancedSettings of '$LabelName'. Use a 6-digit hex color like #40E0D0."
+            }
+        }
+
         $ExistingLabels = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Label' -Compliance | Select-Object Name, DisplayName } catch { @() }
         $ExistingLabelPolicies = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-LabelPolicy' -Compliance | Select-Object Name } catch { @() }
 
@@ -71,6 +86,13 @@ function Set-CIPPSensitivityLabel {
 
         if ($PolicySource) {
             $PolicyHash = Format-CIPPCompliancePolicyParams -Source $PolicySource -AllowedFields $PolicyAllowedFields
+            # Settings/AdvancedSettings are PswsHashtable on New-/Set-LabelPolicy; template JSON authors
+            # Settings as [key, value] pairs, which the helper also normalizes.
+            foreach ($HashtableParam in @('AdvancedSettings', 'Settings')) {
+                if ($PolicyHash.ContainsKey($HashtableParam)) {
+                    $PolicyHash[$HashtableParam] = ConvertTo-CIPPExoHashtable -InputObject $PolicyHash[$HashtableParam]
+                }
+            }
             if (-not $PolicyHash.ContainsKey('Labels') -or -not $PolicyHash['Labels']) {
                 $PolicyHash['Labels'] = @($LabelName)
             }

@@ -161,6 +161,10 @@ function New-CIPPBackup {
                 # If building full URL fails, fall back to resource path
                 $blobUrl = $resourcePath
             }
+
+            # Best-effort off-site replication to an external storage account.
+            $ReplType = if ($backupType -eq 'CIPP') { 'Core' } else { 'Tenant' }
+            Push-CIPPBackupReplication -BackupType $ReplType -BlobName $blobName -Content $BackupData -Headers $Headers
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -headers $Headers -API $APINAME -message "Blob upload failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage

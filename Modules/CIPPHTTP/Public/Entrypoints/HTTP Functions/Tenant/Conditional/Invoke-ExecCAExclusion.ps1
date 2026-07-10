@@ -133,6 +133,55 @@ function Invoke-ExecCAExclusion {
                 Add-CIPPScheduledTask -Task $AuditRemoveTask -hidden $true
             }
             $Results = @("Successfully added vacation mode schedule for $Username on policy '$PolicyName'.")
+
+            # Optional: temporary travel policy that only allows sign-ins from the travel destination
+            $TravelCountries = @($Request.Body.TravelCountries.value | Where-Object { $_ })
+            if ($Request.Body.CreateTravelPolicy -eq $true -and $TravelCountries.Count -gt 0) {
+                $TravelUsers = @($Users.addedFields.userPrincipalName ?? $Users.value ?? $Users ?? $UserID)
+                $StartLabel = [DateTimeOffset]::FromUnixTimeSeconds([int64]$StartDate).ToString('yyyy-MM-dd')
+                $EndLabel = [DateTimeOffset]::FromUnixTimeSeconds([int64]$EndDate).ToString('yyyy-MM-dd')
+                $UserLabel = $TravelUsers -join ', '
+                $TravelPolicyName = "Travel Policy $UserLabel - $StartLabel - $EndLabel"
+                if ($TravelPolicyName.Length -gt 256) {
+                    $TravelPolicyName = "Travel Policy $($TravelUsers.Count) users - $StartLabel - $EndLabel"
+                }
+
+                $TravelCreateTask = [pscustomobject]@{
+                    TenantFilter  = $TenantFilter
+                    Name          = "Create Travel Policy Vacation Mode: $TravelPolicyName"
+                    Command       = @{
+                        value = 'New-CIPPTravelPolicy'
+                        label = 'New-CIPPTravelPolicy'
+                    }
+                    Parameters    = [pscustomobject]@{
+                        Users      = $TravelUsers
+                        Countries  = $TravelCountries
+                        PolicyName = $TravelPolicyName
+                    }
+                    ScheduledTime = $StartDate
+                    PostExecution = $Request.Body.postExecution
+                    Reference     = $Request.Body.reference
+                }
+                Add-CIPPScheduledTask -Task $TravelCreateTask -hidden $false
+
+                $TravelRemoveTask = [pscustomobject]@{
+                    TenantFilter  = $TenantFilter
+                    Name          = "Remove Travel Policy Vacation Mode: $TravelPolicyName"
+                    Command       = @{
+                        value = 'Remove-CIPPTravelPolicy'
+                        label = 'Remove-CIPPTravelPolicy'
+                    }
+                    Parameters    = [pscustomobject]@{
+                        PolicyName = $TravelPolicyName
+                    }
+                    ScheduledTime = $EndDate
+                    PostExecution = $Request.Body.postExecution
+                    Reference     = $Request.Body.reference
+                }
+                Add-CIPPScheduledTask -Task $TravelRemoveTask -hidden $false
+                $Results += "Successfully scheduled temporary travel policy '$TravelPolicyName' restricting sign-ins to $($TravelCountries -join ', '). The policy and named location will be removed at the end date."
+            }
+
             if ($DuplicateGroupWarning) {
                 $Results += $DuplicateGroupWarning
             }

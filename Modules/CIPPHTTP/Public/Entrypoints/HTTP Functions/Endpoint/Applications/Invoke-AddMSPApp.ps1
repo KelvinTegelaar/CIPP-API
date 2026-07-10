@@ -34,57 +34,15 @@ function Invoke-AddMSPApp {
     $SuccessCount = 0
     $ErrorCount = 0
     $Results = foreach ($Tenant in $Tenants) {
-        $InstallParams = [PSCustomObject]$RMMApp.params
-        switch ($RmmName) {
-            'datto' {
-                Write-Host 'Processing Datto installation'
-                $DattoUrl = ConvertTo-CIPPSafePwshArg -Value ([string]$InstallParams.DattoURL)
-                $DattoGuid = ConvertTo-CIPPSafePwshArg -Value ([string]$InstallParams.DattoGUID."$($Tenant.customerId)")
-                $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -URL $DattoUrl -GUID $DattoGuid"
-                $uninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1'
-            }
-            'ninja' {
-                Write-Host 'Processing Ninja installation'
-                $NinjaPackage = ConvertTo-CIPPSafePwshArg -Value ([string]$RMMApp.PackageName)
-                $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -InstallParam $NinjaPackage"
-                $uninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1'
-            }
-            'Huntress' {
-                $HuntressOrgKey = ConvertTo-CIPPSafePwshArg -Value ([string]$InstallParams.Orgkey."$($Tenant.customerId)")
-                $HuntressAccountKey = ConvertTo-CIPPSafePwshArg -Value ([string]$InstallParams.AccountKey)
-                $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -OrgKey $HuntressOrgKey -acctkey $HuntressAccountKey"
-                $uninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\install.ps1 -Uninstall'
-            }
-            'syncro' {
-                $SyncroUrl = ConvertTo-CIPPSafePwshArg -Value ([string]$InstallParams.ClientURL."$($Tenant.customerId)")
-                $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -URL $SyncroUrl"
-                $uninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1'
-            }
-            'NCentral' {
-                $NCentralPackage = ConvertTo-CIPPSafePwshArg -Value ([string]$RMMApp.PackageName)
-                $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -InstallParam $NCentralPackage"
-                $uninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1'
-            }
-            'automate' {
-                $AutomateServer = ConvertTo-CIPPSafePwshArg -Value ([string]$InstallParams.Server)
-                $AutomateInstallerToken = ConvertTo-CIPPSafePwshArg -Value ([string]$InstallParams.InstallerToken."$($Tenant.customerId)")
-                $AutomateLocationId = ConvertTo-CIPPSafePwshArg -Value ([string]$InstallParams.LocationID."$($Tenant.customerId)")
-                $installCommandLine = "c:\windows\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass .\install.ps1 -Server $AutomateServer -InstallerToken $AutomateInstallerToken -LocationID $AutomateLocationId"
-                $uninstallCommandLine = "c:\windows\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1 -Server $AutomateServer"
-                $DetectionScript = (Get-Content 'AddMSPApp\automate.detection.ps1' -Raw) -replace '##SERVER##', $InstallParams.Server
-                $intuneBody.detectionRules[0].scriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($DetectionScript))
-            }
-            'cwcommand' {
-                $CwClientUrl = ConvertTo-CIPPSafePwshArg -Value ([string]$InstallParams.ClientURL."$($Tenant.customerId)")
-                $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -Url $CwClientUrl"
-                $uninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1'
-            }
-            default {
-                throw "Unknown MSP app type '$RmmName'"
-            }
+        # Build the install/uninstall command lines for this tenant. Get-CIPPMSPAppInstallCommand
+        # resolves each param whether it is a per-tenant keyed value (interactive deploy) or a
+        # flat value / %CIPP variable% (Application Template deploy).
+        $CommandResult = Get-CIPPMSPAppInstallCommand -RmmName $RmmName -Params $RMMApp.params -Tenant $Tenant -PackageName $RMMApp.PackageName
+        $intuneBody.installCommandLine = $CommandResult.InstallCommandLine
+        $intuneBody.UninstallCommandLine = $CommandResult.UninstallCommandLine
+        if ($CommandResult.DetectionScriptContent) {
+            $intuneBody.detectionRules[0].scriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($CommandResult.DetectionScriptContent))
         }
-        $intuneBody.installCommandLine = $installCommandLine
-        $intuneBody.UninstallCommandLine = $uninstallCommandLine
 
 
         try {

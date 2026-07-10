@@ -23157,6 +23157,12 @@
                   },
                   "targetUrl": {
                     "type": "string"
+                  },
+                  "appId": {
+                    "type": "string"
+                  },
+                  "appSecret": {
+                    "type": "string"
                   }
                 }
               }

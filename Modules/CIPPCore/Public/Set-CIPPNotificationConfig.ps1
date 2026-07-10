@@ -37,7 +37,7 @@ function Set-CIPPNotificationConfig {
                 }
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force | Out-Null
             } else {
-                $KeyVaultName = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+                $KeyVaultName = Get-CippKeyVaultName
                 Set-CippKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $SecretValue) | Out-Null
             }
         }

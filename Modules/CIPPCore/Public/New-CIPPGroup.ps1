@@ -275,6 +275,18 @@ function New-CIPPGroup {
                 }
 
                 $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-DistributionGroup' -cmdParams $ExoParams
+
+                $Aliases = @($GroupObject.aliases -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+                $SetParams = @{ Identity = $GraphRequest.Identity }
+                if ($GroupObject.hideFromGAL) {
+                    $SetParams.HiddenFromAddressListsEnabled = $true
+                }
+                if ($Aliases.Count -gt 0) {
+                    $SetParams.EmailAddresses = @{ '@odata.type' = '#Exchange.GenericHashTable'; Add = @($Aliases | ForEach-Object { "smtp:$_" }) }
+                }
+                if ($SetParams.Keys.Count -gt 1) {
+                    $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-DistributionGroup' -cmdParams $SetParams
+                }
             }
 
             $Result = [PSCustomObject]@{
