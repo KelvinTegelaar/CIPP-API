@@ -32,8 +32,7 @@ function Update-CIPPSSORedirectUri {
             $SSOMultiTenant = $Secret.SSOMultiTenant -eq 'True'
         } catch { }
     } else {
-        $KV = $env:WEBSITE_DEPLOYMENT_ID
-        $VaultName = if ($KV) { ($KV -split '-')[0] } else { $null }
+        $VaultName = Get-CippKeyVaultName
         if ($VaultName) {
             try {
                 $SSOAppId = Get-CippKeyVaultSecret -VaultName $VaultName -Name 'SSOAppId' -AsPlainText -ErrorAction Stop
@@ -95,30 +94,33 @@ function Update-CIPPSSORedirectUri {
             return
         }
 
-        # Build patch body
-        $PatchBody = @{}
-
+        # Patch redirect URIs and signInAudience as separate requests. A tenant app-management
+        # policy can reject an audience change (e.g. downgrading a multi-tenant app to
+        # single-tenant fails with "SigninAudienceRestrictions with restricted mode can be
+        # configured only on multi-tenants apps"). Sending them together would let that
+        # rejection also drop the redirect URI additions, which are needed for sign-in.
         if ($MissingUris.Count -gt 0) {
             $UpdatedUris = [System.Collections.Generic.List[string]]::new()
             $ExistingUris | ForEach-Object { $UpdatedUris.Add($_) }
             $MissingUris | ForEach-Object { $UpdatedUris.Add($_) }
-            $PatchBody.web = @{ redirectUris = $UpdatedUris }
-        }
-
-        if ($AudienceMismatch) {
-            $PatchBody.signInAudience = $ExpectedAudience
-            Write-Information "[SSO-Redirect] Correcting signInAudience: $($AppResponse.signInAudience) -> $ExpectedAudience"
-        }
-
-        $Body = $PatchBody | ConvertTo-Json -Depth 5
-        New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $Body -type PATCH -NoAuthCheck $true -AsApp $true
-
-        if ($MissingUris.Count -gt 0) {
+            $UriBody = @{ web = @{ redirectUris = $UpdatedUris } } | ConvertTo-Json -Depth 5
+            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $UriBody -type PATCH -NoAuthCheck $true -AsApp $true
             Write-Information "[SSO-Redirect] Added redirect URIs: $($MissingUris -join ', ')"
             Write-LogMessage -API 'SSO-Redirect' -message "Added redirect URIs: $($MissingUris -join ', ')" -sev Info
         }
+
         if ($AudienceMismatch) {
-            Write-LogMessage -API 'SSO-Redirect' -message "Updated signInAudience to $ExpectedAudience (multiTenant=$SSOMultiTenant)" -sev Info
+            Write-Information "[SSO-Redirect] Correcting signInAudience: $($AppResponse.signInAudience) -> $ExpectedAudience"
+            try {
+                $AudienceBody = @{ signInAudience = $ExpectedAudience } | ConvertTo-Json -Compress
+                New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $AudienceBody -type PATCH -NoAuthCheck $true -AsApp $true
+                Write-LogMessage -API 'SSO-Redirect' -message "Updated signInAudience to $ExpectedAudience (multiTenant=$SSOMultiTenant)" -sev Info
+            } catch {
+                # Non-fatal: a tenant app-management policy is blocking the audience change.
+                # EasyAuth issuer validation already enforces the effective tenant scope, so the
+                # app registration can stay as-is. Log at Info so warmup doesn't spam warnings.
+                Write-Information "[SSO-Redirect] signInAudience change to $ExpectedAudience was rejected by tenant policy (leaving app reg as $($AppResponse.signInAudience)): $($_.Exception.Message)"
+            }
         }
     } catch {
         Write-LogMessage -API 'SSO-Redirect' -message "Failed to update SSO app registration: $_" -LogData (Get-CippException -Exception $_) -sev Warning

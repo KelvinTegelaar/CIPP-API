@@ -7,14 +7,15 @@ function Invoke-CippTestZTNA21783 {
     #tested
     try {
         $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
-        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
+        $Roles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
 
         if (-not $CAPolicies -or -not $Roles) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21783' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Privileged Microsoft Entra built-in roles are targeted with Conditional Access policies to enforce phishing-resistant methods' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Access Control'
             return
         }
 
-        $PrivilegedRoles = $Roles | Where-Object { $_.isPrivileged -and $_.isBuiltIn }
+        # Get-CippDbRole -IncludePrivilegedRoles already returns the privileged built-in directory roles.
+        $PrivilegedRoles = @($Roles)
 
         if (-not $PrivilegedRoles) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21783' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No privileged built-in roles found in tenant' -Risk 'High' -Name 'Privileged Microsoft Entra built-in roles are targeted with Conditional Access policies to enforce phishing-resistant methods' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Access Control'
@@ -31,7 +32,11 @@ function Invoke-CippTestZTNA21783 {
 
         $CoveredRoleIds = $PhishResistantPolicies.conditions.users.includeRoles | Select-Object -Unique
 
-        $UnprotectedRoles = $PrivilegedRoles | Where-Object { $_.id -notin $CoveredRoleIds }
+        # Conditional Access includeRoles reference role template IDs, not directory role instance IDs.
+        $UnprotectedRoles = $PrivilegedRoles | Where-Object {
+            $Tid = if ($_.roleTemplateId) { [string]$_.roleTemplateId } elseif ($_.RoletemplateId) { [string]$_.RoletemplateId } else { $null }
+            $Tid -notin $CoveredRoleIds
+        }
 
         if ($UnprotectedRoles.Count -eq 0) {
             $Status = 'Passed'

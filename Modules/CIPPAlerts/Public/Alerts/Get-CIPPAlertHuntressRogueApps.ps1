@@ -3,7 +3,7 @@ function Get-CIPPAlertHuntressRogueApps {
     .SYNOPSIS
         Check for rogue apps in a Tenant
     .DESCRIPTION
-        This function checks for rogue apps in the tenant by comparing the service principals in the tenant with a list of known rogue apps provided by Huntress.
+        This function checks for rogue apps in the tenant by comparing the service principals in the tenant with a list of known rogue apps provided by Huntress and a CIPP collections of appids.
     .FUNCTIONALITY
         Entrypoint
     .LINK
@@ -19,8 +19,23 @@ function Get-CIPPAlertHuntressRogueApps {
 
     try {
         $RogueApps = Invoke-RestMethod -Uri 'https://huntresslabs.github.io/rogueapps/rogueapps.json'
-        $RogueAppFilter = $RogueApps.appId -join "','"
-        $ServicePrincipals = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId in ('$RogueAppFilter')" -tenantid $TenantFilter
+        $CippRogueApps = (Get-Content -Path (Join-Path $env:CIPPRootPath 'Config\schemaDefinitions.json') | ConvertFrom-Json).applications.appId
+        $HuntressRogueApps = $RogueApps.appId
+        $RogueAppIds = @($CippRogueApps) + @($HuntressRogueApps) | Where-Object { $_ } | Select-Object -Unique
+        $Requests = for ($i = 0; $i -lt $RogueAppIds.Count; $i += 15) {
+            $Chunk = $RogueAppIds[$i..([Math]::Min($i + 14, $RogueAppIds.Count - 1))]
+            @{
+                id     = [string]$i
+                method = 'GET'
+                url    = "servicePrincipals?`$filter=appId in ('$($Chunk -join "','")')"
+            }
+        }
+        $Requests = @($Requests)
+
+        $ServicePrincipals = if ($Requests.Count -gt 0) {
+            $Responses = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter
+            foreach ($Response in $Responses) { $Response.body.value }
+        }
         # If IgnoreDisabledApps is true, filter out disabled service principals
         if ($InputValue -eq $true) {
             $ServicePrincipals = $ServicePrincipals | Where-Object { $_.accountEnabled -eq $true }

@@ -9,7 +9,7 @@ function Invoke-ExecCreateSAMApp {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $KV = $env:WEBSITE_DEPLOYMENT_ID
+    $KV = Get-CippKeyVaultName
 
     try {
         $Token = $Request.body
@@ -106,6 +106,19 @@ function Invoke-ExecCreateSAMApp {
 
             # Reload credentials into env vars
             $null = Get-CIPPAuthentication
+
+            # Create the SAM certificate alongside the secret so certificate auth is available
+            # immediately. Uses the wizard's delegated token because the app secret was created
+            # seconds ago and may not have propagated yet. Non-fatal: the weekly token update
+            # timer creates the certificate if this fails.
+            try {
+                $CertResult = Update-CIPPSAMCertificate -ApplicationId $AppId.appId -Headers @{ authorization = "Bearer $($Token.access_token)" }
+                if ($CertResult.Renewed) {
+                    Write-Information "SAM certificate created. Thumbprint: $($CertResult.Thumbprint), expires: $($CertResult.NotAfter), storage mode: $($CertResult.StorageMode)"
+                }
+            } catch {
+                Write-Warning "Failed to create SAM certificate during setup, the weekly token update will create it: $($_.Exception.Message)"
+            }
 
             $Results = @{'message' = "Successfully $state the application registration. The application ID is $($AppId.appid). You may continue to the next step."; severity = 'success' }
         }

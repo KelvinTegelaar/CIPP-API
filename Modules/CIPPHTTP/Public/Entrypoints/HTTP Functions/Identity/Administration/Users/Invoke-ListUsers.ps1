@@ -15,8 +15,66 @@ Function Invoke-ListUsers {
     $GraphFilter = $Request.Query.graphFilter
     $userid = $Request.Query.UserID
 
+    # When fetching a single user, use an explicit $select so directory/schema extension properties are
+    # returned. Covers the properties the user view and edit form consume, any attributes added via
+    # Preferences > Added Attributes, and custom data attributes mapped for manual entry on users.
+    $SelectParam = ''
+    if ($userid -and $TenantFilter -ne 'AllTenants') {
+        $BaseProperties = @(
+            'id', 'accountEnabled', 'ageGroup', 'assignedLicenses', 'businessPhones', 'city', 'companyName',
+            'consentProvidedForMinor', 'country', 'createdDateTime', 'department', 'displayName',
+            'employeeHireDate', 'employeeId', 'employeeLeaveDateTime', 'employeeType', 'faxNumber',
+            'givenName', 'jobTitle', 'lastPasswordChangeDateTime', 'legalAgeGroupClassification', 'mail',
+            'mailNickname', 'mobilePhone', 'officeLocation', 'onPremisesDistinguishedName',
+            'onPremisesImmutableId', 'onPremisesLastSyncDateTime', 'onPremisesSyncEnabled', 'otherMails', 'postalCode',
+            'preferredLanguage', 'proxyAddresses', 'showInAddressList', 'state', 'streetAddress',
+            'surname', 'usageLocation', 'userPrincipalName', 'userType'
+        )
+        $CustomAttributes = [System.Collections.Generic.List[string]]::new()
+        try {
+            # Attributes added via Preferences > 'Added Attributes when creating a new user'
+            $Username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
+            $EscapedUsername = $Username -replace "'", "''"
+            $UserSettingsTable = Get-CippTable -tablename 'UserSettings'
+            $UserSettingsEntities = Get-CIPPAzDataTableEntity @UserSettingsTable -Filter "PartitionKey eq 'UserSettings' and (RowKey eq 'allUsers' or RowKey eq '$EscapedUsername')"
+            foreach ($Entity in $UserSettingsEntities) {
+                foreach ($Label in (($Entity.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue).userAttributes.label)) {
+                    if ($Label) { $CustomAttributes.Add($Label) }
+                }
+            }
+            # Custom data attributes mapped for manual entry on users for this tenant
+            $MappingsTable = Get-CippTable -tablename 'CustomDataMappings'
+            foreach ($Entity in (Get-CIPPAzDataTableEntity @MappingsTable)) {
+                $Mapping = $Entity.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+                if ($Mapping.sourceType.value -ne 'manualEntry' -or $Mapping.directoryObjectType.value -ne 'user') { continue }
+                $TenantList = Expand-CIPPTenantGroups -TenantFilter $Mapping.tenantFilter
+                if ($TenantList.value -notcontains $TenantFilter -and $TenantList.value -notcontains 'AllTenants') { continue }
+                # Schema extension names are 'schemaId.property'; Graph $select takes the schema id
+                $AttributeName = ($Mapping.customDataAttribute.value -split '\.')[0]
+                if ($AttributeName) { $CustomAttributes.Add($AttributeName) }
+            }
+        } catch {
+            Write-Warning "Failed to resolve custom attributes for user $($userid): $($_.Exception.Message)"
+        }
+        $ValidCustomAttributes = $CustomAttributes | Where-Object { $_ -match '^[A-Za-z][A-Za-z0-9_]*$' }
+        $SelectParam = '&$select=' + ((@($BaseProperties) + @($ValidCustomAttributes) | Sort-Object -Unique) -join ',')
+        Write-Information $SelectParam
+    }
+
     $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$filter=$GraphFilter&`$count=true&`$expand=manager(`$select=id,userPrincipalName,displayName)" -tenantid $TenantFilter -ComplexFilter | ForEach-Object {
+        try {
+            $UserData = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$filter=$GraphFilter&`$count=true&`$expand=manager(`$select=id,userPrincipalName,displayName)$SelectParam" -tenantid $TenantFilter -ComplexFilter
+        } catch {
+            if ($SelectParam) {
+                # A preference-added attribute name Graph does not recognize fails the whole $select;
+                # fall back to the default property set rather than failing the request.
+                Write-Warning "ListUsers select query failed, falling back to default properties: $($_.Exception.Message)"
+                $UserData = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$filter=$GraphFilter&`$count=true&`$expand=manager(`$select=id,userPrincipalName,displayName)" -tenantid $TenantFilter -ComplexFilter
+            } else {
+                throw
+            }
+        }
+        $UserData | ForEach-Object {
             $_ | Add-Member -MemberType NoteProperty -Name 'onPremisesSyncEnabled' -Value ([bool]($_.onPremisesSyncEnabled)) -Force
             $_ | Add-Member -MemberType NoteProperty -Name 'username' -Value ($_.userPrincipalName -split '@' | Select-Object -First 1) -Force
             $_ | Add-Member -MemberType NoteProperty -Name 'Aliases' -Value ($_.ProxyAddresses -join ', ') -Force

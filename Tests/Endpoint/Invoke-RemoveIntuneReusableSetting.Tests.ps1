@@ -2,8 +2,14 @@
 # Validates deletion and required parameters
 
 BeforeAll {
+    # Locate the function by name under Modules/ so the test survives the function being
+    # moved between modules (it has already moved from CIPPCore to CIPPHTTP once).
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Entrypoints/HTTP Functions/Endpoint/MEM/Invoke-RemoveIntuneReusableSetting.ps1'
+    $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-RemoveIntuneReusableSetting.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $FunctionPath) {
+        throw 'Could not locate Invoke-RemoveIntuneReusableSetting.ps1 under Modules/'
+    }
 
     class HttpResponseContext {
         [int]$StatusCode

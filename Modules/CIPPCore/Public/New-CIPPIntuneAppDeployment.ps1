@@ -78,6 +78,29 @@ function New-CIPPIntuneAppDeployment {
         }
     }
 
+    # Build IntuneBody from raw config if not pre-built (template/standard path). MSP apps store
+    # only the vendor + params in the template, so build the install command here using the shared
+    # helper, which resolves %CIPP variables% in the params per-tenant.
+    if (-not $IntuneBody -and $AppType -eq 'MSPApp') {
+        $MSPAppName = $AppConfig.MSPAppName ?? $AppConfig.rmmname.value ?? $AppConfig.rmmname
+        if ([string]::IsNullOrWhiteSpace($MSPAppName)) {
+            throw 'MSP app vendor (rmmname) is required for MSP app deployments but was not found in the template config.'
+        }
+        # Ensure the file-loading block below can locate the packaged app files.
+        $AppConfig | Add-Member -NotePropertyName 'MSPAppName' -NotePropertyValue $MSPAppName -Force
+
+        $IntuneBody = Get-Content (Join-Path $env:CIPPRootPath "AddMSPApp\$MSPAppName.app.json") | ConvertFrom-Json
+        $IntuneBody.displayName = $AppConfig.Applicationname ?? $AppConfig.displayName
+
+        $TenantObj = Get-Tenants -TenantFilter $TenantFilter
+        $CommandResult = Get-CIPPMSPAppInstallCommand -RmmName $MSPAppName -Params $AppConfig.params -Tenant $TenantObj -PackageName $AppConfig.PackageName
+        $IntuneBody.installCommandLine = $CommandResult.InstallCommandLine
+        $IntuneBody.UninstallCommandLine = $CommandResult.UninstallCommandLine
+        if ($CommandResult.DetectionScriptContent) {
+            $IntuneBody.detectionRules[0].scriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($CommandResult.DetectionScriptContent))
+        }
+    }
+
     # Load files based on app type (only for types that need them)
     $Intunexml = $null
     $Infile = $null

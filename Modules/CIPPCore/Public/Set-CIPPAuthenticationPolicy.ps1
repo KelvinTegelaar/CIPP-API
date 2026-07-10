@@ -18,6 +18,10 @@ function Set-CIPPAuthenticationPolicy {
         [Parameter()][ValidateRange(8, 20)]$QRCodePinLength = 8,
         [Parameter()][ValidateSet('default', 'enabled', 'disabled')]$EmailAllowExternalIdToUseEmailOtp,
         [Parameter()][string[]]$EmailExcludeGroupIds,
+        [Parameter()][bool]$FIDO2AttestationEnforced,
+        [Parameter()][bool]$FIDO2SelfServiceRegistration,
+        [Parameter()][bool]$VoiceIsOfficePhoneAllowed,
+        [Parameter()][bool]$SmsIsUsableForSignIn,
         $APIName = 'Set Authentication Policy',
         $Headers
     )
@@ -39,37 +43,52 @@ function Set-CIPPAuthenticationPolicy {
         # FIDO2
         'FIDO2' {
             if ($State -eq 'enabled') {
-                $CurrentInfo.isAttestationEnforced = $true
-                $CurrentInfo.isSelfServiceRegistrationAllowed = $true
+                # Honor passed values; otherwise default to enforced/allowed to preserve previous enable behavior
+                $CurrentInfo.isAttestationEnforced = if ($PSBoundParameters.ContainsKey('FIDO2AttestationEnforced')) { $FIDO2AttestationEnforced } else { $true }
+                $CurrentInfo.isSelfServiceRegistrationAllowed = if ($PSBoundParameters.ContainsKey('FIDO2SelfServiceRegistration')) { $FIDO2SelfServiceRegistration } else { $true }
+                $OptionalLogMessage = "with attestation enforced set to $($CurrentInfo.isAttestationEnforced) and self-service registration set to $($CurrentInfo.isSelfServiceRegistrationAllowed)"
             }
         }
 
         # Microsoft Authenticator
         'MicrosoftAuthenticator' {
             if ($State -eq 'enabled') {
+                $AuthChanges = [System.Collections.Generic.List[string]]::new()
                 # Set MS authenticator OTP state if parameter is passed in
                 if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled) {
                     $CurrentInfo.isSoftwareOathEnabled = $MicrosoftAuthenticatorSoftwareOathEnabled
-                    $OptionalLogMessage = "and MS Authenticator software OTP to $MicrosoftAuthenticatorSoftwareOathEnabled"
+                    $AuthChanges.Add("software OTP set to $MicrosoftAuthenticatorSoftwareOathEnabled")
                 }
                 # Feature settings
                 if ($MicrosoftAuthenticatorDisplayAppInfo) {
                     $CurrentInfo.featureSettings.displayAppInformationRequiredState.state = $MicrosoftAuthenticatorDisplayAppInfo
+                    $AuthChanges.Add("display app information set to $MicrosoftAuthenticatorDisplayAppInfo")
                 }
                 if ($MicrosoftAuthenticatorDisplayLocation) {
                     $CurrentInfo.featureSettings.displayLocationInformationRequiredState.state = $MicrosoftAuthenticatorDisplayLocation
+                    $AuthChanges.Add("display location set to $MicrosoftAuthenticatorDisplayLocation")
                 }
                 if ($MicrosoftAuthenticatorCompanionApp) {
                     $CurrentInfo.featureSettings.companionAppAllowedState.state = $MicrosoftAuthenticatorCompanionApp
+                    $AuthChanges.Add("companion app set to $MicrosoftAuthenticatorCompanionApp")
                 }
                 # numberMatchingRequiredState is permanently enabled by Microsoft and can no longer be toggled
                 $CurrentInfo.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
+                if ($AuthChanges.Count -gt 0) {
+                    $OptionalLogMessage = "with $($AuthChanges -join ', ')"
+                }
             }
         }
 
         # SMS
         'SMS' {
-            # No special configuration needed
+            # SMS sign-in is set per include-target (smsAuthenticationMethodTarget.isUsableForSignIn)
+            if ($State -eq 'enabled' -and $PSBoundParameters.ContainsKey('SmsIsUsableForSignIn')) {
+                foreach ($Target in $CurrentInfo.includeTargets) {
+                    $Target | Add-Member -NotePropertyName 'isUsableForSignIn' -NotePropertyValue $SmsIsUsableForSignIn -Force
+                }
+                $OptionalLogMessage = "with SMS sign-in set to $SmsIsUsableForSignIn"
+            }
         }
 
         # Temporary Access Pass
@@ -80,7 +99,7 @@ function Set-CIPPAuthenticationPolicy {
                 $CurrentInfo.maximumLifetimeInMinutes = $TAPMaximumLifetime
                 $CurrentInfo.defaultLifetimeInMinutes = $TAPDefaultLifeTime
                 $CurrentInfo.defaultLength = $TAPDefaultLength
-                $OptionalLogMessage = "with TAP isUsableOnce set to $TAPisUsableOnce"
+                $OptionalLogMessage = "with TAP isUsableOnce set to $TAPisUsableOnce, minimum lifetime $TAPMinimumLifetime min, maximum lifetime $TAPMaximumLifetime min, default lifetime $TAPDefaultLifeTime min, and default length $TAPDefaultLength"
             }
         }
 
@@ -96,7 +115,10 @@ function Set-CIPPAuthenticationPolicy {
 
         # Voice call
         'Voice' {
-            # No special configuration needed
+            if ($State -eq 'enabled' -and $PSBoundParameters.ContainsKey('VoiceIsOfficePhoneAllowed')) {
+                $CurrentInfo.isOfficePhoneAllowed = $VoiceIsOfficePhoneAllowed
+                $OptionalLogMessage = "with isOfficePhoneAllowed set to $VoiceIsOfficePhoneAllowed"
+            }
         }
 
         # Email OTP
@@ -106,7 +128,8 @@ function Set-CIPPAuthenticationPolicy {
                     $CurrentInfo.allowExternalIdToUseEmailOtp = $EmailAllowExternalIdToUseEmailOtp
                     $OptionalLogMessage = "with allowExternalIdToUseEmailOtp set to $EmailAllowExternalIdToUseEmailOtp"
                 }
-                if ($EmailExcludeGroupIds) {
+                # Present (even empty) means the caller is setting the exclude list; an empty array clears it
+                if ($PSBoundParameters.ContainsKey('EmailExcludeGroupIds')) {
                     $CurrentInfo.excludeTargets = @(
                         foreach ($id in $EmailExcludeGroupIds) {
                             [pscustomobject]@{
@@ -115,7 +138,11 @@ function Set-CIPPAuthenticationPolicy {
                             }
                         }
                     )
-                    $OptionalLogMessage += " and excluded groups set to $($EmailExcludeGroupIds -join ', ')"
+                    if ($EmailExcludeGroupIds) {
+                        $OptionalLogMessage += " and excluded groups set to $($EmailExcludeGroupIds -join ', ')"
+                    } else {
+                        $OptionalLogMessage += ' and excluded groups cleared'
+                    }
                 }
             }
         }
@@ -130,6 +157,7 @@ function Set-CIPPAuthenticationPolicy {
             if ($State -eq 'enabled') {
                 $CurrentInfo.standardQRCodeLifetimeInDays = $QRCodeLifetimeInDays
                 $CurrentInfo.pinLength = $QRCodePinLength
+                $OptionalLogMessage = "with QR code lifetime $QRCodeLifetimeInDays days and PIN length $QRCodePinLength"
             }
         }
         default {

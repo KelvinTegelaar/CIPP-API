@@ -25,7 +25,7 @@ function Set-CIPPDBCacheCsTeamsMessagingPolicy {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Teams Messaging Policy' -sev Debug
 
-        $MessagingPolicy = New-TeamsRequest -TenantFilter $TenantFilter -Cmdlet 'Get-CsTeamsMessagingPolicy' -CmdParams @{ Identity = 'Global' }
+        $MessagingPolicy = New-TeamsRequestV2 -TenantFilter $TenantFilter -Type 'TeamsMessagingPolicy' -Action Get -Identity 'Global'
 
         if ($MessagingPolicy) {
             $Data = @($MessagingPolicy)

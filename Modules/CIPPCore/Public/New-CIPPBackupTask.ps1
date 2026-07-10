@@ -27,7 +27,7 @@ function New-CIPPBackupTask {
         }
         'users' {
             Measure-CippTask -TaskName 'Users' -EventName 'CIPP.BackupCompleted' -Script {
-                New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier | ForEach-Object {
+                New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, imAddresses, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier | ForEach-Object {
                     #remove the property if the value is $null
                     $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
                         $_.psobject.properties.Remove($_.Name)

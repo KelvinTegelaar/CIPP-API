@@ -8,7 +8,7 @@ function Invoke-HuduExtensionSync {
         $TenantFilter
     )
     try {
-        Connect-HuduAPI -configuration $Configuration
+        Connect-HuduAPI -configuration $Configuration | Out-Null
         $Configuration = $Configuration.Hudu
         $Tenant = Get-Tenants -TenantFilter $TenantFilter -IncludeErrors
         $CompanyResult = [PSCustomObject]@{
@@ -32,6 +32,12 @@ function Invoke-HuduExtensionSync {
         # Get Asset cache
         $HuduAssetCache = Get-CippTable -tablename 'CacheHuduAssets'
 
+        # Get Relations cache - Hudu's relations API has no per-company filter, so this is cached
+        # globally and shared across every tenant's sync instead of pulling the full relations
+        # table (30s+ on large instances) on every single sync run.
+        $HuduRelationsCache = Get-CippTable -tablename 'CacheHuduRelations'
+        $HuduRelationsCacheTTLMinutes = 15
+
         # Import license mapping
         $LicTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
 
@@ -47,6 +53,18 @@ function Invoke-HuduExtensionSync {
         # Include mailboxes if needed for Hudu sync
         $ExtensionCache = Get-CippExtensionReportingData -TenantFilter $Tenant.defaultDomainName -IncludeMailboxes
         $company_id = $TenantMap.IntegrationId
+        $HuduCompany = Get-HuduCompanies -Id $company_id
+        if ($HuduCompany.archived -eq $true) {
+            Write-Host "Company $($HuduCompany.name) is archived. Skipping sync."
+            $ReturnObject = [PSCustomObject]@{
+                Name    = $Tenant.displayName
+                Users   = 0
+                Devices = 0
+                Errors  = [System.Collections.Generic.List[string]]@("Company $($HuduCompany.name) is archived. Skipping sync.")
+                Logs    = [System.Collections.Generic.List[string]]@("Company $($HuduCompany.name) is archived. Skipping sync.")
+            }
+            return $ReturnObject
+        }
 
         # If tenant not found in mapping table, return error
         if (!$TenantMap) {
@@ -120,8 +138,50 @@ function Invoke-HuduExtensionSync {
             $ExcludeSerials = $DefaultSerials
         }
 
-        $HuduRelations = Get-HuduRelations
-        [System.Collections.ArrayList]$Links = @(
+        $RelationsCacheMeta = Get-CIPPAzDataTableEntity @HuduRelationsCache -Filter "PartitionKey eq 'CacheMetadata' and RowKey eq 'LastRefresh'"
+        $RelationsCacheAgeMinutes = if ($RelationsCacheMeta.LastRefresh) { ((Get-Date).ToUniversalTime() - [datetime]$RelationsCacheMeta.LastRefresh).TotalMinutes } else { $null }
+
+        if ($null -ne $RelationsCacheAgeMinutes -and $RelationsCacheAgeMinutes -lt $HuduRelationsCacheTTLMinutes) {
+            $CachedRelationRows = Get-CIPPAzDataTableEntity @HuduRelationsCache -Filter "PartitionKey eq 'HuduRelation'"
+            $HuduRelations = foreach ($CachedRelationRow in $CachedRelationRows) {
+                [PSCustomObject]@{
+                    id            = $CachedRelationRow.RowKey
+                    fromable_type = $CachedRelationRow.FromableType
+                    fromable_id   = $CachedRelationRow.FromableId
+                    toable_type   = $CachedRelationRow.ToableType
+                    toable_id     = $CachedRelationRow.ToableId
+                }
+            }
+        } else {
+            $HuduRelations = Get-HuduRelations
+
+            $ExistingRelationRows = Get-CIPPAzDataTableEntity @HuduRelationsCache -Filter "PartitionKey eq 'HuduRelation'"
+            if ($ExistingRelationRows) {
+                Remove-AzDataTableEntity @HuduRelationsCache -Entity $ExistingRelationRows -Force
+            }
+
+            $RelationEntities = foreach ($Relation in $HuduRelations) {
+                [PSCustomObject]@{
+                    PartitionKey  = 'HuduRelation'
+                    RowKey        = [string]$Relation.id
+                    FromableType  = [string]$Relation.fromable_type
+                    FromableId    = [string]$Relation.fromable_id
+                    ToableType    = [string]$Relation.toable_type
+                    ToableId      = [string]$Relation.toable_id
+                }
+            }
+            if ($RelationEntities) {
+                Add-CIPPAzDataTableEntity @HuduRelationsCache -Entity $RelationEntities -Force
+            }
+
+            $RelationsCacheMetaEntity = [PSCustomObject]@{
+                PartitionKey = 'CacheMetadata'
+                RowKey       = 'LastRefresh'
+                LastRefresh  = (Get-Date).ToUniversalTime().ToString('o')
+            }
+            Add-CIPPAzDataTableEntity @HuduRelationsCache -Entity $RelationsCacheMetaEntity -Force
+        }
+        [System.Collections.Generic.List[object]]$Links = @(
             @{
                 Title = 'M365 Admin Portal'
                 URL   = 'https://admin.cloud.microsoft?delegatedOrg={0}' -f $Tenant.initialDomainName
@@ -153,29 +213,26 @@ function Invoke-HuduExtensionSync {
                 Icon  = 'fas fa-server'
             }
         )
-        if($Configuration.IncludeDefenderLink)
-        {
+        if ($Configuration.IncludeDefenderLink) {
             $Links.Add(@{
-                Title = 'Defender Portal'
-                URL   = 'https://security.microsoft.com/?tid={0}' -f $Tenant.customerId
-                Icon  = 'fas fa-shield'
-            })
+                    Title = 'Defender Portal'
+                    URL   = 'https://security.microsoft.com/?tid={0}' -f $Tenant.customerId
+                    Icon  = 'fas fa-shield'
+                })
         }
-        if($Configuration.IncludeComplianceLink)
-        {
+        if ($Configuration.IncludeComplianceLink) {
             $Links.Add(@{
-                Title = 'Compliance Portal'
-                URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
-                Icon  = 'fas fa-caret-up'
-            })
+                    Title = 'Compliance Portal'
+                    URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
+                    Icon  = 'fas fa-caret-up'
+                })
         }
-        if($Configuration.IncludeParterCenterLink)
-        {
+        if ($Configuration.IncludeParterCenterLink) {
             $Links.Add(@{
-                Title = 'Partner Center Portals'
-                URL   = 'https://partner.microsoft.com/dashboard/v2/customers/{0}/servicemanagementpage' -f $Tenant.customerId
-                Icon  = 'fas fa-arrow-up-right-from-square'
-            })
+                    Title = 'Partner Center Portals'
+                    URL   = 'https://partner.microsoft.com/dashboard/v2/customers/{0}/servicemanagementpage' -f $Tenant.customerId
+                    Icon  = 'fas fa-arrow-up-right-from-square'
+                })
         }
 
         $FormattedLinks = foreach ($Link in $Links) {
@@ -209,7 +266,7 @@ function Invoke-HuduExtensionSync {
 
         $post = '</div>'
 
-        if($Configuration.HideEmptyRoles) {
+        if ($Configuration.HideEmptyRoles) {
             $Roles = $Roles | Where-Object { $_.ParsedMembers }
         }
 

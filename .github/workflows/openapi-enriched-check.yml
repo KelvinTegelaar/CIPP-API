@@ -1,0 +1,83 @@
+name: OpenAPI Enriched Spec Check
+
+on:
+  pull_request:
+    paths:
+      - '.build/**'
+      - '.github/workflows/openapi-enriched-check.yml'
+      - '.github/workflows/openapi-enriched-release.yml'
+      - '.redocly.lint-ignore.yaml'
+      - 'redocly.yaml'
+      - 'Tests/Build/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  openapi-enriched-check:
+    if: github.repository_owner == 'KelvinTegelaar'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout CIPP-API
+        uses: actions/checkout@v4
+
+      - name: Checkout CIPP frontend
+        uses: actions/checkout@v4
+        with:
+          repository: KelvinTegelaar/CIPP
+          path: _frontend
+
+      - name: Install PowerShell test modules
+        shell: pwsh
+        run: |
+          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+
+      - name: Run build tests
+        shell: pwsh
+        run: ./Tests/Build/Invoke-BuildTests.ps1
+
+      - name: Generate enriched OpenAPI spec
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File .build/Add-OpenApiResponseSchemas.ps1 `
+            -FrontendRepoPath ./_frontend `
+            -InputSpec ./openapi.json `
+            -OutputSpec ./openapi.enriched.json
+
+      - name: Strict lint enriched OpenAPI spec
+        run: |
+          set +e
+          npx --yes @redocly/cli@2.35.1 lint ./openapi.enriched.json --format=json > redocly-results.json
+          REDOCLY_STATUS=$?
+          set -e
+
+          node - redocly-results.json "$REDOCLY_STATUS" <<'NODE'
+          const fs = require('fs');
+
+          const resultsPath = process.argv[2];
+          const redoclyStatus = Number(process.argv[3]);
+          const raw = fs.readFileSync(resultsPath, 'utf8').trim();
+          if (!raw) {
+            throw new Error(`${resultsPath} did not contain Redocly JSON output.`);
+          }
+
+          const doc = JSON.parse(raw);
+          const totals = doc.totals || {};
+          const errors = totals.errors || 0;
+          const warnings = totals.warnings || 0;
+          const ignored = totals.ignored || 0;
+          console.log(`Redocly new findings: errors=${errors}, warnings=${warnings}, ignored=${ignored}`);
+
+          if (errors + warnings > 0) {
+            console.error('Enriched spec introduced new Redocly finding(s). Update the enrichment or regenerate the baseline only for legitimate upstream changes.');
+            process.exit(1);
+          }
+
+          if (redoclyStatus !== 0) {
+            console.error(`Redocly exited with status ${redoclyStatus}.`);
+            process.exit(redoclyStatus);
+          }
+          NODE

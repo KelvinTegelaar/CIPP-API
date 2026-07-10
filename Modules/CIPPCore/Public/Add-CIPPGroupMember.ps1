@@ -34,16 +34,29 @@ function Add-CIPPGroupMember {
         [string]$APIName = 'Add Group Member'
     )
     try {
-        if ($Member -like '*#EXT#*') { $Member = [System.Web.HttpUtility]::UrlEncode($Member) }
         $ODataBindString = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}'
-        $Requests = foreach ($m in $Member) {
+        $Requests = @(
+            foreach ($m in $Member) {
+                if ($m -like '*#EXT#*') { $m = [System.Web.HttpUtility]::UrlEncode($m) }
+                @{
+                    id     = "users-$m"
+                    url    = "users/$($m)?`$select=id,userPrincipalName"
+                    method = 'GET'
+                }
+            }
             @{
-                id     = $m
-                url    = "users/$($m)?`$select=id,userPrincipalName"
+                id     = 'group'
+                url    = "groups/$($GroupId)?`$select=id,displayName"
                 method = 'GET'
             }
-        }
-        $Users = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter
+        )
+        $BulkResults = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter
+        $Users = @($BulkResults | Where-Object { $_.id -like 'users-*' })
+        # Group display name for logging; falls back to the id if the lookup failed
+        # (e.g. the group was addressed by mail rather than GUID).
+        $GroupName = ($BulkResults | Where-Object { $_.id -eq 'group' }).body.displayName ?? $GroupId
+        $SuccessfulUsers = [System.Collections.Generic.List[string]]::new()
+        $FailedUsers = [System.Collections.Generic.List[string]]::new()
 
         if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
             $ExoBulkRequests = [System.Collections.Generic.List[object]]::new()
@@ -58,7 +71,7 @@ function Add-CIPPGroupMember {
                         }
                     })
                 $ExoLogs.Add(@{
-                        message = "Added member $($User.body.userPrincipalName) to $($GroupId) group"
+                        message = "Added member $($User.body.userPrincipalName) to group $($GroupName)"
                         target  = $User.body.userPrincipalName
                     })
             }
@@ -76,6 +89,7 @@ function Add-CIPPGroupMember {
                     $ExoError = $LastError | Where-Object { $ExoLog.target -in $_.target -and $_.error }
                     if (!$LastError -or ($LastError.error -and $LastError.target -notcontains $ExoLog.target)) {
                         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoLog.message -Sev 'Info'
+                        $SuccessfulUsers.Add($ExoLog.target)
                     }
                 }
             }
@@ -91,25 +105,36 @@ function Add-CIPPGroupMember {
                 }
             }
             $AddResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($AddRequests)
-            $SuccessfulUsers = [system.collections.generic.list[string]]::new()
             foreach ($Result in $AddResults) {
+                $UserPrincipalName = ($Users | Where-Object { $_.body.id -eq $Result.id }).body.userPrincipalName
                 if ($Result.status -lt 200 -or $Result.status -gt 299) {
-                    $FailedUsername = $Users | Where-Object { $_.body.id -eq $Result.id } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty userPrincipalName
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add member $($FailedUsername): $($Result.body.error.message)" -Sev 'Error'
+                    # Select-Object -First 1: Get-NormalizedError can return multiple strings
+                    # when a message matches more than one of its translation patterns.
+                    $ErrorText = Get-NormalizedError -message ($Result.body.error.message ?? "Request failed with status $($Result.status)") | Select-Object -First 1
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add member $UserPrincipalName to group $($GroupName): $ErrorText" -Sev 'Error'
+                    $FailedUsers.Add("$UserPrincipalName ($ErrorText)")
                 } else {
-                    $UserPrincipalName = $Users | Where-Object { $_.body.id -eq $Result.id } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty userPrincipalName
                     $SuccessfulUsers.Add($UserPrincipalName)
                 }
             }
         }
-        $UserList = ($SuccessfulUsers -join ', ')
-        $Results = "Successfully added user $UserList to $($GroupId)."
+        $Messages = [System.Collections.Generic.List[string]]::new()
+        if ($SuccessfulUsers.Count -gt 0) {
+            $Messages.Add("Successfully added user $($SuccessfulUsers -join ', ') to group $($GroupName).")
+        }
+        if ($FailedUsers.Count -gt 0) {
+            $Messages.Add("Failed to add $($FailedUsers -join '; ').")
+        }
+        $Results = $Messages -join ' '
+        if ($SuccessfulUsers.Count -eq 0 -and $FailedUsers.Count -gt 0) {
+            throw $Results
+        }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Info'
         return $Results
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $UserList = if ($Users) { ($Users.body.userPrincipalName -join ', ') } else { ($Member -join ', ') }
-        $Results = "Failed to add user $UserList to $($GroupId) - $($ErrorMessage.NormalizedError)"
+        $Results = "Failed to add user $UserList to group $($GroupName ?? $GroupId) - $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'error' -LogData $ErrorMessage
         throw $Results
     }

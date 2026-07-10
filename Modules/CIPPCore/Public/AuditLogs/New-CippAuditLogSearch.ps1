@@ -269,6 +269,13 @@ function New-CippAuditLogSearch {
             }
             $Table = Get-CIPPTable -TableName 'AuditLogSearches'
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
+
+            # When alert processing is requested, bridge the search into the V2 AuditLogCoverage
+            # ledger so the pipeline downloads + processes it automatically (the V2 pipeline does
+            # not scan the AuditLogSearches table).
+            if ($ProcessLogs.IsPresent) {
+                Add-CippAuditLogCoverageManualEntry -TenantFilter $TenantFilter -SearchId $Query.id -StartTime $StartTime -EndTime $EndTime -SearchStatus $Query.status
+            }
         }
 
         return $Query

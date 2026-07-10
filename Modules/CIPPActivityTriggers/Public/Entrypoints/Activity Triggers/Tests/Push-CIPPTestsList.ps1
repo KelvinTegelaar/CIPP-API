@@ -37,7 +37,19 @@ function Push-CIPPTestsList {
 
         # Emit one task per suite — suite names must match the ValidateSet in Invoke-CIPPTestCollection.
         # Function discovery happens inside Invoke-CIPPTestCollection via Get-Command (path-independent).
-        $Suites = @('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'SMB1001', 'CopilotReadiness', 'GenericTests', 'Custom')
+        $Suites = @('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'SMB1001', 'CopilotReadiness', 'GenericTests', 'Custom', 'E8')
+
+        # Optional caller-supplied suite filter (e.g. a Custom-only run). When present, restrict
+        # the emitted suites to the requested subset so we don't spin up every suite unnecessarily.
+        if ($Item.Suites) {
+            $Requested = @($Item.Suites)
+            $Suites = @($Suites | Where-Object { $_ -in $Requested })
+            if ($Suites.Count -eq 0) {
+                Write-Information "No suites matched the requested filter ($($Requested -join ', ')) for tenant $TenantFilter. Skipping."
+                return @()
+            }
+            Write-Information "Suite filter applied for $TenantFilter — running: $($Suites -join ', ')"
+        }
 
         $Tasks = foreach ($Suite in $Suites) {
             [PSCustomObject]@{

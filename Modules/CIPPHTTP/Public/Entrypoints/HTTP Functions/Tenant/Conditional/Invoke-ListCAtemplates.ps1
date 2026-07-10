@@ -9,7 +9,7 @@ function Invoke-ListCAtemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    Write-Host $Request.query.id
+    $GUID = $Request.query.id ?? $Request.query.ID ?? $Request.query.guid ?? $Request.query.GUID
     #Migrating old policies whenever you do a list
     $Table = Get-CippTable -tablename 'templates'
     $Imported = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'settings'"
@@ -31,10 +31,10 @@ function Invoke-ListCAtemplates {
     }
     #List new policies
     $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'CATemplate'"
-    $RawTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
 
     if ($Request.query.mode -eq 'Tag') {
+        $Filter = "PartitionKey eq 'CATemplate'"
+        $RawTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
         #when the mode is tag, show all the potential tags, return the object with: label: tag, value: tag, count: number of templates with that tag, unique only
         $Templates = @($RawTemplates | Where-Object { $_.Package } | Group-Object -Property Package | ForEach-Object {
             $package = $_.Name
@@ -59,6 +59,14 @@ function Invoke-ListCAtemplates {
             }
         } | Sort-Object -Property label)
     } else {
+        if ($GUID) {
+            $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type Guid
+            $Filter = "PartitionKey eq 'CATemplate' and GUID eq '$SafeGUID'"
+            $RawTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+        }
+        else {
+            $RawTemplates = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'CATemplate'")
+        }
         $Templates = $RawTemplates | ForEach-Object {
             try {
                 $row = $_
@@ -73,8 +81,6 @@ function Invoke-ListCAtemplates {
             }
         } | Sort-Object -Property displayName
     }
-
-    if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
 
     $Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100
     return ([HttpResponseContext]@{

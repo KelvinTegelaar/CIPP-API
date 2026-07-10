@@ -3,7 +3,10 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Entrypoints/HTTP Functions/Endpoint/MEM/Invoke-RemoveIntuneReusableSettingTemplate.ps1'
+    # Resolve by name under Modules/ so the test survives the function moving between modules.
+    $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-RemoveIntuneReusableSettingTemplate.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $FunctionPath) { throw 'Could not locate Invoke-RemoveIntuneReusableSettingTemplate.ps1 under Modules/' }
 
     class HttpResponseContext {
         [int]$StatusCode
@@ -15,6 +18,8 @@ BeforeAll {
     function Remove-AzDataTableEntity { param([switch]$Force, $Entity) $script:lastRemoved = $Entity; $script:lastForce = $Force }
     function Write-LogMessage { param($Headers, $API, $message, $sev, $LogData) $script:logs += $message }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = $Exception } }
+    # The ID is sanitised for OData before the table lookup; stub it to pass the value through.
+    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) $Value }
 
     . $FunctionPath
 }
