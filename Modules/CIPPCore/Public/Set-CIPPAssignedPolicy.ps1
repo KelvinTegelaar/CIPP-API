@@ -15,7 +15,7 @@ function Set-CIPPAssignedPolicy {
         $AssignmentFilterType = 'include',
         $GroupIds,
         $GroupNames,
-        $AssignmentMode = 'replace',
+        $AssignmentMode = 'append',
         $AssignmentDirection
     )
 
