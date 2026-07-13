@@ -25,7 +25,13 @@ function Get-CIPPRolePermissions {
         try {
             $ValidPermissions = Get-CippHttpPermissions
             if (@($ValidPermissions).Count -gt 0) {
-                $Permissions = @($Permissions | Where-Object { $ValidPermissions -contains $_ })
+                $ValidBases = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                foreach ($ValidPermission in $ValidPermissions) {
+                    $null = $ValidBases.Add(($ValidPermission -replace '\.(ReadWrite|Read)$', ''))
+                }
+                $Permissions = @($Permissions | Where-Object {
+                        $ValidBases.Contains(($_ -replace '\.(ReadWrite|Read)$', ''))
+                    })
             }
         } catch {
             Write-Warning "Unable to resolve valid permissions to filter role '$RoleName': $($_.Exception.Message)"
