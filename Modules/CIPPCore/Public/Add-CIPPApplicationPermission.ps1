@@ -122,7 +122,7 @@ function Add-CIPPApplicationPermission {
         if (!$svcPrincipalId) { continue }
 
         foreach ($SingleResource in $App.ResourceAccess | Where-Object -Property Type -EQ 'Role') {
-            if ($SingleResource.id -in $CurrentRoles.appRoleId) { continue }
+            if ($CurrentRoles | Where-Object { $_.appRoleId -eq $SingleResource.id -and $_.resourceId -eq $svcPrincipalId.id }) { continue }
             [pscustomobject]@{
                 principalId = $($ourSVCPrincipal.id)
                 resourceId  = $($svcPrincipalId.id)
