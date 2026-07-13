@@ -49,9 +49,13 @@ function Get-CIPPAuthentication {
                 }
             }
 
-            if (-not $env:SAMCertificate) {
-                # First run on this instance: provision the certificate now.
+            if (-not $env:SAMCertificate -and $env:SAMCertProvisionAttempted -ne 'true') {
+                # First run on this instance: provision the certificate now, at most once per
+                # process. The guard also breaks a recursion loop: Update-CIPPSAMCertificate
+                # calls Get-GraphToken, which re-enters this function when the AppCache
+                # ApplicationId does not match the environment.
                 # Set-CIPPSAMCertificate refreshes $env:SAMCertificate on success.
+                $env:SAMCertProvisionAttempted = 'true'
                 Write-Information 'No SAM certificate found, provisioning one now'
                 $CertResult = Update-CIPPSAMCertificate -ErrorAction Stop
                 Write-LogMessage -message "Provisioned SAM certificate during authentication load. Thumbprint: $($CertResult.Thumbprint), storage mode: $($CertResult.StorageMode)" -Sev 'Info' -API 'CIPP Authentication'

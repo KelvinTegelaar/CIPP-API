@@ -22,6 +22,7 @@ function Invoke-ExecCompareIntunePolicy {
         'windowsQualityUpdatePolicies' = 'windowsQualityUpdatePolicies'
         'windowsQualityUpdateProfiles' = 'windowsQualityUpdateProfiles'
         'Intents'                      = 'Intents'
+        'ManagedAppPolicies'           = 'AppProtection'
     }
 
     try {

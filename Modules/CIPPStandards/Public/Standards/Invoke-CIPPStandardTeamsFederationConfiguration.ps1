@@ -123,13 +123,15 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
             $BlockedDomainsMatches = $true
         }
         'AllowSpecificExternal' {
-            $AllowedDomainsMatches = -not (Compare-Object -ReferenceObject $AllowedDomainsAsAList -DifferenceObject $CurrentAllowedDomains)
+            # Both lists are already Sort-Object'd; compare as joined strings. Avoids Compare-Object,
+            # whose parameter binder coerces an empty array @() to $null and then throws.
+            $AllowedDomainsMatches = (@($AllowedDomainsAsAList) -join ',') -eq (@($CurrentAllowedDomains) -join ',')
             $BlockedDomainsMatches = (!$CurrentBlockedDomains -or @($CurrentBlockedDomains).Count -eq 0)
         }
         'BlockSpecificExternal' {
             # Allowed should be AllowAllKnownDomains, blocked domains already parsed above
             $AllowedDomainsMatches = $IsCurrentAllowAllKnownDomains
-            $BlockedDomainsMatches = -not (Compare-Object -ReferenceObject $BlockedDomains -DifferenceObject $CurrentBlockedDomains)
+            $BlockedDomainsMatches = (@($BlockedDomains) -join ',') -eq (@($CurrentBlockedDomains) -join ',')
         }
     }
 

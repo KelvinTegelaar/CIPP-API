@@ -60,6 +60,10 @@ function Get-CippKeyVaultSecret {
                 break
             } catch {
                 $lastError = $_
+                # 404 is definitive - the secret does not exist and retrying cannot change that
+                if ($_.Exception.Message -match '404|SecretNotFound') {
+                    throw "Failed to retrieve secret '$Name' from vault '$VaultName': $($_.Exception.Message)"
+                }
                 if ($i -lt ($maxRetries - 1)) {
                     Start-Sleep -Seconds $retryDelay
                     $retryDelay *= 2  # Exponential backoff
