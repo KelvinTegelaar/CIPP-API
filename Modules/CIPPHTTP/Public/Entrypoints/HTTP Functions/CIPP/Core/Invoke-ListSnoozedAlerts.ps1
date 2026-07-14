@@ -3,7 +3,7 @@ function Invoke-ListSnoozedAlerts {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Alert.Read
+        CIPP.AlertSnooze.Read
     .DESCRIPTION
         Lists alerts that have been snoozed (temporarily suppressed), filterable by cmdlet name. Returns snooze duration and scope details.
     #>

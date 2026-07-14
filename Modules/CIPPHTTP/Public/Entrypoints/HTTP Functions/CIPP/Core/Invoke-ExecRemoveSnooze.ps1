@@ -3,7 +3,7 @@ function Invoke-ExecRemoveSnooze {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Alert.ReadWrite
+        CIPP.AlertSnooze.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

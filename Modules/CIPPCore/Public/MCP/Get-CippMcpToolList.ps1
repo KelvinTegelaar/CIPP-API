@@ -155,7 +155,8 @@ function Resolve-CippMcpNode {
     }
 
     if ($Node -is [System.Collections.IEnumerable]) {
-        return @($Node | ForEach-Object { Resolve-CippMcpNode -Node $_ -Spec $Spec -Depth ($Depth + 1) -Seen $Seen })
+        $Resolved = @($Node | ForEach-Object { Resolve-CippMcpNode -Node $_ -Spec $Spec -Depth ($Depth + 1) -Seen $Seen })
+        return , $Resolved
     }
 
     return $Node
