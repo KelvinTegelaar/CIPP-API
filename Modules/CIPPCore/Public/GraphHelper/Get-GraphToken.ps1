@@ -67,8 +67,15 @@ function Get-GraphToken {
         $AppCache = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter
         #force auth update is appId is not the same as the one in the environment variable.
         if ($AppCache.ApplicationId -and $env:ApplicationID -ne $AppCache.ApplicationId) {
-            Write-Host "Setting environment variable ApplicationID to $($AppCache.ApplicationId)"
-            $CIPPAuth = Get-CIPPAuthentication
+            $CIPPAuth = Get-CIPPAuthentication          # reload creds from KV (source of truth)
+            if ($env:ApplicationID -and $env:ApplicationID -ne $AppCache.ApplicationId) {
+                # KV and AppCache genuinely diverged — reconcile the marker to KV so we
+                # don't reload on every subsequent token call.
+                Write-Host "AppCache ApplicationId ($($AppCache.ApplicationId)) differs from KV ($env:ApplicationID); reconciling AppCache."
+                $null = Add-CIPPAzDataTableEntity @ConfigTable -Entity @{
+                    PartitionKey = 'AppCache'; RowKey = 'AppCache'; ApplicationId = "$env:ApplicationID"
+                } -Force
+            }
         }
         $refreshToken = $env:RefreshToken
         #Get list of tenants that have 'directTenant' set to true
