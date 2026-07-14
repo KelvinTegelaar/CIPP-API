@@ -18,7 +18,7 @@ function Invoke-NinjaOneDocumentTemplate {
     } else {
         $DocumentTemplate = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/document-templates/$($ID)" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -Depth 100
     }
-    
+
     $MatchedCount = ($DocumentTemplate | Measure-Object).count
     if ($MatchedCount -eq 1) {
         # Matched a single document template
@@ -26,11 +26,10 @@ function Invoke-NinjaOneDocumentTemplate {
     } elseif ($MatchedCount -eq 0) {
         # Create a new Document Template
         $Body = $Template | ConvertTo-Json -Depth 100
-        Write-Host "Ninja Body: $body"
         $NinjaDocumentTemplate = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/document-templates/" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body $Body).content | ConvertFrom-Json -Depth 100
     } else {
-        # Matched multiple templates. Should be impossible but lets check anyway :D
-        Throw 'Multiple Documents Matched the Provided Criteria'
+        $NinjaDocumentTemplate = $DocumentTemplate | Sort-Object { [int64]$_.id } | Select-Object -First 1
+        Write-Warning "Multiple NinjaOne document templates named '$($Template.name)' found ($MatchedCount). Using the oldest (id $($NinjaDocumentTemplate.id)). Remove the duplicate template(s) in NinjaOne."
     }
 
     return $NinjaDocumentTemplate

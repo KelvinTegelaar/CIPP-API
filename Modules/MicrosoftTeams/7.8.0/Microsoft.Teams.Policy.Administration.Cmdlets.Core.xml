@@ -1,0 +1,141 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Teams.Policy.Administration.Cmdlets.Core</name>
+    </assembly>
+    <members>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupAssignmentRecommendationsPerPolicyName.PolicyName">
+            <summary>
+            Gets or sets policyType.
+            </summary>
+            
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupAssignmentRecommendationsPerPolicyName.DirectAssignmentsCount">
+            <summary>
+            Gets or sets direct assignments count.
+            </summary>
+            
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupAssignmentRecommendationsPerPolicyType.PolicyType">
+            <summary>
+            Gets or sets policyType.
+            </summary>
+            
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupAssignmentRecommendationsPerPolicyType.DirectAssignmentsCount">
+            <summary>
+            Gets or sets direct assignments count.
+            </summary>
+            
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupPolicyAssignmentRankConflictDetailModel.UserId">
+            <summary>
+            Gets or sets UserId.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupPolicyAssignmentRankConflictDetailModel.PolicyInstance">
+            <summary>
+            Gets or sets PolicyInstance.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupPolicyAssignmentRankConflictDetailModel.AssignmentSource">
+            <summary>
+            Gets or sets AssignmentSource.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupPolicyAssignmentRankConflictResponseModel.TotalCountUsersWithConflict">
+            <summary>
+            Gets or sets total count of users with conflicts in their group policy assignment.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupPolicyAssignmentRankConflictResponseModel.UsersWithConflictDueDirectAssignmentsCount">
+            <summary>
+            Gets or sets the count of users with conflicts in their group policy assignment due direct assignment.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupPolicyAssignmentRankConflictResponseModel.UsersWithConflictDueDirectAssignmentsDetail">
+            <summary>
+            Gets or sets users with conflicts in their group policy assignment due direct assignment.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupPolicyAssignmentRankConflictResponseModel.UsersWithConflictDueGroupAssignmentsCount">
+            <summary>
+            Gets or sets the count of users with conflicts in their group policy assignment due another group assignment.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.Policy.Administration.Cmdlets.Core.Custom.GPA.Models.GroupPolicyAssignmentRankConflictResponseModel.UsersWithConflictDueGroupAssignmentsDetail">
+            <summary>
+            Gets or sets users with conflicts in their group policy assignment  due another group assignment.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.Policy.Administration.Cmdlets.Core.PSListModifierHelper.ApplyTo``1(System.Management.Automation.PSListModifier{``0},System.Collections.Generic.IList{``0},System.Func{``0,``0,System.Boolean},System.Action{System.String})">
+            <summary>
+            'Applies a PSListModifier to a collection. 
+            The collection either has the items in modifier.Add added and those in modifier.Remove removed,
+            or is replaced entirely with the items in modifier.Replace.
+            keyEqualityPredicate is called during a remove operation to determine if an item in the collection
+            is the same as an item in the modifier - reference equality is not sufficient.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.Policy.Administration.Cmdlets.Core.PSListModifierHelper.ApplyTo``1(System.Management.Automation.PSListModifier{``0},System.Collections.Generic.IList{``0},System.Action{System.String})">
+            <summary>
+            'Applies a PSListModifier to a collection. 
+            The collection either has the items in modifier.Add added and those in modifier.Remove removed,
+            or is replaced entirely with the items in modifier.Replace.
+            This overload is used then the objects in the collection can be compared correctly with those 
+            in the modifier by calling .Equals().
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:Microsoft.Teams.Policy.Administration.Cmdlets.Core.PSListModifierHelper.GetUnderlyingType(System.Type)" -->
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.MigrationEventId">
+            <summary>
+            Gets or sets MigrationEventId.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.TenantId">
+            <summary>
+            Gets or sets TenantId.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.GroupId">
+            <summary>
+            Gets or sets GroupId.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.GroupName">
+            <summary>
+            Gets or sets GroupName.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.PolicyType">
+            <summary>
+            Gets or sets PolicyType.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.PolicyInstance">
+            <summary>
+            Gets or sets PolicyInstance.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.State">
+            <summary>
+            Gets or sets State.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.StartTime">
+            <summary>
+            Gets or sets StartTime.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.CompletionTime">
+            <summary>
+            Gets or sets CompletionTime.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Ic3.AdminConfig.RP.Policy.Group.Models.DirectToGroupAssignmentMigrationResponseModel.DirectAssignmentsProcessed">
+            <summary>
+            Gets or sets DirectAssignmentsProcessed.
+            </summary>
+        </member>
+    </members>
+</doc>
