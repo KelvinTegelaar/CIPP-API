@@ -5773,6 +5773,7 @@
   },
   {
     "name": "standards.SPDirectSharing",
+    "deprecated": true,
     "cat": "SharePoint Standards",
     "tag": [],
     "helpText": "This standard has been deprecated in favor of the Default Sharing Link standard. ",
@@ -7526,8 +7527,8 @@
     "cat": "Templates",
     "multiple": true,
     "disabledFeatures": {
-      "report": true,
-      "warn": true,
+      "report": false,
+      "warn": false,
       "remediate": false
     },
     "impact": "High Impact",
