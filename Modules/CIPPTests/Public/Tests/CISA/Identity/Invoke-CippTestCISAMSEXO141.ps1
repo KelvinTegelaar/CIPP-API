@@ -33,7 +33,7 @@ function Invoke-CippTestCISAMSEXO141 {
             $Result += "| Policy Name | Current Action | Expected |`n"
             $Result += "| :---------- | :------------- | :------- |`n"
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.'Policy Name') | $($Policy.'Current Action') | $($Policy.Expected) |`n"
+                $Result += "| $($Policy.Name) | $($Policy.HighConfidenceSpamAction) | Quarantine |`n"
             }
             $Status = 'Failed'
         }
