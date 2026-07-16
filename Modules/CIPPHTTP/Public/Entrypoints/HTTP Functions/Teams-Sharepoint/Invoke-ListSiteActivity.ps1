@@ -14,6 +14,7 @@ function Invoke-ListSiteActivity {
     $APIName = 'ListSiteActivity'
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $Type = $Request.Query.Type ?? $Request.Body.Type
+    $SiteId = $Request.Query.siteId ?? $Request.Body.siteId
 
     if (-not $TenantFilter) {
         return ([HttpResponseContext]@{
@@ -30,6 +31,13 @@ function Invoke-ListSiteActivity {
     }
 
     try {
+        $NormalizeSiteId = {
+            param($Value)
+            if ([string]::IsNullOrWhiteSpace($Value)) { return $null }
+            return $Value.ToString().Trim().Trim('{}').ToLowerInvariant()
+        }
+        $LookupSiteId = & $NormalizeSiteId $SiteId
+
         $TypeMap = @{
             SharePoint = 'SharePoint'
             TeamsSite  = 'SharePointAndTeams'
@@ -56,6 +64,10 @@ function Invoke-ListSiteActivity {
                     foreach ($Row in $TenantRows) {
                         if ($Row.siteType -eq 'OneDrive') { continue }
                         if ($SelectedSiteType -and $Row.siteType -ne $SelectedSiteType) { continue }
+                        if ($LookupSiteId) {
+                            $RowSiteId = & $NormalizeSiteId $Row.siteId
+                            if ($RowSiteId -ne $LookupSiteId) { continue }
+                        }
 
                         $Row | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                         $Row | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
@@ -73,6 +85,10 @@ function Invoke-ListSiteActivity {
             foreach ($Row in $TenantRows) {
                 if ($Row.siteType -eq 'OneDrive') { continue }
                 if ($SelectedSiteType -and $Row.siteType -ne $SelectedSiteType) { continue }
+                if ($LookupSiteId) {
+                    $RowSiteId = & $NormalizeSiteId $Row.siteId
+                    if ($RowSiteId -ne $LookupSiteId) { continue }
+                }
 
                 $Row | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
                 [void]$AllResults.Add($Row)
