@@ -49,7 +49,7 @@ function Invoke-ExecAssignPolicy {
 
     # Validate and default AssignmentMode
     if ([string]::IsNullOrWhiteSpace($AssignmentMode)) {
-        $AssignmentMode = 'replace'
+        $AssignmentMode = 'append'
     }
 
     $AssignTo = if ($AssignTo -ne 'on') { $AssignTo }

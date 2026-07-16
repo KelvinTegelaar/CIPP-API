@@ -55,7 +55,9 @@ function Invoke-CippTestZTNA21816 {
         }
 
         foreach ($Role in $PrivilegedRoles) {
-            if ($Role.templateId -eq $GlobalAdminRoleId) { continue }
+            # roleTemplateId — $Role.templateId does not exist, so this guard never fired and the
+            # Global Administrator role was processed here despite being handled separately below.
+            if ($Role.roleTemplateId -eq $GlobalAdminRoleId) { continue }
 
             $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.RoletemplateId
 
