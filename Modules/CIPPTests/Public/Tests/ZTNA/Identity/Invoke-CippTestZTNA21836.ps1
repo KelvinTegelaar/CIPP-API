@@ -20,16 +20,21 @@ function Invoke-CippTestZTNA21836 {
         $WorkloadIdentitiesWithPrivilegedRoles = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Role in $PrivilegedRoles) {
-            $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.id
+            # Must be the role's TEMPLATE id: PIM's roleDefinitionId carries template ids, so
+            # passing $Role.id (the directoryRole instance id) matched nothing and this test found
+            # no workload identities on any tenant.
+            $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.roleTemplateId
 
             foreach ($Member in $RoleMembers) {
                 if ($Member.'@odata.type' -eq '#microsoft.graph.servicePrincipal') {
+                    # Get-CippDbRoleMembers returns id/displayName/appId — not principalId or
+                    # principalDisplayName, which rendered blank here.
                     $WorkloadIdentitiesWithPrivilegedRoles.Add([PSCustomObject]@{
-                            PrincipalId          = $Member.principalId
-                            PrincipalDisplayName = $Member.principalDisplayName
+                            PrincipalId          = $Member.id
+                            PrincipalDisplayName = $Member.displayName
                             AppId                = $Member.appId
                             RoleDisplayName      = $Role.displayName
-                            RoleDefinitionId     = $Role.id
+                            RoleDefinitionId     = $Role.roleTemplateId
                             AssignmentType       = $Member.AssignmentType
                         })
                 }
@@ -48,7 +53,7 @@ function Invoke-CippTestZTNA21836 {
             $SortedAssignments = $WorkloadIdentitiesWithPrivilegedRoles | Sort-Object -Property PrincipalDisplayName
 
             foreach ($Assignment in $SortedAssignments) {
-                $SPLink = "https://entra.microsoft.com/#view/Microsoft_AAD_IAM/ManagedAppMenuBlade/~/Overview/objectId/$($Assignment.PrincipalId)/appId/$($Assignment.AppId)/preferredSingleSignOnMode~/null/servicePrincipalType/Application/fromNav/"
+                $SPLink = "https://entra.microsoft.com/#view/Microsoft_AAD_IAM/ManagedAppMenuBlade/~/Overview/objectId/$($Assignment.PrincipalId)/appId/$($Assignment.AppId)"
                 $null = $ResultMarkdown.Append("| [$($Assignment.PrincipalDisplayName)]($SPLink) | $($Assignment.RoleDisplayName) | $($Assignment.AssignmentType) |`n")
             }
             $null = $ResultMarkdown.Append("`n")

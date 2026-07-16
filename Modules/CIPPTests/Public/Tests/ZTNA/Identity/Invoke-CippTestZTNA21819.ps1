@@ -17,11 +17,15 @@ function Invoke-CippTestZTNA21819 {
             return
         }
 
-        # Get role management policy for Global Admin
+        # Get role management policy for Global Admin.
+        # This previously matched on effectiveRules.target.targetObjects.id — a property that does
+        # not exist on this response (target is {caller, operations, level, inheritableSettings,
+        # enforcedSettings}), so the policy was never found. roleDefinitionId carries the role's
+        # TEMPLATE id, which is the correct join.
         $RoleManagementPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleManagementPolicies'
         $GlobalAdminPolicy = $RoleManagementPolicies | Where-Object {
-            $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.effectiveRules.target.targetObjects.id -contains $GlobalAdminRole.id
-        }
+            $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.roleDefinitionId -eq $GlobalAdminRole.roleTemplateId
+        } | Select-Object -First 1
 
         $Passed = 'Failed'
         $IsDefaultRecipientsEnabled = 'N/A'

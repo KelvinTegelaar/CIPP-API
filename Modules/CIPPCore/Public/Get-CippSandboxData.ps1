@@ -70,7 +70,7 @@ function Get-CippSandboxData {
 
         $Key = if ($Type) { $Type } else { '' }
         if (-not $Data.ContainsKey($Key)) {
-            $Data[$Key] = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type $Type)
+            $Data[$Key] = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type $Type -NoProjection)
         }
     }
 
