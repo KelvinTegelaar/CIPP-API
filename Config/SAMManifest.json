@@ -582,6 +582,42 @@
         {
           "id": "b7887744-6746-4312-813d-72daeaee7e2d",
           "type": "Scope"
+        },
+        {
+          "id": "dd199f4a-f148-40a4-a2ec-f0069cc799ec",
+          "type": "Role"
+        },
+        {
+          "id": "8c026be3-8e26-4774-9372-8d5d6f21daff",
+          "type": "Scope"
+        },
+        {
+          "id": "fee28b28-e1f3-4841-818e-2704dc62245f",
+          "type": "Role"
+        },
+        {
+          "id": "62ade113-f8e0-4bf9-a6ba-5acb31db32fd",
+          "type": "Scope"
+        },
+        {
+          "id": "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8",
+          "type": "Role"
+        },
+        {
+          "id": "31e08e0a-d3f7-4ca2-ac39-7343fb83e8ad",
+          "type": "Role"
+        },
+        {
+          "id": "1ff1be21-34eb-448c-9ac9-ce1f506b2a68",
+          "type": "Scope"
+        },
+        {
+          "id": "cc147c17-b8e8-4d3f-9f94-aa9e279a079a",
+          "type": "Role"
+        },
+        {
+          "id": "e2edbde8-4448-4e49-8ebb-d53ba72df0f3",
+          "type": "Scope"
         }
       ]
     },

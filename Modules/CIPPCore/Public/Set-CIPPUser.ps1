@@ -12,6 +12,15 @@ function Set-CIPPUser {
     $AddToGroups = $UserObj.AddToGroups
     $RemoveFromGroups = $UserObj.RemoveFromGroups
 
+    $UseExchangeForGroup = {
+        param($AddedFields)
+        $Calculated = $AddedFields.calculatedGroupType
+        if ($Calculated) {
+            return $Calculated -in @('distributionList', 'security')
+        }
+        return $AddedFields.groupType -in @('Distribution List', 'Mail-Enabled Security', 'distributionList')
+    }
+
 
     #Edit the user
     try {
@@ -189,13 +198,12 @@ function Set-CIPPUser {
         $AddToGroups | ForEach-Object {
 
             $GroupType = $_.addedFields.groupType
-            $CalculatedGroupType = $_.addedFields.calculatedGroupType ?? $null
             $GroupID = $_.value
             $GroupName = $_.label
             Write-Host "About to add $($UserObj.userPrincipalName) to $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
-                if ($GroupType -eq 'distributionList' -or $GroupType -eq 'security' -and ($calculatedGroupType -ne 'generic' )) {
+                if (& $UseExchangeForGroup $_.addedFields) {
                     Write-Host 'Adding to group via Add-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
@@ -222,13 +230,12 @@ function Set-CIPPUser {
         $RemoveFromGroups | ForEach-Object {
 
             $GroupType = $_.addedFields.groupType
-            $CalculatedGroupType = $_.addedFields.calculatedGroupType ?? $null
             $GroupID = $_.value
             $GroupName = $_.label
             Write-Host "About to remove $($UserObj.userPrincipalName) from $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
-                if ($GroupType -eq 'distributionList' -or $GroupType -eq 'security' -and ($calculatedGroupType -ne 'generic' )) {
+                if (& $UseExchangeForGroup $_.addedFields) {
                     Write-Host 'Removing From group via Remove-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true

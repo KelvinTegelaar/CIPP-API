@@ -19,15 +19,15 @@ function Invoke-CippTestZTNA21820 {
         # Get all role management policies
         $RoleManagementPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleManagementPolicies'
 
-        # Build hashtable for quick policy lookup by role ID
+        # Build hashtable for quick policy lookup by role template ID.
+        # This previously keyed on effectiveRules.target.targetObjects.id — a property that does
+        # not exist on this response (target is {caller, operations, level, inheritableSettings,
+        # enforcedSettings}), so the table was always empty and no policy was ever found.
+        # roleDefinitionId carries the role's TEMPLATE id, which is the correct key.
         $PolicyByRoleId = @{}
         foreach ($Policy in $RoleManagementPolicies) {
-            if ($Policy.scopeId -eq '/' -and $Policy.scopeType -eq 'DirectoryRole') {
-                foreach ($RoleId in $Policy.effectiveRules.target.targetObjects.id) {
-                    if ($RoleId) {
-                        $PolicyByRoleId[$RoleId] = $Policy
-                    }
-                }
+            if ($Policy.scopeId -eq '/' -and $Policy.scopeType -eq 'DirectoryRole' -and $Policy.roleDefinitionId) {
+                $PolicyByRoleId[$Policy.roleDefinitionId] = $Policy
             }
         }
 
@@ -35,7 +35,8 @@ function Invoke-CippTestZTNA21820 {
         $Passed = 'Passed'
 
         foreach ($Role in $PrivilegedRoles) {
-            $Policy = $PolicyByRoleId[$Role.id]
+            # Template id, not the directoryRole instance id — see the note above.
+            $Policy = $PolicyByRoleId[$Role.roleTemplateId]
 
             if (-not $Policy) {
                 $RolesWithIssues.Add(@{

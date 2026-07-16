@@ -377,12 +377,23 @@ function Get-CIPPDrift {
                 $tenantPolicy.policy | Add-Member -MemberType NoteProperty -Name 'URLName' -Value $TenantPolicy.Type -Force
                 $TenantPolicyName = if ($TenantPolicy.Policy.displayName) { $TenantPolicy.Policy.displayName } else { $TenantPolicy.Policy.name }
                 foreach ($TemplatePolicy in $TemplateIntuneTemplates) {
-                    $TemplatePolicyName = if ($TemplatePolicy.displayName) { $TemplatePolicy.displayName } else { $TemplatePolicy.name }
-
-                    if ($TemplatePolicy.displayName -eq $TenantPolicy.Policy.displayName -or
-                        $TemplatePolicy.name -eq $TenantPolicy.Policy.name -or
-                        $TemplatePolicy.displayName -eq $TenantPolicy.Policy.name -or
-                        $TemplatePolicy.name -eq $TenantPolicy.Policy.displayName) {
+                    # Compare displayName-to-displayName and name-to-name (plus the cross pairings,
+                    # since some policy types are captured under one property but deployed under the
+                    # other) but require BOTH sides of each pairing to be non-empty before treating it
+                    # as a match. Most Intune policy types (compliance policies, device configurations,
+                    # group policy configs, etc.) only expose displayName and have no .name property at
+                    # all, so comparing raw .name values directly (as before) compared $null -eq $null,
+                    # which is $true in PowerShell - causing every tenant policy to falsely "match" the
+                    # first template as soon as any template lacked a .name property, suppressing all
+                    # tenant-only deviations. Note: templates always get a .displayName forced onto them
+                    # (see Add-Member above) even for name-only policy types like Settings Catalog
+                    # (deviceManagement/configurationPolicies), so the name-to-name pairing must still be
+                    # compared directly from the raw properties - collapsing to a single "effective name
+                    # preferring displayName" per side would silently break matching for those policies.
+                    if (($TemplatePolicy.displayName -and $TenantPolicy.Policy.displayName -and $TemplatePolicy.displayName -eq $TenantPolicy.Policy.displayName) -or
+                        ($TemplatePolicy.name -and $TenantPolicy.Policy.name -and $TemplatePolicy.name -eq $TenantPolicy.Policy.name) -or
+                        ($TemplatePolicy.displayName -and $TenantPolicy.Policy.name -and $TemplatePolicy.displayName -eq $TenantPolicy.Policy.name) -or
+                        ($TemplatePolicy.name -and $TenantPolicy.Policy.displayName -and $TemplatePolicy.name -eq $TenantPolicy.Policy.displayName)) {
                         $PolicyFound = $true
                         break
                     }

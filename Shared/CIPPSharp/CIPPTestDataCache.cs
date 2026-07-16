@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Management.Automation;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -266,13 +266,6 @@ namespace CIPP
         public static double HitRate => (_hits + _misses) > 0
             ? Math.Round(_hits * 100.0 / (_hits + _misses), 1) : 0;
 
-        // ── PSObject reflection (cached, resolved once at first use) ──
-        private static readonly object s_reflectLock = new();
-        private static bool s_psResolved;
-        private static Type? s_psObjectType;
-        private static PropertyInfo? s_psPropsProp;   // PSObject.Properties
-        private static PropertyInfo? s_psPropName;     // PSPropertyInfo.Name
-        private static PropertyInfo? s_psPropValue;    // PSPropertyInfo.Value
         // ── Managed-heap size model (x64 CoreCLR) ──
         // The cache stores *parsed PSObject graphs*, whose live heap footprint is
         // many times their JSON text size (measured ≈8× on real Graph data). Sizing
@@ -293,39 +286,11 @@ namespace CIPP
 
         // Bound the walk on pathological payloads: full-walk small collections for
         // accuracy, but stride-sample very large ones so a 100k-item array can't
-        // turn a single Set() into a multi-second reflection storm.
+        // turn a single Set() into a multi-second graph walk.
         private const int LargeCollectionThreshold = 512;
         private const int LargeCollectionSamples = 256;
         private const int MaxDepth = 32;
         private const long NodeBudget = 2_000_000;      // hard ceiling on nodes visited per Set()
-
-        private static void EnsurePSResolved()
-        {
-            if (s_psResolved) return;
-            lock (s_reflectLock)
-            {
-                if (s_psResolved) return;
-                try
-                {
-                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-                    {
-                        var t = asm.GetType("System.Management.Automation.PSObject");
-                        if (t == null) continue;
-                        s_psObjectType = t;
-                        s_psPropsProp = t.GetProperty("Properties");
-                        var piType = asm.GetType("System.Management.Automation.PSPropertyInfo");
-                        if (piType != null)
-                        {
-                            s_psPropName = piType.GetProperty("Name");
-                            s_psPropValue = piType.GetProperty("Value");
-                        }
-                        break;
-                    }
-                }
-                catch { /* SMA not loaded */ }
-                s_psResolved = true;
-            }
-        }
 
         private static long Align8(long bytes) => (bytes + 7) & ~7L;
 
@@ -340,7 +305,6 @@ namespace CIPP
         private static long EstimateValueSize(object? value, int itemCount)
         {
             if (value == null) return 0;
-            EnsurePSResolved();
             try
             {
                 long budget = NodeBudget;
@@ -375,8 +339,8 @@ namespace CIPP
             }
 
             // PSObject → wrapper cost + each NoteProperty (name string + value + overhead)
-            if (s_psObjectType != null && s_psObjectType.IsInstanceOfType(value))
-                return SizeOfPSObject(value, depth, ref budget);
+            if (value is PSObject pso)
+                return SizeOfPSObject(pso, depth, ref budget);
 
             // Dictionary / Hashtable → base + per-entry overhead + keys + values
             if (value is IDictionary dict)
@@ -428,22 +392,20 @@ namespace CIPP
             return ObjectHeader + 32;
         }
 
-        private static long SizeOfPSObject(object psObj, int depth, ref long budget)
+        private static long SizeOfPSObject(PSObject psObj, int depth, ref long budget)
         {
             long total = PSObjectBase;
-            if (s_psPropsProp == null || s_psPropName == null || s_psPropValue == null)
-                return total;
-            if (s_psPropsProp.GetValue(psObj) is not IEnumerable props) return total;
 
-            foreach (var prop in props)
+            foreach (var prop in psObj.Properties)
             {
                 if (--budget <= 0) break;
                 total += PSNotePropertyOverhead;
                 try
                 {
-                    if (s_psPropName.GetValue(prop) is string name)
-                        total += Align8(StringBaseOverhead + 2L * name.Length);
-                    total += SizeOf(s_psPropValue.GetValue(prop), depth + 1, ref budget);
+                    var name = prop.Name;
+                    if (name != null) total += Align8(StringBaseOverhead + 2L * name.Length);
+                    // .Value can throw on script/code properties that evaluate on access.
+                    total += SizeOf(prop.Value, depth + 1, ref budget);
                 }
                 catch { /* skip properties that throw on access */ }
             }
