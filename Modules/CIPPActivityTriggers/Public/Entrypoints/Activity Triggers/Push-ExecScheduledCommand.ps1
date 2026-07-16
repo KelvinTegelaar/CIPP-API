@@ -182,6 +182,7 @@ function Push-ExecScheduledCommand {
     }
 
     $Function = $Command
+    $CommandStartTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
 
     try {
         $PossibleParams = $Function.Parameters.Keys
@@ -284,6 +285,24 @@ function Push-ExecScheduledCommand {
         Write-Information "Results: $($results | ConvertTo-Json -Depth 10)"
         if ($item.command -like 'Get-CIPPAlert*') {
             Write-Information 'This is an alert task. Processing results as alerts.'
+            if ($State -ne 'Failed') {
+                # Output only carries CHANGED data (unchanged conditions stay silent so
+                # notifications don't repeat), so it can't signal "condition cleared".
+                # Write-AlertTrace instead stamps LastSeen on every run with active items;
+                # no trace row stamped during this run means the condition no longer holds
+                # (or every item is snoozed) - clear the stored state so the alert resolves
+                # on the dashboard instead of lingering forever. Use the resolved command
+                # name: rows are keyed by the function's defined name and table filters
+                # are case-sensitive.
+                $AlertTable = Get-CIPPTable -tablename 'AlertLastRun'
+                $TraceRows = Get-CIPPAzDataTableEntity @AlertTable -Filter "RowKey eq '$Tenant-$($Command.Name)'"
+                $StillActive = @($TraceRows | Where-Object {
+                        -not [string]::IsNullOrWhiteSpace($_.LogData) -and [int64]($_.LastSeen ?? 0) -ge $CommandStartTime
+                    })
+                if ($StillActive.Count -eq 0) {
+                    Clear-AlertTrace -CmdletName $Command.Name -TenantFilter $Tenant
+                }
+            }
             $results = @($results)
             $TaskType = 'Alert'
         } else {
