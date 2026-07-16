@@ -8,7 +8,7 @@ function Invoke-CIPPStandardSmartLockout {
         (Label) Configure Entra ID Smart Lockout
     .DESCRIPTION
         (Helptext) **Requires Entra ID P1.** Configures the Entra ID Smart Lockout settings including lockout duration, lockout threshold, and on-premises integration mode.
-        (DocsDescription) Configures the Entra ID Smart Lockout policy which protects against brute-force password attacks. Smart Lockout locks out bad actors who try to guess user passwords or use brute-force methods. It recognizes sign-ins from valid users and treats them differently from attackers. Settings include lockout duration (seconds), lockout threshold (failed attempts before lockout), and on-premises password protection mode (Audit or Enforced).
+        (DocsDescription) Configures the Entra ID Smart Lockout policy which protects against brute-force password attacks. Smart Lockout locks out bad actors who try to guess user passwords or use brute-force methods. It recognizes sign-ins from valid users and treats them differently from attackers. Settings include lockout duration (seconds), lockout threshold (failed attempts before lockout), and on-premises password protection mode (Audit or Enforce).
     .NOTES
         CAT
             Entra (AAD) Standards
@@ -19,7 +19,7 @@ function Invoke-CIPPStandardSmartLockout {
             {"type":"number","name":"standards.SmartLockout.LockoutDurationInSeconds","label":"Lockout Duration (seconds)","default":60,"required":true}
             {"type":"number","name":"standards.SmartLockout.LockoutThreshold","label":"Lockout Threshold (failed attempts)","default":10,"required":true}
             {"type":"switch","name":"standards.SmartLockout.EnableBannedPasswordCheckOnPremises","label":"Enable On-Premises Password Protection"}
-            {"type":"radio","name":"standards.SmartLockout.BannedPasswordCheckOnPremisesMode","label":"On-Premises Mode","options":[{"label":"Audit","value":"Audit"},{"label":"Enforced","value":"Enforced"}]}
+            {"type":"radio","name":"standards.SmartLockout.BannedPasswordCheckOnPremisesMode","label":"On-Premises Mode","options":[{"label":"Audit","value":"Audit"},{"label":"Enforce","value":"Enforce"}]}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -51,7 +51,13 @@ function Invoke-CIPPStandardSmartLockout {
     $DesiredLockoutDuration = [string]($Settings.LockoutDurationInSeconds.value ?? $Settings.LockoutDurationInSeconds ?? '60')
     $DesiredLockoutThreshold = [string]($Settings.LockoutThreshold.value ?? $Settings.LockoutThreshold ?? '10')
     $DesiredEnableOnPrem = [string]($Settings.EnableBannedPasswordCheckOnPremises.value ?? $Settings.EnableBannedPasswordCheckOnPremises ?? 'False')
-    $DesiredOnPremMode = $Settings.BannedPasswordCheckOnPremisesMode.value ?? $Settings.BannedPasswordCheckOnPremisesMode ?? 'Audit'
+    $DesiredOnPremMode = [string]($Settings.BannedPasswordCheckOnPremisesMode.value ?? $Settings.BannedPasswordCheckOnPremisesMode ?? 'Audit')
+
+    # Graph only accepts 'Audit' or 'Enforce'. Templates saved before the option value was
+    # corrected hold 'Enforced', which never matches the tenant and reports as non-compliant.
+    if ($DesiredOnPremMode -eq 'Enforced') {
+        $DesiredOnPremMode = 'Enforce'
+    }
 
     # Normalize boolean switch to string
     if ($DesiredEnableOnPrem -eq $true -or $DesiredEnableOnPrem -eq 'true' -or $DesiredEnableOnPrem -eq 'True') {

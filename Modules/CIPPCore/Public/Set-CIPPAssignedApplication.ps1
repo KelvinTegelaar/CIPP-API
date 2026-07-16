@@ -10,7 +10,7 @@ function Set-CIPPAssignedApplication {
         $ApplicationId,
         $TenantFilter,
         $GroupIds,
-        $AssignmentMode = 'replace',
+        $AssignmentMode = 'append',
         $AssignmentDirection,
         $APIName = 'Assign Application',
         $Headers,

@@ -18,7 +18,12 @@ function Set-CIPPDBCacheRoleEligibilitySchedules {
 
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching role eligibility schedules' -sev Debug
-        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/roleManagement/directory/roleEligibilitySchedules' -tenantid $TenantFilter -Stream |
+        # -AsApp is required: RoleManagement.*.Directory is an APPLICATION permission and only
+        # lands in an app-only token. The default delegated path returns "unauthorized".
+        # $expand=principal — see the note in Set-CIPPDBCacheRoleAssignmentScheduleInstances;
+        # Get-CippDbRoleMembers reads principal.displayName off these records too.
+        $Uri = 'https://graph.microsoft.com/beta/roleManagement/directory/roleEligibilitySchedules?$expand=principal'
+        New-GraphGetRequest -uri $Uri -tenantid $TenantFilter -AsApp $true -Stream |
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RoleEligibilitySchedules' -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached role eligibility schedules successfully' -sev Debug
