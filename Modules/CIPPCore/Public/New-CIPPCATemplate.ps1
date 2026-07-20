@@ -70,7 +70,7 @@ function New-CIPPCATemplate {
     if ($isPSCustomObject -and $hasIncludeUsers) {
         $JSON.conditions.users.includeUsers = @($JSON.conditions.users.includeUsers | ForEach-Object {
                 $originalID = $_
-                if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                if ($_ -in 'All', 'None', 'GuestsOrExternalUsers') { return $_ }
                 $match = $users | Where-Object { $_.id -eq $originalID }
                 if ($match) { $match.displayName } else { $originalID }
             })
@@ -79,7 +79,7 @@ function New-CIPPCATemplate {
     # Use the same type check for other user properties
     if ($isPSCustomObject -and $null -ne $JSON.conditions.users.excludeUsers) {
         $JSON.conditions.users.excludeUsers = @($JSON.conditions.users.excludeUsers | ForEach-Object {
-                if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                if ($_ -in 'All', 'None', 'GuestsOrExternalUsers') { return $_ }
                 $originalID = $_
                 $match = $users | Where-Object { $_.id -eq $originalID }
                 if ($match) { $match.displayName } else { $originalID }
@@ -89,7 +89,7 @@ function New-CIPPCATemplate {
     if ($isPSCustomObject -and $null -ne $JSON.conditions.users.includeGroups) {
         $JSON.conditions.users.includeGroups = @($JSON.conditions.users.includeGroups | ForEach-Object {
                 $originalID = $_
-                if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid -String $_)) { return $_ }
+                if ($_ -in 'All', 'None', 'GuestsOrExternalUsers' -or -not (Test-IsGuid -String $_)) { return $_ }
                 $match = $groups | Where-Object { $_.id -eq $originalID }
                 if ($match) { $match.displayName } else { $originalID }
             })
@@ -97,7 +97,7 @@ function New-CIPPCATemplate {
     if ($isPSCustomObject -and $null -ne $JSON.conditions.users.excludeGroups) {
         $JSON.conditions.users.excludeGroups = @($JSON.conditions.users.excludeGroups | ForEach-Object {
                 $originalID = $_
-                if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid -String $_)) { return $_ }
+                if ($_ -in 'All', 'None', 'GuestsOrExternalUsers' -or -not (Test-IsGuid -String $_)) { return $_ }
                 $match = $groups | Where-Object { $_.id -eq $originalID }
                 if ($match) { $match.displayName } else { $originalID }
             })
