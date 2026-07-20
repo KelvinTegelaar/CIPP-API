@@ -39,10 +39,36 @@ function Invoke-CIPPSharePointTemplateDeploy {
     # strings, but older entries may be autocomplete objects ({label,value}).
     $GetPrincipalName = { param($Principal) $Principal.value ?? $Principal }
     $CreateMissingGroups = $TemplateData.createMissingGroups -eq $true
+    $SkipIfExists = $TemplateData.skipIfExists -eq $true
 
     $Results = [System.Collections.Generic.List[string]]::new()
     foreach ($SiteTemplate in $TemplateData.siteTemplates) {
         try {
+            # Skip if exists: leave pre-existing sites/teams completely untouched — no
+            # libraries or permission changes are applied to anything this run didn't create.
+            if ($SkipIfExists) {
+                $AlreadyExists = $false
+                if ($TemplateData.createAsTeams -eq $true) {
+                    $EscapedName = $SiteTemplate.displayName -replace "'", "''"
+                    $ExistingGroups = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/groups?`$filter=displayName eq '$EscapedName'&`$select=id" -tenantid $TenantFilter -AsApp $true
+                    $AlreadyExists = @($ExistingGroups).Count -gt 0
+                } else {
+                    $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
+                    $SitePath = $SiteTemplate.displayName -replace ' ' -replace '[^A-Za-z0-9-]'
+                    try {
+                        $ExistingSite = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/sites/$($SharePointInfo.TenantName).sharepoint.com:/sites/$($SitePath)?`$select=id" -tenantid $TenantFilter -AsApp $true
+                        $AlreadyExists = [bool]$ExistingSite.id
+                    } catch {
+                        # 404 means the site does not exist yet, which is the normal path.
+                        $AlreadyExists = $false
+                    }
+                }
+                if ($AlreadyExists) {
+                    $Results.Add("[$TenantFilter] Skipped '$($SiteTemplate.displayName)': already exists and Skip if exists is enabled.")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Skipped SharePoint template site '$($SiteTemplate.displayName)': already exists." -sev Info
+                    continue
+                }
+            }
             # Create the container first: a full Team (Teams API) so all Teams functionality
             # stays intact, or a plain SharePoint site otherwise.
             if ($TemplateData.createAsTeams -eq $true) {
