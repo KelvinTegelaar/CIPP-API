@@ -16,7 +16,7 @@ function New-CippAuditLogSearchV2 {
     .PARAMETER RecordTypeFilters
         Record types to capture. Defaults to the four the V1 pipeline used.
     .OUTPUTS
-        [pscustomobject]@{ Id; Status; Outcome; Message }  Outcome in 'Created','AuditingDisabled','Transient'.
+        [pscustomobject]@{ Id; Status; Outcome; Message }  Outcome in 'Created','AuditingDisabled','AccessDenied','Transient'.
     .FUNCTIONALITY
         Internal
     #>
@@ -50,6 +50,15 @@ function New-CippAuditLogSearchV2 {
             $Raw = $_.Exception.Data['RawErrorBody']
             if (-not $Raw) { $Raw = $_.ErrorDetails.Message }
             if (-not $Raw) { $Raw = $_.Exception.Message }
+
+            # Token-acquisition failures that mean we cannot access the tenant at all (e.g.
+            # AADSTS7000229 = CIPP's service principal is missing from the tenant). These arrive as a
+            # plain "Could not get token: ..." string from Get-GraphToken, not JSON, and won't clear
+            # on retry - the caller disables the tenant for 24h, same as AuditingDisabled.
+            if ([string]$Raw -match 'AADSTS7000229') {
+                return [pscustomobject]@{ Id = $null; Status = 'MissingServicePrincipal'; Outcome = 'AccessDenied'; Message = [string]$Raw; Throttled = $false }
+            }
+
             $Parsed = $null
             if ($Raw) { try { $Parsed = ([string]$Raw) | ConvertFrom-Json -ErrorAction Stop } catch {} }
 
