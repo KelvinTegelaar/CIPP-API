@@ -58,8 +58,11 @@ function Invoke-CIPPSharePointTemplateDeploy {
     $SiteIndex = -1
     foreach ($SiteTemplate in $TemplateData.siteTemplates) {
         $SiteIndex++
+        # Step counter for this site: prerequisites, create, site permissions, then one step
+        # per library. Shown as 'Step x of y' in the live progress messages.
+        $TotalSteps = 3 + @($SiteTemplate.libraries).Count
         try {
-            Update-DeployStep -Index $SiteIndex -Status 'running' -Message 'Checking prerequisites'
+            Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 1 of ${TotalSteps}: Checking prerequisites"
             # Skip if exists: leave pre-existing sites/teams completely untouched — no
             # libraries or permission changes are applied to anything this run didn't create.
             if ($SkipIfExists) {
@@ -89,12 +92,12 @@ function Invoke-CIPPSharePointTemplateDeploy {
             # Create the container first: a full Team (Teams API) so all Teams functionality
             # stays intact, or a plain SharePoint site otherwise.
             if ($TemplateData.createAsTeams -eq $true) {
-                Update-DeployStep -Index $SiteIndex -Status 'running' -Message 'Creating Team and waiting for its SharePoint site'
+                Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 2 of ${TotalSteps}: Creating Team and waiting for its SharePoint site"
                 $Team = New-CIPPTeam -DisplayName $SiteTemplate.displayName -Description ($SiteTemplate.description ?? '') -Owner $SiteOwner -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                 $SiteUrl = $Team.SiteUrl
                 $Results.Add("[$TenantFilter] Created Team '$($SiteTemplate.displayName)' with site $SiteUrl")
             } else {
-                Update-DeployStep -Index $SiteIndex -Status 'running' -Message 'Creating SharePoint site'
+                Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 2 of ${TotalSteps}: Creating SharePoint site"
                 $null = New-CIPPSharepointSite -SiteName $SiteTemplate.displayName -SiteDescription ($SiteTemplate.description ?? $SiteTemplate.displayName) -SiteOwner $SiteOwner -TemplateName 'Team' -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                 $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
                 $SitePath = $SiteTemplate.displayName -replace ' ' -replace '[^A-Za-z0-9-]'
@@ -103,7 +106,7 @@ function Invoke-CIPPSharePointTemplateDeploy {
             }
 
             # Root-level permissions, grouped per permission level.
-            Update-DeployStep -Index $SiteIndex -Status 'running' -Message 'Applying site permissions'
+            Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 3 of ${TotalSteps}: Applying site permissions"
             $RootPermGroups = @($SiteTemplate.permissions) | Group-Object -Property permissionLevel
             foreach ($PermGroup in $RootPermGroups) {
                 $GroupNames = @($PermGroup.Group | ForEach-Object { & $GetPrincipalName $_.principal }) | Where-Object { $_ }
@@ -116,9 +119,11 @@ function Invoke-CIPPSharePointTemplateDeploy {
             }
 
             # Then the document libraries via the SharePoint module.
+            $LibraryStep = 3
             foreach ($Library in $SiteTemplate.libraries) {
+                $LibraryStep++
                 try {
-                    Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Creating library '$($Library.name)'"
+                    Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step $LibraryStep of ${TotalSteps}: Creating library '$($Library.name)'"
                     $NewLibrary = New-CIPPSharePointLibrary -SiteUrl $SiteUrl -LibraryName $Library.name -Description ($Library.description ?? '') -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                     $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): library '$($Library.name)' $($NewLibrary.Created ? 'created' : 'already existed')")
 
@@ -136,7 +141,7 @@ function Invoke-CIPPSharePointTemplateDeploy {
                     $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): library '$($Library.name)' failed - $($_.Exception.Message)")
                 }
             }
-            Update-DeployStep -Index $SiteIndex -Status 'succeeded' -Message "Deployed at $SiteUrl"
+            Update-DeployStep -Index $SiteIndex -Status 'succeeded' -Message "Completed all $TotalSteps steps. Deployed at $SiteUrl"
         } catch {
             $Results.Add("[$TenantFilter] Failed to deploy '$($SiteTemplate.displayName)': $($_.Exception.Message)")
             Update-DeployStep -Index $SiteIndex -Status 'failed' -Message $_.Exception.Message
