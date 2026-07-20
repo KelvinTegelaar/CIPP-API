@@ -135,6 +135,10 @@ function Invoke-ExecSharePointTemplate {
                 }
                 $Tenants = @($Tenants | Sort-Object -Unique)
 
+                # Pre-create a status row per tenant so the frontend can poll live progress
+                # (GDAP-onboarding style) from the moment the deployment is queued.
+                $JobId = New-CIPPAsyncDeployment -Names $Tenants -StepTitles @(@($TemplateData.siteTemplates) | ForEach-Object { $_.displayName }) -Source 'SharePointTemplate'
+
                 # Site and Team provisioning is slow (Teams sites can take a minute each), so the
                 # actual work runs per tenant on the durable queue instead of in this request.
                 $Queue = New-CippQueueEntry -Name "SharePoint Template - $($TemplateData.templateName)" -TotalTasks $Tenants.Count
@@ -144,6 +148,7 @@ function Invoke-ExecSharePointTemplate {
                         Tenant       = $TenantFilter
                         TemplateId   = $TemplateId
                         SiteOwner    = $SiteOwner
+                        DeploymentId = $JobId
                         QueueId      = $Queue.RowKey
                     }
                 }
@@ -154,10 +159,23 @@ function Invoke-ExecSharePointTemplate {
                 }
                 $null = Start-CIPPOrchestrator -InputObject $InputObject
 
-                $Body = @{ Results = "Deployment of template '$($TemplateData.templateName)' queued for $($Tenants.Count) tenant(s). See the logbook for progress." }
+                $Body = @{
+                    Results      = "Deployment of template '$($TemplateData.templateName)' queued for $($Tenants.Count) tenant(s)."
+                    DeploymentId = $JobId
+                }
                 Write-LogMessage -headers $Headers -API $APIName -message "Queued SharePoint template deployment '$($TemplateData.templateName)' for $($Tenants.Count) tenant(s)" -Sev 'Info'
             } catch {
                 $Body = @{ Results = "Failed to queue template deployment: $($_.Exception.Message)" }
+                $StatusCode = [HttpStatusCode]::BadRequest
+            }
+        }
+        'DeployStatus' {
+            try {
+                $JobId = $Request.Query.DeploymentId ?? $Request.Body.DeploymentId
+                if (-not $JobId) { throw 'DeploymentId is required' }
+                $Body = @(Get-CIPPAsyncDeployment -JobId $JobId)
+            } catch {
+                $Body = @{ Results = "Failed to get deployment status: $($_.Exception.Message)" }
                 $StatusCode = [HttpStatusCode]::BadRequest
             }
         }
