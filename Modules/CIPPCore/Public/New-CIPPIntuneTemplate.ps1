@@ -47,6 +47,11 @@ function New-CIPPIntuneTemplate {
                 default { 'managedAppPolicies' }
             }
             $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$($AppProtectionUrl)('$($ID)')" -tenantid $TenantFilter
+            if ($ODataType -and !$Template.'@odata.type') {
+                # Graph omits @odata.type when an entity is fetched via its concrete type URL, but Set-CIPPIntunePolicy derives the deploy URL from it
+                if ($ODataType -notmatch '^#') { $ODataType = "#$ODataType" }
+                $null = $Template | Add-Member -MemberType NoteProperty -Name '@odata.type' -Value $ODataType -Force
+            }
             $DisplayName = $Template.displayName
             $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
         }

@@ -27,6 +27,9 @@ function Set-CIPPIntunePolicy {
             'AppProtection' {
                 $PlatformType = 'deviceAppManagement'
                 $TemplateType = ($RawJSON | ConvertFrom-Json).'@odata.type' -replace '#microsoft.graph.', ''
+                if ([string]::IsNullOrWhiteSpace($TemplateType)) {
+                    throw "App Protection template '$DisplayName' does not contain @odata.type, so the policy type cannot be determined. Recreate the template or re-run the template sync to include @odata.type."
+                }
                 $PolicyFile = $RawJSON | ConvertFrom-Json
                 $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value $Description -Force
                 $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $DisplayName -Force

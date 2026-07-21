@@ -80,7 +80,8 @@ function Invoke-CIPPStandardPhishProtection {
                 try {
                     New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/" -ContentType 'application/json' -asApp $true -Type POST -Body $defaultBrandingBody -AddedHeaders $AddedHeaders
                 } catch {
-
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create default branding localization. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 }
             }
             if ($currentBody -like "*$CSS*") {

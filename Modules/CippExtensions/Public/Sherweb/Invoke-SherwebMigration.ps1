@@ -8,6 +8,11 @@ function Invoke-SherwebMigration {
     $ExtensionConfig = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json
     $Config = $ExtensionConfig.Sherweb
 
+    if ($Config.Enabled -ne $true) {
+        Write-Information "Sherweb extension is disabled, skipping migration check for $TenantFilter"
+        return
+    }
+
     # Get licenses within the transfer window (renewing within 7 days)
     $Licenses = Get-CIPPLicenseOverview -TenantFilter $TenantFilter | Where-Object {
         $null -ne $_.TermInfo -and ($_.TermInfo | Where-Object { $_.DaysUntilRenew -le 7 -and $_.DaysUntilRenew -ge 0 })

@@ -161,7 +161,7 @@ function Invoke-ExecCompareIntunePolicy {
 
         # Run the comparison
         $CompareResult = Compare-CIPPIntuneObject @CompareParams
-        $ComparisonResults = if ($null -eq $CompareResult) { @() } else { @($CompareResult) }
+        $ComparisonResults = @($CompareResult | Where-Object { $null -ne $_ })
 
         $ResultBody = @{
             Results      = $ComparisonResults
