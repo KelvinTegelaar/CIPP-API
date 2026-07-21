@@ -15,6 +15,7 @@ function Get-CIPPAlertQuotaUsed {
     $Threshold = if ($InputValue.QuotaUsedQuota) { [int]$InputValue.QuotaUsedQuota } else { 90 }
     $ExcludedRaw = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text ([string]$InputValue.QuotaUsedExcludedMailboxes)
     $Excluded = @($ExcludedRaw -split ',' | ForEach-Object { $_.Trim().ToLower() } | Where-Object { $_ })
+    $MailboxTypes = @($InputValue.QuotaUsedMailboxTypes.value | Where-Object { $_ })
 
     try {
         $AlertData = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')?`$format=application/json&`$top=999" -tenantid $TenantFilter
@@ -27,8 +28,10 @@ function Get-CIPPAlertQuotaUsed {
     $OverQuota = $AlertData | ForEach-Object {
         if (!$_.StorageUsedInBytes -or !$_.prohibitSendReceiveQuotaInBytes) { return }
         if ($Excluded -contains $_.userPrincipalName.ToLower()) { return }
+        # Report returns 'User'/'Shared' or 'UserMailbox'/'SharedMailbox' depending on tenant; normalize before matching
+        if ($MailboxTypes.Count -gt 0 -and ($_.recipientType -replace 'Mailbox$') -notin $MailboxTypes) { return }
         $UsagePercent = [math]::Round(($_.storageUsedInBytes / $_.prohibitSendReceiveQuotaInBytes) * 100)
-        if ($UsagePercent -gt $Threshold) {
+        if ($UsagePercent -ge $Threshold) {
             [PSCustomObject]@{
                 Message                         = "$($_.userPrincipalName): Mailbox is more than $($Threshold)% full. Mailbox is $UsagePercent% full"
                 Owner                           = $_.userPrincipalName

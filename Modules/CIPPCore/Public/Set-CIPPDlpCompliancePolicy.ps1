@@ -90,6 +90,9 @@ function Set-CIPPDlpCompliancePolicy {
         foreach ($Rule in $RuleList) {
             $RuleIndex++
             $RuleHash = Format-CIPPCompliancePolicyParams -Source $Rule -AllowedFields $RuleAllowedFields
+            # Advanced-mode rules send only the AdvancedRule JSON blob, simple-mode rules only the flat
+            # condition params - New-/Set-DlpComplianceRule reject a mix (see Resolve-CIPPDlpAdvancedRule).
+            $RuleHash = Resolve-CIPPDlpAdvancedRule -Source $Rule -RuleParams $RuleHash
             foreach ($SitField in @('ContentContainsSensitiveInformation', 'ExceptIfContentContainsSensitiveInformation')) {
                 if ($RuleHash.ContainsKey($SitField)) {
                     $RuleHash[$SitField] = @(ConvertTo-CIPPSensitiveInformationType -SensitiveInformation $RuleHash[$SitField])

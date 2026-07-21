@@ -83,23 +83,22 @@ function Set-CIPPSAMAdminRoles {
                 $ActionLogs.Add('Added Service Principal to Compliance Center')
             } catch {
                 $SpError = $_.Exception.Message
-                if ($SpError -match 'already exist') {
-                    $ActionLogs.Add('Service Principal already added to Compliance Center')
-                } else {
-                    $ActionLogs.Add("Failed to add Service Principal to Compliance Center: $SpError")
-                    $HasFailures = $true
+                switch ($SpError) {
+                    { $_ -match 'already exist' } { $ActionLogs.Add('Service Principal already added to Compliance Center') }
+                    { $_ -match 'New-ServicePrincipal is not present' } { $ActionLogs.Add('Tenant does not have a license to use Compliance Center features. Skipping.') }
+                    default { $ActionLogs.Add("Failed to add Service Principal to Compliance Center: $SpError"); $HasFailures = $true }
                 }
+
             }
             try {
                 $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true -AsApp
                 $ActionLogs.Add('Added Service Principal to Exchange Online')
             } catch {
                 $SpError = $_.Exception.Message
-                if ($SpError -match 'already exist') {
-                    $ActionLogs.Add('Service Principal already added to Exchange Online')
-                } else {
-                    $ActionLogs.Add("Failed to add Service Principal to Exchange Online: $SpError")
-                    $HasFailures = $true
+                switch ($SpError) {
+                    { $_ -match 'already exist' } { $ActionLogs.Add('Service Principal already added to Compliance Center') }
+                    { $_ -match 'Response status code does not indicate success' } { $ActionLogs.Add('Could not connect to Exchange, we received an access denied. This is expected if you do not have an exchange license.'); $HasFailures = $true }
+                    default { $ActionLogs.Add("Failed to add Service Principal to Compliance Center: $SpError"); $HasFailures = $true }
                 }
             }
 

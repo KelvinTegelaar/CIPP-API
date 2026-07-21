@@ -59,6 +59,8 @@ function Invoke-CIPPStandardTAP {
             try {
                 Set-CIPPAuthenticationPolicy -Tenant $Tenant -APIName 'Standards' -AuthenticationMethodId 'TemporaryAccessPass' -Enabled $true -TAPisUsableOnce $config
             } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable Temporary Access Passwords. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }

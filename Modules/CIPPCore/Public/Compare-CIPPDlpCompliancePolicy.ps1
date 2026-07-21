@@ -68,6 +68,9 @@ function ConvertTo-CIPPDlpComparable {
     $Rules = [ordered]@{}
     foreach ($Rule in @($RuleSource) | Where-Object { $_ }) {
         $RuleParams = Format-CIPPCompliancePolicyParams -Source $Rule -AllowedFields $Fields.Rule
+        # Mirror deploy: keep only AdvancedRule OR the flat condition params, never both, so the same
+        # side is compared that deploy would actually send (see Resolve-CIPPDlpAdvancedRule).
+        $RuleParams = Resolve-CIPPDlpAdvancedRule -Source $Rule -RuleParams $RuleParams
         $RuleName = [string]$RuleParams['Name']
         $RuleParams.Remove('Policy') | Out-Null
         $RuleParams.Remove('Name') | Out-Null
@@ -78,6 +81,12 @@ function ConvertTo-CIPPDlpComparable {
         }
         if ($RuleParams.ContainsKey('IncidentReportContent') -and $RuleParams['IncidentReportContent'] -is [string]) {
             $RuleParams['IncidentReportContent'] = @($RuleParams['IncidentReportContent'] -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        }
+        # Expand the AdvancedRule JSON string into an object so the canonical comparison string is
+        # independent of whitespace and key order (the service may reformat the blob it returns).
+        # Unparseable JSON falls back to raw string comparison.
+        if ($RuleParams.ContainsKey('AdvancedRule') -and $RuleParams['AdvancedRule'] -is [string]) {
+            try { $RuleParams['AdvancedRule'] = $RuleParams['AdvancedRule'] | ConvertFrom-Json -ErrorAction Stop } catch {}
         }
         if (-not [string]::IsNullOrWhiteSpace($RuleName)) { $Rules[$RuleName] = $RuleParams }
     }

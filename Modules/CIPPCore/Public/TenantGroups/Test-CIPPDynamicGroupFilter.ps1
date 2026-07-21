@@ -27,8 +27,8 @@ function Test-CIPPDynamicGroupFilter {
         [hashtable]$TenantGroupMembersCache = @{}
     )
 
-    $AllowedOperators = @('eq', 'ne', 'like', 'notlike', 'in', 'notin', 'contains', 'notcontains')
-    $AllowedProperties = @('delegatedAccessStatus', 'availableLicense', 'availableServicePlan', 'tenantGroupMember', 'customVariable')
+    $AllowedOperators = @('eq', 'ne', 'like', 'notlike', 'in', 'notin', 'contains', 'notcontains', 'gt', 'ge', 'lt', 'le')
+    $AllowedProperties = @('delegatedAccessStatus', 'availableLicense', 'availableServicePlan', 'tenantGroupMember', 'customVariable', 'gdapRelationshipAge')
 
     # Regex for sanitizing string values - block characters that enable code injection
     $SafeValueRegex = [regex]'^[^;|`\$\{\}\(\)]*$'
@@ -201,6 +201,22 @@ function Test-CIPPDynamicGroupFilter {
                     return $null
                 }
             }
+        }
+        'gdapRelationshipAge' {
+            if ($OperatorLower -notin @('eq', 'ne', 'gt', 'ge', 'lt', 'le')) {
+                Write-Warning "Unsupported operator '$OperatorLower' for gdapRelationshipAge"
+                return $null
+            }
+            $RawDays = if ($null -ne $Value.value) { $Value.value } else { $Value }
+            $Days = 0
+            if (-not [int]::TryParse([string]$RawDays, [ref]$Days) -or $Days -lt 0) {
+                Write-Warning "Blocked invalid day count in gdapRelationshipAge rule: '$RawDays'"
+                return $null
+            }
+            # Tenants without an active GDAP relationship have a $null age and never match an
+            # age rule - without the null guard, '$null -lt 14' would be true and direct
+            # tenants would permanently land in every 'younger than' group.
+            return "(`$null -ne `$_.gdapRelationshipAgeDays -and `$_.gdapRelationshipAgeDays -$OperatorLower $Days)"
         }
         default {
             Write-Warning "Unknown property type: $Property"

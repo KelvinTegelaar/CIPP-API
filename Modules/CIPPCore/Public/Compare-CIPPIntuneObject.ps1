@@ -36,8 +36,16 @@ function Compare-CIPPIntuneObject {
             'locationInfo',
             'templateId',
             'source',
-            'package'
+            'package',
+            'assignments'
         )
+
+        # App protection templates store apps[] and deployedAppCount, but deployment strips apps
+        # and the policy read-back never returns either, so they can never match. Scoped to
+        # AppProtection because Device configs carry legitimate nested 'apps' (e.g. kiosk profiles).
+        if ($CompareType -contains 'AppProtection') {
+            $defaultExcludeProperties = $defaultExcludeProperties + @('apps', 'deployedAppCount')
+        }
 
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties
         $result = [System.Collections.Generic.List[PSObject]]::new()

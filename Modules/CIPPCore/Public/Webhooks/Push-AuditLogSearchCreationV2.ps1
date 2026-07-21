@@ -14,7 +14,8 @@ function Push-AuditLogSearchCreationV2 {
            limit, so on a 429 we stop and defer the current window AND all remaining queued windows to
            the next cycle (no Attempts increment - a cap is not a failure, so it never dead-letters).
            Other transient errors (UnknownError, 5xx, gateway) retry the individual window with backoff
-           and dead-letter at MaxAttempts. AuditingDisabled caches the tenant for 24h and stops.
+           and dead-letter at MaxAttempts. AuditingDisabled and AccessDenied (token failure - e.g.
+           AADSTS7000229 missing service principal) cache the tenant as disabled for 24h and stop.
 
         Capping at 6/cycle keeps us well under the ~10 concurrent-search ceiling (they complete within
         the cycle and free slots). Oldest-first means gaps/backlog/reconciliation drain before the
@@ -77,15 +78,17 @@ function Push-AuditLogSearchCreationV2 {
             $Batch = @($Due | Select-Object -First $MaxPerCycle)
         }
 
-        # 3) Create searches (no auto-retry). On 429, defer current + remaining to next cycle.
+        # 3) Create searches (no auto-retry). On 429 or a tenant-level disable, defer current +
+        #    remaining to next cycle.
         $Bail = $false
+        $BailReason = ''
         foreach ($Row in $Batch) {
             if ($Bail) {
                 # Deferred (not attempted): just set NextAttemptUtc, leave Attempts/State as Planned.
                 Add-CIPPAzDataTableEntity @Ledger -Entity @{
                     PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Planned'
                     NextAttemptUtc = (Get-CippAuditLogNextAttempt -Attempts 1)
-                    ThrottleCount = ([int]$Row.ThrottleCount + 1); LastError = 'Deferred: tenant search cap (429)'; LastErrorUtc = $Now
+                    ThrottleCount = ([int]$Row.ThrottleCount + 1); LastError = $BailReason; LastErrorUtc = $Now
                 } -OperationType UpsertMerge
                 continue
             }
@@ -105,23 +108,29 @@ function Push-AuditLogSearchCreationV2 {
             } elseif ($Result.Throttled) {
                 # 429 = tenant cap full. Defer this window (no Attempts bump - a cap isn't a failure) and bail.
                 $Bail = $true
+                $BailReason = 'Deferred: tenant search cap (429)'
                 Add-CIPPAzDataTableEntity @Ledger -Entity @{
                     PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Planned'
                     NextAttemptUtc = (Get-CippAuditLogNextAttempt -Attempts 1)
                     ThrottleCount = ([int]$Row.ThrottleCount + 1); LastError = 'Tenant search cap (429)'; LastErrorUtc = $Now
                 } -OperationType UpsertMerge
                 Write-Information "AuditLogV2: 429 for $TenantFilter - deferring this + remaining windows to next cycle"
-            } elseif ($Result.Outcome -eq 'AuditingDisabled') {
+            } elseif ($Result.Outcome -eq 'AuditingDisabled' -or $Result.Outcome -eq 'AccessDenied') {
+                # AuditingDisabled = unified auditing off; AccessDenied = we can't get a token for the
+                # tenant at all (e.g. missing service principal). Either way: disable for 24h and stop.
                 $Bail = $true
+                $BailReason = 'Deferred: tenant audit log collection disabled'
+                $DisableStatus = if ($Result.Outcome -eq 'AccessDenied') { [string]$Result.Status } else { 'AuditingDisabledTenant' }
+                $LedgerError = if ($Result.Message) { [string]$Result.Message } else { $DisableStatus }
                 try {
                     $AuditDisabledTable = Get-CIPPTable -TableName 'AuditLogDisabledTenants'
                     Add-CIPPAzDataTableEntity @AuditDisabledTable -Entity @{
                         PartitionKey = 'AuditDisabledTenant'; RowKey = [string]$TenantFilter; TenantFilter = [string]$TenantFilter
-                        Status = 'AuditingDisabledTenant'; ExpiresAtUnix = [int64]([datetimeoffset]::UtcNow.AddHours(24).ToUnixTimeSeconds())
+                        Status = $DisableStatus; ExpiresAtUnix = [int64]([datetimeoffset]::UtcNow.AddHours(24).ToUnixTimeSeconds())
                     } -Force
                 } catch {}
-                Add-CIPPAzDataTableEntity @Ledger -Entity @{ PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Skipped'; LastError = 'AuditingDisabledTenant'; LastErrorUtc = $Now } -OperationType UpsertMerge
-                Write-Information "AuditLogV2: auditing disabled for $TenantFilter; skipping"
+                Add-CIPPAzDataTableEntity @Ledger -Entity @{ PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Skipped'; LastError = $LedgerError; LastErrorUtc = $Now } -OperationType UpsertMerge
+                Write-Information "AuditLogV2: $DisableStatus for $TenantFilter; disabled for 24h"
             } else {
                 # Other transient: retry this window next cycle; dead-letter at cap.
                 $RetryTotal = [int]$Row.RetryCount + 1
