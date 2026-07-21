@@ -26,8 +26,8 @@ function Invoke-ExecTenantGroup {
 
     # Validate dynamic rules to prevent code injection
     if ($groupType -eq 'dynamic' -and $dynamicRules) {
-        $AllowedDynamicOperators = @('eq', 'ne', 'like', 'notlike', 'in', 'notin', 'contains', 'notcontains')
-        $AllowedDynamicProperties = @('delegatedAccessStatus', 'availableLicense', 'availableServicePlan', 'tenantGroupMember', 'customVariable')
+        $AllowedDynamicOperators = @('eq', 'ne', 'like', 'notlike', 'in', 'notin', 'contains', 'notcontains', 'gt', 'ge', 'lt', 'le')
+        $AllowedDynamicProperties = @('delegatedAccessStatus', 'availableLicense', 'availableServicePlan', 'tenantGroupMember', 'customVariable', 'gdapRelationshipAge')
         foreach ($rule in $dynamicRules) {
             if ($rule.operator -and $rule.operator.ToLower() -notin $AllowedDynamicOperators) {
                 return ([HttpResponseContext]@{

@@ -295,6 +295,11 @@
     "description": "SharePoint site usage statistics"
   },
   {
+    "type": "SiteActivity",
+    "friendlyName": "Site Activity",
+    "description": "Per-site activity with siteType classification (SharePoint, SharePointAndTeams, OneDrive) and separate workload activity columns"
+  },
+  {
     "type": "SharePointSharingLinks",
     "friendlyName": "SharePoint & OneDrive Sharing Links",
     "description": "Sharing links and external grants on SharePoint and OneDrive files and folders"

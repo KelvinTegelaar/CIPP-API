@@ -233,15 +233,18 @@ function Test-CIPPAccess {
                 $MeResponse['hostedFailedPayments'] = $true
             }
 
+            $CanManageAppSettings = $Permissions -contains 'CIPP.AppSettings.ReadWrite'
+            $HasAnyPermission = ($Permissions | Measure-Object).Count -gt 0
+
             # Forced SSO migration: non-dismissible prompt when migration env var is set
-            if ($env:CIPP_SSO_MIGRATION_APPID -and $Permissions -contains 'CIPP.AppSettings.ReadWrite') {
+            if ($env:CIPP_SSO_MIGRATION_APPID -and $CanManageAppSettings) {
                 $MeResponse['forceSsoMigration'] = @{
                     appId  = $env:CIPP_SSO_MIGRATION_APPID
                     status = 'pending'
                 }
             }
 
-            if ($env:CIPPNG -ne 'true') {
+            if ($env:CIPPNG -ne 'true' -and $HasAnyPermission) {
                 try {
                     $SSOTable = Get-CIPPTable -tablename 'SSOMigration'
                     $SSOMigration = Get-CIPPAzDataTableEntity @SSOTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue

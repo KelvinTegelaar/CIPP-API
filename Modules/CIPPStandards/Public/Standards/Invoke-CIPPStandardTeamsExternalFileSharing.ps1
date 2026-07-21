@@ -58,11 +58,18 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
         return
     }
 
-    $StateIsCorrect = ($CurrentState.AllowGoogleDrive -eq $Settings.AllowGoogleDrive ?? $false ) -and
-    ($CurrentState.AllowShareFile -eq $Settings.AllowShareFile ?? $false ) -and
-    ($CurrentState.AllowBox -eq $Settings.AllowBox ?? $false ) -and
-    ($CurrentState.AllowDropBox -eq $Settings.AllowDropBox ?? $false ) -and
-    ($CurrentState.AllowEgnyte -eq $Settings.AllowEgnyte ?? $false )
+    # Untoggled switches are absent from the settings; default them to $false so we never send null to the ConfigApi
+    $AllowGoogleDrive = $Settings.AllowGoogleDrive ?? $false
+    $AllowShareFile = $Settings.AllowShareFile ?? $false
+    $AllowBox = $Settings.AllowBox ?? $false
+    $AllowDropBox = $Settings.AllowDropBox ?? $false
+    $AllowEgnyte = $Settings.AllowEgnyte ?? $false
+
+    $StateIsCorrect = ($CurrentState.AllowGoogleDrive -eq $AllowGoogleDrive) -and
+    ($CurrentState.AllowShareFile -eq $AllowShareFile) -and
+    ($CurrentState.AllowBox -eq $AllowBox) -and
+    ($CurrentState.AllowDropBox -eq $AllowDropBox) -and
+    ($CurrentState.AllowEgnyte -eq $AllowEgnyte)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -70,11 +77,11 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
         } else {
             $cmdParams = @{
                 Identity         = 'Global'
-                AllowGoogleDrive = $Settings.AllowGoogleDrive
-                AllowShareFile   = $Settings.AllowShareFile
-                AllowBox         = $Settings.AllowBox
-                AllowDropBox     = $Settings.AllowDropBox
-                AllowEgnyte      = $Settings.AllowEgnyte
+                AllowGoogleDrive = $AllowGoogleDrive
+                AllowShareFile   = $AllowShareFile
+                AllowBox         = $AllowBox
+                AllowDropBox     = $AllowDropBox
+                AllowEgnyte      = $AllowEgnyte
             }
 
             try {
@@ -107,11 +114,11 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
             AllowEgnyte      = $CurrentState.AllowEgnyte
         }
         $ExpectedValue = @{
-            AllowGoogleDrive = $Settings.AllowGoogleDrive
-            AllowShareFile   = $Settings.AllowShareFile
-            AllowBox         = $Settings.AllowBox
-            AllowDropBox     = $Settings.AllowDropBox
-            AllowEgnyte      = $Settings.AllowEgnyte
+            AllowGoogleDrive = $AllowGoogleDrive
+            AllowShareFile   = $AllowShareFile
+            AllowBox         = $AllowBox
+            AllowDropBox     = $AllowDropBox
+            AllowEgnyte      = $AllowEgnyte
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsExternalFileSharing' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }

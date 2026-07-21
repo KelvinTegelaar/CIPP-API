@@ -32,32 +32,41 @@ function Get-CIPPDlpComplianceFieldList {
         'ModernGroupLocation', 'ModernGroupLocationException'
     )
 
-    # Note: DLP rules have no 'Mode' parameter (that is policy-level). 'Policy' is the parent reference
-    # added at deploy time; it is not a comparable setting.
-    $Rule = @(
-        'Name', 'Policy', 'Comment', 'Disabled',
+    # Simple-mode condition/exception parameters, kept as their own list because they are mutually
+    # exclusive with AdvancedRule on New-/Set-DlpComplianceRule: a rule built with Purview's Advanced
+    # Rule editor carries its entire condition tree in the single AdvancedRule JSON blob, and sending
+    # any of these alongside it is rejected (see Resolve-CIPPDlpAdvancedRule).
+    $RuleConditions = @(
         'ContentContainsSensitiveInformation', 'ExceptIfContentContainsSensitiveInformation',
-        'ContentPropertyContainsWords', 'BlockAccess', 'BlockAccessScope',
-        'NotifyUser', 'NotifyEmailCustomText', 'NotifyEmailCustomSubject',
-        'NotifyPolicyTipCustomText', 'GenerateAlert', 'AlertProperties',
-        'GenerateIncidentReport', 'IncidentReportContent',
-        'AccessScope', 'From', 'FromMemberOf', 'FromAddressContainsWords',
-        'FromAddressMatchesPatterns', 'SentTo', 'SentToMemberOf',
-        'RecipientDomainIs', 'AnyOfRecipientAddressContainsWords',
-        'AnyOfRecipientAddressMatchesPatterns', 'AnyOfRecipientAddressDomainIs',
+        'ContentPropertyContainsWords', 'AccessScope',
+        'From', 'FromMemberOf', 'FromAddressContainsWords', 'FromAddressMatchesPatterns',
+        'SentTo', 'SentToMemberOf', 'RecipientDomainIs',
+        'AnyOfRecipientAddressContainsWords', 'AnyOfRecipientAddressMatchesPatterns',
+        'AnyOfRecipientAddressDomainIs',
         'ExceptIfFrom', 'ExceptIfFromMemberOf', 'ExceptIfFromAddressContainsWords',
         'ExceptIfFromAddressMatchesPatterns',
-        'AddRecipients', 'BlockMessage', 'GenerateAlertOn', 'IncidentReportTo',
-        'ReportSeverityLevel', 'RuleErrorAction',
         'ContentExtensionMatchesWords', 'DocumentNameMatchesPatterns',
         'DocumentNameMatchesWords', 'DocumentSizeOver',
         'ContentCharacterSetContainsWords', 'ContentFileTypeMatches'
     )
 
+    # Note: DLP rules have no 'Mode' parameter (that is policy-level). 'Policy' is the parent reference
+    # added at deploy time; it is not a comparable setting.
+    $Rule = @(
+        'Name', 'Policy', 'Comment', 'Disabled', 'AdvancedRule',
+        'BlockAccess', 'BlockAccessScope',
+        'NotifyUser', 'NotifyEmailCustomText', 'NotifyEmailCustomSubject',
+        'NotifyPolicyTipCustomText', 'GenerateAlert', 'AlertProperties',
+        'GenerateIncidentReport', 'IncidentReportContent',
+        'AddRecipients', 'BlockMessage', 'GenerateAlertOn', 'IncidentReportTo',
+        'ReportSeverityLevel', 'RuleErrorAction'
+    ) + $RuleConditions
+
     return [pscustomobject]@{
-        Policy   = $Policy
-        Rule     = $Rule
-        Location = @($Policy | Where-Object { $_ -like '*Location*' })
+        Policy         = $Policy
+        Rule           = $Rule
+        RuleConditions = $RuleConditions
+        Location       = @($Policy | Where-Object { $_ -like '*Location*' })
         # Valid -Mode input values for New-/Set-DlpCompliancePolicy. Transient/output-only states such as
         # 'PendingDeletion' are NOT accepted as input and must be dropped before deploy.
         ValidPolicyModes = @('Enable', 'TestWithNotifications', 'TestWithoutNotifications', 'Disable')
