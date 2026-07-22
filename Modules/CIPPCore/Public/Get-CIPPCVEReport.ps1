@@ -17,7 +17,7 @@ function Get-CIPPCVEReport {
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
         [Parameter(Mandatory = $true)]
-        [string]$UseReportDB
+        [bool]$UseReportDB
     )
 
     try {
@@ -27,7 +27,7 @@ function Get-CIPPCVEReport {
         $ExceptionsByCve = @{}
 
          # Retrieve CVEs from database
-        if ($UseReportDB -eq 'true'){
+        if ($UseReportDB -eq $true){
             $RawCveData    = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'DefenderCVEs' | Where-Object { $_.RowKey -ne 'DefenderCVEs-Count' }
             $AllCachedCves = $RawCveData.Data | ConvertFrom-Json
         } else {
