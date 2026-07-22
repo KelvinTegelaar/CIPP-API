@@ -14,9 +14,9 @@ function Invoke-ListCVEManagement {
 
     try {
         if ($UseReportDB -eq 'true') {
-            $GraphRequest = Get-CIPPCVEReport -TenantFilter $TenantFilter -UseReportDB $UseReportDB -ErrorAction Stop
+            $GraphRequest = Get-CIPPCVEReport -TenantFilter $TenantFilter -UseReportDB $true -ErrorAction Stop
         } else {
-            $GraphRequest = Get-CIPPCVEReport -TenantFilter $TenantFilter -UseReportDB 'false' -ErrorAction Stop
+            $GraphRequest = Get-CIPPCVEReport -TenantFilter $TenantFilter -UseReportDB $false -ErrorAction Stop
         }
         $StatusCode = [HttpStatusCode]::OK
         $SortedCves = $GraphRequest
