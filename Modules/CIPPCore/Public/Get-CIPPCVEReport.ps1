@@ -19,11 +19,10 @@ function Get-CIPPCVEReport {
     try {
         # Retrieve Exceptions from Exception database
         $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
-        $AllExceptions      = Get-CIPPAzDataTableEntity @CveExceptionsTable
-        $ExceptionsByCve    = @{}
+        $AllExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable
+        $ExceptionsByCve = @{}
 
-        # Retrieve CVEs from database
-        $RawCveData    = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'DefenderCVEs' | Where-Object { $_.RowKey -ne 'DefenderCVEs-Count' }
+        $RawCveData = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'DefenderCVEs' | Where-Object { $_.RowKey -ne 'DefenderCVEs-Count' }
         $AllCachedCves = $RawCveData.Data | ConvertFrom-Json
 
         # Filter results by Tenant
@@ -37,13 +36,10 @@ function Get-CIPPCVEReport {
                     [void]$RawCveItems.Add($Item)
                 }
             }
-        } else {
-            $TenantList = Get-Tenants | Where-Object defaultDomainName -eq $TenantFilter
-            foreach ($Item in $AllCachedCves) {
-                if ($Item.customerId -eq $TenantFilter) {
-                    [void]$RawCveItems.Add($Item)
-                }
-            }
+        }
+        else {
+            $TenantList = Get-Tenants -TenantFilter $TenantFilter
+            $RawCveItems.AddRange(@($AllCachedCves))
         }
 
         if ($RawCveItems.Count -eq 0) {
@@ -52,21 +48,21 @@ function Get-CIPPCVEReport {
 
         # Build filtered exception items
         foreach ($Ex in $AllExceptions) {
-            if ($TenantList.defaultDomainName -contains $Ex.customerId -or $Ex.customerId -eq 'ALL'){
+            if ($TenantList.defaultDomainName -contains $Ex.customerId -or $Ex.customerId -eq 'ALL') {
                 if (-not $ExceptionsByCve.ContainsKey($Ex.cveId)) {
                     $ExceptionsByCve[$Ex.cveId] = [System.Collections.Generic.List[object]]::new()
                 }
 
                 [void]$ExceptionsByCve[$Ex.cveId].Add([PSCustomObject]@{
-                    cveId              = $Ex.cveId
-                    customerId         = $Ex.customerId
-                    exceptionType      = $Ex.exceptionType
-                    exceptionSource    = $Ex.exceptionSource
-                    exceptionComment   = $Ex.exceptionComment
-                    exceptionCreatedBy = $Ex.exceptionCreatedBy
-                    exceptionDate      = $Ex.exceptionReadableDate
-                    exceptionExpiry    = $Ex.exceptionExpiry
-                })
+                        cveId              = $Ex.cveId
+                        customerId         = $Ex.customerId
+                        exceptionType      = $Ex.exceptionType
+                        exceptionSource    = $Ex.exceptionSource
+                        exceptionComment   = $Ex.exceptionComment
+                        exceptionCreatedBy = $Ex.exceptionCreatedBy
+                        exceptionDate      = $Ex.exceptionReadableDate
+                        exceptionExpiry    = $Ex.exceptionExpiry
+                    })
             }
         }
 
@@ -105,12 +101,18 @@ function Get-CIPPCVEReport {
             if ($Item.deviceDetailsJson) {
                 $Devices = ConvertFrom-Json $Item.deviceDetailsJson | Sort-Object -Property deviceName -Unique
                 foreach ($Dev in $Devices) {
-                        [void]$CveGroup.AffectedDevicesList.Add(@{ deviceName    = $Dev.deviceName })
-                        if($Dev.registryPaths){[void]$CveGroup.RegistryPathList.Add(@{ deviceName = $Dev.deviceName
-                                                                                       registryPaths = $Dev.registryPaths })}
-                        if($Dev.diskPaths){[void]$CveGroup.DiskPathList.Add(@{ deviceName = $Dev.deviceName
-                                                                               diskPaths = $Dev.diskPaths })}
-                        $CveGroup.TotalDeviceCount ++
+                    [void]$CveGroup.AffectedDevicesList.Add(@{ deviceName = $Dev.deviceName })
+                    if ($Dev.registryPaths) {
+                        [void]$CveGroup.RegistryPathList.Add(@{ deviceName = $Dev.deviceName
+                                registryPaths                              = $Dev.registryPaths
+                            })
+                    }
+                    if ($Dev.diskPaths) {
+                        [void]$CveGroup.DiskPathList.Add(@{ deviceName = $Dev.deviceName
+                                diskPaths                              = $Dev.diskPaths
+                            })
+                    }
+                    $CveGroup.TotalDeviceCount ++
                 }
             }
         }
@@ -129,49 +131,55 @@ function Get-CIPPCVEReport {
             $ExceptionDate = ''
             $ExceptionExpiry = ''
 
-            if ($ExceptionsByCve.ContainsKey($CveKey)){
-                $Exceptions         = @($ExceptionsByCve[$CveKey])
-                $HasException       = $true
-                $ExceptionStatus    = if ($Exceptions.customerId -contains "ALL") { "All" } else { "Partial" }
-                $ExceptionType      = @{ customerId = $Exceptions.customerId
-                                        exceptionType = $Exceptions.exceptionType }
-                $ExceptionComment   = @{ customerId = $Exceptions.customerId
-                                        exceptionComment = $Exceptions.exceptionComment }
+            if ($ExceptionsByCve.ContainsKey($CveKey)) {
+                $Exceptions = @($ExceptionsByCve[$CveKey])
+                $HasException = $true
+                $ExceptionStatus = if ($Exceptions.customerId -contains "ALL") { "All" } else { "Partial" }
+                $ExceptionType = @{ customerId = $Exceptions.customerId
+                    exceptionType              = $Exceptions.exceptionType
+                }
+                $ExceptionComment = @{ customerId = $Exceptions.customerId
+                    exceptionComment              = $Exceptions.exceptionComment
+                }
                 $ExceptionCreatedBy = @{ customerId = $Exceptions.customerId
-                                        exceptionCreatedBy = $Exceptions.exceptionCreatedBy }
-                $ExceptionDate      = @{ customerId = $Exceptions.customerId
-                                        exceptionDate = $Exceptions.exceptionDate }
-                $ExceptionExpiry    = @{ customerId = $Exceptions.customerId
-                                        exceptionExpiry = $Exceptions.exceptionExpiry }
+                    exceptionCreatedBy              = $Exceptions.exceptionCreatedBy
+                }
+                $ExceptionDate = @{ customerId = $Exceptions.customerId
+                    exceptionDate              = $Exceptions.exceptionDate
+                }
+                $ExceptionExpiry = @{ customerId = $Exceptions.customerId
+                    exceptionExpiry              = $Exceptions.exceptionExpiry
+                }
             }
 
             [void]$SortedCves.Add([PSCustomObject]@{
-                cveId                      = $Target.cveId
-                vulnerabilitySeverityLevel = $Target.vulnerabilitySeverityLevel
-                exploitabilityLevel        = $Target.exploitabilityLevel
-                softwareName               = $Target.softwareName
-                softwareVendor             = $Target.softwareVendor
-                softwareVersion            = $Target.softwareVersion
-                deviceCount                = $Target.TotalDeviceCount
-                tenantCount                = $Target.TotalTenantGroupCount
-                registryPaths              = $Target.RegistryPathList
-                diskPaths                  = $Target.DiskPathList
-                exceptionStatus            = $ExceptionStatus
-                hasException               = $HasException
-                affectedTenants            = $Target.AffectedTenantsList
-                affectedDevices            = $Target.AffectedDevicesList
-                exceptionType              = $ExceptionType
-                exceptionComment           = $ExceptionComment
-                exceptionCreatedBy         = $ExceptionCreatedBy
-                exceptionDate              = $ExceptionDate
-                exceptionExpiry            = $ExceptionExpiry
-                cacheTimeStamp             = $Target.lastUpdated
-            })
+                    cveId                      = $Target.cveId
+                    vulnerabilitySeverityLevel = $Target.vulnerabilitySeverityLevel
+                    exploitabilityLevel        = $Target.exploitabilityLevel
+                    softwareName               = $Target.softwareName
+                    softwareVendor             = $Target.softwareVendor
+                    softwareVersion            = $Target.softwareVersion
+                    deviceCount                = $Target.TotalDeviceCount
+                    tenantCount                = $Target.TotalTenantGroupCount
+                    registryPaths              = $Target.RegistryPathList
+                    diskPaths                  = $Target.DiskPathList
+                    exceptionStatus            = $ExceptionStatus
+                    hasException               = $HasException
+                    affectedTenants            = $Target.AffectedTenantsList
+                    affectedDevices            = $Target.AffectedDevicesList
+                    exceptionType              = $ExceptionType
+                    exceptionComment           = $ExceptionComment
+                    exceptionCreatedBy         = $ExceptionCreatedBy
+                    exceptionDate              = $ExceptionDate
+                    exceptionExpiry            = $ExceptionExpiry
+                    cacheTimeStamp             = $Target.lastUpdated
+                })
         }
 
         return  $SortedCves | Sort-Object -Property cveId
 
-    } catch {
+    }
+    catch {
         Write-LogMessage -API 'CVEReport' -tenant $TenantFilter -message "Failed to generate CVE report: $($_.Exception.Message)" -sev Error
         throw
     }

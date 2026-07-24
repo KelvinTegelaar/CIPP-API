@@ -49,6 +49,9 @@ Function Invoke-AddDlpCompliancePolicyTemplate {
             $RuleParams = foreach ($Rule in $AssociatedRules) {
                 $RuleClean = Format-CIPPCompliancePolicyParams -Source $Rule -AllowedFields $RuleAllowedFields
                 $RuleClean.Remove('Policy') | Out-Null  # added at deploy time, not stored
+                # Advanced-mode rules keep only the AdvancedRule JSON blob, simple-mode rules only the
+                # flat condition params - the cmdlets reject a mix (see Resolve-CIPPDlpAdvancedRule).
+                $RuleClean = Resolve-CIPPDlpAdvancedRule -Source $Rule -RuleParams $RuleClean
                 foreach ($SitField in @('ContentContainsSensitiveInformation', 'ExceptIfContentContainsSensitiveInformation')) {
                     if ($RuleClean.ContainsKey($SitField)) {
                         $RuleClean[$SitField] = @(ConvertTo-CIPPSensitiveInformationType -SensitiveInformation $RuleClean[$SitField])

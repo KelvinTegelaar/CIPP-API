@@ -45,11 +45,9 @@ function Add-CIPPDelegatedPermission {
     } else {
         if (!$RequiredResourceAccess -and $TemplateId) {
             Write-Information "Adding delegated permissions for template $TemplateId"
-            $TemplateTable = Get-CIPPTable -TableName 'templates'
-            $Filter = "RowKey eq '$TemplateId' and PartitionKey eq 'AppApprovalTemplate'"
-            $Template = (Get-CIPPAzDataTableEntity @TemplateTable -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
-            $ApplicationId = $Template.AppId
-            $Permissions = $Template.Permissions
+            $TemplatePermissions = Get-CIPPAppApprovalPermissions -TemplateId $TemplateId
+            $ApplicationId = $TemplatePermissions.ApplicationId
+            $Permissions = $TemplatePermissions.Permissions
             $NoTranslateRequired = $true
             $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
             foreach ($AppId in $Permissions.PSObject.Properties.Name) {

@@ -2198,9 +2198,12 @@ function Invoke-NinjaOneTenantSync {
                 $ScanGroupName   = "$ScanGroupPrefix$TenantFilter"
                 $NinjaBaseUrl    = "https://$($Configuration.Instance)/api/v2"
 
-                $ResolvedScanGroup = Resolve-NinjaOneCveScanGroup -Configuration $Configuration -TenantFilter $TenantFilter -ScanGroupName $ScanGroupName -NinjaBaseUrl $NinjaBaseUrl -Token $Token
+                $CveScanGroups = Invoke-RestMethod -Method Get -Uri "$NinjaBaseUrl/vulnerability/scan-groups" -Headers @{ Authorization = "Bearer $($Token.access_token)" } -TimeoutSec 30 -ErrorAction Stop
+                $ResolvedScanGroup = $CveScanGroups | Where-Object { $_.groupName -eq $ScanGroupName }
 
-                if ($ResolvedScanGroup) {
+                if (-not $ResolvedScanGroup) {
+                    Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync skipped — scan group '$ScanGroupName' not found" -sev 'Warning'
+                } else {
                     $ResolvedScanGroupId = $ResolvedScanGroup.id
                     $DeviceIdHeader      = $ResolvedScanGroup.deviceIdHeader
                     $CveIdHeader         = $ResolvedScanGroup.cveIdHeader

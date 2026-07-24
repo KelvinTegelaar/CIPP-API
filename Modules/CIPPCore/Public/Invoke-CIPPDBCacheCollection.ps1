@@ -142,6 +142,7 @@ function Invoke-CIPPDBCacheCollection {
             'SPOTenant'
             'SPOTenantSyncClientRestriction'
             'SharePointSiteUsage'
+            'SiteActivity'
             'OneDriveUsage'
         )
         Teams              = @(

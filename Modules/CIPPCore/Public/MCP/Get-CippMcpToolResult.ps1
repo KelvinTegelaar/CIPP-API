@@ -35,17 +35,28 @@ function Get-CippMcpToolResult {
     $PathItem = $Spec['paths']["/api/$ToolName"]
     $Method = if ($PathItem -and $PathItem.Contains('post')) { 'POST' } else { 'GET' }
 
-    # Flatten the MCP arguments object into a parameter hashtable.
+    # Flatten the MCP arguments object into a parameter hashtable. Arguments may arrive as a
+    # dictionary or as a PSCustomObject depending on how the JSON-RPC body was deserialized.
     $ArgHash = @{}
-    if ($Arguments) {
+    if ($Arguments -is [System.Collections.IDictionary]) {
+        foreach ($Entry in $Arguments.GetEnumerator()) {
+            $ArgHash[$Entry.Key] = $Entry.Value
+        }
+    } elseif ($Arguments) {
         foreach ($Prop in $Arguments.PSObject.Properties) {
             $ArgHash[$Prop.Name] = $Prop.Value
         }
     }
 
     # Clone caller headers (preserves the EasyAuth principal) and tag the origin for auditing.
+    # The Functions worker exposes Headers as Dictionary[string,string]; PSObject.Properties on a
+    # dictionary yields .NET members (Count, Keys, ...) rather than entries, dropping every header.
     $Headers = @{}
-    if ($Request.Headers) {
+    if ($Request.Headers -is [System.Collections.IDictionary]) {
+        foreach ($Entry in $Request.Headers.GetEnumerator()) {
+            $Headers[$Entry.Key] = $Entry.Value
+        }
+    } elseif ($Request.Headers) {
         foreach ($Header in $Request.Headers.PSObject.Properties) {
             $Headers[$Header.Name] = $Header.Value
         }

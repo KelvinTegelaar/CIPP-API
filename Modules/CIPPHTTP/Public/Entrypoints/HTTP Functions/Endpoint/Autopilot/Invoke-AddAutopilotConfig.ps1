@@ -12,6 +12,15 @@ function Invoke-AddAutopilotConfig {
     $Headers = $Request.Headers
     $Tenants = $Request.Body.selectedTenants.value
     $Profbod = [pscustomobject]$Request.Body
+
+    $NameCheck = Test-CIPPAutopilotProfileName -DisplayName $Request.Body.DisplayName
+    if (-not $NameCheck.IsValid) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{'Results' = $NameCheck.Message }
+            })
+    }
+
     $UserType = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }
     $DeploymentMode = if ($Profbod.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
 
