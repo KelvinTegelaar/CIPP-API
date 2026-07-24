@@ -153,9 +153,14 @@ function Test-CIPPAuditLogRules {
             $ExpandedTenants = Expand-CIPPTenantGroups -TenantFilter $Tenants
             # Check if the TenantFilter matches any tenant in the expanded list or AllTenants
             if ($ExpandedTenants.value -contains $TenantFilter -or $ExpandedTenants.value -contains 'AllTenants') {
+                # Expand tenant groups in exclusions the same way as inclusions
+                $ExcludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue
+                if ($ExcludedTenants) {
+                    $ExcludedTenants = @(Expand-CIPPTenantGroups -TenantFilter $ExcludedTenants)
+                }
                 [pscustomobject]@{
                     Tenants       = $Tenants
-                    Excluded      = ($ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                    Excluded      = $ExcludedTenants
                     Conditions    = $ConfigEntry.Conditions
                     Actions       = $ConfigEntry.Actions
                     LogType       = $ConfigEntry.Type

@@ -32,6 +32,8 @@ function New-CIPPIntuneAppDeployment {
         if (-not $PackageId) {
             throw "PackageName/packagename is required for WinGet apps but was not found in the config for '$AppDisplayName'."
         }
+        # Default to system when InstallAsSystem is absent so existing templates keep their behavior
+        $RunAsAccount = if ($null -ne $AppConfig.InstallAsSystem -and -not [bool]$AppConfig.InstallAsSystem) { 'user' } else { 'system' }
         $IntuneBody = [ordered]@{
             '@odata.type'       = '#microsoft.graph.winGetApp'
             'displayName'       = "$AppDisplayName"
@@ -39,7 +41,7 @@ function New-CIPPIntuneAppDeployment {
             'packageIdentifier' = "$PackageId"
             'installExperience' = @{
                 '@odata.type'  = 'microsoft.graph.winGetAppInstallExperience'
-                'runAsAccount' = 'system'
+                'runAsAccount' = $RunAsAccount
             }
         }
     }

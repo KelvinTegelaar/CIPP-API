@@ -305,6 +305,11 @@
     "description": "Sharing links and external grants on SharePoint and OneDrive files and folders"
   },
   {
+    "type": "SharePointPermissions",
+    "friendlyName": "SharePoint Permissions",
+    "description": "Site and document library permission assignments, including libraries that no longer inherit and grants to tenant-wide claims such as Everyone except external users"
+  },
+  {
     "type": "OfficeActivations",
     "friendlyName": "Office Activations",
     "description": "Microsoft 365 app activation counts per user per platform (Windows, Mac, Mobile)"

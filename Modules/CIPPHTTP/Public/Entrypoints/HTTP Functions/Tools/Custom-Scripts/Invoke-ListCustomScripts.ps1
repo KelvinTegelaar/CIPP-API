@@ -35,12 +35,13 @@ function Invoke-ListCustomScripts {
             $Filter = "PartitionKey eq 'CustomScript'"
             $AllScripts = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
-            # Group by ScriptGuid and get latest version of each
+            # Group by ScriptGuid and get latest version of each, sorted by name for pickers
             $Scripts = $AllScripts |
                 Group-Object -Property ScriptGuid |
                 ForEach-Object {
                     $_.Group | Sort-Object -Property Version -Descending | Select-Object -First 1
-                }
+                } |
+                Sort-Object -Property ScriptName
         }
 
         $Body = $Scripts

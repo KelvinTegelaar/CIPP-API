@@ -29,7 +29,9 @@ function Start-AuditLogIngestion {
             if (!$ConfigEntry.excludedTenants) {
                 $ConfigEntry | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force
             } else {
-                $ConfigEntry.excludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json
+                # Expand tenant groups in exclusions so group members match on defaultDomainName
+                $Excluded = $ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue
+                $ConfigEntry.excludedTenants = if ($Excluded) { @(Expand-CIPPTenantGroups -TenantFilter $Excluded) } else { @() }
             }
             $ConfigEntry.Tenants = $ConfigEntry.Tenants | ConvertFrom-Json
             $ConfigEntry

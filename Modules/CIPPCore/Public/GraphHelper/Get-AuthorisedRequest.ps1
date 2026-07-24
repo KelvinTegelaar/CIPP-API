@@ -5,7 +5,7 @@ function Get-AuthorisedRequest {
     Internal
     #>
     [CmdletBinding()]
-    Param(
+    param(
         [string]$TenantID,
         [string]$Uri
     )
@@ -13,7 +13,7 @@ function Get-AuthorisedRequest {
         $TenantID = $env:TenantID
     }
 
-    if ($Uri -like 'https://graph.microsoft.com/beta/contracts*' -or $Uri -like '*/customers/*' -or $Uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $Uri -like '*/tenantRelationships/*' -or $Uri -like '*/security/partner/*') {
+    if ($Uri -like 'https://graph.microsoft.com/beta/contracts*' -or $Uri -like '*/customers/*' -or $Uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $Uri -like '*/tenantRelationships/*' -or $Uri -like '*/security/partner/*' -or $Uri -like '*/organization') {
         return $true
     }
     $Tenant = Get-Tenants -IncludeErrors -TenantFilter $TenantID | Where-Object { $_.Excluded -eq $false }

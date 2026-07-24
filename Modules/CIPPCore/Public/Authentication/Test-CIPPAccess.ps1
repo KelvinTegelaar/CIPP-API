@@ -236,8 +236,12 @@ function Test-CIPPAccess {
             $CanManageAppSettings = $Permissions -contains 'CIPP.AppSettings.ReadWrite'
             $HasAnyPermission = ($Permissions | Measure-Object).Count -gt 0
 
-            # Forced SSO migration: non-dismissible prompt when migration env var is set
-            if ($env:CIPP_SSO_MIGRATION_APPID -and $CanManageAppSettings) {
+            # Forced SSO migration: non-dismissible prompt when migration env var is set.
+            # Suppressed until initial setup (SAM app) is complete — the setup wizard has
+            # to run first, and ExecSSOSetup needs the SAM app to create the CIPP-SSO
+            # registration. Same env check that drives the setupCompleted alert.
+            $InitialSetupComplete = $env:ApplicationID -and $env:ApplicationID -ne 'LongApplicationID'
+            if ($env:CIPP_SSO_MIGRATION_APPID -and $CanManageAppSettings -and $InitialSetupComplete) {
                 $MeResponse['forceSsoMigration'] = @{
                     appId  = $env:CIPP_SSO_MIGRATION_APPID
                     status = 'pending'
