@@ -115,7 +115,14 @@ function Start-UserTasksOrchestrator {
                 }
 
                 if ($task.Tenant -eq 'AllTenants') {
-                    $ExcludedTenants = $task.excludedTenants -split ','
+                    $ExcludedTenants = @($task.excludedTenants -split ',' | Where-Object { $_ })
+                    if ($task.excludedTenantGroups) {
+                        # Expand excluded tenant groups at runtime so membership changes are honored
+                        $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        if ($ExcludedGroups) {
+                            $ExcludedTenants = @($ExcludedTenants + (Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ })
+                        }
+                    }
                     Write-Host "Excluded Tenants from this task: $ExcludedTenants"
                     $AllTenantCommands = foreach ($Tenant in $TenantList | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
                         $NewParams = $task.Parameters.Clone()
@@ -148,7 +155,14 @@ function Start-UserTasksOrchestrator {
                         # Expand the tenant group to individual tenants
                         $ExpandedTenants = Expand-CIPPTenantGroups -TenantFilter $TenantFilterForExpansion
 
-                        $ExcludedTenants = $task.excludedTenants -split ','
+                        $ExcludedTenants = @($task.excludedTenants -split ',' | Where-Object { $_ })
+                        if ($task.excludedTenantGroups) {
+                            # Expand excluded tenant groups at runtime so membership changes are honored
+                            $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
+                            if ($ExcludedGroups) {
+                                $ExcludedTenants = @($ExcludedTenants + (Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ })
+                            }
+                        }
                         Write-Host "Excluded Tenants from this task: $ExcludedTenants"
 
                         $GroupTenantCommands = foreach ($ExpandedTenant in $ExpandedTenants | Where-Object { $_.value -notin $ExcludedTenants }) {

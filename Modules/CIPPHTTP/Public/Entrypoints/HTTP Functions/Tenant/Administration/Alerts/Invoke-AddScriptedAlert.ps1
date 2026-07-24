@@ -28,15 +28,19 @@ function Invoke-AddScriptedAlert {
                 $AllTenantsList = Get-Tenants -IncludeErrors
                 $computedExcluded = @($AllTenantsList.defaultDomainName | Where-Object { $_ -notin $targetDomains })
 
-                $existingExcluded = @()
+                $existingEntries = @()
                 if ($Request.Body.PSObject.Properties['excludedTenants'] -and $Request.Body.excludedTenants) {
-                    $existingExcluded = @($Request.Body.excludedTenants | ForEach-Object { $_.value ?? $_ })
+                    $existingEntries = @($Request.Body.excludedTenants)
                 }
+                # Keep user-picked groups as typed objects so Add-CIPPScheduledTask stores them
+                # for runtime expansion instead of flattening them into the domain list
+                $excludedGroupEntries = @($existingEntries | Where-Object { $_.type -eq 'Group' })
+                $existingExcluded = @($existingEntries | Where-Object { $_.type -ne 'Group' } | ForEach-Object { $_.value ?? $_ })
                 $mergedExcluded = @($existingExcluded + $computedExcluded) | Where-Object { $_ } | Select-Object -Unique
 
                 $excludedValue = @($mergedExcluded | ForEach-Object {
                         [PSCustomObject]@{ value = $_; label = $_ }
-                    })
+                    }) + $excludedGroupEntries
                 $Request.Body | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value $excludedValue -Force
             }
 

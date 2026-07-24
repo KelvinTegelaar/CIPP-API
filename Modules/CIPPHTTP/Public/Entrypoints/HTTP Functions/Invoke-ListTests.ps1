@@ -165,8 +165,17 @@ function Invoke-ListTests {
         }
 
         # Add descriptions from markdown files to each test result
+        $MdFileLookup = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($MdPath in [System.IO.Directory]::EnumerateFiles($TestsRootPath, '*.md', [System.IO.SearchOption]::AllDirectories)) {
+            $MdKey = [System.IO.Path]::GetFileNameWithoutExtension($MdPath)
+            if (-not $MdFileLookup.ContainsKey($MdKey)) {
+                $MdFileLookup[$MdKey] = $MdPath
+            }
+        }
+
         foreach ($TestResult in $TestResultsData.TestResults) {
-            $MdFile = [System.IO.Directory]::EnumerateFiles($TestsRootPath, "*$($TestResult.RowKey).md", [System.IO.SearchOption]::AllDirectories) | Select-Object -First 1
+            $MdFile = $null
+            [void]$MdFileLookup.TryGetValue(('Invoke-CippTest{0}' -f $TestResult.RowKey), [ref]$MdFile)
 
             if ($MdFile) {
                 try {

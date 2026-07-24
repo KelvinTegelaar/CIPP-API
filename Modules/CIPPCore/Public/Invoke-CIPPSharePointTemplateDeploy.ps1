@@ -5,14 +5,15 @@ function Invoke-CIPPSharePointTemplateDeploy {
 
     .DESCRIPTION
     Provisions every site template in a SharePoint provisioning template against one tenant.
-    When the template is marked createAsTeams the container is created as a full Microsoft
-    Team first (via the Teams API, so channels and Teams functionality stay intact) and the
-    document libraries are added to the backing SharePoint site afterwards. Otherwise a plain
-    SharePoint site is created. Root-level and per-library permissions are applied by group
+    Each site has a siteType (sharePoint or teams). When overrideSiteType is set, the template
+    siteType is used for every site; otherwise each site's own siteType applies. Teams sites
+    are created via the Teams API so channels and Teams functionality stay intact, then
+    document libraries are added to the backing SharePoint site. SharePoint sites use the
+    plain site-creation path. Root-level and per-library permissions are applied by group
     display name, optionally creating missing groups as security groups.
 
     .PARAMETER TemplateData
-    The deserialized template object (templateName, createAsTeams, createMissingGroups, siteTemplates)
+    The deserialized template object (templateName, siteType, overrideSiteType, createMissingGroups, siteTemplates)
 
     .PARAMETER SiteOwner
     UPN set as the owner of every site or Team the template creates
@@ -48,9 +49,6 @@ function Invoke-CIPPSharePointTemplateDeploy {
         Set-CIPPAsyncDeploymentStep -JobId $DeploymentId -Name $TenantFilter -StepIndex $Index -StepStatus $Status -Message $Message
     }
 
-    # Extracts the group display name from a stored permission entry: the frontend saves plain
-    # strings, but older entries may be autocomplete objects ({label,value}).
-    $GetPrincipalName = { param($Principal) $Principal.value ?? $Principal }
     $CreateMissingGroups = $TemplateData.createMissingGroups -eq $true
     $SkipIfExists = $TemplateData.skipIfExists -eq $true
 
@@ -58,6 +56,17 @@ function Invoke-CIPPSharePointTemplateDeploy {
     $SiteIndex = -1
     foreach ($SiteTemplate in $TemplateData.siteTemplates) {
         $SiteIndex++
+        # Resolve site type: template override wins, otherwise the site's own siteType.
+        # Select controls may persist {label,value}; unwrap to the string value.
+        $RawSiteType = if ($TemplateData.overrideSiteType -eq $true) {
+            $TemplateData.siteType
+        } else {
+            $SiteTemplate.siteType
+        }
+        $SiteType = [string]($RawSiteType.value ?? $RawSiteType)
+        if ($SiteType -notin @('sharePoint', 'teams')) { $SiteType = 'sharePoint' }
+        $IsTeams = $SiteType -eq 'teams'
+
         # Step counter for this site: prerequisites, create, site permissions, then one step
         # per library. Shown as 'Step x of y' in the live progress messages.
         $TotalSteps = 3 + @($SiteTemplate.libraries).Count
@@ -67,7 +76,7 @@ function Invoke-CIPPSharePointTemplateDeploy {
             # libraries or permission changes are applied to anything this run didn't create.
             if ($SkipIfExists) {
                 $AlreadyExists = $false
-                if ($TemplateData.createAsTeams -eq $true) {
+                if ($IsTeams) {
                     $EscapedName = $SiteTemplate.displayName -replace "'", "''"
                     $ExistingGroups = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/groups?`$filter=displayName eq '$EscapedName'&`$select=id" -tenantid $TenantFilter -AsApp $true
                     $AlreadyExists = @($ExistingGroups).Count -gt 0
@@ -91,30 +100,76 @@ function Invoke-CIPPSharePointTemplateDeploy {
             }
             # Create the container first: a full Team (Teams API) so all Teams functionality
             # stays intact, or a plain SharePoint site otherwise.
-            if ($TemplateData.createAsTeams -eq $true) {
+            if ($IsTeams) {
                 Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 2 of ${TotalSteps}: Creating Team and waiting for its SharePoint site"
                 $Team = New-CIPPTeam -DisplayName $SiteTemplate.displayName -Description ($SiteTemplate.description ?? '') -Owner $SiteOwner -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                 $SiteUrl = $Team.SiteUrl
                 $Results.Add("[$TenantFilter] Created Team '$($SiteTemplate.displayName)' with site $SiteUrl")
+                $RawLanguage = [string](($SiteTemplate.language.value ?? $SiteTemplate.language))
+                if ($RawLanguage -and $RawLanguage -ne 'default') {
+                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): site language '$RawLanguage' was not applied — Teams sites use the tenant default SharePoint language.")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': language LCID $RawLanguage skipped for Teams site (tenant default applies)." -sev Info
+                }
             } else {
                 Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 2 of ${TotalSteps}: Creating SharePoint site"
-                $null = New-CIPPSharepointSite -SiteName $SiteTemplate.displayName -SiteDescription ($SiteTemplate.description ?? $SiteTemplate.displayName) -SiteOwner $SiteOwner -TemplateName 'Team' -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+                $SiteParams = @{
+                    SiteName        = $SiteTemplate.displayName
+                    SiteDescription = ($SiteTemplate.description ?? $SiteTemplate.displayName)
+                    SiteOwner       = $SiteOwner
+                    TenantFilter    = $TenantFilter
+                    Headers         = $Headers
+                    APIName         = $APIName
+                }
+                # Team site vs Communication — createAs may persist {label,value}; default Team.
+                $RawCreateAs = [string]($SiteTemplate.createAs.value ?? $SiteTemplate.createAs)
+                $SiteParams.TemplateName = if ($RawCreateAs -in @('Team', 'Communication')) {
+                    $RawCreateAs
+                } else {
+                    'Team'
+                }
+                # language "default" (or missing) → Lcid 0 so New-CIPPSharepointSite uses tenant default.
+                # A specific language → pass that LCID. Always pass Lcid so we don't fall back to the
+                # helper's legacy English default used by AddSite.
+                $RawLanguage = [string](($SiteTemplate.language.value ?? $SiteTemplate.language))
+                $ParsedLcid = 0
+                if ($RawLanguage -and $RawLanguage -ne 'default') {
+                    if (-not [int]::TryParse($RawLanguage, [ref]$ParsedLcid) -or $ParsedLcid -le 0) {
+                        throw "Site language '$RawLanguage' on '$($SiteTemplate.displayName)' is not a valid LCID."
+                    }
+                }
+                $SiteParams.Lcid = $ParsedLcid
+                $null = New-CIPPSharepointSite @SiteParams
                 $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
                 $SitePath = $SiteTemplate.displayName -replace ' ' -replace '[^A-Za-z0-9-]'
                 $SiteUrl = "https://$($SharePointInfo.TenantName).sharepoint.com/sites/$SitePath"
                 $Results.Add("[$TenantFilter] Created site '$($SiteTemplate.displayName)' at $SiteUrl")
             }
 
+            # Track template-defined sub-steps (site perms, libraries, library perms). A failure
+            # here must mark this site step failed — do not report succeeded after swallowing errors.
+            $StepFailures = [System.Collections.Generic.List[string]]::new()
+
             # Root-level permissions, grouped per permission level.
+            # Set-CIPPSharePointObjectPermission only throws when nothing was granted. Partial
+            # outcomes (some Failed / Not found) still return a message — treat those as failures.
             Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 3 of ${TotalSteps}: Applying site permissions"
             $RootPermGroups = @($SiteTemplate.permissions) | Group-Object -Property permissionLevel
             foreach ($PermGroup in $RootPermGroups) {
-                $GroupNames = @($PermGroup.Group | ForEach-Object { & $GetPrincipalName $_.principal }) | Where-Object { $_ }
+                # Frontend may store principals as plain strings or autocomplete {label,value} objects.
+                $GroupNames = @($PermGroup.Group | ForEach-Object { $_.principal.value ?? $_.principal }) | Where-Object { $_ }
                 try {
                     $PermResult = Set-CIPPSharePointObjectPermission -SiteUrl $SiteUrl -PermissionLevel $PermGroup.Name -GroupNames $GroupNames -CreateMissingGroups:$CreateMissingGroups -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                     $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): $PermResult")
+                    if ($PermResult -match 'Failed for|Not found by display name') {
+                        $FailMsg = "Root permissions ($($PermGroup.Name)): $PermResult"
+                        $StepFailures.Add($FailMsg)
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
+                    }
                 } catch {
-                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): root permissions failed - $($_.Exception.Message)")
+                    $FailMsg = "Root permissions ($($PermGroup.Name)) failed: $($_.Exception.Message)"
+                    $StepFailures.Add($FailMsg)
+                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): $FailMsg")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
                 }
             }
 
@@ -129,21 +184,41 @@ function Invoke-CIPPSharePointTemplateDeploy {
 
                     $LibPermGroups = @($Library.permissions) | Group-Object -Property permissionLevel
                     foreach ($PermGroup in $LibPermGroups) {
-                        $GroupNames = @($PermGroup.Group | ForEach-Object { & $GetPrincipalName $_.principal }) | Where-Object { $_ }
+                        $GroupNames = @($PermGroup.Group | ForEach-Object { $_.principal.value ?? $_.principal }) | Where-Object { $_ }
                         try {
                             $PermResult = Set-CIPPSharePointObjectPermission -SiteUrl $SiteUrl -ListId $NewLibrary.ListId -PermissionLevel $PermGroup.Name -GroupNames $GroupNames -CreateMissingGroups:$CreateMissingGroups -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                             $Results.Add("[$TenantFilter] $($SiteTemplate.displayName)/$($Library.name): $PermResult")
+                            if ($PermResult -match 'Failed for|Not found by display name') {
+                                $FailMsg = "Library '$($Library.name)' permissions ($($PermGroup.Name)): $PermResult"
+                                $StepFailures.Add($FailMsg)
+                                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
+                            }
                         } catch {
-                            $Results.Add("[$TenantFilter] $($SiteTemplate.displayName)/$($Library.name): permissions failed - $($_.Exception.Message)")
+                            $FailMsg = "Library '$($Library.name)' permissions ($($PermGroup.Name)) failed: $($_.Exception.Message)"
+                            $StepFailures.Add($FailMsg)
+                            $Results.Add("[$TenantFilter] $($SiteTemplate.displayName)/$($Library.name): $FailMsg")
+                            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
                         }
                     }
                 } catch {
-                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): library '$($Library.name)' failed - $($_.Exception.Message)")
+                    $FailMsg = "Library '$($Library.name)' failed: $($_.Exception.Message)"
+                    $StepFailures.Add($FailMsg)
+                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): $FailMsg")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
                 }
             }
-            Update-DeployStep -Index $SiteIndex -Status 'succeeded' -Message "Completed all $TotalSteps steps. Deployed at $SiteUrl"
+
+            if ($StepFailures.Count -gt 0) {
+                $FailureSummary = $StepFailures -join '; '
+                $Results.Add("[$TenantFilter] Site '$($SiteTemplate.displayName)' completed with failures at $SiteUrl")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)' deployed with failures: $FailureSummary" -sev Error
+                Update-DeployStep -Index $SiteIndex -Status 'failed' -Message $FailureSummary
+            } else {
+                Update-DeployStep -Index $SiteIndex -Status 'succeeded' -Message "Completed all $TotalSteps steps. Deployed at $SiteUrl"
+            }
         } catch {
             $Results.Add("[$TenantFilter] Failed to deploy '$($SiteTemplate.displayName)': $($_.Exception.Message)")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to deploy SharePoint template site '$($SiteTemplate.displayName)': $($_.Exception.Message)" -sev Error
             Update-DeployStep -Index $SiteIndex -Status 'failed' -Message $_.Exception.Message
         }
     }

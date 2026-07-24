@@ -12,7 +12,9 @@ function Invoke-ListCVEManagement {
     $TenantFilter = $Request.Query.tenantFilter
     $UseReportDB = $Request.Query.UseReportDB
 
-    if ($UseReportDB -eq 'true') {
+    # AllTenants always uses the reporting database - the live path queries a single tenant's
+    # Defender TVM API and cannot fan out across tenants within one request.
+    if ($UseReportDB -eq 'true' -or $TenantFilter -eq 'AllTenants') {
         try {
             $GraphRequest = Get-CIPPCVEReport -TenantFilter $TenantFilter -ErrorAction Stop
             $StatusCode = [HttpStatusCode]::OK
