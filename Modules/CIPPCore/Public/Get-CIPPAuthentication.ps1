@@ -30,9 +30,12 @@ function Get-CIPPAuthentication {
         # TenantID must be the tenant GUID: a domain name (contoso.onmicrosoft.com)
         # works for token requests but breaks API integrations that compare or store
         # tenant ids. Resolve a domain to its GUID via the unauthenticated OpenID
-        # metadata endpoint.
+        # metadata endpoint. Skip the deployment template's placeholder value —
+        # fresh deployments hold 'tenantId' until the setup wizard writes real
+        # secrets (same placeholder set as Initialize-CIPPAuth).
         $GuidPattern = '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$'
-        if ($env:TenantID -and $env:TenantID -notmatch $GuidPattern) {
+        $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
+        if ($env:TenantID -and $env:TenantID -notmatch $GuidPattern -and $env:TenantID -notmatch $PlaceholderPattern) {
             $StoredTenantID = $env:TenantID
             try {
                 $OpenIdConfig = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$StoredTenantID/v2.0/.well-known/openid-configuration" -ErrorAction Stop
