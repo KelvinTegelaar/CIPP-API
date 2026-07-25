@@ -188,8 +188,15 @@ function Add-CIPPScheduledTask {
                     $task.ScheduledTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
                 }
             }
-            $excludedTenants = if ($task.excludedTenants.value) {
-                $task.excludedTenants.value -join ','
+            # Split exclusions by type (same pattern as Tenant/TenantGroup): plain tenants are
+            # comma-joined, groups are stored as JSON and expanded at runtime by the orchestrator
+            $ExcludedEntries = @($task.excludedTenants | Where-Object { $_.value })
+            $excludedTenants = @($ExcludedEntries | Where-Object { $_.type -ne 'Group' }).value -join ','
+            $ExcludedGroupEntries = @($ExcludedEntries | Where-Object { $_.type -eq 'Group' } | ForEach-Object {
+                    [PSCustomObject]@{ value = $_.value; label = $_.label; type = 'Group' }
+                })
+            $excludedTenantGroups = if ($ExcludedGroupEntries.Count -gt 0) {
+                ConvertTo-Json -InputObject $ExcludedGroupEntries -Compress -Depth 5
             }
 
             # Handle tenant filter - support both single tenant and tenant groups
@@ -222,6 +229,7 @@ function Add-CIPPScheduledTask {
                 RowKey               = [string]$RowKey
                 Tenant               = [string]$tenantFilter
                 excludedTenants      = [string]$excludedTenants
+                excludedTenantGroups = [string]$excludedTenantGroups
                 Name                 = [string]$task.Name
                 Command              = [string]$RequestedCommand
                 Parameters           = [string]$Parameters

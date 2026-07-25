@@ -32,19 +32,32 @@ function Invoke-ExecSharePointTemplate {
                     break
                 }
 
-                $GUID = $Request.Body.TemplateId ?? (New-Guid).GUID
+                # Frontend sends TemplateId only when editing (add.js). Create/copy omit it.
+                $GUID = $Request.Body.TemplateId
+                if ([string]::IsNullOrWhiteSpace([string]$GUID)) {
+                    $GUID = (New-Guid).GUID
+                    $Existing = $null
+                } else {
+                    $GUID = [string]$GUID
+                    $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$GUID'"
+                }
 
-                # Keep only the template payload; strip transport/metadata fields.
-                $TemplateObject = $Request.Body | Select-Object -Property * -ExcludeProperty Action, TemplateId
+                # Never trust client-supplied audit fields.
+                $TemplateObject = $Request.Body | Select-Object -Property * -ExcludeProperty Action, TemplateId, GUID, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
 
-                # Stamp audit metadata. CreatedBy/On only on first save, UpdatedBy/On on every save.
-                if (-not $Request.Body.TemplateId) {
+                if ($Existing) {
+                    $ExistingData = $Existing.JSON | ConvertFrom-Json
+                    $TemplateObject | Add-Member -NotePropertyName 'CreatedBy' -NotePropertyValue ($ExistingData.CreatedBy ?? $User.userDetails ?? 'CIPP-API') -Force
+                    $TemplateObject | Add-Member -NotePropertyName 'CreatedOn' -NotePropertyValue ($ExistingData.CreatedOn ?? (Get-Date).ToString('o')) -Force
+                } else {
                     $TemplateObject | Add-Member -NotePropertyName 'CreatedBy' -NotePropertyValue ($User.userDetails ?? 'CIPP-API') -Force
                     $TemplateObject | Add-Member -NotePropertyName 'CreatedOn' -NotePropertyValue (Get-Date).ToString('o') -Force
                 }
                 $TemplateObject | Add-Member -NotePropertyName 'UpdatedBy' -NotePropertyValue ($User.userDetails ?? 'CIPP-API') -Force
                 $TemplateObject | Add-Member -NotePropertyName 'UpdatedOn' -NotePropertyValue (Get-Date).ToString('o') -Force
                 $TemplateObject | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
+                # Always stamp the engine version this API understands; clients cannot omit or override.
+                $TemplateObject | Add-Member -NotePropertyName 'templateEngineVersion' -NotePropertyValue 1 -Force
 
                 $TemplateJson = $TemplateObject | ConvertTo-Json -Depth 10 -Compress
 
@@ -125,45 +138,38 @@ function Invoke-ExecSharePointTemplate {
                 $TemplateData = $Template.JSON | ConvertFrom-Json
                 if (-not $SiteOwner) { throw 'A site/team owner is required to deploy this template.' }
 
-                # Expand AllTenants when selected in the drawer.
-                $Tenants = foreach ($Tenant in $Request.Body.selectedTenants) {
-                    if ($Tenant.defaultDomainName -eq 'AllTenants') {
-                        (Get-Tenants).defaultDomainName
-                    } else {
-                        $Tenant.defaultDomainName
-                    }
+                $TenantFilter = $Request.Body.tenantFilter
+                if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+                    throw 'A tenant is required to deploy this template.'
                 }
-                $Tenants = @($Tenants | Sort-Object -Unique)
 
-                # Pre-create a status row per tenant so the frontend can poll live progress
-                # (GDAP-onboarding style) from the moment the deployment is queued.
-                $JobId = New-CIPPAsyncDeployment -Names $Tenants -StepTitles @(@($TemplateData.siteTemplates) | ForEach-Object { $_.displayName }) -Source 'SharePointTemplate'
+                # Pre-create a status row so the frontend can poll live progress from queue time.
+                $JobId = New-CIPPAsyncDeployment -Names @($TenantFilter) -StepTitles @(@($TemplateData.siteTemplates) | ForEach-Object { $_.displayName }) -Source 'SharePointTemplate'
 
                 # Site and Team provisioning is slow (Teams sites can take a minute each), so the
-                # actual work runs per tenant on the durable queue instead of in this request.
-                $Queue = New-CippQueueEntry -Name "SharePoint Template - $($TemplateData.templateName)" -TotalTasks $Tenants.Count
-                $Batch = foreach ($TenantFilter in $Tenants) {
-                    [pscustomobject]@{
-                        FunctionName = 'ExecSharePointTemplateDeploy'
-                        Tenant       = $TenantFilter
-                        TemplateId   = $TemplateId
-                        SiteOwner    = $SiteOwner
-                        DeploymentId = $JobId
-                        QueueId      = $Queue.RowKey
-                    }
-                }
+                # actual work runs on the durable queue instead of in this request.
+                $Queue = New-CippQueueEntry -Name "SharePoint Template - $($TemplateData.templateName)" -TotalTasks 1
                 $InputObject = @{
                     OrchestratorName = 'SharePointTemplateOrchestrator'
-                    Batch            = @($Batch)
+                    Batch            = @(
+                        [pscustomobject]@{
+                            FunctionName = 'ExecSharePointTemplateDeploy'
+                            Tenant       = $TenantFilter
+                            TemplateId   = $TemplateId
+                            SiteOwner    = $SiteOwner
+                            DeploymentId = $JobId
+                            QueueId      = $Queue.RowKey
+                        }
+                    )
                     SkipLog          = $true
                 }
                 $null = Start-CIPPOrchestrator -InputObject $InputObject
 
                 $Body = @{
-                    Results      = "Deployment of template '$($TemplateData.templateName)' queued for $($Tenants.Count) tenant(s)."
+                    Results      = "Deployment of template '$($TemplateData.templateName)' queued for $TenantFilter."
                     DeploymentId = $JobId
                 }
-                Write-LogMessage -headers $Headers -API $APIName -message "Queued SharePoint template deployment '$($TemplateData.templateName)' for $($Tenants.Count) tenant(s)" -Sev 'Info'
+                Write-LogMessage -headers $Headers -API $APIName -message "Queued SharePoint template deployment '$($TemplateData.templateName)' for $TenantFilter" -Sev 'Info'
             } catch {
                 $Body = @{ Results = "Failed to queue template deployment: $($_.Exception.Message)" }
                 $StatusCode = [HttpStatusCode]::BadRequest

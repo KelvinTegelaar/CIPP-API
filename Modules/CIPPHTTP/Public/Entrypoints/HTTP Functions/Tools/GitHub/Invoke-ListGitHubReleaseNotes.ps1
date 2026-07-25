@@ -13,7 +13,7 @@
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $Owner = 'KelvinTegelaar'
+    $Owner = 'CyberDrain'
     $Repository = 'CIPP'
 
     if (-not $Owner) {

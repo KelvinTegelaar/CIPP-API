@@ -40,6 +40,14 @@ function Invoke-ListCopilotSettings {
         $BulkResults = @()
     }
 
+    # Web search is a three-state setting (values match the config.office.com policy options);
+    # the other settings are plain 1/0 toggles.
+    $WebSearchStates = @{
+        '2' = 'Enabled in Copilot and Copilot Chat'
+        '1' = 'Disabled in Copilot and Copilot Chat'
+        '0' = 'Disabled in Copilot Work mode, Enabled in Copilot Chat'
+    }
+
     $Results = foreach ($Setting in $PolicySettings) {
         $Response = $BulkResults | Where-Object { $_.id -eq $Setting.id }
         $Value = $null
@@ -47,6 +55,8 @@ function Invoke-ListCopilotSettings {
             $Value = $Response.body.value
             $StateText = if ([string]::IsNullOrEmpty($Value)) {
                 'Not configured'
+            } elseif ($Setting.id -eq 'microsoft.copilot.allowwebsearch' -and $WebSearchStates[[string]$Value]) {
+                $WebSearchStates[[string]$Value]
             } elseif ($Value -eq '1') {
                 'Enabled'
             } elseif ($Value -eq '0') {
