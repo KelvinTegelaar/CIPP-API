@@ -1048,6 +1048,56 @@ namespace CIPP
                 Interlocked.Increment(ref _invalidations);
         }
 
+        /// <summary>
+        /// Invalidate every cached token for a tenant, across all scopes, client IDs and
+        /// grant types. Call this after a consent change (CPV refresh/reset, permission
+        /// update) so the next request re-acquires a token carrying the new scopes instead
+        /// of serving a stale one that predates the consent.
+        /// Keys are built as "tenantId|scope|app-or-delegated|clientId|grantType", so the
+        /// tenant is matched on the first segment.
+        /// </summary>
+        public static int RemoveByTenant(string tenantId)
+        {
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return 0;
+
+            var prefix = tenantId.Trim().ToLowerInvariant() + "|";
+            var removed = 0;
+
+            foreach (var kvp in _entries)
+            {
+                if (kvp.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                    _entries.TryRemove(kvp.Key, out _))
+                {
+                    removed++;
+                    Interlocked.Increment(ref _invalidations);
+                }
+            }
+
+            return removed;
+        }
+
+        /// <summary>
+        /// Invalidate the entire token cache. Intended for global consent/app changes
+        /// (for example rotating the SAM application) where per-tenant invalidation is
+        /// not sufficient.
+        /// </summary>
+        public static int Clear()
+        {
+            var removed = 0;
+
+            foreach (var kvp in _entries)
+            {
+                if (_entries.TryRemove(kvp.Key, out _))
+                {
+                    removed++;
+                    Interlocked.Increment(ref _invalidations);
+                }
+            }
+
+            return removed;
+        }
+
         public static int CompactExpired(int refreshSkewSeconds = 0, int maxRemovals = 1000)
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();

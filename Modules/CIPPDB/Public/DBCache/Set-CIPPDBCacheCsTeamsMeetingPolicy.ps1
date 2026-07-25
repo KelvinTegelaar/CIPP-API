@@ -4,7 +4,7 @@ function Set-CIPPDBCacheCsTeamsMeetingPolicy {
         Caches the Teams Global Meeting Policy
 
     .DESCRIPTION
-        Calls Get-CsTeamsMeetingPolicy via New-TeamsRequest and writes the
+        Calls Get-CsTeamsMeetingPolicy via New-TeamsRequestV2 and writes the
         result into the CippReportingDB under Type 'CsTeamsMeetingPolicy'.
         Used by CIS tests 8.5.1 - 8.5.9.
 

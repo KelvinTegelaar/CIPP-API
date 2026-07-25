@@ -55,24 +55,58 @@ function New-TeamsRequestV2 {
         Resolve the per-tenant ConfigApi host + X-MS-Forest via Teams.Tenant/tenants and use
         them (and, for federation/ACS types, the OcsPowershellWebservice target headers).
 
+    .PARAMETER Path
+        Address a ConfigAPI surface outside Skype.Policy/configurations by raw path, e.g.
+        'Skype.Ncs/locations' or 'Teams.PlatformService/v2/ApplicationInstances'. Mutually
+        exclusive with -Type. Reuses the same token, headers and error handling.
+
+    .PARAMETER Method
+        Path only. HTTP verb. Default GET.
+
+    .PARAMETER Body
+        Path only. Request body; hashtables/objects are serialized to JSON.
+
+    .PARAMETER QueryParameters
+        Path only. Hashtable appended as a query string; null/empty values are skipped.
+
+    .PARAMETER AdditionalHeaders
+        Path only. Extra request headers merged over the defaults, for surfaces that need
+        their own (e.g. Skype.TelephoneNumberMgmt expects x-ms-tnm-applicationid).
+
     .EXAMPLE
         New-TeamsRequestV2 -TenantFilter $t -Type TeamsMeetingPolicy -Action Set -Parameters @{ AllowAnonymousUsersToJoinMeeting = $false }
+
+    .EXAMPLE
+        New-TeamsRequestV2 -TenantFilter $t -Path 'Skype.Ncs/locations'
 
     .FUNCTIONALITY
         Internal
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Configuration')]
     param(
         [Parameter(Mandatory)] $TenantFilter,
-        [Parameter(Mandatory)] [string] $Type,
-        [ValidateSet('Get', 'Set', 'New', 'Remove')] [string] $Action = 'Get',
-        [string] $Identity = 'Global',
-        [hashtable] $Parameters = @{},
-        [switch] $ListAll,
+        [Parameter(Mandatory, ParameterSetName = 'Configuration')] [string] $Type,
+        [Parameter(ParameterSetName = 'Configuration')] [ValidateSet('Get', 'Set', 'New', 'Remove')] [string] $Action = 'Get',
+        [Parameter(ParameterSetName = 'Configuration')] [string] $Identity = 'Global',
+        [Parameter(ParameterSetName = 'Configuration')] [hashtable] $Parameters = @{},
+        [Parameter(ParameterSetName = 'Configuration')] [switch] $ListAll,
+        [Parameter(ParameterSetName = 'Configuration')] [switch] $NoRead,
+        [Parameter(Mandatory, ParameterSetName = 'Path')] [string] $Path,
+        [Parameter(ParameterSetName = 'Path')] [ValidateSet('GET', 'POST', 'PUT', 'PATCH', 'DELETE')] [string] $Method = 'GET',
+        [Parameter(ParameterSetName = 'Path')] $Body,
+        [Parameter(ParameterSetName = 'Path')] [hashtable] $QueryParameters = @{},
+        [Parameter(ParameterSetName = 'Path')] [hashtable] $AdditionalHeaders = @{},
         [switch] $AsApp,
-        [switch] $NoRead,
         [switch] $UseServiceDiscovery
     )
+
+    $IsPathRequest = $PSCmdlet.ParameterSetName -eq 'Path'
+
+    # Same scope gate the Graph helpers apply: refuse tenants outside management scope or
+    # explicitly excluded. Without this, a caller could reach a tenant CIPP should not touch.
+    if (-not (Get-AuthorisedRequest -TenantID $TenantFilter)) {
+        throw (Get-AuthorisedRequestError -TenantID $TenantFilter -Context 'Teams request')
+    }
 
     # ---- cmdlet-noun -> ConfigAPI type aliases (noun != type) ----
     $TypeAliases = @{
@@ -82,8 +116,8 @@ function New-TeamsRequestV2 {
     $FederationTypes = @('TenantFederationSettings', 'TeamsAcsFederationConfiguration')
 
     # normalize Type: strip Get-/Set-/New-/Remove-Cs prefix, then alias
-    $ConfigType = $Type -replace '^(Get|Set|New|Remove|Grant|Revoke)-Cs', ''
-    if ($TypeAliases.ContainsKey($ConfigType)) { $ConfigType = $TypeAliases[$ConfigType] }
+    $ConfigType = if ($IsPathRequest) { '' } else { $Type -replace '^(Get|Set|New|Remove|Grant|Revoke)-Cs', '' }
+    if ($ConfigType -and $TypeAliases.ContainsKey($ConfigType)) { $ConfigType = $TypeAliases[$ConfigType] }
 
     # ---- token ----
     $TokenSplat = @{ tenantid = $TenantFilter; scope = '48ac35b8-9aa8-4d74-927d-1f4a14a0b239/.default' }
@@ -122,6 +156,37 @@ function New-TeamsRequestV2 {
         $Headers['x-ms-tenant-id'] = $TenantFilter
     }
     $Query = if ($ConfigType -in $FederationTypes -and $AdminDomain) { "?adminDomain=$AdminDomain" } else { '' }
+
+    # ---- raw path surfaces (Skype.Ncs, Skype.TelephoneNumberMgmt, Teams.PlatformService, ...) ----
+    if ($IsPathRequest) {
+        # The Teams admin center sends these on every ConfigAPI surface, not just Skype.Policy.
+        $Headers['X-Requested-With'] = 'XMLHttpRequest'
+        $Headers['Content-Type'] = 'application/json'
+        foreach ($Key in $AdditionalHeaders.Keys) { $Headers[$Key] = $AdditionalHeaders[$Key] }
+
+        $Uri = 'https://{0}/{1}' -f $ApiHost, $Path.TrimStart('/')
+        if ($QueryParameters.Count -gt 0) {
+            $Pairs = foreach ($Key in $QueryParameters.Keys) {
+                if ($null -eq $QueryParameters[$Key] -or $QueryParameters[$Key] -eq '') { continue }
+                '{0}={1}' -f [uri]::EscapeDataString($Key), [uri]::EscapeDataString([string]$QueryParameters[$Key])
+            }
+            if ($Pairs) { $Uri = '{0}?{1}' -f $Uri, ($Pairs -join '&') }
+        }
+
+        $Splat = @{ Uri = $Uri; Method = $Method; Headers = $Headers }
+        if ($null -ne $Body) {
+            $Splat['Body'] = if ($Body -is [string]) { $Body } else { $Body | ConvertTo-Json -Depth 25 -Compress }
+            $Splat['ContentType'] = 'application/json'
+        }
+
+        $StatusCode = $null
+        $RespBody = Invoke-CIPPRestMethod @Splat -SkipHttpErrorCheck -StatusCodeVariable StatusCode
+        if ([int]$StatusCode -ge 400) {
+            $Detail = if ($RespBody -is [string]) { $RespBody } elseif ($null -ne $RespBody) { $RespBody | ConvertTo-Json -Compress -Depth 10 } else { '' }
+            throw "Teams ConfigApi $Method $Path failed: $StatusCode $Detail"
+        }
+        return $RespBody
+    }
 
     switch ($Action) {
 
