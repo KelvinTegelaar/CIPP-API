@@ -162,7 +162,8 @@ function Set-CIPPSharePointObjectPermission {
             $null = New-GraphPostRequest -uri "$AssignmentUri/addroleassignment(principalid=$($EnsuredUser.Id),roledefid=$RoleDefId)" -tenantid $TenantFilter -scope $Scope -type POST -body '{}' -AddedHeaders $JsonAccept -UseCertificate -AsApp $true
             $Granted.Add($Principal.Label)
         } catch {
-            $Failed.Add("$($Principal.Label) ($($_.Exception.Message))")
+            # Principals here are always groups, resolved from display names above.
+            $Failed.Add("$($Principal.Label) - $(Get-CIPPSharePointErrorMessage -ErrorMessage $_.Exception.Message -IsGroup)")
         }
     }
 
@@ -171,7 +172,8 @@ function Set-CIPPSharePointObjectPermission {
         $Messages.Add("Granted $PermissionLevel on $TargetLabel to $($Granted -join ', ').")
     }
     if ($Failed.Count -gt 0) {
-        $Messages.Add("Failed for $($Failed -join '; ').")
+        # The explanations are already sentences, so trim before adding the closing period.
+        $Messages.Add("Failed for $(($Failed -join '; ').TrimEnd('.')).")
     }
     if ($NotFound.Count -gt 0) {
         $Messages.Add("Not found by display name: $($NotFound -join ', ').")
