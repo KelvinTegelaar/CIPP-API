@@ -240,6 +240,12 @@ function Update-CIPPDynamicTenantGroups {
         # Bust the TenantGroups cache so subsequent calls reflect the changes made above
         Get-TenantGroups -SkipCache | Out-Null
 
+        # Roles scoped to a tenant group resolve through this membership, so the cached access
+        # scope rules are stale too. Only worth the write when membership actually moved.
+        if ($TotalMembersAdded -gt 0 -or $TotalMembersRemoved -gt 0) {
+            Clear-CippAccessScopeCache
+        }
+
         return @{
             MembersAdded    = $TotalMembersAdded
             MembersRemoved  = $TotalMembersRemoved

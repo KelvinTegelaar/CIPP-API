@@ -35,11 +35,17 @@ function Invoke-ExecCAExclusion {
             throw "Policy with ID $PolicyId not found in tenant $TenantFilter."
         }
 
-        $VacationGroupName = "Vacation Exclusion - $($Policy.displayName)"
-        $escapedGroupName = $VacationGroupName -replace "'", "''"
-        $groupFilter = "displayName eq '$escapedGroupName' and mailEnabled eq false and securityEnabled eq true"
-        $encodedGroupFilter = [System.Uri]::EscapeDataString($groupFilter)
-        $VacationGroups = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$filter=$encodedGroupFilter" -tenantid $TenantFilter)
+        $GroupNamePrefix = 'Vacation Exclusion - '
+        $VacationGroupName = "$GroupNamePrefix$($Policy.displayName)"
+        if ($VacationGroupName.Length -gt 120) {
+            $PolicyIdSuffix = " [$($Policy.id.Substring(0, 8))]"
+            $MaxNameLength = 120 - $GroupNamePrefix.Length - $PolicyIdSuffix.Length
+            $VacationGroupName = '{0}{1}{2}' -f $GroupNamePrefix, $Policy.displayName.Substring(0, $MaxNameLength).TrimEnd(), $PolicyIdSuffix
+        }
+
+        $EscapedGroupName = $VacationGroupName -replace "'", "''"
+        $GroupFilter = [System.Uri]::EscapeDataString("displayName eq '$EscapedGroupName' and mailEnabled eq false and securityEnabled eq true")
+        $VacationGroups = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$count=true&`$filter=$GroupFilter" -tenantid $TenantFilter -ComplexFilter)
 
         $DuplicateGroupWarning = $null
         if ($VacationGroups.Count -eq 0) {
@@ -64,7 +70,7 @@ function Invoke-ExecCAExclusion {
         }
 
         if ($Policy.conditions.users.excludeGroups -notcontains $GroupId) {
-            Set-CIPPCAExclusion -TenantFilter $TenantFilter -ExclusionType 'Add' -PolicyId $PolicyId -Groups @{ value = @($GroupId); addedFields = @{ displayName = @("Vacation Exclusion - $($Policy.displayName)") } } -Headers $Headers
+            Set-CIPPCAExclusion -TenantFilter $TenantFilter -ExclusionType 'Add' -PolicyId $PolicyId -Groups @{ value = @($GroupId); addedFields = @{ displayName = @($VacationGroupName) } } -Headers $Headers
         }
 
         $PolicyName = $Policy.displayName

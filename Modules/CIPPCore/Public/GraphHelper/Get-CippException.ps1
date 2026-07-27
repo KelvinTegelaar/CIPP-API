@@ -5,12 +5,13 @@ function Get-CippException {
     )
 
     [PSCustomObject]@{
-        Message         = $Exception.Exception.Message
-        NormalizedError = Get-NormalizedError -message $Exception.Exception.Message
-        Position        = $Exception.InvocationInfo.PositionMessage
-        StackTrace      = ($Exception.ScriptStackTrace | Out-String)
-        ScriptName      = $Exception.InvocationInfo.ScriptName
-        LineNumber      = $Exception.InvocationInfo.ScriptLineNumber
-        Category        = $Exception.CategoryInfo.ToString()
+        Message         = $Exception.Exception.Message ?? 'Not available'
+        NormalizedError = (Get-NormalizedError -message $Exception.Exception.Message) ?? 'Not available'
+        RawError        = ($Exception.Exception.Data['RawErrorBody'] ?? $Exception.ErrorDetails.Message ?? $Exception.Exception.Response.Content) ?? 'Not available'
+        Position        = $Exception.InvocationInfo.PositionMessage ?? 'Not available'
+        StackTrace      = ($Exception.ScriptStackTrace | Out-String) ?? 'Not available'
+        ScriptName      = $Exception.InvocationInfo.ScriptName ?? 'Not available'
+        LineNumber      = $Exception.InvocationInfo.ScriptLineNumber ?? 'Not available'
+        Category        = ($Exception.CategoryInfo.ToString()) ?? 'Not available'
     }
 }

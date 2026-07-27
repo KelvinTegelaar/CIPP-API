@@ -1,7 +1,7 @@
 function Invoke-ExecDnsConfig {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         Tenant.Domains.ReadWrite
     #>

@@ -110,7 +110,9 @@ function Set-CIPPAssignedApplication {
                 if ($PSBoundParameters.ContainsKey('GroupIds') -and $GroupIds) {
                     $resolvedGroupIds = $GroupIds
                 } elseif ($GroupName) {
-                    $GroupNames = $GroupName.Split(',')
+                    # Trim: the group name comes from free-text fields, and stray whitespace around
+                    # a name would otherwise silently resolve to no groups at all.
+                    $GroupNames = @($GroupName.Split(',').Trim() | Where-Object { $_ })
                     $resolvedGroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName' -tenantid $TenantFilter | ForEach-Object {
                         $Group = $_
                         foreach ($SingleName in $GroupNames) {
@@ -126,7 +128,8 @@ function Set-CIPPAssignedApplication {
                 # assignments legitimately resolve to no include groups here.
                 $IncludeRequested = $GroupName -or ($GroupIds -and @($GroupIds).Count -gt 0)
                 if (-not $resolvedGroupIds -and $IncludeRequested) {
-                    throw 'No matching groups resolved for assignment request.'
+                    $SearchedFor = if ($GroupNames) { @($GroupNames) -join ', ' } else { @($GroupIds) -join ', ' }
+                    throw "No matching groups resolved for assignment request. Searched for: $SearchedFor"
                 }
 
                 foreach ($Group in $resolvedGroupIds) {
