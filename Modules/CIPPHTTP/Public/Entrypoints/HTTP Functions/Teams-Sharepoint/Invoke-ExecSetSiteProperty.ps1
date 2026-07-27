@@ -98,8 +98,51 @@ function Invoke-ExecSetSiteProperty {
             $ActionDescription = "Set storage quota to $($MaxGB) GB (warning at $([math]::Round($PropertiesToSet['StorageWarningLevel'] / 1024, 2)) GB)"
         }
 
+        # Default Sharing Link Type (0=None/tenant default, 1=Direct, 2=Internal, 3=AnonymousAccess)
+        $RawLinkType = Get-FieldValue $Request.Body.DefaultSharingLinkType
+        if ($null -ne $RawLinkType -and '' -ne $RawLinkType) {
+            $LinkTypeLabels = @{ 0 = 'Tenant default'; 1 = 'Direct (specific people)'; 2 = 'Internal (organization)'; 3 = 'Anyone (anonymous)' }
+            $LinkTypeValue = [int]$RawLinkType
+            if ($LinkTypeValue -notin 0, 1, 2, 3) {
+                throw "Invalid DefaultSharingLinkType '$LinkTypeValue'. Valid values: 0 (tenant default), 1 (Direct), 2 (Internal), 3 (AnonymousAccess)"
+            }
+            $PropertiesToSet['DefaultSharingLinkType'] = $LinkTypeValue
+            $ActionDescription = "Set default sharing link type to '$($LinkTypeLabels[$LinkTypeValue])'"
+        }
+
+        # Default Link Permission (0=None/tenant default, 1=View, 2=Edit)
+        $RawLinkPerm = Get-FieldValue $Request.Body.DefaultLinkPermission
+        if ($null -ne $RawLinkPerm -and '' -ne $RawLinkPerm) {
+            $LinkPermLabels = @{ 0 = 'Tenant default'; 1 = 'View'; 2 = 'Edit' }
+            $LinkPermValue = [int]$RawLinkPerm
+            if ($LinkPermValue -notin 0, 1, 2) {
+                throw "Invalid DefaultLinkPermission '$LinkPermValue'. Valid values: 0 (tenant default), 1 (View), 2 (Edit)"
+            }
+            $PropertiesToSet['DefaultLinkPermission'] = $LinkPermValue
+            if ($ActionDescription) { $ActionDescription += "; default link permission '$($LinkPermLabels[$LinkPermValue])'" }
+            else { $ActionDescription = "Set default link permission to '$($LinkPermLabels[$LinkPermValue])'" }
+        }
+
+        # Anonymous link expiration (requires override flag)
+        if ($null -ne $Request.Body.AnonymousLinkExpirationInDays -and '' -ne $Request.Body.AnonymousLinkExpirationInDays) {
+            $ExpDays = [int]$Request.Body.AnonymousLinkExpirationInDays
+            if ($ExpDays -lt 1) { throw 'AnonymousLinkExpirationInDays must be at least 1' }
+            $PropertiesToSet['OverrideTenantAnonymousLinkExpirationPolicy'] = $true
+            $PropertiesToSet['AnonymousLinkExpirationInDays'] = $ExpDays
+            if ($ActionDescription) { $ActionDescription += "; anonymous links expire after $ExpDays days" }
+            else { $ActionDescription = "Set anonymous link expiration to $ExpDays days" }
+        }
+
+        # Restricted Access Control (requires SharePoint Advanced Management licensing)
+        $RawRAC = Get-FieldValue $Request.Body.RestrictedAccessControl
+        if ($null -ne $RawRAC -and '' -ne $RawRAC) {
+            $RACValue = [bool]$RawRAC
+            $PropertiesToSet['RestrictedAccessControl'] = $RACValue
+            $ActionDescription = if ($RACValue) { 'Enabled restricted access control (members only)' } else { 'Disabled restricted access control' }
+        }
+
         if ($PropertiesToSet.Count -eq 0) {
-            throw 'No valid properties specified. Provide one of: LockState, SharingCapability, StorageMaximumLevel'
+            throw 'No valid properties specified. Provide one of: LockState, SharingCapability, StorageMaximumLevelGB, DefaultSharingLinkType, DefaultLinkPermission, AnonymousLinkExpirationInDays, RestrictedAccessControl'
         }
 
         $PatchBody = $PropertiesToSet | ConvertTo-Json -Depth 5
@@ -121,6 +164,9 @@ function Invoke-ExecSetSiteProperty {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $ErrorText = $ErrorMessage.NormalizedError
+        if ($ErrorText -match 'license|Advanced Management|not enabled for this tenant') {
+            $ErrorText = "This setting requires SharePoint Advanced Management licensing, which this tenant does not appear to have. Original error: $ErrorText"
+        }
         $Results = "Failed to update site property for '$SiteLabel'. Error: $ErrorText"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
 
