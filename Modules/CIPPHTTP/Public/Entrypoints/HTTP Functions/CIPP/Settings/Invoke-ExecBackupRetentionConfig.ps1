@@ -1,7 +1,7 @@
 function Invoke-ExecBackupRetentionConfig {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.AppSettings.ReadWrite
     #>

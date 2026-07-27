@@ -78,18 +78,7 @@ function Invoke-CIPPStandardIntuneTemplate {
 
     # Fallback: infer type from RAWJson content when stored template has no Type
     if (-not $TemplateType) {
-        try {
-            $parsedRaw = $rawJsonFromTemplate | ConvertFrom-Json -ErrorAction SilentlyContinue
-            $odataType = $parsedRaw.'@odata.type'
-            $TemplateType = if ($null -ne $parsedRaw.settings -and $null -ne $parsedRaw.technologies) { 'Catalog' }
-                elseif ($null -ne $parsedRaw.scheduledActionsForRule -or $odataType -match 'CompliancePolicy') { 'deviceCompliancePolicies' }
-                elseif ($odataType -match 'windowsDriverUpdateProfile') { 'windowsDriverUpdateProfiles' }
-                elseif ($odataType -match 'ManagedApp|managedAppProtection') { 'AppProtection' }
-                elseif ($odataType -match 'deviceConfiguration|#microsoft\.graph\.\w+Configuration$') { 'Device' }
-                else { $null }
-        } catch {
-            $TemplateType = $null
-        }
+        $TemplateType = Get-CIPPIntuneTemplateType -Type $TemplateType -RawJson $rawJsonFromTemplate
         if ($TemplateType) {
             Write-Information "[IntuneTemplate][$Tenant] Inferred template type '$TemplateType' from content for '$displayname'"
         } else {

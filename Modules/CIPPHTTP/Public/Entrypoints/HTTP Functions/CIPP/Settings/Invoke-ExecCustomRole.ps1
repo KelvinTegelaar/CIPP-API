@@ -269,6 +269,12 @@ function Invoke-ExecCustomRole {
         }
     }
 
+    # Role definitions feed the access scope rules cached on every worker. Bump the shared version
+    # stamp so the change lands within seconds rather than waiting out the rule cache TTL.
+    if ($Action -in @('AddUpdate', 'Clone', 'Delete')) {
+        Clear-CippAccessScopeCache
+    }
+
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body

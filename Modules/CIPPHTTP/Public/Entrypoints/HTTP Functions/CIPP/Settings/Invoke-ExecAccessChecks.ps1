@@ -48,9 +48,12 @@ function Invoke-ExecAccessChecks {
                             TenantId                  = $Tenant.customerId
                             TenantName                = $Tenant.displayName
                             DefaultDomainName         = $Tenant.defaultDomainName
+                            TenantType                = if ($Tenant.delegatedPrivilegeStatus -eq 'directTenant') { 'Direct' } else { 'GDAP' }
+                            ServiceAccount            = $Tenant.directTenantUserPrincipalName
+                            ServiceAccountLastAuth    = $Tenant.directTenantAuthDate
                             GraphStatus               = 'Not run yet'
                             ExchangeStatus            = 'Not run yet'
-                            GDAPRoles                 = ''
+                            AssignedRoles             = ''
                             MissingRoles              = ''
                             LastRun                   = ''
                             GraphTest                 = ''
@@ -63,7 +66,9 @@ function Invoke-ExecAccessChecks {
                             $Data = @($TenantCheck.Data | ConvertFrom-Json -ErrorAction Stop)
                             $TenantResult.GraphStatus = $Data.GraphStatus
                             $TenantResult.ExchangeStatus = $Data.ExchangeStatus
-                            $TenantResult.GDAPRoles = $Data.GDAPRoles
+                            # Fall back to the old property name so checks cached before the rename
+                            # keep rendering until the tenant is checked again.
+                            $TenantResult.AssignedRoles = $Data.AssignedRoles ?? $Data.GDAPRoles
                             $TenantResult.MissingRoles = $Data.MissingRoles
                             $TenantResult.LastRun = $Data.LastRun
                             $TenantResult.GraphTest = $Data.GraphTest
@@ -71,6 +76,11 @@ function Invoke-ExecAccessChecks {
                             $TenantResult.OrgManagementRoles = $Data.OrgManagementRoles ? @($Data.OrgManagementRoles) : @()
                             $TenantResult.OrgManagementRolesMissing = $Data.OrgManagementRolesMissing ? @($Data.OrgManagementRolesMissing) : @()
                             $TenantResult.OrgManagementRepairNeeded = $Data.OrgManagementRolesMissing.Count -gt 0
+                            # The check reads the account live, so it also backfills direct tenants
+                            # onboarded before the service account was recorded on the tenant.
+                            if ($Data.ServiceAccount) {
+                                $TenantResult.ServiceAccount = $Data.ServiceAccount
+                            }
                         }
                         $TenantResult
                     }
