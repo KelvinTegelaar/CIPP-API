@@ -137,6 +137,6 @@ function New-GraphBulkRequest {
         Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         return $ReturnedData.responses
     } else {
-        Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
+        Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Graph bulk request')
     }
 }

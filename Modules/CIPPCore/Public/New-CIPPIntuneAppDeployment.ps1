@@ -116,8 +116,14 @@ function New-CIPPIntuneAppDeployment {
 
     $BaseUri = 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps'
 
-    # Check if app already exists (any type with matching display name)
-    $ApplicationList = New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.DisplayName -eq $AppConfig.Applicationname }
+    # Check if app already exists (any type with matching display name). Office is a singleton per
+    # tenant and Graph names it 'Microsoft 365 Apps for Windows 10 and later' regardless of what the
+    # template calls it, so match that one on type instead or it is redeployed on every run.
+    $ApplicationList = if ($AppType -eq 'OfficeApp') {
+        New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.officeSuiteApp' }
+    } else {
+        New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.DisplayName -eq $AppConfig.Applicationname }
+    }
     if ($ApplicationList.displayname.count -ge 1) {
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "$($AppConfig.Applicationname) exists. Skipping this application" -Sev 'Info'
         return $null
@@ -195,14 +201,11 @@ function New-CIPPIntuneAppDeployment {
             $NewApp = Add-CIPPW32ScriptApplication -TenantFilter $TenantFilter -Properties ([PSCustomObject]$Properties)
         }
         'OfficeApp' {
-            # Strip read-only properties that Graph API won't accept on create
-            $ObjBody = $IntuneBody
-            if ($ObjBody -is [string]) { $ObjBody = $ObjBody | ConvertFrom-Json -Depth 100 }
-            $ReadOnlyProps = @('id', 'createdDateTime', 'lastModifiedDateTime', 'uploadState', 'publishingState', 'isAssigned', 'roleScopeTagIds', 'dependentAppCount', 'supersedingAppCount', 'supersededAppCount', 'committedContentVersion', 'fileName', 'size', 'assignments@odata.context', 'assignments', 'AppAssignment', 'AppExclude')
-            foreach ($prop in $ReadOnlyProps) {
-                if ($ObjBody.PSObject.Properties[$prop]) {
-                    $ObjBody.PSObject.Properties.Remove($prop)
-                }
+            # Templates built in the wizard carry the individual Office fields rather than a
+            # pre-built IntuneBody, so build the body the same way Invoke-AddOfficeApp does.
+            $ObjBody = Get-CIPPOfficeAppBody -Config $AppConfig
+            if (-not $ObjBody) {
+                throw "No Office configuration could be built from the supplied settings for '$($AppConfig.Applicationname)'."
             }
             $NewApp = New-GraphPostRequest -Uri $BaseUri -tenantid $TenantFilter -Body (ConvertTo-Json -InputObject $ObjBody -Depth 10) -Type POST
         }

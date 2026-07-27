@@ -106,7 +106,7 @@ function Invoke-ExecGDAPInvite {
                 }
             } catch {
                 $Message = 'Error creating GDAP relationship, failed at step: ' + $Step
-                Write-Host "GDAP ERROR: $($_.InvocationInfo.PositionMessage)"
+                Write-Information "GDAP ERROR: on line $($_.InvocationInfo.PositionMessage) | $(($_ | ConvertTo-Json -Compress))"
 
                 if ($Step -eq 'Creating GDAP relationship' -and $_.Exception.Message -match 'The user (principal) does not have the required permissions to perform the specified action on the resource.') {
                     $Message = 'Error creating GDAP relationship, ensure that all users have MFA enabled and enforced without exception. Please see the Microsoft Partner Security Requirements documentation for more information. https://learn.microsoft.com/en-us/partner-center/security/partner-security-requirements'

@@ -4,7 +4,7 @@ function Set-CIPPDBCacheCsTenantFederationConfiguration {
         Caches the Teams Tenant Federation Configuration
 
     .DESCRIPTION
-        Calls Get-CsTenantFederationConfiguration via New-TeamsRequest and
+        Calls Get-CsTenantFederationConfiguration via New-TeamsRequestV2 and
         writes the result into the CippReportingDB under Type
         'CsTenantFederationConfiguration'. Used by CIS tests 8.2.1 (external
         domains allow/block list) and 8.2.4 (trial Teams tenants).

@@ -161,6 +161,11 @@ function Add-CIPPApplicationPermission {
             $Results.add("Failed to grant permissions in bulk: $(Get-NormalizedError -message $_.Exception.Message)")
         }
     }
+    if ($counter -gt 0) {
+        # App-only scopes changed; a cached client_credentials token still carries the old
+        # roles, so drop it rather than wait out its TTL.
+        $null = Clear-CippTokenCache -TenantFilter $TenantFilter
+    }
     "Added $counter Application permissions to $($ourSVCPrincipal.displayName)"
     return $Results
 }

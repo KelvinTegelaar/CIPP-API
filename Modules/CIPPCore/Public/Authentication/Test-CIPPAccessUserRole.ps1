@@ -24,15 +24,30 @@ function Test-CIPPAccessUserRole {
     $UserRoleTotalSw = [System.Diagnostics.Stopwatch]::StartNew()
     $Roles = @()
 
-    # Check AsyncLocal cache first (per-request cache)
+    # TTL for the in-memory tier, deliberately identical to the cacheAccessUserRoles window used
+    # below. That tier fronts the table cache, so leaving it without an expiry lets it outlive
+    # the cache it is caching: a role change, or a user being removed from an access group,
+    # would not take effect on a warm worker until the process recycled.
+    $RoleCacheMinutes = 15
+
+    # Check the in-memory cache first, discarding the entry once it is past its TTL
+    $CachedEntry = $null
     if ($script:CippUserRolesStorage -and $script:CippUserRolesStorage.Value -and $script:CippUserRolesStorage.Value.ContainsKey($User.userDetails)) {
-        $Roles = $script:CippUserRolesStorage.Value[$User.userDetails]
+        $CachedEntry = $script:CippUserRolesStorage.Value[$User.userDetails]
+        if ($null -eq $CachedEntry.Expires -or $CachedEntry.Expires -le (Get-Date).ToUniversalTime()) {
+            $script:CippUserRolesStorage.Value.Remove($User.userDetails)
+            $CachedEntry = $null
+        }
+    }
+
+    if ($CachedEntry) {
+        $Roles = $CachedEntry.Roles
     } else {
         # Check table storage cache (persistent cache)
         try {
             $swTableLookup = [System.Diagnostics.Stopwatch]::StartNew()
             $Table = Get-CippTable -TableName cacheAccessUserRoles
-            $Filter = "PartitionKey eq 'AccessUser' and RowKey eq '$($User.userDetails)' and Timestamp ge datetime'$((Get-Date).AddMinutes(-15).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))'"
+            $Filter = "PartitionKey eq 'AccessUser' and RowKey eq '$($User.userDetails)' and Timestamp ge datetime'$((Get-Date).AddMinutes(-$RoleCacheMinutes).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))'"
             $UserRole = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             $swTableLookup.Stop()
             $UserRoleTimings['TableLookup'] = $swTableLookup.Elapsed.TotalMilliseconds
@@ -44,9 +59,12 @@ function Test-CIPPAccessUserRole {
             Write-Information "Found cached user role for $($User.userDetails)"
             $Roles = $UserRole.Role | ConvertFrom-Json
 
-            # Store in AsyncLocal cache for this request
+            # Store in the in-memory cache, expiring in step with the table cache
             if ($script:CippUserRolesStorage -and $script:CippUserRolesStorage.Value) {
-                $script:CippUserRolesStorage.Value[$User.userDetails] = $Roles
+                $script:CippUserRolesStorage.Value[$User.userDetails] = @{
+                    Roles   = $Roles
+                    Expires = (Get-Date).ToUniversalTime().AddMinutes($RoleCacheMinutes)
+                }
             }
         } else {
             try {
@@ -114,9 +132,12 @@ function Test-CIPPAccessUserRole {
                 }
             }
 
-            # Store in AsyncLocal cache for this request
+            # Store in the in-memory cache, expiring in step with the table cache
             if ($script:CippUserRolesStorage -and $script:CippUserRolesStorage.Value) {
-                $script:CippUserRolesStorage.Value[$User.userDetails] = $Roles
+                $script:CippUserRolesStorage.Value[$User.userDetails] = @{
+                    Roles   = $Roles
+                    Expires = (Get-Date).ToUniversalTime().AddMinutes($RoleCacheMinutes)
+                }
             }
         }
     }
