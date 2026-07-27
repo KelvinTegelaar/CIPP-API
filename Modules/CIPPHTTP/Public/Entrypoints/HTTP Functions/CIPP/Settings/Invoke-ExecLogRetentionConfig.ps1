@@ -1,7 +1,7 @@
 function Invoke-ExecLogRetentionConfig {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.AppSettings.ReadWrite
     #>
