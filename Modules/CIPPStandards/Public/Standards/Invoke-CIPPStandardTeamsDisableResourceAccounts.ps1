@@ -40,9 +40,18 @@ function Invoke-CIPPStandardTeamsDisableResourceAccounts {
     }
 
     try {
-        # Get-CsOnlineApplicationInstance returns the Auto Attendant / Call Queue resource accounts.
-        # Without -First it only returns the first page, so request a large page explicitly.
-        $ResourceAccounts = @(New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsOnlineApplicationInstance' -CmdParams @{ First = 1000 })
+        # Teams.PlatformService returns the Auto Attendant / Call Queue resource accounts along
+        # with the applicationId that distinguishes the two. Graph's admin/teams/userConfigurations
+        # does not surface resource accounts at all, so this surface is the only source.
+        $ResourceAccounts = [System.Collections.Generic.List[object]]::new()
+        $SkipToken = $null
+        do {
+            $QueryParameters = @{ pageSize = 100 }
+            if ($SkipToken) { $QueryParameters['skipToken'] = $SkipToken }
+            $Page = New-TeamsRequestV2 -TenantFilter $Tenant -Path 'Teams.PlatformService/v2/ApplicationInstances' -QueryParameters $QueryParameters
+            foreach ($Instance in @($Page.applicationInstances)) { $ResourceAccounts.Add($Instance) }
+            $SkipToken = $Page.skipToken
+        } while ($SkipToken)
 
         # Cross-reference the cached user objects for sign-in state; cloud-only accounts only,
         # as the account state of synced accounts is managed in the on-premises AD.
@@ -58,13 +67,12 @@ function Invoke-CIPPStandardTeamsDisableResourceAccounts {
         }
 
         $EnabledResourceAccounts = foreach ($Account in $ResourceAccounts) {
-            if ($Account.ObjectId -and $EnabledUserIds -contains $Account.ObjectId) {
+            if ($Account.objectId -and $EnabledUserIds -contains $Account.objectId) {
                 [PSCustomObject]@{
-                    DisplayName       = $Account.DisplayName
-                    UserPrincipalName = $Account.UserPrincipalName
-                    ObjectId          = $Account.ObjectId
-                    ApplicationType   = $ApplicationTypes[[string]$Account.ApplicationId] ?? 'Custom'
-                    PhoneNumber       = $Account.PhoneNumber
+                    DisplayName       = $Account.displayName
+                    UserPrincipalName = $Account.userPrincipalName
+                    ObjectId          = $Account.objectId
+                    ApplicationType   = $ApplicationTypes[[string]$Account.applicationId] ?? 'Custom'
                 }
             }
         }
@@ -119,6 +127,11 @@ function Invoke-CIPPStandardTeamsDisableResourceAccounts {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
                 }
             }
+        } elseif ($ResourceAccounts.Count -eq 0) {
+            # Distinct from "all blocked": Teams classifies an account as a resource account based
+            # on licensing, so an account carrying user licences (or none) drops out of this list
+            # entirely. Saying "already blocked" there would be a false pass.
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No Teams resource accounts were returned for this tenant, so there was nothing to evaluate. If Auto Attendants or Call Queues exist, check that their resource accounts hold the Microsoft Teams Phone Resource Account license.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Sign-in is already blocked for all Teams resource accounts.' -sev Info
         }
@@ -128,6 +141,8 @@ function Invoke-CIPPStandardTeamsDisableResourceAccounts {
         if ($EnabledResourceAccounts.Count -gt 0) {
             Write-StandardsAlert -message "Teams resource accounts with sign-in enabled: $($EnabledResourceAccounts.Count)" -object $EnabledResourceAccounts -tenant $Tenant -standardName 'TeamsDisableResourceAccounts' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Teams resource accounts with sign-in enabled: $($EnabledResourceAccounts.Count)" -sev Info
+        } elseif ($ResourceAccounts.Count -eq 0) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No Teams resource accounts were returned for this tenant, so there was nothing to evaluate.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Sign-in is blocked for all Teams resource accounts.' -sev Info
         }

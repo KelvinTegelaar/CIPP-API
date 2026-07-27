@@ -59,73 +59,49 @@ function Invoke-ListCustomRole {
             }
         }
         if ($Role.AllowedTenants) {
+            $RawAllowedTenants = $Role.AllowedTenants
             try {
-                $AllowedTenants = $Role.AllowedTenants | ConvertFrom-Json -ErrorAction Stop | ForEach-Object {
-                    if ($_ -is [PSCustomObject] -and $_.type -eq 'Group') {
-                        # Return group objects as-is for frontend display
-                        [PSCustomObject]@{
-                            type  = 'Group'
-                            value = $_.value
-                            label = $_.label
-                        }
-                    } else {
-                        # Convert tenant customer ID to domain name object for frontend
-                        $TenantId = $_
-                        $TenantInfo = $TenantList | Where-Object { $_.customerId -eq $TenantId }
-                        if ($TenantInfo) {
-                            [PSCustomObject]@{
-                                type        = 'Tenant'
-                                value       = $TenantInfo.defaultDomainName
-                                label       = "$($TenantInfo.displayName) ($($TenantInfo.defaultDomainName))"
-                                addedFields = @{
-                                    defaultDomainName = $TenantInfo.defaultDomainName
-                                    displayName       = $TenantInfo.displayName
-                                    customerId        = $TenantInfo.customerId
-                                }
-                            }
-                        }
+                # No null filter and no 'AllTenants' fallback: every stored entry produces exactly
+                # one displayed entry, so the list shown is the list stored
+                $Role.AllowedTenants = @(
+                    $RawAllowedTenants | ConvertFrom-Json -ErrorAction Stop | ForEach-Object {
+                        Resolve-CippRoleTenantEntry -Entry $_ -TenantList $TenantList
                     }
-                } | Where-Object { $_ -ne $null }
-                $AllowedTenants = $AllowedTenants ?? @('AllTenants')
-                $Role.AllowedTenants = @($AllowedTenants)
+                )
             } catch {
-                $Role.AllowedTenants = @('AllTenants')
+                Write-Warning "Could not parse AllowedTenants for role '$($Role.RowKey)': $($_.Exception.Message)"
+                $Role.AllowedTenants = @(
+                    [PSCustomObject]@{
+                        type       = 'Tenant'
+                        value      = [string]$RawAllowedTenants
+                        label      = 'Stored value could not be read'
+                        Unresolved = $true
+                    }
+                )
             }
         } else {
             $Role | Add-Member -NotePropertyName AllowedTenants -NotePropertyValue @() -Force
         }
         if ($Role.BlockedTenants) {
+            $RawBlockedTenants = $Role.BlockedTenants
             try {
-                $BlockedTenants = $Role.BlockedTenants | ConvertFrom-Json -ErrorAction Stop | ForEach-Object {
-                    if ($_ -is [PSCustomObject] -and $_.type -eq 'Group') {
-                        # Return group objects as-is for frontend display
-                        [PSCustomObject]@{
-                            type  = 'Group'
-                            value = $_.value
-                            label = $_.label
-                        }
-                    } else {
-                        # Convert tenant customer ID to domain name object for frontend
-                        $TenantId = $_
-                        $TenantInfo = $TenantList | Where-Object { $_.customerId -eq $TenantId }
-                        if ($TenantInfo) {
-                            [PSCustomObject]@{
-                                type        = 'Tenant'
-                                value       = $TenantInfo.defaultDomainName
-                                label       = "$($TenantInfo.displayName) ($($TenantInfo.defaultDomainName))"
-                                addedFields = @{
-                                    defaultDomainName = $TenantInfo.defaultDomainName
-                                    displayName       = $TenantInfo.displayName
-                                    customerId        = $TenantInfo.customerId
-                                }
-                            }
-                        }
+                # An unresolvable id here is exactly the case that mattered: a block on a tenant
+                # the current tenant list does not contain used to render as no block at all
+                $Role.BlockedTenants = @(
+                    $RawBlockedTenants | ConvertFrom-Json -ErrorAction Stop | ForEach-Object {
+                        Resolve-CippRoleTenantEntry -Entry $_ -TenantList $TenantList
                     }
-                } | Where-Object { $_ -ne $null }
-                $BlockedTenants = $BlockedTenants ?? @()
-                $Role.BlockedTenants = @($BlockedTenants)
+                )
             } catch {
-                $Role.BlockedTenants = @()
+                Write-Warning "Could not parse BlockedTenants for role '$($Role.RowKey)': $($_.Exception.Message)"
+                $Role.BlockedTenants = @(
+                    [PSCustomObject]@{
+                        type       = 'Tenant'
+                        value      = [string]$RawBlockedTenants
+                        label      = 'Stored value could not be read'
+                        Unresolved = $true
+                    }
+                )
             }
         } else {
             $Role | Add-Member -NotePropertyName BlockedTenants -NotePropertyValue @() -Force

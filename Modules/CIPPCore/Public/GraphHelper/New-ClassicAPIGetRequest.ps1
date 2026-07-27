@@ -25,6 +25,6 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
         } until ($null -eq $NextURL -or ' ' -eq $NextURL)
         return $ReturnedData
     } else {
-        Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
+        Write-Error (Get-AuthorisedRequestError -TenantID $TenantID -Context 'Classic API request')
     }
 }

@@ -56,7 +56,15 @@ function Get-SharePointAdminLink {
             throw "Failed to get SharePoint admin URL through autodiscover: $($_.Exception.Message)"
         }
     } else {
-        $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
+        # id looks like 'contoso.sharepoint.com,<guid>,<guid>' - the host's first label is the name.
+        $RootSite = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter
+        $tenantName = ($RootSite.id -split '\.')[0]
+    }
+
+    # Without a name every URL below is a well-formed link to nowhere ('https://-admin.sharepoint.com').
+    # Callers cache what they get back, so a bad value here sticks around - fail instead.
+    if ([string]::IsNullOrWhiteSpace($tenantName)) {
+        throw "Could not determine the SharePoint tenant name for $TenantFilter. The tenant may not have SharePoint provisioned, or the Sites.Read.All permission may be missing."
     }
 
     # Return object with all needed properties

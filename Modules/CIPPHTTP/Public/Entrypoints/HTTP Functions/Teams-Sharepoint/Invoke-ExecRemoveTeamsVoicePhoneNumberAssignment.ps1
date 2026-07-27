@@ -4,13 +4,14 @@ Function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
         Entrypoint
     .ROLE
         Teams.Voice.ReadWrite
+    .DESCRIPTION
+        Unassigns a phone number from a user or resource account via the Teams administration Graph API.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Body.tenantFilter
@@ -19,8 +20,14 @@ Function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
     $PhoneNumberType = $Request.Body.PhoneNumberType
 
     try {
-        $null = New-TeamsRequest -TenantFilter $TenantFilter -Cmdlet 'Remove-CsPhoneNumberAssignment' -CmdParams @{Identity = $AssignedTo; PhoneNumber = $PhoneNumber; PhoneNumberType = $PhoneNumberType; ErrorAction = 'Stop' }
-        $Result = "Successfully unassigned $PhoneNumber from $AssignedTo"
+        # unassignNumber is keyed on the number alone - AssignedTo is kept only for the audit log.
+        $Body = @{
+            telephoneNumber = $PhoneNumber
+            numberType      = Get-CippTeamsNumberType -NumberType $PhoneNumberType
+        }
+        # Asynchronous: 202 Accepted with a Location header for the operation.
+        $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/admin/teams/telephoneNumberManagement/numberAssignments/unassignNumber' -tenantid $TenantFilter -body ($Body | ConvertTo-Json -Compress) -type POST
+        $Result = "Successfully submitted unassignment of $PhoneNumber from $AssignedTo"
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
