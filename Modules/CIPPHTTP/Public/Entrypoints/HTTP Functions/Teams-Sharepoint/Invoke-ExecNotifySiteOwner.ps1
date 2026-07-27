@@ -24,6 +24,11 @@ function Invoke-ExecNotifySiteOwner {
         if (-not $OwnerEmail) { throw 'OwnerEmail is required — this site has no resolvable owner email' }
         if ($Type -eq 'Custom' -and -not $CustomMessage) { throw 'CustomMessage is required when Type is Custom' }
 
+        # CustomMessage is treated as plaintext: HTML-encode, then preserve line breaks
+        $SafeCustomMessage = if ($CustomMessage) {
+            ([System.Net.WebUtility]::HtmlEncode([string]$CustomMessage)) -replace "\r?\n", '<br/>'
+        } else { '' }
+
         $SiteLabel = if ($DisplayName) { $DisplayName } else { $SiteUrl }
         $StorageLine = if ($UsedGB -and $AllocatedGB) {
             $Pct = [math]::Round(([double]$UsedGB / [double]$AllocatedGB) * 100)
@@ -41,7 +46,7 @@ function Invoke-ExecNotifySiteOwner {
             }
             'Custom' {
                 "A message about your SharePoint site '$SiteLabel'",
-                "<p>Hello,</p><p>You are listed as the owner of the SharePoint site <a href='$SiteUrl'>$SiteLabel</a>.</p><p>$CustomMessage</p>$StorageLine<p>Thank you,<br/>Your IT team</p>"
+                "<p>Hello,</p><p>You are listed as the owner of the SharePoint site <a href='$SiteUrl'>$SiteLabel</a>.</p><p>$SafeCustomMessage</p>$StorageLine<p>Thank you,<br/>Your IT team</p>"
             }
             default { throw "Invalid Type '$Type'. Valid values: StorageCritical, Inactivity, Custom" }
         }
