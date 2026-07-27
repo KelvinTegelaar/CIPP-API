@@ -189,8 +189,8 @@ function Invoke-ExecSetSiteProperty {
         if ($ErrorText -match 'license|Advanced Management|not enabled for this tenant') {
             $ErrorText = "This setting requires SharePoint Advanced Management licensing, which this tenant does not appear to have. Original error: $ErrorText"
         }
-        if ($PropertiesToSet -and $PropertiesToSet.ContainsKey('StorageMaximumLevel')) {
-            $ErrorText = "$ErrorText If this tenant uses automatic site storage management, per-site quotas do not apply until the tenant is switched to manual site storage limits in the SharePoint admin center."
+        if ($PropertiesToSet -and $PropertiesToSet.ContainsKey('StorageMaximumLevel') -and $ErrorText -notmatch 'must be') {
+            $ErrorText = $ErrorText.TrimEnd() + ' | Note: if this tenant uses automatic site storage management, per-site quotas do not apply until the tenant is switched to manual site storage limits in the SharePoint admin center.'
         }
         $Results = "Failed to update site property for '$SiteLabel'. Error: $ErrorText"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
