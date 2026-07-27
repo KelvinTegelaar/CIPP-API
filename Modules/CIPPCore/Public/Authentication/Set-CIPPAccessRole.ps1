@@ -47,5 +47,9 @@ function Set-CIPPAccessRole {
 
     if ($PSCmdlet.ShouldProcess("Setting access role $Role for group $($Group.displayName)")) {
         Add-CIPPAzDataTableEntity -Table $Table -Entity $AccessGroup -Force
+
+        # Group to role mapping decides which roles a user resolves to, so the cached scope rules
+        # have to be invalidated with it
+        Clear-CippAccessScopeCache
     }
 }
