@@ -42,6 +42,25 @@ function Invoke-ExecSetSiteProperty {
             return $Field
         }
 
+        # Helper: strict integer parse — rejects non-integral values instead of rounding
+        function Get-IntValue($Raw, [string]$Name) {
+            $Parsed = 0
+            if (-not [int]::TryParse([string]$Raw, [ref]$Parsed)) {
+                throw "$Name must be a whole number (received '$Raw')"
+            }
+            return $Parsed
+        }
+
+        # Helper: strict boolean parse — accepts native booleans and 'true'/'false' strings only
+        function Get-BoolValue($Raw, [string]$Name) {
+            if ($Raw -is [bool]) { return $Raw }
+            $Parsed = $false
+            if (-not [bool]::TryParse([string]$Raw, [ref]$Parsed)) {
+                throw "$Name must be true or false (received '$Raw')"
+            }
+            return $Parsed
+        }
+
         # Lock State
         $RawLockState = Get-FieldValue $Request.Body.LockState
         if ($RawLockState) {
@@ -102,19 +121,20 @@ function Invoke-ExecSetSiteProperty {
         $RawLinkType = Get-FieldValue $Request.Body.DefaultSharingLinkType
         if ($null -ne $RawLinkType -and '' -ne $RawLinkType) {
             $LinkTypeLabels = @{ 0 = 'Tenant default'; 1 = 'Direct (specific people)'; 2 = 'Internal (organization)'; 3 = 'Anyone (anonymous)' }
-            $LinkTypeValue = [int]$RawLinkType
+            $LinkTypeValue = Get-IntValue $RawLinkType 'DefaultSharingLinkType'
             if ($LinkTypeValue -notin 0, 1, 2, 3) {
                 throw "Invalid DefaultSharingLinkType '$LinkTypeValue'. Valid values: 0 (tenant default), 1 (Direct), 2 (Internal), 3 (AnonymousAccess)"
             }
             $PropertiesToSet['DefaultSharingLinkType'] = $LinkTypeValue
-            $ActionDescription = "Set default sharing link type to '$($LinkTypeLabels[$LinkTypeValue])'"
+            if ($ActionDescription) { $ActionDescription += "; default sharing link type '$($LinkTypeLabels[$LinkTypeValue])'" }
+            else { $ActionDescription = "Set default sharing link type to '$($LinkTypeLabels[$LinkTypeValue])'" }
         }
 
         # Default Link Permission (0=None/tenant default, 1=View, 2=Edit)
         $RawLinkPerm = Get-FieldValue $Request.Body.DefaultLinkPermission
         if ($null -ne $RawLinkPerm -and '' -ne $RawLinkPerm) {
             $LinkPermLabels = @{ 0 = 'Tenant default'; 1 = 'View'; 2 = 'Edit' }
-            $LinkPermValue = [int]$RawLinkPerm
+            $LinkPermValue = Get-IntValue $RawLinkPerm 'DefaultLinkPermission'
             if ($LinkPermValue -notin 0, 1, 2) {
                 throw "Invalid DefaultLinkPermission '$LinkPermValue'. Valid values: 0 (tenant default), 1 (View), 2 (Edit)"
             }
@@ -125,7 +145,7 @@ function Invoke-ExecSetSiteProperty {
 
         # Anonymous link expiration (requires override flag)
         if ($null -ne $Request.Body.AnonymousLinkExpirationInDays -and '' -ne $Request.Body.AnonymousLinkExpirationInDays) {
-            $ExpDays = [int]$Request.Body.AnonymousLinkExpirationInDays
+            $ExpDays = Get-IntValue $Request.Body.AnonymousLinkExpirationInDays 'AnonymousLinkExpirationInDays'
             if ($ExpDays -lt 1) { throw 'AnonymousLinkExpirationInDays must be at least 1' }
             $PropertiesToSet['OverrideTenantAnonymousLinkExpirationPolicy'] = $true
             $PropertiesToSet['AnonymousLinkExpirationInDays'] = $ExpDays
@@ -136,9 +156,11 @@ function Invoke-ExecSetSiteProperty {
         # Restricted Access Control (requires SharePoint Advanced Management licensing)
         $RawRAC = Get-FieldValue $Request.Body.RestrictedAccessControl
         if ($null -ne $RawRAC -and '' -ne $RawRAC) {
-            $RACValue = [bool]$RawRAC
+            $RACValue = Get-BoolValue $RawRAC 'RestrictedAccessControl'
             $PropertiesToSet['RestrictedAccessControl'] = $RACValue
-            $ActionDescription = if ($RACValue) { 'Enabled restricted access control (members only)' } else { 'Disabled restricted access control' }
+            $RACDescription = if ($RACValue) { 'Enabled restricted access control (members only)' } else { 'Disabled restricted access control' }
+            if ($ActionDescription) { $ActionDescription += "; $($RACDescription.ToLower())" }
+            else { $ActionDescription = $RACDescription }
         }
 
         if ($PropertiesToSet.Count -eq 0) {
