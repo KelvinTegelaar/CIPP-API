@@ -24,6 +24,14 @@ function Invoke-ExecHubSiteAssociation {
         if (-not $SiteUrl) { throw 'SiteUrl is required' }
         if (-not $Disconnect -and -not $HubSiteId) { throw 'Provide HubSiteId to join a hub, or Disconnect: true to leave' }
 
+        if (-not $Disconnect) {
+            $ParsedHubId = [guid]::Empty
+            if (-not [guid]::TryParse([string]$HubSiteId, [ref]$ParsedHubId)) {
+                throw "HubSiteId '$HubSiteId' is not a valid GUID"
+            }
+            $HubSiteId = $ParsedHubId.Guid
+        }
+
         $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
         $TargetHubId = if ($Disconnect) { '00000000-0000-0000-0000-000000000000' } else { $HubSiteId }
 
