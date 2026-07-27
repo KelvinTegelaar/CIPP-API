@@ -22,7 +22,9 @@ function Invoke-ExecNotifySiteOwner {
     try {
         if (-not $TenantFilter) { throw 'tenantFilter is required' }
         if (-not $OwnerEmail) { throw 'OwnerEmail is required — this site has no resolvable owner email' }
+        if ($OwnerEmail -notmatch '^[^\s@]+@[^\s@]+\.[^\s@]+$') { throw "OwnerEmail '$OwnerEmail' does not look like a valid email address" }
         if ($Type -eq 'Custom' -and -not $CustomMessage) { throw 'CustomMessage is required when Type is Custom' }
+        if ($SiteUrl -and $SiteUrl -notmatch '^https://') { throw 'SiteUrl must be an https URL' }
 
         # CustomMessage is treated as plaintext: HTML-encode, then preserve line breaks
         $SafeCustomMessage = if ($CustomMessage) {
@@ -30,6 +32,8 @@ function Invoke-ExecNotifySiteOwner {
         } else { '' }
 
         $SiteLabel = if ($DisplayName) { $DisplayName } else { $SiteUrl }
+        $SafeSiteLabel = [System.Net.WebUtility]::HtmlEncode([string]$SiteLabel)
+        $SafeSiteUrl = [System.Net.WebUtility]::HtmlEncode([string]$SiteUrl)
         $StorageLine = if ($UsedGB -and $AllocatedGB) {
             $Pct = [math]::Round(([double]$UsedGB / [double]$AllocatedGB) * 100)
             "<p>Current usage: <strong>$UsedGB GB of $AllocatedGB GB allocated ($Pct%)</strong>.</p>"
@@ -38,15 +42,15 @@ function Invoke-ExecNotifySiteOwner {
         $Subject, $BodyHtml = switch ($Type) {
             'StorageCritical' {
                 "Action needed: SharePoint site '$SiteLabel' is running out of storage",
-                "<p>Hello,</p><p>You are listed as the owner of the SharePoint site <a href='$SiteUrl'>$SiteLabel</a>, which is approaching its storage limit.</p>$StorageLine<p>Please review the site's content and delete or archive files that are no longer needed. Old file versions and large media files are common culprits. If the site genuinely needs more space, reply to this email to request a storage increase.</p><p>Thank you,<br/>Your IT team</p>"
+                "<p>Hello,</p><p>You are listed as the owner of the SharePoint site <a href=`"$SafeSiteUrl`">$SafeSiteLabel</a>, which is approaching its storage limit.</p>$StorageLine<p>Please review the site's content and delete or archive files that are no longer needed. Old file versions and large media files are common culprits. If the site genuinely needs more space, reply to this email to request a storage increase.</p><p>Thank you,<br/>Your IT team</p>"
             }
             'Inactivity' {
                 "Is the SharePoint site '$SiteLabel' still needed?",
-                "<p>Hello,</p><p>You are listed as the owner of the SharePoint site <a href='$SiteUrl'>$SiteLabel</a>, which has had no activity for more than 90 days.</p><p>If the site is no longer needed, please let us know so it can be archived or removed. If it is still in use, no action is required.</p><p>Thank you,<br/>Your IT team</p>"
+                "<p>Hello,</p><p>You are listed as the owner of the SharePoint site <a href=`"$SafeSiteUrl`">$SafeSiteLabel</a>, which has had no activity for more than 90 days.</p><p>If the site is no longer needed, please let us know so it can be archived or removed. If it is still in use, no action is required.</p><p>Thank you,<br/>Your IT team</p>"
             }
             'Custom' {
                 "A message about your SharePoint site '$SiteLabel'",
-                "<p>Hello,</p><p>You are listed as the owner of the SharePoint site <a href='$SiteUrl'>$SiteLabel</a>.</p><p>$SafeCustomMessage</p>$StorageLine<p>Thank you,<br/>Your IT team</p>"
+                "<p>Hello,</p><p>You are listed as the owner of the SharePoint site <a href=`"$SafeSiteUrl`">$SafeSiteLabel</a>.</p><p>$SafeCustomMessage</p>$StorageLine<p>Thank you,<br/>Your IT team</p>"
             }
             default { throw "Invalid Type '$Type'. Valid values: StorageCritical, Inactivity, Custom" }
         }

@@ -8,6 +8,8 @@ function Invoke-ListHubSites {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
 
     try {
@@ -29,9 +31,11 @@ function Invoke-ListHubSites {
         })
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $Results = "Failed to list hub sites: $ErrorMessage"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error
         return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::InternalServerError
-            Body       = @{ Results = "Failed to list hub sites: $ErrorMessage" }
+            Body       = @{ Results = $Results }
         })
     }
 }

@@ -13,13 +13,23 @@ function Invoke-ExecHubSiteAssociation {
     $TenantFilter = $Request.Body.tenantFilter
     $SiteUrl = $Request.Body.SiteUrl
     $DisplayName = $Request.Body.DisplayName
-    $Disconnect = [bool]$Request.Body.Disconnect
+    $RawDisconnect = $Request.Body.Disconnect
     $RawHubId = $Request.Body.HubSiteId
     # autoComplete fields may arrive as { label, value }
     $HubSiteId = if ($RawHubId -is [PSCustomObject] -and $null -ne $RawHubId.value) { $RawHubId.value } else { $RawHubId }
     $SiteLabel = if ($DisplayName) { $DisplayName } else { $SiteUrl }
 
     try {
+        # Strict boolean parse — MUI radios submit strings, and [bool]"false" is $true in PowerShell.
+        $Disconnect = $false
+        if ($RawDisconnect -is [bool]) {
+            $Disconnect = $RawDisconnect
+        } elseif ($null -ne $RawDisconnect -and '' -ne $RawDisconnect) {
+            if (-not [bool]::TryParse([string]$RawDisconnect, [ref]$Disconnect)) {
+                throw "Disconnect must be true or false (received '$RawDisconnect')"
+            }
+        }
+
         if (-not $TenantFilter) { throw 'tenantFilter is required' }
         if (-not $SiteUrl) { throw 'SiteUrl is required' }
         if (-not $Disconnect -and -not $HubSiteId) { throw 'Provide HubSiteId to join a hub, or Disconnect: true to leave' }
