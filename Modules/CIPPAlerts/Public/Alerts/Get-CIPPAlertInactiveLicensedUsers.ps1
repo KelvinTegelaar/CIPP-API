@@ -47,6 +47,13 @@ function Get-CIPPAlertInactiveLicensedUsers {
             $GraphRequest = New-GraphGetRequest -uri $Uri -scope 'https://graph.microsoft.com/.default' -tenantid $TenantFilter |
                 Where-Object { $null -ne $_.assignedLicenses -and $_.assignedLicenses.Count -gt 0 }
 
+            $LicenseOverview = @()
+            try {
+                $LicenseOverview = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'LicenseOverview')
+            } catch {
+                Write-Information "Could not get the license overview from the reporting DB, license names will fall back to SKU IDs: $($_.Exception.Message)"
+            }
+
             $AlertData = foreach ($user in $GraphRequest) {
                 $lastInteractive = $user.signInActivity.lastSignInDateTime
                 $lastNonInteractive = $user.signInActivity.lastNonInteractiveSignInDateTime
@@ -67,19 +74,28 @@ function Get-CIPPAlertInactiveLicensedUsers {
                 if (-not $IncludeNeverSignedIn -and -not $lastSignIn) { continue }
                 # Only process inactive users
                 if ($isInactive) {
+                    $daysSinceSignIn = $null
                     if (-not $lastSignIn) {
                         $Message = 'User {0} has never signed in but still has a license assigned.' -f $user.UserPrincipalName
                     } else {
                         $daysSinceSignIn = [Math]::Round(((Get-Date) - [DateTime]$lastSignIn).TotalDays)
                         $Message = 'User {0} has been inactive for {1} days but still has a license assigned. Last sign-in: {2}' -f $user.UserPrincipalName, $daysSinceSignIn, $lastSignIn
                     }
+                    $LicenseNames = foreach ($SkuId in $user.assignedLicenses.skuId) {
+                        $Sku = $LicenseOverview | Where-Object { $_.skuId -eq $SkuId } | Select-Object -First 1
+                        if ($Sku.License) { $Sku.License } else { $SkuId }
+                    }
 
                     [PSCustomObject]@{
-                        UserPrincipalName = $user.UserPrincipalName
-                        Id                = $user.id
-                        lastSignIn        = $lastSignIn
-                        Message           = $Message
-                        Tenant            = $TenantFilter
+                        UserPrincipalName   = $user.UserPrincipalName
+                        Id                  = $user.id
+                        lastSignIn          = $lastSignIn
+                        DaysSinceLastSignIn = if ($null -ne $daysSinceSignIn) { $daysSinceSignIn } else { 'N/A' }
+                        AccountEnabled      = $user.accountEnabled
+                        LicenseNames        = $LicenseNames -join ', '
+                        SkuIds              = @($user.assignedLicenses.skuId) -join ', '
+                        Message             = $Message
+                        Tenant              = $TenantFilter
                     }
                 }
             }

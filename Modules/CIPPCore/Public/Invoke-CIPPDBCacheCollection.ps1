@@ -134,6 +134,7 @@ function Invoke-CIPPDBCacheCollection {
         SharePoint         = @(
             'SPOTenant'
             'SPOTenantSyncClientRestriction'
+            'SiteActivity'
         )
         Teams              = @(
             'CsTeamsMeetingPolicy'

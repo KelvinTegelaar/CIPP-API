@@ -69,14 +69,21 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     $DesignatedPresenterRoleMode = $Settings.DesignatedPresenterRoleMode.value ?? $Settings.DesignatedPresenterRoleMode
     $AutoAdmittedUsers = $Settings.AutoAdmittedUsers.value ?? $Settings.AutoAdmittedUsers ?? $CurrentState.AutoAdmittedUsers # Default to current state if not set, for backward compatibility pre v8.6.0
 
-    $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $Settings.AllowAnonymousUsersToJoinMeeting) -and
-    ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $Settings.AllowAnonymousUsersToStartMeeting) -and
+    # Untoggled switches are absent from the settings; default them to $false (the CIS recommended value) so we never send null to the ConfigApi
+    $AllowAnonymousUsersToJoinMeeting = $Settings.AllowAnonymousUsersToJoinMeeting ?? $false
+    $AllowAnonymousUsersToStartMeeting = $Settings.AllowAnonymousUsersToStartMeeting ?? $false
+    $AllowPSTNUsersToBypassLobby = $Settings.AllowPSTNUsersToBypassLobby ?? $false
+    $AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl ?? $false
+    $AllowParticipantGiveRequestControl = $Settings.AllowParticipantGiveRequestControl ?? $false
+
+    $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $AllowAnonymousUsersToJoinMeeting) -and
+    ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $AllowAnonymousUsersToStartMeeting) -and
     ($CurrentState.AutoAdmittedUsers -eq $AutoAdmittedUsers) -and
-    ($CurrentState.AllowPSTNUsersToBypassLobby -eq $Settings.AllowPSTNUsersToBypassLobby) -and
+    ($CurrentState.AllowPSTNUsersToBypassLobby -eq $AllowPSTNUsersToBypassLobby) -and
     ($CurrentState.MeetingChatEnabledType -eq $MeetingChatEnabledType) -and
     ($CurrentState.DesignatedPresenterRoleMode -eq $DesignatedPresenterRoleMode) -and
-    ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $Settings.AllowExternalParticipantGiveRequestControl) -and
-    ($CurrentState.AllowParticipantGiveRequestControl -eq $Settings.AllowParticipantGiveRequestControl)
+    ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $AllowExternalParticipantGiveRequestControl) -and
+    ($CurrentState.AllowParticipantGiveRequestControl -eq $AllowParticipantGiveRequestControl)
 
 
     if ($Settings.remediate -eq $true) {
@@ -85,14 +92,14 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
         } else {
             $cmdParams = @{
                 Identity                                   = 'Global'
-                AllowAnonymousUsersToJoinMeeting           = $Settings.AllowAnonymousUsersToJoinMeeting
-                AllowAnonymousUsersToStartMeeting          = $Settings.AllowAnonymousUsersToStartMeeting
+                AllowAnonymousUsersToJoinMeeting           = $AllowAnonymousUsersToJoinMeeting
+                AllowAnonymousUsersToStartMeeting          = $AllowAnonymousUsersToStartMeeting
                 AutoAdmittedUsers                          = $AutoAdmittedUsers
-                AllowPSTNUsersToBypassLobby                = $Settings.AllowPSTNUsersToBypassLobby
+                AllowPSTNUsersToBypassLobby                = $AllowPSTNUsersToBypassLobby
                 MeetingChatEnabledType                     = $MeetingChatEnabledType
                 DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
-                AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl
-                AllowParticipantGiveRequestControl         = $Settings.AllowParticipantGiveRequestControl
+                AllowExternalParticipantGiveRequestControl = $AllowExternalParticipantGiveRequestControl
+                AllowParticipantGiveRequestControl         = $AllowParticipantGiveRequestControl
             }
 
             try {
@@ -127,14 +134,14 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             AllowParticipantGiveRequestControl         = $CurrentState.AllowParticipantGiveRequestControl
         }
         $ExpectedValue = @{
-            AllowAnonymousUsersToJoinMeeting           = $Settings.AllowAnonymousUsersToJoinMeeting
-            AllowAnonymousUsersToStartMeeting          = $Settings.AllowAnonymousUsersToStartMeeting
+            AllowAnonymousUsersToJoinMeeting           = $AllowAnonymousUsersToJoinMeeting
+            AllowAnonymousUsersToStartMeeting          = $AllowAnonymousUsersToStartMeeting
             AutoAdmittedUsers                          = $AutoAdmittedUsers
-            AllowPSTNUsersToBypassLobby                = $Settings.AllowPSTNUsersToBypassLobby
+            AllowPSTNUsersToBypassLobby                = $AllowPSTNUsersToBypassLobby
             MeetingChatEnabledType                     = $MeetingChatEnabledType
             DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
-            AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl
-            AllowParticipantGiveRequestControl         = $Settings.AllowParticipantGiveRequestControl
+            AllowExternalParticipantGiveRequestControl = $AllowExternalParticipantGiveRequestControl
+            AllowParticipantGiveRequestControl         = $AllowParticipantGiveRequestControl
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGlobalMeetingPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'TeamsGlobalMeetingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant

@@ -25,7 +25,9 @@ function Invoke-CippTestZTNA21899 {
             foreach ($R in $NotifRules) {
                 if (-not $R.notificationRecipients -or $R.notificationRecipients.Count -eq 0) {
                     $MissingRecipients.Add([PSCustomObject]@{
-                            PolicyId           = $Policy.id
+                            # 'policyId' — this type is sourced from roleManagementPolicyAssignments
+                            # and carries the policy's id as policyId, not id.
+                            PolicyId           = $Policy.policyId
                             ScopeId            = $Policy.scopeId
                             ScopeType          = $Policy.scopeType
                             RuleId             = $R.id

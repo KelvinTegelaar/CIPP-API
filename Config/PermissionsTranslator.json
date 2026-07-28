@@ -5392,5 +5392,23 @@
     "id": "0eb56b90-a7b5-43b5-9402-8137a8083e90",
     "origin": "Delegated (Power Apps Service)",
     "value": "User"
+  },
+  {
+    "description": "Allows the app to read and write Copilot policy settings for the organization, on behalf of the signed-in user.",
+    "displayName": "Read and write Copilot policy settings",
+    "id": "e2edbde8-4448-4e49-8ebb-d53ba72df0f3",
+    "Origin": "Delegated",
+    "userConsentDescription": "Allows the app to read and write Copilot policy settings for the organization, on your behalf.",
+    "userConsentDisplayName": "Read and write Copilot policy settings",
+    "value": "CopilotPolicySettings.ReadWrite"
+  },
+  {
+    "description": "Allows the app to read and write Copilot policy settings for the organization, without a signed-in user.",
+    "displayName": "Read and write Copilot policy settings",
+    "id": "cc147c17-b8e8-4d3f-9f94-aa9e279a079a",
+    "Origin": "Application",
+    "userConsentDescription": "Allows the app to read and write Copilot policy settings for the organization, without a signed-in user.",
+    "userConsentDisplayName": "Read and write Copilot policy settings",
+    "value": "CopilotPolicySettings.ReadWrite"
   }
 ]

@@ -19,28 +19,20 @@ function New-CIPPSharepointSite {
     The template to use for the site. Default is Communication
 
     .PARAMETER SiteDesign
-    The design to use for the site (for Communication sites). Default is Blank
+    The design to use for the site. Default is Topic
 
-    .PARAMETER CustomSiteDesignId
-    Custom site design ID from tenant's site designs
+    .PARAMETER WebTemplateExtensionId
+    The web template extension ID to use
 
     .PARAMETER SensitivityLabel
     The Purview sensitivity label to apply to the site
 
     .PARAMETER Lcid
-    The language/locale ID for the site. Default is 1033 (English US)
-
-    .PARAMETER TimeZoneId
-    The time zone ID for the site. Default is 13 (UTC-08:00 Pacific Time)
-
-    .PARAMETER StorageQuota
-    Storage quota in MB. Default is determined by tenant settings
-
-    .PARAMETER ShareByEmailEnabled
-    Allow external sharing via email. Default is false
-
-    .PARAMETER HubSiteId
-    Associate the site with a hub site
+    SharePoint UI language LCID. Omit to keep the legacy English (1033) default used by
+    Add Site. Pass 0 to use the tenant default (SharePoint Online root site language).
+    Pass a positive LCID to force that language — must be a SharePoint Online site-creation
+    language (same allowlist as the template builder). If 0 is passed and the root language
+    cannot be read, site creation fails instead of falling back to English.
 
     .PARAMETER TenantFilter
     The tenant associated with the site
@@ -58,36 +50,24 @@ function New-CIPPSharepointSite {
         [string]$SiteOwner,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Communication', 'Team', 'TeamChannel')]
+        [ValidateSet('Communication', 'Team')]
         [string]$TemplateName = 'Communication',
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('Topic', 'Showcase', 'Blank', 'Custom')]
-        [string]$SiteDesign = 'Blank',
+        [string]$SiteDesign = 'Showcase',
 
         [Parameter(Mandatory = $false)]
-        [string]$CustomSiteDesignId,
+        [ValidatePattern('(\{|\()?[A-Za-z0-9]{4}([A-Za-z0-9]{4}\-?){4}[A-Za-z0-9]{12}(\}|\()?')]
+        [string]$WebTemplateExtensionId,
 
         [Parameter(Mandatory = $false)]
         [string]$SensitivityLabel,
 
-        [Parameter(Mandatory = $false)]
         [string]$Classification,
 
         [Parameter(Mandatory = $false)]
-        [int]$Lcid = 1033,
-
-        [Parameter(Mandatory = $false)]
-        [int]$TimeZoneId,
-
-        [Parameter(Mandatory = $false)]
-        [int]$StorageQuota,
-
-        [Parameter(Mandatory = $false)]
-        [bool]$ShareByEmailEnabled = $false,
-
-        [Parameter(Mandatory = $false)]
-        [string]$HubSiteId,
+        [int]$Lcid,
 
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
@@ -96,58 +76,100 @@ function New-CIPPSharepointSite {
         $Headers
     )
 
+    # SharePoint Online site-creation UI languages (not full Windows LCIDs — e.g. en-GB 2057 is invalid).
+    # Keep in sync with SITE_LANGUAGE_OPTIONS in CippSharePointTemplateBuilder.jsx.
+    $AllowedSiteLcids = @(
+        1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1035, 1036, 1037, 1038, 1040, 1041,
+        1042, 1043, 1044, 1045, 1046, 1048, 1049, 1050, 1051, 1053, 1054, 1055, 1057, 1058, 1060,
+        1061, 1062, 1063, 1066, 1069, 1081, 1086, 1087, 1106, 1110, 2052, 2070, 2074, 3082
+    )
+
     $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
     $SitePath = $SiteName -replace ' ' -replace '[^A-Za-z0-9-]'
     $SiteUrl = "https://$($SharePointInfo.TenantName).sharepoint.com/sites/$SitePath"
 
-    # Map template name to SharePoint web template
-    $WebTemplate = switch ($TemplateName) {
-        'Communication' { 'SITEPAGEPUBLISHING#0' }
-        'Team' { 'STS#3' }
-        'TeamChannel' { 'TEAMCHANNEL#1' }
-        default { 'SITEPAGEPUBLISHING#0' }
-    }
-
-    # Default site design IDs (built-in Microsoft designs for Communication sites)
-    $DefaultSiteDesignIds = @{
-        'Topic'    = '96c933ac-3698-44c7-9f4a-5fd17d71af9e'
-        'Showcase' = '6142d2a0-63a5-4ba0-aede-d9fefca2c767'
-        'Blank'    = 'f6cc5403-0d63-442e-96c0-285923709ffc'
-    }
-
-    # Determine site design ID
-    $SiteDesignId = '00000000-0000-0000-0000-000000000000'
-    $WebTemplateExtensionId = '00000000-0000-0000-0000-000000000000'
-
-    if ($TemplateName -eq 'Communication') {
-        if ($SiteDesign -eq 'Custom' -and $CustomSiteDesignId) {
-            # Use custom site design - validate it's a GUID
-            if ($CustomSiteDesignId -match '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
-                # Check if it's a default design ID or a custom one
-                if ($CustomSiteDesignId -in $DefaultSiteDesignIds.Values) {
-                    $SiteDesignId = $CustomSiteDesignId
-                } else {
-                    # Custom site design uses WebTemplateExtensionId
-                    $WebTemplateExtensionId = $CustomSiteDesignId
-                }
-            } else {
-                Write-Warning "Invalid CustomSiteDesignId format, using Blank design"
-                $SiteDesignId = $DefaultSiteDesignIds['Blank']
+    # Resolve site language:
+    # - Explicit positive LCID → use it (must be in $AllowedSiteLcids)
+    # - Explicit 0 (or negative) → tenant default. In SharePoint Online that is the root
+    #   site language (https://{tenant}.sharepoint.com); there is no separate admin-center
+    #   "default language" API (Graph sharepointSettings has timezone, not language).
+    # - Parameter omitted → English (1033), preserving AddSite / bulk-create behaviour
+    #
+    # When tenant default is requested but the root language cannot be read, fail instead of
+    # silently creating an English site on a non-English tenant.
+    if ($PSBoundParameters.ContainsKey('Lcid')) {
+        if ($Lcid -gt 0) {
+            if ($Lcid -notin $AllowedSiteLcids) {
+                $Result = "LCID $Lcid is not a supported SharePoint Online site language. Choose a language from the template builder list (or tenant default)."
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error
+                throw $Result
             }
-        } elseif ($DefaultSiteDesignIds.ContainsKey($SiteDesign)) {
-            $SiteDesignId = $DefaultSiteDesignIds[$SiteDesign]
+            $ResolvedLcid = $Lcid
         } else {
-            $SiteDesignId = $DefaultSiteDesignIds['Blank']
+            $ResolvedLcid = 0
+            $RootLanguageError = $null
+            try {
+                $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
+                $RootWeb = New-GraphGetRequest -uri "https://$($SharePointInfo.TenantName).sharepoint.com/_api/web?`$select=Language" -tenantid $TenantFilter -scope "$($SharePointInfo.SharePointUrl)/.default" -extraHeaders $JsonAccept -UseCertificate -AsApp $true
+                if ($RootWeb.Language -gt 0) {
+                    $ResolvedLcid = [int]$RootWeb.Language
+                }
+            } catch {
+                $RootLanguageError = $_.Exception.Message
+            }
+            if ($ResolvedLcid -le 0) {
+                $Detail = if ($RootLanguageError) { $RootLanguageError } else { 'Root site Language was missing or zero.' }
+                $Result = "Could not resolve tenant default SharePoint language for $TenantFilter (root site). $Detail Choose an explicit site language in the template, or ensure the tenant root site is readable."
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Warning
+                throw $Result
+            }
+        }
+    } else {
+        $ResolvedLcid = 1033
+    }
+
+    switch ($TemplateName) {
+        'Communication' {
+            $WebTemplate = 'SITEPAGEPUBLISHING#0'
+        }
+        'Team' {
+            $WebTemplate = 'STS#3'
         }
     }
-    # Team sites don't use site designs in the same way
+
+    $WebTemplateExtensionId = '00000000-0000-0000-0000-000000000000'
+    $DefaultSiteDesignIds = @( '96c933ac-3698-44c7-9f4a-5fd17d71af9e', '6142d2a0-63a5-4ba0-aede-d9fefca2c767', 'f6cc5403-0d63-442e-96c0-285923709ffc')
+
+    switch ($SiteDesign) {
+        'Topic' {
+            $SiteDesignId = '96c933ac-3698-44c7-9f4a-5fd17d71af9e'
+        }
+        'Showcase' {
+            $SiteDesignId = '6142d2a0-63a5-4ba0-aede-d9fefca2c767'
+        }
+        'Blank' {
+            $SiteDesignId = 'f6cc5403-0d63-442e-96c0-285923709ffc'
+        }
+        'Custom' {
+            if ($WebTemplateExtensionId -match '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
+                if ($WebTemplateExtensionId -notin $DefaultSiteDesignIds) {
+                    $WebTemplateExtensionId = $SiteDesign
+                    $SiteDesignId = '00000000-0000-0000-0000-000000000000'
+                } else {
+                    $SiteDesignId = $WebTemplateExtensionId
+                }
+            } else {
+                $SiteDesignId = '96c933ac-3698-44c7-9f4a-5fd17d71af9e'
+            }
+        }
+    }
 
     # Create the request body
     $Request = @{
         Title                  = $SiteName
         Url                    = $SiteUrl
-        Lcid                   = $Lcid
-        ShareByEmailEnabled    = $ShareByEmailEnabled
+        Lcid                   = $ResolvedLcid
+        ShareByEmailEnabled    = $false
         Description            = $SiteDescription
         WebTemplate            = $WebTemplate
         SiteDesignId           = $SiteDesignId
@@ -155,21 +177,12 @@ function New-CIPPSharepointSite {
         WebTemplateExtensionId = $WebTemplateExtensionId
     }
 
-    # Add optional parameters
+    # Set the sensitivity label if provided
     if ($SensitivityLabel) {
         $Request.SensitivityLabel = $SensitivityLabel
     }
     if ($Classification) {
         $Request.Classification = $Classification
-    }
-    if ($TimeZoneId) {
-        $Request.TimeZoneId = $TimeZoneId
-    }
-    if ($StorageQuota -and $StorageQuota -gt 0) {
-        $Request.StorageMaximumLevel = $StorageQuota
-    }
-    if ($HubSiteId -and $HubSiteId -ne '00000000-0000-0000-0000-000000000000') {
-        $Request.HubSiteId = $HubSiteId
     }
 
     Write-Verbose (ConvertTo-Json -InputObject $Request -Compress -Depth 10)
@@ -217,10 +230,12 @@ function New-CIPPSharepointSite {
             throw $Result
         }
         '4' {
-            $Result = "Failed to create new SharePoint site $SiteName with URL $SiteUrl. The site already exists."
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error
+            $Result = "Failed to create new SharePoint site $SiteName with URL $SiteUrl. The site already exists."
             throw $Result
         }
         default {}
     }
+
+
 }

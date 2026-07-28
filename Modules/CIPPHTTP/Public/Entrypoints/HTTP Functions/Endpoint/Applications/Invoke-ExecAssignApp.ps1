@@ -31,7 +31,7 @@ function Invoke-ExecAssignApp {
     $Intent = if ([string]::IsNullOrWhiteSpace($Intent)) { 'Required' } else { $Intent }
 
     if ([string]::IsNullOrWhiteSpace($AssignmentMode)) {
-        $AssignmentMode = 'replace'
+        $AssignmentMode = 'append'
     } else {
         $AssignmentMode = $AssignmentMode.ToLower()
         if ($AssignmentMode -notin @('replace', 'append')) {

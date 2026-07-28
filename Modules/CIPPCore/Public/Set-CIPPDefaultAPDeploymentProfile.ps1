@@ -19,6 +19,13 @@ function Set-CIPPDefaultAPDeploymentProfile {
         $APIName = 'Add Default Autopilot Deployment Profile'
     )
 
+    # Checked before the try so the clean message is thrown as-is rather than wrapped by the catch below.
+    $NameCheck = Test-CIPPAutopilotProfileName -DisplayName $DisplayName
+    if (-not $NameCheck.IsValid) {
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $NameCheck.Message -Sev 'Error'
+        throw $NameCheck.Message
+    }
+
     try {
         if ($Language -in @('user-select', 'os-default')) { $Language = "$null" }
 

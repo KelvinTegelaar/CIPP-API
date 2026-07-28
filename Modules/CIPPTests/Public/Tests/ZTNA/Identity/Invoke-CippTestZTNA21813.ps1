@@ -24,11 +24,14 @@ function Invoke-CippTestZTNA21813 {
         $UserRoleMap = @{}
 
         foreach ($Role in $PrivilegedRoles) {
+            # 'roleTemplateId', not 'templateId' — the Roles cache has no templateId field at all
+            # (description, displayName, id, memberCount, members, roleTemplateId), so both filters
+            # below compared against $null and matched nothing.
             $ActiveAssignments = $RoleAssignmentScheduleInstances | Where-Object {
-                $_.roleDefinitionId -eq $Role.templateId -and $_.assignmentType -eq 'Assigned'
+                $_.roleDefinitionId -eq $Role.roleTemplateId -and $_.assignmentType -eq 'Assigned'
             }
             $EligibleAssignments = $RoleEligibilitySchedules | Where-Object {
-                $_.roleDefinitionId -eq $Role.templateId
+                $_.roleDefinitionId -eq $Role.roleTemplateId
             }
 
             $AllAssignments = @($ActiveAssignments) + @($EligibleAssignments)
@@ -38,7 +41,9 @@ function Invoke-CippTestZTNA21813 {
                 if (-not $User) { continue }
 
                 $UserId = $User.id
-                $IsGARole = $Role.templateId -eq $GlobalAdminRoleId
+                # roleTemplateId — $Role.templateId does not exist, so this was always false and
+                # no user was ever classed as a Global Administrator.
+                $IsGARole = $Role.roleTemplateId -eq $GlobalAdminRoleId
 
                 if ($IsGARole) {
                     $AllGAUsers[$UserId] = $User

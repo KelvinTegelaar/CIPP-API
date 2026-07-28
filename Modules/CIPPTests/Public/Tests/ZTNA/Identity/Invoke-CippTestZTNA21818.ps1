@@ -68,8 +68,10 @@ function Invoke-CippTestZTNA21818 {
         $ExitLoop = $false
 
         foreach ($Role in $PrivilegedRoles) {
+            # roleDefinitionId carries the role's TEMPLATE id — matching it against $Role.id (the
+            # directoryRole instance id) never succeeded.
             $Policy = $RoleManagementPolicies | Where-Object {
-                $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.roleDefinitionId -eq $Role.id
+                $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.roleDefinitionId -eq $Role.roleTemplateId
             } | Select-Object -First 1
 
             if (-not $Policy) { continue }

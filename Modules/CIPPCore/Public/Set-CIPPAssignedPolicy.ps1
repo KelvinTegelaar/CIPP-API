@@ -15,9 +15,21 @@ function Set-CIPPAssignedPolicy {
         $AssignmentFilterType = 'include',
         $GroupIds,
         $GroupNames,
-        $AssignmentMode = 'replace',
+        $AssignmentMode = 'append',
         $AssignmentDirection
     )
+
+    # App protection policy lists expose the singular @odata.type as the URLName, but Graph
+    # needs the plural collection segment. Normalize the known types here.
+    $Type = switch ($Type) {
+        'androidManagedAppProtection' { 'androidManagedAppProtections' }
+        'iosManagedAppProtection' { 'iosManagedAppProtections' }
+        'windowsManagedAppProtection' { 'windowsManagedAppProtections' }
+        'mdmWindowsInformationProtectionPolicy' { 'mdmWindowsInformationProtectionPolicies' }
+        'windowsInformationProtectionPolicy' { 'windowsInformationProtectionPolicies' }
+        'targetedManagedAppConfiguration' { 'targetedManagedAppConfigurations' }
+        default { $Type }
+    }
 
     Write-Host "Assigning policy $PolicyId ($PlatformType/$Type) to $GroupName"
 
