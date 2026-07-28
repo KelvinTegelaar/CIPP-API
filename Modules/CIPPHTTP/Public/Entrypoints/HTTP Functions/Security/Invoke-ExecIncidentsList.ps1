@@ -86,7 +86,7 @@ function Invoke-ExecIncidentsList {
                 $Metadata = [PSCustomObject]@{
                     QueueId = $RunningQueue.RowKey ?? $null
                 }
-                $Incidents = $Rows
+                $Incidents = $Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
                 foreach ($incident in $Incidents) {
                     if ($incident.Incident -and (Test-Json -Json $incident.Incident)) {
                         $IncidentObj = $incident.Incident | ConvertFrom-Json
