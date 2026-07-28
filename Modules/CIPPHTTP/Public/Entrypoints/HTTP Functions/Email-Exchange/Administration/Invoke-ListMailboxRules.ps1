@@ -88,7 +88,7 @@ function Invoke-ListMailboxRules {
             $Metadata = [PSCustomObject]@{
                 QueueId = $RunningQueue.RowKey ?? $null
             }
-            $GraphRequest = $Rows | ForEach-Object {
+            $GraphRequest = $Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant' | ForEach-Object {
                 $NewObj = $_.Rules | ConvertFrom-Json -ErrorAction SilentlyContinue
                 $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $_.Tenant -Force
                 $NewObj
