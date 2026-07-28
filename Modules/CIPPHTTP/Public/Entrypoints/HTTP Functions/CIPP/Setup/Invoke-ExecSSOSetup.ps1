@@ -248,6 +248,10 @@ function Invoke-ExecSSOSetup {
                 # --- Step 6: Mark migration as secrets_stored ---
                 & $SaveMigrationRow @{ Status = 'secrets_stored'; LastError = '' }
 
+                # New credentials are stored - lift a pending management-portal SSO reset
+                # so warmup's auto-configure can use them instead of re-entering setup.
+                Remove-CIPPMigrationAppSetting -SettingName 'CIPP_SSO_RESET'
+
                 Write-LogMessage -API $APIName -headers $Headers -message "SSO migration credentials stored for app $AppId" -sev Info
                 $Body = @{
                     Results = @{
@@ -563,8 +567,9 @@ function Invoke-ExecSSOSetup {
                 # --- Step 5: Configure EasyAuth on the App Service ---
                 Set-CIPPSSOEasyAuth -AppId $AppId -MultiTenant $MultiTenant -TenantId $env:TenantID -UseKvReferences
 
-                # --- Step 6: Remove the migration trigger env var ---
+                # --- Step 6: Remove the migration trigger env var (and any pending SSO reset flag) ---
                 Remove-CIPPMigrationAppSetting -SettingName 'CIPP_SSO_MIGRATION_APPID'
+                Remove-CIPPMigrationAppSetting -SettingName 'CIPP_SSO_RESET'
 
                 # --- Step 7: Mark complete ---
                 & $SaveMigrationRow @{ Status = 'complete'; LastError = '' }
@@ -632,6 +637,10 @@ function Invoke-ExecSSOSetup {
                     ManualConfig = 'true'
                     LastError    = ''
                 }
+
+                # New credentials are stored - lift a pending management-portal SSO reset
+                # so warmup's auto-configure can use them instead of re-entering setup.
+                Remove-CIPPMigrationAppSetting -SettingName 'CIPP_SSO_RESET'
 
                 Write-LogMessage -API $APIName -headers $Headers -message "SSO credentials manually configured for app $AppId (multiTenant=$MultiTenant)" -sev Info
 

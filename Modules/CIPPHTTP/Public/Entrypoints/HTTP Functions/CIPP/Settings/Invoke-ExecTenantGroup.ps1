@@ -161,6 +161,12 @@ function Invoke-ExecTenantGroup {
         }
     }
 
+    # Roles can be scoped to a tenant group, so changing membership changes what those roles
+    # resolve to and the cached scope rules have to be rebuilt
+    if ($Action -in @('AddEdit', 'Delete')) {
+        Clear-CippAccessScopeCache
+    }
+
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body

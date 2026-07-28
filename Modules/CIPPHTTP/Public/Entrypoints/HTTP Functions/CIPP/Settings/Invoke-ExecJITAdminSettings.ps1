@@ -1,7 +1,7 @@
 function Invoke-ExecJITAdminSettings {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.AppSettings.ReadWrite
     #>

@@ -15,7 +15,9 @@ function Invoke-AddStoreApp {
     $WinGetApp = $Request.Body
     $assignTo = $Request.Body.AssignTo -eq 'customGroup' ? $Request.Body.CustomGroup : $Request.Body.AssignTo
 
-    if ($ChocoApp.InstallAsSystem) { 'system' } else { 'user' }
+    # winGetAppInstallExperience only supports runAsAccount (no restart behavior). Default to
+    # system when the toggle is absent so older callers keep the previous behavior.
+    $RunAsAccount = if ($null -ne $WinGetApp.InstallAsSystem -and -not [bool]$WinGetApp.InstallAsSystem) { 'user' } else { 'system' }
     $WinGetData = [ordered]@{
         '@odata.type'       = '#microsoft.graph.winGetApp'
         'displayName'       = "$($WinGetApp.ApplicationName)"
@@ -23,7 +25,7 @@ function Invoke-AddStoreApp {
         'packageIdentifier' = "$($WinGetApp.PackageName)"
         'installExperience' = @{
             '@odata.type'  = 'microsoft.graph.winGetAppInstallExperience'
-            'runAsAccount' = 'system'
+            'runAsAccount' = $RunAsAccount
         }
     }
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList

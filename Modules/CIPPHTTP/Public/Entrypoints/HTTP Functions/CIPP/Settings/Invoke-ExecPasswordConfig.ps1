@@ -1,7 +1,7 @@
 function Invoke-ExecPasswordConfig {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.AppSettings.ReadWrite
     #>

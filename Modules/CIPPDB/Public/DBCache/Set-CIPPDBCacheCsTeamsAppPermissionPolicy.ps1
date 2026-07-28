@@ -4,7 +4,7 @@ function Set-CIPPDBCacheCsTeamsAppPermissionPolicy {
         Caches the Teams App Permission Policy (all policies)
 
     .DESCRIPTION
-        Calls Get-CsTeamsAppPermissionPolicy via New-TeamsRequest and writes
+        Calls Get-CsTeamsAppPermissionPolicy via New-TeamsRequestV2 and writes
         the result into the CippReportingDB under Type
         'CsTeamsAppPermissionPolicy'. Used by CIS test 8.4.1.
 

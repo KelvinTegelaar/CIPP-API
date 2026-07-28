@@ -4,7 +4,7 @@ function Set-CIPPDBCacheCsTeamsMessagingPolicy {
         Caches the Teams Messaging Policy (Global)
 
     .DESCRIPTION
-        Calls Get-CsTeamsMessagingPolicy via New-TeamsRequest and writes the
+        Calls Get-CsTeamsMessagingPolicy via New-TeamsRequestV2 and writes the
         result into the CippReportingDB under Type 'CsTeamsMessagingPolicy'.
         Used by CIS tests 8.2.3 (external Teams users initiating chat) and
         8.6.1 (security reporting in Teams).

@@ -8,7 +8,8 @@ function Get-CIPPAuthentication {
     $Variables = @('ApplicationID', 'ApplicationSecret', 'TenantID', 'RefreshToken')
 
     try {
-        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+        $IsDevMode = $env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true'
+        if ($IsDevMode) {
             $Table = Get-CIPPTable -tablename 'DevSecrets'
             $Secret = Get-AzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
             if (!$Secret) {
@@ -26,6 +27,48 @@ function Get-CIPPAuthentication {
                 Set-Item -Path env:$_ -Value (Get-CippKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
             }
         }
+        # TenantID must be the tenant GUID: a domain name (contoso.onmicrosoft.com)
+        # works for token requests but breaks API integrations that compare or store
+        # tenant ids. Resolve a domain to its GUID via the unauthenticated OpenID
+        # metadata endpoint. Skip the deployment template's placeholder value —
+        # fresh deployments hold 'tenantId' until the setup wizard writes real
+        # secrets (same placeholder set as Initialize-CIPPAuth).
+        $GuidPattern = '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$'
+        $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
+        if ($env:TenantID -and $env:TenantID -notmatch $GuidPattern -and $env:TenantID -notmatch $PlaceholderPattern) {
+            $StoredTenantID = $env:TenantID
+            try {
+                $OpenIdConfig = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$StoredTenantID/v2.0/.well-known/openid-configuration" -ErrorAction Stop
+                $ResolvedTenantID = ($OpenIdConfig.issuer -split '/')[3]
+                if ($ResolvedTenantID -notmatch $GuidPattern) {
+                    throw "OpenID metadata for '$StoredTenantID' did not contain a tenant GUID (issuer: $($OpenIdConfig.issuer))"
+                }
+                $env:TenantID = $ResolvedTenantID
+                Write-LogMessage -message "The TenantID secret is set to domain name '$StoredTenantID' - resolved to tenant GUID $ResolvedTenantID." -Sev 'Warning' -API 'CIPP Authentication'
+
+                # Fix the stored secret so every future load gets the GUID directly.
+                # Best-effort: this session already has the resolved value.
+                if ($IsDevMode) {
+                    try {
+                        $Secret | Add-Member -MemberType NoteProperty -Name 'TenantID' -Value $ResolvedTenantID -Force
+                        $null = Add-AzDataTableEntity @Table -Entity $Secret -Force
+                        Write-LogMessage -message "Updated the TenantID in the DevSecrets table from '$StoredTenantID' to tenant GUID $ResolvedTenantID." -Sev 'Info' -API 'CIPP Authentication'
+                    } catch {
+                        Write-LogMessage -message 'Could not update the TenantID in the DevSecrets table - it will be re-resolved on every authentication load.' -Sev 'Warning' -API 'CIPP Authentication' -LogData (Get-CippException -Exception $_)
+                    }
+                } elseif ($keyvaultname) {
+                    try {
+                        $null = Set-CippKeyVaultSecret -VaultName $keyvaultname -Name 'TenantID' -SecretValue (ConvertTo-SecureString -String $ResolvedTenantID -AsPlainText -Force) -ErrorAction Stop
+                        Write-LogMessage -message "Updated the 'TenantID' Key Vault secret from '$StoredTenantID' to tenant GUID $ResolvedTenantID." -Sev 'Info' -API 'CIPP Authentication'
+                    } catch {
+                        Write-LogMessage -message "Could not update the 'TenantID' Key Vault secret to the tenant GUID - it will be re-resolved on every authentication load until the secret is updated manually." -Sev 'Warning' -API 'CIPP Authentication' -LogData (Get-CippException -Exception $_)
+                    }
+                }
+            } catch {
+                Write-LogMessage -message "The TenantID secret ('$StoredTenantID') is not a GUID and could not be resolved to one. API integrations may misbehave until the 'tenantid' Key Vault secret is set to the tenant GUID." -Sev 'Error' -API 'CIPP Authentication' -LogData (Get-CippException -Exception $_)
+            }
+        }
+
         # Set before certificate handling: Update-CIPPSAMCertificate goes through
         # Get-GraphToken, which re-enters this function when SetFromProfile is unset
         $env:SetFromProfile = $true
@@ -34,7 +77,7 @@ function Get-CIPPAuthentication {
         # when it does not exist yet. Non-fatal: auth must succeed even when certificate
         # handling fails; the weekly token update retries provisioning.
         try {
-            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+            if ($IsDevMode) {
                 if ($Secret.SAMCertificate) {
                     $env:SAMCertificate = $Secret.SAMCertificate
                 }
