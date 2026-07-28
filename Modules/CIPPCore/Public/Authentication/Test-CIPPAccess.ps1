@@ -159,7 +159,7 @@ function Test-CIPPAccess {
 
         $swIPCheck = [System.Diagnostics.Stopwatch]::StartNew()
         if (-not $User.userRoles) {
-            throw 'Access denied: unable to resolve roles for the authenticated principal, here is what we know about this user: ' + ($User | ConvertTo-Json -Depth 5)
+            throw 'Access denied: unable to resolve roles for the authenticated principal, here is what we know about this user: ' + ($User | ConvertTo-Json -Depth 5) + ' and here is what we know about the request: ' + ($Request | ConvertTo-Json -Depth 5)
         }
         $AllowedIPRanges = Get-CIPPRoleIPRanges -Roles $User.userRoles
 
