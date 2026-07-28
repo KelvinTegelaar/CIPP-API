@@ -6,6 +6,7 @@ function Invoke-ExecBackupReplicationConfig {
         CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'Wraps a backup SAS URL in a SecureString only to satisfy Set-CippKeyVaultSecret; the value is written to Azure Key Vault (encrypted at rest)')]
     param($Request, $TriggerMetadata)
 
     $Table = Get-CIPPTable -TableName Config

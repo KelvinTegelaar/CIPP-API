@@ -88,7 +88,7 @@ function Invoke-ExecAlertsList {
                     QueueId = $RunningQueue.RowKey ?? $null
                 }
 
-                $Alerts = $Rows
+                $Alerts = $Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
                 $AlertsObj = foreach ($Alert in $Alerts) {
                     $AlertInfo = $Alert.Alert | ConvertFrom-Json
                     @{

@@ -74,7 +74,7 @@ function Invoke-ListMailQuarantine {
                 $Metadata = [PSCustomObject]@{
                     QueueId = $RunningQueue.RowKey ?? $null
                 }
-                $Messages = $Rows
+                $Messages = $Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
                 foreach ($message in $Messages) {
                     $messageObj = $message.QuarantineMessage | ConvertFrom-Json
                     $messageObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $message.Tenant -Force
