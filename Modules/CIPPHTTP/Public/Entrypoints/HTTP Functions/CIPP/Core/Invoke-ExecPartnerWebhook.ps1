@@ -29,11 +29,18 @@ function Invoke-ExecPartnerWebhook {
             } catch {}
             if (!$Results) {
                 $Results = [PSCustomObject]@{
-                    webhoookUrl           = 'None'
+                    webhookUrl            = 'None'
                     lastModifiedTimestamp = 'Never'
                     webhookEvents         = @()
                     enabled               = $false
                 }
+            }
+
+            # The URL that would be registered if the subscription were saved right now, so the UI can
+            # flag a subscription still pointing at a previous CIPP URL.
+            $CurrentHostname = Get-CIPPHostname -Headers $Request.Headers
+            if ($CurrentHostname) {
+                $Results | Add-Member -MemberType NoteProperty -Name 'expectedWebhookUrl' -Value "https://$CurrentHostname/API/PublicWebhooks?CIPPID=$($env:TenantID)&Type=PartnerCenter" -Force
             }
         }
         'CreateSubscription' {
@@ -41,7 +48,8 @@ function Invoke-ExecPartnerWebhook {
                 $Request.Body.EventType = $Request.Body.EventType.value
             }
 
-            $BaseURL = ([System.Uri]$Request.Headers.'x-ms-original-url').Host
+            # Resolve the URL CIPP is served from at the time of submit, and store it for background jobs
+            $BaseURL = Get-CIPPHostname -Headers $Request.Headers -Save
             $Webhook = @{
                 TenantFilter  = $env:TenantID
                 PartnerCenter = $true
