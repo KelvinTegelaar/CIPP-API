@@ -81,6 +81,14 @@ Function Invoke-ListUsers {
             $_ | Add-Member -MemberType NoteProperty -Name 'primDomain' -Value @{value = ($_.userPrincipalName -split '@' | Select-Object -Last 1); label = ($_.userPrincipalName -split '@' | Select-Object -Last 1); } -Force
             $_
         }
+    } elseif ($null -ne (Get-CippRequestContext).AllowedTenants) {
+        # Deprecated cacheusers blob has no reliable per-tenant column, so it cannot be safely
+        # narrowed for a tenant-restricted caller (including zero allowed tenants). Return the
+        # deprecation message instead of leaking every tenant's users. Unrestricted callers keep
+        # the legacy behavior below ($null AllowedTenants).
+        [PSCustomObject]@{
+            Message = 'This function has been deprecated for all users, please use ListGraphRequest instead'
+        }
     } else {
         $Table = Get-CIPPTable -TableName 'cacheusers'
         $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)

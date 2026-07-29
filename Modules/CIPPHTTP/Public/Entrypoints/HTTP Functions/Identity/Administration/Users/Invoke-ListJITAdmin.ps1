@@ -100,7 +100,7 @@
             }
             # There is data in the cache, so we will use that
             Write-Information "Found $($Rows.Count) rows in the cache"
-            foreach ($row in $Rows) {
+            foreach ($row in ($Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant')) {
                 $UserObject = $row.JITAdminUser | ConvertFrom-Json
                 $Results.Add(
                     [PSCustomObject]@{
