@@ -37,7 +37,7 @@ function Invoke-ListLicenses {
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
             }
         } else {
-            $GraphRequest = $Rows | ForEach-Object {
+            $GraphRequest = $Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant' | ForEach-Object {
                 $LicenseData = $_.License | ConvertFrom-Json -ErrorAction SilentlyContinue
                 foreach ($License in $LicenseData) {
                     $License
