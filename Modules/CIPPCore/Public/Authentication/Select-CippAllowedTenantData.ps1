@@ -16,7 +16,8 @@ function Select-CippAllowedTenantData {
         is CIPPCore module-scoped; a copy defined in CIPPHTTP would read that module's own empty
         variable and silently filter nothing (see Get-CippRequestContext).
 
-        The stored scope is a list of customerIds (or $null = unrestricted). Cache rows identify
+        The stored scope is a list of customerIds. $null means unrestricted; an explicit scope
+        (including an empty list) means restricted. Cache rows identify
         their tenant by domain name (defaultDomainName, stored on a 'Tenant' property) and/or by
         customerId, so allowed customerIds are expanded to every identifier form an allowed tenant
         might present, mirroring the match logic in Invoke-ListLogs.
@@ -50,24 +51,35 @@ function Select-CippAllowedTenantData {
     )
 
     begin {
-        # $null / empty stored scope means the caller is unrestricted - pass everything through
-        # with zero overhead (no Get-Tenants call).
-        $AllowedCustomerIds = if ($script:CippAllowedTenantsStorage) { $script:CippAllowedTenantsStorage.Value } else { $null }
-        $Unrestricted = -not ($AllowedCustomerIds | Where-Object { $_ })
-
-        if (-not $Unrestricted) {
-            # Build a case-insensitive set of every identifier a row might carry for an allowed
-            # tenant. Get-Tenants is already narrowed to the caller's scope by the storage filter.
-            $AllowedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-            foreach ($Id in $AllowedCustomerIds) {
-                if ($Id) { [void]$AllowedSet.Add([string]$Id) }
-            }
-            foreach ($Tenant in (Get-Tenants -IncludeErrors)) {
-                foreach ($Value in @($Tenant.customerId, $Tenant.defaultDomainName, $Tenant.initialDomainName)) {
-                    if ($Value) { [void]$AllowedSet.Add([string]$Value) }
+        # $null scope means unrestricted (pass everything through with no Get-Tenants call).
+        # An explicit scope — including @() when the caller has zero allowed tenants — is
+        # restricted and must fail closed rather than returning global cached data.
+        # Note: do not use ($null -eq $ScopeValue); in PowerShell $null -eq @() is $true.
+        if (-not $script:CippAllowedTenantsStorage -or $null -eq $script:CippAllowedTenantsStorage.Value) {
+            $Unrestricted = $true
+            $DenyAll = $false
+            $AllowedSet = $null
+        } else {
+            $Unrestricted = $false
+            $DenyAll = $false
+            $AllowedSet = $null
+            $AllowedCustomerIds = @($script:CippAllowedTenantsStorage.Value | Where-Object { $_ })
+            if ($AllowedCustomerIds.Count -eq 0) {
+                $DenyAll = $true
+            } else {
+                # Build a case-insensitive set of every identifier a row might carry for an allowed
+                # tenant. Get-Tenants is already narrowed to the caller's scope by the storage filter.
+                $AllowedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                foreach ($Id in $AllowedCustomerIds) {
+                    [void]$AllowedSet.Add([string]$Id)
                 }
+                foreach ($Tenant in (Get-Tenants -IncludeErrors)) {
+                    foreach ($Value in @($Tenant.customerId, $Tenant.defaultDomainName, $Tenant.initialDomainName)) {
+                        if ($Value) { [void]$AllowedSet.Add([string]$Value) }
+                    }
+                }
+                if ($AllowPartner) { [void]$AllowedSet.Add('CIPP') }
             }
-            if ($AllowPartner) { [void]$AllowedSet.Add('CIPP') }
         }
     }
 
@@ -76,6 +88,9 @@ function Select-CippAllowedTenantData {
             if ($null -eq $Item) { continue }
             if ($Unrestricted) {
                 $Item
+                continue
+            }
+            if ($DenyAll) {
                 continue
             }
             foreach ($Prop in $TenantProperty) {

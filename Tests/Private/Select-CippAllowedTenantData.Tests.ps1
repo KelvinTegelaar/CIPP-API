@@ -90,10 +90,23 @@ Describe 'Select-CippAllowedTenantData' {
             Should -Invoke -CommandName Get-Tenants -Times 0 -Exactly
         }
 
-        It 'treats an empty scope array as unrestricted' {
+        It 'does not treat an explicit empty scope as unrestricted' {
+            Mock -CommandName Get-Tenants -MockWith { throw 'Get-Tenants must not be called when scope is empty' }
             $script:CippAllowedTenantsStorage.Value = @()
             $Result = $script:MixedRows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
-            @($Result).Count | Should -Be 3
+            @($Result).Count | Should -Be 0
+        }
+    }
+
+    Context 'Restricted caller with zero effective tenants' {
+        BeforeEach {
+            Mock -CommandName Get-Tenants -MockWith { throw 'Get-Tenants must not be called when scope is empty' }
+            $script:CippAllowedTenantsStorage.Value = @()
+        }
+
+        It 'returns no rows from a non-empty cache input' {
+            $Result = $script:MixedRows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
+            @($Result).Count | Should -Be 0
         }
     }
 }
