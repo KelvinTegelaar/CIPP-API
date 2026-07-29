@@ -429,6 +429,10 @@ function Get-CIPPDrift {
                 # unmanagedSync standard). They are system-managed, cannot be templated and come
                 # back when deleted, so they are never a deviation.
                 if (([string]$TenantCAPolicy.displayName).StartsWith('[SharePoint admin center]')) { continue }
+                # Microsoft-managed CA policies cannot be deleted, only disabled. Once turned off
+                # they are not actionable, so a disabled Microsoft-managed policy is never a
+                # deviation. Enabled or report-only ones still are.
+                if (([string]$TenantCAPolicy.displayName).StartsWith('Microsoft-managed', [System.StringComparison]::OrdinalIgnoreCase) -and $TenantCAPolicy.state -eq 'disabled') { continue }
                 $PolicyFound = $false
 
                 foreach ($TemplateCAPolicy in $TemplateCATemplates) {
