@@ -16,6 +16,7 @@ function Invoke-ExecSnoozeAlert {
         $TenantFilter = $Request.Body.TenantFilter
         $AlertItem = $Request.Body.AlertItem
         $Duration = [int]$Request.Body.Duration
+        $Reason = [string]$Request.Body.Reason
         $SnoozedBy = try {
             ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
         } catch { 'Unknown' }
@@ -56,6 +57,7 @@ function Invoke-ExecSnoozeAlert {
             SnoozedAt      = [string]$CurrentUnixTime
             ContentPreview = [string]$HashResult.ContentPreview
             SnoozeKey      = [string]$HashResult.RawKey
+            SnoozeReason   = [string]$Reason
         }
 
         Add-CIPPAzDataTableEntity @SnoozeTable -Entity $SnoozeEntity -Force | Out-Null
@@ -63,6 +65,9 @@ function Invoke-ExecSnoozeAlert {
         $DurationLabel = if ($Duration -eq -1) { 'forever' } else { "$Duration days" }
         $ContentPreview = $HashResult.ContentPreview
         $Result = "Successfully snoozed alert for ${DurationLabel}: ${ContentPreview}"
+        if (-not [string]::IsNullOrWhiteSpace($Reason)) {
+            $Result = "$Result - Reason: $Reason"
+        }
 
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info' -tenant $TenantFilter
 

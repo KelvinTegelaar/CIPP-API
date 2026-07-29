@@ -100,9 +100,11 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         # Use existing policy name if found
         $PolicyName = $ExistingPolicy.Name
     }
-    # Derive rule name from policy name, but check for old names for backward compatibility
-    $DesiredRuleName = "$PolicyName Rule"
-    $RuleList = @($DesiredRuleName, 'CIPP Default SafeLinks Rule', 'CIPP Default SafeLinks Policy')
+    # Derive rule name from policy name using the same convention as the Safe Links page and
+    # templates (PolicyName_Rule), but check for old names for backward compatibility so rules
+    # created as "PolicyName Rule" by earlier versions of this standard are adopted, not duplicated
+    $DesiredRuleName = "$($PolicyName)_Rule"
+    $RuleList = @($DesiredRuleName, "$PolicyName Rule", 'CIPP Default SafeLinks Rule', 'CIPP Default SafeLinks Policy')
     $ExistingRule = $AllSafeLinksRule | Where-Object -Property Name -In $RuleList | Select-Object -First 1
     if ($null -eq $ExistingRule.Name) {
         # No existing rule - use the derived name
