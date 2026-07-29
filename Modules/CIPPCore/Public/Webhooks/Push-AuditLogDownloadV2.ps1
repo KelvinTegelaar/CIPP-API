@@ -54,25 +54,28 @@ function Push-AuditLogDownloadV2 {
 
             if ($Status -eq 'succeeded') {
                 try {
-                    $Results = @(Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId)
-                    foreach ($SearchResult in $Results) {
+                    # Streamed, not collected: each record is written to CacheWebhooks and
+                    # dropped, so the window never needs to be resident.
+                    $WindowCount = 0
+                    Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId | ForEach-Object {
                         Add-CIPPAzDataTableEntity @CacheTable -Entity @{
-                            RowKey                = [string]$SearchResult.id
+                            RowKey                = [string]$_.id
                             PartitionKey          = [string]$TenantFilter
                             SearchId              = $SearchId
-                            JSON                  = [string]($SearchResult | ConvertTo-Json -Depth 10 -Compress)
+                            JSON                  = [string]($_ | ConvertTo-Json -Depth 10 -Compress)
                             CippProcessing        = $false
                             CippProcessingStarted = ''
                         } -Force
+                        $WindowCount++
                     }
-                    $Downloaded += $Results.Count
+                    $Downloaded += $WindowCount
                     # Empty windows have nothing to process - mark them Processed directly so they
                     # don't sit at Downloaded forever. Windows with records go to Downloaded and are
                     # advanced to Processed by Push-AuditLogTenantProcessV2 once their rows are drained.
-                    $DownloadState = if ($Results.Count -eq 0) { 'Processed' } else { 'Downloaded' }
+                    $DownloadState = if ($WindowCount -eq 0) { 'Processed' } else { 'Downloaded' }
                     $LedgerUpdate = @{
                         PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = $DownloadState
-                        RecordCount  = [int]$Results.Count; DownloadedUtc = $Now; Attempts = 0
+                        RecordCount  = [int]$WindowCount; DownloadedUtc = $Now; Attempts = 0
                         SearchStatus = 'succeeded'; LastPolledUtc = $Now
                     }
                     if ($DownloadState -eq 'Processed') {
@@ -80,7 +83,7 @@ function Push-AuditLogDownloadV2 {
                         $LedgerUpdate.MatchedCount = 0
                     }
                     Add-CIPPAzDataTableEntity @Ledger -Entity $LedgerUpdate -OperationType UpsertMerge
-                    Write-Information "AuditLogV2: downloaded $($Results.Count) record(s) for $TenantFilter window $($Row.RowKey)"
+                    Write-Information "AuditLogV2: downloaded $WindowCount record(s) for $TenantFilter window $($Row.RowKey)"
                 } catch {
                     $Attempts = [int]$Row.Attempts + 1
                     $RetryTotal = [int]$Row.RetryCount + 1
