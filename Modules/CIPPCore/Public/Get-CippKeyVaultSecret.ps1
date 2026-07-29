@@ -23,6 +23,7 @@ function Get-CippKeyVaultSecret {
     Get-CippKeyVaultSecret -VaultName 'mykeyvault' -Name 'RefreshToken' -AsPlainText
     #>
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'Wraps the value returned by the Key Vault REST call in a SecureString to match the Get-AzKeyVaultSecret return shape')]
     param(
         [Parameter(Mandatory = $false)]
         [string]$VaultName,

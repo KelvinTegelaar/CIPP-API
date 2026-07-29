@@ -1,6 +1,7 @@
 
 function Get-CIPPAuthentication {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'Wraps a resolved tenant GUID in a SecureString only to satisfy Set-CippKeyVaultSecret; the value is written to Azure Key Vault (encrypted at rest)')]
     param (
         $APIName = 'Get Keyvault Authentication',
         [switch]$Force
