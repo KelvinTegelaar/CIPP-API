@@ -136,7 +136,7 @@ function Test-CIPPAccess {
         $swUserBranch = [System.Diagnostics.Stopwatch]::StartNew()
         $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
 
-       if ($User.claims -and [string]::IsNullOrWhiteSpace($User.userDetails)) {
+        if ($User.claims -and [string]::IsNullOrWhiteSpace($User.userDetails)) {
             $Claims = @($User.claims)
             $Upn = ($Claims | Where-Object { $_.typ -in @('preferred_username', 'upn', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn', 'email', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress') } | Select-Object -First 1).val
             if ([string]::IsNullOrWhiteSpace($Upn)) { $Upn = $Request.Headers.'x-ms-client-principal-name' }
@@ -159,7 +159,7 @@ function Test-CIPPAccess {
 
         $swIPCheck = [System.Diagnostics.Stopwatch]::StartNew()
         if (-not $User.userRoles) {
-            throw 'Access denied: unable to resolve roles for the authenticated principal.'
+            throw 'Access denied: unable to resolve roles for the authenticated principal'
         }
         $AllowedIPRanges = Get-CIPPRoleIPRanges -Roles $User.userRoles
 

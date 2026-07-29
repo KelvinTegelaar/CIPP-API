@@ -63,7 +63,7 @@ function Invoke-ListTransportRules {
                     $Metadata = [PSCustomObject]@{
                         QueueId = $RunningQueue.RowKey ?? $null
                     }
-                    $Rules = $Rows
+                    $Rules = $Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
                     foreach ($rule in $Rules) {
                         $RuleObj = $rule.TransportRule | ConvertFrom-Json
                         $RuleObj | Add-Member -MemberType NoteProperty -Name Tenant -Value $rule.Tenant -Force
