@@ -233,8 +233,8 @@ function Invoke-ListConditionalAccessPolicies {
                 $Metadata = [PSCustomObject]@{
                     QueueId = $RunningQueue.RowKey ?? $null
                 }
-                $Policies = $Rows
-                # Output all policies from all tenants
+                $Policies = $Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
+                # Output all policies from all tenants the caller is allowed to see
                 foreach ($policy in $Policies) {
                     ($policy.Policy | ConvertFrom-Json)
                 }

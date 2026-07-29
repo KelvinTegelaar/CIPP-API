@@ -69,7 +69,7 @@ Function Invoke-ListBasicAuth {
                     Body       = @($GraphRequest)
                 })
         } else {
-            $GraphRequest = $Rows
+            $GraphRequest = @($Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant')
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @($GraphRequest)
