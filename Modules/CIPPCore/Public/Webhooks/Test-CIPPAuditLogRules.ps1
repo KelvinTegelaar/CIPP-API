@@ -462,11 +462,11 @@ function Test-CIPPAuditLogRules {
                 $Data = $AuditRecord.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
                 try {
                     # Attempt to locate GUIDs in $Data and match them with their corresponding user, group, device, or service principal using O(1) hashtable lookups
-                    Write-Information 'Checking Data for GUIDs to map to users, groups, devices, or service principals'
+                    # Write-Information 'Checking Data for GUIDs to map to users, groups, devices, or service principals'
                     Add-CIPPGuidMappings -DataObject $Data -UserLookup $UserLookup -GroupLookup $GroupLookup -DeviceLookup $DeviceLookup -ServicePrincipalLookup $ServicePrincipalLookup -PartnerUserLookup $PartnerUserLookup -PropertyPrefix 'CIPP'
 
                     # Also check root properties for GUIDs and partner UPNs
-                    Write-Information 'Checking RootProperties for GUIDs to map to users, groups, devices, or service principals'
+                    # Write-Information 'Checking RootProperties for GUIDs to map to users, groups, devices, or service principals'
                     Add-CIPPGuidMappings -DataObject $RootProperties -UserLookup $UserLookup -GroupLookup $GroupLookup -DeviceLookup $DeviceLookup -ServicePrincipalLookup $ServicePrincipalLookup -PartnerUserLookup $PartnerUserLookup
 
                     if ($Data.ExtendedProperties) {
