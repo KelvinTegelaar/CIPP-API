@@ -48,7 +48,7 @@ function Assert-Contains {
 # ---------------------------------------------------------------------------
 # Load blocklist function from source
 # ---------------------------------------------------------------------------
-$blocklistPath = Join-Path $PSScriptRoot '../Modules/CIPPCore/Private/Get-CIPPSchedulerBlockedCommands.ps1'
+$blocklistPath = Join-Path $PSScriptRoot '../Modules/CIPPCore/Public/Tools/Get-CIPPSchedulerBlockedCommands.ps1'
 if (-not (Test-Path $blocklistPath)) {
     Write-Error "Get-CIPPSchedulerBlockedCommands.ps1 not found at: $blocklistPath"
     exit 1
