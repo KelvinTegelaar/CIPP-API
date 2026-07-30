@@ -14,8 +14,12 @@ Function Invoke-ExecBrandingSettings {
 
     try {
         $Table = Get-CIPPTable -TableName Config
-        $Filter = "PartitionKey eq 'BrandingSettings' and RowKey eq 'BrandingSettings'"
-        $BrandingConfig = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        # Partition-scoped, not RowKey-scoped: a logo large enough to exceed the 1 MiB entity limit is
+        # stored across 'BrandingSettings-partN' rows, and reassembly needs every part row in the
+        # result set. Filtering on RowKey returns only the root row, so the split manifest is missing
+        # and the logo comes back as $null.
+        $Filter = "PartitionKey eq 'BrandingSettings'"
+        $BrandingConfig = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.RowKey -eq 'BrandingSettings' }
 
         if (-not $BrandingConfig) {
             $BrandingConfig = @{
