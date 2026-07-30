@@ -15,7 +15,7 @@ function Get-HaloMapping {
             IntegrationId   = $_.HaloPSA
             IntegrationName = $_.HaloPSAName
         }
-        Remove-AzDataTableEntity -Force @CIPPMapping -Entity $_ | Out-Null
+        Remove-CIPPAzDataTableEntity -Force @CIPPMapping -Entity $_ | Out-Null
     }
     if (($MigrateRows | Measure-Object).Count -gt 0) {
         Add-CIPPAzDataTableEntity @CIPPMapping -Entity $MigrateRows -Force

@@ -119,7 +119,7 @@ function Invoke-ExecTenantGroup {
                 if ($CurrentMembers -and $null -ne $members) {
                     foreach ($CurrentMember in $CurrentMembers) {
                         if ($members.value -notcontains $CurrentMember.customerId) {
-                            Remove-AzDataTableEntity @MembersTable -Entity $CurrentMember -Force
+                            Remove-CIPPAzDataTableEntity @MembersTable -Entity $CurrentMember -Force
                             $Removes.Add('Removed member {0}' -f $CurrentMember.customerId)
                         }
                     }
@@ -150,7 +150,7 @@ function Invoke-ExecTenantGroup {
             # Delete group
             $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$groupId'"
             if ($GroupEntity) {
-                Remove-AzDataTableEntity @Table -Entity $GroupEntity -Force
+                Remove-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
                 $Body = @{ Results = "Group '$($GroupEntity.Name)' deleted successfully" }
             } else {
                 $Body = @{ Results = "Group '$groupId' not found" }

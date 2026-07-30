@@ -347,7 +347,7 @@ function Invoke-ExecSSOSetup {
                 $PreviousAppId = $Existing.AppId
 
                 if ($Existing) {
-                    Remove-AzDataTableEntity @MigrationTable -Entity $Existing -Force | Out-Null
+                    Remove-CIPPAzDataTableEntity @MigrationTable -Entity $Existing -Force | Out-Null
                     Write-LogMessage -API $APIName -headers $Headers -message "SSO migration record cleared (previous AppId: $PreviousAppId). Use Create to provision a new app." -sev Info
                 }
 

@@ -157,7 +157,7 @@ function Invoke-HuduExtensionSync {
 
             $ExistingRelationRows = Get-CIPPAzDataTableEntity @HuduRelationsCache -Filter "PartitionKey eq 'HuduRelation'"
             if ($ExistingRelationRows) {
-                Remove-AzDataTableEntity @HuduRelationsCache -Entity $ExistingRelationRows -Force
+                Remove-CIPPAzDataTableEntity @HuduRelationsCache -Entity $ExistingRelationRows -Force
             }
 
             $RelationEntities = foreach ($Relation in $HuduRelations) {

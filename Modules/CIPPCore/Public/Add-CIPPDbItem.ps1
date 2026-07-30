@@ -101,7 +101,7 @@ function Add-CIPPDbItem {
                     Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -sev Warning -message "Skipped $Undated $Type row(s) with no readable Timestamp during orphan cleanup — not deleting without positive evidence"
                 }
                 if ($Orphans) {
-                    $null = Remove-AzDataTableEntity @Table -Entity @($Orphans) -Force
+                    $null = Remove-CIPPAzDataTableEntity @Table -Entity @($Orphans) -Force
                 }
             }
         }

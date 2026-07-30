@@ -55,7 +55,7 @@ function Invoke-ExecRemoveCippCveException {
         $RemovedCount     = 0
 
         foreach ($Entity in $EntitiesToRemove) {
-            Remove-AzDataTableEntity @CveExceptionsTable -Entity $Entity -Force
+            Remove-CIPPAzDataTableEntity @CveExceptionsTable -Entity $Entity -Force
             $RemovedCount++
         }
 

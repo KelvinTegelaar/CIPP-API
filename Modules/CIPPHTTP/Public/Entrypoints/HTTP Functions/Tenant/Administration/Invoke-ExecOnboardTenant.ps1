@@ -20,7 +20,7 @@ function Invoke-ExecOnboardTenant {
             if ($Request.Body.Cancel -eq $true) {
                 $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$SafeId'"
                 if ($TenantOnboarding) {
-                    Remove-AzDataTableEntity -Force @OnboardTable -Entity $TenantOnboarding
+                    Remove-CIPPAzDataTableEntity -Force @OnboardTable -Entity $TenantOnboarding
                     $Results = @{'Results' = 'Onboarding job canceled' }
                     $StatusCode = [HttpStatusCode]::OK
                 } else {

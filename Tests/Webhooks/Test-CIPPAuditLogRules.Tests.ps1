@@ -14,7 +14,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($TableName, $Context, $Filter, $Property, $First) }
     function Get-AzDataTableEntity { param($TableName, $Context, $Filter, $Property, $First) }
     function Add-CIPPAzDataTableEntity { param($TableName, $Context, $Entity, [switch]$Force, $OperationType) }
-    function Remove-AzDataTableEntity { param($TableName, $Context, $Entity, [switch]$Force) }
+    function Remove-CIPPAzDataTableEntity { param($TableName, $Context, $Entity, [switch]$Force) }
     function Expand-CIPPTenantGroups { param($TenantFilter) }
     function Test-CIPPConditionFilter { param($Condition) }
     function Invoke-CippWebhookProcessing { param($Data, $CIPPURL, $TenantFilter, $AlertComment) }
@@ -134,7 +134,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
                 })
         }
 
-        Mock -CommandName Remove-AzDataTableEntity -MockWith {
+        Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith {
             param($TableName, $Context, $Entity, [switch]$Force)
             foreach ($e in @($Entity)) { $script:RemovedRows.Add($e) }
         }
@@ -144,7 +144,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         Mock -CommandName Test-CIPPConditionFilter -MockWith { '$_.Operation -eq ''Set-Mailbox''' }
         Mock -CommandName Invoke-CippWebhookProcessing -MockWith { }
         Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { }
-        # Remove-AzDataTableEntity is mocked above with a capturing body; a second mock here
+        # Remove-CIPPAzDataTableEntity is mocked above with a capturing body; a second mock here
         # would win and silently capture nothing.
         Mock -CommandName Get-CIPPGeoIPLocationBatch -MockWith { @{} }
         Mock -CommandName Write-LogMessage -MockWith { }
@@ -312,7 +312,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $rows
 
             # Under the flush size, so one flush after the loop plus the end-of-run sweep.
-            Should -Invoke Remove-AzDataTableEntity -Times 2 -Exactly
+            Should -Invoke Remove-CIPPAzDataTableEntity -Times 2 -Exactly
             @($script:RemovedRows).RowKey | Should -Contain 'rec-1'
             @($script:RemovedRows).RowKey | Should -Contain 'rec-5'
         }
@@ -329,7 +329,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
 
             # 60 records at a flush size of 25: two mid-loop flushes, a remainder flush,
             # and the sweep - not 60 individual calls.
-            Should -Invoke Remove-AzDataTableEntity -Times 4 -Exactly
+            Should -Invoke Remove-CIPPAzDataTableEntity -Times 4 -Exactly
             @($script:RemovedRows).RowKey.Count | Should -Be 120  # 60 flushed + 60 swept
         }
 

@@ -65,7 +65,7 @@ function Get-CIPPSchemaExtensions {
                     Write-LogMessage -headers $Headers -message "Updated Schema Extension: $($SchemaDefinition.id)" -API 'Get-CIPPSchemaExtensions' -Sev 'info' -LogData $Body
                 }
                 if ($Patch.status -eq 'Deprecated') {
-                    Remove-AzDataTableEntity @CustomDataTable -Entity $SchemaExtension -Force
+                    Remove-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaExtension -Force
                 } else {
                     $NewSchema = [string]($Schema | ConvertTo-Json -Depth 5 -Compress)
                     if ($SchemaExtension.JSON -ne $NewSchema) {

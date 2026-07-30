@@ -94,7 +94,7 @@ function Invoke-ExecSharePointTemplate {
 
                 if ($Template) {
                     $TemplateName = ($Template.JSON | ConvertFrom-Json).templateName
-                    $null = Remove-AzDataTableEntity @Table -Entity $Template -Force
+                    $null = Remove-CIPPAzDataTableEntity @Table -Entity $Template -Force
                     $Body = @{
                         'Results' = "Successfully deleted template '$TemplateName'"
                     }

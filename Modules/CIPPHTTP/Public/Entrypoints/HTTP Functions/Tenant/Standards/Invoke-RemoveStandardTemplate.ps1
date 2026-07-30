@@ -25,14 +25,14 @@ function Invoke-RemoveStandardTemplate {
             $TemplateName = ''
         }
         $Entities = Get-AzDataTableEntity @Table -Filter $Filter
-        Remove-AzDataTableEntity -Force @Table -Entity $Entities
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entities
 
         # Remove any drift remediation scheduled tasks associated with this template
         $ScheduledTasksTable = Get-CIPPTable -TableName 'ScheduledTasks'
         $SafeTag = ConvertTo-CIPPODataFilterValue -Value "DriftRemediation_$SafeID"
         $DriftTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter "PartitionKey eq 'ScheduledTask' and Tag eq '$SafeTag'"
         foreach ($DriftTask in $DriftTasks) {
-            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $DriftTask
+            Remove-CIPPAzDataTableEntity -Force @ScheduledTasksTable -Entity $DriftTask
             Write-LogMessage -Headers $Headers -API $APIName -message "Removed drift remediation scheduled task: $($DriftTask.Name)" -Sev Info
         }
         $StandardsReportsTable = Get-CIPPTable -TableName 'CippStandardsReports'
@@ -44,7 +44,7 @@ function Invoke-RemoveStandardTemplate {
             foreach ($Row in $Rows) { $OrphanedReports.Add($Row) }
         }
         if ($OrphanedReports.Count -gt 0) {
-            Remove-AzDataTableEntity -Force @StandardsReportsTable -Entity @($OrphanedReports)
+            Remove-CIPPAzDataTableEntity -Force @StandardsReportsTable -Entity @($OrphanedReports)
             Write-LogMessage -Headers $Headers -API $APIName -message "Removed $($OrphanedReports.Count) orphaned standards comparison row(s) for template id: $($ID)" -Sev Info
         }
 

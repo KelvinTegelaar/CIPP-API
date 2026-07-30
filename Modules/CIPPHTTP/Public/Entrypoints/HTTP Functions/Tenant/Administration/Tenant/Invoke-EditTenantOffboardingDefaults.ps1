@@ -53,7 +53,7 @@ function Invoke-EditTenantOffboardingDefaults {
             $toRemove = $existingDefaults | Where-Object { $_.PartitionKey -in $partitionKeys }
             if ($toRemove) {
                 foreach ($Entity in $toRemove) {
-                    Remove-AzDataTableEntity @PropertiesTable -Entity $Entity
+                    Remove-CIPPAzDataTableEntity @PropertiesTable -Entity $Entity
                 }
                 Write-LogMessage -headers $Headers -tenant $customerId -API $APIName -message "Removed tenant offboarding defaults for partition keys: $($partitionKeys -join ', ')" -Sev 'Info'
             }
