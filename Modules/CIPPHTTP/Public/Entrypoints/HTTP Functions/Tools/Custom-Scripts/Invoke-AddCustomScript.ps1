@@ -1,7 +1,7 @@
 function Invoke-AddCustomScript {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.Tests.ReadWrite
     #>
@@ -94,7 +94,7 @@ function Invoke-AddCustomScript {
 
             $NewerVersions = $ExistingScripts | Where-Object { $_.Version -gt $RestoreToVersion }
             foreach ($script in $NewerVersions) {
-                Remove-AzDataTableEntity @Table -Entity $script
+                Remove-CIPPAzDataTableEntity @Table -Entity $script
             }
 
             Write-LogMessage -API $APIName -headers $Headers -message "Restored custom script: $($TargetScript.ScriptName) to version $RestoreToVersion (Deleted $($NewerVersions.Count) newer version(s))" -sev 'Info'

@@ -104,7 +104,9 @@ function Invoke-ListUserSettings {
         #Get branding settings
         if ($UserSettings) {
             $brandingTable = Get-CippTable -tablename 'Config'
-            $BrandingSettings = Get-CIPPAzDataTableEntity @brandingTable -Filter "PartitionKey eq 'BrandingSettings' and RowKey eq 'BrandingSettings'"
+            # Partition-scoped, not RowKey-scoped: a logo over the 1 MiB entity limit is split across
+            # 'BrandingSettings-partN' rows and reassembly needs all of them in the result set.
+            $BrandingSettings = Get-CIPPAzDataTableEntity @brandingTable -Filter "PartitionKey eq 'BrandingSettings'" | Where-Object { $_.RowKey -eq 'BrandingSettings' }
             if ($BrandingSettings) {
                 $UserSettings | Add-Member -MemberType NoteProperty -Name 'customBranding' -Value $BrandingSettings -Force | Out-Null
             }

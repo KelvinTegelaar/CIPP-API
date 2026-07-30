@@ -13,7 +13,7 @@ Set-SharingPolicy -Identity "Default Sharing Policy" -Domains @{Remove="*:Contac
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.6.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo61v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.6.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo61v1)
 - [Sharing policies in Exchange Online](https://learn.microsoft.com/exchange/sharing/sharing-policies/sharing-policies)
 
 <!--- Results --->

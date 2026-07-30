@@ -53,7 +53,7 @@ function Invoke-ExecGDAPRoleTemplate {
 
                     # If the template ID is being changed, delete the old one and create a new one
                     if ($OriginalRowKey -ne $NewRowKey) {
-                        Remove-AzDataTableEntity -Force @Table -Entity $Template
+                        Remove-CIPPAzDataTableEntity -Force @Table -Entity $Template
                         Add-CIPPGDAPRoleTemplate -TemplateId $NewRowKey -RoleMappings $RoleMappings -Overwrite
                         Write-LogMessage -headers $Headers -API $APIName -message "Renamed GDAP template from '$OriginalRowKey' to '$NewRowKey' and updated role mappings" -Sev 'Info'
                         $Body = @{
@@ -78,7 +78,7 @@ function Invoke-ExecGDAPRoleTemplate {
                 $RowKey = $Request.Body.TemplateId
                 $Template = $Templates | Where-Object -Property RowKey -EQ $RowKey
                 if ($Template) {
-                    Remove-AzDataTableEntity -Force @Table -Entity $Template
+                    Remove-CIPPAzDataTableEntity -Force @Table -Entity $Template
                     Write-LogMessage -headers $Headers -API $APIName -message "Deleted GDAP role template '$RowKey'" -Sev 'Info'
                     $Body = @{
                         Results = "Deleted template $RowKey"

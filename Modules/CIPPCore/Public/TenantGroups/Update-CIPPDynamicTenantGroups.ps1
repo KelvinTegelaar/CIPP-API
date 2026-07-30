@@ -220,7 +220,7 @@ function Update-CIPPDynamicTenantGroups {
                     $TenantInfo = $AllTenants | Where-Object { $_.customerId -eq $TenantId }
                     $MemberToRemove = $CurrentMembers | Where-Object { $_.customerId -eq $TenantId }
                     if ($MemberToRemove) {
-                        Remove-AzDataTableEntity @MembersTable -Entity $MemberToRemove -Force
+                        Remove-CIPPAzDataTableEntity @MembersTable -Entity $MemberToRemove -Force
                         Write-LogMessage -API 'TenantGroups' -message "Removed tenant '$($TenantInfo.displayName)' from dynamic group '$($Group.Name)'" -sev Info
                         $TotalMembersRemoved++
                     }

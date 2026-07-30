@@ -336,7 +336,7 @@ function Invoke-ExecApiClient {
                     }
                     Write-Information "Deleting API Client: $ClientId from CIPP"
                     $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'" -Property RowKey, PartitionKey
-                    Remove-AzDataTableEntity @Table -Entity $Client -Force
+                    Remove-CIPPAzDataTableEntity @Table -Entity $Client -Force
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Deleted API client $ClientId" -Sev 'Info'
                     $Body = @{ Results = "API client $ClientId deleted" }
                 } else {

@@ -56,7 +56,7 @@ function New-CIPPIntuneReportExportJob {
     $JobsTable = Get-CIPPTable -tablename 'IntuneReportJobs'
     $Existing = Get-CIPPAzDataTableEntity @JobsTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$ReportName'"
     if ($Existing) {
-        Remove-AzDataTableEntity @JobsTable -Entity $Existing -Force -ErrorAction SilentlyContinue
+        Remove-CIPPAzDataTableEntity @JobsTable -Entity $Existing -Force -ErrorAction SilentlyContinue
     }
 
     Add-CIPPAzDataTableEntity @JobsTable -Entity @{

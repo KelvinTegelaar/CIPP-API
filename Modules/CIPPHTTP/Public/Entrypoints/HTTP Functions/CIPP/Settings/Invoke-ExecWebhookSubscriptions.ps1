@@ -19,7 +19,7 @@ function Invoke-ExecWebhookSubscriptions {
             $Webhook = Get-AzDataTableEntity @Table -Filter "RowKey eq '$SafeWebhookId'" -Property PartitionKey, RowKey
             if ($Webhook) {
                 Remove-CIPPGraphSubscription -TenantFilter $Webhook.PartitionKey -CIPPID $Webhook.RowKey
-                Remove-AzDataTableEntity -Force @Table -Entity $Webhook
+                Remove-CIPPAzDataTableEntity -Force @Table -Entity $Webhook
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = @{ Results = "Deleted subscription $($Webhook.RowKey) for $($Webhook.PartitionKey)" }
@@ -53,7 +53,7 @@ function Invoke-ExecWebhookSubscriptions {
                     return
                 }
                 Remove-CIPPGraphSubscription @Unsubscribe
-                Remove-AzDataTableEntity -Force @Table -Entity $Webhook
+                Remove-CIPPAzDataTableEntity -Force @Table -Entity $Webhook
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = @{ Results = "Unsubscribed from $($Webhook.Resource) for $($Webhook.PartitionKey)" }
@@ -76,7 +76,7 @@ function Invoke-ExecWebhookSubscriptions {
                     # get row from table if exists and remove
                     $Webhook = Get-AzDataTableEntity @Table -Filter "WebhookNotificationUrl eq 'https://graph.microsoft.com/beta/subscriptions/$($_.id)'" -Property PartitionKey, RowKey, ETag
                     if ($Webhook) {
-                        $null = Remove-AzDataTableEntity -Force @Table -Entity $Webhook
+                        $null = Remove-CIPPAzDataTableEntity -Force @Table -Entity $Webhook
                     }
                 }
             }

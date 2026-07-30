@@ -34,7 +34,7 @@ function Invoke-RemoveTenantCapabilitiesCache {
 
         if ($CacheEntry) {
             # Remove the cache entry
-            Remove-AzDataTableEntity -Force @Table -Entity $CacheEntry
+            Remove-CIPPAzDataTableEntity -Force @Table -Entity $CacheEntry
             Write-LogMessage -Headers $Headers -API $APIName -message "Removed capabilities cache for tenant $DefaultDomainName." -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Successfully removed capabilities cache for tenant $DefaultDomainName" }
             $StatusCode = [HttpStatusCode]::OK

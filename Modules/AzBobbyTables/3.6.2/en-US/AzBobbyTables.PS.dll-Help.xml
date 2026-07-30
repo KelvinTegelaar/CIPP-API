@@ -282,6 +282,289 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -Context $Context -OperationType
   </command:command>
   <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
     <command:details>
+      <command:name>Add-AzDataTableLargeEntity</command:name>
+      <command:verb>Add</command:verb>
+      <command:noun>AzDataTableLargeEntity</command:noun>
+      <maml:description>
+        <maml:para>Add one or more entities to an Azure Table, transparently splitting entities that exceed the Azure Table Storage size limits.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Add one or more entities to an Azure Table, as an array of either Hashtables, PSObjects, or SortedLists.</maml:para>
+      <maml:para>Unlike Add-AzDataTableEntity, this cmdlet accepts entities that exceed the Azure Table Storage size limits (64 KiB per string property, 1 MiB per entity) and splits them transparently:</maml:para>
+      <maml:para>- A string property larger than 32256 characters is stored as multiple chunk properties named `{Property}_Part0`, `{Property}_Part1`, and so on. A JSON manifest in the `SplitOverProps` property records which chunks belong to which original property.</maml:para>
+      <maml:para>- An entity that is still too large after property splitting is distributed over multiple rows. The first row keeps the original RowKey, additional rows are named `{RowKey}-part1`, `{RowKey}-part2`, and so on. Each row carries an `OriginalEntityId` property with the original RowKey and a `PartIndex` property with the row order.</maml:para>
+      <maml:para></maml:para>
+      <maml:para>Use Get-AzDataTableLargeEntity to read the entities back in their original shape, and Remove-AzDataTableLargeEntity to delete them including all part rows.</maml:para>
+      <maml:para>Entities in one call are deduplicated by PartitionKey and RowKey, with the last occurrence winning, since the underlying transactions reject multiple operations on the same key. After writing a split entity, leftover part rows from an earlier larger version of the same entity are cleaned up automatically.</maml:para>
+      <maml:para>Note that when an entity is split over multiple rows, its rows are written as full replacements even with an OperationType of UpsertMerge, since the distribution of properties over rows changes between writes and merging would leave stale values behind. Entities small enough to fit in one row are written with the requested operation type. When the sizes of entities vary between writes across the splitting threshold, prefer UpsertReplace (or Force).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Add-AzDataTableLargeEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>CreateTableIfNotExists</maml:name>
+          <maml:description>
+            <maml:para>If the table should be created if it does not exist.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+          <maml:name>Entity</maml:name>
+          <maml:description>
+            <maml:para>The entities to add to the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+          <dev:type>
+            <maml:name>Object[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Force</maml:name>
+          <maml:description>
+            <maml:para>Overwrites provided entities if they exist.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>MaxRetries</maml:name>
+          <maml:description>
+            <maml:para>The number of times to retry the operation when the request is throttled by the service with an HTTP 429 response. Between attempts the module waits for the duration indicated by the service's Retry-After response. Defaults to 0, which disables retries.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Add-AzDataTableLargeEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>CreateTableIfNotExists</maml:name>
+          <maml:description>
+            <maml:para>If the table should be created if it does not exist.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+          <maml:name>Entity</maml:name>
+          <maml:description>
+            <maml:para>The entities to add to the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+          <dev:type>
+            <maml:name>Object[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>MaxRetries</maml:name>
+          <maml:description>
+            <maml:para>The number of times to retry the operation when the request is throttled by the service with an HTTP 429 response. Between attempts the module waits for the duration indicated by the service's Retry-After response. Defaults to 0, which disables retries.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>OperationType</maml:name>
+          <maml:description>
+            <maml:para>The operation type to perform on the entities. See the Azure SDK documentation for more information:</maml:para>
+            <maml:para>https://learn.microsoft.com/en-us/dotnet/api/azure.data.tables.tabletransactionactiontype</maml:para>
+            <maml:para>Entities split over multiple rows are always written as full replacements, see the description.</maml:para>
+          </maml:description>
+          <command:parameterValueGroup>
+            <command:parameterValue required="false" command:variableLength="false">Add</command:parameterValue>
+            <command:parameterValue required="false" command:variableLength="false">UpsertReplace</command:parameterValue>
+            <command:parameterValue required="false" command:variableLength="false">UpsertMerge</command:parameterValue>
+          </command:parameterValueGroup>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>CreateTableIfNotExists</maml:name>
+        <maml:description>
+          <maml:para>If the table should be created if it does not exist.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+        <maml:name>Entity</maml:name>
+        <maml:description>
+          <maml:para>The entities to add to the table.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+        <dev:type>
+          <maml:name>Object[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Force</maml:name>
+        <maml:description>
+          <maml:para>Overwrites provided entities if they exist.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>MaxRetries</maml:name>
+        <maml:description>
+          <maml:para>The number of times to retry the operation when the request is throttled by the service with an HTTP 429 response. Between attempts the module waits for the duration indicated by the service's Retry-After response. Defaults to 0, which disables retries.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>OperationType</maml:name>
+        <maml:description>
+          <maml:para>The operation type to perform on the entities. See the Azure SDK documentation for more information:</maml:para>
+          <maml:para>https://learn.microsoft.com/en-us/dotnet/api/azure.data.tables.tabletransactionactiontype</maml:para>
+          <maml:para>Entities split over multiple rows are always written as full replacements, see the description.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.Collections.Hashtable[] or System.Management.Automation.PSObject[] or System.Collections.SortedList[]</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet takes either an array of hashtables, psobjects, or sorted lists as input to the Entity parameter, which can also be provided through the pipeline.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>Only string properties are split. A non-string property that individually exceeds the service limits, such as a byte array over 64 KiB, is rejected by the service.</maml:para>
+        <maml:para>The storage format reserves some naming patterns in tables used with the large-entity cmdlets: property names ending in `_Part{n}` of another property, the property names `SplitOverProps`, `OriginalEntityId` and `PartIndex`, and RowKeys of the form `{OtherRowKey}-part{n}`. Entities using such names can collide with the split representation of other entities.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; $Report = @{ PartitionKey = 'Reports'; RowKey = 'tenant1'; Data = $LargeJsonString }
+PS C:\&gt; Add-AzDataTableLargeEntity -Entity $Report -Context $Context -Force</dev:code>
+        <dev:remarks>
+          <maml:para>Add a report entity whose Data property may exceed the 64 KiB property limit, overwriting any existing version.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; $CacheRows | Add-AzDataTableLargeEntity -Context $Context -Force -CreateTableIfNotExists</dev:code>
+        <dev:remarks>
+          <maml:para>Write a collection of cache rows of arbitrary size from the pipeline, creating the table if needed.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Get-AzDataTableLargeEntity</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Remove-AzDataTableLargeEntity</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
       <command:name>Clear-AzDataTable</command:name>
       <command:verb>Clear</command:verb>
       <command:noun>AzDataTable</command:noun>
@@ -830,6 +1113,292 @@ PS C:\&gt; $UserEntities = Get-AzDataTableEntity -Property 'FirstName','Age' -Co
       </command:example>
     </command:examples>
     <command:relatedLinks />
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-AzDataTableLargeEntity</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>AzDataTableLargeEntity</command:noun>
+      <maml:description>
+        <maml:para>Get one or more entities from an Azure Table, reassembling entities that were split by Add-AzDataTableLargeEntity.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Get one or more entities from an Azure Table, reassembling entities that were split across multiple properties or rows because they exceeded the Azure Table Storage size limits.</maml:para>
+      <maml:para>Rows belonging to one logical entity are recognized by their `OriginalEntityId` property and merged in `PartIndex` order, after which chunked properties recorded in the `SplitOverProps` manifest are joined back into their original single property. Entities that were never split are returned as-is.</maml:para>
+      <maml:para>If both a plain row and leftover part rows exist for the same RowKey, the plain row wins, so an entity that was rewritten smaller after having been split still reads correctly.</maml:para>
+      <maml:para>Since split entities span multiple physical rows, use filters that do not separate an entity from its parts; filtering on the PartitionKey level is safe. First, Skip, Sort and Count operate on physical rows, before reassembly. A Property selection that excludes the split markers (OriginalEntityId, PartIndex, SplitOverProps and the chunk properties) prevents reassembly.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-AzDataTableLargeEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Count</maml:name>
+          <maml:description>
+            <maml:para>Specify that the output should only specify the number of entities. Counts physical rows, so each part row of a split entity counts individually.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>MaxRetries</maml:name>
+          <maml:description>
+            <maml:para>The number of times to retry the operation when the request is throttled by the service with an HTTP 429 response. Between attempts the module waits for the duration indicated by the service's Retry-After response. Defaults to 0, which disables retries.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Get-AzDataTableLargeEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Filter</maml:name>
+          <maml:description>
+            <maml:para>The OData filter to use in the query.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="Top, Take">
+          <maml:name>First</maml:name>
+          <maml:description>
+            <maml:para>The amount of physical rows to retrieve, counted before split entities are reassembled.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>MaxRetries</maml:name>
+          <maml:description>
+            <maml:para>The number of times to retry the operation when the request is throttled by the service with an HTTP 429 response. Between attempts the module waits for the duration indicated by the service's Retry-After response. Defaults to 0, which disables retries.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Property</maml:name>
+          <maml:description>
+            <maml:para>The properties to return for the entities. Selecting properties that exclude the split markers prevents reassembly of split entities.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Skip</maml:name>
+          <maml:description>
+            <maml:para>The amount of physical rows to skip from the query result, counted before split entities are reassembled.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Sort</maml:name>
+          <maml:description>
+            <maml:para>The names of one or more properties to sort by, in order. Sorting applies to physical rows before reassembly.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Count</maml:name>
+        <maml:description>
+          <maml:para>Specify that the output should only specify the number of entities. Counts physical rows, so each part row of a split entity counts individually.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Filter</maml:name>
+        <maml:description>
+          <maml:para>The OData filter to use in the query.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="Top, Take">
+        <maml:name>First</maml:name>
+        <maml:description>
+          <maml:para>The amount of physical rows to retrieve, counted before split entities are reassembled.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>MaxRetries</maml:name>
+        <maml:description>
+          <maml:para>The number of times to retry the operation when the request is throttled by the service with an HTTP 429 response. Between attempts the module waits for the duration indicated by the service's Retry-After response. Defaults to 0, which disables retries.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Property</maml:name>
+        <maml:description>
+          <maml:para>The properties to return for the entities. Selecting properties that exclude the split markers prevents reassembly of split entities.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Skip</maml:name>
+        <maml:description>
+          <maml:para>The amount of physical rows to skip from the query result, counted before split entities are reassembled.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Sort</maml:name>
+        <maml:description>
+          <maml:para>The names of one or more properties to sort by, in order. Sorting applies to physical rows before reassembly.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.PSObject</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>The ETag and Timestamp of a reassembled entity are taken from its first part row.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; Get-AzDataTableLargeEntity -Context $Context -Filter "PartitionKey eq 'Reports'"</dev:code>
+        <dev:remarks>
+          <maml:para>Get all report entities, transparently reassembling any that were split on write.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Add-AzDataTableLargeEntity</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Remove-AzDataTableLargeEntity</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
   </command:command>
   <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
     <command:details>
@@ -1705,6 +2274,168 @@ PS C:\&gt; # OK - The -Force switch overrides ETag validation</dev:code>
       </command:example>
     </command:examples>
     <command:relatedLinks />
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Remove-AzDataTableLargeEntity</command:name>
+      <command:verb>Remove</command:verb>
+      <command:noun>AzDataTableLargeEntity</command:noun>
+      <maml:description>
+        <maml:para>Remove one or more entities from an Azure Table, including any part rows they were split into by Add-AzDataTableLargeEntity.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Remove one or more entities from an Azure Table, based on PartitionKey and RowKey.</maml:para>
+      <maml:para>In addition to the entity's own row, any part rows that the entity was split into on write (rows whose `OriginalEntityId` matches the entity's RowKey) are looked up and removed as well, so no orphaned parts are left behind. Part rows are removed without ETag validation; ETag validation, when not skipped with Force, applies to the entity's own row.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Remove-AzDataTableLargeEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+          <maml:name>Entity</maml:name>
+          <maml:description>
+            <maml:para>The entities to remove from the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+          <dev:type>
+            <maml:name>Object[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Force</maml:name>
+          <maml:description>
+            <maml:para>Skips ETag validation and removes entity even if it has changed.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>MaxRetries</maml:name>
+          <maml:description>
+            <maml:para>The number of times to retry the operation when the request is throttled by the service with an HTTP 429 response. Between attempts the module waits for the duration indicated by the service's Retry-After response. Defaults to 0, which disables retries.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+        <maml:name>Entity</maml:name>
+        <maml:description>
+          <maml:para>The entities to remove from the table.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+        <dev:type>
+          <maml:name>Object[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Force</maml:name>
+        <maml:description>
+          <maml:para>Skips ETag validation and removes entity even if it has changed.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>MaxRetries</maml:name>
+        <maml:description>
+          <maml:para>The number of times to retry the operation when the request is throttled by the service with an HTTP 429 response. Between attempts the module waits for the duration indicated by the service's Retry-After response. Defaults to 0, which disables retries.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.Collections.Hashtable[] or System.Management.Automation.PSObject[] or System.Collections.SortedList[]</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet takes either an array of hashtables, psobjects, or sorted lists as input to the Entity parameter, which can also be provided through the pipeline.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; $Entity = Get-AzDataTableLargeEntity -Context $Context -Filter "RowKey eq 'tenant1'"
+PS C:\&gt; Remove-AzDataTableLargeEntity -Entity $Entity -Context $Context -Force</dev:code>
+        <dev:remarks>
+          <maml:para>Remove an entity and all rows it was split into.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Add-AzDataTableLargeEntity</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Get-AzDataTableLargeEntity</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
   </command:command>
   <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
     <command:details>

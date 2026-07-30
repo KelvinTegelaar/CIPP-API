@@ -14,7 +14,7 @@ function Push-DomainAnalyserTenant {
         $CleanupCount = ($CleanupRows | Measure-Object).Count
         if ($CleanupCount -gt 0) {
             Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
-            Remove-AzDataTableEntity -Force @DomainTable -Entity $CleanupRows
+            Remove-CIPPAzDataTableEntity -Force @DomainTable -Entity $CleanupRows
         }
     } elseif ($Tenant.GraphErrorCount -gt 50) {
         return
@@ -80,7 +80,7 @@ function Push-DomainAnalyserTenant {
                         $OldDomain = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
 
                         if ($OldDomain) {
-                            Remove-AzDataTableEntity -Force @DomainTable -Entity $OldDomain | Out-Null
+                            Remove-CIPPAzDataTableEntity -Force @DomainTable -Entity $OldDomain | Out-Null
                         }
 
                         $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{0}'" -f $TenantDomain.Domain

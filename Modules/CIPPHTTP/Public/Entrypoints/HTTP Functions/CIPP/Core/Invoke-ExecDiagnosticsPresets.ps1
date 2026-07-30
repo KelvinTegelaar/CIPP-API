@@ -26,7 +26,7 @@ function Invoke-ExecDiagnosticsPresets {
                 }
             }
 
-            Remove-AzDataTableEntity @Table -Entity @{
+            Remove-CIPPAzDataTableEntity @Table -Entity @{
                 PartitionKey = 'Preset'
                 RowKey       = $GUID
             }

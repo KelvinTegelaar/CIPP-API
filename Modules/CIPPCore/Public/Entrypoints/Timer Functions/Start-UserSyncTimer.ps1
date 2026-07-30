@@ -214,7 +214,7 @@ function Start-UserSyncTimer {
             Add-CIPPAzDataTableEntity @UsersTable -Entity $Entity -Force
         }
         foreach ($Entity in $EntitiesToRemove) {
-            Remove-AzDataTableEntity -Force @UsersTable -Entity $Entity
+            Remove-CIPPAzDataTableEntity -Force @UsersTable -Entity $Entity
             $RemoveCount++
         }
 

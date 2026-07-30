@@ -75,6 +75,15 @@ function Initialize-CIPPAuth {
         } catch {
             Write-Information "[Auth-Init] SSO redirect URI patch failed (non-fatal): $_"
         }
+
+        # Admin-consent the SSO app so users aren't prompted at sign-in. Retried every warmup
+        # until it lands, since the service principal isn't always queryable right after the
+        # app registration is created.
+        try {
+            Update-CIPPSSOPreconsent
+        } catch {
+            Write-Information "[Auth-Init] SSO pre-consent failed (non-fatal): $_"
+        }
     }
 
     # 3. Handle EasyAuth configuration based on current state
