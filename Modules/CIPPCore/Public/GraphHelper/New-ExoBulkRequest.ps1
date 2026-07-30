@@ -266,6 +266,6 @@ function New-ExoBulkRequest {
         return $FinalData
 
     } else {
-        Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
+        Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Exchange bulk request')
     }
 }

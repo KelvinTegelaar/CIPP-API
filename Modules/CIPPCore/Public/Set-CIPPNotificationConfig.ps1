@@ -1,5 +1,7 @@
 function Set-CIPPNotificationConfig {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'Wraps a webhook auth config value in a SecureString only to satisfy Set-CippKeyVaultSecret; the value is written to Azure Key Vault (encrypted at rest)')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingUsernameAndPasswordParams', '', Justification = 'webhookAuthUsername/webhookAuthPassword are stored config values for an outbound webhook integration, not interactive credentials')]
     param (
         $email,
         $webhook,

@@ -12,7 +12,7 @@ function Invoke-ExecSetCIPPAutoBackup {
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'
         $AutomatedCIPPBackupTask = Get-AzDataTableEntity @table -Filter "Name eq 'Automated CIPP Backup'" -Property RowKey, PartitionKey, ETag
         if ($AutomatedCIPPBackupTask) {
-            Remove-AzDataTableEntity -Force @Table -Entity $AutomatedCIPPBackupTask | Out-Null
+            Remove-CIPPAzDataTableEntity -Force @Table -Entity $AutomatedCIPPBackupTask | Out-Null
         }
 
         $TaskBody = [pscustomobject]@{
@@ -32,7 +32,7 @@ function Invoke-ExecSetCIPPAutoBackup {
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'
         $AutomatedCIPPBackupTask = Get-AzDataTableEntity @table -Filter "Name eq 'Automated CIPP Backup'" -Property RowKey, PartitionKey, ETag
         if ($AutomatedCIPPBackupTask) {
-            Remove-AzDataTableEntity -Force @Table -Entity $AutomatedCIPPBackupTask | Out-Null
+            Remove-CIPPAzDataTableEntity -Force @Table -Entity $AutomatedCIPPBackupTask | Out-Null
             $Result = @{ 'Results' = 'Scheduled Task Successfully removed' }
         } else {
             $Result = @{ 'Results' = 'No existing scheduled task found to remove' }

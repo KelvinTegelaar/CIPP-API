@@ -25,22 +25,69 @@ function Push-AuditLogTenantProcessV2 {
         $CacheWebhooksTable = Get-CippTable -TableName 'CacheWebhooks'
         $SearchIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
-        $Rows = foreach ($RowId in $RowIds) {
-            $CacheEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$RowId'"
-            if ($CacheEntity) {
-                if ($CacheEntity.SearchId) { [void]$SearchIds.Add([string]$CacheEntity.SearchId) }
-                $CacheEntity.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+        # Chunked so peak memory tracks $ChunkSize, not batch size. Don't raise much above
+        # 100: each chunk builds one `RowKey eq '<guid>'` predicate per row, and an over-long
+        # filter is rejected (Azure ~520 predicates, Azurite ~250) and swallowed by the catch.
+        $ChunkSize = 100
+        $ProcessedCount = 0
+        $MatchedLogs = 0
+
+        for ($Offset = 0; $Offset -lt $RowIds.Count; $Offset += $ChunkSize) {
+            $Slice = @($RowIds[$Offset..([Math]::Min($Offset + $ChunkSize - 1, $RowIds.Count - 1))])
+
+            # Raw cmdlet: the wrapper merges split parts and reports the logical RowKey.
+            $KeyFilter = "PartitionKey eq '$TenantFilter' and (" +
+                         (($Slice | ForEach-Object { "RowKey eq '$_'" }) -join ' or ') + ')'
+            $Keys = @(Get-AzDataTableEntity @CacheWebhooksTable -Filter $KeyFilter `
+                    -Property 'PartitionKey', 'RowKey', 'OriginalEntityId')
+            if ($Keys.Count -eq 0) { continue }
+
+            # Split records span X / X-part1 / X-part2 and only reassemble when every part
+            # arrives in one call, so select on OriginalEntityId rather than RowKey.
+            $Predicates = [System.Collections.Generic.List[string]]::new()
+            $SeenLogical = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($Key in $Keys) {
+                if ($Key.PSObject.Properties.Name -contains 'OriginalEntityId' -and $Key.OriginalEntityId) {
+                    if ($SeenLogical.Add([string]$Key.OriginalEntityId)) {
+                        $Predicates.Add("OriginalEntityId eq '$($Key.OriginalEntityId)'")
+                    }
+                } else {
+                    $Predicates.Add("RowKey eq '$($Key.RowKey)'")
+                }
             }
+            if ($Predicates.Count -eq 0) { continue }
+
+            # No -Property: a projection must list every JSON_Part* column or split rows
+            # come back empty.
+            $RowFilter = "PartitionKey eq '$TenantFilter' and (" + ($Predicates -join ' or ') + ')'
+            $Entities = @(Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter $RowFilter)
+
+            $Chunk = [System.Collections.Generic.List[object]]::new()
+            foreach ($Entity in $Entities) {
+                if ($Entity.SearchId) { [void]$SearchIds.Add([string]$Entity.SearchId) }
+                $Parsed = $Entity.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+                if ($null -eq $Parsed) {
+                    Write-Information "AuditLogV2: unparseable cached JSON for RowKey $($Entity.RowKey) ($TenantFilter)"
+                    continue
+                }
+                $Chunk.Add($Parsed)
+            }
+
+            if ($Chunk.Count -gt 0) {
+                $Result = Test-CIPPAuditLogRules -TenantFilter $TenantFilter -Rows $Chunk
+                $MatchedLogs += [int]($Result.MatchedLogs ?? 0)
+                $ProcessedCount += $Chunk.Count
+            }
+            $Chunk.Clear()
+            $Entities = $null
         }
 
-        if ($Rows.Count -eq 0) {
+        if ($ProcessedCount -eq 0) {
             Write-Information "AuditLogV2: no rows found in cache for the provided row IDs ($TenantFilter)"
             return $false
         }
 
-        Write-Information "AuditLogV2: processing $($Rows.Count) row(s) for $TenantFilter"
-        $Result = Test-CIPPAuditLogRules -TenantFilter $TenantFilter -Rows $Rows
-        $MatchedLogs = [int]($Result.MatchedLogs ?? 0)
+        Write-Information "AuditLogV2: processed $ProcessedCount row(s) for $TenantFilter"
 
         # Advance the ledger to Processed for any SearchId now fully drained from the cache.
         if ($SearchIds.Count -gt 0) {

@@ -25,7 +25,9 @@ function Start-AuditLogSearchCreationV2 {
             if (!$ConfigEntry.excludedTenants) {
                 $ConfigEntry | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force
             } else {
-                $ConfigEntry.excludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json
+                # Expand tenant groups in exclusions so group members match on defaultDomainName
+                $Excluded = $ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue
+                $ConfigEntry.excludedTenants = if ($Excluded) { @(Expand-CIPPTenantGroups -TenantFilter $Excluded) } else { @() }
             }
             $ConfigEntry.Tenants = $ConfigEntry.Tenants | ConvertFrom-Json
             $ConfigEntry | Add-Member -MemberType NoteProperty -Name 'ExpandedTenants' -Value (Expand-CIPPTenantGroups -TenantFilter ($ConfigEntry.Tenants)).value -Force
@@ -110,7 +112,7 @@ function Start-AuditLogSearchCreationV2 {
             $CutoffIso = (Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
             $Stale = @(Get-CIPPAzDataTableEntity @Ledger -Filter "Timestamp le datetime'$CutoffIso'" -Property PartitionKey, RowKey)
             if ($Stale.Count -gt 0) {
-                Remove-AzDataTableEntity @Ledger -Entity $Stale -Force
+                Remove-CIPPAzDataTableEntity @Ledger -Entity $Stale -Force
                 Write-Information "AuditLogV2: cleaned $($Stale.Count) stale ledger row(s)"
             }
         } catch {

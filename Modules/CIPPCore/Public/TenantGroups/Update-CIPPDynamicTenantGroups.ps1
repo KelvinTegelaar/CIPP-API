@@ -220,7 +220,7 @@ function Update-CIPPDynamicTenantGroups {
                     $TenantInfo = $AllTenants | Where-Object { $_.customerId -eq $TenantId }
                     $MemberToRemove = $CurrentMembers | Where-Object { $_.customerId -eq $TenantId }
                     if ($MemberToRemove) {
-                        Remove-AzDataTableEntity @MembersTable -Entity $MemberToRemove -Force
+                        Remove-CIPPAzDataTableEntity @MembersTable -Entity $MemberToRemove -Force
                         Write-LogMessage -API 'TenantGroups' -message "Removed tenant '$($TenantInfo.displayName)' from dynamic group '$($Group.Name)'" -sev Info
                         $TotalMembersRemoved++
                     }
@@ -239,6 +239,12 @@ function Update-CIPPDynamicTenantGroups {
 
         # Bust the TenantGroups cache so subsequent calls reflect the changes made above
         Get-TenantGroups -SkipCache | Out-Null
+
+        # Roles scoped to a tenant group resolve through this membership, so the cached access
+        # scope rules are stale too. Only worth the write when membership actually moved.
+        if ($TotalMembersAdded -gt 0 -or $TotalMembersRemoved -gt 0) {
+            Clear-CippAccessScopeCache
+        }
 
         return @{
             MembersAdded    = $TotalMembersAdded

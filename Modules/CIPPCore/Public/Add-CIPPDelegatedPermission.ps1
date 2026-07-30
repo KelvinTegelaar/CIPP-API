@@ -174,6 +174,9 @@ function Add-CIPPDelegatedPermission {
                 $Results.add("Failed to update permissions for $($svcPrincipalId.displayName): $(Get-NormalizedError -message $_.Exception.Message)")
                 continue
             }
+            # Delegated scopes changed; a cached refresh_token-derived access token still
+            # carries the old scopes, so drop it rather than wait out its TTL.
+            $null = Clear-CippTokenCache -TenantFilter $TenantFilter
             # Added permissions
             $Added = ($Compare | Where-Object { $_.SideIndicator -eq '=>' }).InputObject -join ' '
             $Removed = ($Compare | Where-Object { $_.SideIndicator -eq '<=' }).InputObject -join ' '

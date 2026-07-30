@@ -13,6 +13,11 @@ function Invoke-ExecAddTenant {
         $tenantId = $Request.body.tenantId
         $defaultDomainName = $Request.body.defaultDomainName
 
+        # The account that consented is recorded so the connection can be traced and refreshed
+        # later. The auth date is stamped server side rather than trusting the client.
+        $ServiceAccount = $Request.body.username ?? ''
+        $AuthDate = (Get-Date).ToUniversalTime()
+
         # Get the Tenants table
         $TenantsTable = Get-CippTable -tablename 'Tenants'
         #force a refresh of the authentication info
@@ -23,11 +28,24 @@ function Invoke-ExecAddTenant {
         if ($tenantId -eq $env:TenantID) {
             # If the tenant is the partner tenant, return an error because you cannot add the partner tenant as direct tenant
             $Results = @{'message' = 'You cannot add the partner tenant as a direct tenant. Please connect the tenant using the "Connect to Partner Tenant" option. '; 'severity' = 'error'; }
+        } elseif ($ExistingTenant -and $ExistingTenant.delegatedPrivilegeStatus -ne 'directTenant') {
+            # Converting an existing GDAP tenant in place would silently change how CIPP
+            # authenticates to it. Require the tenant to be offboarded first so the switch is
+            # deliberate.
+            # The sign-in that got us here already stored a per-tenant refresh token, so discard it
+            # again - keeping it would leave a credential behind for a conversion we just refused.
+            Remove-CIPPDirectTenantToken -TenantId $tenantId
+
+            $Results = @{'message' = "$($ExistingTenant.displayName) is already onboarded as a GDAP tenant and cannot be converted to a Direct Tenant. To manage it as a Direct Tenant, remove the tenant first under Settings > Tenants, then add it again using the Direct Tenant flow."; 'severity' = 'error' }
+            Write-LogMessage -tenant $ExistingTenant.defaultDomainName -tenantid $ExistingTenant.customerId -API 'NewTenant' -message "Blocked conversion of GDAP tenant $($ExistingTenant.displayName) to a Direct Tenant, attempted by $ServiceAccount." -Sev 'Warn'
         } elseif ($ExistingTenant) {
-            # Update existing tenant
-            $ExistingTenant.delegatedPrivilegeStatus = 'directTenant'
+            # Existing direct tenant - refresh the stored credentials and service account details.
+            $ExistingTenant | Add-Member -NotePropertyName 'directTenantUserPrincipalName' -NotePropertyValue $ServiceAccount -Force
+            $ExistingTenant | Add-Member -NotePropertyName 'directTenantAuthDate' -NotePropertyValue $AuthDate -Force
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenant -Force | Out-Null
-            $Results = @{'message' = 'Successfully updated tenant.'; 'severity' = 'success' }
+
+            $Results = @{'message' = "Successfully updated the credentials for $($ExistingTenant.displayName)."; 'severity' = 'success' }
+            Write-LogMessage -tenant $ExistingTenant.defaultDomainName -tenantid $ExistingTenant.customerId -API 'NewTenant' -message "Refreshed Direct Tenant credentials for $($ExistingTenant.displayName) using $ServiceAccount." -Sev 'Info'
         } else {
             # Create new tenant entry
             try {
@@ -67,21 +85,23 @@ function Invoke-ExecAddTenant {
 
             # Create new tenant object
             $NewTenant = [PSCustomObject]@{
-                PartitionKey             = 'Tenants'
-                RowKey                   = $tenantId
-                customerId               = $tenantId
-                displayName              = $displayName
-                defaultDomainName        = $defaultDomainName
-                initialDomainName        = $initialDomainName
-                delegatedPrivilegeStatus = 'directTenant'
-                domains                  = ''
-                Excluded                 = $false
-                ExcludeUser              = ''
-                ExcludeDate              = ''
-                GraphErrorCount          = 0
-                LastGraphError           = ''
-                RequiresRefresh          = $false
-                LastRefresh              = (Get-Date).ToUniversalTime()
+                PartitionKey                  = 'Tenants'
+                RowKey                        = $tenantId
+                customerId                    = $tenantId
+                displayName                   = $displayName
+                defaultDomainName             = $defaultDomainName
+                initialDomainName             = $initialDomainName
+                delegatedPrivilegeStatus      = 'directTenant'
+                directTenantUserPrincipalName = $ServiceAccount
+                directTenantAuthDate          = $AuthDate
+                domains                       = ''
+                Excluded                      = $false
+                ExcludeUser                   = ''
+                ExcludeDate                   = ''
+                GraphErrorCount               = 0
+                LastGraphError                = ''
+                RequiresRefresh               = $false
+                LastRefresh                   = (Get-Date).ToUniversalTime()
             }
 
             # Add tenant to table

@@ -53,7 +53,7 @@ function Invoke-ExecMDOAlertsList {
                 $Metadata = [PSCustomObject]@{
                     QueueId = $RunningQueue.RowKey ?? $null
                 }
-                $Alerts = $Rows
+                $Alerts = $Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
                 foreach ($alert in $Alerts) {
                     ConvertFrom-Json -InputObject $alert.MdoAlert -Depth 10
                 }

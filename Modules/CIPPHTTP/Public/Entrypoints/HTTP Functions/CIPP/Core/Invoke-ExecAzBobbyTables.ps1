@@ -20,7 +20,7 @@ function Invoke-ExecAzBobbyTables {
         'Get-CIPPAzDataTableEntity'
         'Get-AzDataTable'
         'New-AzDataTable'
-        'Remove-AzDataTableEntity'
+        'Remove-CIPPAzDataTableEntity'
         'Remove-AzDataTable'
     )
 

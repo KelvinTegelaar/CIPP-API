@@ -37,7 +37,7 @@ function Initialize-CIPPExcludedLicenses {
         if ($Force) {
             $ExistingRows = Get-CIPPAzDataTableEntity @Table
             foreach ($Row in $ExistingRows) {
-                Remove-AzDataTableEntity -Force @Table -Entity $Row
+                Remove-CIPPAzDataTableEntity -Force @Table -Entity $Row
             }
             Write-LogMessage -API $APIName -headers $Headers -message 'Cleared existing excluded licenses' -Sev 'Info'
         }

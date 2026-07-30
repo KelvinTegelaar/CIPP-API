@@ -64,7 +64,7 @@ function Remove-SnoozedAlerts {
     if ($RecordsToCleanup.Count -gt 0) {
         try {
             foreach ($staleRecord in $RecordsToCleanup) {
-                Remove-AzDataTableEntity @SnoozeTable -Entity @{
+                Remove-CIPPAzDataTableEntity @SnoozeTable -Entity @{
                     PartitionKey = $staleRecord.PartitionKey
                     RowKey       = $staleRecord.RowKey
                     ETag         = '*'

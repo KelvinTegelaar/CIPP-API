@@ -19,7 +19,7 @@ function Invoke-RemoveUserDefaultTemplate {
         $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if ($Template) {
-            Remove-AzDataTableEntity @Table -Entity $Template
+            Remove-CIPPAzDataTableEntity @Table -Entity $Template
             $Result = "Successfully deleted User Default Template with ID: $ID"
             Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
             $StatusCode = [HttpStatusCode]::OK

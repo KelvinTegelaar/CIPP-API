@@ -48,14 +48,14 @@ function Test-CIPPRerun {
             $AllRerunData = Get-CIPPAzDataTableEntity @RerunTable
             if ($AllRerunData) {
                 Write-Information "Clearing all rerun cache entries for $($Type)_$($API)"
-                Remove-AzDataTableEntity @RerunTable -Entity $AllRerunData -Force
+                Remove-CIPPAzDataTableEntity @RerunTable -Entity $AllRerunData -Force
             }
             return $false
         }
 
         if ($Clear.IsPresent) {
             if ($RerunData) {
-                Remove-AzDataTableEntity @RerunTable -Entity $RerunData
+                Remove-CIPPAzDataTableEntity @RerunTable -Entity $RerunData
             }
             return $false
         } elseif ($RerunData) {

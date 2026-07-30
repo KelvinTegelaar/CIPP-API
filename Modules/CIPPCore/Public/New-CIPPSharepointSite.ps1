@@ -27,6 +27,13 @@ function New-CIPPSharepointSite {
     .PARAMETER SensitivityLabel
     The Purview sensitivity label to apply to the site
 
+    .PARAMETER Lcid
+    SharePoint UI language LCID. Omit to keep the legacy English (1033) default used by
+    Add Site. Pass 0 to use the tenant default (SharePoint Online root site language).
+    Pass a positive LCID to force that language — must be a SharePoint Online site-creation
+    language (same allowlist as the template builder). If 0 is passed and the root language
+    cannot be read, site creation fails instead of falling back to English.
+
     .PARAMETER TenantFilter
     The tenant associated with the site
 
@@ -59,6 +66,9 @@ function New-CIPPSharepointSite {
 
         [string]$Classification,
 
+        [Parameter(Mandatory = $false)]
+        [int]$Lcid,
+
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
 
@@ -66,9 +76,57 @@ function New-CIPPSharepointSite {
         $Headers
     )
 
+    # SharePoint Online site-creation UI languages (not full Windows LCIDs — e.g. en-GB 2057 is invalid).
+    # Keep in sync with SITE_LANGUAGE_OPTIONS in CippSharePointTemplateBuilder.jsx.
+    $AllowedSiteLcids = @(
+        1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1035, 1036, 1037, 1038, 1040, 1041,
+        1042, 1043, 1044, 1045, 1046, 1048, 1049, 1050, 1051, 1053, 1054, 1055, 1057, 1058, 1060,
+        1061, 1062, 1063, 1066, 1069, 1081, 1086, 1087, 1106, 1110, 2052, 2070, 2074, 3082
+    )
+
     $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
     $SitePath = $SiteName -replace ' ' -replace '[^A-Za-z0-9-]'
     $SiteUrl = "https://$($SharePointInfo.TenantName).sharepoint.com/sites/$SitePath"
+
+    # Resolve site language:
+    # - Explicit positive LCID → use it (must be in $AllowedSiteLcids)
+    # - Explicit 0 (or negative) → tenant default. In SharePoint Online that is the root
+    #   site language (https://{tenant}.sharepoint.com); there is no separate admin-center
+    #   "default language" API (Graph sharepointSettings has timezone, not language).
+    # - Parameter omitted → English (1033), preserving AddSite / bulk-create behaviour
+    #
+    # When tenant default is requested but the root language cannot be read, fail instead of
+    # silently creating an English site on a non-English tenant.
+    if ($PSBoundParameters.ContainsKey('Lcid')) {
+        if ($Lcid -gt 0) {
+            if ($Lcid -notin $AllowedSiteLcids) {
+                $Result = "LCID $Lcid is not a supported SharePoint Online site language. Choose a language from the template builder list (or tenant default)."
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error
+                throw $Result
+            }
+            $ResolvedLcid = $Lcid
+        } else {
+            $ResolvedLcid = 0
+            $RootLanguageError = $null
+            try {
+                $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
+                $RootWeb = New-GraphGetRequest -uri "https://$($SharePointInfo.TenantName).sharepoint.com/_api/web?`$select=Language" -tenantid $TenantFilter -scope "$($SharePointInfo.SharePointUrl)/.default" -extraHeaders $JsonAccept -UseCertificate -AsApp $true
+                if ($RootWeb.Language -gt 0) {
+                    $ResolvedLcid = [int]$RootWeb.Language
+                }
+            } catch {
+                $RootLanguageError = $_.Exception.Message
+            }
+            if ($ResolvedLcid -le 0) {
+                $Detail = if ($RootLanguageError) { $RootLanguageError } else { 'Root site Language was missing or zero.' }
+                $Result = "Could not resolve tenant default SharePoint language for $TenantFilter (root site). $Detail Choose an explicit site language in the template, or ensure the tenant root site is readable."
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Warning
+                throw $Result
+            }
+        }
+    } else {
+        $ResolvedLcid = 1033
+    }
 
     switch ($TemplateName) {
         'Communication' {
@@ -110,7 +168,7 @@ function New-CIPPSharepointSite {
     $Request = @{
         Title                  = $SiteName
         Url                    = $SiteUrl
-        Lcid                   = 1033
+        Lcid                   = $ResolvedLcid
         ShareByEmailEnabled    = $false
         Description            = $SiteDescription
         WebTemplate            = $WebTemplate

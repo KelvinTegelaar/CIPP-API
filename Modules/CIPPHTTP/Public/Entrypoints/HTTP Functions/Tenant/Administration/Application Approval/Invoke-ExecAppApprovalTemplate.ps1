@@ -91,7 +91,7 @@ function Invoke-ExecAppApprovalTemplate {
                     $TemplateName = $TemplateData.TemplateName
 
                     # Remove the template
-                    $null = Remove-AzDataTableEntity @Table -Entity $Template -Force
+                    $null = Remove-CIPPAzDataTableEntity @Table -Entity $Template -Force
 
                     $Body = @{
                         'Results' = "Successfully deleted template '$TemplateName'"

@@ -33,11 +33,19 @@ function Initialize-CIPPAuth {
         Write-Information "[Auth-Init] Credential source available (KV=$($AuthState.HasKeyVault), DevStorage=$IsDevStorage) — attempting SAM load"
         try {
             $Auth = Get-CIPPAuthentication
-            if ($Auth -and $env:ApplicationID -and $env:TenantID) {
+            # Fresh deployments carry the deployment template's placeholder secrets
+            # until the setup wizard writes real ones — treat those as "no
+            # credentials" or the EasyAuth issuer reconciliation below rewrites a
+            # correctly configured issuer to .../tenantId/v2.0 and breaks sign-in.
+            $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
+            $HasPlaceholders = ($env:ApplicationID -match $PlaceholderPattern) -or ($env:TenantID -match $PlaceholderPattern)
+            if ($Auth -and $env:ApplicationID -and $env:TenantID -and -not $HasPlaceholders) {
                 $AuthState.HasSAMCredentials = $true
                 $AuthState.NeedsSetup = $false
                 $AuthState.IsConfigured = $true
                 Write-Information "[Auth-Init] SAM credentials loaded (AppID: $($env:ApplicationID), TenantID: $($env:TenantID))"
+            } elseif ($HasPlaceholders) {
+                Write-Information '[Auth-Init] SAM secrets still hold deployment placeholder values — setup wizard has not been completed yet, treating as unconfigured'
             } else {
                 Write-Information '[Auth-Init] SAM credential load returned but env vars not populated — credentials not available yet (expected on fresh deployment)'
             }
@@ -72,6 +80,18 @@ function Initialize-CIPPAuth {
     # 3. Handle EasyAuth configuration based on current state
     if ($EasyAuthEnabled) {
         Write-Information '[Auth-Init] EasyAuth is already configured'
+
+        # A pending SSO reset flag with EasyAuth back up means setup completed (the
+        # Craft setup wizard configures EasyAuth itself and doesn't know about this
+        # flag) - clean it up so a future EasyAuth outage doesn't re-trigger setup.
+        if ($env:CIPP_SSO_RESET -eq 'true') {
+            Write-Information '[Auth-Init] EasyAuth is active but CIPP_SSO_RESET still set — reset completed, cleaning up'
+            try {
+                $null = Remove-CIPPMigrationAppSetting -SettingName 'CIPP_SSO_RESET'
+            } catch {
+                Write-Information "[Auth-Init] CIPP_SSO_RESET cleanup failed (non-fatal): $_"
+            }
+        }
 
         # 3a. If CIPP_SSO_MIGRATION_APPID is set, check if migration is complete
         if ($env:CIPP_SSO_MIGRATION_APPID) {
@@ -222,6 +242,17 @@ function Initialize-CIPPAuth {
     } elseif ($AuthState.HasSAMCredentials) {
         # EasyAuth NOT configured but we DO have SAM credentials — try to auto-configure
         Write-Information '[Auth-Init] EasyAuth not configured but SAM credentials available — attempting auto-configuration'
+
+        # SSO reset requested from the management portal (it has no access to this
+        # instance's Key Vault, so it can't clear the stored credentials itself).
+        # Skip every auto-configure path and serve the setup wizard; completing the
+        # wizard rewrites the stored credentials and removes this flag.
+        if ($env:CIPP_SSO_RESET -eq 'true') {
+            Write-Information '[Auth-Init] CIPP_SSO_RESET is set — skipping SSO auto-configuration and requesting setup wizard'
+            [Craft.Services.AppLifecycleBridge]::RequestSetupMode('SSO reset requested — setup wizard needed to reconfigure sign-in')
+            $AuthState.NeedsSetup = $true
+            return $AuthState
+        }
 
         if ($env:CIPP_SSO_MIGRATION_APPID) {
             Write-Information "[Auth-Init] CIPP_SSO_MIGRATION_APPID is set ($($env:CIPP_SSO_MIGRATION_APPID)) — configuring implicit auth EasyAuth"

@@ -174,7 +174,7 @@ function Test-CIPPGDAPGroupMappings {
                 if ($Correction.OldGroupId -and $Correction.OldGroupId -ne $Mapping.GroupId) {
                     $OldEntity = Get-CIPPAzDataTableEntity @RolesTable -Filter "PartitionKey eq 'Roles' and RowKey eq '$($Correction.OldGroupId)'"
                     if ($OldEntity) {
-                        Remove-AzDataTableEntity -Force @RolesTable -Entity $OldEntity
+                        Remove-CIPPAzDataTableEntity -Force @RolesTable -Entity $OldEntity
                     }
                 }
                 Add-CIPPAzDataTableEntity @RolesTable -Entity @{

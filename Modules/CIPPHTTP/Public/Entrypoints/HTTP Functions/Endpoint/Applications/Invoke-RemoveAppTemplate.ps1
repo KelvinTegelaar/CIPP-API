@@ -20,7 +20,7 @@ function Invoke-RemoveAppTemplate {
         $Filter = "PartitionKey eq 'AppTemplate' and RowKey eq '$SafeID'"
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($Entity) {
-            Remove-AzDataTableEntity @Table -Entity $Entity
+            Remove-CIPPAzDataTableEntity @Table -Entity $Entity
             $Result = 'Successfully removed app template'
             Write-LogMessage -headers $Headers -API $APIName -message "Removed app template $ID" -Sev 'Info'
         } else {

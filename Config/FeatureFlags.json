@@ -25,7 +25,7 @@
   {
     "Id": "SuperAdminNG",
     "Name": "Super Admin",
-    "Description": "Additional super admin pages for CIPP instances (CIPP Users, SSO, Container management).",
+    "Description": "Additional super admin pages for CIPP instances (CIPP Users, SSO, Container management, Custom Domains).",
     "Enabled": false,
     "AllowUserToggle": false,
     "Timers": [],
@@ -33,12 +33,14 @@
       "ExecCIPPUsers",
       "ListCIPPUsers",
       "ExecContainerManagement",
+      "ExecAppServiceDomains",
       "ListContainerLogs",
       "ListWorkerHealth"
     ],
     "Pages": [
       "/cipp/advanced/super-admin/cipp-users",
       "/cipp/advanced/super-admin/container",
+      "/cipp/advanced/super-admin/custom-domains",
       "/cipp/advanced/container-logs",
       "/cipp/advanced/worker-health"
     ],

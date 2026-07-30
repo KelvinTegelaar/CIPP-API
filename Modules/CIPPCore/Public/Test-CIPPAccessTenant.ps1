@@ -23,6 +23,9 @@ function Test-CIPPAccessTenant {
         @{ Name = 'Domain Name Administrator'; Id = '8329153b-31d0-4727-b945-745eb3bc5f31'; Optional = $true }
     )
 
+    # Global Administrator implicitly grants every role listed above.
+    $GlobalAdminRoleId = '62e90394-69f5-4237-9190-012177145e10'
+
     $TenantParams = @{
         IncludeErrors = $true
     }
@@ -50,13 +53,20 @@ function Test-CIPPAccessTenant {
         $GraphStatus = $false
         $ExchangeStatus = $false
 
+        # Direct tenants authenticate with their own per-tenant refresh token rather than through a
+        # GDAP relationship, so directory roles granted to the partner tenant do not apply to them.
+        $IsDirectTenant = $Tenant.delegatedPrivilegeStatus -eq 'directTenant'
+        $TenantType = if ($IsDirectTenant) { 'Direct' } else { 'GDAP' }
+
         $Results = [PSCustomObject]@{
             TenantName                = $Tenant.defaultDomainName
+            TenantType                = $TenantType
+            ServiceAccount            = ''
             GraphStatus               = $false
             GraphTest                 = ''
             ExchangeStatus            = $false
             ExchangeTest              = ''
-            GDAPRoles                 = ''
+            AssignedRoles             = ''
             MissingRoles              = ''
             OrgManagementRoles        = @()
             OrgManagementRolesMissing = @()
@@ -66,46 +76,89 @@ function Test-CIPPAccessTenant {
         $AddedText = ''
         try {
             $TenantId = $Tenant.customerId
-            $BulkRequests = $ExpectedRoles | ForEach-Object { @(
-                    @{
-                        id     = "roleManagement_$($_.Id)"
-                        method = 'GET'
-                        url    = "roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$($_.Id)'&`$expand=principal"
-                    }
-                )
-            }
-            $GDAPRolesGraph = New-GraphBulkRequest -tenantid $TenantId -Requests $BulkRequests
-            $GDAPRoles = [System.Collections.Generic.List[object]]::new()
+            $AssignedRoles = [System.Collections.Generic.List[object]]::new()
             $MissingRoles = [System.Collections.Generic.List[object]]::new()
 
-            foreach ($RoleId in $ExpectedRoles) {
-                $GraphRole = $GDAPRolesGraph.body.value | Where-Object -Property roleDefinitionId -EQ $RoleId.Id
-                $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $env:TenantID
+            if ($IsDirectTenant) {
+                # A direct tenant is reached with the service account's own delegated token, so the
+                # roles that matter are the ones that account holds inside the tenant itself rather
+                # than anything assigned to the partner tenant.
+                $ServiceAccount = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/me?$select=id,displayName,userPrincipalName' -tenantid $TenantId -ErrorAction Stop
+                $Results.ServiceAccount = $ServiceAccount.userPrincipalName
 
-                if (!$Role) {
-                    $MissingRoles.Add(
-                        [PSCustomObject]@{
-                            Name     = $RoleId.Name
-                            Type     = 'Tenant'
-                            Optional = $RoleId.Optional
+                $Memberships = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/me/transitiveMemberOf' -tenantid $TenantId -ErrorAction Stop
+                $DirectoryRoles = @($Memberships | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.directoryRole' })
+                $IsGlobalAdmin = $DirectoryRoles.roleTemplateId -contains $GlobalAdminRoleId
+
+                foreach ($RoleId in $ExpectedRoles) {
+                    $HeldRole = $DirectoryRoles | Where-Object { $_.roleTemplateId -eq $RoleId.Id }
+                    if ($HeldRole) {
+                        $AssignedRoles.Add([PSCustomObject]@{
+                                Role  = $RoleId.Name
+                                Group = $ServiceAccount.userPrincipalName
+                            })
+                    } elseif ($IsGlobalAdmin) {
+                        $AssignedRoles.Add([PSCustomObject]@{
+                                Role  = $RoleId.Name
+                                Group = "$($ServiceAccount.userPrincipalName) (via Global Administrator)"
+                            })
+                    } else {
+                        $MissingRoles.Add(
+                            [PSCustomObject]@{
+                                Name     = $RoleId.Name
+                                Type     = 'Tenant'
+                                Optional = $RoleId.Optional
+                            }
+                        )
+                    }
+                }
+
+                $RequiredMissingRoles = $MissingRoles | Where-Object { $_.Optional -ne $true }
+                if (($RequiredMissingRoles | Measure-Object).Count -gt 0) {
+                    $AddedText = 'but the service account is missing required roles'
+                } elseif (($MissingRoles | Measure-Object).Count -gt 0) {
+                    $AddedText = 'but the service account is missing optional roles'
+                }
+            } else {
+                $BulkRequests = $ExpectedRoles | ForEach-Object { @(
+                        @{
+                            id     = "roleManagement_$($_.Id)"
+                            method = 'GET'
+                            url    = "roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$($_.Id)'&`$expand=principal"
                         }
                     )
-                } else {
-                    $GDAPRoles.Add([PSCustomObject]@{
-                            Role  = $RoleId.Name
-                            Group = $Role.displayName
-                        })
+                }
+                $GDAPRolesGraph = New-GraphBulkRequest -tenantid $TenantId -Requests $BulkRequests
+
+                foreach ($RoleId in $ExpectedRoles) {
+                    $GraphRole = $GDAPRolesGraph.body.value | Where-Object -Property roleDefinitionId -EQ $RoleId.Id
+                    $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $env:TenantID
+
+                    if (!$Role) {
+                        $MissingRoles.Add(
+                            [PSCustomObject]@{
+                                Name     = $RoleId.Name
+                                Type     = 'Tenant'
+                                Optional = $RoleId.Optional
+                            }
+                        )
+                    } else {
+                        $AssignedRoles.Add([PSCustomObject]@{
+                                Role  = $RoleId.Name
+                                Group = $Role.displayName
+                            })
+                    }
+                }
+
+                $RequiredMissingRoles = $MissingRoles | Where-Object { $_.Optional -ne $true }
+                if (($RequiredMissingRoles | Measure-Object).Count -gt 0) {
+                    $AddedText = 'but missing required GDAP roles'
+                } elseif (($MissingRoles | Measure-Object).Count -gt 0) {
+                    $AddedText = 'but missing optional GDAP roles'
                 }
             }
 
-            $RequiredMissingRoles = $MissingRoles | Where-Object { $_.Optional -ne $true }
-            if (($RequiredMissingRoles | Measure-Object).Count -gt 0) {
-                $AddedText = 'but missing required GDAP roles'
-            } elseif (($MissingRoles | Measure-Object).Count -gt 0) {
-                $AddedText = 'but missing optional GDAP roles'
-            }
-
-            $GraphTest = "Successfully connected to Graph $($AddedText)"
+            $GraphTest = "Successfully connected to Graph $($AddedText)".Trim()
             $GraphStatus = $true
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
@@ -176,7 +229,7 @@ function Test-CIPPAccessTenant {
         $Results.GraphTest = $GraphTest
         $Results.ExchangeStatus = $ExchangeStatus
         $Results.ExchangeTest = $ExchangeTest
-        $Results.GDAPRoles = @($GDAPRoles)
+        $Results.AssignedRoles = @($AssignedRoles)
         $Results.MissingRoles = @($MissingRoles)
 
         $Headers = $Headers.UserDetails

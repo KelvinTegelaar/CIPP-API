@@ -28,19 +28,17 @@ function Start-AuditLogIngestionV2 {
         $Now = (Get-Date).ToUniversalTime()
 
         # --- Download tenants: searches awaiting download (State = Created, due) ---
-        $Created = @(Get-CIPPAzDataTableEntity @Ledger -Filter "State eq 'Created'")
-        $DueCreated = $Created | Where-Object { -not $_.NextAttemptUtc -or ([datetimeoffset]$_.NextAttemptUtc).UtcDateTime -le $Now }
         $DownloadTenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($Name in @($DueCreated | Group-Object PartitionKey | ForEach-Object { $_.Name })) {
-            if ($Name) { [void]$DownloadTenants.Add([string]$Name) }
+        foreach ($Row in @(Get-CIPPAzDataTableEntity @Ledger -Filter "State eq 'Created'" -Property @('PartitionKey', 'RowKey', 'NextAttemptUtc'))) {
+            if ($Row.NextAttemptUtc -and ([datetimeoffset]$Row.NextAttemptUtc).UtcDateTime -gt $Now) { continue }
+            if ($Row.PartitionKey) { [void]$DownloadTenants.Add([string]$Row.PartitionKey) }
         }
 
         # --- Process-only tenants: rows pending in the webhook cache (downloaded, not yet processed) ---
         $CacheTable = Get-CippTable -TableName 'CacheWebhooks'
-        $CacheRows = @(Get-CIPPAzDataTableEntity @CacheTable -Property @('PartitionKey', 'RowKey'))
         $CacheTenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($Name in @($CacheRows | Group-Object PartitionKey | ForEach-Object { $_.Name })) {
-            if ($Name) { [void]$CacheTenants.Add([string]$Name) }
+        foreach ($Row in @(Get-CIPPAzDataTableEntity @CacheTable -Property @('PartitionKey', 'RowKey'))) {
+            if ($Row.PartitionKey) { [void]$CacheTenants.Add([string]$Row.PartitionKey) }
         }
 
         if ($DownloadTenants.Count -eq 0 -and $CacheTenants.Count -eq 0) {

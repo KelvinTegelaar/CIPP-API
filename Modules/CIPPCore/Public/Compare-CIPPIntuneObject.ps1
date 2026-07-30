@@ -379,6 +379,17 @@ function Compare-CIPPIntuneObject {
             if ($item.id) { $intuneCollectionIndex[$item.id] = $item }
         }
 
+        # Settings Intune generates per tenant. The Defender onboarding blob embeds the tenant's own
+        # workspace identity, so a template captured in one tenant can never match another - it
+        # reports drift on every run, remediation cannot resolve it, and the comparison shows a
+        # friendly option name on one side against a raw identifier on the other.
+        $tenantSpecificSettings = @(
+            'device_vendor_msft_windowsadvancedthreatprotection_onboarding',
+            'device_vendor_msft_windowsadvancedthreatprotection_onboarding_fromconnector',
+            'device_vendor_msft_windowsadvancedthreatprotection_offboarding',
+            'device_vendor_msft_windowsadvancedthreatprotection_offboarding_fromconnector'
+        )
+
         # Recursive function to process group setting collections at any depth
         function Process-GroupSettingChildren {
             param(
@@ -740,6 +751,8 @@ function Compare-CIPPIntuneObject {
             } elseif ($key -like 'Unknown-*') {
                 $settingId = $key.Substring(8)
             }
+
+            if ($settingId -in $tenantSpecificSettings) { continue }
 
             $settingDefinition = $intuneCollectionIndex[$settingId]
 

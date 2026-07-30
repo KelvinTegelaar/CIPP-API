@@ -52,6 +52,9 @@ function Invoke-CIPPStandardIntuneAppTemplateDeploy {
     $Table = Get-CIPPTable -TableName 'templates'
     $MissingApps = [System.Collections.Generic.List[PSCustomObject]]::new()
     $CurrentAppNames = @($CurrentApps.displayName)
+    # Office is a singleton per tenant that Graph always names 'Microsoft 365 Apps for Windows 10
+    # and later', which never matches the name the template stores, so track it by type instead.
+    $OfficeDeployed = @($CurrentApps | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.officeSuiteApp' }).Count -gt 0
 
     foreach ($TemplateId in $TemplateIds) {
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppTemplate' and RowKey eq '$TemplateId'"
@@ -69,14 +72,17 @@ function Invoke-CIPPStandardIntuneAppTemplateDeploy {
         for ($i = 0; $i -lt $AppTypes.Count; $i++) {
             $RawConfig = $AppConfigs[$i]
             $Config = if ($RawConfig -is [string]) { $RawConfig | ConvertFrom-Json -Depth 100 } else { $RawConfig }
+            $AppType = [string]$AppTypes[$i]
             $DisplayName = [string]($Config.ApplicationName ?? $Config.displayName ?? $AppNames[$i])
 
-            if ($DisplayName -notin $CurrentAppNames) {
+            $IsDeployed = if ($AppType -eq 'officeApp') { $OfficeDeployed } else { $DisplayName -in $CurrentAppNames }
+
+            if (-not $IsDeployed) {
                 $MissingApps.Add([PSCustomObject]@{
                     TemplateId   = [string]$TemplateId
                     TemplateName = [string]$TemplateName
                     AppName      = [string]$DisplayName
-                    AppType      = [string]$AppTypes[$i]
+                    AppType      = $AppType
                     Config       = $Config
                 })
             }

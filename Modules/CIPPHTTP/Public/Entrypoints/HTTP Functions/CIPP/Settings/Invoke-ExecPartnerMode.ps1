@@ -22,7 +22,7 @@ function Invoke-ExecPartnerMode {
             $Tenant = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($env:TenantID)'" -Property RowKey, PartitionKey, customerId, displayName
             if ($Tenant) {
                 try {
-                    Remove-AzDataTableEntity -Force @Table -Entity $Tenant
+                    Remove-CIPPAzDataTableEntity -Force @Table -Entity $Tenant
                 } catch {
                 }
             }

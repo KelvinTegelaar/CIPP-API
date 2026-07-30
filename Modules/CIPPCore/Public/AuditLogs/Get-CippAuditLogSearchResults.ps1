@@ -28,6 +28,8 @@ function Get-CippAuditLogSearchResults {
             $GraphRequest.CountOnly = $true
         }
 
-        New-GraphGetRequest @GraphRequest -ErrorAction Stop | Sort-Object -Property createdDateTime -Descending
+        # Deliberately unsorted: Sort-Object blocks until the entire window is in memory, and
+        # no caller depends on the order.
+        New-GraphGetRequest @GraphRequest -Stream -ErrorAction Stop
     }
 }

@@ -429,6 +429,10 @@ function Get-CIPPDrift {
                 # unmanagedSync standard). They are system-managed, cannot be templated and come
                 # back when deleted, so they are never a deviation.
                 if (([string]$TenantCAPolicy.displayName).StartsWith('[SharePoint admin center]')) { continue }
+                # Microsoft-managed CA policies cannot be deleted, only disabled. Once turned off
+                # they are not actionable, so a disabled Microsoft-managed policy is never a
+                # deviation. Enabled or report-only ones still are.
+                if (([string]$TenantCAPolicy.displayName).StartsWith('Microsoft-managed', [System.StringComparison]::OrdinalIgnoreCase) -and $TenantCAPolicy.state -eq 'disabled') { continue }
                 $PolicyFound = $false
 
                 foreach ($TemplateCAPolicy in $TemplateCATemplates) {
@@ -567,7 +571,7 @@ function Get-CIPPDrift {
         if ($StaleDriftEntities) {
             try {
                 foreach ($StaleEntity in $StaleDriftEntities) {
-                    Remove-AzDataTableEntity @DriftTable -Entity $StaleEntity
+                    Remove-CIPPAzDataTableEntity @DriftTable -Entity $StaleEntity
                 }
                 Write-Information "Removed $(@($StaleDriftEntities).Count) stale drift deviation entries for $TenantFilter"
             } catch {

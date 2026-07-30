@@ -73,23 +73,11 @@ function Invoke-CIPPStandardIntuneTemplate {
 
     $displayname = $Template.Displayname
     $description = $Template.Description
-    $RawJSON = $rawJsonFromTemplate
     $TemplateType = $Template.Type
 
     # Fallback: infer type from RAWJson content when stored template has no Type
     if (-not $TemplateType) {
-        try {
-            $parsedRaw = $rawJsonFromTemplate | ConvertFrom-Json -ErrorAction SilentlyContinue
-            $odataType = $parsedRaw.'@odata.type'
-            $TemplateType = if ($null -ne $parsedRaw.settings -and $null -ne $parsedRaw.technologies) { 'Catalog' }
-                elseif ($null -ne $parsedRaw.scheduledActionsForRule -or $odataType -match 'CompliancePolicy') { 'deviceCompliancePolicies' }
-                elseif ($odataType -match 'windowsDriverUpdateProfile') { 'windowsDriverUpdateProfiles' }
-                elseif ($odataType -match 'ManagedApp|managedAppProtection') { 'AppProtection' }
-                elseif ($odataType -match 'deviceConfiguration|#microsoft\.graph\.\w+Configuration$') { 'Device' }
-                else { $null }
-        } catch {
-            $TemplateType = $null
-        }
+        $TemplateType = Get-CIPPIntuneTemplateType -Type $TemplateType -RawJson $rawJsonFromTemplate
         if ($TemplateType) {
             Write-Information "[IntuneTemplate][$Tenant] Inferred template type '$TemplateType' from content for '$displayname'"
         } else {
@@ -98,27 +86,65 @@ function Invoke-CIPPStandardIntuneTemplate {
         }
     }
 
+    # Resolve tenant variables before anything reads the payload. Deployment replaces them first and
+    # derives the policy name from the result, so looking up the unreplaced text searches for a name
+    # that only ever existed in the template.
+    $RawJSON = Get-CIPPTextReplacement -Text $rawJsonFromTemplate -TenantFilter $Tenant -EscapeForJson
+
+    # Catalog and the Windows update profile types are deployed under the name in their payload
+    # rather than the template's Displayname, so find them under the name they were created with.
+    $PolicyName = Get-CIPPIntunePolicyName -TemplateType $TemplateType -RawJSON $RawJSON -DisplayName $displayname
+
     $AssignmentsMatch = $null
     try {
-        $ExistingPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $displayname -TemplateType $TemplateType
-        if ($ExistingPolicy -and $Settings.verifyAssignments -eq $true) {
+        $ExistingPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $PolicyName -TemplateType $TemplateType -APIName 'IntuneTemplate'
+    } catch {
+        # Graph failing is not the same thing as the policy being absent. Recording it as absent
+        # writes a non-compliant result that survives every later run until the standard next
+        # succeeds, and tells remediation to create a policy that is probably already there. Keep
+        # the previous result and surface the real error instead.
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not read Intune policy '$PolicyName' ($TemplateType) while checking template '$displayname'. Keeping the previous compliance result. Error: $($_.Exception.Message)" -sev 'Error'
+        return $true
+    }
+
+    if ($ExistingPolicy -and $Settings.verifyAssignments -eq $true) {
+        try {
             Write-Information "Verifying assignments for tenant $Tenant"
             $ExistingAssignments = Get-CIPPIntunePolicyAssignments -PolicyId $ExistingPolicy.id -TemplateType $TemplateType -TenantFilter $Tenant -ExistingPolicy $ExistingPolicy
             $AssignmentsMatch = Compare-CIPPIntuneAssignments -ExistingAssignments $ExistingAssignments -ExpectedAssignTo $Settings.AssignTo -ExpectedCustomGroup $Settings.customGroup -ExpectedExcludeGroup $Settings.excludeGroup -ExpectedAssignmentFilter $Settings.assignmentFilter -ExpectedAssignmentFilterType $Settings.assignmentFilterType -TenantFilter $Tenant
 
             Write-Information "AssignmentsMatch for tenant $($Tenant): $AssignmentsMatch"
+        } catch {
+            # The policy itself read back fine, so still report on its configuration rather than
+            # discarding the whole check because the assignment lookup failed.
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not verify assignments for Intune policy '$PolicyName'. Error: $($_.Exception.Message)" -sev 'Error'
+            $AssignmentsMatch = $null
         }
-    } catch {
-        $ExistingPolicy = $null
     }
-    Write-Information "[IntuneTemplate][$Tenant] GetPolicy '$displayname' ($TemplateType): $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+    Write-Information "[IntuneTemplate][$Tenant] GetPolicy '$PolicyName' ($TemplateType): $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
     $lap = $sw.Elapsed
 
     if ($ExistingPolicy) {
         try {
-            $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant -EscapeForJson
             $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json
             $JSONTemplate = $RawJSON | ConvertFrom-Json
+
+            # Compare against what deployment actually sends, not what the payload was captured
+            # with. Remediation writes the template's Displayname and Description columns over the
+            # payload for most types, so a renamed or re-described template otherwise shows a
+            # difference on the very fields remediation has already brought into line.
+            $JSONTemplate = Merge-CIPPIntuneTemplateIdentity -Policy $JSONTemplate -TemplateType $TemplateType -DisplayName $displayname -Description $description
+
+            if ($TemplateType -eq 'Catalog') {
+                try {
+                    $JSONTemplate = Select-CIPPIntuneAvailableSetting -Policy $JSONTemplate -TenantFilter $Tenant
+                } catch {
+                    # Fall back to the full template. Over-reporting drift is recoverable; silently
+                    # dropping settings from the baseline would hide real drift.
+                    Write-Information "[IntuneTemplate][$Tenant] Could not resolve available settings for '$PolicyName', comparing against the full template: $($_.Exception.Message)"
+                }
+            }
+
             $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $TemplateType -ErrorAction SilentlyContinue
         } catch {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to compare Intune Template $displayname against the existing policy: $($_.Exception.Message)" -sev 'Error'
@@ -130,9 +156,12 @@ function Invoke-CIPPStandardIntuneTemplate {
         Write-Information "[IntuneTemplate][$Tenant] Compare '$displayname': $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
         $lap = $sw.Elapsed
     } else {
+        # Name the policy that was searched for. When a template is deployed under a different name
+        # than it is looked up under, "does not exist" on its own sends people hunting for a policy
+        # that is sitting in the tenant under the name in this message.
         $compare = [pscustomobject]@{
             MatchFailed = $true
-            Difference  = 'This policy does not exist in Intune.'
+            Difference  = "No policy named '$PolicyName' exists in Intune."
         }
     }
     $CompareResult = [PSCustomObject]@{
