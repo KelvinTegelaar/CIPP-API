@@ -27,7 +27,7 @@ function Get-CIPPCVEReport {
         $ExceptionsByCve = @{}
 
          # Retrieve CVEs from database
-        if ($UseReportDB -eq $true){
+        if ($UseReportDB -eq $true) {
             $RawCveData    = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'DefenderCVEs' | Where-Object { $_.RowKey -ne 'DefenderCVEs-Count' }
             $AllCachedCves = $RawCveData.Data | ConvertFrom-Json
         } else {
@@ -142,38 +142,38 @@ function Get-CIPPCVEReport {
 
             if ($Exceptions) {
                 $HasException = $true
-                $ExceptionStatus = if ($Exceptions.customerId -contains "ALL") { "All" } else { "Partial" }
+                $ExceptionStatus = if ($Exceptions.customerId -contains 'ALL') { 'All' } else { 'Partial' }
             }
 
             [void]$SortedCves.Add([PSCustomObject]@{
-                    cveId                      = $Target.cveId
-                    vulnerabilitySeverityLevel = $Target.vulnerabilitySeverityLevel
-                    exploitabilityLevel        = $Target.exploitabilityLevel
-                    softwareName               = $Target.softwareName
-                    softwareVendor             = $Target.softwareVendor
-                    softwareVersion            = $Target.softwareVersion
-                    deviceCount                = $Target.TotalDeviceCount
-                    tenantCount                = $Target.TotalTenantGroupCount
-                    registryPaths              = $Target.RegistryPathList
-                    diskPaths                  = $Target.DiskPathList
-                    exceptionStatus            = $ExceptionStatus
-                    hasException               = $HasException
-                    affectedTenants            = $Target.AffectedTenantsList
-                    affectedDevices            = $Target.AffectedDevicesList
-                    exceptionType              = $Exceptions.exceptionType ?? ''
-                    exceptionComment           = $Exceptions.exceptionComment ?? ''
-                    exceptionCreatedBy         = $Exceptions.exceptionCreatedBy ?? ''
-                    exceptionDate              = $Exceptions.exceptionDate ?? ''
-                    exceptionExpiry            = $Exceptions.exceptionExpiry ?? ''
-                    cacheTimeStamp             = $Target.lastUpdated
-                })
+                cveId                      = $Target.cveId
+                vulnerabilitySeverityLevel = $Target.vulnerabilitySeverityLevel
+                exploitabilityLevel        = $Target.exploitabilityLevel
+                softwareName               = $Target.softwareName
+                softwareVendor             = $Target.softwareVendor
+                softwareVersion            = $Target.softwareVersion
+                deviceCount                = $Target.TotalDeviceCount
+                tenantCount                = $Target.TotalTenantGroupCount
+                registryPaths              = $Target.RegistryPathList
+                diskPaths                  = $Target.DiskPathList
+                exceptionStatus            = $ExceptionStatus
+                hasException               = $HasException
+                affectedTenants            = $Target.AffectedTenantsList
+                affectedDevices            = $Target.AffectedDevicesList
+                exceptionType              = $Exceptions.exceptionType ?? ''
+                exceptionComment           = $Exceptions.exceptionComment ?? ''
+                exceptionCreatedBy         = $Exceptions.exceptionCreatedBy ?? ''
+                exceptionDate              = $Exceptions.exceptionDate ?? ''
+                exceptionExpiry            = $Exceptions.exceptionExpiry ?? ''
+                cacheTimeStamp             = $Target.lastUpdated
+            })
         }
 
         return  $SortedCves | Sort-Object -Property cveId
 
     }
     catch {
-        Write-LogMessage -API 'CVEReport' -tenant $TenantFilter -message "Failed to generate CVE report: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CVEReport' -tenant $TenantFilter -message 'Failed to generate CVE report: $($_.Exception.Message)' -sev 'Error'
         throw
     }
 }
