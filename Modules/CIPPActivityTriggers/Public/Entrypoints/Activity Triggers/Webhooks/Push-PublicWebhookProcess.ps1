@@ -19,6 +19,6 @@ function Push-PublicWebhookProcess {
         Write-Host "Webhook Exception: $($_.Exception.Message)"
     } finally {
         $Entity = $Webhook | Select-Object -Property RowKey, PartitionKey
-        Remove-AzDataTableEntity -Force @Table -Entity $Entity
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity
     }
 }

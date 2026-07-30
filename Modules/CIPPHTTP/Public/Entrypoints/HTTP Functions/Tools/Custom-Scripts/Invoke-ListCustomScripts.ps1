@@ -1,7 +1,7 @@
 function Invoke-ListCustomScripts {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.Tests.Read
     .DESCRIPTION

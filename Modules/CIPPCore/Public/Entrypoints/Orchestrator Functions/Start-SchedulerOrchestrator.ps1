@@ -18,7 +18,7 @@ function Start-SchedulerOrchestrator {
         if ($Tenant.type -notin $ValidTypes) {
             if ($Tenant.PartitionKey -eq 'Alert') {
                 Write-Information "Scheduler: removing legacy classic-alert row for '$($Tenant.tenant)'"
-                Remove-AzDataTableEntity -Force @Table -Entity $Tenant
+                Remove-CIPPAzDataTableEntity -Force @Table -Entity $Tenant
             } else {
                 Write-Information "Scheduler: skipping row $($Tenant.PartitionKey)/$($Tenant.RowKey) - no handler for type '$($Tenant.type)'"
             }

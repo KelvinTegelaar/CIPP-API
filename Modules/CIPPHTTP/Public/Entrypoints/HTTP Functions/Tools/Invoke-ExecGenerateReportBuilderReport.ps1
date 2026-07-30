@@ -22,7 +22,7 @@ function Invoke-ExecGenerateReportBuilderReport {
             $ReportTable = Get-CippTable -tablename 'ReportBuilderReports'
             $ExistingEntity = Get-CIPPAzDataTableEntity @ReportTable -Filter "RowKey eq '$($Body.ReportGUID)'"
             if ($ExistingEntity) {
-                Remove-AzDataTableEntity @ReportTable -Entity $ExistingEntity
+                Remove-CIPPAzDataTableEntity @ReportTable -Entity $ExistingEntity
                 Write-LogMessage -headers $Headers -API $APIName -message "Deleted generated report '$($Body.ReportGUID)'" -Sev 'Info'
                 $Result = @{ Results = 'Successfully deleted generated report' }
             } else {

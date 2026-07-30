@@ -32,7 +32,7 @@ function Set-CIPPDBCacheDetectedApps {
         $JobId = $JobRow.JobId
         if (-not $JobId) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "IntuneReportJobs row missing JobId - removing" -sev Warning
-            Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+            Remove-CIPPAzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
             return
         }
 
@@ -44,14 +44,14 @@ function Set-CIPPDBCacheDetectedApps {
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId not retrievable: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
-                Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+                Remove-CIPPAzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
                 return
             }
 
             if ($Job.status -eq 'completed') { break }
             if ($Job.status -eq 'failed') {
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId failed" -sev Error
-                Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+                Remove-CIPPAzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
                 return
             }
             if ([datetime]::UtcNow -ge $Deadline) {
@@ -64,7 +64,7 @@ function Set-CIPPDBCacheDetectedApps {
 
         if (-not $Job.url) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId completed but no url returned" -sev Error
-            Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+            Remove-CIPPAzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
             return
         }
 
@@ -124,7 +124,7 @@ function Set-CIPPDBCacheDetectedApps {
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedApps -AddCount
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($DetectedApps.Count) detected apps with devices from export $JobId" -sev Info
 
-        Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+        Remove-CIPPAzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache detected apps: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

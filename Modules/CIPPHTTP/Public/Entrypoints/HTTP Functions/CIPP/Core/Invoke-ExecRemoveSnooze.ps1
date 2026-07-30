@@ -23,7 +23,7 @@ function Invoke-ExecRemoveSnooze {
         }
 
         $SnoozeTable = Get-CIPPTable -tablename 'AlertSnooze'
-        Remove-AzDataTableEntity @SnoozeTable -Entity @{
+        Remove-CIPPAzDataTableEntity @SnoozeTable -Entity @{
             PartitionKey = $PartitionKey
             RowKey       = $RowKey
             ETag         = '*'

@@ -15,7 +15,7 @@ Set-HostedContentFilterPolicy -Identity "Default" -AllowedSenders @() -AllowedSe
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.14.3](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo143v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.14.3](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo143v1)
 - [Configure allowed and blocked senders](https://learn.microsoft.com/microsoft-365/security/office-365-security/create-safe-sender-lists-in-office-365)
 
 <!--- Results --->

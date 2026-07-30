@@ -574,7 +574,7 @@ function Test-CIPPAuditLogRules {
                     })
                 if ($PendingDeletes.Count -ge $DeleteFlushSize) {
                     try {
-                        $null = Remove-AzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
+                        $null = Remove-CIPPAzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
                     } catch {
                         Write-Information "Error removing $($PendingDeletes.Count) processed row(s) from cache: $($_.Exception.Message)"
                     }
@@ -587,7 +587,7 @@ function Test-CIPPAuditLogRules {
 
             if ($PendingDeletes.Count -gt 0) {
                 try {
-                    $null = Remove-AzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
+                    $null = Remove-CIPPAzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
                 } catch {
                     Write-Information "Error removing $($PendingDeletes.Count) processed row(s) from cache: $($_.Exception.Message)"
                 }
@@ -745,7 +745,7 @@ function Test-CIPPAuditLogRules {
                 }
 
                 if ($RowsToRemove.Count -gt 0) {
-                    Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowsToRemove -Force
+                    Remove-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $RowsToRemove -Force
                     Write-Information "Removed $($RowsToRemove.Count) processed rows from cache"
                 }
             }

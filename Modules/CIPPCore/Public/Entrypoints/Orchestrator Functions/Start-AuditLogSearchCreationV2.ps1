@@ -112,7 +112,7 @@ function Start-AuditLogSearchCreationV2 {
             $CutoffIso = (Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
             $Stale = @(Get-CIPPAzDataTableEntity @Ledger -Filter "Timestamp le datetime'$CutoffIso'" -Property PartitionKey, RowKey)
             if ($Stale.Count -gt 0) {
-                Remove-AzDataTableEntity @Ledger -Entity $Stale -Force
+                Remove-CIPPAzDataTableEntity @Ledger -Entity $Stale -Force
                 Write-Information "AuditLogV2: cleaned $($Stale.Count) stale ledger row(s)"
             }
         } catch {

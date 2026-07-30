@@ -21,7 +21,7 @@ Function Invoke-RemoveAssignmentFilterTemplate {
         $Filter = "PartitionKey eq 'AssignmentFilterTemplate' and RowKey eq '$SafeID'"
         Write-Host $Filter
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $ClearRow
         $Result = "Removed Assignment Filter Template with ID $ID"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

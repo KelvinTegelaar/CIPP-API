@@ -46,7 +46,7 @@ function Start-AuditLogSearchCreation {
         }
 
         if ($ExpiredDisabledRows.Count -gt 0) {
-            Remove-AzDataTableEntity @AuditDisabledTable -Entity $ExpiredDisabledRows -Force | Out-Null
+            Remove-CIPPAzDataTableEntity @AuditDisabledTable -Entity $ExpiredDisabledRows -Force | Out-Null
         }
 
         # Round time down to nearest minute

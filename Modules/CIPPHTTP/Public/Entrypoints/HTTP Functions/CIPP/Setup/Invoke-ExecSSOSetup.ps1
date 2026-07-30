@@ -72,20 +72,26 @@ function Invoke-ExecSSOSetup {
                         $MigrationError = if ($MigrationMatches) { $Migration.LastError } else { '' }
                         $MigrationCanRepair = $MigrationMatches -and ($Migration.Status -in @('error', 'app_created', 'appid_stored'))
 
+                        # Null (rather than false) when warmup has never attempted the grant, so
+                        # the UI can tell "not yet tried" apart from "tried and refused".
+                        $Preconsented = if ([string]::IsNullOrWhiteSpace($Migration.Preconsented)) { $null } else { $Migration.Preconsented -eq 'true' }
+
                         $Body = @{
                             Results = @{
-                                configured     = $true
-                                status         = $MigrationStatus
-                                appId          = $ClientId
-                                multiTenant    = $IsMultiTenant
-                                tenantId       = $IssuerTenantId
-                                issuer         = $Issuer
-                                audiences      = $AllowedAudiences
-                                allowedApps    = $AllowedApps
-                                excludedPaths  = $ExcludedPaths
-                                easyAuthActive = $true
-                                lastError      = $MigrationError
-                                canRepair      = [bool]$MigrationCanRepair
+                                configured      = $true
+                                status          = $MigrationStatus
+                                appId           = $ClientId
+                                multiTenant     = $IsMultiTenant
+                                tenantId        = $IssuerTenantId
+                                issuer          = $Issuer
+                                audiences       = $AllowedAudiences
+                                allowedApps     = $AllowedApps
+                                excludedPaths   = $ExcludedPaths
+                                easyAuthActive  = $true
+                                lastError       = $MigrationError
+                                canRepair       = [bool]$MigrationCanRepair
+                                preconsented    = $Preconsented
+                                preconsentError = $Migration.PreconsentError
                             }
                         }
                     } else {
@@ -94,15 +100,17 @@ function Invoke-ExecSSOSetup {
                         if ($Migration) {
                             $Body = @{
                                 Results = @{
-                                    configured     = $true
-                                    status         = $Migration.Status
-                                    appId          = $Migration.AppId
-                                    multiTenant    = [bool]($Migration.MultiTenant -eq 'true' -or $Migration.MultiTenant -eq 'True')
-                                    createdAt      = $Migration.CreatedAt
-                                    lastChecked    = $Migration.LastChecked
-                                    lastError      = $Migration.LastError
-                                    easyAuthActive = $false
-                                    canRepair      = [bool]($Migration.AppId -and ($Migration.Status -in @('error', 'app_created', 'appid_stored')))
+                                    configured      = $true
+                                    status          = $Migration.Status
+                                    appId           = $Migration.AppId
+                                    multiTenant     = [bool]($Migration.MultiTenant -eq 'true' -or $Migration.MultiTenant -eq 'True')
+                                    createdAt       = $Migration.CreatedAt
+                                    lastChecked     = $Migration.LastChecked
+                                    lastError       = $Migration.LastError
+                                    easyAuthActive  = $false
+                                    canRepair       = [bool]($Migration.AppId -and ($Migration.Status -in @('error', 'app_created', 'appid_stored')))
+                                    preconsented    = if ([string]::IsNullOrWhiteSpace($Migration.Preconsented)) { $null } else { $Migration.Preconsented -eq 'true' }
+                                    preconsentError = $Migration.PreconsentError
                                 }
                             }
                         } else {
@@ -121,14 +129,16 @@ function Invoke-ExecSSOSetup {
                     if ($Migration) {
                         $Body = @{
                             Results = @{
-                                configured  = $true
-                                status      = $Migration.Status
-                                appId       = $Migration.AppId
-                                multiTenant = [bool]($Migration.MultiTenant -eq 'true' -or $Migration.MultiTenant -eq 'True')
-                                createdAt   = $Migration.CreatedAt
-                                lastChecked = $Migration.LastChecked
-                                lastError   = $Migration.LastError
-                                canRepair   = [bool]($Migration.AppId -and ($Migration.Status -in @('error', 'app_created', 'appid_stored')))
+                                configured      = $true
+                                status          = $Migration.Status
+                                appId           = $Migration.AppId
+                                multiTenant     = [bool]($Migration.MultiTenant -eq 'true' -or $Migration.MultiTenant -eq 'True')
+                                createdAt       = $Migration.CreatedAt
+                                lastChecked     = $Migration.LastChecked
+                                lastError       = $Migration.LastError
+                                canRepair       = [bool]($Migration.AppId -and ($Migration.Status -in @('error', 'app_created', 'appid_stored')))
+                                preconsented    = if ([string]::IsNullOrWhiteSpace($Migration.Preconsented)) { $null } else { $Migration.Preconsented -eq 'true' }
+                                preconsentError = $Migration.PreconsentError
                             }
                         }
                     } else {
@@ -347,7 +357,7 @@ function Invoke-ExecSSOSetup {
                 $PreviousAppId = $Existing.AppId
 
                 if ($Existing) {
-                    Remove-AzDataTableEntity @MigrationTable -Entity $Existing -Force | Out-Null
+                    Remove-CIPPAzDataTableEntity @MigrationTable -Entity $Existing -Force | Out-Null
                     Write-LogMessage -API $APIName -headers $Headers -message "SSO migration record cleared (previous AppId: $PreviousAppId). Use Create to provision a new app." -sev Info
                 }
 

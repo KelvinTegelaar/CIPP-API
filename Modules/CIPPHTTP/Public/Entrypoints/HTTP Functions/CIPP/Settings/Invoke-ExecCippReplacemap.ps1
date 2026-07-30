@@ -68,7 +68,7 @@ function Invoke-ExecCippReplacemap {
 
             $VariableEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId' and RowKey eq '$VariableName'"
             if ($VariableEntity) {
-                Remove-AzDataTableEntity @Table -Entity $VariableEntity -Force
+                Remove-CIPPAzDataTableEntity @Table -Entity $VariableEntity -Force
                 $Body = @{ Results = "Variable '$VariableName' deleted successfully" }
             } else {
                 $Body = @{ Results = "Variable '$VariableName' not found" }

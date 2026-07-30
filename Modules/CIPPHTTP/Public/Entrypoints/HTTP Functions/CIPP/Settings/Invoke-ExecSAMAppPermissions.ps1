@@ -78,7 +78,7 @@ function Invoke-ExecSAMAppPermissions {
                 $Table = Get-CIPPTable -TableName 'AppPermissions'
                 $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'CIPP-SAM' and RowKey eq 'CIPP-SAM'"
                 if ($Existing) {
-                    $null = Remove-AzDataTableEntity @Table -Entity $Existing -Force
+                    $null = Remove-CIPPAzDataTableEntity @Table -Entity $Existing -Force
                 }
                 $Body = @{
                     'Results' = 'Permissions reset to CIPP defaults.'

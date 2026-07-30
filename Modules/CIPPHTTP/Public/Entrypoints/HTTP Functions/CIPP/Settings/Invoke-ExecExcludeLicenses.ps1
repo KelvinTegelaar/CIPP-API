@@ -66,7 +66,7 @@ function Invoke-ExecExcludeLicenses {
             'RemoveExclusion' {
                 $Filter = "RowKey eq '{0}' and PartitionKey eq 'License'" -f $GUID
                 $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-                Remove-AzDataTableEntity -Force @Table -Entity $Entity
+                Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity
                 $Result = "Success. Removed $DisplayName($GUID) from the excluded licenses list."
                 Write-LogMessage -API $APIName -headers $Headers -message $Result -Sev 'Info'
 
