@@ -3186,6 +3186,10 @@
                     "type": "boolean",
                     "description": "(auto) from CippAddGroupForm.jsx"
                   },
+                  "disableNesting": {
+                    "type": "boolean",
+                    "description": "Optional. When true, prevents other groups from being added as members. Only applies to Graph-created groups (generic, azurerole, m365, dynamic)."
+                  },
                   "primDomain": {
                     "allOf": [
                       {
