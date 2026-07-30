@@ -17,7 +17,7 @@ Set-AntiPhishPolicy -Identity "Standard Preset Security Policy" `
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.11.3](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo113v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.11.3](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo113v1)
 - [Mailbox intelligence in anti-phishing policies](https://learn.microsoft.com/microsoft-365/security/office-365-security/anti-phishing-policies-about#impersonation-settings-in-anti-phishing-policies-in-microsoft-defender-for-office-365)
 
 <!--- Results --->

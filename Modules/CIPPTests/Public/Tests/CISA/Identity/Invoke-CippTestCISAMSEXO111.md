@@ -15,7 +15,7 @@ Enable-ATPProtectionPolicyRule -Identity "Standard Preset Security Policy"
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.11.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo111v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.11.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo111v1)
 - [Preset security policies](https://learn.microsoft.com/microsoft-365/security/office-365-security/preset-security-policies)
 
 <!--- Results --->
