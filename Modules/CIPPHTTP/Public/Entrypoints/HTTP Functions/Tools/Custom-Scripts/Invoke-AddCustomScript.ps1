@@ -1,7 +1,7 @@
 function Invoke-AddCustomScript {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.Tests.ReadWrite
     #>
