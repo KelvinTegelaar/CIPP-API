@@ -36,12 +36,29 @@ function New-CIPPRestoreTask {
         'ScriptedAlerts'    = @{ success = 0; failed = 0 }
     }
 
-    # Helper function to clean user object for Graph API - removes reference properties, nulls, and empty strings
+    # Helper function to clean user/group objects for Graph API - removes reference properties,
+    # read-only properties, nulls, and empty strings
     function Clean-GraphObject {
-        param($Object, [switch]$ExcludeId)
-        $excludeProps = @('password', 'passwordProfile', '@odata.type', 'manager', 'memberOf', 'createdOnBehalfOf', 'createdByAppId', 'deletedDateTime', 'authorizationInfo', 'imAddresses')
+        param($Object, [switch]$ExcludeId, [switch]$ForUpdate)
+        $excludeProps = @('password', 'passwordProfile', '@odata.type', 'manager', 'memberOf', 'createdOnBehalfOf',
+            'createdByAppId', 'deletedDateTime', 'authorizationInfo', 'imAddresses', 'assignedLicenses',
+            'assignedPlans', 'cloudLicensing', 'cloudRealtimeCommunicationInfo',
+            'createdDateTime', 'creationType', 'deviceKeys', 'expirationDateTime', 'externalUserState',
+            'externalUserStateChangeDateTime', 'hasMembersWithLicenseErrors', 'isArchived', 'isFavorite',
+            'isLicenseReconciliationNeeded', 'isManagementRestricted', 'isResourceAccount',
+            'isSubscribedByMail', 'lastPasswordChangeDateTime', 'legalAgeGroupClassification',
+            'licenseAssignmentStates', 'licenseProcessingState', 'mail', 'membershipRuleProcessingStatus',
+            'onPremises*', 'provisionedPlans', 'proxyAddresses', 'refreshTokensValidFromDateTime',
+            'renewedDateTime', 'resourceProvisioningOptions', 'securityIdentifier',
+            'serviceProvisioningErrors', 'signInActivity', 'signInSessionsValidFromDateTime',
+            'uniqueName', 'unseenConversationsCount', 'unseenCount', 'unseenMessagesCount')
+
         if ($ExcludeId) {
             $excludeProps += @('id')
+        }
+        if ($ForUpdate) {
+            # Immutable after creation: allowed in a POST body, rejected on PATCH
+            $excludeProps += @('id', 'isAssignableToRole', 'resourceBehaviorOptions', 'creationOptions')
         }
 
         $cleaned = $Object | Select-Object * -ExcludeProperty $excludeProps
@@ -49,8 +66,10 @@ function New-CIPPRestoreTask {
 
         foreach ($prop in $cleaned.PSObject.Properties) {
             $propValue = $prop.Value
-            # Skip empty strings, nulls, and complex objects (except known-good arrays like businessPhones)
-            if ($propValue -ne '' -and $null -ne $propValue) {
+            # Skip empty strings, nulls, and complex objects (except known-good arrays like businessPhones).
+            # Compare the string case explicitly: '$propValue -ne ''''' coerces '' to $false for booleans,
+            # which silently dropped required $false properties like mailEnabled.
+            if ($null -ne $propValue -and -not ($propValue -is [string] -and $propValue -eq '')) {
                 # Skip complex objects/dictionaries but allow simple arrays
                 if ($propValue -is [System.Collections.IDictionary]) {
                     continue
@@ -202,16 +221,16 @@ function New-CIPPRestoreTask {
             $BackupGroups | ForEach-Object {
 
                 try {
-                    $CleanObj = Clean-GraphObject $_
-                    $JSON = $CleanObj | ConvertTo-Json -Depth 100 -Compress
                     $DisplayName = $_.displayName
                     if ($overwrite) {
                         if ($_.id -in $Groups.id) {
+                            $JSON = Clean-GraphObject $_ -ForUpdate | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $TenantFilter -body $JSON -type PATCH
                             Write-LogMessage -message "Restored $DisplayName from backup by patching the existing object." -Sev 'info'
                             $restorationStats['Groups'].success++
                             $RestoreData.Add("The group existed. Restored $DisplayName from backup")
                         } else {
+                            $JSON = Clean-GraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter -body $JSON -type POST
                             Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'info'
                             $restorationStats['Groups'].success++
@@ -220,6 +239,7 @@ function New-CIPPRestoreTask {
                     }
                     if (!$overwrite) {
                         if ($_.id -notin $Groups.id) {
+                            $JSON = Clean-GraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter -body $JSON -type POST
                             Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'info'
                             $restorationStats['Groups'].success++
