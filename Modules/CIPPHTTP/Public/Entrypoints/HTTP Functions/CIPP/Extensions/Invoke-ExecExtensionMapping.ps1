@@ -110,7 +110,9 @@ Function Invoke-ExecExtensionMapping {
           Write-Host "Started permissions orchestration with ID = '$InstanceId'"
           $Result = 'AutoMapping Request has been queued. Exact name matches will appear first and matches on device names and serials will take longer. Please check the CIPP Logbook and refresh the page once complete.'
         }
-
+        'HaloPSA' {
+          $Result = Invoke-HaloAutoMap -CIPPMapping $Table
+        }
       }
     }
     $StatusCode = [HttpStatusCode]::OK
