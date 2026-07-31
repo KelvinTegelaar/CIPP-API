@@ -19,13 +19,32 @@ function Set-CIPPDBCacheManagedDeviceEncryptionStates {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching managed device encryption states' -sev Debug
 
-        $ManagedDeviceEncryptionStates = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceEncryptionStates?$top=999' -tenantid $TenantFilter
-
-        if ($ManagedDeviceEncryptionStates) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ManagedDeviceEncryptionStates' -Data $ManagedDeviceEncryptionStates -AddCount
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($ManagedDeviceEncryptionStates.Count) managed device encryption states" -sev Debug
+        # A row per device, iterated once, so it is streamed into the writer instead of held whole.
+        # The writer is opened on the first record: an empty result previously skipped
+        # Add-CIPPDbItem altogether, and piping into it unconditionally would run its end block
+        # and overwrite the count row with 0.
+        $Writer = $null
+        $CachedCount = 0
+        try {
+            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceEncryptionStates?$top=999' -tenantid $TenantFilter -Stream | ForEach-Object {
+                if ($null -eq $Writer) {
+                    $Writer = { Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ManagedDeviceEncryptionStates' -AddCount }.GetSteppablePipeline()
+                    $Writer.Begin($true)
+                }
+                $CachedCount++
+                $Writer.Process($_)
+            }
+            if ($Writer) {
+                $Writer.End()
+                $Writer.Dispose()
+                $Writer = $null
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $CachedCount managed device encryption states" -sev Debug
+            }
+        } finally {
+            # Only set if the stream threw part-way: dispose without End so a partial run never
+            # triggers the writer's orphan cleanup.
+            if ($Writer) { $Writer.Dispose() }
         }
-        $ManagedDeviceEncryptionStates = $null
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache managed device encryption states: $($_.Exception.Message)" -sev Error
