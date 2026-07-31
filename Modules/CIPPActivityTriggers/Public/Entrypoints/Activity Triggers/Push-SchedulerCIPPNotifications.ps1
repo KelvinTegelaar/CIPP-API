@@ -143,7 +143,7 @@ function Push-SchedulerCIPPNotifications {
             foreach ($g in $LogsByTenant) {
                 $tenant = $g.Name
                 $Data = $g.Group | Select-Object Message, API, Tenant, Username, Severity
-                $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'table' -CIPPURL $CIPPURL
+                $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'psa' -InputObject 'table' -CIPPURL $CIPPURL
                 $Title = "$tenant CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))"
                 Send-CIPPAlert -Type 'psa' -Title $Title -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
                 & $MarkSent $g.Group $LogTable
@@ -153,7 +153,7 @@ function Push-SchedulerCIPPNotifications {
                 $tenant = $g.Name
                 $Data = $g.Group
                 $Subject = "$($tenant): Standards are out of sync for $tenant"
-                $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'standards' -CIPPURL $CIPPURL
+                $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'psa' -InputObject 'standards' -CIPPURL $CIPPURL
                 Send-CIPPAlert -Type 'psa' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
                 & $MarkSent $g.Group $StandardsTable
                 $Data = $null; $HTMLContent = $null

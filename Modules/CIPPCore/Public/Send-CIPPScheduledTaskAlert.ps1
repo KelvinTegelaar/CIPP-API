@@ -268,7 +268,7 @@ function Send-CIPPScheduledTaskAlert {
                                 foreach ($Group in $Groups) {
                                     $GroupKey = $Group.Name
                                     $GroupHTMLFragment = $Group.Group | ForEach-Object { ConvertTo-AlertDisplayRow -Row $_ } | ConvertTo-Html -Fragment
-                                    $GroupHTML = $GroupHTMLFragment -replace '\[\[BR\]\]', '<br />' -replace '<table>', "$AlertHeader $TableDesign<table class=adaptiveTable>" | Out-String
+                                    $GroupHTML = ConvertTo-PSAHtml -Html ($GroupHTMLFragment -replace '\[\[BR\]\]', '<br />' -replace '<table>', "$AlertHeader $TableDesign<table class=adaptiveTable>" | Out-String)
 
                                     if ([string]::IsNullOrWhiteSpace($GroupKey)) {
                                         # Rows without a usable user identifier - fall back to the
@@ -296,7 +296,7 @@ function Send-CIPPScheduledTaskAlert {
                 }
 
                 if (-not $PsaSplitSent) {
-                    $PsaParams = @{ Type = 'psa'; Title = $title; HTMLContent = $HTML; TenantFilter = $TenantFilter }
+                    $PsaParams = @{ Type = 'psa'; Title = $title; HTMLContent = (ConvertTo-PSAHtml -Html $HTML); TenantFilter = $TenantFilter }
                     if ($TaskAffectedUser) { $PsaParams.AffectedUser = $TaskAffectedUser }
                     Send-CIPPAlert @PsaParams
                 }
