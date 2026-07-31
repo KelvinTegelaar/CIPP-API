@@ -61,6 +61,14 @@ function Set-CIPPSSOEasyAuth {
         "https://login.microsoftonline.com/$TenantId/v2.0"
     }
 
+    # Easy Auth path matching is case-sensitive — cover every casing CIPP has ever emitted
+    $RequiredExcludedPaths = @(
+        '/api/Public*'
+        '/API/Public*'
+        '/api/public*'
+        '/api/setup/health'
+    )
+
     # Read current app settings and merge AUTH_SECRET
     $CurrentSettings = Invoke-RestMethod -Uri "$BaseUri/config/appsettings/list?api-version=2024-11-01" -Method Post -Headers @{ Authorization = "Bearer $ArmToken" }
     $MergedSettings = @{}
@@ -124,6 +132,15 @@ function Set-CIPPSSOEasyAuth {
             $AAD.validation.defaultAuthorizationPolicy.allowedPrincipals = @{}
         }
 
+        # Ensure all required excludedPaths are present (heals drift from older configs)
+        if (-not $Current.ContainsKey('globalValidation') -or $null -eq $Current.globalValidation) { $Current.globalValidation = @{} }
+        $ExistingPaths = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+        if ($Current.globalValidation.excludedPaths) {
+            foreach ($p in $Current.globalValidation.excludedPaths) { [void]$ExistingPaths.Add($p) }
+        }
+        foreach ($p in $RequiredExcludedPaths) { [void]$ExistingPaths.Add($p) }
+        $Current.globalValidation.excludedPaths = @($ExistingPaths)
+
         $AuthConfig = $ArmPayload | ConvertTo-Json -Depth 20
         Write-Information "[SSO-EasyAuth] Read-modify-write: patching issuer to $IssuerUrl (preserving $(($ExistingAudiences).Count) audiences, $(($ExistingApps).Count) allowed apps)"
     } else {
@@ -134,12 +151,7 @@ function Set-CIPPSSOEasyAuth {
                 globalValidation  = @{
                     unauthenticatedClientAction = 'RedirectToLoginPage'
                     redirectToProvider          = 'azureactivedirectory'
-                    excludedPaths               = @(
-                        '/api/Public*'
-                        '/API/Public*'
-                        '/api/public*'
-                        '/api/setup/health'
-                    )
+                    excludedPaths               = $RequiredExcludedPaths
                 }
                 identityProviders = @{
                     azureActiveDirectory = @{
