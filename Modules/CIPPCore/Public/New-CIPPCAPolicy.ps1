@@ -219,15 +219,21 @@ function New-CIPPCAPolicy {
             $StrengthName = $JSONobj.GrantControls.authenticationStrength.displayName
             $JSONobj.GrantControls.authenticationStrength = @{ id = $DependencyMap.AuthStrength[$StrengthName] }
         } else {
-            $ExistingStrength = $AllAuthStrengthPolicies | Where-Object -Property displayName -EQ $JSONobj.GrantControls.authenticationStrength.displayName
-            if ($ExistingStrength) {
-                $JSONobj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
+            # Capture the name before the assignments below overwrite the object it lives on
+            $StrengthName = $JSONobj.GrantControls.authenticationStrength.displayName
+            $ExistingStrength = @($AllAuthStrengthPolicies | Where-Object -Property displayName -EQ $StrengthName)
+            if ($ExistingStrength.Count -gt 0) {
+                if ($ExistingStrength.Count -gt 1) {
+                    Write-Warning "Multiple authentication strength policies found with display name '$StrengthName'. Using the first match: $($ExistingStrength[0].id). IDs found: $($ExistingStrength.id -join ', ')"
+                    Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Multiple authentication strength policies found with display name '$StrengthName'. Using first match: $($ExistingStrength[0].id)" -Sev 'Warning'
+                }
+                $JSONobj.GrantControls.authenticationStrength = @{ id = $ExistingStrength[0].id }
 
             } else {
-                $Body = ConvertTo-Json -InputObject $JSONobj.GrantControls.authenticationStrength
+                $Body = ConvertTo-Json -InputObject $JSONobj.GrantControls.authenticationStrength -Depth 10
                 $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -body $body -Type POST -tenantid $TenantFilter -asApp $true -ScheduleRetry $true
-                $JSONobj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
-                Write-LogMessage -Headers $Headers -API $APIName -message "Created new Authentication Strength Policy: $($JSONobj.GrantControls.authenticationStrength.displayName)" -Sev 'Info'
+                $JSONobj.GrantControls.authenticationStrength = @{ id = $GraphRequest.id }
+                Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Created new Authentication Strength Policy: $StrengthName" -Sev 'Info'
             }
         }
     }
