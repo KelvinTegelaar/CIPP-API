@@ -136,6 +136,8 @@ function Set-CIPPSSOEasyAuth {
                     redirectToProvider          = 'azureactivedirectory'
                     excludedPaths               = @(
                         '/api/Public*'
+                        '/API/Public*'
+                        '/api/public*'
                         '/api/setup/health'
                     )
                 }
