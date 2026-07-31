@@ -117,14 +117,8 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         }
 
         # Override the template's state with the Drift Standard's state if specified
-        # This ensures drift detection compares against the desired state, not the original template state.
-        # Only when this standard actually deploys: the state radio is a deploy-time option that
-        # New-CIPPCAPolicy applies on remediation only. Drift templates default to report-only, so forcing
-        # it into the comparison there turns "deploy in report only" into a permanent deviation against a
-        # policy the template itself defines as enabled, and the only offered fix would flip a live policy
-        # back to report-only. Report-only keeps comparing against the template state, so genuine state
-        # drift (someone disabling the policy) is still reported.
-        if ($Settings.remediate -eq $true -and $Settings.state -and $Settings.state -ne 'donotchange') {
+        # This ensures drift detection compares against the desired state, not the original template state
+        if ($Settings.state -and $Settings.state -ne 'donotchange') {
             Write-Information "Overriding template state from '$($Policy.state)' to '$($Settings.state)' for drift comparison"
             $Policy | Add-Member -NotePropertyName 'state' -NotePropertyValue $Settings.state -Force
         }
