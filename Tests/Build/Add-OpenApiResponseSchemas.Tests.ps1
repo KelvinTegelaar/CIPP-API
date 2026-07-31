@@ -97,6 +97,34 @@ Describe 'ConvertTo-ResponseEnvelopeSchema' {
 }
 
 
+Describe 'Add-CippServerOriginTemplate' {
+    It 'replaces the old /api server prefix with a deployment origin variable' {
+        $spec = Get-TestSpec -Paths @{ '/api/ListLogs' = @{ get = (Get-Operation) } }
+        $spec['servers'] = @([ordered]@{ url = '/api'; description = 'CIPP API' })
+
+        Add-CippServerOriginTemplate -Spec $spec
+
+        $server = $spec['servers'][0]
+        $server['url'] | Should -BeExactly '{origin}'
+        $server['variables']['origin']['default'] | Should -BeExactly 'https://your-cipp-deployment.example'
+        $server['variables']['origin']['description'] |
+            Should -BeExactly 'CIPP deployment origin including scheme and host, without a trailing slash or /api suffix.'
+
+        $deploymentOrigins = @(
+            @{ Name = 'hosted-style'; Origin = 'https://hosted.example' }
+            @{ Name = 'Function App'; Origin = 'https://tenant-api.azurewebsites.net' }
+            @{ Name = 'Static Web App'; Origin = 'https://tenant-ui.azurestaticapps.net' }
+            @{ Name = 'custom domain'; Origin = 'https://cipp.contoso.example' }
+        )
+        foreach ($deployment in $deploymentOrigins) {
+            $composed = $server['url'].Replace('{origin}', $deployment.Origin) + '/api/ListLogs'
+            $composed | Should -BeExactly "$($deployment.Origin)/api/ListLogs" -Because $deployment.Name
+            $composed | Should -Not -Match '/api/api/' -Because $deployment.Name
+        }
+    }
+}
+
+
 Describe 'Add-CippOperationId' {
     It 'injects the bare endpoint name for a single-method operation with no operationId' {
         $spec = Get-TestSpec -Paths @{ '/api/ListMailboxes' = @{ get = (Get-Operation) } }
@@ -186,7 +214,7 @@ Describe 'Add-CippOperationId' {
     }
 
     It 'yields one unique operationId per operation on the full real spec' {
-        $specPath = Join-Path $RepoRoot 'openapi.json'
+        $specPath = Join-Path $RepoRoot 'Config' 'openapi.json'
         $spec = Get-Content -LiteralPath $specPath -Raw | ConvertFrom-Json -AsHashtable -Depth 100
         $operationTotal = 0
         foreach ($pathEntry in $spec['paths'].GetEnumerator()) {
@@ -198,6 +226,28 @@ Describe 'Add-CippOperationId' {
         Write-Information "Full real spec operationIds: $($r.Unique)" -InformationAction Continue
         $r.Operations | Should -Be $operationTotal
         $r.Unique | Should -Be $r.Operations
+    }
+}
+
+Describe 'canonical OpenAPI server portability' {
+    It 'defines one portable server and keeps every operation path under /api/' {
+        $specPath = Join-Path $RepoRoot 'Config' 'openapi.json'
+        $spec = Get-Content -LiteralPath $specPath -Raw | ConvertFrom-Json -AsHashtable -Depth 100
+        @($spec['servers']).Count | Should -Be 1
+        $server = $spec['servers'][0]
+
+        $server['url'] | Should -BeExactly '{origin}'
+        $server['variables']['origin']['default'] | Should -BeExactly 'https://your-cipp-deployment.example'
+        $spec['paths'].Count | Should -BeGreaterThan 0
+        foreach ($path in $spec['paths'].Keys) {
+            $path | Should -Match '^/api/'
+        }
+        $spec['paths'].Contains('/api/ListLogs') | Should -BeTrue
+
+        $origin = 'https://tenant-api.azurewebsites.net'
+        $composed = $server['url'].Replace('{origin}', $origin) + '/api/ListLogs'
+        $composed | Should -BeExactly 'https://tenant-api.azurewebsites.net/api/ListLogs'
+        $composed | Should -Not -Match '/api/api/'
     }
 }
 
@@ -455,14 +505,16 @@ Describe 'Add-CippResponseSchema - end to end on a temp spec' {
             Set-Content (Join-Path $tmp 'Tests' 'Shapes' 'ListThings.json')
         $specPath = Join-Path $tmp 'openapi.json'
         $outPath = Join-Path $tmp 'out.json'
-        Get-TestSpec -Paths @{ '/api/ListThings' = @{ get = (Get-Operation) } } | ConvertTo-Json -Depth 100 |
-            Set-Content $specPath
+        $inputSpec = Get-TestSpec -Paths @{ '/api/ListThings' = @{ get = (Get-Operation) } }
+        $inputSpec['servers'] = @([ordered]@{ url = '/api'; description = 'CIPP API' })
+        $inputSpec | ConvertTo-Json -Depth 100 | Set-Content $specPath
 
         Add-CippResponseSchema -InputSpec $specPath -OutputSpec $outPath -FrontendRepoPath $tmp | Out-Null
         $out = Get-Content $outPath -Raw | ConvertFrom-Json -AsHashtable -Depth 100
         $out['paths']['/api/ListThings']['get']['responses']['200']['content']['application/json']['schema'].properties.Results.items.properties.id.type |
             Should -Be 'string'
         $out['paths']['/api/ListThings']['get']['operationId'] | Should -Be 'ListThings'
+        $out['servers'][0]['url'] | Should -BeExactly '{origin}'
 
         Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
     }

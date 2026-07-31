@@ -7,6 +7,7 @@ on:
       - '.github/workflows/openapi-enriched-check.yml'
       - '.github/workflows/openapi-enriched-release.yml'
       - '.redocly.lint-ignore.yaml'
+      - 'Config/openapi.json'
       - 'redocly.yaml'
       - 'Tests/Build/**'
   workflow_dispatch:
@@ -44,7 +45,7 @@ jobs:
         run: |
           pwsh -NoProfile -File .build/Add-OpenApiResponseSchemas.ps1 `
             -FrontendRepoPath ./_frontend `
-            -InputSpec ./openapi.json `
+            -InputSpec ./Config/openapi.json `
             -OutputSpec ./openapi.enriched.json
 
       - name: Strict lint enriched OpenAPI spec
