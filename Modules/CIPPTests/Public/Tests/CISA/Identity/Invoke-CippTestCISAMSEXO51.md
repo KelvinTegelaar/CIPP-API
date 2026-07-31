@@ -16,7 +16,7 @@ Set-CASMailbox -Identity user@domain.com -SmtpClientAuthenticationDisabled $true
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.5.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo51v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.5.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo51v1)
 - [Disable SMTP AUTH](https://learn.microsoft.com/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)
 
 <!--- Results --->

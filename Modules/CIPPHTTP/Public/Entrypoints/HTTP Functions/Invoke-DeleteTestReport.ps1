@@ -15,7 +15,7 @@ function Invoke-DeleteTestReport {
         $ReportId = $Request.Body.ReportId
         $Table = Get-CippTable -tablename 'CippReportTemplates'
         $ExistingReport = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$ReportId'"
-        Remove-AzDataTableEntity @Table -Entity $ExistingReport
+        Remove-CIPPAzDataTableEntity @Table -Entity $ExistingReport
 
         $Body = [PSCustomObject]@{
             Results = 'Successfully deleted custom report'

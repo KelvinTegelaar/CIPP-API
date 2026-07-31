@@ -12,7 +12,7 @@ Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.17.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo171v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.17.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo171v1)
 - [Turn audit log search on or off](https://learn.microsoft.com/purview/audit-log-enable-disable)
 
 <!--- Results --->

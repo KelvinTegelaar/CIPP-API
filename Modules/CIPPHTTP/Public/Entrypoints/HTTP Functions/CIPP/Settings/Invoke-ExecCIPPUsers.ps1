@@ -108,7 +108,7 @@ function Invoke-ExecCIPPUsers {
                 # Remove any case-variant duplicate rows now merged into the canonical row
                 foreach ($Existing in $MatchingEntities) {
                     if ($Existing.RowKey -cne $UPN) {
-                        Remove-AzDataTableEntity -Force @Table -Entity $Existing
+                        Remove-CIPPAzDataTableEntity -Force @Table -Entity $Existing
                     }
                 }
 
@@ -163,7 +163,7 @@ function Invoke-ExecCIPPUsers {
                 }
 
                 foreach ($Existing in $MatchingEntities) {
-                    Remove-AzDataTableEntity -Force @Table -Entity $Existing
+                    Remove-CIPPAzDataTableEntity -Force @Table -Entity $Existing
                 }
                 try { [Craft.Services.AuthBridge]::InvalidateUsers() } catch {}
 

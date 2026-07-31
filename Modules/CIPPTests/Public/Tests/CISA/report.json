@@ -1,6 +1,6 @@
 {
-  "name": "CISA SCubaGear Tests for Exchange Online",
-  "description": "Security configuration assessment tests based on CISA's Secure Cloud Business Applications (SCubaGear) project for Microsoft Exchange Online. These tests validate compliance with federal security baselines.",
+  "name": "CISA ScubaGear Tests for Exchange Online",
+  "description": "Security configuration assessment tests based on CISA's Secure Cloud Business Applications (ScubaGear) project for Microsoft Exchange Online. These tests validate compliance with federal security baselines.",
   "version": "1.0",
   "source": "https://github.com/cisagov/ScubaGear",
   "category": "CISA Security Baselines",

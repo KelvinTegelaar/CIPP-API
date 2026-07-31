@@ -40,7 +40,7 @@ function Invoke-ExecPartnerWebhook {
             # flag a subscription still pointing at a previous CIPP URL.
             $CurrentHostname = Get-CIPPHostname -Headers $Request.Headers
             if ($CurrentHostname) {
-                $Results | Add-Member -MemberType NoteProperty -Name 'expectedWebhookUrl' -Value "https://$CurrentHostname/API/PublicWebhooks?CIPPID=$($env:TenantID)&Type=PartnerCenter" -Force
+                $Results | Add-Member -MemberType NoteProperty -Name 'expectedWebhookUrl' -Value "https://$CurrentHostname/api/PublicWebhooks?CIPPID=$($env:TenantID)&Type=PartnerCenter" -Force
             }
         }
         'CreateSubscription' {

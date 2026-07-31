@@ -1,10 +1,10 @@
-@{
+﻿@{
 
 # Script module or binary module file associated with this manifest.
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '3.6.0'
+ModuleVersion = '3.6.2'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -66,11 +66,14 @@ FunctionsToExport = @()
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @(
     'Add-AzDataTableEntity'
+    'Add-AzDataTableLargeEntity'
     'Clear-AzDataTable'
     'Get-AzDataTable'
     'Get-AzDataTableEntity'
+    'Get-AzDataTableLargeEntity'
     'Get-AzDataTableSupportedEntityType'
     'Remove-AzDataTableEntity'
+    'Remove-AzDataTableLargeEntity'
     'Update-AzDataTableEntity'
     'New-AzDataTableContext'
     'Remove-AzDataTable'
@@ -110,18 +113,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-          ReleaseNotes = '## [3.6.0] - 2026-07-01
-
-### Added
-
-- Added a `-MaxConnectionsPerServer` parameter to `New-AzDataTableContext` to cap the number of concurrent connections per server endpoint on the shared HTTP client pool. Applied process-wide on first use; default is unlimited. ([#133](https://github.com/PalmEmanuel/AzBobbyTables/pull/122))
-- Added a `-MaxRetries` parameter to the table operation cmdlets (`Add-`, `Get-`, `Remove-`, `Update-AzDataTableEntity`, `Clear-`, `Get-`, `New-`, `Remove-AzDataTable`) to retry throttled requests (HTTP 429), waiting for the service''s Retry-After hint between attempts. Defaults to `0` (no retries). ([#133](https://github.com/PalmEmanuel/AzBobbyTables/pull/122))
-
-### Changed
-
-Bumped Microsoft.VisualStudio.Threading from 17.14.15 to 18.7.23 (#132)
-
-'
+        # ReleaseNotes = ''
 
         # Prerelease string of this module
         # Prerelease = ''
@@ -143,3 +135,5 @@ Bumped Microsoft.VisualStudio.Threading from 17.14.15 to 18.7.23 (#132)
 # DefaultCommandPrefix = ''
 
 }
+
+

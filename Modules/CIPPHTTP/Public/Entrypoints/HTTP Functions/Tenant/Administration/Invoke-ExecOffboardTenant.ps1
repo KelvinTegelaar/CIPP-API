@@ -114,7 +114,7 @@ function Invoke-ExecOffboardTenant {
                     if ($DomainEntries) {
                         $DomainCount = ($DomainEntries | Measure-Object).Count
                         foreach ($Domain in $DomainEntries) {
-                            Remove-AzDataTableEntity @DomainTable -Entity $Domain
+                            Remove-CIPPAzDataTableEntity @DomainTable -Entity $Domain
                         }
                         $Results.Add("Successfully removed $DomainCount Domain Analyser entries")
                         Write-LogMessage -headers $Headers -API $APIName -message "Removed $DomainCount Domain Analyser entries" -Sev 'Info' -tenant $TenantFilter
@@ -204,7 +204,7 @@ function Invoke-ExecOffboardTenant {
                 $TenantsTable = Get-CippTable -tablename 'Tenants'
                 $TenantRow = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$TenantId'" -Property RowKey, PartitionKey, customerId, displayName
                 if ($TenantRow) {
-                    Remove-AzDataTableEntity -Force @TenantsTable -Entity $TenantRow
+                    Remove-CIPPAzDataTableEntity -Force @TenantsTable -Entity $TenantRow
                     $Results.Add("$($Tenant.displayName) ($TenantId) has been deleted from CIPP")
                     Write-LogMessage -headers $Headers -API $APIName -message "Tenant $($Tenant.displayName) ($TenantId) deleted from CIPP" -Sev 'Info' -tenant $TenantFilter
                 } else {

@@ -20,13 +20,13 @@ function Invoke-RemoveScheduledItem {
     }
     try {
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'
-        Remove-AzDataTableEntity -Force @Table -Entity $task
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $task
 
         $DetailTable = Get-CIPPTable -TableName 'ScheduledTaskDetails'
         $Details = Get-CIPPAzDataTableEntity @DetailTable -Filter "PartitionKey eq '$($RowKey)'" -Property RowKey, PartitionKey, ETag
 
         if ($Details) {
-            Remove-AzDataTableEntity -Force @DetailTable -Entity $Details
+            Remove-CIPPAzDataTableEntity -Force @DetailTable -Entity $Details
         }
 
         Write-LogMessage -Headers $Headers -API $APIName -message "Task removed: $($task.RowKey)" -Sev 'Info'

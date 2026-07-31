@@ -25,7 +25,7 @@ BeforeAll {
     function Get-CIPPTenantAlignment { param($TenantFilter, $TemplateId) }
     function New-GraphBulkRequest { param($Requests, $tenantid, $asapp) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force, $TableName) }
-    function Remove-AzDataTableEntity { param($Entity, $TableName) }
+    function Remove-CIPPAzDataTableEntity { param($Entity, $TableName) }
 
     # Builds an IntuneTemplate row the way the templates table stores it: JSON is a wrapper object
     # (Displayname/Description/Type/RAWJson) where RAWJson is itself a JSON string of the captured
@@ -148,7 +148,7 @@ Describe 'Get-CIPPDrift - Intune extra-policy matching (#6347 and Settings Catal
             param($Entity, [switch]$Force, $TableName)
             foreach ($e in @($Entity)) { $script:AddedDriftEntities.Add($e) }
         }
-        Mock -CommandName Remove-AzDataTableEntity -MockWith {
+        Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith {
             param($Entity, $TableName)
             $script:RemovedDriftEntities.Add($Entity)
         }
@@ -329,7 +329,7 @@ Describe 'Get-CIPPDrift - Conditional Access extra-policy matching' {
             }
         }
         Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { param($Entity, [switch]$Force, $TableName) }
-        Mock -CommandName Remove-AzDataTableEntity -MockWith { param($Entity, $TableName) }
+        Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith { param($Entity, $TableName) }
     }
 
     It 'does not report a deviation when displayName matches exactly' {
@@ -378,7 +378,7 @@ Describe 'Get-CIPPDrift - standards deviation display name resolution' {
         }
         Mock -CommandName New-GraphBulkRequest -MockWith { @() }
         Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { param($Entity, [switch]$Force, $TableName) }
-        Mock -CommandName Remove-AzDataTableEntity -MockWith { param($Entity, $TableName) }
+        Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith { param($Entity, $TableName) }
     }
 
     It 'resolves the Intune template display name and description for standards.IntuneTemplate deviations' {
@@ -476,7 +476,7 @@ Describe 'Get-CIPPDrift - stale drift entity pruning' {
         Mock -CommandName Get-CippTable -MockWith { param($tablename) @{ TableName = $tablename } }
         Mock -CommandName New-GraphBulkRequest -MockWith { @() }
         Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { param($Entity, [switch]$Force, $TableName) }
-        Mock -CommandName Remove-AzDataTableEntity -MockWith {
+        Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith {
             param($Entity, $TableName)
             $script:RemovedDriftEntities.Add($Entity)
         }
