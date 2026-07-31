@@ -116,13 +116,6 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
             return
         }
 
-        # Override the template's state with the Drift Standard's state if specified
-        # This ensures drift detection compares against the desired state, not the original template state
-        if ($Settings.state -and $Settings.state -ne 'donotchange') {
-            Write-Information "Overriding template state from '$($Policy.state)' to '$($Settings.state)' for drift comparison"
-            $Policy | Add-Member -NotePropertyName 'state' -NotePropertyValue $Settings.state -Force
-        }
-
         if ($Policy.sessionControls) {
             if ($Policy.sessionControls.disableResilienceDefaults -ne $true) {
                 $Policy.sessionControls.PSObject.Properties.Remove('disableResilienceDefaults')
@@ -177,6 +170,12 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = 'Tenant policy conversion returned null.' } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
                 return
             }
+
+            if ($Settings.state -and $Settings.state -ne 'donotchange' -and $CompareObj.state -eq $Settings.state) {
+                Write-Information "Policy is in the deployed state '$($CompareObj.state)'; not comparing against template state '$($Policy.state)'"
+                $Policy | Add-Member -NotePropertyName 'state' -NotePropertyValue $CompareObj.state -Force
+            }
+
             try {
                 $Compare = Compare-CIPPIntuneObject -ReferenceObject $Policy -DifferenceObject $CompareObj -CompareType 'ca'
             } catch {
