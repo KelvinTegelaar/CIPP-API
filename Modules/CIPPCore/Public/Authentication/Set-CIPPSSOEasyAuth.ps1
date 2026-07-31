@@ -61,13 +61,27 @@ function Set-CIPPSSOEasyAuth {
         "https://login.microsoftonline.com/$TenantId/v2.0"
     }
 
-    # Easy Auth path matching is case-sensitive — cover every casing CIPP has ever emitted
-    $RequiredExcludedPaths = @(
-        '/api/Public*'
-        '/API/Public*'
-        '/api/public*'
-        '/api/setup/health'
-    )
+    # Used only for the initial full-overwrite write below. Steady-state ownership of
+    # excludedPaths belongs to Craft's ReconcileAuthPolicy, which enforces the
+    # App.Setup.ExcludedPaths list from the runtime appsettings on every warmup —
+    # so read the same file (it sits one level above CRAFT_ROOT in the container)
+    # and the initial write converges without a reconcile PUT on first boot.
+    $RequiredExcludedPaths = @()
+    try {
+        if ($env:CRAFT_ROOT) {
+            $AppSettingsPath = Join-Path (Split-Path $env:CRAFT_ROOT -Parent) 'appsettings.Production.json'
+            if (Test-Path $AppSettingsPath) {
+                $RequiredExcludedPaths = @((Get-Content $AppSettingsPath -Raw | ConvertFrom-Json).App.Setup.ExcludedPaths)
+            }
+        }
+    } catch {
+        Write-Information "[SSO-EasyAuth] Could not read ExcludedPaths from appsettings: $($_.Exception.Message)"
+    }
+    if ($RequiredExcludedPaths.Count -eq 0) {
+        # Fallback when the appsettings file is unavailable — minimal set the app needs
+        # to function (public webhooks in every emitted casing + the health probe).
+        $RequiredExcludedPaths = @('/api/Public*', '/API/Public*', '/api/public*', '/api/setup/health')
+    }
 
     # Read current app settings and merge AUTH_SECRET
     $CurrentSettings = Invoke-RestMethod -Uri "$BaseUri/config/appsettings/list?api-version=2024-11-01" -Method Post -Headers @{ Authorization = "Bearer $ArmToken" }
@@ -131,15 +145,6 @@ function Set-CIPPSSOEasyAuth {
         if (-not $AAD.validation.defaultAuthorizationPolicy.ContainsKey('allowedPrincipals')) {
             $AAD.validation.defaultAuthorizationPolicy.allowedPrincipals = @{}
         }
-
-        # Ensure all required excludedPaths are present (heals drift from older configs)
-        if (-not $Current.ContainsKey('globalValidation') -or $null -eq $Current.globalValidation) { $Current.globalValidation = @{} }
-        $ExistingPaths = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-        if ($Current.globalValidation.excludedPaths) {
-            foreach ($p in $Current.globalValidation.excludedPaths) { [void]$ExistingPaths.Add($p) }
-        }
-        foreach ($p in $RequiredExcludedPaths) { [void]$ExistingPaths.Add($p) }
-        $Current.globalValidation.excludedPaths = @($ExistingPaths)
 
         $AuthConfig = $ArmPayload | ConvertTo-Json -Depth 20
         Write-Information "[SSO-EasyAuth] Read-modify-write: patching issuer to $IssuerUrl (preserving $(($ExistingAudiences).Count) audiences, $(($ExistingApps).Count) allowed apps)"
