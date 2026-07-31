@@ -35,11 +35,17 @@ Function Invoke-ExecExtensionMapping {
         $Result = Get-SherwebMapping -CIPPMapping $Table
       }
       'HaloPSAFields' {
+        # Outcomes and priorities are scoped to a ticket type. The settings page sends the
+        # ticket type currently selected in the form so the lists follow the dropdown; without
+        # it both fall back to whatever ticket type was last saved.
+        $SelectedTicketType = $Request.Query.TicketType
         $TicketTypes = Get-HaloTicketType
-        $Outcomes = Get-HaloTicketOutcome
+        $Outcomes = Get-HaloTicketOutcome -TicketType $SelectedTicketType
+        $Priorities = Get-HaloPriority -TicketType $SelectedTicketType
         $Result = @{
           'TicketTypes' = $TicketTypes
           'Outcomes'    = $Outcomes
+          'Priorities'  = $Priorities
         }
       }
       'PWPushFields' {

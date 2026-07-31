@@ -310,6 +310,13 @@ function New-CIPPAlertTemplate {
                 $ButtonText = 'User Management'
             }
         }
+
+        # Append a deep-link to the source audit event so technicians can jump straight from
+        # the ticket to the raw record in CIPP for forensics, regardless of which action page
+        # the primary button takes them to.
+        if (![string]::IsNullOrWhiteSpace($AuditLogLink)) {
+            $AfterButtonText = "$AfterButtonText<p>For forensics, <a href=`"$AuditLogLink`">view the source audit event in CIPP</a>.</p>"
+        }
     }
 
     if (![string]::IsNullOrWhiteSpace($CustomSubject)) {

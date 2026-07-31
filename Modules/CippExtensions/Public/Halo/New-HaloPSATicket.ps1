@@ -46,18 +46,23 @@ function New-HaloPSATicket {
       if ($Ticket.id) {
         if (!$Ticket.hasbeenclosed) {
           Write-Information 'Ticket is still open, adding new note'
+          # Halo won't take a note without an outcome - it answers "An Outcome must be entered
+          # for this Action" - so fall back to 7, the built-in Internal Note outcome, when the
+          # integration hasn't been given one. The failure this used to hit was the API user not
+          # having rights to the action, which is caught below and falls back to a new ticket so
+          # the alert still lands somewhere.
+          $Outcome = if ($Configuration.Outcome) {
+            $Configuration.Outcome.value ?? $Configuration.Outcome
+          } else {
+            7
+          }
           $Object = [PSCustomObject]@{
             ticket_id      = $ExistingTicket.TicketID
-            outcome_id     = 7
+            outcome_id     = $Outcome
             hiddenfromuser = $true
             note_html      = $description
           }
-  
-          if ($Configuration.Outcome) {
-            $Outcome = $Configuration.Outcome.value ?? $Configuration.Outcome
-            $Object.outcome_id = $Outcome
-          }
-  
+
           $body = ConvertTo-Json -Compress -Depth 10 -InputObject @($Object)
           $NoteAdded = $false
           try {
@@ -76,7 +81,12 @@ function New-HaloPSATicket {
             }
             # Don't return here - if appending a note failed (e.g. permissions on the action,
             # invalid outcome_id) we still want to create a fresh ticket so the alert isn't lost.
-            Write-LogMessage -message "Failed to add note to HaloPSA ticket $($ExistingTicket.TicketID): $Message - falling back to creating a new ticket" -API 'HaloPSATicket' -sev Warning -LogData (Get-CippException -Exception $_)
+            $OutcomeHint = if ($Configuration.Outcome) {
+              "Outcome $Outcome is set for this integration - check the HaloPSA API user can run that action."
+            } else {
+              "No Outcome is configured, so the built-in Internal Note action ($Outcome) was used. If it has been removed or the API user cannot run it, pick a different Outcome on the HaloPSA integration page."
+            }
+            Write-LogMessage -message "Failed to add note to HaloPSA ticket $($ExistingTicket.TicketID): $Message - falling back to creating a new ticket. $OutcomeHint" -API 'HaloPSATicket' -sev Warning -LogData (Get-CippException -Exception $_)
             Write-Information "Failed to add note to HaloPSA ticket: $Message; creating a new ticket instead"
             Write-Information "Body we tried to ship: $body"
           }
@@ -126,6 +136,17 @@ function New-HaloPSATicket {
   if ($Configuration.TicketType) {
     $TicketType = $Configuration.TicketType.value ?? $Configuration.TicketType
     $object | Add-Member -MemberType NoteProperty -Name 'tickettype_id' -Value $TicketType -Force
+  }
+  if ($Configuration.DefaultPriority) {
+    $Priority = $Configuration.DefaultPriority.value ?? $Configuration.DefaultPriority
+    $PriorityInt = $Priority -as [int]
+    if ($PriorityInt -and $PriorityInt -gt 0) {
+      $object | Add-Member -MemberType NoteProperty -Name 'priority_id' -Value $PriorityInt -Force
+    } else {
+      # Stored value isn't a valid Halo priority id (legacy data, hint-row selection, etc.).
+      # Skip priority_id rather than crashing the cast - Halo will fall back to its default.
+      Write-LogMessage -message "HaloPSA.DefaultPriority value '$Priority' is not a valid integer - omitting priority_id from ticket payload" -API 'HaloPSATicket' -sev Warning
+    }
   }
   #use the token to create a new ticket in HaloPSA
   $body = ConvertTo-Json -Compress -Depth 10 -InputObject @($Object)
