@@ -29,22 +29,14 @@ function Invoke-ListCVEManagement {
     } else {
         try {
             Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'retrieving CVEs' -sev 'info'
-            $GraphRequest = get-DefenderCVEs -TenantFilter $TenantFilter
 
-            # Retrieve Exceptions from Exception database
+            # Retrieve Exceptions from Exception database. These are resolved before the CVE
+            # fetch so the fetch can be streamed straight into the merge below.
             $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
             $AllExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable
             $ExceptionsByCve = @{}
 
-            # Retrieve CVEs from database
-            $RawCveItems = $GraphRequest
-            $AllCachedCves = $RawCveData
-
             $TenantList = Get-Tenants | Where-Object defaultDomainName -EQ $TenantFilter
-
-            if ($RawCveItems.Count -eq 0) {
-                return @()
-            }
 
             foreach ($Ex in $AllExceptions) {
                 if ($TenantList.defaultDomainName -contains $Ex.customerId -or $Ex.customerId -eq 'ALL') {
@@ -65,10 +57,23 @@ function Invoke-ListCVEManagement {
                 }
             }
 
-            # Merge all results
+            # Merge all results.
+            #
+            # get-DefenderCVEs is piped rather than assigned. It returns one row per CVE, each
+            # carrying a deviceDetailsJson blob covering every affected device, so for a large
+            # tenant that row set is the biggest object in the request. Assigning it kept every
+            # row and every JSON blob alive alongside $CveMasterTable and $SortedCves for the
+            # rest of the request; folding rows as they arrive lets each one be collected once
+            # it has been merged. This runs on the HTTP worker pool, which shares the
+            # container's managed heap with the background pool, so an OOM here takes
+            # user-facing requests down with it.
             $CveMasterTable = @{}
+            $RowCount = 0
 
-            foreach ($Item in $RawCveItems) {
+            get-DefenderCVEs -TenantFilter $TenantFilter | ForEach-Object {
+                $Item = $_
+                $RowCount++
+
                 $CveId = $Item.PartitionKey
 
                 if (-not $CveMasterTable.ContainsKey($CveId)) {
@@ -114,6 +119,12 @@ function Invoke-ListCVEManagement {
                         $CveGroup.TotalDeviceCount ++
                     }
                 }
+            }
+
+            # Counted during the fold rather than off a materialised row set, but the same
+            # guarantee: a tenant with no CVEs returns a bare empty array, not a response body.
+            if ($RowCount -eq 0) {
+                return @()
             }
 
             # Combine filtered results
