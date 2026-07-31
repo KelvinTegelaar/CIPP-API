@@ -123,6 +123,40 @@ function Invoke-ExecUpdateDriftDeviation {
                                 $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
                                 $Settings = $MatchedTemplate
                             }
+                        } elseif ($Setting -like '*QuarantineTemplate*') {
+                            $Setting = 'QuarantineTemplate'
+                            # The suffix is the quarantine policy display name, hex encoded because '\', '#'
+                            # and '?' are legal in a quarantine name but not in an Azure Table RowKey.
+                            # See the matching encoder in Invoke-CIPPStandardQuarantineTemplate.
+                            $HexName = $Deviation.standardName -replace '^(standards\.)?QuarantineTemplates?\.', ''
+                            $PolicyName = $null
+                            if ($HexName -match '^[0-9A-Fa-f]+$' -and $HexName.Length % 2 -eq 0) {
+                                $Chars = for ($i = 0; $i -lt $HexName.Length; $i += 2) {
+                                    [char][Convert]::ToInt32($HexName.Substring($i, 2), 16)
+                                }
+                                $PolicyName = -join $Chars
+                            }
+                            $MatchedTemplate = $StandardTemplate.standardSettings.QuarantineTemplate | Where-Object {
+                                ($_.displayName.value ?? [string]$_.displayName) -eq $PolicyName
+                            } | Select-Object -First 1
+                            if (-not $MatchedTemplate) {
+                                Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Could not find QuarantineTemplate '$PolicyName' in drift standard settings for remediation" -Sev 'Warning'
+                            } else {
+                                $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
+                                $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
+                                $Settings = $MatchedTemplate
+                            }
+                        } elseif ($Setting -like '*ReusableSettingsTemplate*') {
+                            $Setting = 'ReusableSettingsTemplate'
+                            $TemplateId = $Deviation.standardName -replace '^(standards\.)?ReusableSettingsTemplates?\.', ''
+                            $MatchedTemplate = $StandardTemplate.standardSettings.ReusableSettingsTemplate | Where-Object { $_.TemplateList.value -like "*$TemplateId*" } | Select-Object -First 1
+                            if (-not $MatchedTemplate) {
+                                Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Could not find ReusableSettingsTemplate $TemplateId in drift standard settings for remediation" -Sev 'Warning'
+                            } else {
+                                $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
+                                $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
+                                $Settings = $MatchedTemplate
+                            }
                         } else {
                             $StandardTemplate = $StandardTemplate.standardSettings.$Setting
                             # If the addedComponent values are stored nested under standards.<setting> instead of
@@ -191,7 +225,7 @@ function Invoke-ExecUpdateDriftDeviation {
                             [PSCustomObject]@{
                                 standardName = $Deviation.standardName
                                 success      = $false
-                                error        = "The deviation status was updated, but no remediation task was scheduled: the template could not be resolved from the drift template settings. Verify the template still exists in the template library, or re-save the drift template."
+                                error        = "The deviation status was updated, but no remediation task was scheduled: '$Setting' could not be resolved from the drift template settings. Verify the template still exists in the template library and is included in the drift template, or re-save the drift template."
                             }
                         }
                     }
