@@ -101,7 +101,8 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
             # Capture the Graph deploy error (e.g. invalid CA policy 1011/1085) so the report
             # section below surfaces the reason in the compare fields instead of just "missing".
             $DeployError = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $DeployError" -sev 'Error'
+            $PolicyName = $Policy.displayName ?? $Settings.TemplateList.label
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $PolicyName. Error: $DeployError" -sev 'Error'
         }
     }
     if ($Settings.report -eq $true -or $Settings.remediate -eq $true) {

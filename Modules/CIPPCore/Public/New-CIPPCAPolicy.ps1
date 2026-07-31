@@ -240,23 +240,31 @@ function New-CIPPCAPolicy {
 
     #if we have excluded or included applications, we need to remove any appIds that do not have a service principal in the tenant
     if ($AllServicePrincipals) {
-        $ReservedApplicationNames = @('none', 'All', 'Office365', 'MicrosoftAdminPortals')
-
+        # Only GUIDs are real appIds worth checking against the tenant's service principals. Everything else is a
+        # Graph reserved keyword (All, None, Office365, MicrosoftAdminPortals, AllAgentIdResources, ...) and must be
+        # passed through untouched - filtering them out empties the array and Graph rejects the policy with a 1011.
         if ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All') {
             $ValidExclusions = [system.collections.generic.list[string]]::new()
             foreach ($appId in $JSONobj.conditions.applications.excludeApplications) {
-                if ($AllServicePrincipals.appId -contains $appId -or $ReservedApplicationNames -contains $appId) {
+                if ([string]::IsNullOrWhiteSpace($appId)) { continue }
+                if (-not (Test-IsGuid -String $appId) -or $AllServicePrincipals.appId -contains $appId) {
                     $ValidExclusions.Add($appId)
                 }
             }
             $JSONobj.conditions.applications.excludeApplications = $ValidExclusions
         }
         if ($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') {
+            $OriginalInclusions = @($JSONobj.conditions.applications.includeApplications)
             $ValidInclusions = [system.collections.generic.list[string]]::new()
-            foreach ($appId in $JSONobj.conditions.applications.includeApplications) {
-                if ($AllServicePrincipals.appId -contains $appId -or $ReservedApplicationNames -contains $appId) {
+            foreach ($appId in $OriginalInclusions) {
+                if ([string]::IsNullOrWhiteSpace($appId)) { continue }
+                if (-not (Test-IsGuid -String $appId) -or $AllServicePrincipals.appId -contains $appId) {
                     $ValidInclusions.Add($appId)
                 }
+            }
+            # An empty includeApplications is always rejected by Graph, so never let the filter clear it out entirely.
+            if ($ValidInclusions.Count -eq 0) {
+                throw "None of the applications included by '$displayName' ($($OriginalInclusions -join ', ')) have a service principal in tenant $TenantFilter. Consent the applications in the tenant or remove them from the policy."
             }
             $JSONobj.conditions.applications.includeApplications = $ValidInclusions
         }
