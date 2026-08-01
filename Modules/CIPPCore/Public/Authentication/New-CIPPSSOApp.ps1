@@ -26,6 +26,16 @@ function New-CIPPSSOApp {
     $CallbackUri = $RedirectUri.TrimEnd('/') + '/.auth/login/aad/callback'
     $SignInAudience = if ($MultiTenant) { 'AzureADMultipleOrgs' } else { 'AzureADMyOrg' }
 
+    # A container can carry several custom domains and EasyAuth derives redirect_uri from the
+    # incoming Host header, so every bound hostname needs its own callback - not just the URL
+    # the admin happened to run setup from. Writing only $CallbackUri here would strip sign-in
+    # from every other domain until the next warmup re-added it.
+    $DesiredUris = [System.Collections.Generic.List[string]]::new()
+    $DesiredUris.Add($CallbackUri)
+    foreach ($Uri in @(Get-CIPPSiteHostname -AsRedirectUri)) {
+        if ($Uri -notin $DesiredUris) { $DesiredUris.Add($Uri) }
+    }
+
     # Microsoft Graph resource ID and delegated permission GUIDs
     $GraphResourceId = '00000003-0000-0000-c000-000000000000'
     $Permissions = @(
@@ -56,9 +66,17 @@ function New-CIPPSSOApp {
         $State = 'updated'
         Write-Information "[SSO-App] Updating existing app: $AppClientId"
 
+        # Union with what is already registered - never send a shorter array than the app
+        # already has, or re-running setup silently breaks sign-in on the other domains.
+        $MergedUris = [System.Collections.Generic.List[string]]::new()
+        foreach ($Uri in @($ExistingApp.web.redirectUris)) { $MergedUris.Add($Uri) }
+        foreach ($Uri in $DesiredUris) {
+            if ($Uri -notin $MergedUris) { $MergedUris.Add($Uri) }
+        }
+
         $PatchBody = @{
             web                    = @{
-                redirectUris          = @($CallbackUri)
+                redirectUris          = $MergedUris
                 implicitGrantSettings = @{ enableIdTokenIssuance = $true }
             }
             signInAudience         = $SignInAudience
@@ -70,7 +88,7 @@ function New-CIPPSSOApp {
             )
         } | ConvertTo-Json -Depth 10 -Compress
 
-        New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$AppObjectId" -body $PatchBody -type PATCH -NoAuthCheck $true -AsApp $true
+        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$AppObjectId" -body $PatchBody -type PATCH -NoAuthCheck $true -AsApp $true
     } else {
         # Create new app registration
         $State = 'created'
@@ -80,7 +98,7 @@ function New-CIPPSSOApp {
             displayName            = $AppDisplayName
             signInAudience         = $SignInAudience
             web                    = @{
-                redirectUris          = @($CallbackUri)
+                redirectUris          = $DesiredUris
                 implicitGrantSettings = @{ enableIdTokenIssuance = $true }
             }
             requiredResourceAccess = @(

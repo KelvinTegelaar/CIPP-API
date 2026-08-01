@@ -23,6 +23,35 @@ function Invoke-ExecSSOSetup {
         return "https://$($env:WEBSITE_HOSTNAME)"
     }
 
+    # Compare the callbacks registered on the SSO app against every hostname bound to this
+    # container. A container can have several custom domains and each needs its own callback,
+    # so "missing" here means those domains cannot sign in yet.
+    $GetRedirectUriState = {
+        param([string]$AppId)
+        $HostnameState = Get-CIPPSiteHostname -IncludeStatus
+        $Required = @($HostnameState.RedirectUris)
+        $Registered = @()
+        if ($AppId) {
+            try {
+                $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')?`$select=web" -NoAuthCheck $true -AsApp $true
+                $Registered = @($App.web.redirectUris)
+            } catch {
+                Write-Information "[SSO-Setup] Could not read redirect URIs for $AppId : $($_.Exception.Message)"
+            }
+        }
+        [PSCustomObject]@{
+            # Fall back to the required set when the app can't be read, so the UI still shows
+            # which URLs this instance expects rather than an empty list.
+            RedirectUris    = if ($Registered.Count -gt 0) { $Registered } else { $Required }
+            MissingUris     = @($Required | Where-Object { $_ -notin $Registered })
+            Known           = $Registered.Count -gt 0
+            # False means the bound-domain list is a best-effort guess, so an empty MissingUris
+            # is NOT proof that every domain can sign in. The UI has to say so.
+            DomainsVerified = $HostnameState.Discovered
+            DomainsError    = $HostnameState.Error
+        }
+    }
+
     # Save a row to the migration table while preserving fields that aren't being updated
     $SaveMigrationRow = {
         param([hashtable]$Updates)
@@ -149,6 +178,74 @@ function Invoke-ExecSSOSetup {
                     Write-LogMessage -API $APIName -message "Failed to get SSO status: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                     $Body = @{ Results = @{ configured = $false; status = 'error'; lastError = $ErrorMessage.NormalizedError } }
                 }
+            }
+
+            # Report which hostnames can actually sign in, and self-heal a domain that was
+            # bound after the app was provisioned (e.g. a custom domain added from the
+            # management portal). Only patches when something is genuinely missing, so
+            # polling this endpoint doesn't hammer Graph with writes.
+            try {
+                if ($Body.Results -is [hashtable] -and $Body.Results.appId) {
+                    $UriState = & $GetRedirectUriState $Body.Results.appId
+                    if ($UriState.Known -and $UriState.MissingUris.Count -gt 0) {
+                        Write-Information "[SSO-Setup] $($UriState.MissingUris.Count) bound hostname(s) missing a callback — patching"
+                        $Refreshed = Update-CIPPSSORedirectUri -PassThru
+                        if ($Refreshed.Status -eq 'updated') { $UriState = & $GetRedirectUriState $Body.Results.appId }
+                    }
+                    $Body.Results.redirectUris = @($UriState.RedirectUris)
+                    $Body.Results.missingRedirectUris = @($UriState.MissingUris)
+                    $Body.Results.domainsVerified = [bool]$UriState.DomainsVerified
+                    $Body.Results.domainsError = $UriState.DomainsError
+                }
+            } catch {
+                Write-Information "[SSO-Setup] Redirect URI status check failed (non-fatal): $($_.Exception.Message)"
+            }
+        }
+
+        'RefreshRedirectUris' {
+            # Register a callback for every hostname bound to this container. Warmup does this
+            # too, but a domain added through the management portal would otherwise have no
+            # callback until the next restart - and sign-in on it fails with AADSTS50011.
+            try {
+                $Refreshed = Update-CIPPSSORedirectUri -PassThru
+
+                if ($Refreshed.Status -eq 'skipped') {
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    $Body = @{ Results = $Refreshed.Message }
+                    break
+                }
+                if ($Refreshed.Status -eq 'error') {
+                    $StatusCode = [HttpStatusCode]::InternalServerError
+                    $Body = @{ Results = "Failed to refresh sign-in URLs: $($Refreshed.Message)" }
+                    break
+                }
+
+                if ($Refreshed.AddedUris.Count -gt 0) {
+                    Write-LogMessage -API $APIName -headers $Headers -message "Refreshed SSO sign-in URLs, added: $($Refreshed.AddedUris -join ', ')" -sev Info
+                }
+
+                # 'partial' means the additive patch ran but we could not read the full list of
+                # domains bound to this container, so we cannot promise every domain can sign in.
+                # Reporting that as a success is how a broken custom domain stays invisible.
+                $IsPartial = $Refreshed.Status -eq 'partial'
+                if ($IsPartial) {
+                    Write-LogMessage -API $APIName -headers $Headers -message "SSO sign-in URL refresh could not enumerate bound domains: $($Refreshed.Message)" -sev Warning
+                }
+
+                $Body = @{
+                    Results = @{
+                        message         = $Refreshed.Message
+                        redirectUris    = @($Refreshed.RedirectUris)
+                        addedUris       = @($Refreshed.AddedUris)
+                        domainsVerified = -not $IsPartial
+                        severity        = if ($IsPartial) { 'warning' } else { 'success' }
+                    }
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API $APIName -headers $Headers -message "SSO sign-in URL refresh failed: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $Body = @{ Results = "Failed to refresh sign-in URLs: $($ErrorMessage.NormalizedError)" }
             }
         }
 
@@ -407,15 +504,25 @@ function Invoke-ExecSSOSetup {
                 # Look up the existing app and patch it
                 $AppResponse = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($Existing.AppId)')?`$select=id,appId,web,signInAudience" -NoAuthCheck $true -AsApp $true
 
+                # Merge, never replace. $TargetUrl is only whichever domain the admin is
+                # browsing from - an instance can have several custom domains bound, and each
+                # needs its own callback. Replacing the array here used to strip sign-in from
+                # every other domain until the next container restart re-ran warmup.
+                $MergedUris = [System.Collections.Generic.List[string]]::new()
+                foreach ($Uri in @($AppResponse.web.redirectUris)) { $MergedUris.Add($Uri) }
+                foreach ($Uri in @($CallbackUri) + @(Get-CIPPSiteHostname -AsRedirectUri)) {
+                    if ($Uri -notin $MergedUris) { $MergedUris.Add($Uri) }
+                }
+
                 $PatchBody = @{
                     signInAudience = $SignInAudience
                     web            = @{
-                        redirectUris          = @($CallbackUri)
+                        redirectUris          = $MergedUris
                         implicitGrantSettings = @{ enableIdTokenIssuance = $true }
                     }
                 } | ConvertTo-Json -Depth 10 -Compress
 
-                New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $PatchBody -type PATCH -NoAuthCheck $true -AsApp $true
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $PatchBody -type PATCH -NoAuthCheck $true -AsApp $true
 
                 # Update migration table
                 & $SaveMigrationRow @{
@@ -681,7 +788,7 @@ function Invoke-ExecSSOSetup {
 
         default {
             $StatusCode = [HttpStatusCode]::BadRequest
-            $Body = @{ Results = "Unknown action: $Action. Use 'Status', 'Create', 'Repair', 'Recreate', 'Update', 'RotateSecret', 'ManualConfigure', or 'Migrate'." }
+            $Body = @{ Results = "Unknown action: $Action. Use 'Status', 'Create', 'Repair', 'Recreate', 'Update', 'RefreshRedirectUris', 'RotateSecret', 'ManualConfigure', or 'Migrate'." }
         }
     }
 
