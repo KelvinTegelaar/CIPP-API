@@ -1,0 +1,352 @@
+[
+    {
+        "Region": "centralus",
+        "DisplayName": "Central US",
+        "TimeZone": "America/Chicago",
+        "WindowsTimeZone": "Central Standard Time",
+        "UtcOffset": "-06:00"
+    },
+    {
+        "Region": "eastus",
+        "DisplayName": "East US",
+        "TimeZone": "America/New_York",
+        "WindowsTimeZone": "Eastern Standard Time",
+        "UtcOffset": "-05:00"
+    },
+    {
+        "Region": "eastus2",
+        "DisplayName": "East US 2",
+        "TimeZone": "America/New_York",
+        "WindowsTimeZone": "Eastern Standard Time",
+        "UtcOffset": "-05:00"
+    },
+    {
+        "Region": "westus",
+        "DisplayName": "West US",
+        "TimeZone": "America/Los_Angeles",
+        "WindowsTimeZone": "Pacific Standard Time",
+        "UtcOffset": "-08:00"
+    },
+    {
+        "Region": "westus2",
+        "DisplayName": "West US 2",
+        "TimeZone": "America/Los_Angeles",
+        "WindowsTimeZone": "Pacific Standard Time",
+        "UtcOffset": "-08:00"
+    },
+    {
+        "Region": "westus3",
+        "DisplayName": "West US 3",
+        "TimeZone": "America/Phoenix",
+        "WindowsTimeZone": "US Mountain Standard Time",
+        "UtcOffset": "-07:00"
+    },
+    {
+        "Region": "southcentralus",
+        "DisplayName": "South Central US",
+        "TimeZone": "America/Chicago",
+        "WindowsTimeZone": "Central Standard Time",
+        "UtcOffset": "-06:00"
+    },
+    {
+        "Region": "northcentralus",
+        "DisplayName": "North Central US",
+        "TimeZone": "America/Chicago",
+        "WindowsTimeZone": "Central Standard Time",
+        "UtcOffset": "-06:00"
+    },
+    {
+        "Region": "westcentralus",
+        "DisplayName": "West Central US",
+        "TimeZone": "America/Denver",
+        "WindowsTimeZone": "Mountain Standard Time",
+        "UtcOffset": "-07:00"
+    },
+    {
+        "Region": "canadacentral",
+        "DisplayName": "Canada Central",
+        "TimeZone": "America/Toronto",
+        "WindowsTimeZone": "Eastern Standard Time",
+        "UtcOffset": "-05:00"
+    },
+    {
+        "Region": "canadaeast",
+        "DisplayName": "Canada East",
+        "TimeZone": "America/Halifax",
+        "WindowsTimeZone": "Atlantic Standard Time",
+        "UtcOffset": "-04:00"
+    },
+    {
+        "Region": "brazilsouth",
+        "DisplayName": "Brazil South",
+        "TimeZone": "America/Sao_Paulo",
+        "WindowsTimeZone": "E. South America Standard Time",
+        "UtcOffset": "-03:00"
+    },
+    {
+        "Region": "westeurope",
+        "DisplayName": "West Europe",
+        "TimeZone": "Europe/Amsterdam",
+        "WindowsTimeZone": "W. Europe Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "northeurope",
+        "DisplayName": "North Europe",
+        "TimeZone": "Europe/Dublin",
+        "WindowsTimeZone": "GMT Standard Time",
+        "UtcOffset": "+00:00"
+    },
+    {
+        "Region": "uksouth",
+        "DisplayName": "UK South",
+        "TimeZone": "Europe/London",
+        "WindowsTimeZone": "GMT Standard Time",
+        "UtcOffset": "+00:00"
+    },
+    {
+        "Region": "ukwest",
+        "DisplayName": "UK West",
+        "TimeZone": "Europe/London",
+        "WindowsTimeZone": "GMT Standard Time",
+        "UtcOffset": "+00:00"
+    },
+    {
+        "Region": "germanywestcentral",
+        "DisplayName": "Germany West Central",
+        "TimeZone": "Europe/Berlin",
+        "WindowsTimeZone": "W. Europe Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "switzerlandnorth",
+        "DisplayName": "Switzerland North",
+        "TimeZone": "Europe/Zurich",
+        "WindowsTimeZone": "W. Europe Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "swedencentral",
+        "DisplayName": "Sweden Central",
+        "TimeZone": "Europe/Stockholm",
+        "WindowsTimeZone": "W. Europe Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "norwayeast",
+        "DisplayName": "Norway East",
+        "TimeZone": "Europe/Oslo",
+        "WindowsTimeZone": "W. Europe Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "francecentral",
+        "DisplayName": "France Central",
+        "TimeZone": "Europe/Paris",
+        "WindowsTimeZone": "Romance Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "southafricanorth",
+        "DisplayName": "South Africa North",
+        "TimeZone": "Africa/Johannesburg",
+        "WindowsTimeZone": "South Africa Standard Time",
+        "UtcOffset": "+02:00"
+    },
+    {
+        "Region": "australiaeast",
+        "DisplayName": "Australia East",
+        "TimeZone": "Australia/Sydney",
+        "WindowsTimeZone": "AUS Eastern Standard Time",
+        "UtcOffset": "+10:00"
+    },
+    {
+        "Region": "australiacentral",
+        "DisplayName": "Australia Central",
+        "TimeZone": "Australia/Darwin",
+        "WindowsTimeZone": "AUS Central Standard Time",
+        "UtcOffset": "+09:30"
+    },
+    {
+        "Region": "australiasoutheast",
+        "DisplayName": "Australia Southeast",
+        "TimeZone": "Australia/Melbourne",
+        "WindowsTimeZone": "AUS Eastern Standard Time",
+        "UtcOffset": "+10:00"
+    },
+    {
+        "Region": "newzealandnorth",
+        "DisplayName": "New Zealand North",
+        "TimeZone": "Pacific/Auckland",
+        "WindowsTimeZone": "New Zealand Standard Time",
+        "UtcOffset": "+12:00"
+    },
+    {
+        "Region": "eastasia",
+        "DisplayName": "East Asia",
+        "TimeZone": "Asia/Hong_Kong",
+        "WindowsTimeZone": "China Standard Time",
+        "UtcOffset": "+08:00"
+    },
+    {
+        "Region": "southeastasia",
+        "DisplayName": "Southeast Asia",
+        "TimeZone": "Asia/Singapore",
+        "WindowsTimeZone": "Singapore Standard Time",
+        "UtcOffset": "+08:00"
+    },
+    {
+        "Region": "chilecentral",
+        "DisplayName": "Chile Central",
+        "TimeZone": "America/Santiago",
+        "WindowsTimeZone": "Pacific SA Standard Time",
+        "UtcOffset": "-04:00"
+    },
+    {
+        "Region": "mexicocentral",
+        "DisplayName": "Mexico Central",
+        "TimeZone": "America/Mexico_City",
+        "WindowsTimeZone": "Central Standard Time (Mexico)",
+        "UtcOffset": "-06:00"
+    },
+    {
+        "Region": "austriaeast",
+        "DisplayName": "Austria East",
+        "TimeZone": "Europe/Vienna",
+        "WindowsTimeZone": "W. Europe Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "belgiumcentral",
+        "DisplayName": "Belgium Central",
+        "TimeZone": "Europe/Brussels",
+        "WindowsTimeZone": "Romance Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "denmarkeast",
+        "DisplayName": "Denmark East",
+        "TimeZone": "Europe/Copenhagen",
+        "WindowsTimeZone": "Romance Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "italynorth",
+        "DisplayName": "Italy North",
+        "TimeZone": "Europe/Rome",
+        "WindowsTimeZone": "W. Europe Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "polandcentral",
+        "DisplayName": "Poland Central",
+        "TimeZone": "Europe/Warsaw",
+        "WindowsTimeZone": "Central European Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "spaincentral",
+        "DisplayName": "Spain Central",
+        "TimeZone": "Europe/Madrid",
+        "WindowsTimeZone": "Romance Standard Time",
+        "UtcOffset": "+01:00"
+    },
+    {
+        "Region": "israelcentral",
+        "DisplayName": "Israel Central",
+        "TimeZone": "Asia/Jerusalem",
+        "WindowsTimeZone": "Israel Standard Time",
+        "UtcOffset": "+02:00"
+    },
+    {
+        "Region": "qatarcentral",
+        "DisplayName": "Qatar Central",
+        "TimeZone": "Asia/Qatar",
+        "WindowsTimeZone": "Arab Standard Time",
+        "UtcOffset": "+03:00"
+    },
+    {
+        "Region": "uaenorth",
+        "DisplayName": "UAE North",
+        "TimeZone": "Asia/Dubai",
+        "WindowsTimeZone": "Arabian Standard Time",
+        "UtcOffset": "+04:00"
+    },
+    {
+        "Region": "centralindia",
+        "DisplayName": "Central India",
+        "TimeZone": "Asia/Kolkata",
+        "WindowsTimeZone": "India Standard Time",
+        "UtcOffset": "+05:30"
+    },
+    {
+        "Region": "indiasouthcentral",
+        "DisplayName": "India South Central",
+        "TimeZone": "Asia/Kolkata",
+        "WindowsTimeZone": "India Standard Time",
+        "UtcOffset": "+05:30"
+    },
+    {
+        "Region": "southindia",
+        "DisplayName": "South India",
+        "TimeZone": "Asia/Kolkata",
+        "WindowsTimeZone": "India Standard Time",
+        "UtcOffset": "+05:30"
+    },
+    {
+        "Region": "westindia",
+        "DisplayName": "West India",
+        "TimeZone": "Asia/Kolkata",
+        "WindowsTimeZone": "India Standard Time",
+        "UtcOffset": "+05:30"
+    },
+    {
+        "Region": "indonesiacentral",
+        "DisplayName": "Indonesia Central",
+        "TimeZone": "Asia/Jakarta",
+        "WindowsTimeZone": "SE Asia Standard Time",
+        "UtcOffset": "+07:00"
+    },
+    {
+        "Region": "malaysiawest",
+        "DisplayName": "Malaysia West",
+        "TimeZone": "Asia/Kuala_Lumpur",
+        "WindowsTimeZone": "Singapore Standard Time",
+        "UtcOffset": "+08:00"
+    },
+    {
+        "Region": "japaneast",
+        "DisplayName": "Japan East",
+        "TimeZone": "Asia/Tokyo",
+        "WindowsTimeZone": "Tokyo Standard Time",
+        "UtcOffset": "+09:00"
+    },
+    {
+        "Region": "japanwest",
+        "DisplayName": "Japan West",
+        "TimeZone": "Asia/Tokyo",
+        "WindowsTimeZone": "Tokyo Standard Time",
+        "UtcOffset": "+09:00"
+    },
+    {
+        "Region": "koreacentral",
+        "DisplayName": "Korea Central",
+        "TimeZone": "Asia/Seoul",
+        "WindowsTimeZone": "Korea Standard Time",
+        "UtcOffset": "+09:00"
+    },
+    {
+        "Region": "koreasouth",
+        "DisplayName": "Korea South",
+        "TimeZone": "Asia/Seoul",
+        "WindowsTimeZone": "Korea Standard Time",
+        "UtcOffset": "+09:00"
+    },
+    {
+        "Region": "global",
+        "DisplayName": "Global",
+        "TimeZone": "UTC",
+        "WindowsTimeZone": "UTC",
+        "UtcOffset": "+00:00"
+    }
+]
