@@ -20,6 +20,12 @@ function Invoke-ExecContainerManagement {
     # 'latest', 'dev', 'nightly' or a bare semver, so a build tag can never shadow a real channel.
     $BuildChannelPattern = '^(preview|feat|fix|refactor|perf|chore|build|revert)-[a-z0-9][a-z0-9._-]{0,54}$'
 
+    # Used only to LIST available tags when ARM cannot tell us what image is deployed — local
+    # development has no WEBSITE_SITE_NAME or managed identity, so the ARM lookup returns nothing
+    # and the picker would otherwise show no branch builds at all. Switching channels still
+    # derives its image base from the site's own linuxFxVersion, never from this.
+    $DefaultImageBase = 'ghcr.io/cyberdrain/cipp'
+
     $SettingsTable = Get-CippTable -tablename 'ContainerUpdateSettings'
 
     # Helper: resolve ARM site details
@@ -226,8 +232,10 @@ function Invoke-ExecContainerManagement {
                         })
                 }
 
-                # Resolve the image base from ARM so we list tags for the image actually deployed
-                # here, not a hardcoded one.
+                # Prefer the image actually deployed here, so a fork or a privately hosted image
+                # lists its own tags. ARM is unavailable in local development (no
+                # WEBSITE_SITE_NAME, no managed identity), so fall back to the published image
+                # rather than silently listing no branch builds at all.
                 $CurrentImage = $null
                 $site = Get-ContainerSiteInfo
                 if ($site.Subscription -and $site.RGName -and $site.SiteName) {
@@ -242,11 +250,19 @@ function Invoke-ExecContainerManagement {
                         Write-Information "Could not read container config from ARM: $($_.Exception.Message)"
                     }
                 }
+                if (-not $CurrentImage) {
+                    $CurrentImage = $DefaultImageBase
+                    Write-Information "[Channels] No image reference from ARM, listing tags for $DefaultImageBase"
+                }
 
-                # A registry failure must still leave the standard channels selectable.
-                if ($CurrentImage -and $CurrentImage -match '^ghcr\.io/') {
+                # An empty branch-build list must be distinguishable from a failed lookup - the
+                # standard channels rendering fine otherwise makes a silent failure look like
+                # "there are no branch builds", which is exactly what it is not.
+                if ($CurrentImage -match '^ghcr\.io/') {
                     try {
-                        foreach ($Tag in @(Get-GHCRBuildChannel -ImageRef $CurrentImage)) {
+                        $BuildTags = @(Get-GHCRBuildChannel -ImageRef $CurrentImage)
+                        Write-Information "[Channels] Found $($BuildTags.Count) branch build tag(s) on $CurrentImage"
+                        foreach ($Tag in $BuildTags) {
                             $IsPinned = $Tag -match '-[0-9a-f]{7}$'
                             $Channels.Add([PSCustomObject]@{
                                     label = $Tag
@@ -255,8 +271,10 @@ function Invoke-ExecContainerManagement {
                                 })
                         }
                     } catch {
-                        Write-Information "Could not list branch build tags: $($_.Exception.Message)"
+                        Write-LogMessage -API $APIName -headers $Headers -message "Could not list branch build tags from $($CurrentImage): $($_.Exception.Message)" -sev Warning
                     }
+                } else {
+                    Write-Information "[Channels] $CurrentImage is not a GHCR image - branch builds are not listed"
                 }
 
                 $Body = @{ Results = @($Channels) }
