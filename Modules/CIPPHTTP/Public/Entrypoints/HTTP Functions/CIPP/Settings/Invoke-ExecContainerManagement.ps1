@@ -263,11 +263,10 @@ function Invoke-ExecContainerManagement {
                         $BuildTags = @(Get-GHCRBuildChannel -ImageRef $CurrentImage)
                         Write-Information "[Channels] Found $($BuildTags.Count) branch build tag(s) on $CurrentImage"
                         foreach ($Tag in $BuildTags) {
-                            $IsPinned = $Tag -match '-[0-9a-f]{7}$'
                             $Channels.Add([PSCustomObject]@{
                                     label = $Tag
                                     value = $Tag
-                                    group = if ($IsPinned) { 'Branch builds (pinned)' } else { 'Branch builds (latest)' }
+                                    group = 'Branch builds'
                                 })
                         }
                     } catch {
