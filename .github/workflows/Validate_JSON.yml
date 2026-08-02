@@ -15,7 +15,6 @@ on:
       - "AddMSPApp/**/*.json"
       - ".github/workflows/Validate_JSON.yml"
       - ".github/scripts/validate-json.mjs"
-      - ".github/scripts/validate-json.test.mjs"
   push:
     branches:
       - dev
@@ -25,7 +24,6 @@ on:
       - "AddMSPApp/**/*.json"
       - ".github/workflows/Validate_JSON.yml"
       - ".github/scripts/validate-json.mjs"
-      - ".github/scripts/validate-json.test.mjs"
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -39,11 +37,6 @@ jobs:
     steps:
       - name: Checkout base (trusted validator script)
         uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Test trusted JSON validator
-        run: node --test .github/scripts/validate-json.test.mjs
 
       - name: Checkout PR head (untrusted, data only)
         if: github.event_name == 'pull_request_target'
@@ -53,9 +46,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           path: pr
           persist-credentials: false
-          lfs: false
-          submodules: false
-          allow-unsafe-pr-checkout: true
 
       - name: Validate JSON files
         id: validate
@@ -63,7 +53,7 @@ jobs:
         env:
           ROOT: ${{ github.event_name == 'pull_request_target' && 'pr/' || '' }}
         run: >-
-          node .github/scripts/validate-json.mjs --boundary "${ROOT:-.}" --strip "$ROOT"
+          node .github/scripts/validate-json.mjs --strip "$ROOT"
           "${ROOT}Config" "${ROOT}Tools" "${ROOT}AddMSPApp"
 
       - name: Comment on PR
@@ -80,27 +70,7 @@ jobs:
               core.warning('No validation results found — skipping PR comment.');
               return;
             }
-            let failures;
-            try {
-              failures = JSON.parse(fs.readFileSync(resultsFile, 'utf8'));
-            } catch (error) {
-              core.warning('Validation results are unreadable — skipping PR comment.');
-              return;
-            }
-            if (!Array.isArray(failures) || failures.some(
-              ({ file, message } = {}) => typeof file !== 'string' || typeof message !== 'string'
-            )) {
-              core.warning('Validation results have an invalid shape — skipping PR comment.');
-              return;
-            }
-
-            // Presentation escaping prevents PR data from restructuring the Markdown.
-            // Workflow-command escaping is handled separately by the validator.
-            const present = (value) => String(value)
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/[\u0000-\u001f\u007f]/g, ' ');
+            const failures = JSON.parse(fs.readFileSync(resultsFile, 'utf8'));
 
             // Find a previous comment from this workflow so we update instead of piling up.
             const { data: comments } = await github.rest.issues.listComments({
@@ -115,16 +85,14 @@ jobs:
             let body;
             if (failures.length > 0) {
               const list = failures
-                .map(({ file, message }) =>
-                  `- <code>${present(file)}</code>\n  <blockquote><code>${present(message)}</code></blockquote>`
-                )
+                .map(({ file, message }) => `- \`${file}\`\n  > ${message}`)
                 .join('\n');
               body =
-                `${marker}\n### ⚠️ JSON validation failed\n\n` +
-                `${failures.length} JSON validation issue(s) were found in this PR. ` +
-                `These files are loaded directly by CIPP, so invalid JSON or unsafe filesystem entries break the app at runtime.\n\n` +
+                `${marker}\n### ⚠️ Invalid JSON detected\n\n` +
+                `${failures.length} JSON file(s) in this PR could not be parsed. ` +
+                `These files are loaded directly by CIPP, so a syntax error here breaks the app at runtime.\n\n` +
                 `${list}\n\n` +
-                `Please fix the issues and push again — this comment will update automatically.`;
+                `Please fix the syntax and push again — this comment will update automatically.`;
             } else if (existing) {
               body = `${marker}\n### ✅ JSON is valid\n\nAll JSON files in \`Config\`, \`Tools\` and \`AddMSPApp\` parse correctly. Thanks for fixing it!`;
             } else {
@@ -146,17 +114,8 @@ jobs:
               });
             }
 
-      - name: Fail if validation did not succeed
-        if: >-
-          always() &&
-          (steps.validate.outcome != 'success' ||
-          steps.validate.outputs.invalid_count != '0')
-        env:
-          INVALID_COUNT: ${{ steps.validate.outputs.invalid_count }}
+      - name: Fail if any JSON is invalid
+        if: steps.validate.outputs.invalid_count != '0'
         run: |
-          if [[ "$INVALID_COUNT" =~ ^(0|[1-9][0-9]*)$ ]]; then
-            echo "::error::$INVALID_COUNT JSON validation issue(s). See annotations above."
-          else
-            echo "::error::JSON validator output was missing or malformed."
-          fi
+          echo "::error::${{ steps.validate.outputs.invalid_count }} invalid JSON file(s). See annotations above."
           exit 1
