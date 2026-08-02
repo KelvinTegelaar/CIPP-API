@@ -26,9 +26,11 @@ function Invoke-ListCommunityRepos {
         $CommunityRepos = Join-Path $env:CIPPRootPath 'Config\CommunityRepos.json'
         $DefaultCommunityRepos = [System.IO.File]::ReadAllText($CommunityRepos) | ConvertFrom-Json
 
-        $DefaultsMissing = $false
+        $DefaultsChanged = $false
         foreach ($Repo in $DefaultCommunityRepos) {
-            if ($Repos.Url -notcontains $Repo.Url -or $Repos.Buitin -notcontains $Repo.BuiltIn) {
+            $TemplateTypesJson = [string](ConvertTo-Json -InputObject @($Repo.TemplateTypes) -Compress)
+            $Existing = $Repos | Where-Object { $_.URL -eq $Repo.URL } | Select-Object -First 1
+            if (!$Existing) {
                 $Entity = [PSCustomObject]@{
                     PartitionKey  = 'CommunityRepos'
                     RowKey        = $Repo.Id
@@ -42,13 +44,21 @@ function Invoke-ListCommunityRepos {
                     WriteAccess   = $Repo.WriteAccess
                     DefaultBranch = $Repo.DefaultBranch
                     UploadBranch  = $Repo.DefaultBranch
+                    TemplateTypes = $TemplateTypesJson
                     Permissions   = [string]($Repo.RepoPermissions | ConvertTo-Json -ErrorAction SilentlyContinue -Compress)
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
-                $DefaultsMissing = $true
+                $DefaultsChanged = $true
+            } elseif ($Existing.TemplateTypes -ne $TemplateTypesJson -or $Existing.BuiltIn -ne $Repo.BuiltIn -or $Existing.Description -ne $Repo.Description) {
+                # Upgrade path: sync built-in metadata onto rows seeded by older versions
+                $Existing | Add-Member -NotePropertyName 'TemplateTypes' -NotePropertyValue $TemplateTypesJson -Force
+                $Existing | Add-Member -NotePropertyName 'BuiltIn' -NotePropertyValue $Repo.BuiltIn -Force
+                $Existing | Add-Member -NotePropertyName 'Description' -NotePropertyValue $Repo.Description -Force
+                Add-CIPPAzDataTableEntity @Table -Entity $Existing -Force
+                $DefaultsChanged = $true
             }
         }
-        if ($DefaultsMissing) {
+        if ($DefaultsChanged) {
             $Repos = Get-CIPPAzDataTableEntity @Table
         }
     }
@@ -66,6 +76,7 @@ function Invoke-ListCommunityRepos {
             WriteAccess     = $_.WriteAccess
             DefaultBranch   = $_.DefaultBranch
             UploadBranch    = $_.UploadBranch ?? $_.DefaultBranch
+            TemplateTypes   = @(($_.TemplateTypes | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @())
             RepoPermissions = ($_.Permissions | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @{}
         }
     }

@@ -10,6 +10,7 @@
     "Visibility": "public",
     "WriteAccess": false,
     "DefaultBranch": "main",
+    "TemplateTypes": ["IntuneTemplate"],
     "RepoPermissions": {
       "admin": false,
       "maintain": false,
@@ -21,14 +22,15 @@
   {
     "Id": "930523724",
     "BuiltIn": true,
-    "Name": "CIPP-Templates",
-    "Description": "CIPP Community Templates",
+    "Name": "CIPP Templates",
+    "Description": "CIPP Official Templates",
     "URL": "https://github.com/CyberDrain/CIPP-Templates",
     "FullName": "CyberDrain/CIPP-Templates",
     "Owner": "CyberDrain",
     "Visibility": "public",
     "WriteAccess": false,
     "DefaultBranch": "main",
+    "TemplateTypes": ["StandardsTemplateV2", "ReportBuilderTemplate"],
     "RepoPermissions": {
       "admin": false,
       "maintain": false,
@@ -48,6 +50,7 @@
     "Visibility": "public",
     "WriteAccess": false,
     "DefaultBranch": "main",
+    "TemplateTypes": ["CATemplate"],
     "RepoPermissions": {
       "admin": false,
       "maintain": false,
@@ -67,6 +70,7 @@
     "Visibility": "public",
     "WriteAccess": false,
     "DefaultBranch": "main",
+    "TemplateTypes": ["IntuneTemplate"],
     "RepoPermissions": {
       "admin": false,
       "maintain": false,
@@ -86,6 +90,7 @@
     "Visibility": "public",
     "WriteAccess": false,
     "DefaultBranch": "main",
+    "TemplateTypes": ["IntuneTemplate"],
     "RepoPermissions": {
       "admin": false,
       "maintain": false,
