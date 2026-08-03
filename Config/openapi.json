@@ -7721,7 +7721,7 @@
                   },
                   "email": {
                     "type": "string",
-                    "description": "PS1 maps to WindowsEmailAddress on Set-Contact."
+                    "description": "PS1 maps to WindowsEmailAddress on Set-Contact (the displayed 'mail' attribute) and to ExternalEmailAddress on Set-MailContact (the mail routing target). Both are set so the contact cannot end up displaying one address while delivering to another."
                   },
                   "firstName": {
                     "type": "string",
