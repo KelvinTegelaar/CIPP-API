@@ -62,8 +62,14 @@ function Invoke-ListUserSettings {
                 pinNav         = $true
                 showDevtools   = $false
                 customBranding = @{
-                    colour = '#F77F00'
-                    logo   = $null
+                    colour        = '#F77F00'
+                    logo          = $null
+                    coverImage    = $null
+                    coverStock    = '/reportImages/soc.jpg'
+                    coverUploads  = @()
+                    logoImageId   = $null
+                    coverImageId  = $null
+                    coverImageIds = @()
                 }
             }
         }
@@ -101,14 +107,13 @@ function Invoke-ListUserSettings {
             Write-Warning "Failed to convert UserBookmarks JSON: $($_.Exception.Message)"
         }
 
-        #Get branding settings
+        #Get branding settings (hydrated image refs from Images table)
         if ($UserSettings) {
-            $brandingTable = Get-CippTable -tablename 'Config'
-            # Partition-scoped, not RowKey-scoped: a logo over the 1 MiB entity limit is split across
-            # 'BrandingSettings-partN' rows and reassembly needs all of them in the result set.
-            $BrandingSettings = Get-CIPPAzDataTableEntity @brandingTable -Filter "PartitionKey eq 'BrandingSettings'" | Where-Object { $_.RowKey -eq 'BrandingSettings' }
-            if ($BrandingSettings) {
-                $UserSettings | Add-Member -MemberType NoteProperty -Name 'customBranding' -Value $BrandingSettings -Force | Out-Null
+            try {
+                $HydratedBranding = Get-CIPPBrandingSettings -PersistMigration
+                $UserSettings | Add-Member -MemberType NoteProperty -Name 'customBranding' -Value $HydratedBranding -Force | Out-Null
+            } catch {
+                Write-Warning "Failed to load branding settings: $($_.Exception.Message)"
             }
         }
 
