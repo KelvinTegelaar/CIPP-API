@@ -1,11 +1,17 @@
-function Set-CIPPDBCacheDetectedApps {
+function Set-CIPPDBCacheIntuneAppInstallStatus {
     <#
     .SYNOPSIS
-        Caches detected apps using the AppInvRawData export submitted earlier,
-        enriched with the live /detectedApps catalog.
+        Caches per-application install status counts from the AppInstallStatusAggregate
+        export submitted earlier.
+
+    .DESCRIPTION
+        The AppInstallStatusAggregate report is the only tenant-wide app install report Intune
+        exposes without a per-app filter, so it carries rollup counts (FailedDeviceCount etc.)
+        rather than per-device detail. Get-CIPPAlertIntunePolicyConflicts reads the cached rows
+        to flag applications that are failing to install.
 
     .PARAMETER TenantFilter
-        The tenant to cache detected apps for.
+        The tenant to cache app install status for.
 
     .PARAMETER QueueId
         Optional queue ID for progress tracking.
@@ -17,13 +23,15 @@ function Set-CIPPDBCacheDetectedApps {
         [string]$QueueId
     )
 
-    $ReportName = 'AppInvRawData'
+    $ReportName = 'AppInstallStatusAggregate'
 
     try {
         $JobsTable = Get-CIPPTable -tablename 'IntuneReportJobs'
         $JobRow = Get-CIPPAzDataTableEntity @JobsTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$ReportName'"
 
         if (-not $JobRow) {
+            # No pending job - the nightly submission was already consumed by a previous cache run
+            # or never ran. Submit a new export job now so forced cache runs are self-sufficient.
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "No $ReportName export job pending - submitting a new one" -sev Info
             $null = New-CIPPIntuneReportExportJob -TenantFilter $TenantFilter -ReportName $ReportName
             $JobRow = Get-CIPPAzDataTableEntity @JobsTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$ReportName'"
@@ -31,12 +39,14 @@ function Set-CIPPDBCacheDetectedApps {
 
         $JobId = $JobRow.JobId
         if (-not $JobId) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "IntuneReportJobs row missing JobId - removing" -sev Warning
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'IntuneReportJobs row missing JobId - removing' -sev Warning
             Remove-CIPPAzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
             return
         }
 
-
+        # Poll the export job until it completes. Jobs submitted by the nightly orchestrator are
+        # long since completed and pass on the first check; freshly self-submitted jobs get a
+        # bounded wait so a forced run still returns fresh data.
         $Deadline = [datetime]::UtcNow.AddMinutes(4)
         while ($true) {
             try {
@@ -92,41 +102,30 @@ function Set-CIPPDBCacheDetectedApps {
         $ExportRows = @(($JsonText | ConvertFrom-Json).values)
         $JsonText = $null
 
-        $AppsByKey = @{}
-        foreach ($Row in $ExportRows) {
-            $AppId = $Row.ApplicationKey
-            if (-not $AppId) { continue }
-            if (-not $AppsByKey.ContainsKey($AppId)) {
-                $AppsByKey[$AppId] = [pscustomobject]@{
-                    id             = $AppId
-                    displayName    = $Row.ApplicationName
-                    version        = $Row.ApplicationVersion
-                    publisher      = $Row.ApplicationPublisher
-                    platform       = $Row.Platform
-                    deviceCount    = 0
-                    managedDevices = [System.Collections.Generic.List[object]]::new()
-                }
+        $AppStatuses = foreach ($Row in $ExportRows) {
+            if (-not $Row.ApplicationId) { continue }
+            [pscustomobject]@{
+                id                        = $Row.ApplicationId
+                displayName               = $Row.DisplayName
+                publisher                 = $Row.Publisher
+                platform                  = $Row.AppPlatform ?? $Row.Platform
+                appVersion                = $Row.AppVersion
+                installedDeviceCount      = [int]($Row.InstalledDeviceCount ?? 0)
+                failedDeviceCount         = [int]($Row.FailedDeviceCount ?? 0)
+                failedUserCount           = [int]($Row.FailedUserCount ?? 0)
+                pendingInstallDeviceCount = [int]($Row.PendingInstallDeviceCount ?? 0)
+                notInstalledDeviceCount   = [int]($Row.NotInstalledDeviceCount ?? 0)
+                failedDevicePercentage    = [double]($Row.FailedDevicePercentage ?? 0)
             }
-            $App = $AppsByKey[$AppId]
-            $App.managedDevices.Add([pscustomobject]@{
-                id                = $Row.DeviceId
-                deviceName        = $Row.DeviceName
-                osVersion         = $Row.OSVersion
-                platform          = $Row.Platform
-                userId            = $Row.UserId
-                userPrincipalName = $Row.UserName
-                emailAddress      = $Row.EmailAddress
-            })
-            $App.deviceCount++
         }
+        $AppStatuses = @($AppStatuses)
 
-        $DetectedApps = @($AppsByKey.Values)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedApps -AddCount
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($DetectedApps.Count) detected apps with devices from export $JobId" -sev Info
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppInstallStatusAggregate' -Data $AppStatuses -AddCount
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AppStatuses.Count) app install status rows from export $JobId" -sev Info
 
         Remove-CIPPAzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache detected apps: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache app install status: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }
