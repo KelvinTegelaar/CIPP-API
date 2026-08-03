@@ -1,0 +1,41 @@
+{
+  "name": "SpoofWarn",
+  "label": "Enable external sender warnings",
+  "cat": "Exchange Standards",
+  "tag": [
+    "LowImpact"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Adds the external sender warning to messages arriving from outside the organisation.",
+  "executiveText": "Flags emails from outside the company so staff pause before trusting them.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "enabled": {
+      "type": "switch",
+      "label": "External sender warnings enabled",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "ExternalInOutlook": "%enabled%"
+  },
+  "read": {
+    "cacheType": "ExoExternalInOutlook"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlet": "Set-ExternalInOutlook",
+    "params": {
+      "Enabled": "%enabled%"
+    }
+  }
+}

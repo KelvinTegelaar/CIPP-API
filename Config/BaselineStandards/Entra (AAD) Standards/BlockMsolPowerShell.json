@@ -1,0 +1,38 @@
+{
+  "name": "BlockMsolPowerShell",
+  "label": "Block MSOL PowerShell Access",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "LowImpact"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Blocks the legacy MSOnline PowerShell module from being used against the tenant. Attackers use it for reconnaissance.",
+  "executiveText": "Closes off an outdated management tool that is frequently abused by attackers to map out your environment.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "block": {
+      "type": "switch",
+      "label": "Block MSOL PowerShell access",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "blockMsolPowerShell": "%block%"
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy"
+  },
+  "remediate": {
+    "executor": "GraphPatch",
+    "uri": "policies/authorizationPolicy",
+    "body": {
+      "blockMsolPowerShell": "%block%"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "EnableCustomerLockbox",
+  "label": "Enable Customer Lockbox",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (1.3.6)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Requires Microsoft to request approval before accessing tenant content during support operations.",
+  "executiveText": "Microsoft engineers need your explicit approval before they can touch your data during a support case.",
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "LOCKBOX_ENTERPRISE"
+  ],
+  "secureScoreImpact": 5,
+  "compare": "subset",
+  "variables": {
+    "enabled": {
+      "type": "switch",
+      "label": "Customer Lockbox enabled",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "CustomerLockBoxEnabled": "%enabled%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlet": "Set-OrganizationConfig",
+    "params": {
+      "CustomerLockBoxEnabled": "%enabled%"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "AuditLog",
+  "label": "Enable the Unified Audit Log",
+  "cat": "Global Standards",
+  "tag": [
+    "CIS M365 7.0.0 (3.1.1)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Enables Unified Audit Log ingestion so activity across Exchange, SharePoint, Entra and Teams is recorded and searchable.",
+  "executiveText": "Keeps a tamper-evident record of who did what in your Microsoft 365 environment, which is essential for investigations and compliance.",
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE"
+  ],
+  "secureScoreImpact": 10,
+  "compare": "subset",
+  "variables": {
+    "enabled": {
+      "type": "switch",
+      "label": "Audit log ingestion enabled",
+      "default": true,
+      "recommended": true,
+      "locked": true
+    }
+  },
+  "expected": {
+    "UnifiedAuditLogIngestionEnabled": "%enabled%"
+  },
+  "read": {
+    "cacheType": "ExoAdminAuditLogConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlet": "Set-AdminAuditLogConfig",
+    "params": {
+      "UnifiedAuditLogIngestionEnabled": "%enabled%"
+    }
+  }
+}

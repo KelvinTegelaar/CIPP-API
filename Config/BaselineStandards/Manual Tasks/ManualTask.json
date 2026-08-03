@@ -1,0 +1,51 @@
+{
+  "name": "ManualTask",
+  "label": "Manual task for an operator",
+  "cat": "Manual Tasks",
+  "tag": [
+    "Manual"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Describes an action an operator must perform by hand. CIPP raises a deviation on the configured recurrence until the task is marked complete, so manual work shows up in the same alignment view as automated standards.",
+  "executiveText": "A recurring operational task performed by an engineer, tracked and evidenced alongside the automated controls.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "variables": {
+    "instructions": {
+      "type": "textField",
+      "label": "Instructions for the operator",
+      "default": ""
+    },
+    "recurrence": {
+      "type": "autoComplete",
+      "label": "Raise a deviation every",
+      "options": [
+        {
+          "label": "Week",
+          "value": "weekly"
+        },
+        {
+          "label": "Month",
+          "value": "monthly"
+        },
+        {
+          "label": "Quarter",
+          "value": "quarterly"
+        }
+      ],
+      "default": "monthly"
+    }
+  },
+  "expected": {
+    "completed": true,
+    "instructions": "%instructions%",
+    "recurrence": "%recurrence%"
+  },
+  "custom": true,
+  "customFunction": "Invoke-CIPPBaselineCustomManualTask"
+}

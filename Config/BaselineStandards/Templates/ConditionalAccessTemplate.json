@@ -1,0 +1,79 @@
+{
+  "name": "ConditionalAccessTemplate",
+  "label": "Deploy CA policy: Require MFA for all users",
+  "cat": "Templates",
+  "tag": [
+    "HighImpact"
+  ],
+  "impact": "High Impact",
+  "helpText": "Deploys a Conditional Access policy from a CA template. Deploy in report-only first, then enforce via a later stage.",
+  "executiveText": "Requires a second factor to sign in. The single most effective control against account takeover.",
+  "recommendedBy": [
+    "CIS",
+    "Microsoft",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "AAD_PREMIUM"
+  ],
+  "secureScoreImpact": 30,
+  "compare": "subset",
+  "multiple": true,
+  "variables": {
+    "caTemplate": {
+      "type": "autoComplete",
+      "label": "CA template",
+      "options": [
+        {
+          "label": "CIPP - Require MFA for all users",
+          "value": "CIPP - Require MFA for all users"
+        },
+        {
+          "label": "CIPP - Block legacy authentication",
+          "value": "CIPP - Block legacy authentication"
+        },
+        {
+          "label": "CIPP - Require compliant device for admins",
+          "value": "CIPP - Require compliant device for admins"
+        }
+      ],
+      "default": "CIPP - Require MFA for all users"
+    },
+    "state": {
+      "type": "autoComplete",
+      "label": "Policy state",
+      "options": [
+        {
+          "label": "Report only",
+          "value": "enabledForReportingButNotEnforced"
+        },
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        }
+      ],
+      "default": "enabledForReportingButNotEnforced",
+      "recommended": "enabled"
+    }
+  },
+  "expected": {
+    "displayName": "%caTemplate%",
+    "state": "%state%"
+  },
+  "read": {
+    "cacheType": "ConditionalAccessPolicy",
+    "select": {
+      "property": "displayName",
+      "equals": "%caTemplate%"
+    }
+  },
+  "remediate": {
+    "executor": "CATemplate",
+    "caTemplate": "%caTemplate%",
+    "state": "%state%"
+  }
+}

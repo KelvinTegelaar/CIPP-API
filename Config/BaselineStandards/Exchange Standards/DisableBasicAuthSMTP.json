@@ -1,0 +1,42 @@
+{
+  "name": "DisableBasicAuthSMTP",
+  "label": "Disable SMTP Basic Authentication",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (6.5.4)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Disables SMTP AUTH tenant-wide. Legacy devices that submit mail with basic authentication will stop working.",
+  "executiveText": "Blocks an outdated email sign-in method that bypasses MFA. Old scanners or printers may need reconfiguration.",
+  "recommendedBy": [
+    "CIS",
+    "Microsoft"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE"
+  ],
+  "secureScoreImpact": 10,
+  "compare": "subset",
+  "variables": {
+    "disabled": {
+      "type": "switch",
+      "label": "SMTP basic authentication disabled",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "SmtpClientAuthenticationDisabled": "%disabled%"
+  },
+  "read": {
+    "cacheType": "ExoTransportConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlet": "Set-TransportConfig",
+    "params": {
+      "SmtpClientAuthenticationDisabled": "%disabled%"
+    }
+  }
+}

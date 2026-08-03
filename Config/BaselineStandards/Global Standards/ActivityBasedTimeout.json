@@ -1,0 +1,51 @@
+{
+  "name": "ActivityBasedTimeout",
+  "label": "Enable Activity based Timeout",
+  "cat": "Global Standards",
+  "tag": [
+    "CIS M365 7.0.0 (1.3.2)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Signs users out of Microsoft 365 web sessions after a period of inactivity.",
+  "executiveText": "Automatically signs out idle sessions on shared or unattended devices.",
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 5,
+  "compare": "subset",
+  "variables": {
+    "timeout": {
+      "type": "autoComplete",
+      "label": "Idle session timeout",
+      "options": [
+        {
+          "label": "1 hour",
+          "value": "01:00:00"
+        },
+        {
+          "label": "2 hours",
+          "value": "02:00:00"
+        },
+        {
+          "label": "4 hours",
+          "value": "04:00:00"
+        },
+        {
+          "label": "6 hours",
+          "value": "06:00:00"
+        }
+      ],
+      "default": "01:00:00",
+      "recommended": "01:00:00"
+    }
+  },
+  "expected": {
+    "timeout": "%timeout%"
+  },
+  "read": {
+    "cacheType": "ActivityBasedTimeoutPolicy"
+  },
+  "custom": true,
+  "customFunction": "Invoke-CIPPBaselineCustomActivityBasedTimeout"
+}

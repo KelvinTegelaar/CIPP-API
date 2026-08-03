@@ -1,0 +1,42 @@
+{
+  "name": "intuneDeviceRetirementDays",
+  "label": "Set Intune device retirement window",
+  "cat": "Intune Standards",
+  "tag": [
+    "LowImpact"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Configures the Intune device cleanup rule to retire devices after a period of inactivity.",
+  "executiveText": "Keeps the device inventory clean by retiring machines that have not checked in.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "INTUNE_A"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "days": {
+      "type": "number",
+      "label": "Days of inactivity before retirement",
+      "default": 90,
+      "recommended": 90
+    }
+  },
+  "expected": {
+    "DeviceInactivityBeforeRetirementInDay": "%days%"
+  },
+  "read": {
+    "cacheType": "DeviceManagementSettings"
+  },
+  "remediate": {
+    "executor": "GraphPatch",
+    "uri": "deviceManagement",
+    "body": {
+      "managedDeviceCleanupSettings": {
+        "deviceInactivityBeforeRetirementInDays": "%days%"
+      }
+    }
+  }
+}
