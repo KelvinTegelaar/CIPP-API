@@ -144,6 +144,10 @@ function New-CIPPGroup {
                 'isAssignableToRole' = ($NormalizedGroupType -eq 'AzureRole')
             }
 
+            if ($GroupObject.disableNesting -eq $true) {
+                $BodyParams | Add-Member -NotePropertyName 'disableNesting' -NotePropertyValue $true
+            }
+
             # Handle dynamic membership
             if ($GroupObject.membershipRules) {
                 $BodyParams | Add-Member -NotePropertyName 'membershipRule' -NotePropertyValue $GroupObject.membershipRules
