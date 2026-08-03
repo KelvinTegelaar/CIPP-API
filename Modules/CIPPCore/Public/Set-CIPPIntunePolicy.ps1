@@ -165,7 +165,7 @@ function Set-CIPPIntunePolicy {
             'Catalog' {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'configurationPolicies'
-                $DisplayName = ($RawJSON | ConvertFrom-Json).Name
+                $DisplayName = Get-CIPPIntunePolicyName -TemplateType 'Catalog' -RawJSON $RawJSON -DisplayName $DisplayName
                 if ($ReusableSettings) {
                     Write-Verbose "Catalog: ReusableSettings count $($ReusableSettings.Count)"
                     Write-Verbose ('Catalog: ReusableSettings detail ' + ($ReusableSettings | ConvertTo-Json -Depth 5 -Compress))
@@ -177,35 +177,10 @@ function Set-CIPPIntunePolicy {
 
                 $Template = $RawJSON | ConvertFrom-Json
                 if ($Template.templateReference.templateId) {
-                    Write-Information "Checking configuration policy template $($Template.templateReference.templateId) for $($DisplayName)"
-                    # Remove unavailable settings from the template
-                    $AvailableSettings = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicyTemplates('$($Template.templateReference.templateId)')/settingTemplates?`$expand=settingDefinitions&`$top=1000" -tenantid $tenantFilter
-
-                    if ($AvailableSettings) {
-                        Write-Information "Available settings for template $($Template.templateReference.templateId): $($AvailableSettings.Count)"
-                        $FilteredSettings = [System.Collections.Generic.List[psobject]]::new()
-                        foreach ($setting in $Template.settings) {
-                            if ($setting.settingInstance.settingInstanceTemplateReference.settingInstanceTemplateId -in $AvailableSettings.settingInstanceTemplate.settingInstanceTemplateId) {
-                                $AvailableSetting = $AvailableSettings | Where-Object { $_.settingInstanceTemplate.settingInstanceTemplateId -eq $setting.settingInstance.settingInstanceTemplateReference.settingInstanceTemplateId }
-
-                                if ($AvailableSetting.settingInstanceTemplate.settingInstanceTemplateId -cnotmatch $setting.settingInstance.settingInstanceTemplateReference.settingInstanceTemplateId) {
-                                    # update casing
-                                    Write-Information "Fixing casing for setting instance template $($AvailableSetting.settingInstanceTemplate.settingInstanceTemplateId)"
-                                    $setting.settingInstance.settingInstanceTemplateReference.settingInstanceTemplateId = $AvailableSetting.settingInstanceTemplate.settingInstanceTemplateId
-                                }
-
-                                if ($AvailableSetting.settingInstanceTemplate.choiceSettingValueTemplate -cnotmatch $setting.settingInstance.choiceSettingValue.settingValueTemplateReference.settingValueTemplateId) {
-                                    # update choice setting value template
-                                    Write-Information "Fixing casing for choice setting value template $($AvailableSetting.settingInstanceTemplate.choiceSettingValueTemplate.settingValueTemplateId)"
-                                    $setting.settingInstance.choiceSettingValue.settingValueTemplateReference.settingValueTemplateId = $AvailableSetting.settingInstanceTemplate.choiceSettingValueTemplate.settingValueTemplateId
-                                }
-
-                                $FilteredSettings.Add($setting)
-                            }
-                        }
-                        $Template.settings = $FilteredSettings
-                        $RawJSON = $Template | ConvertTo-Json -Depth 100 -Compress
-                    }
+                    # Remove settings this tenant does not offer. The comparison paths run the
+                    # baseline through the same helper so they diff against what actually lands.
+                    $Template = Select-CIPPIntuneAvailableSetting -Policy $Template -TenantFilter $TenantFilter
+                    $RawJSON = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
 
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
@@ -230,8 +205,7 @@ function Set-CIPPIntunePolicy {
             'windowsDriverUpdateProfiles' {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'windowsDriverUpdateProfiles'
-                $File = ($RawJSON | ConvertFrom-Json)
-                $DisplayName = $File.displayName ?? $File.Name
+                $DisplayName = Get-CIPPIntunePolicyName -TemplateType $TemplateType -RawJSON $RawJSON -DisplayName $DisplayName
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance
                 if ($FuzzyResult) {
@@ -254,8 +228,7 @@ function Set-CIPPIntunePolicy {
             'windowsFeatureUpdateProfiles' {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'windowsFeatureUpdateProfiles'
-                $File = ($RawJSON | ConvertFrom-Json)
-                $DisplayName = $File.displayName ?? $File.Name
+                $DisplayName = Get-CIPPIntunePolicyName -TemplateType $TemplateType -RawJSON $RawJSON -DisplayName $DisplayName
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance
                 if ($FuzzyResult) {
@@ -279,8 +252,7 @@ function Set-CIPPIntunePolicy {
             'windowsQualityUpdatePolicies' {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'windowsQualityUpdatePolicies'
-                $File = ($RawJSON | ConvertFrom-Json)
-                $DisplayName = $File.displayName ?? $File.Name
+                $DisplayName = Get-CIPPIntunePolicyName -TemplateType $TemplateType -RawJSON $RawJSON -DisplayName $DisplayName
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance
                 if ($FuzzyResult) {
@@ -303,8 +275,7 @@ function Set-CIPPIntunePolicy {
             'windowsQualityUpdateProfiles' {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'windowsQualityUpdateProfiles'
-                $File = ($RawJSON | ConvertFrom-Json)
-                $DisplayName = $File.displayName ?? $File.Name
+                $DisplayName = Get-CIPPIntunePolicyName -TemplateType $TemplateType -RawJSON $RawJSON -DisplayName $DisplayName
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance
                 if ($FuzzyResult) {

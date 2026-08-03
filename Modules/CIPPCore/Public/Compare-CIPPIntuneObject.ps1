@@ -353,13 +353,13 @@ function Compare-CIPPIntuneObject {
         }
 
         $obj1 = if ($ReferenceObject -is [string]) {
-            $ReferenceObject | ConvertFrom-Json -AsHashtable -Depth 25
+            $ReferenceObject | ConvertFrom-Json -AsHashtable -Depth 100
         } else {
             $ReferenceObject
         }
 
         $obj2 = if ($DifferenceObject -is [string]) {
-            $DifferenceObject | ConvertFrom-Json -AsHashtable -Depth 25
+            $DifferenceObject | ConvertFrom-Json -AsHashtable -Depth 100
         } else {
             $DifferenceObject
         }
@@ -379,6 +379,17 @@ function Compare-CIPPIntuneObject {
             if ($item.id) { $intuneCollectionIndex[$item.id] = $item }
         }
 
+        # Settings Intune generates per tenant. The Defender onboarding blob embeds the tenant's own
+        # workspace identity, so a template captured in one tenant can never match another - it
+        # reports drift on every run, remediation cannot resolve it, and the comparison shows a
+        # friendly option name on one side against a raw identifier on the other.
+        $tenantSpecificSettings = @(
+            'device_vendor_msft_windowsadvancedthreatprotection_onboarding',
+            'device_vendor_msft_windowsadvancedthreatprotection_onboarding_fromconnector',
+            'device_vendor_msft_windowsadvancedthreatprotection_offboarding',
+            'device_vendor_msft_windowsadvancedthreatprotection_offboarding_fromconnector'
+        )
+
         # Recursive function to process group setting collections at any depth
         function Process-GroupSettingChildren {
             param(
@@ -387,15 +398,8 @@ function Compare-CIPPIntuneObject {
                 [Parameter(Mandatory = $true)]
                 [string]$Source,
                 [Parameter(Mandatory = $true)]
-                $IntuneCollectionIndex,
-                [int]$CurrentDepth = 0,
-                [int]$MaxDepth = 25
+                $IntuneCollectionIndex
             )
-
-            if ($CurrentDepth -ge $MaxDepth) {
-                Write-Warning "Process-GroupSettingChildren: Maximum recursion depth ($MaxDepth) reached. Stopping to prevent stack overflow."
-                return
-            }
 
             $results = [System.Collections.Generic.List[PSCustomObject]]::new()
 
@@ -412,8 +416,8 @@ function Compare-CIPPIntuneObject {
                         if ($child.groupSettingCollectionValue) {
                             foreach ($groupValue in $child.groupSettingCollectionValue) {
                                 if ($groupValue.children) {
-                                    $nestedResults = Process-GroupSettingChildren -Children $groupValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex -CurrentDepth ($CurrentDepth + 1) -MaxDepth $MaxDepth
-                                    $results.AddRange($nestedResults)
+                                    $nestedResults = Process-GroupSettingChildren -Children $groupValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex
+                                    foreach ($nr in $nestedResults) { $results.Add($nr) }
                                 }
                             }
                         }
@@ -498,8 +502,8 @@ function Compare-CIPPIntuneObject {
 
                 # Also process any children within choice setting values
                 if ($child.choiceSettingValue?.children) {
-                    $nestedResults = Process-GroupSettingChildren -Children $child.choiceSettingValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex -CurrentDepth ($CurrentDepth + 1) -MaxDepth $MaxDepth
-                    $results.AddRange($nestedResults)
+                    $nestedResults = Process-GroupSettingChildren -Children $child.choiceSettingValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex
+                    foreach ($nr in $nestedResults) { $results.Add($nr) }
                 }
             }
 
@@ -747,6 +751,8 @@ function Compare-CIPPIntuneObject {
             } elseif ($key -like 'Unknown-*') {
                 $settingId = $key.Substring(8)
             }
+
+            if ($settingId -in $tenantSpecificSettings) { continue }
 
             $settingDefinition = $intuneCollectionIndex[$settingId]
 
