@@ -1,7 +1,7 @@
 Function Invoke-ListIPWhitelist {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION

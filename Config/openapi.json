@@ -11142,6 +11142,16 @@
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -11185,15 +11195,8 @@
                   "State": {
                     "type": "string",
                     "description": "State parameter"
-                  },
-                  "tenantfilter": {
-                    "type": "string",
-                    "description": "tenantfilter parameter"
                   }
-                },
-                "required": [
-                  "tenantfilter"
-                ]
+                }
               }
             }
           }
