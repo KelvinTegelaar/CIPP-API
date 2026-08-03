@@ -217,7 +217,7 @@ function Invoke-ExecSAMSetup {
                 $Results = @{'message' = 'Received token.'; step = $step }
             }
             4 {
-                Remove-AzDataTableEntity -Force @Table -Entity $Rows
+                Remove-CIPPAzDataTableEntity -Force @Table -Entity $Rows
                 $step = 5
                 $Results = @{'message' = 'setup completed.'; step = $step
                 }

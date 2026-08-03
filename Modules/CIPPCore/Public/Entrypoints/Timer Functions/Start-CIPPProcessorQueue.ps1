@@ -53,7 +53,7 @@ function Start-CIPPProcessorQueue {
             } else {
                 Write-Warning "Function $($FunctionName) not found"
             }
-            Remove-AzDataTableEntity -Force @QueueTable -Entity $QueueItem
+            Remove-CIPPAzDataTableEntity -Force @QueueTable -Entity $QueueItem
         }
     }
 }

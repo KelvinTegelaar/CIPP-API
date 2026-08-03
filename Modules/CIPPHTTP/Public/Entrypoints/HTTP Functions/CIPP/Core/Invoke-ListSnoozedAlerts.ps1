@@ -43,6 +43,7 @@ function Invoke-ListSnoozedAlerts {
                     Tenant         = $_.Tenant
                     ContentHash    = $_.ContentHash
                     ContentPreview = $_.ContentPreview
+                    SnoozeReason   = $_.SnoozeReason
                     SnoozedBy      = $_.SnoozedBy
                     SnoozedAt      = $_.SnoozedAt
                     SnoozeUntil    = $_.SnoozeUntil

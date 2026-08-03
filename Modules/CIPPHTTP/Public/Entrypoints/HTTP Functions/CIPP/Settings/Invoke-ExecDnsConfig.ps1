@@ -94,7 +94,7 @@ function Invoke-ExecDnsConfig {
             'RemoveDomain' {
                 $Filter = "RowKey eq '{0}'" -f $Domain
                 $DomainRow = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter -Property PartitionKey, RowKey
-                Remove-AzDataTableEntity -Force @DomainTable -Entity $DomainRow
+                Remove-CIPPAzDataTableEntity -Force @DomainTable -Entity $DomainRow
                 Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message "Removed Domain - $Domain " -Sev 'Info'
                 $body = [pscustomobject]@{ 'Results' = "Domain removed - $Domain" }
             }

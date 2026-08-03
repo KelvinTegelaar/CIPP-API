@@ -18,7 +18,7 @@ Function Invoke-RemoveSpamfilterTemplate {
         $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
         $Filter = "PartitionKey eq 'SpamfilterTemplate' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $ClearRow
         $Result = "Removed Spamfilter template with ID $ID"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

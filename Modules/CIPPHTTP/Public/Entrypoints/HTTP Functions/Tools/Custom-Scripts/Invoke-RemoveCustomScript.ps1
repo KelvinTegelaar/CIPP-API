@@ -33,7 +33,7 @@ function Invoke-RemoveCustomScript {
 
         # Delete all versions
         foreach ($script in $Scripts) {
-            Remove-AzDataTableEntity @Table -Entity $script
+            Remove-CIPPAzDataTableEntity @Table -Entity $script
         }
 
         # Delete matching test result rows for this custom script across tenants
@@ -42,7 +42,7 @@ function Invoke-RemoveCustomScript {
         $TestResultsFilter = "RowKey eq '{0}'" -f $CustomTestId
         $RelatedTestResults = @(Get-CIPPAzDataTableEntity @TestResultsTable -Filter $TestResultsFilter)
         foreach ($ResultRow in $RelatedTestResults) {
-            Remove-AzDataTableEntity @TestResultsTable -Entity $ResultRow
+            Remove-CIPPAzDataTableEntity @TestResultsTable -Entity $ResultRow
         }
 
         # Remove this custom test from any custom report templates that include it

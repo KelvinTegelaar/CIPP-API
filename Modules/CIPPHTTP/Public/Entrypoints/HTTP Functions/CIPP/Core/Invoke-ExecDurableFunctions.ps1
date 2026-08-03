@@ -138,11 +138,11 @@ function Invoke-ExecDurableFunctions {
             if ($Request.Query.PartitionKey) {
                 $HistoryEntities = Get-CIPPAzDataTableEntity @HistoryTable -Filter "PartitionKey eq '$($Request.Query.PartitionKey)'" -Property RowKey, PartitionKey
                 if ($HistoryEntities) {
-                    Remove-AzDataTableEntity -Force @HistoryTable -Entity $HistoryEntities
+                    Remove-CIPPAzDataTableEntity -Force @HistoryTable -Entity $HistoryEntities
                 }
                 $Instance = Get-CIPPAzDataTableEntity @InstancesTable -Filter "PartitionKey eq '$($Request.Query.PartitionKey)'" -Property RowKey, PartitionKey
                 if ($Instance) {
-                    Remove-AzDataTableEntity -Force @InstancesTable -Entity $Instance
+                    Remove-CIPPAzDataTableEntity -Force @InstancesTable -Entity $Instance
                 }
                 $Body = [PSCustomObject]@{
                     Results = 'Orchestrator {0} purged successfully' -f $Request.Query.PartitionKey

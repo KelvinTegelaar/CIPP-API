@@ -38,7 +38,7 @@ function Invoke-CippGraphWebhookRenewal {
             if (-not $TenantDomainsHash.ContainsKey($TenantFilter) -and -not $TenantCustomerIdsHash.ContainsKey($TenantFilter)) {
                 Write-LogMessage -API 'Renew_Graph_Subscriptions' -message "Removing Subscription Renewal for $($UpdateSub.SubscriptionID) as tenant $TenantFilter is not in the tenant list." -Sev 'Warning' -tenant $TenantFilter
                 try {
-                    Remove-AzDataTableEntity -Force @WebhookTable -Entity $UpdateSub -ErrorAction Stop
+                    Remove-CIPPAzDataTableEntity -Force @WebhookTable -Entity $UpdateSub -ErrorAction Stop
                 } catch {
                     if ($_.Exception.Message -notmatch 'does not exist|ResourceNotFound') {
                         Write-Warning "Failed to remove entity: $($_.Exception.Message)"
@@ -107,7 +107,7 @@ function Invoke-CippGraphWebhookRenewal {
 
                         if ($CreateResult -match 'Created Webhook subscription for') {
                             try {
-                                Remove-AzDataTableEntity -Force @WebhookTable -Entity $UpdateSub -ErrorAction Stop
+                                Remove-CIPPAzDataTableEntity -Force @WebhookTable -Entity $UpdateSub -ErrorAction Stop
                             } catch {
                                 if ($_.Exception.Message -notmatch 'does not exist|ResourceNotFound') {
                                     throw

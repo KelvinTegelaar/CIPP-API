@@ -70,6 +70,16 @@ function Get-CIPPDrift {
     # Load CA templates with GUID hashtable
     $RawCATemplates = Get-CIPPAzDataTableEntity @IntuneTable -Filter "PartitionKey eq 'CATemplate'"
     $CATemplatesByGuid = @{}
+    # Build a hashtable indexed by Package for O(1) CA tag lookup
+    $CATemplatesByPackage = @{}
+    foreach ($t in $RawCATemplates) {
+        if ($t.Package) {
+            if (-not $CATemplatesByPackage.ContainsKey($t.Package)) {
+                $CATemplatesByPackage[$t.Package] = [System.Collections.Generic.List[object]]::new()
+            }
+            $CATemplatesByPackage[$t.Package].Add($t)
+        }
+    }
     $AllCATemplates = foreach ($RawTemplate in $RawCATemplates) {
         try {
             $data = $RawTemplate.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
@@ -419,6 +429,10 @@ function Get-CIPPDrift {
                 # unmanagedSync standard). They are system-managed, cannot be templated and come
                 # back when deleted, so they are never a deviation.
                 if (([string]$TenantCAPolicy.displayName).StartsWith('[SharePoint admin center]')) { continue }
+                # Microsoft-managed CA policies cannot be deleted, only disabled. Once turned off
+                # they are not actionable, so a disabled Microsoft-managed policy is never a
+                # deviation. Enabled or report-only ones still are.
+                if (([string]$TenantCAPolicy.displayName).StartsWith('Microsoft-managed', [System.StringComparison]::OrdinalIgnoreCase) -and $TenantCAPolicy.state -eq 'disabled') { continue }
                 $PolicyFound = $false
 
                 foreach ($TemplateCAPolicy in $TemplateCATemplates) {
@@ -471,15 +485,25 @@ function Get-CIPPDrift {
             # Persist newly detected deviations to the tenantDrift table so the summary page can count them
             $NewDriftEntities = [System.Collections.Generic.List[object]]::new()
             foreach ($Deviation in $AllDeviations) {
-                if (-not $ExistingDriftStates.ContainsKey($Deviation.standardName)) {
-                    $RowKey = $Deviation.standardName -replace '\.', '_'
+                # Diagnostic: standardName must be a scalar string. Azure Tables cannot store a PSObject,
+                # so a non-string here is what causes "Unsupported property types found: StandardName".
+                # Log the offending value (with tenant) so the producing standard can be identified.
+                if ($Deviation.standardName -isnot [string]) {
+                    Write-Warning "Drift deviation for tenant '$TenantFilter' has a non-string standardName (type $($Deviation.standardName.GetType().FullName)): $(ConvertTo-Json -InputObject $Deviation.standardName -Depth 5 -Compress -ErrorAction SilentlyContinue)"
+                }
+                # Coerce to string so the table write never fails on this property. RowKey already
+                # coerces via -replace; this makes the stored StandardName column match.
+                $StandardNameValue = [string]$Deviation.standardName
+                if ([string]::IsNullOrWhiteSpace($StandardNameValue)) { continue }
+                if (-not $ExistingDriftStates.ContainsKey($StandardNameValue)) {
+                    $RowKey = $StandardNameValue -replace '\.', '_'
                     $NewDriftEntities.Add(@{
-                        PartitionKey = $TenantFilter
-                        RowKey       = $RowKey
-                        StandardName = $Deviation.standardName
-                        Status       = 'New'
-                        LastModified = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-                    })
+                            PartitionKey = $TenantFilter
+                            RowKey       = $RowKey
+                            StandardName = $StandardNameValue
+                            Status       = 'New'
+                            LastModified = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        })
                 }
             }
             if ($NewDriftEntities.Count -gt 0) {
@@ -547,7 +571,7 @@ function Get-CIPPDrift {
         if ($StaleDriftEntities) {
             try {
                 foreach ($StaleEntity in $StaleDriftEntities) {
-                    Remove-AzDataTableEntity @DriftTable -Entity $StaleEntity
+                    Remove-CIPPAzDataTableEntity @DriftTable -Entity $StaleEntity
                 }
                 Write-Information "Removed $(@($StaleDriftEntities).Count) stale drift deviation entries for $TenantFilter"
             } catch {

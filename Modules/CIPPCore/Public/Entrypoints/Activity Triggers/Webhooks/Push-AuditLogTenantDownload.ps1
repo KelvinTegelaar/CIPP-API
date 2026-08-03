@@ -21,18 +21,13 @@ function Push-AuditLogTenantDownload {
             }
             # remove legacy webhooks
             foreach ($Task in $LegacyWebhookTasks) {
-                Remove-AzDataTableEntity -Force @SchedulerConfig -Entity $Task
+                Remove-CIPPAzDataTableEntity -Force @SchedulerConfig -Entity $Task
             }
             $CIPPURL = $LegacyUrl
         } else {
             if (!$CippConfig) {
-                $CippConfig = @{
-                    PartitionKey = 'InstanceProperties'
-                    RowKey       = 'CIPPURL'
-                    Value        = [string]([System.Uri]$Request.Headers.'x-ms-original-url').Host
-                }
-                Add-AzDataTableEntity @CippConfigTable -Entity $CippConfig -Force
-                $CIPPURL = 'https://{0}' -f $CippConfig.Value
+                # No request context here, so this resolves from the platform hostname and stores it
+                $CIPPURL = 'https://{0}' -f (Get-CIPPHostname -Save)
             } else { $CIPPURL = 'https://{0}' -f $CippConfig.Value }
         }
 

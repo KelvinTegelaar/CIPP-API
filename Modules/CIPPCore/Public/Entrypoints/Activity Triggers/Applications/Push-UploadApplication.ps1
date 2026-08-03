@@ -25,7 +25,7 @@ function Push-UploadApplication {
         $AssignToIntent = $AppConfig.InstallationIntent
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($AppConfig.tenant -ne 'AllTenants') {
-            $null = Remove-AzDataTableEntity -Force @Table -Entity $clearRow
+            $null = Remove-CIPPAzDataTableEntity -Force @Table -Entity $clearRow
         } else {
             $Table.Force = $true
             $null = Add-CIPPAzDataTableEntity @Table -Entity @{

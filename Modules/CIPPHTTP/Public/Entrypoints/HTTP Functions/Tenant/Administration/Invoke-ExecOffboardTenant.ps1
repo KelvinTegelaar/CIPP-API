@@ -114,7 +114,7 @@ function Invoke-ExecOffboardTenant {
                     if ($DomainEntries) {
                         $DomainCount = ($DomainEntries | Measure-Object).Count
                         foreach ($Domain in $DomainEntries) {
-                            Remove-AzDataTableEntity @DomainTable -Entity $Domain
+                            Remove-CIPPAzDataTableEntity @DomainTable -Entity $Domain
                         }
                         $Results.Add("Successfully removed $DomainCount Domain Analyser entries")
                         Write-LogMessage -headers $Headers -API $APIName -message "Removed $DomainCount Domain Analyser entries" -Sev 'Info' -tenant $TenantFilter

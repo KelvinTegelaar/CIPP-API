@@ -95,7 +95,7 @@ function Invoke-ExecCustomData {
 
 
                 # Delete the schema extension entity
-                Remove-AzDataTableEntity @CustomDataTable -Entity $SchemaEntity
+                Remove-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaEntity
 
                 $Body = @{
                     Results = @{
@@ -326,7 +326,7 @@ function Invoke-ExecCustomData {
                     $ExtensionEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'DirectoryExtension' and RowKey eq '$ExtensionName'"
                     # Remove the extension from the custom data table
                     if ($ExtensionEntity) {
-                        Remove-AzDataTableEntity @CustomDataTable -Entity $ExtensionEntity
+                        Remove-CIPPAzDataTableEntity @CustomDataTable -Entity $ExtensionEntity
                     }
                 } catch {
                     Write-Warning "Failed to delete directory extension from custom data table: $($_.Exception.Message)"
@@ -433,7 +433,7 @@ function Invoke-ExecCustomData {
                 }
 
                 # Delete the mapping entity
-                Remove-AzDataTableEntity @CustomDataMappingsTable -Entity $MappingEntity
+                Remove-CIPPAzDataTableEntity @CustomDataMappingsTable -Entity $MappingEntity
                 Register-CIPPExtensionScheduledTasks
                 $Body = @{
                     Results = @{

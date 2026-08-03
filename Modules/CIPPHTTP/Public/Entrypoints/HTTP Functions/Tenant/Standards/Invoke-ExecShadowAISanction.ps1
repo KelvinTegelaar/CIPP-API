@@ -40,7 +40,7 @@ function Invoke-ExecShadowAISanction {
                 $EscapedRowKey = $RowKey -replace "'", "''"
                 $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$EscapedTenant' and RowKey eq '$EscapedRowKey'"
                 if ($Entity) {
-                    Remove-AzDataTableEntity @Table -Entity $Entity -Force
+                    Remove-CIPPAzDataTableEntity @Table -Entity $Entity -Force
                 }
                 Write-LogMessage -headers $Request.Headers -API 'ExecShadowAISanction' -tenant $TenantFilter -message "Removed company sanctioned status from AI tool '$Tool'" -Sev 'Info'
                 "Removed company sanctioned status from '$Tool'. Its catalog risk level applies again."

@@ -86,7 +86,7 @@ function Start-BackupRetentionCleanup {
 
             # Delete table entities for this batch (even if blob delete failed - blob may already be gone)
             try {
-                Remove-AzDataTableEntity @Table -Entity $BlobBackups -Force -ErrorAction Stop
+                Remove-CIPPAzDataTableEntity @Table -Entity $BlobBackups -Force -ErrorAction Stop
                 $TotalEntitiesDeleted += $BatchCount
             } catch {
                 if ($_.Exception.Message -notmatch 'does not exist|ResourceNotFound') {
@@ -137,7 +137,7 @@ function Start-BackupRetentionCleanup {
             }
 
             try {
-                Remove-AzDataTableEntity @Table -Entity $TableBackups -Force -ErrorAction Stop
+                Remove-CIPPAzDataTableEntity @Table -Entity $TableBackups -Force -ErrorAction Stop
                 $TotalDeleted += $BatchCount
                 Write-Host "Deleted batch of $BatchCount table-only backups"
             } catch {

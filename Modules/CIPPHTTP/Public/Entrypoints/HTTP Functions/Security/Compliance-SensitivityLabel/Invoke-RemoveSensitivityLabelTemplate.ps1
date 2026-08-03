@@ -17,7 +17,7 @@ Function Invoke-RemoveSensitivityLabelTemplate {
         $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
         $Filter = "PartitionKey eq 'SensitivityLabelTemplate' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $ClearRow
         $Result = "Removed Sensitivity Label template with ID $ID"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

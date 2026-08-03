@@ -70,7 +70,7 @@ function Start-LogRetentionCleanup {
 
                 if ($OldLogs -and ($OldLogs | Measure-Object).Count -gt 0) {
                     $BatchCount = ($OldLogs | Measure-Object).Count
-                    Remove-AzDataTableEntity @CippLogsTable -Entity $OldLogs -Force
+                    Remove-CIPPAzDataTableEntity @CippLogsTable -Entity $OldLogs -Force
                     $TotalDeletedCount += $BatchCount
                     Write-Host "Batch $BatchNumber`: Deleted $BatchCount log entries"
 

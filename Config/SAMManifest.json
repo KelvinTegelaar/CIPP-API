@@ -663,6 +663,10 @@
         {
           "id": "e2edbde8-4448-4e49-8ebb-d53ba72df0f3",
           "type": "Scope"
+        },
+        {
+          "id": "3bc15058-7858-4141-b24f-ae43b4e80b52",
+          "type": "Scope"
         }
       ]
     },

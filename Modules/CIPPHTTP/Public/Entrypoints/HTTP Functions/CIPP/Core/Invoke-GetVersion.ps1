@@ -23,12 +23,12 @@ function Invoke-GetVersion {
                         $semVer = [semver]$ver.Version
                         if ($semVer.Major -lt 7) {
                             Write-Information "Removing stale version entry: $($ver.RowKey) = $($ver.Version)"
-                            Remove-AzDataTableEntity @VersionTable -Entity $ver
+                            Remove-CIPPAzDataTableEntity @VersionTable -Entity $ver
                         }
                     } catch {
                         # Invalid semver - remove it
                         Write-Information "Removing invalid version entry: $($ver.RowKey) = $($ver.Version)"
-                        Remove-AzDataTableEntity @VersionTable -Entity $ver
+                        Remove-CIPPAzDataTableEntity @VersionTable -Entity $ver
                     }
                 }
             }
