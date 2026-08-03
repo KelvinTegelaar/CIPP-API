@@ -103,14 +103,11 @@ function Invoke-ExecSetCASMailbox {
         }
     }
 
-    $Warnings = [System.Collections.Generic.List[string]]::new()
-    if ($CmdParams.ContainsKey('SmtpClientAuthenticationDisabled') -and $CmdParams['SmtpClientAuthenticationDisabled'] -eq $false) {
-        $null = $CmdParams.Remove('SmtpClientAuthenticationDisabled')
-        $Warnings.Add('SMTP Client Authentication can only be disabled, not enabled, and was left unchanged.')
-    }
-
+    # SmtpClientAuthenticationDisabled is inverted ($true = SMTP AUTH off) but both values
+    # are valid per-mailbox overrides — $false re-enables AUTH for devices/LOB apps even when
+    # org TransportConfig has SMTP AUTH disabled.
     if ($CmdParams.Keys.Count -le 1) {
-        $Results = $Warnings.Count -gt 0 ? ($Warnings -join ' ') : 'No CAS protocol settings were supplied.'
+        $Results = 'No CAS protocol settings were supplied.'
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Info'
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
@@ -125,9 +122,6 @@ function Invoke-ExecSetCASMailbox {
     try {
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-CASMailbox' -cmdParams $CmdParams
         $Results = "Successfully set CAS settings for $DisplayName ($ChangeSummary)"
-        if ($Warnings.Count -gt 0) {
-            $Results = '{0}. {1}' -f $Results, ($Warnings -join ' ')
-        }
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
