@@ -1,10 +1,10 @@
-@{
+﻿@{
 
 # Script module or binary module file associated with this manifest.
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '3.4.0'
+ModuleVersion = '3.6.2'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -66,11 +66,14 @@ FunctionsToExport = @()
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @(
     'Add-AzDataTableEntity'
+    'Add-AzDataTableLargeEntity'
     'Clear-AzDataTable'
     'Get-AzDataTable'
     'Get-AzDataTableEntity'
+    'Get-AzDataTableLargeEntity'
     'Get-AzDataTableSupportedEntityType'
     'Remove-AzDataTableEntity'
+    'Remove-AzDataTableLargeEntity'
     'Update-AzDataTableEntity'
     'New-AzDataTableContext'
     'Remove-AzDataTable'
@@ -110,21 +113,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-          ReleaseNotes = '## [3.4.0] - 2025-07-03
-
-### Added
-
-- Added SortedList as valid type for -Entity parameter [#52](https://github.com/PalmEmanuel/AzBobbyTables/issues/52)
-- New command `Get-AzDataTableSupportedEntityType` to get the supported data types for the module when using `-Entity` parameter
-
-### Changed
-
-- Dependency version bumps
-- Rewrote core module logic to add a converter system which allows for flexible entity types
-- Updated gitversion config for build and release
-- Improved module tests for the new type converter system
-
-'
+        # ReleaseNotes = ''
 
         # Prerelease string of this module
         # Prerelease = ''
@@ -146,3 +135,5 @@ PrivateData = @{
 # DefaultCommandPrefix = ''
 
 }
+
+

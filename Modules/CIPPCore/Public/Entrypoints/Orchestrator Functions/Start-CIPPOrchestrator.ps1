@@ -147,7 +147,7 @@ function Start-CIPPOrchestrator {
             # Clean up the stored input object after starting the orchestration
             try {
                 $Entities = Get-AzDataTableEntity @OrchestratorTable -Filter "PartitionKey eq 'Input' and (RowKey eq '$InputObjectGuid' or OriginalEntityId eq '$InputObjectGuid' or OriginalEntityId eq guid'$InputObjectGuid')" -Property PartitionKey, RowKey
-                Remove-AzDataTableEntity @OrchestratorTable -Entity $Entities -Force
+                Remove-CIPPAzDataTableEntity @OrchestratorTable -Entity $Entities -Force
                 Write-Information "Cleaned up stored input object: $InputObjectGuid"
             } catch {
                 Write-Warning "Failed to clean up stored input object $InputObjectGuid : $_"

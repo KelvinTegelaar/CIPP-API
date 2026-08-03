@@ -43,7 +43,7 @@ function Remove-CIPPDbItem {
 
         if ($Entity) {
             # Remove the entity
-            Remove-AzDataTableEntity @Table -Entity $Entity -Force
+            Remove-CIPPAzDataTableEntity @Table -Entity $Entity -Force
             Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Removed $Type item with ID: $ItemId" -sev Debug
 
             # Always decrement count

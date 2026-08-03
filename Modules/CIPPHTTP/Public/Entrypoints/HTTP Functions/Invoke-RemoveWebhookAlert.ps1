@@ -17,7 +17,7 @@ Function Invoke-RemoveWebhookAlert {
         Write-Host "The webhook count is $($WebhookRow.count)"
         if ($WebhookRow.count -gt 1) {
             $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.query.ID
-            Remove-AzDataTableEntity -Force @WebhookTable -Entity $Entity | Out-Null
+            Remove-CIPPAzDataTableEntity -Force @WebhookTable -Entity $Entity | Out-Null
             $Results = "Removed Alert Rule for $($Request.query.TenantFilter)"
         } else {
             if ($Request.query.TenantFilter -eq 'AllTenants') {
@@ -29,7 +29,7 @@ Function Invoke-RemoveWebhookAlert {
                         RowKey       = 'AllTenantsWebhookCreation'
                         PartitionKey = 'webhookcreation'
                     }
-                    Remove-AzDataTableEntity -Force @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
+                    Remove-CIPPAzDataTableEntity -Force @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
                 } catch {
                     Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to remove webhook for AllTenants. $($_.Exception.Message)" -Sev 'Error'
                 }
@@ -40,7 +40,7 @@ Function Invoke-RemoveWebhookAlert {
             $Results = foreach ($Tenant in $Tenants) {
                 Remove-CIPPGraphSubscription -TenantFilter $Tenant -Type 'AuditLog'
                 $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.query.ID
-                Remove-AzDataTableEntity -Force @WebhookTable -Entity $Entity | Out-Null
+                Remove-CIPPAzDataTableEntity -Force @WebhookTable -Entity $Entity | Out-Null
                 "Removed Alert Rule for $($Request.query.TenantFilter)"
             }
         }

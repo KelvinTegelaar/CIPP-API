@@ -45,7 +45,7 @@ function Push-TableCleanupTask {
                     if ($Entities) {
                         Write-Information "Removing $($Entities.Count) entities from $($Item.TableName)"
                         try {
-                            Remove-AzDataTableEntity @Table -Entity $Entities -Force
+                            Remove-CIPPAzDataTableEntity @Table -Entity $Entities -Force
                             $RowsRemoved += $Entities.Count
                             if ($DataTableProps.First -and $Entities.Count -lt $DataTableProps.First) {
                                 $CleanupCompleted = $true

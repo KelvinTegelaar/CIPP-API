@@ -20,7 +20,7 @@ function Invoke-RemoveIntuneReusableSettingTemplate {
         $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
         $Filter = "PartitionKey eq 'IntuneReusableSettingTemplate' and RowKey eq '$SafeID'"
         $Row = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $Row
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $Row
 
         $Result = "Removed Intune reusable setting template with ID $ID"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info'

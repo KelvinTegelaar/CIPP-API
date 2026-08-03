@@ -126,7 +126,7 @@ function Start-DurableCleanup {
         try {
             $StaleInstances = Get-CIPPAzDataTableEntity @Table -Filter $CompletedFilter -Property PartitionKey, RowKey, ETag -First 500
             if ($StaleInstances -and @($StaleInstances).Count -gt 0) {
-                Remove-AzDataTableEntity @Table -Entity $StaleInstances -Force -ErrorAction Stop | Out-Null
+                Remove-CIPPAzDataTableEntity @Table -Entity $StaleInstances -Force -ErrorAction Stop | Out-Null
                 $PurgeCount += @($StaleInstances).Count
             }
         } catch {
@@ -141,7 +141,7 @@ function Start-DurableCleanup {
             $HistoryFilter = "Timestamp lt datetime'{0}'" -f $PurgeCutoff.ToString('yyyy-MM-ddTHH:mm:ssZ')
             $StaleHistory = Get-CIPPAzDataTableEntity @HistoryTable -Filter $HistoryFilter -Property PartitionKey, RowKey, ETag -First 1000
             if ($StaleHistory -and @($StaleHistory).Count -gt 0) {
-                Remove-AzDataTableEntity @HistoryTable -Entity $StaleHistory -Force -ErrorAction Stop | Out-Null
+                Remove-CIPPAzDataTableEntity @HistoryTable -Entity $StaleHistory -Force -ErrorAction Stop | Out-Null
                 $PurgeCount += @($StaleHistory).Count
             }
         } catch {

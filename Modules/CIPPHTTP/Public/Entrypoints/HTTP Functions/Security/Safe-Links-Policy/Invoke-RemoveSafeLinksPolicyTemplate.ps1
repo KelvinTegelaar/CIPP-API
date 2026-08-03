@@ -16,7 +16,7 @@ function Invoke-RemoveSafeLinksPolicyTemplate {
         $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type String
         $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $ClearRow
         $Result = "Removed SafeLinks Policy Template with ID $ID."
         Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

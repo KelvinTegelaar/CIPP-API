@@ -21,7 +21,7 @@ function Push-PublicWebhookProcess {
         if ($Webhook) {
             try {
                 $Entity = $Webhook | Select-Object -Property RowKey, PartitionKey
-                Remove-AzDataTableEntity -Force @Table -Entity $Entity
+                Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity
             } catch {
                 # Row may have already been deleted by a concurrent execution - this is expected
                 Write-Information "Webhook cleanup for RowKey '$($Item.RowKey)': $($_.Exception.Message)"

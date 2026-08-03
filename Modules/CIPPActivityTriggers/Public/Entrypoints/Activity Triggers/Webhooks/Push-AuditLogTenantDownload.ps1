@@ -21,7 +21,7 @@ function Push-AuditLogTenantDownload {
             }
             # remove legacy webhooks
             foreach ($Task in $LegacyWebhookTasks) {
-                Remove-AzDataTableEntity -Force @SchedulerConfig -Entity $Task
+                Remove-CIPPAzDataTableEntity -Force @SchedulerConfig -Entity $Task
             }
             $CIPPURL = $LegacyUrl
         } else {

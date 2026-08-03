@@ -1470,7 +1470,7 @@ function Invoke-NinjaOneTenantSync {
                         if (($NinjaUserCreation | Measure-Object).count -ge 100) {
                             Write-Information 'Creating NinjaOne Users'
                             [System.Collections.Generic.List[PSCustomObject]]$CreatedUsers = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ("[$($NinjaUserCreation.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 20
-                            Remove-AzDataTableEntity -Force @UsersUpdateTable -Entity $NinjaUserCreation
+                            Remove-CIPPAzDataTableEntity -Force @UsersUpdateTable -Entity $NinjaUserCreation
                             [System.Collections.Generic.List[PSCustomObject]]$NinjaUserCreation = @()
                         }
                     } catch {
@@ -1482,7 +1482,7 @@ function Invoke-NinjaOneTenantSync {
                         if (($NinjaUserUpdates | Measure-Object).count -ge 100) {
                             Write-Information 'Updating NinjaOne Users'
                             [System.Collections.Generic.List[PSCustomObject]]$UpdatedUsers = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ("[$($NinjaUserUpdates.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 20
-                            Remove-AzDataTableEntity -Force @UsersUpdateTable -Entity $NinjaUserUpdates
+                            Remove-CIPPAzDataTableEntity -Force @UsersUpdateTable -Entity $NinjaUserUpdates
                             [System.Collections.Generic.List[PSCustomObject]]$NinjaUserUpdates = @()
                         }
                     } catch {
@@ -1546,7 +1546,7 @@ function Invoke-NinjaOneTenantSync {
                 if (($NinjaUserCreation | Measure-Object).count -ge 1) {
                     Write-Information 'Creating NinjaOne Users'
                     [System.Collections.Generic.List[PSCustomObject]]$CreatedUsers = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ("[$($NinjaUserCreation.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 20
-                    Remove-AzDataTableEntity -Force @UsersUpdateTable -Entity $NinjaUserCreation
+                    Remove-CIPPAzDataTableEntity -Force @UsersUpdateTable -Entity $NinjaUserCreation
 
                 }
             } catch {
@@ -1558,7 +1558,7 @@ function Invoke-NinjaOneTenantSync {
                 if (($NinjaUserUpdates | Measure-Object).count -ge 1) {
                     Write-Information 'Updating NinjaOne Users'
                     [System.Collections.Generic.List[PSCustomObject]]$UpdatedUsers = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ("[$($NinjaUserUpdates.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 20
-                    Remove-AzDataTableEntity -Force @UsersUpdateTable -Entity $NinjaUserUpdates
+                    Remove-CIPPAzDataTableEntity -Force @UsersUpdateTable -Entity $NinjaUserUpdates
                 }
             } catch {
                 Write-Information "Bulk Update Errored, but may have been successful as only 1 record with an issue could have been the cause: $_"
@@ -2486,12 +2486,12 @@ function Invoke-NinjaOneTenantSync {
 
         Write-Information 'Cleaning Users Cache'
         if (($ParsedUsers | Measure-Object).count -gt 0) {
-            Remove-AzDataTableEntity -Force @UsersTable -Entity ($ParsedUsers | Select-Object PartitionKey, RowKey)
+            Remove-CIPPAzDataTableEntity -Force @UsersTable -Entity ($ParsedUsers | Select-Object PartitionKey, RowKey)
         }
 
         Write-Information 'Cleaning Device Cache'
         if (($ParsedDevices | Measure-Object).count -gt 0) {
-            Remove-AzDataTableEntity -Force @DeviceTable -Entity ($ParsedDevices | Select-Object PartitionKey, RowKey)
+            Remove-CIPPAzDataTableEntity -Force @DeviceTable -Entity ($ParsedDevices | Select-Object PartitionKey, RowKey)
         }
 
         Write-Information "Total Fetch Time: $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds)"

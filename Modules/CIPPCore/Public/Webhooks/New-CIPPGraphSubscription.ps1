@@ -135,7 +135,7 @@ function New-CIPPGraphSubscription {
                     # Remove the corresponding table row by SubscriptionID
                     $StaleRow = $ExistingWebhooks | Where-Object { $_.SubscriptionID -eq $Dup.id }
                     foreach ($Row in $StaleRow) {
-                        Remove-AzDataTableEntity @WebhookTable -Entity $Row -Force
+                        Remove-CIPPAzDataTableEntity @WebhookTable -Entity $Row -Force
                         Write-LogMessage -headers $Headers -API $APIName -message "Removed stale webhook table entry (RowKey $($Row.RowKey)) for $($TenantFilter)" -Sev 'Warning' -tenant $TenantFilter
                     }
                 }
@@ -143,7 +143,7 @@ function New-CIPPGraphSubscription {
                 # Remove any remaining table rows whose SubscriptionID doesn't match the kept Graph subscription
                 $ExistingWebhooks | Where-Object { $KeptSub -and $_.SubscriptionID -ne $KeptSub.id } | ForEach-Object {
                     try {
-                        Remove-AzDataTableEntity @WebhookTable -Entity $_ -Force
+                        Remove-CIPPAzDataTableEntity @WebhookTable -Entity $_ -Force
                         Write-LogMessage -headers $Headers -API $APIName -message "Removed orphaned webhook table entry (RowKey $($_.RowKey)) for $($TenantFilter)" -Sev 'Warning' -tenant $TenantFilter
                     } catch {
                         # Entity may have already been removed in the duplicate cleanup pass

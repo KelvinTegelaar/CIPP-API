@@ -94,7 +94,7 @@ function Invoke-ExecIntegrationTemplate {
                     throw "Template not found: $TemplateId"
                 }
 
-                Remove-AzDataTableEntity @Table -Entity $ExistingTemplate
+                Remove-CIPPAzDataTableEntity @Table -Entity $ExistingTemplate
 
                 Write-LogMessage -headers $Headers -API $APIName -user $Username -message "Deleted integration template: $TemplateId" -Sev 'Info'
 

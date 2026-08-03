@@ -237,7 +237,7 @@ function Add-CIPPDbItem {
                     })
                     if ($StaleEntities.Count -gt 0) {
                         try {
-                            Remove-AzDataTableEntity @Table -Entity $StaleEntities -Force -ErrorAction Stop | Out-Null
+                            Remove-CIPPAzDataTableEntity @Table -Entity $StaleEntities -Force -ErrorAction Stop | Out-Null
                         } catch {
                             if ($_.Exception.Message -notmatch 'does not exist|ResourceNotFound') {
                                 Write-Warning "Failed to remove $($StaleEntities.Count) stale $Type entries for $TenantFilter : $($_.Exception.Message)"

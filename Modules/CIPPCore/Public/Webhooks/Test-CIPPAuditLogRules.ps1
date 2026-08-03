@@ -547,7 +547,7 @@ function Test-CIPPAuditLogRules {
                 try {
                     Write-Information 'Removing processed rows from cache'
                     $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($AuditRecord.id)'"
-                    Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
+                    Remove-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
                     Write-Information "Removed row $($AuditRecord.id) from cache"
                 } catch {
                     Write-Information "Error removing rows from cache: $($_.Exception.Message)"
@@ -693,7 +693,7 @@ function Test-CIPPAuditLogRules {
                 if ($Row.id) {
                     $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Row.id)'"
                     if ($RowEntity) {
-                        Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
+                        Remove-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
                         Write-Information "Removed row $($Row.id) from cache at final pass."
                     }
                 }

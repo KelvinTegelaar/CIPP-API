@@ -24,7 +24,7 @@ function Invoke-ExecRemoveCrossTenantTemplate {
             throw "Template with GUID $GUID not found."
         }
 
-        Remove-AzDataTableEntity @Table -Entity $Entity
+        Remove-CIPPAzDataTableEntity @Table -Entity $Entity
 
         Write-LogMessage -headers $Headers -API $APIName -message "Cross-tenant security template with GUID $GUID removed." -Sev 'Info'
 

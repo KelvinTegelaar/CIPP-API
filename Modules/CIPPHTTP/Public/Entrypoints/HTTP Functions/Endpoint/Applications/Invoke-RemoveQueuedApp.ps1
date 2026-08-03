@@ -17,7 +17,7 @@ function Invoke-RemoveQueuedApp {
         $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
         $Filter = "PartitionKey eq 'apps' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $ClearRow
         $Message = "Removed application queue for $ID."
         Write-LogMessage -Headers $Request.Headers -API $APIName -message $Message -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

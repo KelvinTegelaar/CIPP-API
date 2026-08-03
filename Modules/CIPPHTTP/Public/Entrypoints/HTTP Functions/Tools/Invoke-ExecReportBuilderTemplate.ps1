@@ -55,7 +55,7 @@ function Invoke-ExecReportBuilderTemplate {
 
                 $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ReportBuilderTemplate' and RowKey eq '$($Body.GUID)'"
                 if ($ExistingEntity) {
-                    Remove-AzDataTableEntity @Table -Entity $ExistingEntity
+                    Remove-CIPPAzDataTableEntity @Table -Entity $ExistingEntity
                     Write-LogMessage -headers $Headers -API $APIName -message "Deleted report builder template '$($Body.GUID)'" -Sev 'Info'
                     $Result = @{ Results = 'Successfully deleted report builder template' }
                 } else {

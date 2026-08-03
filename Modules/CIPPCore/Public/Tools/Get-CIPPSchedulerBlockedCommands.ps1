@@ -66,7 +66,7 @@ function Get-CIPPSchedulerBlockedCommands {
         'Add-CIPPAzDataTableEntity'
         'Add-AzDataTableEntity'
         'Update-AzDataTableEntity'
-        'Remove-AzDataTableEntity'
+        'Remove-CIPPAzDataTableEntity'
         'Remove-AzDataTable'
 
         # Backup & restore

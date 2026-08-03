@@ -75,7 +75,7 @@ function Get-CIPPTimerFunctions {
     }
 
     $OrchestratorStatus | Where-Object { $_.RowKey -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } | Select-Object ETag, PartitionKey, RowKey | ForEach-Object {
-        Remove-AzDataTableEntity @Table -Entity $_ -Force
+        Remove-CIPPAzDataTableEntity @Table -Entity $_ -Force
     }
 
     foreach ($Orchestrator in $Orchestrators) {
@@ -171,7 +171,7 @@ function Get-CIPPTimerFunctions {
         } else {
             if ($Status) {
                 Write-Warning "Timer function: $($Orchestrator.Command) does not exist"
-                Remove-AzDataTableEntity @Table -Entity $Status
+                Remove-CIPPAzDataTableEntity @Table -Entity $Status
             }
         }
     }
@@ -179,7 +179,7 @@ function Get-CIPPTimerFunctions {
     foreach ($StaleStatus in $OrchestratorStatus) {
         if ($Orchestrators.Id -notcontains $StaleStatus.RowKey) {
             Write-Warning "Removing stale timer function entry: $($StaleStatus.RowKey)"
-            Remove-AzDataTableEntity @Table -Entity $StaleStatus
+            Remove-CIPPAzDataTableEntity @Table -Entity $StaleStatus
         }
     }
 }

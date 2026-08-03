@@ -97,7 +97,7 @@ function Invoke-ExecCommunityRepo {
         'Delete' {
             if ($RepoEntity) {
                 $Delete = $RepoEntity | Select-Object PartitionKey, RowKey, ETag
-                Remove-AzDataTableEntity @Table -Entity $Delete
+                Remove-CIPPAzDataTableEntity @Table -Entity $Delete
             }
             $Results = @{
                 resultText = "Repository $($RepoEntity.Name) deleted"

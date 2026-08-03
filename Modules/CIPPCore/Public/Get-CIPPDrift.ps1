@@ -547,7 +547,7 @@ function Get-CIPPDrift {
         if ($StaleDriftEntities) {
             try {
                 foreach ($StaleEntity in $StaleDriftEntities) {
-                    Remove-AzDataTableEntity @DriftTable -Entity $StaleEntity
+                    Remove-CIPPAzDataTableEntity @DriftTable -Entity $StaleEntity
                 }
                 Write-Information "Removed $(@($StaleDriftEntities).Count) stale drift deviation entries for $TenantFilter"
             } catch {

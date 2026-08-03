@@ -73,7 +73,7 @@ function Invoke-ExecCustomRole {
                     # Remove IP ranges if none provided or role is superadmin
                     $ExistingIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "RowKey eq '$($Request.Body.RoleName.ToLower())'"
                     if ($ExistingIPRange) {
-                        Remove-AzDataTableEntity -Force @AccessIPRangeTable -Entity $ExistingIPRange
+                        Remove-CIPPAzDataTableEntity -Force @AccessIPRangeTable -Entity $ExistingIPRange
                         if ($Request.Body.RoleName -ne 'superadmin') {
                             $Results.Add("IP ranges removed from '$($Request.Body.RoleName)' role.")
                         }
@@ -92,7 +92,7 @@ function Invoke-ExecCustomRole {
                 } else {
                     $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "RowKey eq '$($Request.Body.RoleName)'"
                     if ($AccessRoleGroup) {
-                        Remove-AzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
+                        Remove-CIPPAzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
                         $Results.Add("Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role.")
                         Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role." -Sev 'Info'
                     }
@@ -153,14 +153,14 @@ function Invoke-ExecCustomRole {
         'Delete' {
             Write-Information "Deleting custom role $($Request.Body.RoleName)"
             $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName)'" -Property RowKey, PartitionKey
-            Remove-AzDataTableEntity -Force @Table -Entity $Role
+            Remove-CIPPAzDataTableEntity -Force @Table -Entity $Role
             $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "PartitionKey eq 'AccessRoleGroups' and RowKey eq '$($Request.Body.RoleName)'"
             if ($AccessRoleGroup) {
-                Remove-AzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
+                Remove-CIPPAzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
             }
             $AccessIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "PartitionKey eq 'AccessIPRanges' and RowKey eq '$($Request.Body.RoleName)'"
             if ($AccessIPRange) {
-                Remove-AzDataTableEntity -Force @AccessIPRangeTable -Entity $AccessIPRange
+                Remove-CIPPAzDataTableEntity -Force @AccessIPRangeTable -Entity $AccessIPRange
             }
             $Body = @{Results = 'Custom role deleted' }
             Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Deleted custom role $($Request.Body.RoleName)" -Sev 'Info'

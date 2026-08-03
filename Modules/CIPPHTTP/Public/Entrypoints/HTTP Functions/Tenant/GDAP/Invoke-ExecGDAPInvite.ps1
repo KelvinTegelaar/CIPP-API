@@ -146,7 +146,7 @@ function Invoke-ExecGDAPInvite {
         'Delete' {
             $Invite = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'invite' and RowKey eq '$InviteId'"
             if ($Invite) {
-                Remove-AzDataTableEntity @Table -Entity $Invite
+                Remove-CIPPAzDataTableEntity @Table -Entity $Invite
                 $Message = 'Invite deleted'
             } else {
                 $Message = 'Invite not found'

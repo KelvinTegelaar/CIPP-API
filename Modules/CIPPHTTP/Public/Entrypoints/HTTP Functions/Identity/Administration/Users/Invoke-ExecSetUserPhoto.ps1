@@ -109,7 +109,7 @@ function Invoke-ExecSetUserPhoto {
                 $Filter = "PartitionKey eq '$tenantFilter' and RowKey eq '$userId'"
                 $CachedEntry = Get-CIPPAzDataTableEntity @Table -Filter $Filter
                 if ($CachedEntry) {
-                    Remove-AzDataTableEntity @Table -Entity $CachedEntry -Force | Out-Null
+                    Remove-CIPPAzDataTableEntity @Table -Entity $CachedEntry -Force | Out-Null
                 }
             } catch {
                 Write-Information "Failed to invalidate photo cache: $($_.Exception.Message)"
