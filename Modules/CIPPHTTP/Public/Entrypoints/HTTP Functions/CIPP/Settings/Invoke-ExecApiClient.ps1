@@ -130,6 +130,7 @@ function Invoke-ExecApiClient {
                     $Client.Role = [string]$Request.Body.Role.value
                     $Client.IPRange = "$(@($IpRange) | ConvertTo-Json -Compress)"
                     $Client.Enabled = $Request.Body.Enabled ?? $false
+                    $Client | Add-Member -NotePropertyName 'MCPAllowed' -NotePropertyValue ([bool]($Request.Body.MCPAllowed ?? $false)) -Force
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated API client $($Request.Body.ClientId)" -Sev 'Info'
                     if ($APIConfig.ApplicationSecret) {
                         $Results.Add(@{
@@ -148,6 +149,7 @@ function Invoke-ExecApiClient {
                         'Role'         = [string]$Request.Body.Role.value
                         'IPRange'      = "$(@($IpRange) | ConvertTo-Json -Compress)"
                         'Enabled'      = $Request.Body.Enabled ?? $false
+                        'MCPAllowed'   = [bool]($Request.Body.MCPAllowed ?? $false)
                     }
                     $Results.Add(@{
                             resultText = "API Client created with the name '$($Client.AppName)'. Use the Copy to Clipboard button to retrieve the secret."
@@ -157,6 +159,20 @@ function Invoke-ExecApiClient {
                 }
 
                 Add-CIPPAzDataTableEntity @Table -Entity $Client -Force | Out-Null
+
+                # When this client is MCP-enabled, configure its app registration as the MCP OAuth
+                # resource (host identifier URIs + v2 tokens) so connector flows can resolve it.
+                if ([bool]($Request.Body.MCPAllowed ?? $false)) {
+                    try {
+                        $null = Set-CIPPMCPClientApp -AppId $ClientId -Headers $Request.Headers
+                        $Results.Add('MCP resource URIs and v2 tokens configured on the app registration. Run Save to Azure to apply the changes.')
+                    } catch {
+                        $Results.Add(@{
+                                resultText = "Client saved, but MCP app configuration failed: $($_.Exception.Message)"
+                                state      = 'warning'
+                            })
+                    }
+                }
             }
 
             if ($IPValidationErrors.Count -gt 0) {
@@ -218,8 +234,20 @@ function Invoke-ExecApiClient {
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
             $ClientIds = $AllClients.RowKey
+            # MCPAllowed can round-trip from table storage as a bool or a string; compare on string form.
+            $McpClientIds = @($AllClients | Where-Object { "$($_.MCPAllowed)" -eq 'True' } | ForEach-Object { $_.RowKey })
+            Write-Information "[ExecApiClient] MCP clients resolved for audiences/scope: $($McpClientIds -join ', ')"
             try {
-                Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds
+                Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds -McpClientIds $McpClientIds
+
+                # Advertise the MCP resource scope via App Service PRM so connectors request
+                # a scope that matches the resource app. Cleared when no MCP clients.
+                if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
+                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation" }
+                } else {
+                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES')
+                }
+
                 $Body = @{ Results = 'API clients saved to Azure' }
                 Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message 'Saved API clients to Azure' -Sev 'Info'
             } catch {

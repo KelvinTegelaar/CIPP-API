@@ -4,7 +4,8 @@ function Set-CippApiAuth {
         [string]$RGName,
         [string]$FunctionAppName,
         [string]$TenantId,
-        [string[]]$ClientIds
+        [string[]]$ClientIds,
+        [string[]]$McpClientIds
     )
 
     # Resolve subscription ID via helper (managed identity environment assumed for ARM).
@@ -20,11 +21,25 @@ function Set-CippApiAuth {
     Write-Information "AuthSettings: $($AuthSettings | ConvertTo-Json -Depth 10)"
 
     # Set allowed audiences
-    $AllowedAudiences = foreach ($ClientId in $ClientIds) {
-        "api://$ClientId"
+    $AllowedAudiences = [System.Collections.Generic.List[string]]::new()
+    foreach ($ClientId in @($ClientIds)) {
+        if (-not [string]::IsNullOrEmpty($ClientId)) {
+            $AllowedAudiences.Add("api://$ClientId")
+        }
     }
 
-    if (!$AllowedAudiences) { $AllowedAudiences = @() }
+    # MCP resource clients also accept tokens whose audience is the host-based identifier URI or
+    # the bare appId (v2 tokens), so MCP connectors validate against EasyAuth.
+    if ($McpClientIds -and $env:WEBSITE_HOSTNAME) {
+        $AllowedAudiences.Add("https://$($env:WEBSITE_HOSTNAME)")
+        $AllowedAudiences.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
+        foreach ($McpId in @($McpClientIds)) {
+            if (-not [string]::IsNullOrEmpty($McpId)) {
+                $AllowedAudiences.Add($McpId)
+            }
+        }
+    }
+
     if (!$ClientIds) { $ClientIds = @() }
 
     # Set auth settings
