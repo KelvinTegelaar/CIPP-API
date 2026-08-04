@@ -50,7 +50,7 @@ function Invoke-CippTestGenericTest002 {
         $SortedUsers = $UserLicenseMap.GetEnumerator() | Sort-Object { $_.Value.DisplayName }
         $DisplayCount = 0
         foreach ($Entry in $SortedUsers) {
-            $DisplayName = $Entry.Value.DisplayName
+            $DisplayName = ConvertTo-CippMarkdownCell -Value $Entry.Value.DisplayName
             $LicList = ($Entry.Value.Licenses | Sort-Object) -join ', '
             $null = $Result.Append("| $DisplayName | $LicList |`n")
             $DisplayCount++
