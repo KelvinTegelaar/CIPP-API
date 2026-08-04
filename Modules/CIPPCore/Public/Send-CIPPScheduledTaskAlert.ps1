@@ -77,6 +77,55 @@ function Send-CIPPScheduledTaskAlert {
         [pscustomobject]$Display
     }
 
+    function Get-AlertSnoozeLinksHtml {
+        <#
+            Builds the "Snooze Individual Alerts" block for a set of result rows. Generated per
+            row-set rather than once for the whole alert so the per-user PSA split further down
+            can emit the buttons for just that user's rows - it rebuilds the ticket body from the
+            grouped rows, which used to drop the snooze buttons entirely (#165).
+            Returns an empty string when there is nothing to render or generation fails, so a
+            broken row can never cost the caller its alert.
+        #>
+        param($Rows, [string]$CIPPURL, [string]$CmdletName, [string]$Tenant)
+
+        if ([string]::IsNullOrWhiteSpace($CIPPURL)) { return '' }
+        $Items = @($Rows)
+        if ($Items.Count -eq 0 -or $Items[0] -is [string]) { return '' }
+
+        try {
+            $EncodedCmdlet = [System.Web.HttpUtility]::UrlEncode($CmdletName)
+            $EncodedTenant = [System.Web.HttpUtility]::UrlEncode($Tenant)
+            $SnoozeLinksHtml = @'
+<div style="margin:20px 0;padding:20px;border-left:4px solid #ff9800;">
+<h4 style="margin-top:0;color:#ff9800;">Snooze Individual Alerts</h4>
+<p style="margin:0 0 12px;font-size:13px;">Click a button to snooze that specific alert item. You will need to be signed in to CIPP.</p>
+'@
+            foreach ($ResultItem in $Items) {
+                $HashResult = Get-AlertContentHash -AlertItem $ResultItem
+                $ItemPreview = [System.Web.HttpUtility]::HtmlEncode($HashResult.ContentPreview)
+                $EncodedData = [System.Web.HttpUtility]::UrlEncode(($ResultItem | ConvertTo-Json -Compress -Depth 5))
+                $BaseLink = "${CIPPURL}/cipp/snooze-alert?cmdlet=${EncodedCmdlet}&tenant=${EncodedTenant}&data=${EncodedData}"
+                $SnoozeLinksHtml += @"
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:12px;border-bottom:1px solid #e0e0e0;padding-bottom:12px;">
+<tr><td style="font-size:13px;padding:0 0 8px 0;font-weight:600;">$ItemPreview</td></tr>
+<tr><td style="padding:0;">
+<table cellpadding="0" cellspacing="0" border="0"><tr>
+<td style="padding:0 6px 0 0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#0078d4;padding:6px 14px;"><a href="${BaseLink}&duration=7" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">7 Days</a></td></tr></table></td>
+<td style="padding:0 6px 0 0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#0078d4;padding:6px 14px;"><a href="${BaseLink}&duration=14" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">14 Days</a></td></tr></table></td>
+<td style="padding:0 6px 0 0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#ff9800;padding:6px 14px;"><a href="${BaseLink}&duration=30" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">30 Days</a></td></tr></table></td>
+<td style="padding:0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#d32f2f;padding:6px 14px;"><a href="${BaseLink}&duration=90" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">90 Days</a></td></tr></table></td>
+</tr></table>
+</td></tr>
+</table>
+"@
+            }
+            return "$SnoozeLinksHtml</div>"
+        } catch {
+            Write-Information "Failed to generate snooze links: $($_.Exception.Message)"
+            return ''
+        }
+    }
+
     try {
         Write-Information "Sending post-execution alerts for task $($TaskInfo.Name)"
 
@@ -107,50 +156,23 @@ function Send-CIPPScheduledTaskAlert {
         }
         $HTML = $FinalResults -replace '\[\[BR\]\]', '<br />' -replace '<table>', "$AlertHeader $TableDesign<table class=adaptiveTable>" | Out-String
 
-        # For alert tasks, add per-row snooze links to the email
+        # For alert tasks, add per-row snooze links. The resolved URL is kept in scope so the
+        # per-user PSA split below can build the same block from each user's own rows.
+        $SnoozeCIPPURL = $null
         if ($TaskType -eq 'Alert' -and $Results -is [array] -and $Results.Count -gt 0 -and $Results[0] -isnot [string]) {
             try {
                 $CippConfigTable = Get-CippTable -tablename Config
                 $CippConfig = Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
-                $CIPPURL = if ($CippConfig.Value) { 'https://{0}' -f $CippConfig.Value } else { $null }
-
-                if ($CIPPURL) {
-                    $CmdletName = $TaskInfo.Command
-                    $SnoozeLinksHtml = @'
-<div style="margin:20px 0;padding:20px;border-left:4px solid #ff9800;">
-<h4 style="margin-top:0;color:#ff9800;">Snooze Individual Alerts</h4>
-<p style="margin:0 0 12px;font-size:13px;">Click a button to snooze that specific alert item. You will need to be signed in to CIPP.</p>
-'@
-                    foreach ($ResultItem in $Results) {
-                        $HashResult = Get-AlertContentHash -AlertItem $ResultItem
-                        $ItemPreview = [System.Web.HttpUtility]::HtmlEncode($HashResult.ContentPreview)
-                        $EncodedData = [System.Web.HttpUtility]::UrlEncode(($ResultItem | ConvertTo-Json -Compress -Depth 5))
-                        $EncodedCmdlet = [System.Web.HttpUtility]::UrlEncode($CmdletName)
-                        $EncodedTenant = [System.Web.HttpUtility]::UrlEncode($TenantFilter)
-                        $BaseLink = "${CIPPURL}/cipp/snooze-alert?cmdlet=${EncodedCmdlet}&tenant=${EncodedTenant}&data=${EncodedData}"
-                        $SnoozeLinksHtml += @"
-<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:12px;border-bottom:1px solid #e0e0e0;padding-bottom:12px;">
-<tr><td style="font-size:13px;padding:0 0 8px 0;font-weight:600;">$ItemPreview</td></tr>
-<tr><td>
-<table cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="padding:0 6px 0 0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#0078d4;padding:6px 14px;"><a href="${BaseLink}&duration=7" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">7 Days</a></td></tr></table></td>
-<td style="padding:0 6px 0 0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#0078d4;padding:6px 14px;"><a href="${BaseLink}&duration=14" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">14 Days</a></td></tr></table></td>
-<td style="padding:0 6px 0 0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#ff9800;padding:6px 14px;"><a href="${BaseLink}&duration=30" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">30 Days</a></td></tr></table></td>
-<td style="padding:0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#d32f2f;padding:6px 14px;"><a href="${BaseLink}&duration=90" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">90 Days</a></td></tr></table></td>
-</tr></table>
-</td></tr>
-</table>
-"@
-                    }
-                    $SnoozeLinksHtml += '</div>'
-                    $HTML += $SnoozeLinksHtml
-                }
+                $SnoozeCIPPURL = if ($CippConfig.Value) { 'https://{0}' -f $CippConfig.Value } else { $null }
+                $HTML += Get-AlertSnoozeLinksHtml -Rows $Results -CIPPURL $SnoozeCIPPURL -CmdletName $TaskInfo.Command -Tenant $TenantFilter
             } catch {
-                Write-Information "Failed to generate snooze links for email: $($_.Exception.Message)"
+                Write-Information "Failed to resolve CIPP URL for snooze links: $($_.Exception.Message)"
             }
         }
 
-        # Add alert comment if available
+        # Add alert comment if available. Held separately as well as appended to $HTML so the
+        # per-user PSA split can re-attach it to each rebuilt ticket body.
+        $AlertCommentHtml = ''
         if ($TaskInfo.AlertComment) {
             $AlertComment = $TaskInfo.AlertComment
 
@@ -162,7 +184,8 @@ function Send-CIPPScheduledTaskAlert {
 
             # Replace other variables
             $AlertComment = Get-CIPPTextReplacement -Text $AlertComment -TenantFilter $TenantFilter
-            $HTML += "<div style='background-color: transparent; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$AlertComment</p></div>"
+            $AlertCommentHtml = "<div style='background-color: transparent; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$AlertComment</p></div>"
+            $HTML += $AlertCommentHtml
         }
 
         # Build title — honor CustomSubject if set on the task row, otherwise use default format
@@ -268,7 +291,13 @@ function Send-CIPPScheduledTaskAlert {
                                 foreach ($Group in $Groups) {
                                     $GroupKey = $Group.Name
                                     $GroupHTMLFragment = $Group.Group | ForEach-Object { ConvertTo-AlertDisplayRow -Row $_ } | ConvertTo-Html -Fragment
-                                    $GroupHTML = ConvertTo-PSAHtml -Html ($GroupHTMLFragment -replace '\[\[BR\]\]', '<br />' -replace '<table>', "$AlertHeader $TableDesign<table class=adaptiveTable>" | Out-String)
+                                    # This path rebuilds the body from the grouped rows instead of using
+                                    # $HTML, so everything appended to $HTML after the table - the snooze
+                                    # buttons and the alert comment
+                                    $GroupBody = $GroupHTMLFragment -replace '\[\[BR\]\]', '<br />' -replace '<table>', "$AlertHeader $TableDesign<table class=adaptiveTable>" | Out-String
+                                    $GroupBody += Get-AlertSnoozeLinksHtml -Rows $Group.Group -CIPPURL $SnoozeCIPPURL -CmdletName $TaskInfo.Command -Tenant $TenantFilter
+                                    $GroupBody += $AlertCommentHtml
+                                    $GroupHTML = ConvertTo-PSAHtml -Html $GroupBody
 
                                     if ([string]::IsNullOrWhiteSpace($GroupKey)) {
                                         # Rows without a usable user identifier - fall back to the
