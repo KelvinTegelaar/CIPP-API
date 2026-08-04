@@ -1,0 +1,43 @@
+{
+  "name": "AutoArchive",
+  "label": "Configure Auto-Archiving Threshold",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Configures the auto-archiving threshold percentage for the tenant. When a mailbox exceeds this threshold, the oldest items are automatically moved to the archive mailbox. Archive must be enabled manually or via the CIPP standard 'Enable Online Archive for all users'. Valid range is 80-100, where 100 disables auto-archiving for the tenant.",
+  "executiveText": "Configures automatic archiving of mailbox items when storage approaches capacity, preventing email delivery failures due to full mailboxes. This proactive storage management ensures business continuity and reduces helpdesk tickets related to mailbox quota issues.",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "threshold": {
+      "type": "number",
+      "label": "Auto-Archiving Threshold Percentage (80-100, default 96, 100 disables)",
+      "default": 96
+    }
+  },
+  "expected": {
+    "AutoArchivingThresholdPercentage": "%threshold%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "AutoArchivingThresholdPercentage": "%threshold%"
+        }
+      }
+    ]
+  }
+}

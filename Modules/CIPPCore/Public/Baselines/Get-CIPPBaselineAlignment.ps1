@@ -58,7 +58,7 @@ function Get-CIPPBaselineAlignment {
         $Applicable = $Total - $LicenseMissing - $NoData
         $Compliant = @($Rows | Where-Object { $_.status -eq 'Compliant' }).Count
         $Accepted = @($Rows | Where-Object { $_.status -eq 'Accepted' }).Count
-        $Drift = @($Rows | Where-Object { $_.status -eq 'Drift' }).Count
+        $Drift = @($Rows | Where-Object { $_.status -in @('Drift', 'Partially Accepted') }).Count
         $Denied = @($Rows | Where-Object { $_.status -like 'Denied - *' }).Count
         $Pct = { param($Count) if ($Applicable) { [math]::Round(($Count / $Applicable) * 100) } else { 0 } }
         @{
@@ -272,7 +272,7 @@ function Get-CIPPBaselineAlignment {
 
         # Chronological deviation feed derived from the resolved rows.
         $Feed = foreach ($Row in $Rows) {
-            if ($Row.status -eq 'Drift') {
+            if ($Row.status -in @('Drift', 'Partially Accepted')) {
                 [PSCustomObject]@{ timestamp = $Row.lastRun; feedEvent = 'Drift'; standardLabel = $Row.standardLabel; detail = "Drift detected by the $($Row.sourceTemplate) run"; by = 'CIPP' }
             }
             if ($Row.status -eq 'Accepted' -or $Row.status -like 'Denied - *') {
@@ -343,7 +343,7 @@ function Get-CIPPBaselineAlignment {
             standards        = @($Standards)
             tenants          = @($Tenants)
             trend            = $Trend
-            activeDeviations = @($Rows | Where-Object { $_.status -eq 'Accepted' -or $_.status -like 'Denied - *' })
+            activeDeviations = @($Rows | Where-Object { $_.status -in @('Accepted', 'Partially Accepted') -or $_.status -like 'Denied - *' })
         }
     }
 

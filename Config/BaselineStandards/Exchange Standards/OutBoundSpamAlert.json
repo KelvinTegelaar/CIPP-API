@@ -1,0 +1,64 @@
+{
+  "name": "OutBoundSpamAlert",
+  "label": "Set Outbound Spam Alert e-mail",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.1.6)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Sets the e-mail address to which outbound spam alerts are sent.",
+  "executiveText": "Makes sure IT is notified by e-mail whenever an internal mailbox starts sending outbound spam, so a compromised account is caught early.",
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "NotifyOutboundSpam": {
+      "type": "switch",
+      "label": "Notify on outbound spam",
+      "default": true,
+      "recommended": true
+    },
+    "OutboundSpamContact": {
+      "type": "textField",
+      "label": "Outbound spam contact",
+      "default": ""
+    }
+  },
+  "expected": {
+    "NotifyOutboundSpam": "%NotifyOutboundSpam%",
+    "NotifyOutboundSpamRecipients": [
+      "%OutboundSpamContact%"
+    ]
+  },
+  "read": {
+    "cacheType": "ExoHostedOutboundSpamFilterPolicy",
+    "filter": [
+      {
+        "property": "Name",
+        "value": "Default"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-HostedOutboundSpamFilterPolicy",
+        "params": {
+          "Identity": "Default",
+          "NotifyOutboundSpam": "%NotifyOutboundSpam%",
+          "NotifyOutboundSpamRecipients": "%OutboundSpamContact%"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "AutoArchiveMailbox",
+  "label": "Set auto enable archive mailbox state",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables or disables the tenant policy that automatically provisions an archive mailbox when a user's primary mailbox reaches 90% of its quota.",
+  "executiveText": "Automatically provisions archive mailboxes only when users reach 90% of their mailbox capacity, reducing manual intervention and preventing mailbox quota issues without enabling archives for everyone.",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "enabled": {
+      "type": "switch",
+      "label": "Automatically provision archive mailbox at 90% of primary mailbox quota",
+      "default": true
+    }
+  },
+  "expected": {
+    "AutoEnableArchiveMailbox": "%enabled%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "AutoEnableArchiveMailbox": "%enabled%"
+        }
+      }
+    ]
+  }
+}

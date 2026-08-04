@@ -65,16 +65,26 @@ function Invoke-ExecUpdateBaselineDeviation {
                 & $Set 'DeviationAt' $Now
                 & $Set 'DeviationExpires' ''
                 & $Set 'RemediateOnExpire' $false
+                # A deny is an order to enforce the baseline; accepted property paths would
+                # block the (whole-object) remediation, so the deny supersedes them.
+                & $Set 'AcceptedPaths' '{}'
                 $Message = "Denied the deviation on $Standard for $TenantFilter - $Method pending on the next run."
             }
             'Clear' {
-                & $Set 'Status' 'Drift'
+                # Only a triaged status re-surfaces as Drift; clearing leftover accepted
+                # paths from a Compliant row must not flag drift that is not there.
+                if ("$($Entity.Status)" -in @('Accepted', 'Partially Accepted', 'Denied - Remediate Pending', 'Denied - Delete Pending')) {
+                    & $Set 'Status' 'Drift'
+                }
                 & $Set 'DeviationReason' ''
                 & $Set 'DeviationBy' ''
                 & $Set 'DeviationAt' ''
                 & $Set 'DeviationExpires' ''
                 & $Set 'RemediateOnExpire' $false
-                $Message = "Cleared the triage on $Standard for $TenantFilter - it re-surfaces as Drift."
+                # Accepted property paths now drive the status too - a Clear that left them
+                # behind would flip straight back to (Partially) Accepted on the next run.
+                & $Set 'AcceptedPaths' '{}'
+                $Message = "Cleared the triage and any accepted properties on $Standard for $TenantFilter - it re-surfaces as Drift."
             }
             'AcceptPath' {
                 $Path = $Request.Body.path
@@ -86,7 +96,34 @@ function Invoke-ExecUpdateBaselineDeviation {
                         at     = $Now
                     }) -Force
                 & $Set 'AcceptedPaths' (ConvertTo-Json -Compress -Depth 20 -InputObject $AcceptedPaths)
+                # Reflect the acceptance in the status immediately instead of waiting for the
+                # next run: rediff the stored values with the accepted paths filtered out -
+                # nothing left means every deviating property is accepted (Accepted), anything
+                # left keeps alerting (Partially Accepted). Denied rows keep the operator's
+                # order; rows without stored values wait for the engine.
                 $Message = "Accepted the deviation on property $Path of $Standard for $TenantFilter. Other properties keep alerting."
+                if ($Entity.Status -in @('Drift', 'Partially Accepted', 'Accepted') -and $Entity.ExpectedValue -and $Entity.CurrentValue) {
+                    $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name)
+                    $Remaining = $null
+                    try {
+                        $Differences = @(Compare-CIPPIntuneObject -ReferenceObject ($Entity.ExpectedValue | ConvertFrom-Json) -DifferenceObject ($Entity.CurrentValue | ConvertFrom-Json) | Where-Object { $_ })
+                        $Remaining = @($Differences | Where-Object {
+                                $Property = $_.Property
+                                -not ($AcceptedKeys | Where-Object { $Property -eq $_ -or $Property.StartsWith("$_.") })
+                            })
+                    } catch { $Remaining = $null }
+                    if ($null -ne $Remaining) {
+                        & $Set 'Status' $(if ($Remaining.Count -eq 0) { 'Accepted' } else { 'Partially Accepted' })
+                        & $Set 'DeviationReason' "$($Request.Body.reason)"
+                        & $Set 'DeviationBy' "$User"
+                        & $Set 'DeviationAt' $Now
+                        $Message = if ($Remaining.Count -eq 0) {
+                            "Accepted the deviation on property $Path of $Standard for $TenantFilter - every deviating property is now accepted."
+                        } else {
+                            "Accepted the deviation on property $Path of $Standard for $TenantFilter. $($Remaining.Count) unaccepted deviating $(if ($Remaining.Count -eq 1) { 'property keeps' } else { 'properties keep' }) alerting."
+                        }
+                    }
+                }
             }
             'CompleteTask' {
                 & $Set 'Status' 'Compliant'

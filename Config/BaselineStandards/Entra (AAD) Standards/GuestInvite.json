@@ -1,0 +1,62 @@
+{
+  "name": "GuestInvite",
+  "label": "Guest Invite setting",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CISA (MS.AAD.18.1v1)",
+    "EIDSCA.AP04",
+    "EIDSCA.AP07",
+    "SMB1001 (2.8)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "This setting controls who can invite guests to your directory to collaborate on resources secured by your company, such as SharePoint sites or Azure resources.",
+  "executiveText": "Controls who within the organization can invite external partners and vendors to access company resources, ensuring proper oversight of external access while enabling necessary business collaboration. This helps maintain security while supporting partnership and vendor relationships.",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowInvitesFrom": {
+      "type": "autoComplete",
+      "label": "Who can send invites?",
+      "options": [
+        {
+          "label": "Everyone",
+          "value": "everyone"
+        },
+        {
+          "label": "Admins, Guest inviters and All Members",
+          "value": "adminsGuestInvitersAndAllMembers"
+        },
+        {
+          "label": "Admins and Guest inviters",
+          "value": "adminsAndGuestInviters"
+        },
+        {
+          "label": "None",
+          "value": "none"
+        }
+      ],
+      "default": "adminsAndGuestInviters",
+      "recommended": "adminsAndGuestInviters"
+    }
+  },
+  "expected": {
+    "allowInvitesFrom": "%allowInvitesFrom%"
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authorizationPolicy/authorizationPolicy",
+        "body": {
+          "allowInvitesFrom": "%allowInvitesFrom%"
+        }
+      }
+    ]
+  }
+}

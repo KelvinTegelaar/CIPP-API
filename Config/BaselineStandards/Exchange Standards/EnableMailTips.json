@@ -1,0 +1,62 @@
+{
+  "name": "EnableMailTips",
+  "label": "Enable all MailTips",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (6.5.2)",
+    "exo_mailtipsenabled"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Enables all MailTips in Outlook. MailTips are the notifications Outlook and Outlook on the web shows when an email you create, meets some requirements",
+  "executiveText": "Enables helpful notifications in Outlook that warn users about potential email issues, such as sending to large groups, external recipients, or invalid addresses. This reduces email mistakes and improves communication efficiency by providing real-time guidance to employees.",
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "mailTipsEnabled": {
+      "type": "switch",
+      "label": "All MailTips enabled",
+      "default": true,
+      "recommended": true
+    },
+    "largeAudienceThreshold": {
+      "type": "number",
+      "label": "Number of recipients to trigger the large audience MailTip (Default is 25)",
+      "default": 25,
+      "recommended": 25
+    }
+  },
+  "expected": {
+    "MailTipsAllTipsEnabled": "%mailTipsEnabled%",
+    "MailTipsExternalRecipientsTipsEnabled": "%mailTipsEnabled%",
+    "MailTipsGroupMetricsEnabled": "%mailTipsEnabled%",
+    "MailTipsLargeAudienceThreshold": "%largeAudienceThreshold%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "MailTipsAllTipsEnabled": "%mailTipsEnabled%",
+          "MailTipsExternalRecipientsTipsEnabled": "%mailTipsEnabled%",
+          "MailTipsGroupMetricsEnabled": "%mailTipsEnabled%",
+          "MailTipsLargeAudienceThreshold": "%largeAudienceThreshold%"
+        }
+      }
+    ]
+  }
+}

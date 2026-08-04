@@ -1,0 +1,46 @@
+{
+  "name": "DisableEWS",
+  "label": "Disable Exchange Web Services",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Disables Exchange Web Services (EWS) organization-wide. This reduces the attack surface by blocking legacy API access to mailbox data. Warning: This may break Office web add-ins on builds older than 16.0.19127.",
+  "executiveText": "Disables Exchange Web Services (EWS) across the organization to reduce attack surface and prevent legacy API access to sensitive mailbox data. This aligns with Microsoft's Baseline Security Mode recommendation to minimize exploitable endpoints while requiring updates to applications that depend on EWS.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "ewsEnabled": {
+      "type": "switch",
+      "label": "Exchange Web Services enabled",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "EwsEnabled": "%ewsEnabled%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "EwsEnabled": "%ewsEnabled%"
+        }
+      }
+    ]
+  }
+}

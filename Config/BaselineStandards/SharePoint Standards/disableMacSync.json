@@ -1,0 +1,39 @@
+{
+  "name": "disableMacSync",
+  "label": "Do not allow Mac devices to sync using OneDrive",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Disables the ability for Mac devices to sync with OneDrive.",
+  "executiveText": "Prevents Mac computers from synchronizing files with OneDrive, typically implemented for security or compliance reasons in Windows-centric environments. This restriction helps maintain standardized device management while potentially limiting collaboration for Mac users.",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "BlockMacSync": true
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "admin/sharepoint/settings",
+        "body": {
+          "isMacSyncAppEnabled": false
+        }
+      }
+    ]
+  }
+}

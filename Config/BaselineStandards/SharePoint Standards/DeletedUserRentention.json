@@ -1,0 +1,61 @@
+{
+  "name": "DeletedUserRentention",
+  "label": "Set deleted user retention time in OneDrive",
+  "cat": "SharePoint Standards",
+  "tag": [
+    "SMB1001 (3.1)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Sets the retention period for deleted users OneDrive to the specified period of time. The default is 30 days.",
+  "executiveText": "Preserves departed employees' OneDrive files for a specified period, allowing time to recover important business documents before permanent deletion. This helps prevent data loss while managing storage costs and maintaining compliance with data retention policies.",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "days": {
+      "type": "autoComplete",
+      "label": "Retention time (Default 30 days)",
+      "options": [
+        { "label": "30 days", "value": 30 },
+        { "label": "90 days", "value": 90 },
+        { "label": "1 year", "value": 365 },
+        { "label": "2 years", "value": 730 },
+        { "label": "3 years", "value": 1095 },
+        { "label": "4 years", "value": 1460 },
+        { "label": "5 years", "value": 1825 },
+        { "label": "6 years", "value": 2190 },
+        { "label": "7 years", "value": 2555 },
+        { "label": "8 years", "value": 2920 },
+        { "label": "9 years", "value": 3285 },
+        { "label": "10 years", "value": 3650 }
+      ],
+      "default": 30
+    }
+  },
+  "expected": {
+    "OrphanedPersonalSitesRetentionPeriod": "%days%"
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "admin/sharepoint/settings",
+        "body": {
+          "deletedUserPersonalSiteRetentionPeriodInDays": "%days%"
+        }
+      }
+    ]
+  }
+}

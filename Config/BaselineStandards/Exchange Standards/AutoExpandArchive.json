@@ -1,0 +1,44 @@
+{
+  "name": "AutoExpandArchive",
+  "label": "Enable Auto-expanding archives",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables auto-expanding archives for the tenant. Does not enable archives for users.",
+  "executiveText": "Enables automatic expansion of email archive storage when users approach their archive limits, ensuring continuous email retention without manual intervention. This prevents email storage issues and maintains compliance with data retention policies without requiring ongoing administrative management.",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "enabled": {
+      "type": "switch",
+      "label": "Auto-expanding archives enabled",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "AutoExpandingArchiveEnabled": "%enabled%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "AutoExpandingArchive": "%enabled%"
+        }
+      }
+    ]
+  }
+}

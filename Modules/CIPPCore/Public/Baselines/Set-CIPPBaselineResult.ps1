@@ -6,8 +6,9 @@ function Set-CIPPBaselineResult {
         The resolved row is the frontend contract (read via Convert-CIPPBaselineResolvedEntity):
         ExpectedValue/CurrentValue/AcceptedPaths/Inheritance as JSON columns, flat PascalCase
         for the rest, StandardName/TenantName/SourceTemplate as view aids. ONE Status column
-        (Compliant / Drift / Accepted / Denied - Remediate Pending / Denied - Delete Pending /
-        Skipped - No License) - the per-run outcome lives on the history rows only. Triage
+        (Compliant / Drift / Accepted / Partially Accepted / Denied - Remediate Pending /
+        Denied - Delete Pending / Skipped - No License) - the per-run outcome lives on the
+        history rows only. Triage
         metadata (reason/by/at/expires) survives while the status is a triaged one; the engine
         clears it when a row returns to Compliant or plain Drift. History keys
         PK <tenant>_<standard> with an inverted-ticks RowKey so the partition lists
@@ -27,7 +28,7 @@ function Set-CIPPBaselineResult {
     if (-not $RunId) { $RunId = [string](New-Guid).Guid }
 
     # Triaged statuses keep the operator's metadata; Compliant/Drift clears stale triage.
-    $KeepTriage = $Result.Status -in @('Accepted', 'Denied - Remediate Pending', 'Denied - Delete Pending')
+    $KeepTriage = $Result.Status -in @('Accepted', 'Partially Accepted', 'Denied - Remediate Pending', 'Denied - Delete Pending')
 
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
     $ResolvedTable.Force = $true

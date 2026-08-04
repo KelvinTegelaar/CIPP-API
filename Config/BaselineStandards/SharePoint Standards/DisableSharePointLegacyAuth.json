@@ -1,0 +1,54 @@
+{
+  "name": "DisableSharePointLegacyAuth",
+  "label": "Disable legacy basic authentication for SharePoint",
+  "cat": "SharePoint Standards",
+  "tag": [
+    "CIS M365 7.0.0 (7.2.1)",
+    "spo_legacy_auth",
+    "CISA (MS.AAD.3.1v1)",
+    "NIST CSF 2.0 (PR.IR-01)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Disables the ability to authenticate with SharePoint using legacy authentication methods. Any applications that use legacy authentication will need to be updated to use modern authentication.",
+  "executiveText": "Disables outdated authentication methods for SharePoint access, forcing applications and users to use modern, more secure authentication protocols. This significantly improves security by eliminating vulnerable authentication pathways while requiring updates to older applications.",
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "legacyAuthEnabled": {
+      "type": "switch",
+      "label": "Legacy authentication protocols enabled",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "LegacyAuthProtocolsEnabled": "%legacyAuthEnabled%"
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "admin/sharepoint/settings",
+        "body": {
+          "isLegacyAuthProtocolsEnabled": "%legacyAuthEnabled%"
+        }
+      }
+    ]
+  }
+}

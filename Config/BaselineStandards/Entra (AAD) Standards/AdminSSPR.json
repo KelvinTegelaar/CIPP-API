@@ -1,0 +1,43 @@
+{
+  "name": "AdminSSPR",
+  "label": "Set administrator Self-Service Password Reset state",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "EIDSCA.AP01"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Controls whether administrators are allowed to use Self-Service Password Reset through the Microsoft Entra authorization policy.",
+  "executiveText": "Controls whether tenant administrators can reset their own passwords through Self-Service Password Reset. Disabling this capability forces privileged accounts through more controlled recovery processes and reduces the risk of self-service recovery being misused on administrative identities.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowSSPR": {
+      "type": "switch",
+      "label": "Allow administrators to use Self-Service Password Reset",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "allowedToUseSSPR": "%allowSSPR%"
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authorizationPolicy/authorizationPolicy",
+        "body": {
+          "allowedToUseSSPR": "%allowSSPR%"
+        }
+      }
+    ]
+  }
+}

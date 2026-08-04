@@ -17,11 +17,15 @@ function Invoke-CIPPBaselineStandard {
         3. Render the expected template from the configured variable values, project the
            current value to the expected keys and compare with Compare-CIPPIntuneObject
            (subset). Differences on accepted property paths are tolerated.
-        4. One Status per row: Compliant / Drift / Accepted / Denied - Remediate Pending /
-           Denied - Delete Pending / Skipped - No License. Accepted holds until its unix
-           expiry (optionally remediating on lapse); Denied - Remediate Pending forces
-           remediation regardless of the configured posture. Writes only happen when needed:
-           drift, -Force (manual runs), or "checkBeforeRun": false definitions.
+        4. One Status per row: Compliant / Drift / Accepted / Partially Accepted /
+           Denied - Remediate Pending / Denied - Delete Pending / Skipped - No License.
+           Accepted holds until its unix expiry (optionally remediating on lapse); a row
+           whose drift is fully covered by accepted property paths also scores Accepted,
+           and partially covered drift scores Partially Accepted. Denied - Remediate
+           Pending forces remediation regardless of the configured posture. Writes only
+           happen when needed: drift, -Force (manual runs), or "checkBeforeRun": false
+           definitions - and never while accepted paths cover live drift, because a write
+           deploys the whole expected object.
         5. Persist the resolved row + a history row via Set-CIPPBaselineResult.
         Modes: run (all steps), compare (never writes), oneoff (remediation forced on).
     .FUNCTIONALITY
@@ -78,6 +82,10 @@ function Invoke-CIPPBaselineStandard {
         $SafeStandard = ConvertTo-CIPPODataFilterValue -Value $Item.Standard
         $Prior = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and StandardName eq '$SafeStandard'" | Select-Object -First 1
         $PriorStatus = $Prior.Status
+        # Per-property acceptances (design addendum): parsed up front because they shape the
+        # compare, the remediation gate, and the resulting status.
+        $AcceptedPaths = $(try { $Prior.AcceptedPaths | ConvertFrom-Json } catch { $null })
+        $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name | Where-Object { $_ })
         $Expected = & $Render $Definition.expected $Item.Variables
         $Tiers = foreach ($Tier in @($Item.Tiers)) {
             if (-not $Tier) { continue }
@@ -182,6 +190,7 @@ function Invoke-CIPPBaselineStandard {
         # 3. Project to the expected keys (subset compare) and diff. A key the current object
         # lacks stays present as $null so the compare flags the presence mismatch.
         $Differences = @()
+        $PreFilterDifferences = @()
         if ($null -ne $Current) {
             $Projected = [PSCustomObject]@{}
             foreach ($Property in $Expected.PSObject.Properties.Name) {
@@ -191,10 +200,9 @@ function Invoke-CIPPBaselineStandard {
             # Compare-CIPPIntuneObject emits $null (not an empty set) when nothing differs.
             $Differences = @(Compare-CIPPIntuneObject -ReferenceObject $Expected -DifferenceObject $Projected | Where-Object { $_ })
 
-            # Per-property acceptances (design addendum): an accepted path tolerates that
-            # property's drift - and only that property's. Prefix matches cover nested paths.
-            $AcceptedPaths = $(try { $Prior.AcceptedPaths | ConvertFrom-Json } catch { $null })
-            $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name)
+            # An accepted path tolerates that property's drift - and only that property's.
+            # Prefix matches cover nested paths.
+            $PreFilterDifferences = $Differences
             if ($AcceptedKeys.Count -gt 0) {
                 $Differences = @($Differences | Where-Object {
                         $Property = $_.Property
@@ -204,6 +212,9 @@ function Invoke-CIPPBaselineStandard {
             $Result.Diff = $Differences
         }
         $Compliant = ($null -ne $Current) -and ($Differences.Count -eq 0)
+        # True when accepted paths actually swallowed drift this run - the row's alignment
+        # (full or partial) is owed to acceptances, not to the tenant matching the baseline.
+        $PathAccepted = $PreFilterDifferences.Count -gt $Differences.Count
 
         # 4. Status lifecycle + write gate.
         $Expires = if ("$($Prior.DeviationExpires)" -match '^\d+$') { [int64]$Prior.DeviationExpires } else { 0 }
@@ -226,10 +237,22 @@ function Invoke-CIPPBaselineStandard {
             Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
             return $Result
         }
+        if ($Compliant -and $PathAccepted -and -not "$PriorStatus".StartsWith('Denied')) {
+            # Aligned only because every deviating property is individually accepted: that
+            # scores as Accepted (aligned via acceptance), not Compliant, and the tolerated
+            # diff stays visible in history.
+            $Result.Diff = $PreFilterDifferences
+            $Result.Outcome = 'Drift'
+            $Result.Status = 'Accepted'
+            Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
+            return $Result
+        }
 
-        # An active Accept or a pending delete always blocks remediation - including the
-        # fail-open path, which must never blind-write over an operator's acceptance.
-        $TriageHold = $AcceptActive -or $PriorStatus -eq 'Denied - Delete Pending'
+        # An active Accept, a pending delete, or a live path acceptance always blocks
+        # remediation - including the fail-open path. Remediation writes the WHOLE expected
+        # object, which would wipe an accepted property's deviation along with the rest.
+        $PathHold = $AcceptedKeys.Count -gt 0 -and ($PathAccepted -or $null -eq $Current)
+        $TriageHold = $AcceptActive -or $PriorStatus -eq 'Denied - Delete Pending' -or $PathHold
         $RemediationAllowed = (($Mode -eq 'oneoff') -or ($Mode -eq 'run' -and ($Item.RemediateEnabled -or $RemediateOnExpire -or $DeniedRemediate))) -and -not $TriageHold
         # Write only when needed: drift proves it, -Force (manual runs) demands it, and
         # checkBeforeRun=false standards cannot prove a write unnecessary.
@@ -242,6 +265,8 @@ function Invoke-CIPPBaselineStandard {
                 switch ($Definition.remediate.executor) {
                     'ExoRequest' { Invoke-CIPPBaselineExoRequest -Remediate $Rendered -TenantFilter $TenantFilter }
                     'GraphRequest' { Invoke-CIPPBaselineGraphRequest -Remediate $Rendered -TenantFilter $TenantFilter }
+                    'TeamsRequest' { Invoke-CIPPBaselineTeamsRequest -Remediate $Rendered -TenantFilter $TenantFilter }
+                    'SPOTenant' { Invoke-CIPPBaselineSPOTenant -Remediate $Rendered -TenantFilter $TenantFilter }
                     'CATemplate' { Invoke-CIPPBaselineCATemplate -Remediate $Rendered -TenantFilter $TenantFilter }
                     default { throw "Unknown remediate executor '$($Definition.remediate.executor)' on $($Definition.name)." }
                 }
@@ -275,10 +300,11 @@ function Invoke-CIPPBaselineStandard {
         } else {
             $Result.Outcome = 'Drift'
             # A pending deny is an operator order - a run that could not remediate (compare
-            # mode, or a failed attempt) must not silently clear it.
-            $Result.Status = if ("$PriorStatus".StartsWith('Denied')) { $PriorStatus } else { 'Drift' }
-            # Alerts fire on the transition INTO Drift, not every run.
-            if ($Result.Status -eq 'Drift' -and $PriorStatus -ne 'Drift' -and $Item.AlertEnabled) { $Result.AlertEvent = 'Drift' }
+            # mode, or a failed attempt) must not silently clear it. Drift partially covered
+            # by accepted paths surfaces as Partially Accepted.
+            $Result.Status = if ("$PriorStatus".StartsWith('Denied')) { $PriorStatus } elseif ($PathAccepted) { 'Partially Accepted' } else { 'Drift' }
+            # Alerts fire on the transition INTO drift (full or partial), not every run.
+            if ($Result.Status -in @('Drift', 'Partially Accepted') -and $PriorStatus -notin @('Drift', 'Partially Accepted') -and $Item.AlertEnabled) { $Result.AlertEvent = 'Drift' }
         }
 
         Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId

@@ -1,0 +1,52 @@
+{
+  "name": "DisableAppCreation",
+  "label": "Disable App creation by users",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.1.2.2)",
+    "CISA (MS.AAD.4.1v1)",
+    "EIDSCA.AP10",
+    "Essential 8 (1175)",
+    "NIST CSF 2.0 (PR.AA-05)",
+    "SMB1001 (2.8)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Disables the ability for users to create App registrations in the tenant.",
+  "executiveText": "Prevents regular employees from creating application registrations that could be used to maintain unauthorized access to company systems. This security measure ensures that only authorized IT personnel can create applications, reducing the risk of persistent security breaches through malicious applications.",
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowAppCreation": {
+      "type": "switch",
+      "label": "Allow users to create app registrations",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "allowedToCreateApps": "%allowAppCreation%"
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy",
+    "object": "defaultUserRolePermissions"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authorizationPolicy/authorizationPolicy",
+        "body": {
+          "defaultUserRolePermissions": {
+            "allowedToCreateApps": "%allowAppCreation%"
+          }
+        }
+      }
+    ]
+  }
+}

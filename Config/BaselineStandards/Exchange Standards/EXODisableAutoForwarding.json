@@ -1,0 +1,74 @@
+{
+  "name": "EXODisableAutoForwarding",
+  "label": "Disable automatic forwarding to external recipients",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (6.2.1)",
+    "mdo_autoforwardingmode",
+    "mdo_blockmailforward",
+    "CISA (MS.EXO.4.1v1)",
+    "NIST CSF 2.0 (PR.DS-02)"
+  ],
+  "impact": "High Impact",
+  "helpText": "Disables the ability for users to automatically forward e-mails to external recipients. This is to prevent data exfiltration. Please check if there are any legitimate use cases for this feature before implementing, like forwarding invoices and such.",
+  "executiveText": "Prevents employees from automatically forwarding company emails to external addresses, protecting against data leaks and unauthorized information sharing. This security measure helps maintain control over sensitive business communications while preventing both accidental and intentional data exfiltration.",
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "autoForwardingMode": {
+      "type": "autoComplete",
+      "label": "Automatic forwarding mode",
+      "options": [
+        {
+          "label": "Off - forwarding to external recipients is disabled",
+          "value": "Off"
+        },
+        {
+          "label": "Automatic - controlled by outbound spam detection",
+          "value": "Automatic"
+        },
+        {
+          "label": "On - forwarding to external recipients is allowed",
+          "value": "On"
+        }
+      ],
+      "default": "Off",
+      "recommended": "Off"
+    }
+  },
+  "expected": {
+    "AutoForwardingMode": "%autoForwardingMode%"
+  },
+  "read": {
+    "cacheType": "ExoHostedOutboundSpamFilterPolicy",
+    "filter": [
+      {
+        "property": "Identity",
+        "value": "Default"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-HostedOutboundSpamFilterPolicy",
+        "params": {
+          "Identity": "Default",
+          "AutoForwardingMode": "%autoForwardingMode%"
+        }
+      }
+    ]
+  }
+}

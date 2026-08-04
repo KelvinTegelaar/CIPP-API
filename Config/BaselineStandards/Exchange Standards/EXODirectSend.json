@@ -1,0 +1,40 @@
+{
+  "name": "EXODirectSend",
+  "label": "Set Direct Send state",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (6.5.5)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Sets the state of Direct Send in Exchange Online. Direct Send allows applications to send emails directly to Exchange Online mailboxes as the tenants domains, without requiring authentication.",
+  "executiveText": "Controls whether business applications and devices (like printers or scanners) can send emails through the company's email system without authentication. While this enables convenient features like scan-to-email, it may pose security risks and should be carefully managed.",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "rejectDirectSend": {
+      "type": "switch",
+      "label": "Reject Direct Send (Direct Send disabled)",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "RejectDirectSend": "%rejectDirectSend%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "RejectDirectSend": "%rejectDirectSend%"
+        }
+      }
+    ]
+  }
+}

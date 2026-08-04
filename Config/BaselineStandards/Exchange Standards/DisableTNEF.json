@@ -1,0 +1,53 @@
+{
+  "name": "DisableTNEF",
+  "label": "Disable TNEF/winmail.dat",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Disables Transport Neutral Encapsulation Format (TNEF)/winmail.dat for the tenant. TNEF can cause issues if the recipient is not using a client supporting TNEF.",
+  "executiveText": "Prevents the creation of winmail.dat attachments that can cause compatibility issues when sending emails to external recipients using non-Outlook email clients. This improves email compatibility and reduces support issues with external partners and customers.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "tnefEnabled": {
+      "type": "switch",
+      "label": "TNEF/winmail.dat enabled for the default remote domain",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "TNEFEnabled": "%tnefEnabled%"
+  },
+  "read": {
+    "cacheType": "ExoRemoteDomain",
+    "filter": [
+      {
+        "property": "Identity",
+        "value": "Default"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-RemoteDomain",
+        "params": {
+          "Identity": "Default",
+          "TNEFEnabled": "%tnefEnabled%"
+        }
+      }
+    ]
+  }
+}
