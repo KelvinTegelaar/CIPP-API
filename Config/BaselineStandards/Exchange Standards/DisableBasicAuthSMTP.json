@@ -34,9 +34,13 @@
   },
   "remediate": {
     "executor": "ExoRequest",
-    "cmdlet": "Set-TransportConfig",
-    "params": {
-      "SmtpClientAuthenticationDisabled": "%disabled%"
-    }
+    "cmdlets": [
+      {
+        "cmdlet": "Set-TransportConfig",
+        "params": {
+          "SmtpClientAuthenticationDisabled": "%disabled%"
+        }
+      }
+    ]
   }
 }

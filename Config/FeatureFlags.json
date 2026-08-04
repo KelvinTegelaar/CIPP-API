@@ -5,9 +5,7 @@
     "Description": "The Best Practice Analyser has been deprecated and will be removed in a future release.",
     "Enabled": false,
     "AllowUserToggle": true,
-    "Timers": [
-      "80070b4f-95ed-4e5f-be4c-9e339306d4aa"
-    ],
+    "Timers": ["80070b4f-95ed-4e5f-be4c-9e339306d4aa"],
     "Endpoints": [
       "BestPracticeAnalyser_List",
       "ExecBPA",
@@ -53,9 +51,7 @@
     "Enabled": false,
     "AllowUserToggle": true,
     "Timers": [],
-    "Endpoints": [
-      "ExecMcp"
-    ],
+    "Endpoints": ["ExecMcp"],
     "Pages": [],
     "Hidden": false
   },
@@ -66,12 +62,8 @@
     "Enabled": true,
     "AllowUserToggle": false,
     "Timers": [],
-    "Endpoints": [
-      "ExecAppInsightsQuery"
-    ],
-    "Pages": [
-      "/cipp/advanced/diagnostics"
-    ],
+    "Endpoints": ["ExecAppInsightsQuery"],
+    "Pages": ["/cipp/advanced/diagnostics"],
     "Hidden": true
   },
   {
@@ -81,12 +73,8 @@
     "Enabled": true,
     "AllowUserToggle": false,
     "Timers": [],
-    "Endpoints": [
-      "ExecBackendURLs"
-    ],
-    "Pages": [
-      "/cipp/settings/backend"
-    ],
+    "Endpoints": ["ExecBackendURLs"],
+    "Pages": ["/cipp/settings/backend"],
     "Hidden": true
   },
   {
@@ -96,12 +84,19 @@
     "Enabled": true,
     "AllowUserToggle": false,
     "Timers": [],
-    "Endpoints": [
-      "ExecOffloadFunctions"
-    ],
-    "Pages": [
-      "/cipp/advanced/super-admin/function-offloading"
-    ],
+    "Endpoints": ["ExecOffloadFunctions"],
+    "Pages": ["/cipp/advanced/super-admin/function-offloading"],
+    "Hidden": true
+  },
+  {
+    "Id": "Baselines",
+    "Name": "Baselines",
+    "Description": "The drift-first baseline engine (preview). Enables the scheduled baseline run; the baseline pages and on-demand runs work regardless.",
+    "Enabled": false,
+    "AllowUserToggle": true,
+    "Timers": ["9f2c7b1e-4a6d-4c3f-8b9a-5e1d2f7c0a44"],
+    "Endpoints": [],
+    "Pages": [],
     "Hidden": true
   }
 ]

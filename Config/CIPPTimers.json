@@ -274,5 +274,13 @@
     "Priority": 11,
     "RunOnProcessor": false,
     "IsSystem": true
+  },
+  {
+    "Id": "9f2c7b1e-4a6d-4c3f-8b9a-5e1d2f7c0a44",
+    "Command": "Start-CIPPBaselineOrchestrator",
+    "Description": "Baseline run: graduations, drift detection and remediation for all baselines",
+    "Cron": "0 0 */12 * * *",
+    "Priority": 10,
+    "RunOnProcessor": true
   }
 ]

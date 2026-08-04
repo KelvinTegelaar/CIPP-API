@@ -42,16 +42,20 @@
     "AllowClickThrough": "%allowClickThrough%"
   },
   "read": {
-    "cacheType": "SafeLinksPolicy"
+    "cacheType": "ExoSafeLinksPolicies"
   },
   "remediate": {
     "executor": "ExoRequest",
-    "cmdlet": "Set-SafeLinksPolicy",
-    "params": {
-      "Identity": "Default",
-      "EnableSafeLinksForEmail": "%enableForEmail%",
-      "TrackClicks": "%trackClicks%",
-      "AllowClickThrough": "%allowClickThrough%"
-    }
+    "cmdlets": [
+      {
+        "cmdlet": "Set-SafeLinksPolicy",
+        "params": {
+          "Identity": "Default",
+          "EnableSafeLinksForEmail": "%enableForEmail%",
+          "TrackClicks": "%trackClicks%",
+          "AllowClickThrough": "%allowClickThrough%"
+        }
+      }
+    ]
   }
 }

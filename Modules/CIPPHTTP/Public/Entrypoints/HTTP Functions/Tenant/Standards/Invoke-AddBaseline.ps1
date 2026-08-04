@@ -124,6 +124,21 @@ function Invoke-AddBaseline {
             }
         }
 
+        # Resolved rows for standards no longer in this baseline would linger forever -
+        # clear them now so the alignment view reflects the edit immediately.
+        $Instances = [System.Collections.Generic.List[string]]::new()
+        foreach ($Stage in $Request.Body.stages) {
+            foreach ($Config in @($Stage.standards)) {
+                if (-not $Config) { continue }
+                $Instances.Add($(if ($Config -is [string]) { $Config } else { $Config.instance ?? $Config.standard }))
+            }
+        }
+        $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
+        $Orphans = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "TemplateId eq '$SafeGuid'" | Where-Object { $Instances -notcontains $_.StandardName })
+        if ($Orphans) {
+            Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $Orphans
+        }
+
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Baseline $($Request.Body.templateName) ($GUID) saved; $DeltaCount delta rows written." -Sev 'Info'
         $Results = [pscustomobject]@{ Results = 'Successfully saved the baseline'; Metadata = @{ id = $GUID; deltas = $DeltaCount } }
         $StatusCode = [HttpStatusCode]::OK

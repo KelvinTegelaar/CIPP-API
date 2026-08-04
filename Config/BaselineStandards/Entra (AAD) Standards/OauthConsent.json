@@ -30,10 +30,15 @@
     "cacheType": "AuthorizationPolicy"
   },
   "remediate": {
-    "executor": "GraphPatch",
-    "uri": "policies/authorizationPolicy",
-    "body": {
-      "permissionGrantPolicyIdsAssignedToDefaultUserRole": []
-    }
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authorizationPolicy",
+        "body": {
+          "permissionGrantPolicyIdsAssignedToDefaultUserRole": []
+        }
+      }
+    ]
   }
 }

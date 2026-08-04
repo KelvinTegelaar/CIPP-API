@@ -35,9 +35,18 @@
   },
   "remediate": {
     "executor": "ExoRequest",
-    "cmdlet": "Set-AdminAuditLogConfig",
-    "params": {
-      "UnifiedAuditLogIngestionEnabled": "%enabled%"
-    }
+    "cmdlets": [
+      {
+        "cmdlet": "Enable-OrganizationCustomization",
+        "params": {},
+        "continueOnError": true
+      },
+      {
+        "cmdlet": "Set-AdminAuditLogConfig",
+        "params": {
+          "UnifiedAuditLogIngestionEnabled": "%enabled%"
+        }
+      }
+    ]
   }
 }

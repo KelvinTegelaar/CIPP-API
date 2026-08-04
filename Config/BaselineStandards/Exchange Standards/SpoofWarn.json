@@ -33,9 +33,13 @@
   },
   "remediate": {
     "executor": "ExoRequest",
-    "cmdlet": "Set-ExternalInOutlook",
-    "params": {
-      "Enabled": "%enabled%"
-    }
+    "cmdlets": [
+      {
+        "cmdlet": "Set-ExternalInOutlook",
+        "params": {
+          "Enabled": "%enabled%"
+        }
+      }
+    ]
   }
 }

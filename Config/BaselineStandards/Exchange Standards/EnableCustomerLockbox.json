@@ -32,9 +32,13 @@
   },
   "remediate": {
     "executor": "ExoRequest",
-    "cmdlet": "Set-OrganizationConfig",
-    "params": {
-      "CustomerLockBoxEnabled": "%enabled%"
-    }
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "CustomerLockBoxEnabled": "%enabled%"
+        }
+      }
+    ]
   }
 }

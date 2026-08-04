@@ -39,9 +39,10 @@ function Convert-CIPPBaselineResolvedEntity {
         licenseAvailable    = if ($null -ne $Entity.LicenseAvailable) { [bool]$Entity.LicenseAvailable } else { $true }
         sourceScope         = $Entity.SourceScope
         sourceTemplate      = $Entity.SourceTemplate ?? $Entity.SourceScope
+        stage               = $(if ($Entity.StageName) { $Entity.StageName } elseif ($Entity.Stage) { "Stage $($Entity.Stage)" } else { $null })
         inheritance         = @(& $ParseJson $Entity.Inheritance)
         acceptedPaths       = (& $ParseJson $Entity.AcceptedPaths) ?? [PSCustomObject]@{}
-        deviationState      = $Entity.DeviationState
+        status              = $Entity.Status
         deviationReason     = $Entity.DeviationReason
         deviationBy         = $Entity.DeviationBy
         deviationAt         = $Entity.DeviationAt
@@ -49,6 +50,5 @@ function Convert-CIPPBaselineResolvedEntity {
         remediateOnExpire   = [bool]$Entity.RemediateOnExpire
         lastRun             = $Entity.LastRun
         lastRemediated      = $Entity.LastRemediated
-        lastOutcome         = $Entity.LastOutcome
     }
 }

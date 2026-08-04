@@ -27,15 +27,20 @@
   },
   "read": {
     "cacheType": "AuthorizationPolicy",
-    "path": "defaultUserRolePermissions"
+    "object": "defaultUserRolePermissions"
   },
   "remediate": {
-    "executor": "GraphPatch",
-    "uri": "policies/authorizationPolicy",
-    "body": {
-      "defaultUserRolePermissions": {
-        "allowedToCreateApps": "%allowAppCreation%"
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authorizationPolicy",
+        "body": {
+          "defaultUserRolePermissions": {
+            "allowedToCreateApps": "%allowAppCreation%"
+          }
+        }
       }
-    }
+    ]
   }
 }

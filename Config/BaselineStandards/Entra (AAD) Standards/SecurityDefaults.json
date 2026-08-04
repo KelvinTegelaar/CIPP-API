@@ -29,10 +29,15 @@
     "cacheType": "SecurityDefaults"
   },
   "remediate": {
-    "executor": "GraphPatch",
-    "uri": "policies/identitySecurityDefaultsEnforcementPolicy",
-    "body": {
-      "isEnabled": "%enabled%"
-    }
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/identitySecurityDefaultsEnforcementPolicy",
+        "body": {
+          "isEnabled": "%enabled%"
+        }
+      }
+    ]
   }
 }

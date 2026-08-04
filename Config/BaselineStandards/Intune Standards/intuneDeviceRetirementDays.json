@@ -31,12 +31,17 @@
     "cacheType": "DeviceManagementSettings"
   },
   "remediate": {
-    "executor": "GraphPatch",
-    "uri": "deviceManagement",
-    "body": {
-      "managedDeviceCleanupSettings": {
-        "deviceInactivityBeforeRetirementInDays": "%days%"
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "deviceManagement",
+        "body": {
+          "managedDeviceCleanupSettings": {
+            "deviceInactivityBeforeRetirementInDays": "%days%"
+          }
+        }
       }
-    }
+    ]
   }
 }

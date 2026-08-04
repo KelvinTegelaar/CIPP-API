@@ -16,14 +16,24 @@
   "compare": "subset",
   "multiple": true,
   "variables": {
+    "taskName": {
+      "type": "textField",
+      "label": "Task name",
+      "default": ""
+    },
     "instructions": {
       "type": "textField",
       "label": "Instructions for the operator",
       "default": ""
     },
+    "documentationUrl": {
+      "type": "textField",
+      "label": "Documentation link (optional)",
+      "default": ""
+    },
     "recurrence": {
       "type": "autoComplete",
-      "label": "Raise a deviation every",
+      "label": "Reopen the task every",
       "options": [
         {
           "label": "Week",
@@ -36,16 +46,22 @@
         {
           "label": "Quarter",
           "value": "quarterly"
+        },
+        {
+          "label": "Never (one-time task)",
+          "value": "once"
         }
       ],
       "default": "monthly"
     }
   },
   "expected": {
-    "completed": true,
-    "instructions": "%instructions%",
-    "recurrence": "%recurrence%"
+    "completed": true
   },
-  "custom": true,
-  "customFunction": "Invoke-CIPPBaselineCustomManualTask"
+  "manual": {
+    "taskName": "%taskName%",
+    "instructions": "%instructions%",
+    "documentationUrl": "%documentationUrl%",
+    "reopen": "%recurrence%"
+  }
 }

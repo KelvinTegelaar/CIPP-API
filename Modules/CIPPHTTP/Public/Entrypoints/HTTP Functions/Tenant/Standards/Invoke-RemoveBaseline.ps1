@@ -5,8 +5,8 @@ function Invoke-RemoveBaseline {
     .ROLE
         Tenant.Standards.ReadWrite
     .DESCRIPTION
-        Deletes a baseline and its rollout state. Resolved rows are left for the
-        engine to clean up on the next run, when the baseline stops resolving.
+        Deletes a baseline with its rollout state, delta rows, and resolved rows - the
+        alignment view reflects the removal immediately.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -33,6 +33,11 @@ function Invoke-RemoveBaseline {
         $StateRows = Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeID'"
         if ($StateRows) {
             Remove-CIPPAzDataTableEntity -Force @StateTable -Entity $StateRows
+        }
+        $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
+        $ResolvedRows = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "TemplateId eq '$SafeID'"
+        if ($ResolvedRows) {
+            Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $ResolvedRows
         }
 
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Removed baseline $BaselineName ($ID)." -Sev 'Info'

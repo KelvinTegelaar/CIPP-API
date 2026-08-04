@@ -29,10 +29,15 @@
     "cacheType": "AuthorizationPolicy"
   },
   "remediate": {
-    "executor": "GraphPatch",
-    "uri": "policies/authorizationPolicy",
-    "body": {
-      "blockMsolPowerShell": "%block%"
-    }
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authorizationPolicy",
+        "body": {
+          "blockMsolPowerShell": "%block%"
+        }
+      }
+    ]
   }
 }

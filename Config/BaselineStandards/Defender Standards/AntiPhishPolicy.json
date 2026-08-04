@@ -60,20 +60,26 @@
     "EnableMailboxIntelligence": "%enableMailboxIntelligence%"
   },
   "read": {
-    "cacheType": "AntiPhishPolicy",
-    "select": {
-      "property": "IsDefault",
-      "equals": true
-    }
+    "cacheType": "ExoAntiPhishPolicies",
+    "filter": [
+      {
+        "property": "IsDefault",
+        "value": true
+      }
+    ]
   },
   "remediate": {
     "executor": "ExoRequest",
-    "cmdlet": "Set-AntiPhishPolicy",
-    "params": {
-      "Identity": "Office365 AntiPhish Default",
-      "Enabled": "%enabled%",
-      "PhishThresholdLevel": "%phishThresholdLevel%",
-      "EnableMailboxIntelligence": "%enableMailboxIntelligence%"
-    }
+    "cmdlets": [
+      {
+        "cmdlet": "Set-AntiPhishPolicy",
+        "params": {
+          "Identity": "Office365 AntiPhish Default",
+          "Enabled": "%enabled%",
+          "PhishThresholdLevel": "%phishThresholdLevel%",
+          "EnableMailboxIntelligence": "%enableMailboxIntelligence%"
+        }
+      }
+    ]
   }
 }

@@ -66,14 +66,17 @@
   },
   "read": {
     "cacheType": "ConditionalAccessPolicy",
-    "select": {
-      "property": "displayName",
-      "equals": "%caTemplate%"
-    }
+    "filter": [
+      {
+        "property": "displayName",
+        "value": "%caTemplate%"
+      }
+    ]
   },
   "remediate": {
     "executor": "CATemplate",
     "caTemplate": "%caTemplate%",
     "state": "%state%"
-  }
+  },
+  "checkBeforeRun": false
 }

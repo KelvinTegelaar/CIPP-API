@@ -44,16 +44,21 @@
     }
   },
   "expected": {
-    "sharingCapability": "%level%"
+    "SharingCapability": "%level%"
   },
   "read": {
-    "cacheType": "SharePointSettings"
+    "cacheType": "SPOTenant"
   },
   "remediate": {
-    "executor": "GraphPatch",
-    "uri": "admin/sharepoint/settings",
-    "body": {
-      "sharingCapability": "%level%"
-    }
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "admin/sharepoint/settings",
+        "body": {
+          "SharingCapability": "%level%"
+        }
+      }
+    ]
   }
 }

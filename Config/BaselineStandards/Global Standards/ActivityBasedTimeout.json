@@ -47,5 +47,5 @@
     "cacheType": "ActivityBasedTimeoutPolicy"
   },
   "custom": true,
-  "customFunction": "Invoke-CIPPBaselineCustomActivityBasedTimeout"
+  "customFunction": "Invoke-CIPPBaselineActivityBasedTimeout"
 }

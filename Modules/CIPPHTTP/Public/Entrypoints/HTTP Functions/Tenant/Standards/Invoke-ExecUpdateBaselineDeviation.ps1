@@ -5,11 +5,13 @@ function Invoke-ExecUpdateBaselineDeviation {
     .ROLE
         Tenant.Standards.ReadWrite
     .DESCRIPTION
-        Triage for Baseline deviations on a resolved (tenant, standard) row:
-        Accept (reason, optional expiry, optional remediate-on-expire), Suppress (mute alerts,
-        stays non-compliant), Clear (re-surface as Detected), AcceptPath (tolerate one property
-        while others keep alerting), and CompleteTask (mark a manual task done). Writes the
-        BaselineAlignment columns from design doc §4.2 directly.
+        Triage for baseline drift on a resolved (tenant, standard) row:
+        Accept (reason required, optional expiry, optional remediate-on-expire),
+        Deny (method remediate|delete - the engine remediates on the next run regardless of
+        the configured posture, or holds Delete Pending for object-type standards),
+        Clear (re-surface as Drift), AcceptPath (tolerate one property while others keep
+        alerting), and CompleteTask (mark a manual task done). One Status column; timestamps
+        are unix seconds.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -44,7 +46,7 @@ function Invoke-ExecUpdateBaselineDeviation {
 
         switch ($Action) {
             'Accept' {
-                & $Set 'DeviationState' 'Accepted'
+                & $Set 'Status' 'Accepted'
                 & $Set 'DeviationReason' "$($Request.Body.reason)"
                 & $Set 'DeviationBy' "$User"
                 & $Set 'DeviationAt' $Now
@@ -52,22 +54,27 @@ function Invoke-ExecUpdateBaselineDeviation {
                 & $Set 'RemediateOnExpire' ([bool]$Request.Body.remediateOnExpire)
                 $Message = "Accepted the deviation on $Standard for $TenantFilter."
             }
-            'Suppress' {
-                & $Set 'DeviationState' 'Suppressed'
+            'Deny' {
+                $Method = $Request.Body.method ?? 'remediate'
+                if ($Method -notin @('remediate', 'delete')) {
+                    throw "Unknown deny method '$Method'. Use remediate or delete."
+                }
+                & $Set 'Status' $(if ($Method -eq 'delete') { 'Denied - Delete Pending' } else { 'Denied - Remediate Pending' })
                 & $Set 'DeviationReason' "$($Request.Body.reason)"
                 & $Set 'DeviationBy' "$User"
                 & $Set 'DeviationAt' $Now
-                & $Set 'DeviationExpires' ($Request.Body.expires ?? '')
-                $Message = "Suppressed alerts for $Standard on $TenantFilter."
+                & $Set 'DeviationExpires' ''
+                & $Set 'RemediateOnExpire' $false
+                $Message = "Denied the deviation on $Standard for $TenantFilter - $Method pending on the next run."
             }
             'Clear' {
-                & $Set 'DeviationState' 'Detected'
+                & $Set 'Status' 'Drift'
                 & $Set 'DeviationReason' ''
                 & $Set 'DeviationBy' ''
                 & $Set 'DeviationAt' ''
                 & $Set 'DeviationExpires' ''
                 & $Set 'RemediateOnExpire' $false
-                $Message = "Cleared the deviation status on $Standard for $TenantFilter - it re-surfaces as Detected."
+                $Message = "Cleared the triage on $Standard for $TenantFilter - it re-surfaces as Drift."
             }
             'AcceptPath' {
                 $Path = $Request.Body.path
@@ -82,9 +89,8 @@ function Invoke-ExecUpdateBaselineDeviation {
                 $Message = "Accepted the deviation on property $Path of $Standard for $TenantFilter. Other properties keep alerting."
             }
             'CompleteTask' {
-                & $Set 'DeviationState' 'Compliant'
+                & $Set 'Status' 'Compliant'
                 & $Set 'Compliant' $true
-                & $Set 'LastOutcome' 'Remediated'
                 & $Set 'LastRemediated' $Now
                 if ($Entity.CurrentValue) {
                     $Current = $Entity.CurrentValue | ConvertFrom-Json
@@ -94,7 +100,7 @@ function Invoke-ExecUpdateBaselineDeviation {
                 $Message = "Marked the manual task $Standard as completed for $TenantFilter."
             }
             default {
-                throw "Unknown action '$Action'. Use Accept, Suppress, Clear, AcceptPath, or CompleteTask."
+                throw "Unknown action '$Action'. Use Accept, Deny, Clear, AcceptPath, or CompleteTask."
             }
         }
 
