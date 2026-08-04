@@ -8,6 +8,12 @@ function Invoke-GetCippAlerts {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $Alerts = [System.Collections.Generic.List[object]]::new()
+
+    # Hosted maintenance notice, set as a JSON blob in CIPP_MAINTENANCE_NOTICE. Added first so it
+    # sorts to the top of the banner stack. Self-suppresses once its end time has passed.
+    $MaintenanceNotice = Get-CIPPMaintenanceNotice
+    if ($MaintenanceNotice) { $Alerts.Add($MaintenanceNotice) }
+
     $Table = Get-CippTable -tablename CippAlerts
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
