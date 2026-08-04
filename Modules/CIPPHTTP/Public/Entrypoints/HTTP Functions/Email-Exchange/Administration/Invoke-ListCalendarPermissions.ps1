@@ -41,10 +41,35 @@ Function Invoke-ListCalendarPermissions {
 
         # Original live query logic for specific user
         $GetCalParam = @{Identity = $UserID; FolderScope = 'Calendar' }
-        $CalendarFolder = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderStatistics' -anchor $UserID -cmdParams $GetCalParam | Select-Object -First 1 -ExcludeProperty *data.type*
+        $CalendarFolders = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderStatistics' -anchor $UserID -cmdParams $GetCalParam | Select-Object -ExcludeProperty *data.type*
+        $CalendarFolder = @($CalendarFolders) | Where-Object { $_.FolderType -eq 'Calendar' } | Select-Object -First 1
+        if (-not $CalendarFolder) {
+            $CalendarFolder = @($CalendarFolders) | Select-Object -First 1
+        }
         $CalParam = @{Identity = "$($UserID):\$($CalendarFolder.name)" }
         $Mailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{Identity = $UserID }
-        $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderPermission' -anchor $UserID -cmdParams $CalParam -UseSystemMailbox $true | Select-Object Identity, User, AccessRights, FolderName, @{ Name = 'MailboxInfo'; Expression = { $Mailbox } }
+        $RawPermissions = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderPermission' -anchor $UserID -cmdParams $CalParam -UseSystemMailbox $true
+
+        $ResolveCache = @{}
+        $GraphRequest = foreach ($Perm in @($RawPermissions)) {
+            $UserKey = [string]$Perm.User
+            if (-not $ResolveCache.ContainsKey($UserKey)) {
+                $ResolveCache[$UserKey] = Resolve-CIPPFolderPermissionUser -User $Perm.User -TenantFilter $TenantFilter
+            }
+            $Resolved = $ResolveCache[$UserKey]
+
+            [PSCustomObject]@{
+                Identity          = $Perm.Identity
+                User              = $Resolved.User ?? $Perm.User
+                UserEmail         = $Resolved.UserEmail
+                UserId            = $Resolved.UserId
+                UserAmbiguous     = [bool]$Resolved.UserAmbiguous
+                CandidateEmails   = $Resolved.CandidateEmails
+                AccessRights      = $Perm.AccessRights
+                FolderName        = $Perm.FolderName
+                MailboxInfo       = $Mailbox
+            }
+        }
 
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Calendar permissions listed for $($TenantFilter)" -sev Debug
         $StatusCode = [HttpStatusCode]::OK

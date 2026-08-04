@@ -36,71 +36,51 @@ function Set-CIPPCalendarPermission {
             $FolderIdentity = "$($UserID):\$FolderName"
         }
 
-        $CalParam = [PSCustomObject]@{
-            Identity               = $FolderIdentity
-            AccessRights           = @($Permissions)
-            User                   = $UserToGetPermissions
-            SendNotificationToUser = $SendNotificationToUser
+        $TargetUser = if ($RemoveAccess) { $RemoveAccess } else { $UserToGetPermissions }
+        $Resolved = Resolve-CIPPFolderPermissionUser -User $TargetUser -TenantFilter $TenantFilter
+        if (-not [string]::IsNullOrWhiteSpace($Resolved.UserEmail) -and [string]::IsNullOrWhiteSpace($LoggingName)) {
+            $LoggingName = $Resolved.UserEmail
+        } elseif ($Resolved.User -and ($LoggingName -eq $TargetUser)) {
+            $LoggingName = $Resolved.User
         }
 
+        $SharingFlags = $null
         if ($CanViewPrivateItems) {
-            $CalParam | Add-Member -NotePropertyName 'SharingPermissionFlags' -NotePropertyValue 'Delegate,CanViewPrivateItems'
+            $SharingFlags = 'Delegate,CanViewPrivateItems'
         }
 
         if ($RemoveAccess) {
             if ($PSCmdlet.ShouldProcess("$UserID\$FolderName", "Remove permissions for $LoggingName")) {
-                try {
-                    $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{Identity = $FolderIdentity; User = $RemoveAccess }
-                } catch {
-                    $RemoveError = Get-CippException -Exception $_
-                    if ($RemoveError.NormalizedError -match 'InvalidExternalUserIdException' -and $RemoveAccess -match '@') {
-                        $ResolvedUser = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$RemoveAccess" -tenantid $TenantFilter -NoAuthCheck $true
-                        if ($ResolvedUser.id) {
-                            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{Identity = $FolderIdentity; User = $ResolvedUser.id }
-                        } else {
-                            throw
-                        }
-                    } else {
-                        throw
-                    }
+                $Attempt = Invoke-CIPPMailboxFolderPermissionAttempt -Action Remove -TenantFilter $TenantFilter -FolderIdentity $FolderIdentity -Candidates $Resolved.Candidates -Anchor $UserID
+                $Result = "Successfully removed access for $LoggingName from calendar $($FolderIdentity)"
+                if ($Attempt.UsedUser -and $Attempt.UsedUser -ne $RemoveAccess) {
+                    $Result += " (resolved as $($Attempt.UsedUser))"
                 }
-                $Result = "Successfully removed access for $LoggingName from calendar $($CalParam.Identity)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
 
-                # Sync cache
+                # Sync cache — use original + resolved identities
                 Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $RemoveAccess -Action 'Remove'
+                if ($Resolved.UserEmail -and $Resolved.UserEmail -ne $RemoveAccess) {
+                    Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $Resolved.UserEmail -Action 'Remove'
+                }
+                if ($Resolved.User -and $Resolved.User -ne $RemoveAccess) {
+                    Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $Resolved.User -Action 'Remove'
+                }
             }
         } else {
             if ($PSCmdlet.ShouldProcess("$UserID\$FolderName", "Set permissions for $LoggingName to $Permissions")) {
                 try {
-                    try {
-                        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxFolderPermission' -cmdParams $CalParam -Anchor $UserID
-                    } catch {
-                        $SetError = Get-CippException -Exception $_
-                        if ($SetError.NormalizedError -match 'InvalidExternalUserIdException') {
-                            throw
-                        }
-                        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-MailboxFolderPermission' -cmdParams $CalParam -Anchor $UserID
-                    }
+                    $null = Invoke-CIPPMailboxFolderPermissionAttempt -Action Set -TenantFilter $TenantFilter -FolderIdentity $FolderIdentity -Candidates $Resolved.Candidates -Anchor $UserID -AccessRights @($Permissions) -SendNotificationToUser $SendNotificationToUser -SharingPermissionFlags $SharingFlags
                 } catch {
-                    $InnerError = Get-CippException -Exception $_
-                    if ($InnerError.NormalizedError -match 'InvalidExternalUserIdException' -and $UserToGetPermissions -match '@') {
-                        $ResolvedUser = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserToGetPermissions" -tenantid $TenantFilter -NoAuthCheck $true
-                        if ($ResolvedUser.id) {
-                            $CalParam.User = $ResolvedUser.id
-                            try {
-                                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxFolderPermission' -cmdParams $CalParam -Anchor $UserID
-                            } catch {
-                                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-MailboxFolderPermission' -cmdParams $CalParam -Anchor $UserID
-                            }
-                        } else {
-                            throw
-                        }
-                    } else {
+                    $SetError = Get-CippException -Exception $_
+                    # Only fall through to Add when the entry is missing; do not Add after identity resolution failures
+                    if ($SetError.NormalizedError -match 'InvalidExternalUserIdException|Couldn.?t find user|not a valid Exchange recipient|isn.?t a valid user') {
                         throw
                     }
+                    $null = Invoke-CIPPMailboxFolderPermissionAttempt -Action Add -TenantFilter $TenantFilter -FolderIdentity $FolderIdentity -Candidates $Resolved.Candidates -Anchor $UserID -AccessRights @($Permissions) -SendNotificationToUser $SendNotificationToUser -SharingPermissionFlags $SharingFlags
                 }
-                $Result = "Successfully set permissions on folder $($CalParam.Identity). The user $LoggingName now has $Permissions permissions on this folder."
+
+                $Result = "Successfully set permissions on folder $FolderIdentity. The user $LoggingName now has $Permissions permissions on this folder."
                 if ($CanViewPrivateItems) {
                     $Result += ' The user can also view private items.'
                 }
@@ -109,8 +89,8 @@ function Set-CIPPCalendarPermission {
                 }
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
 
-                # Sync cache
-                Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $UserToGetPermissions -Permissions $Permissions -Action 'Add'
+                $CacheUser = $Resolved.UserEmail ?? $UserToGetPermissions
+                Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $CacheUser -Permissions $Permissions -Action 'Add'
             }
         }
     } catch {
@@ -120,6 +100,8 @@ function Set-CIPPCalendarPermission {
 
         if ($ErrorMessage.NormalizedError -match 'InvalidExternalUserIdException') {
             $Result = "Failed to set calendar permissions for $LoggingName on $UserID : The user '$LoggingName' is not a valid Exchange recipient. Ensure they have an Exchange Online mailbox or are a valid mail-enabled object."
+        } elseif ($ErrorMessage.NormalizedError -match 'no existing permission entry|UserNotFoundInPermissionEntryException') {
+            $Result = "Failed to set calendar permissions for $LoggingName on $UserID : $($ErrorMessage.NormalizedError) If multiple accounts share this display name, remove using the account email, or ensure the mailbox-enabled account is the one granted access."
         } else {
             $Result = "Failed to set calendar permissions for $LoggingName on $UserID : $($ErrorMessage.NormalizedError)"
         }
