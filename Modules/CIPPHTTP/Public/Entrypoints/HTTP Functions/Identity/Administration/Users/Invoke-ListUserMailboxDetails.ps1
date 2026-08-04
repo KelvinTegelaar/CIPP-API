@@ -85,17 +85,9 @@ function Invoke-ListUserMailboxDetails {
                 $ArchiveEnabled = $false
             }
 
-            # Check org-level first; if enabled org-wide, report that. Otherwise use mailbox-specific value.
-            if ($OrgConfig.AutoExpandingArchiveEnabled) {
-                $AutoExpandingArchiveEnabled = $true
-                $AutoExpandingArchiveScope = 'Organization'
-            } elseif ($MailboxDetailedRequest.AutoExpandingArchiveEnabled) {
-                $AutoExpandingArchiveEnabled = $true
-                $AutoExpandingArchiveScope = 'Mailbox'
-            } else {
-                $AutoExpandingArchiveEnabled = $false
-                $AutoExpandingArchiveScope = 'None'
-            }
+            $AutoExpandingArchiveState = Get-CIPPAutoExpandingArchiveState -MailboxAutoExpandingArchiveEnabled $MailboxDetailedRequest.AutoExpandingArchiveEnabled -OrgAutoExpandingArchiveEnabled $OrgConfig.AutoExpandingArchiveEnabled
+            $AutoExpandingArchiveEnabled = $AutoExpandingArchiveState.AutoExpandingArchive
+            $AutoExpandingArchiveScope = $AutoExpandingArchiveState.AutoExpandingArchiveScope
         } catch {
             $ArchiveEnabled = $false
             $ArchiveSizeRequest = @{

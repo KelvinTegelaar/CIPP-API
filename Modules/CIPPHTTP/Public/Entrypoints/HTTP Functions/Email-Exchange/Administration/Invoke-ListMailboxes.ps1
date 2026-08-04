@@ -33,7 +33,7 @@ function Invoke-ListMailboxes {
 
         # Original live EXO logic
         $ZeroArchiveGuid = '00000000-0000-0000-0000-000000000000'
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,IsDirSynced,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy'
+        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,IsDirSynced,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,AutoExpandingArchiveEnabled'
         $ExoRequest = @{
             tenantid  = $TenantFilter
             cmdlet    = 'Get-Mailbox'
@@ -73,32 +73,38 @@ function Invoke-ListMailboxes {
             }
         }
 
-        $GraphRequest = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
-        @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
-        @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
-        @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
-        @{ Name = 'ArchiveEnabled'; Expression = { $_.ArchiveGuid -and $_.ArchiveGuid.ToString() -ne $ZeroArchiveGuid } },
-        @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
-        @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
-        @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
-        @{ Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
-        @{ Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
-        DeliverToMailboxAndForward,
-        HiddenFromAddressListsEnabled,
-        ExternalDirectoryObjectId,
-        IsDirSynced,
-        MessageCopyForSendOnBehalfEnabled,
-        MessageCopyForSentAsEnabled,
-        LitigationHoldEnabled,
-        LitigationHoldDate,
-        LitigationHoldDuration,
-        @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'BPOS_S_ArchiveAddOn' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE' -or $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
-        ComplianceTagHoldApplied,
-        RetentionHoldEnabled,
-        InPlaceHolds,
-        RetentionPolicy
-        # This select also exists in ListUserMailboxDetails and should be updated if this is changed here
+        $OrgAutoExpandingArchiveEnabled = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-OrganizationConfig' -Select 'AutoExpandingArchiveEnabled').AutoExpandingArchiveEnabled
 
+        $GraphRequest = foreach ($Mailbox in @(New-ExoRequest @ExoRequest)) {
+            $AutoExpandingArchiveState = Get-CIPPAutoExpandingArchiveState -MailboxAutoExpandingArchiveEnabled $Mailbox.AutoExpandingArchiveEnabled -OrgAutoExpandingArchiveEnabled $OrgAutoExpandingArchiveEnabled
+            $Mailbox | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
+            @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+            @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
+            @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
+            @{ Name = 'ArchiveEnabled'; Expression = { $_.ArchiveGuid -and $_.ArchiveGuid.ToString() -ne $ZeroArchiveGuid } },
+            @{ Name = 'AutoExpandingArchive'; Expression = { $AutoExpandingArchiveState.AutoExpandingArchive } },
+            @{ Name = 'AutoExpandingArchiveScope'; Expression = { $AutoExpandingArchiveState.AutoExpandingArchiveScope } },
+            @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
+            @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
+            @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
+            @{ Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+            @{ Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+            DeliverToMailboxAndForward,
+            HiddenFromAddressListsEnabled,
+            ExternalDirectoryObjectId,
+            IsDirSynced,
+            MessageCopyForSendOnBehalfEnabled,
+            MessageCopyForSentAsEnabled,
+            LitigationHoldEnabled,
+            LitigationHoldDate,
+            LitigationHoldDuration,
+            @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'BPOS_S_ArchiveAddOn' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE' -or $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
+            ComplianceTagHoldApplied,
+            RetentionHoldEnabled,
+            InPlaceHolds,
+            RetentionPolicy
+        }
+        # This select also exists in ListUserMailboxDetails and should be updated if this is changed here
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {

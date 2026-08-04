@@ -27,12 +27,21 @@ function Set-CIPPDBCacheMailboxes {
 
         # Get mailboxes and user details in a single bulk request
         $ZeroArchiveGuid = '00000000-0000-0000-0000-000000000000'
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,RemotePowerShellEnabled,Guid,Identity'
+        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,RemotePowerShellEnabled,Guid,Identity,AutoExpandingArchiveEnabled'
         $BulkRequests = @(
             @{ CmdletInput = @{ CmdletName = 'Get-Mailbox'; Parameters = @{} } }
             @{ CmdletInput = @{ CmdletName = 'Get-User'; Parameters = @{} } }
         )
         $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $BulkRequests -useSystemMailbox $true -Select $Select -ReturnWithCommand $true
+
+        # Separate OrgConfig call (avoid shared mailbox $Select on Get-OrganizationConfig).
+        # On failure, fall back to mailbox-only resolution and log so live/cache skew is diagnosable.
+        $OrgAutoExpandingArchiveEnabled = $null
+        try {
+            $OrgAutoExpandingArchiveEnabled = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-OrganizationConfig' -Select 'AutoExpandingArchiveEnabled' -useSystemMailbox $true).AutoExpandingArchiveEnabled
+        } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to get OrganizationConfig for Auto Expanding Archive; using mailbox-level values only. Error: $($_.Exception.Message)" -sev Warning
+        }
 
         # Build a lookup hashtable from Get-User results for O(1) matching
         $UserLookup = @{}
@@ -46,11 +55,14 @@ function Set-CIPPDBCacheMailboxes {
         $Mailboxes = [System.Collections.Generic.List[PSObject]]::new()
         foreach ($Mailbox in @($BulkResults.'Get-Mailbox')) {
             $MatchedUser = $UserLookup[$Mailbox.ExternalDirectoryObjectId]
+            $AutoExpandingArchiveState = Get-CIPPAutoExpandingArchiveState -MailboxAutoExpandingArchiveEnabled $Mailbox.AutoExpandingArchiveEnabled -OrgAutoExpandingArchiveEnabled $OrgAutoExpandingArchiveEnabled
             $Mailboxes.Add(($Mailbox | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
                     @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
                     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                     @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
                     @{ Name = 'ArchiveEnabled'; Expression = { $_.ArchiveGuid -and $_.ArchiveGuid.ToString() -ne $ZeroArchiveGuid } },
+                    @{ Name = 'AutoExpandingArchive'; Expression = { $AutoExpandingArchiveState.AutoExpandingArchive } },
+                    @{ Name = 'AutoExpandingArchiveScope'; Expression = { $AutoExpandingArchiveState.AutoExpandingArchiveScope } },
                     @{ Name = 'ArchiveSize'; Expression = { 0 } },
                     @{ Name = 'ArchiveItemCount'; Expression = { 0 } },
                     @{ Name = 'storageUsedInBytes'; Expression = { 0 } },
