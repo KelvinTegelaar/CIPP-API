@@ -51,12 +51,7 @@ function Invoke-ExecDeployAppTemplate {
             try {
                 $Config = $App.config
                 if ($Config -is [string]) {
-                    # Parse case-sensitive to survive templates carrying both 'applicationName'
-                    # and 'ApplicationName', then collapse them via a case-insensitive dictionary.
-                    $Parsed = $Config | ConvertFrom-Json -Depth 100 -AsHashtable
-                    $Config = [ordered]@{}
-                    foreach ($Key in $Parsed.Keys) { $Config[$Key] = $Parsed[$Key] }
-                    $Config = [PSCustomObject]$Config
+                    $Config = $Config | ConvertFrom-CippAppConfig
                 }
 
                 $AppType = "$($App.appType ?? $App.AppType)"
