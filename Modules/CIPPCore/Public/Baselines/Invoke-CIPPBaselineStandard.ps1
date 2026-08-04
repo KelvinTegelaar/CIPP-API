@@ -32,8 +32,10 @@ function Invoke-CIPPBaselineStandard {
         $Item,
         [ValidateSet('run', 'compare', 'oneoff')]$Mode = 'run',
         $TriggeredBy = 'schedule',
-        [switch]$Force
+        [switch]$Force,
+        $RunId
     )
+    if (-not $RunId) { $RunId = [string](New-Guid).Guid }
 
     $TenantFilter = $Item.TenantFilter
     $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
@@ -60,12 +62,14 @@ function Invoke-CIPPBaselineStandard {
     try {
         $Definition = Get-CIPPBaselineDefinition -Name $Item.BaseName
         if (-not $Definition) { throw "No definition found for standard $($Item.BaseName)." }
+        $Label = $Definition.label ?? $Item.Standard
+        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Started `"$Label`" ($Mode) - Run $RunId" -Sev 'Info'
 
         # 1a. Custom standards own their whole flow in their per-standard script.
         if ($Definition.custom -eq $true) {
             $CustomFunction = Get-Command -Name $Definition.customFunction -ErrorAction SilentlyContinue
             if (-not $CustomFunction) { throw "Custom function $($Definition.customFunction) is not available." }
-            return (& $Definition.customFunction -Item $Item -Mode $Mode -TriggeredBy $TriggeredBy -Force:$Force)
+            return (& $Definition.customFunction -Item $Item -Mode $Mode -TriggeredBy $TriggeredBy -Force:$Force -RunId $RunId)
         }
 
         # Prior resolved row: the deviation lifecycle and manual completion live on it.
@@ -124,7 +128,7 @@ function Invoke-CIPPBaselineStandard {
             if ($Result.Status -eq 'Drift' -and $PriorStatus -ne 'Drift' -and $Item.AlertEnabled) {
                 $Result.AlertEvent = 'Drift'
             }
-            Set-CIPPBaselineResult -Result $Result -Prior $Prior
+            Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
             if ($Result.AlertEvent) { Send-CIPPBaselineAlert -Result $Result }
             return $Result
         }
@@ -212,14 +216,14 @@ function Invoke-CIPPBaselineStandard {
             # Tolerated: no remediation, no alert; Accepted counts aligned (shown as inflating).
             $Result.Outcome = 'Drift'
             $Result.Status = 'Accepted'
-            Set-CIPPBaselineResult -Result $Result -Prior $Prior
+            Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
             return $Result
         }
         if (-not $Compliant -and $null -ne $Current -and $PriorStatus -eq 'Denied - Delete Pending') {
             # The delete executor lands with object-type standards; hold the status until then.
             $Result.Outcome = 'Drift'
             $Result.Status = 'Denied - Delete Pending'
-            Set-CIPPBaselineResult -Result $Result -Prior $Prior
+            Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
             return $Result
         }
 
@@ -232,13 +236,22 @@ function Invoke-CIPPBaselineStandard {
         $WriteNeeded = (-not $Compliant) -or $Force.IsPresent -or (-not $CheckBeforeRun)
 
         if ($Mode -ne 'compare' -and $RemediationAllowed -and $WriteNeeded) {
-            $Rendered = & $Render $Definition.remediate $Item.Variables
-            switch ($Definition.remediate.executor) {
-                'ExoRequest' { Invoke-CIPPBaselineExoRequest -Remediate $Rendered -TenantFilter $TenantFilter }
-                'GraphRequest' { Invoke-CIPPBaselineGraphRequest -Remediate $Rendered -TenantFilter $TenantFilter }
-                'CATemplate' { Invoke-CIPPBaselineCATemplate -Remediate $Rendered -TenantFilter $TenantFilter }
-                default { throw "Unknown remediate executor '$($Definition.remediate.executor)' on $($Definition.name)." }
+            $ExpectedJson = ConvertTo-Json -Compress -Depth 100 -InputObject $Expected
+            try {
+                $Rendered = & $Render $Definition.remediate $Item.Variables
+                switch ($Definition.remediate.executor) {
+                    'ExoRequest' { Invoke-CIPPBaselineExoRequest -Remediate $Rendered -TenantFilter $TenantFilter }
+                    'GraphRequest' { Invoke-CIPPBaselineGraphRequest -Remediate $Rendered -TenantFilter $TenantFilter }
+                    'CATemplate' { Invoke-CIPPBaselineCATemplate -Remediate $Rendered -TenantFilter $TenantFilter }
+                    default { throw "Unknown remediate executor '$($Definition.remediate.executor)' on $($Definition.name)." }
+                }
+            } catch {
+                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to change `"$Label`" to $ExpectedJson`: $($_.Exception.Message) - Run $RunId" -Sev 'Error'
+                $Result.Outcome = 'Error'
+                Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
+                return $Result
             }
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Successfully changed `"$Label`" to $ExpectedJson - Run $RunId" -Sev 'Info'
             # Optimistic post-write: currentValue = what we wrote; the next run's cache read verifies.
             $Result.CurrentValue = $Expected
             $Result.Compliant = $true
@@ -268,14 +281,14 @@ function Invoke-CIPPBaselineStandard {
             if ($Result.Status -eq 'Drift' -and $PriorStatus -ne 'Drift' -and $Item.AlertEnabled) { $Result.AlertEvent = 'Drift' }
         }
 
-        Set-CIPPBaselineResult -Result $Result -Prior $Prior
+        Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
         if ($Result.AlertEvent) { Send-CIPPBaselineAlert -Result $Result }
         return $Result
     } catch {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Baseline run failed for $($Item.Standard) on ${TenantFilter}: $($_.Exception.Message)" -Sev 'Error'
         if ($Result) {
             $Result.Outcome = 'Error'
-            try { Set-CIPPBaselineResult -Result $Result -Prior $Prior } catch { Write-Information "Set-CIPPBaselineResult failed: $($_.Exception.Message)" }
+            try { Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId } catch { Write-Information "Set-CIPPBaselineResult failed: $($_.Exception.Message)" }
             return $Result
         }
     }

@@ -41,7 +41,8 @@ function Get-CIPPBaselineWorkItems {
 
         foreach ($State in $Baseline.tenantStates) {
             $Domain = $State.tenantFilter
-            if ($TenantFilter -and $Domain -ne $TenantFilter) { continue }
+            # TenantFilter accepts one domain or a list (an expanded tenant group).
+            if ($TenantFilter -and $Domain -notin @($TenantFilter)) { continue }
             if ($Baseline.excludedTenants -contains $Domain) { continue }
 
             $Rank = if ($AssignmentValues -contains $Domain) { 2 }
@@ -110,12 +111,9 @@ function Get-CIPPBaselineWorkItems {
     # Ad-hoc tenant overrides (templateId '') replace whatever a baseline resolved, or stand alone.
     $DeltaTable = Get-CippTable -tablename 'Baselines'
     $OverrideFilter = "PartitionKey eq 'standardItem' and templateId eq '' and scope eq 'tenant'"
-    if ($TenantFilter) {
-        $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
-        $OverrideFilter = "$OverrideFilter and scopeId eq '$SafeTenant'"
-    }
     foreach ($Delta in @(Get-CIPPAzDataTableEntity @DeltaTable -Filter $OverrideFilter)) {
         if (-not $Delta) { continue }
+        if ($TenantFilter -and $Delta.scopeId -notin @($TenantFilter)) { continue }
         if ($StandardName -and $Delta.standardName -ne $StandardName) { continue }
         if ($TemplateId) { continue } # a baseline-scoped run never picks up ad-hoc overrides of other config
         $Variables = $(try { $Delta.expectedValue | ConvertFrom-Json -ErrorAction Stop } catch { [PSCustomObject]@{} }) ?? [PSCustomObject]@{}

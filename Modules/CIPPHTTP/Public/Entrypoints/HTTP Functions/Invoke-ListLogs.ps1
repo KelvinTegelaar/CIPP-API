@@ -93,6 +93,7 @@ function Invoke-ListLogs {
             $ApiFilter = $Request.Query.API
             $StandardFilter = $Request.Query.StandardTemplateId
             $ScheduledTaskFilter = $Request.Query.ScheduledTaskId
+            $BaselineRunFilter = $Request.Query.BaselineRunId
 
             $StartDate = if ($Request.Query.StartDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.StartDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
             $EndDate = if ($Request.Query.EndDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.EndDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
@@ -112,6 +113,7 @@ function Invoke-ListLogs {
             $ApiFilter = $null
             $StandardFilter = $null
             $ScheduledTaskFilter = $null
+            $BaselineRunFilter = $null
             $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
         }
 
@@ -124,6 +126,10 @@ function Invoke-ListLogs {
         if ($ScheduledTaskFilter) {
             $SafeSched = ConvertTo-CIPPODataFilterValue -Value $ScheduledTaskFilter -Type Guid
             $Filter = "$Filter and ScheduledTaskId eq '$SafeSched'"
+        }
+        if ($BaselineRunFilter) {
+            $SafeRun = ConvertTo-CIPPODataFilterValue -Value $BaselineRunFilter -Type Guid
+            $Filter = "$Filter and BaselineRunId eq '$SafeRun'"
         }
 
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList

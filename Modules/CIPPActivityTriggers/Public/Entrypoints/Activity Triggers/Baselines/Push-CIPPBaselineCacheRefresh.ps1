@@ -16,6 +16,7 @@ function Push-CIPPBaselineCacheRefresh {
     param($Item)
 
     try {
+        Set-CippBaselineRunContext -RunId $Item.Parameters.RunId
         $Impacted = @{}
         foreach ($ActivityResult in @($Item.Results)) {
             foreach ($Record in @($ActivityResult)) {

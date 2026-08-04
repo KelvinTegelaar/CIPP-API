@@ -8,21 +8,44 @@ function Get-CIPPBaselineAlignment {
           BaselineHistory), per-baseline stage states, and the deviation feed for one tenant.
         - -ByStandard: fleet score, per-standard aggregates, per-tenant summaries, and the
           accepted/suppressed deviation list across all tenants.
-        Storage follows the design doc: columnar BaselineAlignment rows (§4.2) reshaped into
-        view rows at read time, history rows with RunId/Mode/TriggeredBy/Outcome/Remediated/Diff
-        columns (§4.3). Scoring per §9: applicable = total - licenseMissing;
-        verified = compliant/applicable; aligned = (compliant+accepted)/applicable.
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
     param(
         $TenantFilter,
-        [switch]$ByStandard
+        [switch]$ByStandard,
+        [switch]$History
     )
 
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
     $Definitions = Get-CIPPBaselineDefinition
+
+    # Historic view: every recorded run event for the tenant, flattened and newest-first.
+    # History partitions are '<tenant>_<standard>', so a partition range scan covers them all.
+    if ($TenantFilter -and $History) {
+        $HistoryTable = Get-CippTable -tablename 'BaselineHistory'
+        $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
+        $Rows = Get-CIPPAzDataTableEntity @HistoryTable -Filter ("PartitionKey ge '{0}_' and PartitionKey lt '{0}{1}'" -f $SafeTenant, [char]0x60)
+        $Events = foreach ($Row in $Rows) {
+            if (-not $Row) { continue }
+            $StandardName = "$($Row.PartitionKey)".Substring($TenantFilter.Length + 1)
+            $BaseName = ($StandardName -split '#')[0]
+            $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
+            [PSCustomObject]@{
+                timestamp     = $(if ($Row.Timestamp -is [System.DateTimeOffset]) { $Row.Timestamp.ToUnixTimeSeconds() } else { $Row.Timestamp })
+                standardName  = $StandardName
+                standardLabel = $Definition.label ?? $StandardName
+                mode          = $Row.Mode
+                triggeredBy   = $Row.TriggeredBy
+                outcome       = $Row.Outcome
+                remediated    = [bool]$Row.Remediated
+                runId         = $Row.RunId
+                diff          = $(if ($Row.Diff) { try { $Row.Diff | ConvertFrom-Json } catch { $null } } else { $null })
+            }
+        }
+        return [PSCustomObject]@{ events = @($Events | Sort-Object -Property timestamp -Descending) }
+    }
 
     $ScoreRows = {
         param($Rows)
@@ -211,39 +234,39 @@ function Get-CIPPBaselineAlignment {
                 }
             } else {
                 $Rows.Add([PSCustomObject]@{
-                    tenantFilter        = $TenantFilter
-                    tenantName          = ($Rows | Select-Object -First 1).tenantName ?? $TenantFilter
-                    standardName        = $Delta.standardName
-                    standardLabel       = $Definition.label ?? $Delta.standardName
-                    category            = $Definition.cat ?? 'Uncategorized'
-                    impact              = $Definition.impact
-                    secureScoreImpact   = $Definition.secureScoreImpact ?? 0
-                    templateId          = ''
-                    expectedValue       = $Expected
-                    currentValue        = $null
-                    compliant           = $false
-                    pendingVerification = $false
-                    licenseAvailable    = $true
-                    sourceScope         = 'tenant'
-                    sourceTemplate      = 'Tenant Override'
-                    stage               = $null
-                    inheritance         = @([PSCustomObject]@{
-                            templateName = 'Tenant Override'
-                            assignedTo   = $TenantFilter
-                            value        = $Expected
-                            effective    = $true
-                        })
-                    acceptedPaths       = [PSCustomObject]@{}
-                    status              = 'No Data'
-                    deviationReason     = $null
-                    deviationBy         = $null
-                    deviationAt         = $null
-                    deviationExpires    = $null
-                    remediateOnExpire   = $false
-                    lastRun             = $null
-                    lastRemediated      = $null
-                    history             = @()
-                })
+                        tenantFilter        = $TenantFilter
+                        tenantName          = ($Rows | Select-Object -First 1).tenantName ?? $TenantFilter
+                        standardName        = $Delta.standardName
+                        standardLabel       = $Definition.label ?? $Delta.standardName
+                        category            = $Definition.cat ?? 'Uncategorized'
+                        impact              = $Definition.impact
+                        secureScoreImpact   = $Definition.secureScoreImpact ?? 0
+                        templateId          = ''
+                        expectedValue       = $Expected
+                        currentValue        = $null
+                        compliant           = $false
+                        pendingVerification = $false
+                        licenseAvailable    = $true
+                        sourceScope         = 'tenant'
+                        sourceTemplate      = 'Tenant Override'
+                        stage               = $null
+                        inheritance         = @([PSCustomObject]@{
+                                templateName = 'Tenant Override'
+                                assignedTo   = $TenantFilter
+                                value        = $Expected
+                                effective    = $true
+                            })
+                        acceptedPaths       = [PSCustomObject]@{}
+                        status              = 'No Data'
+                        deviationReason     = $null
+                        deviationBy         = $null
+                        deviationAt         = $null
+                        deviationExpires    = $null
+                        remediateOnExpire   = $false
+                        lastRun             = $null
+                        lastRemediated      = $null
+                        history             = @()
+                    })
             }
         }
 

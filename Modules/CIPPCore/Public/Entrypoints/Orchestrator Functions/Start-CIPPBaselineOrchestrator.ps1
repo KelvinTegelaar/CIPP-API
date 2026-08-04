@@ -29,6 +29,18 @@ function Start-CIPPBaselineOrchestrator {
         try { Invoke-CIPPBaselineGraduation } catch { Write-LogMessage -API 'Baselines' -message "Baseline graduation evaluation failed: $($_.Exception.Message)" -Sev 'Error' }
     }
 
+    # The run scope may arrive as a tenant group (the selector sends the group ID) -
+    # expand it to the member domains. 'AllTenants'/'allTenants' means no filter at all.
+    if ($TenantFilter -in @('AllTenants', 'allTenants')) { $TenantFilter = $null }
+    if ($TenantFilter) {
+        try {
+            $ScopeGroup = Get-TenantGroups | Where-Object { $_.Id -eq $TenantFilter -or $_.Name -eq $TenantFilter } | Select-Object -First 1
+            if ($ScopeGroup) { $TenantFilter = @($ScopeGroup.Members.defaultDomainName) }
+        } catch {
+            Write-Information "Start-CIPPBaselineOrchestrator: tenant group lookup failed: $($_.Exception.Message)"
+        }
+    }
+
     $WorkItems = @(Get-CIPPBaselineWorkItems -TenantFilter $TenantFilter -StandardName $StandardName -TemplateId $TemplateId)
 
     # Scheduled full runs reconcile the resolved store: rows for pairs nothing resolves
@@ -50,6 +62,12 @@ function Start-CIPPBaselineOrchestrator {
         Write-Information 'Start-CIPPBaselineOrchestrator: no baseline work items resolved - nothing to do.'
         return 0
     }
+
+    # One RunId for the whole orchestration: every log line, history row and queue entry
+    # carries it, so a run is traceable end to end. The ambient context stamps the
+    # BaselineRunId column onto every log row this invocation writes.
+    $RunId = [string](New-Guid).Guid
+    Set-CippBaselineRunContext -RunId $RunId
 
     # License prefilter: collect each item's required capabilities, compare against the
     # tenant's licenses ONCE per tenant, and strip unlicensed pairs before anything runs.
@@ -74,7 +92,7 @@ function Start-CIPPBaselineOrchestrator {
             $LicensedItems.Add($Item)
         } else {
             try {
-                Set-CIPPBaselineResult -Prior $null -Result ([PSCustomObject]@{
+                Set-CIPPBaselineResult -Prior $null -RunId $RunId -Result ([PSCustomObject]@{
                         Item                = $Item
                         Mode                = $Mode
                         TriggeredBy         = $TriggeredBy
@@ -97,10 +115,11 @@ function Start-CIPPBaselineOrchestrator {
     }
     if ($LicensedItems.Count -eq 0) {
         Write-Information 'Start-CIPPBaselineOrchestrator: no licensed work items remain - nothing to queue.'
+        Set-CippBaselineRunContext -RunId $null
         return 0
     }
 
-    $Queue = New-CippQueueEntry -Name "Baseline $Mode ($($LicensedItems.Count) checks)" -TotalTasks $LicensedItems.Count
+    $Queue = New-CippQueueEntry -Name "Baseline $Mode ($($LicensedItems.Count) checks) - Run $RunId" -TotalTasks $LicensedItems.Count
     $Batch = foreach ($Item in $LicensedItems) {
         [PSCustomObject]@{
             FunctionName = 'CIPPBaselineStandard'
@@ -108,6 +127,7 @@ function Start-CIPPBaselineOrchestrator {
             Mode         = $Mode
             TriggeredBy  = $TriggeredBy
             Force        = [bool]$Force
+            RunId        = $RunId
             QueueId      = $Queue.RowKey
             QueueName    = ('{0} - {1}' -f $Item.Standard, $Item.TenantFilter)
         }
@@ -121,10 +141,11 @@ function Start-CIPPBaselineOrchestrator {
         # otherwise the next run re-reads stale data and re-detects fixed drift.
         PostExecution    = @{
             FunctionName = 'CIPPBaselineCacheRefresh'
+            Parameters   = @{ RunId = $RunId }
         }
     }
     $null = Start-CIPPOrchestrator -InputObject $InputObject
-    Write-LogMessage -API 'Baselines' -message "Baseline $Mode started: $($LicensedItems.Count) (tenant, standard) checks queued." -Sev 'Info'
+    Write-LogMessage -API 'Baselines' -message "Baseline $Mode started by ${TriggeredBy}: $($LicensedItems.Count) (tenant, standard) checks queued - Run $RunId" -Sev 'Info'
 
     # 90-day history retention (design doc §4.3): prune on the scheduled run only. The newest
     # row per (tenant, standard) partition always survives, even when it is older than 90 days.
@@ -144,5 +165,6 @@ function Start-CIPPBaselineOrchestrator {
         }
     }
 
+    Set-CippBaselineRunContext -RunId $null
     return $LicensedItems.Count
 }

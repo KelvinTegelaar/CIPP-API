@@ -18,7 +18,10 @@ function Invoke-ExecBaselineRun {
         if ($Mode -notin @('run', 'compare', 'oneoff')) {
             throw "Unknown mode '$Mode'. Use run, compare, or oneoff."
         }
-        $TenantFilter = $Request.Body.tenantFilter
+        # The tenant selector posts its option object; a group ID or 'AllTenants' are valid
+        # scopes too - the orchestrator expands them.
+        $TenantFilter = $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter
+        if ($TenantFilter -in @('AllTenants', 'allTenants')) { $TenantFilter = $null }
         $StandardName = $Request.Body.standard
         $TemplateId = $Request.Body.templateId
         if ($Mode -eq 'oneoff' -and -not ($TenantFilter -and $StandardName)) {

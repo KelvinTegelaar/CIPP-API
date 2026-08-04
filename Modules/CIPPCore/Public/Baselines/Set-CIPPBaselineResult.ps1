@@ -18,12 +18,13 @@ function Set-CIPPBaselineResult {
     [CmdletBinding()]
     param(
         $Result,
-        $Prior
+        $Prior,
+        $RunId
     )
 
     $Item = $Result.Item
     $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
-    $RunId = [string](New-Guid).Guid
+    if (-not $RunId) { $RunId = [string](New-Guid).Guid }
 
     # Triaged statuses keep the operator's metadata; Compliant/Drift clears stale triage.
     $KeepTriage = $Result.Status -in @('Accepted', 'Denied - Remediate Pending', 'Denied - Delete Pending')

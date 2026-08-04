@@ -6,9 +6,10 @@ function Invoke-ListBaselineAlignment {
         Tenant.Standards.Read
     .DESCRIPTION
         Baseline alignment data. With ?tenantFilter= returns the tenant payload (summary,
-        resolved rows with history, stage states, deviation feed); with ?byStandard=true returns
-        the aggregate payload (fleet score, per-standard rollups, tenant summaries, trend, and
-        the accepted/suppressed deviation list).
+        resolved rows with history, stage states, deviation feed); with
+        ?tenantFilter=&history=true returns the flattened run-event history; with
+        ?byStandard=true returns the aggregate payload (fleet score, per-standard rollups,
+        tenant summaries, trend, and the accepted/denied deviation list).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,6 +18,8 @@ function Invoke-ListBaselineAlignment {
     try {
         $Results = if ($Request.Query.byStandard -eq 'true') {
             Get-CIPPBaselineAlignment -ByStandard
+        } elseif ($Request.Query.tenantFilter -and $Request.Query.history -eq 'true') {
+            Get-CIPPBaselineAlignment -TenantFilter $Request.Query.tenantFilter -History
         } elseif ($Request.Query.tenantFilter) {
             Get-CIPPBaselineAlignment -TenantFilter $Request.Query.tenantFilter
         } else {

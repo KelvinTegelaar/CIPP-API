@@ -18,8 +18,10 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
         $Item,
         [ValidateSet('run', 'compare', 'oneoff')]$Mode = 'run',
         $TriggeredBy = 'schedule',
-        [switch]$Force
+        [switch]$Force,
+        $RunId
     )
+    if (-not $RunId) { $RunId = [string](New-Guid).Guid }
 
     $TenantFilter = $Item.TenantFilter
     $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
@@ -80,7 +82,7 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
         if (-not $Compliant -and $null -ne $Policy -and $AcceptActive) {
             $Result.Outcome = 'Drift'
             $Result.Status = 'Accepted'
-            Set-CIPPBaselineResult -Result $Result -Prior $Prior
+            Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
             return $Result
         }
 
@@ -98,11 +100,19 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
                     isOrganizationDefault = $true
                     displayName           = 'DefaultTimeoutPolicy'
                 })
-            if ($Policy.id) {
-                $null = New-GraphPostRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies/$($Policy.id)" -type PATCH -body $Body -AsApp $true
-            } else {
-                $null = New-GraphPostRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies' -type POST -body $Body -AsApp $true
+            try {
+                if ($Policy.id) {
+                    $null = New-GraphPostRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies/$($Policy.id)" -type PATCH -body $Body -AsApp $true
+                } else {
+                    $null = New-GraphPostRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies' -type POST -body $Body -AsApp $true
+                }
+            } catch {
+                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to change `"Enable Activity based Timeout`" to $ExpectedTimeout`: $($_.Exception.Message) - Run $RunId" -Sev 'Error'
+                $Result.Outcome = 'Error'
+                Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
+                return $Result
             }
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Successfully changed `"Enable Activity based Timeout`" to $ExpectedTimeout - Run $RunId" -Sev 'Info'
             $Result.CurrentValue = $Result.ExpectedValue
             $Result.Compliant = $true
             $Result.PendingVerification = $true
@@ -127,13 +137,13 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
             if ($Result.Status -eq 'Drift' -and $PriorStatus -ne 'Drift' -and $Item.AlertEnabled) { $Result.AlertEvent = 'Drift' }
         }
 
-        Set-CIPPBaselineResult -Result $Result -Prior $Prior
+        Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
         if ($Result.AlertEvent) { Send-CIPPBaselineAlert -Result $Result }
         return $Result
     } catch {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Activity Based Timeout baseline failed on ${TenantFilter}: $($_.Exception.Message)" -Sev 'Error'
         $Result.Outcome = 'Error'
-        try { Set-CIPPBaselineResult -Result $Result -Prior $Prior } catch { Write-Information "Set-CIPPBaselineResult failed: $($_.Exception.Message)" }
+        try { Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId } catch { Write-Information "Set-CIPPBaselineResult failed: $($_.Exception.Message)" }
         return $Result
     }
 }

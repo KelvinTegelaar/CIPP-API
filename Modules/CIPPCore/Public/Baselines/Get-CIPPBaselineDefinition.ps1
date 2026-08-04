@@ -3,13 +3,7 @@ function Get-CIPPBaselineDefinition {
     .SYNOPSIS
         Returns the Baseline definition catalog: the standards available to add to a baseline.
     .DESCRIPTION
-        One definition file per standard at Config/BaselineStandards/<category>/<Name>.json (design
-        doc §5; rooted under Config because the module build ships only compiled psm1 files -
-        Config is where runtime data files live, like intuneCollection.json). Each file carries
-        the frontend metadata slice (label, category, help and executive text, recommended-by,
-        impact, Secure Score impact, configurable variables) and the backend spec the engine
-        executes: read (CIPPDb cacheType + optional path/select), expected (%var% template),
-        remediate (typed executor), and the custom escape hatch.
+        One definition file per standard at Config/BaselineStandards/<category>/<Name>.json.
     .FUNCTIONALITY
         Internal
     #>
