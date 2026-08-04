@@ -186,6 +186,8 @@ function Invoke-ListCustomVariables {
 
         # Add reserved variables first
         foreach ($Variable in $ReservedVariables) {
+            # Every reserved variable resolves to a name, ID or path, so they are all strings.
+            $Variable.VariableType = 'string'
             $VariableMap[$Variable.Name] = $Variable
         }
 
@@ -198,14 +200,39 @@ function Invoke-ListCustomVariables {
             foreach ($Variable in $GlobalVariables) {
                 if ($Variable.RowKey -and $Variable.Value) {
                     $VariableMap[$Variable.RowKey] = @{
-                        Name        = $Variable.RowKey
-                        Variable    = "%$($Variable.RowKey)%"
-                        Description = 'Global custom variable'
-                        Value       = $Variable.Value
-                        Type        = 'custom'
-                        Category    = 'global'
-                        Scope       = 'AllTenants'
+                        Name         = $Variable.RowKey
+                        Variable     = "%$($Variable.RowKey)%"
+                        Description  = 'Global custom variable'
+                        Value        = $Variable.Value
+                        Type         = 'custom'
+                        VariableType = $Variable.VariableType ?? 'string'
+                        Category     = 'global'
+                        Scope        = 'AllTenants'
                     }
+                }
+            }
+        }
+
+        # A template is not bound to a tenant - the same template deploys to many, and each variable
+        # in it resolves against whichever tenant it lands on. So a caller editing one needs every
+        # variable *name* that exists anywhere, not the set belonging to whichever tenant happens to
+        # be selected. Values are deliberately not returned here: they differ per tenant, so there is
+        # no single correct one to show.
+        if ($Request.Query.allTenants -eq 'true') {
+            $EveryCustomVariable = Get-CIPPAzDataTableEntity @ReplaceTable
+            foreach ($Variable in $EveryCustomVariable) {
+                if (-not $Variable.RowKey -or -not $Variable.Value) { continue }
+                # Names already added as reserved or global keep their own description and value.
+                if ($VariableMap.ContainsKey($Variable.RowKey)) { continue }
+
+                $VariableMap[$Variable.RowKey] = @{
+                    Name         = $Variable.RowKey
+                    Variable     = "%$($Variable.RowKey)%"
+                    Description  = 'Tenant-specific custom variable, resolved per tenant on deployment'
+                    Type         = 'custom'
+                    VariableType = $Variable.VariableType ?? 'string'
+                    Category     = 'tenant-custom'
+                    Scope        = 'PerTenant'
                 }
             }
         }
@@ -232,13 +259,14 @@ function Invoke-ListCustomVariables {
                         if ($Variable.RowKey -and $Variable.Value) {
                             # Tenant variables override global ones with the same name
                             $VariableMap[$Variable.RowKey] = @{
-                                Name        = $Variable.RowKey
-                                Variable    = "%$($Variable.RowKey)%"
-                                Description = 'Tenant-specific custom variable'
-                                Value       = $Variable.Value
-                                Type        = 'custom'
-                                Category    = 'tenant-custom'
-                                Scope       = $TenantFilter
+                                Name         = $Variable.RowKey
+                                Variable     = "%$($Variable.RowKey)%"
+                                Description  = 'Tenant-specific custom variable'
+                                Value        = $Variable.Value
+                                Type         = 'custom'
+                                VariableType = $Variable.VariableType ?? 'string'
+                                Category     = 'tenant-custom'
+                                Scope        = $TenantFilter
                             }
                         }
                     }

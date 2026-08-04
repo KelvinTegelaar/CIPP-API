@@ -26,6 +26,41 @@ function Get-CIPPTextReplacement {
         return $Encoded.Substring(1, $Encoded.Length - 2)
     }
 
+    # Renders a typed variable as a bare JSON literal. Returns $null for an untyped variable, for the
+    # default string type, and when the value does not actually parse as the type it claims - the
+    # caller then substitutes it the way it always did, which keeps existing variables byte-identical
+    # and lets a mistyped one fail as a readable error rather than a parse error here.
+    function ConvertTo-CIPPJsonLiteral {
+        param($Value, [string]$VariableType)
+
+        if ([string]::IsNullOrWhiteSpace($VariableType)) { return $null }
+
+        $Text = ([string]$Value).Trim()
+        switch ($VariableType.ToLower()) {
+            'integer' {
+                $Parsed = [long]0
+                if ([long]::TryParse($Text, [ref]$Parsed)) { return "$Parsed" }
+                return $null
+            }
+            'boolean' {
+                if ($Text -in @('true', '1', 'yes')) { return 'true' }
+                if ($Text -in @('false', '0', 'no')) { return 'false' }
+                return $null
+            }
+            'json' {
+                # Re-serialized rather than spliced in verbatim, so whatever reaches the payload is
+                # known-valid, compact JSON regardless of how it was stored.
+                try {
+                    $Object = ConvertFrom-Json -InputObject $Text -Depth 100 -ErrorAction Stop
+                    return (ConvertTo-Json -InputObject $Object -Depth 100 -Compress)
+                } catch {
+                    return $null
+                }
+            }
+            default { return $null }
+        }
+    }
+
     if ($Text -isnot [string]) {
         return , $Text
     }
@@ -75,6 +110,10 @@ function Get-CIPPTextReplacement {
     $ReplaceTable = Get-CIPPTable -tablename 'CippReplacemap'
     $GlobalMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq 'AllTenants'"
     $Vars = @{}
+    # The declared type of each variable, and its unescaped value. A typed variable is rendered from
+    # the raw value: escaping is a no-op for a number, and would break a JSON one.
+    $VarTypes = @{}
+    $RawVars = @{}
     if ($GlobalMap) {
         foreach ($Var in $GlobalMap) {
             if (-not $Var.PSObject.Properties['Value']) { continue }
@@ -83,6 +122,8 @@ function Get-CIPPTextReplacement {
                 $Val = ConvertTo-CIPPJsonEscapedString -Value $Val
             }
             $Vars[$Var.RowKey] = $Val
+            $RawVars[$Var.RowKey] = $Var.Value
+            $VarTypes[$Var.RowKey] = $Var.VariableType
         }
     }
 
@@ -101,6 +142,8 @@ function Get-CIPPTextReplacement {
                     $Val = ConvertTo-CIPPJsonEscapedString -Value $Val
                 }
                 $Vars[$Var.RowKey] = $Val
+                $RawVars[$Var.RowKey] = $Var.Value
+                $VarTypes[$Var.RowKey] = $Var.VariableType
             }
         }
     }
@@ -108,6 +151,24 @@ function Get-CIPPTextReplacement {
     foreach ($Replace in $Vars.GetEnumerator()) {
         $String = '%{0}%' -f $Replace.Key
         if ($string -notin $ReservedVariables) {
+            # A variable declared as integer, boolean or json is written as a JSON literal when it
+            # fills an entire string slot, so a numeric setting receives 300 rather than "300" and
+            # behaves exactly like a value typed into the template by hand.
+            #
+            # The declared type drives this, not the caller's -EscapeForJson switch: a type is
+            # something an operator opts into on a single variable, so it can be honoured everywhere
+            # without changing what any existing variable does. Untyped variables - which is every
+            # variable that predates this - return $null here and fall through to the substitution
+            # they have always had.
+            #
+            # Only the whole-slot form is unquoted; a variable embedded in a longer string is still
+            # part of that string. A value that does not parse as its declared type also falls
+            # through, so a mistyped variable degrades to the old behaviour instead of emitting
+            # invalid JSON.
+            $Literal = ConvertTo-CIPPJsonLiteral -Value $RawVars[$Replace.Key] -VariableType $VarTypes[$Replace.Key]
+            if ($null -ne $Literal) {
+                $Text = $Text -replace ('"{0}"' -f [regex]::Escape($String)), $Literal
+            }
             $Text = $Text -replace $String, $Replace.Value
         }
     }

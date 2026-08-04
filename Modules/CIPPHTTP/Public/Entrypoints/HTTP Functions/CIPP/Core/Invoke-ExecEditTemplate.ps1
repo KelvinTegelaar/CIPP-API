@@ -30,7 +30,24 @@ function Invoke-ExecEditTemplate {
                 $NewGuid = $GUID
             }
             if ($Request.Body.parsedRAWJson) {
-                $RawJSON = ConvertTo-Json -Compress -Depth 100 -InputObject $Request.Body.parsedRAWJson
+                # Intune identifies a policy and every setting in it by @odata.type, and rejects a
+                # policy that is missing them. An editor that rebuilds the body from form state can
+                # drop them silently, which stores a template that only fails at deployment time -
+                # so refuse the write here rather than let a working template be replaced by one
+                # that cannot deploy.
+                $Incoming = $Request.Body.parsedRAWJson
+                $Stored = $TemplateData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+
+                if ($Stored.'@odata.type' -and -not $Incoming.'@odata.type') {
+                    throw "The submitted policy is missing its '@odata.type' and was not saved, because it would no longer deploy."
+                }
+
+                $MissingType = @($Incoming.settings).Where({ $_.settingInstance -and -not $_.settingInstance.'@odata.type' })
+                if ($MissingType.Count -gt 0) {
+                    throw "The submitted policy has $($MissingType.Count) setting(s) missing '@odata.type' and was not saved, because it would no longer deploy."
+                }
+
+                $RawJSON = ConvertTo-Json -Compress -Depth 100 -InputObject $Incoming
             } else {
                 $RawJSON = $TemplateData.RAWJson
             }
