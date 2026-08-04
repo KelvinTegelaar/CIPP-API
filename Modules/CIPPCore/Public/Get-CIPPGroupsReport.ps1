@@ -47,6 +47,9 @@ function Get-CIPPGroupsReport {
             if ($Group.members -and -not $Group.membersCsv) {
                 $Group | Add-Member -NotePropertyName 'membersCsv' -NotePropertyValue ($Group.members.userPrincipalName -join ',') -Force
             }
+            if ($Group.owners -and -not $Group.ownersCsv) {
+                $Group | Add-Member -NotePropertyName 'ownersCsv' -NotePropertyValue ($Group.owners.userPrincipalName -join ',') -Force
+            }
             $Group | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
             $Results.Add($Group)
         } catch {

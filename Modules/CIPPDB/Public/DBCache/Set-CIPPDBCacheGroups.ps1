@@ -20,7 +20,7 @@ function Set-CIPPDBCacheGroups {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching groups' -sev Debug
 
         $GroupSelect = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,assignedLicenses,licenseProcessingState'
-        $Groups = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=$GroupSelect" -tenantid $TenantFilter
+        $Groups = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=$GroupSelect&`$expand=owners(`$select=id,displayName,userPrincipalName)" -tenantid $TenantFilter
 
         # Build bulk request for group members
         $MemberRequests = $Groups | ForEach-Object {
@@ -92,7 +92,7 @@ function Set-CIPPDBCacheGroups {
         $Groups = $null
         $MembersByGroupId = $null
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached groups with members successfully' -sev Debug
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached groups with members and owners successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter `

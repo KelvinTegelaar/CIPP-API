@@ -16,6 +16,7 @@ function Invoke-ListGroups {
     $Owners = $Request.Query.owners
 
     $ExpandMembers = $Request.Query.expandMembers ?? $false
+    $ExpandOwners = $Request.Query.expandOwners ?? $false
     $UseReportDB = $Request.Query.UseReportDB
 
     # Cache path: list view only — skip when fetching a specific group's details
@@ -31,8 +32,11 @@ function Invoke-ListGroups {
     }
 
     $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,assignedLicenses,userPrincipalName,licenseProcessingState'
+    # Graph allows only one navigational $expand on groups; members wins if both are requested
     if ($ExpandMembers -ne $false) {
         $SelectString = '{0}&$expand=members($select=userPrincipalName)' -f $SelectString
+    } elseif ($ExpandOwners -ne $false) {
+        $SelectString = '{0}&$expand=owners($select=userPrincipalName)' -f $SelectString
     }
 
 
@@ -127,6 +131,7 @@ function Invoke-ListGroups {
         } else {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
             @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } },
+            @{Name = 'ownersCsv'; Expression = { $_.owners.userPrincipalName -join ',' } },
             @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } },
             @{Name = 'groupType'; Expression = {
                     if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
