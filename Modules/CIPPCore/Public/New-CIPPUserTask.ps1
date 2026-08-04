@@ -108,6 +108,112 @@ function New-CIPPUserTask {
         }
     }
 
+    # Give the user access to the tenant's shared calendars and shared mailboxes. Both are always
+    # scheduled instead of run inline: a freshly created user is not a usable Exchange recipient for
+    # several minutes, so Add-MailboxFolderPermission / Add-MailboxPermission would fail right now.
+    if ($UserObj.sharedCalendars -or $UserObj.sharedMailboxes) {
+        # This endpoint only grants Identity.User.ReadWrite, so the request must not be able to hand
+        # the new account access to an arbitrary person's calendar or mailbox. Resolve the tenant's
+        # shared mailboxes up front and refuse anything else (fail closed when the lookup errors).
+        try {
+            $TenantSharedMailboxes = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = 'SharedMailbox' } -Select 'UserPrincipalName,PrimarySmtpAddress'
+            $AllowedSharedMailboxes = @(@($TenantSharedMailboxes.UserPrincipalName) + @($TenantSharedMailboxes.PrimarySmtpAddress) | Where-Object { $_ })
+        } catch {
+            $AllowedSharedMailboxes = $null
+            $Results.Add("Could not verify the shared mailboxes for this tenant, no shared access was granted: $($_.Exception.Message)")
+        }
+
+        if ($null -ne $AllowedSharedMailboxes) {
+            # ponytail: single attempt. Exchange usually has the recipient within 15 minutes; if
+            # provisioning is slower the task fails visibly in the scheduler. Upgrade path is a
+            # bounded retry on recipient-not-found.
+            $SharedAccessTime = [int64](([datetime]::UtcNow).AddMinutes(15) - (Get-Date '1/1/1970')).TotalSeconds
+            $SharedAccessGrants = [System.Collections.Generic.List[object]]::new()
+
+            $CalendarPermission = if ($UserObj.sharedCalendarPermission.value) { $UserObj.sharedCalendarPermission.value } elseif ($UserObj.sharedCalendarPermission) { $UserObj.sharedCalendarPermission } else { 'Editor' }
+            foreach ($Calendar in @($UserObj.sharedCalendars)) {
+                $CalendarId = if ($Calendar.value) { $Calendar.value } else { $Calendar }
+                $CalendarLabel = if ($Calendar.label) { $Calendar.label } else { $CalendarId }
+                $SharedAccessGrants.Add([PSCustomObject]@{
+                        Identity   = $CalendarId
+                        Kind       = 'calendar'
+                        Label      = $CalendarLabel
+                        Name       = "Grant Calendar Access: $($CreationResults.Username) -> $CalendarId"
+                        Command    = 'Set-CIPPCalendarPermission'
+                        Parameters = [PSCustomObject]@{
+                            TenantFilter           = $UserObj.tenantFilter
+                            UserID                 = $CalendarId
+                            UserToGetPermissions   = $CreationResults.Username
+                            FolderName             = 'Calendar'
+                            AutoResolveFolderName  = $true
+                            Permissions            = $CalendarPermission
+                            SendNotificationToUser = $true
+                            APIName                = 'Shared Calendar Onboarding'
+                        }
+                        Success    = "Scheduled $CalendarPermission access to the calendar of $CalendarLabel in 15 minutes. A sharing invitation will be sent to $($CreationResults.Username) once Exchange has provisioned the mailbox."
+                    })
+            }
+
+            # Set-CIPPMailboxPermission takes a single level, so Full Access plus Send As means one
+            # task per level. They are separate Exchange operations anyway.
+            $MailboxPermissions = @(@($UserObj.sharedMailboxPermission) | ForEach-Object { if ($_.value) { $_.value } else { $_ } } | Where-Object { $_ })
+            if (-not $MailboxPermissions) { $MailboxPermissions = @('FullAccess') }
+            foreach ($Mailbox in @($UserObj.sharedMailboxes)) {
+                $MailboxId = if ($Mailbox.value) { $Mailbox.value } else { $Mailbox }
+                $MailboxLabel = if ($Mailbox.label) { $Mailbox.label } else { $MailboxId }
+                foreach ($MailboxPermission in $MailboxPermissions) {
+                    # AutoMap only applies to FullAccess, and is what makes Outlook mount the mailbox
+                    # on its own, so no invitation is needed on this side of the feature.
+                    $AutoMapNote = if ($MailboxPermission -eq 'FullAccess') { ' Outlook adds the mailbox automatically.' } else { '' }
+                    $SharedAccessGrants.Add([PSCustomObject]@{
+                            Identity   = $MailboxId
+                            Kind       = 'mailbox'
+                            Label      = $MailboxLabel
+                            Name       = "Grant Mailbox Access: $($CreationResults.Username) -> $MailboxId ($MailboxPermission)"
+                            Command    = 'Set-CIPPMailboxPermission'
+                            Parameters = [PSCustomObject]@{
+                                TenantFilter    = $UserObj.tenantFilter
+                                UserId          = $MailboxId
+                                AccessUser      = $CreationResults.Username
+                                PermissionLevel = $MailboxPermission
+                                Action          = 'Add'
+                                AutoMap         = $true
+                                APIName         = 'Shared Mailbox Onboarding'
+                            }
+                            Success    = "Scheduled $MailboxPermission on the shared mailbox $MailboxLabel in 15 minutes.$AutoMapNote"
+                        })
+                }
+            }
+
+            foreach ($Grant in $SharedAccessGrants) {
+                if ($AllowedSharedMailboxes -notcontains $Grant.Identity) {
+                    $Results.Add("Skipped $($Grant.Kind) access to $($Grant.Label): it is not a shared mailbox in this tenant.")
+                    continue
+                }
+                try {
+                    $TaskBody = [PSCustomObject]@{
+                        TenantFilter  = $UserObj.tenantFilter
+                        Name          = $Grant.Name
+                        Command       = @{ value = $Grant.Command }
+                        Parameters    = $Grant.Parameters
+                        ScheduledTime = $SharedAccessTime
+                        PostExecution = @{ Webhook = $false; Email = $false; PSA = $false }
+                    }
+                    # Add-CIPPScheduledTask reports most failures by returning an error string, only
+                    # table write failures throw, so the return value decides what we tell the caller.
+                    $ScheduleResult = Add-CIPPScheduledTask -Task $TaskBody -hidden $false -Headers $Headers -DisallowDuplicateName $true
+                    if ($ScheduleResult -like 'Successfully added task:*') {
+                        $Results.Add($Grant.Success)
+                    } else {
+                        $Results.Add("Failed to schedule $($Grant.Kind) access to $($Grant.Label): $ScheduleResult")
+                    }
+                } catch {
+                    $Results.Add("Failed to schedule $($Grant.Kind) access to $($Grant.Label): $($_.Exception.Message)")
+                }
+            }
+        }
+    }
+
     if ($UserObj.setManager) {
         $ManagerResults = Set-CIPPManager -Users $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
         $Results.Add($ManagerResults.Result)
