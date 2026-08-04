@@ -54,8 +54,8 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
     } #we're done.
 
     try {
-        $CurrentState = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$expand=assignments&orderBy=priority&`$filter=deviceEnrollmentConfigurationType eq 'SinglePlatformRestriction'" -tenantID $Tenant -AsApp $true |
-            Select-Object -Property id, androidForWorkRestriction, androidRestriction, iosRestriction, macOSRestriction, windowsRestriction
+        $CurrentState = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$orderby=priority&`$filter=deviceEnrollmentConfigurationType eq 'SinglePlatformRestriction'" -tenantID $Tenant -AsApp $true |
+            Select-Object -First 1 -Property id, androidForWorkRestriction, androidRestriction, iosRestriction, macOSRestriction, windowsRestriction
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DefaultPlatformRestrictions state for $Tenant. Error: $ErrorMessage" -Sev Error

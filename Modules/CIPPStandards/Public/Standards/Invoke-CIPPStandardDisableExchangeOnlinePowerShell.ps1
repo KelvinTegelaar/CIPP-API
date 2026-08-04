@@ -49,7 +49,7 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
 
     try {
 
-        $RoleAssignments = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$expand=principal' -tenantid $Tenant
+        $RoleAssignments = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$select=id,principalId,roleDefinitionId,directoryScopeId&$expand=principal($select=id,userPrincipalName)' -tenantid $Tenant
         $DirectAdminUPNs = ($RoleAssignments | Where-Object { $_.principal.'@odata.type' -eq '#microsoft.graph.user' }).principal.userPrincipalName
         $AdminGroupIds = ($RoleAssignments | Where-Object { $_.principal.'@odata.type' -eq '#microsoft.graph.group' }).principal.id | Select-Object -Unique
 
