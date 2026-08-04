@@ -100,6 +100,7 @@ function Invoke-CIPPBaselineStandard {
             Diff                = $null
             Inheritance         = @($Tiers)
             AlertEvent          = $null
+            CacheType           = $Definition.read.cacheType
         }
 
         # 1b. Manual tasks: state lives on the resolved row; the operator completes them.
@@ -169,14 +170,10 @@ function Invoke-CIPPBaselineStandard {
 
         # checkBeforeRun=false marks standards whose pre-check cannot prove the write is
         # unnecessary (e.g. a CA template compare only sees name/state) - they write whenever
-        # remediation applies, cache or not.
+        # remediation applies, cache or not. A missing cache does NOT return early: the
+        # engine fails OPEN - when the current state cannot be read, an enforced standard
+        # still applies its expected state, and only a compare/report-only run skips.
         $CheckBeforeRun = $Definition.checkBeforeRun -ne $false
-        if ($null -eq $Current -and $CheckBeforeRun) {
-            # Deliberately writes NOTHING: the row stays 'No Data' and retries next run.
-            $Result.Outcome = 'Skipped-NoCache'
-            $Result.Status = $PriorStatus ?? 'No Data'
-            return $Result
-        }
 
         # 3. Project to the expected keys (subset compare) and diff. A key the current object
         # lacks stays present as $null so the compare flags the presence mismatch.
@@ -226,7 +223,10 @@ function Invoke-CIPPBaselineStandard {
             return $Result
         }
 
-        $RemediationAllowed = ($Mode -eq 'oneoff') -or ($Mode -eq 'run' -and ($Item.RemediateEnabled -or $RemediateOnExpire -or $DeniedRemediate))
+        # An active Accept or a pending delete always blocks remediation - including the
+        # fail-open path, which must never blind-write over an operator's acceptance.
+        $TriageHold = $AcceptActive -or $PriorStatus -eq 'Denied - Delete Pending'
+        $RemediationAllowed = (($Mode -eq 'oneoff') -or ($Mode -eq 'run' -and ($Item.RemediateEnabled -or $RemediateOnExpire -or $DeniedRemediate))) -and -not $TriageHold
         # Write only when needed: drift proves it, -Force (manual runs) demands it, and
         # checkBeforeRun=false standards cannot prove a write unnecessary.
         $WriteNeeded = (-not $Compliant) -or $Force.IsPresent -or (-not $CheckBeforeRun)
@@ -252,8 +252,10 @@ function Invoke-CIPPBaselineStandard {
             $Result.Outcome = 'Compliant'
             $Result.Status = 'Compliant'
         } elseif ($null -eq $Current) {
-            # checkBeforeRun=false with no cache AND no remediation applying: nothing ran,
-            # so nothing is written - the row stays 'No Data' and retries next run.
+            # No cache and remediation does not apply (compare mode / report-only): there is
+            # nothing to honestly report, so nothing is written - the row stays 'No Data'
+            # and retries next run.
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "$($Item.Standard): no $($Definition.read.cacheType) data in CIPPDb after collection and remediation does not apply - skipped, nothing written." -Sev 'Info'
             $Result.Outcome = 'Skipped-NoCache'
             $Result.Status = $PriorStatus ?? 'No Data'
             return $Result

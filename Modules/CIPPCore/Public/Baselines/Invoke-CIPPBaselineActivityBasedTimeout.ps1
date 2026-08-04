@@ -40,6 +40,7 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
         Diff                = $null
         Inheritance         = @($Item.Tiers)
         AlertEvent          = $null
+        CacheType           = 'ActivityBasedTimeoutPolicy'
     }
 
     try {
@@ -62,24 +63,21 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
                 }
             }
         }
-        if ($null -eq $Policy) {
-            # Deliberately writes NOTHING: the row stays 'No Data' and retries next run.
-            $Result.Outcome = 'Skipped-NoCache'
-            $Result.Status = $PriorStatus ?? 'No Data'
-            return $Result
-        }
-
+        # Fail open: a missing cache never returns early - an enforced standard still
+        # applies its expected state (POSTing a new org-default policy when none exists).
         # The governed value sits in a JSON string inside the policy's definition array.
         $CurrentTimeout = $(try { (@($Policy.definition)[0] | ConvertFrom-Json).ActivityBasedTimeoutPolicy.WebSessionIdleTimeout } catch { $null })
-        $Result.CurrentValue = [PSCustomObject]@{ timeout = $CurrentTimeout }
-        $Compliant = $CurrentTimeout -eq $ExpectedTimeout
+        if ($null -ne $Policy) {
+            $Result.CurrentValue = [PSCustomObject]@{ timeout = $CurrentTimeout }
+        }
+        $Compliant = ($null -ne $Policy) -and ($CurrentTimeout -eq $ExpectedTimeout)
         if (-not $Compliant) {
             $Result.Diff = @([PSCustomObject]@{ Property = 'timeout'; ExpectedValue = $ExpectedTimeout; ReceivedValue = $CurrentTimeout })
         }
 
         $Expires = if ("$($Prior.DeviationExpires)" -match '^\d+$') { [int64]$Prior.DeviationExpires } else { 0 }
         $AcceptActive = $PriorStatus -eq 'Accepted' -and ($Expires -eq 0 -or $Now -lt $Expires)
-        if (-not $Compliant -and $AcceptActive) {
+        if (-not $Compliant -and $null -ne $Policy -and $AcceptActive) {
             $Result.Outcome = 'Drift'
             $Result.Status = 'Accepted'
             Set-CIPPBaselineResult -Result $Result -Prior $Prior
@@ -87,7 +85,8 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
         }
 
         $DeniedRemediate = $PriorStatus -eq 'Denied - Remediate Pending'
-        $RemediationAllowed = ($Mode -eq 'oneoff') -or ($Mode -eq 'run' -and ($Item.RemediateEnabled -or $DeniedRemediate))
+        # An active Accept blocks remediation - including the fail-open path.
+        $RemediationAllowed = (($Mode -eq 'oneoff') -or ($Mode -eq 'run' -and ($Item.RemediateEnabled -or $DeniedRemediate))) -and -not $AcceptActive
         $WriteNeeded = (-not $Compliant) -or $Force.IsPresent
 
         if ($Mode -ne 'compare' -and $RemediationAllowed -and $WriteNeeded) {
@@ -115,10 +114,17 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
             $Result.Compliant = $true
             $Result.Outcome = 'Compliant'
             $Result.Status = 'Compliant'
+        } elseif ($null -eq $Policy) {
+            # No cache and remediation does not apply: nothing to honestly report, so
+            # nothing is written - the row stays 'No Data' and retries next run.
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "$($Item.Standard): no ActivityBasedTimeoutPolicy data in CIPPDb after collection and remediation does not apply - skipped, nothing written." -Sev 'Info'
+            $Result.Outcome = 'Skipped-NoCache'
+            $Result.Status = $PriorStatus ?? 'No Data'
+            return $Result
         } else {
             $Result.Outcome = 'Drift'
-            $Result.Status = 'Drift'
-            if ($PriorStatus -ne 'Drift' -and $Item.AlertEnabled) { $Result.AlertEvent = 'Drift' }
+            $Result.Status = if ("$PriorStatus".StartsWith('Denied')) { $PriorStatus } else { 'Drift' }
+            if ($Result.Status -eq 'Drift' -and $PriorStatus -ne 'Drift' -and $Item.AlertEnabled) { $Result.AlertEvent = 'Drift' }
         }
 
         Set-CIPPBaselineResult -Result $Result -Prior $Prior

@@ -48,7 +48,7 @@ function Start-CIPPBaselineOrchestrator {
 
     if ($WorkItems.Count -eq 0) {
         Write-Information 'Start-CIPPBaselineOrchestrator: no baseline work items resolved - nothing to do.'
-        return
+        return 0
     }
 
     # License prefilter: collect each item's required capabilities, compare against the
@@ -97,7 +97,7 @@ function Start-CIPPBaselineOrchestrator {
     }
     if ($LicensedItems.Count -eq 0) {
         Write-Information 'Start-CIPPBaselineOrchestrator: no licensed work items remain - nothing to queue.'
-        return
+        return 0
     }
 
     $Queue = New-CippQueueEntry -Name "Baseline $Mode ($($LicensedItems.Count) checks)" -TotalTasks $LicensedItems.Count
@@ -117,6 +117,11 @@ function Start-CIPPBaselineOrchestrator {
         Batch            = @($Batch)
         OrchestratorName = "BaselineRun_$Mode"
         SkipLog          = $false
+        # After every check has run, refresh ONLY the caches remediations wrote to -
+        # otherwise the next run re-reads stale data and re-detects fixed drift.
+        PostExecution    = @{
+            FunctionName = 'CIPPBaselineCacheRefresh'
+        }
     }
     $null = Start-CIPPOrchestrator -InputObject $InputObject
     Write-LogMessage -API 'Baselines' -message "Baseline $Mode started: $($LicensedItems.Count) (tenant, standard) checks queued." -Sev 'Info'
@@ -138,4 +143,6 @@ function Start-CIPPBaselineOrchestrator {
             Write-Information "Baseline history pruning skipped: $($_.Exception.Message)"
         }
     }
+
+    return $LicensedItems.Count
 }
