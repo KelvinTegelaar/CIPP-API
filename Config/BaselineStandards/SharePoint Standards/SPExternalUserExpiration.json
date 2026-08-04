@@ -1,0 +1,46 @@
+{
+  "name": "SPExternalUserExpiration",
+  "label": "Set guest access to expire automatically",
+  "cat": "SharePoint Standards",
+  "tag": [
+    "CIS M365 7.0.0 (7.2.9)",
+    "CISA (MS.SPO.1.5v1)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Ensure guest access to a site or OneDrive will expire automatically",
+  "executiveText": "Automatically expires external user access to SharePoint sites and OneDrive after a specified period, reducing security risks from forgotten or unnecessary guest accounts. This ensures external access is regularly reviewed and maintained only when actively needed.",
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "days": {
+      "type": "number",
+      "label": "Days until expiration (Default 60)",
+      "default": 60
+    }
+  },
+  "expected": {
+    "ExternalUserExpirationRequired": true,
+    "ExternalUserExpireInDays": "%days%"
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "remediate": {
+    "executor": "SPOTenant",
+    "properties": {
+      "ExternalUserExpirationRequired": true,
+      "ExternalUserExpireInDays": "%days%"
+    }
+  }
+}

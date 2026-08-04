@@ -1,0 +1,74 @@
+{
+  "name": "TeamsChatProtection",
+  "label": "Set Teams Chat Protection Settings",
+  "cat": "Teams Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Configures Teams chat protection settings including weaponizable file protection and malicious URL protection.",
+  "executiveText": "Enables automated security protections in Microsoft Teams to block dangerous files and warn users about malicious links in chat messages. This helps protect employees from file-based attacks and phishing attempts. These safeguards work seamlessly in the background, providing essential protection without disrupting normal business communication.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "FileTypeCheck": {
+      "type": "autoComplete",
+      "label": "Weaponizable File Protection",
+      "options": [
+        {
+          "label": "Enabled",
+          "value": "Enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "Disabled"
+        }
+      ],
+      "default": "Enabled",
+      "recommended": "Enabled"
+    },
+    "UrlReputationCheck": {
+      "type": "autoComplete",
+      "label": "Malicious URL Protection",
+      "options": [
+        {
+          "label": "Enabled",
+          "value": "Enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "Disabled"
+        }
+      ],
+      "default": "Enabled",
+      "recommended": "Enabled"
+    }
+  },
+  "expected": {
+    "FileTypeCheck": "%FileTypeCheck%",
+    "UrlReputationCheck": "%UrlReputationCheck%"
+  },
+  "read": {
+    "cacheType": "CsTeamsMessagingConfiguration"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsMessagingConfiguration",
+        "params": {
+          "FileTypeCheck": "%FileTypeCheck%",
+          "UrlReputationCheck": "%UrlReputationCheck%"
+        }
+      }
+    ]
+  }
+}

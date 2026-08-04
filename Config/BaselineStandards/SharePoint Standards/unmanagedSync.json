@@ -1,0 +1,47 @@
+{
+  "name": "unmanagedSync",
+  "label": "Restrict access to SharePoint and OneDrive from unmanaged devices",
+  "cat": "SharePoint Standards",
+  "tag": [
+    "CISA (MS.SPO.2.1v1)",
+    "NIST CSF 2.0 (PR.AA-05)"
+  ],
+  "impact": "High Impact",
+  "helpText": "Entra P1 required. Block or limit access to SharePoint and OneDrive content from unmanaged devices (those not hybrid AD joined or compliant in Intune). These controls rely on Microsoft Entra Conditional Access policies and can take up to 24 hours to take effect.",
+  "executiveText": "Restricts access to company files from personal or unmanaged devices, ensuring corporate data can only be accessed from properly secured and monitored devices. This critical security control prevents data leaks while allowing controlled access through web browsers when necessary.",
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "conditionalAccessPolicy": {
+      "type": "autoComplete",
+      "label": "Unmanaged device access level",
+      "options": [
+        { "label": "Allow limited, web-only access", "value": 1 },
+        { "label": "Block access", "value": 2 }
+      ],
+      "default": 2
+    }
+  },
+  "expected": {
+    "ConditionalAccessPolicy": "%conditionalAccessPolicy%"
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "remediate": {
+    "executor": "SPOTenant",
+    "properties": {
+      "ConditionalAccessPolicy": "%conditionalAccessPolicy%"
+    }
+  }
+}

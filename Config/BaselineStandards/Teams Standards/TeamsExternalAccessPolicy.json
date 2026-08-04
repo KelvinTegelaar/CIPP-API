@@ -1,0 +1,53 @@
+{
+  "name": "TeamsExternalAccessPolicy",
+  "label": "External Access Settings for Microsoft Teams",
+  "cat": "Teams Standards",
+  "tag": [
+    "CIS M365 7.0.0 (8.2.1)",
+    "CIS M365 7.0.0 (8.2.2)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Sets the properties of the Global external access policy.",
+  "executiveText": "Defines the organization's policy for communicating with external users through Teams, including other organizations, Skype users, and unmanaged accounts. This fundamental setting determines the scope of external collaboration while maintaining security boundaries for business communications.",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "EnableFederationAccess": {
+      "type": "switch",
+      "label": "Allow communication from trusted organizations",
+      "default": false
+    },
+    "EnableTeamsConsumerAccess": {
+      "type": "switch",
+      "label": "Allow communication with unmanaged Teams accounts",
+      "default": false
+    }
+  },
+  "expected": {
+    "EnableFederationAccess": "%EnableFederationAccess%",
+    "EnableTeamsConsumerAccess": "%EnableTeamsConsumerAccess%"
+  },
+  "read": {
+    "cacheType": "CsExternalAccessPolicy"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsExternalAccessPolicy",
+        "params": {
+          "EnableFederationAccess": "%EnableFederationAccess%",
+          "EnableTeamsConsumerAccess": "%EnableTeamsConsumerAccess%"
+        }
+      }
+    ]
+  }
+}

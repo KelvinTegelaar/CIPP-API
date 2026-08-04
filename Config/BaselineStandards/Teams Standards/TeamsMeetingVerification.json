@@ -1,0 +1,56 @@
+{
+  "name": "TeamsMeetingVerification",
+  "label": "Teams Meeting Verification (CAPTCHA)",
+  "cat": "Teams Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Configures CAPTCHA verification for external users joining Teams meetings. This helps prevent unauthorized AI notetakers and bots from joining meetings.",
+  "executiveText": "Requires external meeting participants to complete verification challenges before joining Teams meetings, preventing automated bots and unauthorized AI systems from accessing confidential discussions. This security measure protects against meeting infiltration while maintaining legitimate external collaboration.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "CaptchaVerificationForMeetingJoin": {
+      "type": "autoComplete",
+      "label": "CAPTCHA Verification Setting",
+      "options": [
+        {
+          "label": "Not Required",
+          "value": "NotRequired"
+        },
+        {
+          "label": "Anonymous Users and Untrusted Organizations",
+          "value": "AnonymousUsersAndUntrustedOrganizations"
+        }
+      ],
+      "default": "AnonymousUsersAndUntrustedOrganizations",
+      "recommended": "AnonymousUsersAndUntrustedOrganizations"
+    }
+  },
+  "expected": {
+    "CaptchaVerificationForMeetingJoin": "%CaptchaVerificationForMeetingJoin%"
+  },
+  "read": {
+    "cacheType": "CsTeamsMeetingPolicy"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsMeetingPolicy",
+        "params": {
+          "CaptchaVerificationForMeetingJoin": "%CaptchaVerificationForMeetingJoin%"
+        }
+      }
+    ]
+  }
+}

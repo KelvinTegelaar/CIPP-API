@@ -1,0 +1,35 @@
+{
+  "name": "SPDisableCustomScripts",
+  "label": "Disable custom scripts on SharePoint sites",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Prevents users from running custom scripts on SharePoint and OneDrive sites. Custom scripts can modify site behaviors and bypass governance controls.",
+  "executiveText": "Blocks custom scripts from being added to SharePoint and OneDrive sites, enforcing governance controls and preventing unscoped code execution. This aligns with Microsoft's Baseline Security Mode recommendation to permanently remove the ability to add new custom scripts, directing organizations to use the SharePoint Framework instead.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "CustomScriptsRestrictMode": true
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "remediate": {
+    "executor": "SPOTenant",
+    "properties": {
+      "CustomScriptsRestrictMode": true
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "TeamsMeetingRecordingExpiration",
+  "label": "Set Teams Meeting Recording Expiration",
+  "cat": "Teams Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Sets the default number of days after which Teams meeting recordings automatically expire. Valid values are -1 (Never Expire) or between 1 and 99999. The default value is 120 days.",
+  "executiveText": "Automatically removes old Teams meeting recordings after a specified period to manage storage costs and comply with data retention policies. This helps organizations balance the need to preserve important meeting content with storage efficiency and regulatory compliance requirements.",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "ExpirationDays": {
+      "type": "number",
+      "label": "Recording Expiration Days (e.g., 365)",
+      "default": 120
+    }
+  },
+  "expected": {
+    "NewMeetingRecordingExpirationDays": "%ExpirationDays%"
+  },
+  "read": {
+    "cacheType": "CsTeamsMeetingPolicy"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsMeetingPolicy",
+        "params": {
+          "NewMeetingRecordingExpirationDays": "%ExpirationDays%"
+        }
+      }
+    ]
+  }
+}

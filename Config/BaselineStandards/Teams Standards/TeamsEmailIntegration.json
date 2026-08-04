@@ -1,0 +1,48 @@
+{
+  "name": "TeamsEmailIntegration",
+  "label": "Disallow emails to be sent to channel email addresses",
+  "cat": "Teams Standards",
+  "tag": [
+    "CIS M365 7.0.0 (8.1.2)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Should users be allowed to send emails directly to a channel email addresses?",
+  "executiveText": "Controls whether Teams channels can receive emails directly, enabling integration between email and team collaboration. This feature can improve workflow efficiency by allowing external communications to flow into team discussions, though it may need management for security or organizational reasons.",
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "AllowEmailIntoChannel": {
+      "type": "switch",
+      "label": "Allow channel emails",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "AllowEmailIntoChannel": "%AllowEmailIntoChannel%"
+  },
+  "read": {
+    "cacheType": "CsTeamsClientConfiguration"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsClientConfiguration",
+        "params": {
+          "AllowEmailIntoChannel": "%AllowEmailIntoChannel%"
+        }
+      }
+    ]
+  }
+}
