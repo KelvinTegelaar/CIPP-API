@@ -84,7 +84,7 @@ function Invoke-ListmailboxPermissions {
                     }
                 }
             }
-            if ($Perm.GrantSendonBehalfTo -ne $null) {
+            if ($Perm.GrantSendonBehalfTo) {
                 $Perm.GrantSendonBehalfTo | ForEach-Object { [PSCustomObject]@{
                         User        = $_
                         Permissions = 'SendOnBehalf'

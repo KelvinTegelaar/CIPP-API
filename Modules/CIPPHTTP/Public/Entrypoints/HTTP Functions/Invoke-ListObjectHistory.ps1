@@ -165,18 +165,18 @@ function Invoke-ListObjectHistory {
 
             [array]$RawAudits = New-GraphGetRequest -uri $Uri -tenantid $TenantFilter -ComplexFilter -ErrorAction Stop
 
-            [array]$DirectoryTimeline = @(foreach ($Event in $RawAudits) {
-                $TargetResource = $Event.targetResources | Where-Object { $_.id -eq $ObjectId } | Select-Object -First 1
-                $TargetResource = $TargetResource ?? ($Event.targetResources | Select-Object -First 1)
+            [array]$DirectoryTimeline = @(foreach ($Audit in $RawAudits) {
+                $TargetResource = $Audit.targetResources | Where-Object { $_.id -eq $ObjectId } | Select-Object -First 1
+                $TargetResource = $TargetResource ?? ($Audit.targetResources | Select-Object -First 1)
 
                 [PSCustomObject]@{
-                    id            = $Event.id
-                    timestamp     = $Event.activityDateTime
-                    activity      = $Event.activityDisplayName
-                    category      = $Event.category
-                    operationType = $Event.operationType
-                    result        = $Event.result
-                    actor         = & $NormalizeActor $Event.initiatedBy
+                    id            = $Audit.id
+                    timestamp     = $Audit.activityDateTime
+                    activity      = $Audit.activityDisplayName
+                    category      = $Audit.category
+                    operationType = $Audit.operationType
+                    result        = $Audit.result
+                    actor         = & $NormalizeActor $Audit.initiatedBy
                     target        = $TargetResource.displayName ?? $TargetResource.userPrincipalName ?? $ObjectId
                     changes       = @(& $ParseModifiedProperties ($TargetResource.modifiedProperties ?? @()))
                     source        = 'directoryAudit'

@@ -71,7 +71,7 @@ function Invoke-ListLogs {
                     User       = $Row.Username
                     Severity   = $Row.Severity
                     LogData    = $LogData
-                    TenantID   = if ($Row.TenantID -ne $null) {
+                    TenantID   = if ($null -ne $Row.TenantID) {
                         $Row.TenantID
                     } else {
                         'None'
@@ -178,7 +178,7 @@ function Invoke-ListLogs {
                 User         = $Row.Username
                 Severity     = $Row.Severity
                 LogData      = $LogData
-                TenantID     = if ($Row.TenantID -ne $null) {
+                TenantID     = if ($null -ne $Row.TenantID) {
                     $Row.TenantID
                 } else {
                     'None'

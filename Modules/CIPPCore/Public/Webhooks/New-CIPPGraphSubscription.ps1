@@ -25,9 +25,9 @@ function New-CIPPGraphSubscription {
             # Required event types
             $EventList = [System.Collections.Generic.List[string]]@('test-created', 'granular-admin-relationship-approved')
             if (($EventType | Measure-Object).count -gt 0) {
-                foreach ($Event in $EventType) {
-                    if ($EventList -notcontains $Event) {
-                        $EventList.Add($Event)
+                foreach ($EventName in $EventType) {
+                    if ($EventList -notcontains $EventName) {
+                        $EventList.Add($EventName)
                     }
                 }
             }

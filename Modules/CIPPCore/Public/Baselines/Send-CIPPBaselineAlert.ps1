@@ -14,8 +14,8 @@ function Send-CIPPBaselineAlert {
     param($Result)
 
     $Item = $Result.Item
-    $Event = $Result.AlertEvent
-    $Title = if ($Event -eq 'Remediated') {
+    $AlertEvent = $Result.AlertEvent
+    $Title = if ($AlertEvent -eq 'Remediated') {
         "Baseline standard auto-remediated: $($Item.Standard) on $($Item.TenantFilter)"
     } else {
         "Baseline drift detected: $($Item.Standard) on $($Item.TenantFilter)"
@@ -25,7 +25,7 @@ function Send-CIPPBaselineAlert {
         }) -join ''
     $HTMLContent = "<p>$Title (baseline: $($Item.SourceTemplate), stage $($Item.Stage)).</p>" + $(if ($DiffLines) { "<ul>$DiffLines</ul>" } else { '' })
     $JSONContent = ConvertTo-Json -Compress -Depth 100 -InputObject ([PSCustomObject]@{
-            Event        = $Event
+            Event        = $AlertEvent
             Tenant       = $Item.TenantFilter
             Standard     = $Item.Standard
             Baseline     = $Item.SourceTemplate

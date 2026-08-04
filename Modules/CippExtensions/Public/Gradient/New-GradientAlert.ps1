@@ -18,7 +18,7 @@ function New-GradientAlert {
                 description = $_.defaultDomainName
                 id          = $_.defaultDomainName
             })
-        if ($ExistingAccounts -eq $null) {
+        if ($null -eq $ExistingAccounts) {
             Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/accounts' -Method POST -Headers $GradientToken -Body $NewAccounts -ContentType 'application/json'
         }
         #Send the alert

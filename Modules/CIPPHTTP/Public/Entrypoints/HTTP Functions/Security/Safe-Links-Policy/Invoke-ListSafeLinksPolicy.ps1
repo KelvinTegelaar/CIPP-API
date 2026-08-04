@@ -80,7 +80,7 @@ Function Invoke-ListSafeLinksPolicy {
                 ExceptIfSentToMemberOf = $associatedRule.ExceptIfSentToMemberOf
                 ExceptIfRecipientDomainIs = $associatedRule.ExceptIfRecipientDomainIs
                 Description = $policy.AdminDisplayName
-                IsBuiltIn = ($matchingBuiltInRule -ne $null)
+                IsBuiltIn = ($null -ne $matchingBuiltInRule)
                 IsValid = $policy.IsValid
                 ConfigurationStatus = if ($associatedRule) { "Complete" } else { "Policy Only (Missing Rule)" }
             }

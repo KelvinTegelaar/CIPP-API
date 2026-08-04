@@ -151,7 +151,7 @@ Function Invoke-ExecManageRetentionTags {
                     $cmdParams.Comment = $Tag.Comment
                 }
 
-                if ($Tag.RetentionEnabled -ne $null) {
+                if ($null -ne $Tag.RetentionEnabled) {
                     $cmdParams.RetentionEnabled = $Tag.RetentionEnabled
                 }
 
@@ -210,7 +210,7 @@ Function Invoke-ExecManageRetentionTags {
                     $cmdParams.Comment = $Tag.Comment
                 }
 
-                if ($Tag.RetentionEnabled -ne $null) {
+                if ($null -ne $Tag.RetentionEnabled) {
                     $cmdParams.RetentionEnabled = $Tag.RetentionEnabled
                 }
 

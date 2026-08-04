@@ -391,7 +391,7 @@ function Compare-CIPPIntuneObject {
         )
 
         # Recursive function to process group setting collections at any depth
-        function Process-GroupSettingChildren {
+        function Expand-GroupSettingChildren {
             param(
                 [Parameter(Mandatory = $true)]
                 $Children,
@@ -416,7 +416,7 @@ function Compare-CIPPIntuneObject {
                         if ($child.groupSettingCollectionValue) {
                             foreach ($groupValue in $child.groupSettingCollectionValue) {
                                 if ($groupValue.children) {
-                                    $nestedResults = Process-GroupSettingChildren -Children $groupValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex
+                                    $nestedResults = Expand-GroupSettingChildren -Children $groupValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex
                                     foreach ($nr in $nestedResults) { $results.Add($nr) }
                                 }
                             }
@@ -502,7 +502,7 @@ function Compare-CIPPIntuneObject {
 
                 # Also process any children within choice setting values
                 if ($child.choiceSettingValue?.children) {
-                    $nestedResults = Process-GroupSettingChildren -Children $child.choiceSettingValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex
+                    $nestedResults = Expand-GroupSettingChildren -Children $child.choiceSettingValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex
                     foreach ($nr in $nestedResults) { $results.Add($nr) }
                 }
             }
@@ -520,7 +520,7 @@ function Compare-CIPPIntuneObject {
                         $groupResults = [System.Collections.Generic.List[PSCustomObject]]::new()
                         foreach ($groupValue in $settingInstance.groupSettingCollectionValue) {
                             if ($groupValue.children -is [System.Array]) {
-                                $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Reference' -IntuneCollectionIndex $intuneCollectionIndex
+                                $childResults = Expand-GroupSettingChildren -Children $groupValue.children -Source 'Reference' -IntuneCollectionIndex $intuneCollectionIndex
                                 foreach ($cr in $childResults) { $groupResults.Add($cr) }
                             }
                         }
@@ -580,7 +580,7 @@ function Compare-CIPPIntuneObject {
 
                         # Recurse into children of choice settings (e.g. firewall profile sub-settings)
                         if ($settingInstance.choiceSettingValue.children) {
-                            $childResults = Process-GroupSettingChildren -Children $settingInstance.choiceSettingValue.children -Source 'Reference' -IntuneCollectionIndex $intuneCollectionIndex
+                            $childResults = Expand-GroupSettingChildren -Children $settingInstance.choiceSettingValue.children -Source 'Reference' -IntuneCollectionIndex $intuneCollectionIndex
                             foreach ($cr in $childResults) { $cr }
                         }
                     } elseif ($settingInstance.choiceSettingCollectionValue) {
@@ -629,7 +629,7 @@ function Compare-CIPPIntuneObject {
                         $groupResults = [System.Collections.Generic.List[PSCustomObject]]::new()
                         foreach ($groupValue in $settingInstance.groupSettingCollectionValue) {
                             if ($groupValue.children -is [System.Array]) {
-                                $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Difference' -IntuneCollectionIndex $intuneCollectionIndex
+                                $childResults = Expand-GroupSettingChildren -Children $groupValue.children -Source 'Difference' -IntuneCollectionIndex $intuneCollectionIndex
                                 foreach ($cr in $childResults) { $groupResults.Add($cr) }
                             }
                         }
@@ -689,7 +689,7 @@ function Compare-CIPPIntuneObject {
 
                         # Recurse into children of choice settings (e.g. firewall profile sub-settings)
                         if ($settingInstance.choiceSettingValue.children) {
-                            $childResults = Process-GroupSettingChildren -Children $settingInstance.choiceSettingValue.children -Source 'Difference' -IntuneCollectionIndex $intuneCollectionIndex
+                            $childResults = Expand-GroupSettingChildren -Children $settingInstance.choiceSettingValue.children -Source 'Difference' -IntuneCollectionIndex $intuneCollectionIndex
                             foreach ($cr in $childResults) { $cr }
                         }
                     } elseif ($settingInstance.choiceSettingCollectionValue) {

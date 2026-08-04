@@ -91,11 +91,11 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
             try {
                 # Update the default profile in the profiles array, preserve all others
                 $ExistingProfiles = @($CurrentConfig.passkeyProfiles)
-                $UpdatedProfiles = foreach ($Profile in $ExistingProfiles) {
-                    if ($Profile.id -eq $DefaultProfileId) {
+                $UpdatedProfiles = foreach ($PasskeyProfile in $ExistingProfiles) {
+                    if ($PasskeyProfile.id -eq $DefaultProfileId) {
                         @{
-                            id                     = $Profile.id
-                            name                   = $Profile.name
+                            id                     = $PasskeyProfile.id
+                            name                   = $PasskeyProfile.name
                             passkeyTypes           = $PasskeyTypes
                             attestationEnforcement = $AttestationEnforcement
                             keyRestrictions        = @{
@@ -105,7 +105,7 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
                             }
                         }
                     } else {
-                        $Profile
+                        $PasskeyProfile
                     }
                 }
 

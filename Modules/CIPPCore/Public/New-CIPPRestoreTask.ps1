@@ -38,7 +38,7 @@ function New-CIPPRestoreTask {
 
     # Helper function to clean user/group objects for Graph API - removes reference properties,
     # read-only properties, nulls, and empty strings
-    function Clean-GraphObject {
+    function ConvertTo-RestorableGraphObject {
         param($Object, [switch]$ExcludeId, [switch]$ForUpdate)
         $excludeProps = @('password', 'passwordProfile', '@odata.type', 'manager', 'memberOf', 'createdOnBehalfOf',
             'createdByAppId', 'deletedDateTime', 'authorizationInfo', 'imAddresses', 'assignedLicenses',
@@ -146,7 +146,7 @@ function New-CIPPRestoreTask {
                     if ($overwrite) {
                         if ($userObject.id -in $currentUsers.id -or $userObject.userPrincipalName -in $currentUsers.userPrincipalName) {
                             # Patch existing user - clean object to remove reference properties, nulls, and empty strings
-                            $cleanedUser = Clean-GraphObject -Object $userObject
+                            $cleanedUser = ConvertTo-RestorableGraphObject -Object $userObject
                             $patchBody = $cleanedUser | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/users/$($userObject.id)" -tenantid $TenantFilter -body $patchBody -type PATCH
                             Write-LogMessage -message "Restored $($UPN) from backup by patching the existing object." -Sev 'info'
@@ -156,7 +156,7 @@ function New-CIPPRestoreTask {
                             # Create new user - need to add password and clean object
                             $tempPassword = New-passwordString
                             # Remove reference properties that may not exist in target tenant, nulls, and empty strings
-                            $cleanedUser = Clean-GraphObject -Object $userObject -ExcludeId
+                            $cleanedUser = ConvertTo-RestorableGraphObject -Object $userObject -ExcludeId
                             $cleanedUser['passwordProfile'] = @{
                                 'forceChangePasswordNextSignIn' = $true
                                 'password'                      = $tempPassword
@@ -184,7 +184,7 @@ function New-CIPPRestoreTask {
                             # Create new user - need to add password and clean object
                             $tempPassword = New-passwordString
                             # Remove reference properties that may not exist in target tenant, nulls, and empty strings
-                            $cleanedUser = Clean-GraphObject -Object $userObject -ExcludeId
+                            $cleanedUser = ConvertTo-RestorableGraphObject -Object $userObject -ExcludeId
                             $cleanedUser['passwordProfile'] = @{
                                 'forceChangePasswordNextSignIn' = $true
                                 'password'                      = $tempPassword
@@ -224,13 +224,13 @@ function New-CIPPRestoreTask {
                     $DisplayName = $_.displayName
                     if ($overwrite) {
                         if ($_.id -in $Groups.id) {
-                            $JSON = Clean-GraphObject $_ -ForUpdate | ConvertTo-Json -Depth 100 -Compress
+                            $JSON = ConvertTo-RestorableGraphObject $_ -ForUpdate | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $TenantFilter -body $JSON -type PATCH
                             Write-LogMessage -message "Restored $DisplayName from backup by patching the existing object." -Sev 'info'
                             $restorationStats['Groups'].success++
                             $RestoreData.Add("The group existed. Restored $DisplayName from backup")
                         } else {
-                            $JSON = Clean-GraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
+                            $JSON = ConvertTo-RestorableGraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter -body $JSON -type POST
                             Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'info'
                             $restorationStats['Groups'].success++
@@ -239,7 +239,7 @@ function New-CIPPRestoreTask {
                     }
                     if (!$overwrite) {
                         if ($_.id -notin $Groups.id) {
-                            $JSON = Clean-GraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
+                            $JSON = ConvertTo-RestorableGraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter -body $JSON -type POST
                             Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'info'
                             $restorationStats['Groups'].success++

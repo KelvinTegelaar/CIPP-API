@@ -28,7 +28,7 @@ function Invoke-CippTestZTNA21845 {
         $SecurityInfoPolicies = $CAPolicies | Where-Object {
             $_.state -eq 'enabled' -and
             $_.conditions.applications.includeUserActions -contains 'urn:user:registersecurityinfo' -and
-            $_.grantControls.authenticationStrength -ne $null
+            $null -ne $_.grantControls.authenticationStrength
         }
 
         $TAPEnabled = $TAPConfig.state -eq 'enabled'

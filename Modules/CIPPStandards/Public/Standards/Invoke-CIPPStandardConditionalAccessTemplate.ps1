@@ -40,7 +40,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
 
     #Checking if the DB has been updated in the last 3h, if not, run an update before we run the standard, as CA policies are critical and we want to make sure we have the latest state before making changes or comparisons.
     $LastDBUpdate = Get-CIPPDbItem -TenantFilter $Tenant -Type 'ConditionalAccessPolicies' -CountsOnly
-    if ($LastDBUpdate -eq $null -or ($LastDBUpdate.Timestamp -lt (Get-Date).AddHours(-3) -or $LastDBUpdate.DataCount -eq 0)) {
+    if ($null -eq $LastDBUpdate -or ($LastDBUpdate.Timestamp -lt (Get-Date).AddHours(-3) -or $LastDBUpdate.DataCount -eq 0)) {
         Write-Information "DB last updated at $($LastDBUpdate.Timestamp). Updating DB before running standard, this is probably a manual run."
         Set-CIPPDBCacheConditionalAccessPolicies -TenantFilter $Tenant
     } else {

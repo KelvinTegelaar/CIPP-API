@@ -13,7 +13,7 @@ function Invoke-CippTestGenericTest009 {
             return
         }
 
-        $Scores = @($SecureScoreData | Where-Object { $_.currentScore -ne $null })
+        $Scores = @($SecureScoreData | Where-Object { $null -ne $_.currentScore })
         if ($Scores.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest009' -TestType 'Identity' -Status 'Informational' -ResultMarkdown 'Secure Score data was found but contained no score records.' -Risk 'Informational' -Name 'Secure Score Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'
             return
@@ -65,7 +65,7 @@ function Invoke-CippTestGenericTest009 {
                 try { $Latest.controlScores | ConvertFrom-Json } catch { @() }
             } else { $Latest.controlScores }
 
-            $ImprovableControls = @($Controls | Where-Object { $_.score -ne $null } | ForEach-Object {
+            $ImprovableControls = @($Controls | Where-Object { $null -ne $_.score } | ForEach-Object {
                 $MaxControlScore = if ($_.maxScore) { [double]$_.maxScore } else { 0 }
                 $CurrentControlScore = [double]$_.score
                 $Gap = $MaxControlScore - $CurrentControlScore

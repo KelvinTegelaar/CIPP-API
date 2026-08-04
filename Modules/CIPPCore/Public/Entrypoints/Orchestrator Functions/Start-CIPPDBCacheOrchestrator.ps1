@@ -17,7 +17,7 @@ function Start-CIPPDBCacheOrchestrator {
     try {
         Write-LogMessage -API 'CIPPDBCache' -message 'Starting database cache orchestration' -sev Info
         Write-Host 'Starting database cache orchestration'
-        $TenantList = Get-Tenants | Where-Object { $_.defaultDomainName -ne $null }
+        $TenantList = Get-Tenants | Where-Object { $null -ne $_.defaultDomainName }
 
         if ($TenantList.Count -eq 0) {
             Write-LogMessage -API 'CIPPDBCache' -message 'No tenants found for cache collection' -sev Warning

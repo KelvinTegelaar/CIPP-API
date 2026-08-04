@@ -44,8 +44,8 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
     $Table = Get-CippTable -tablename 'templates'
     $TemplateId = $Settings.TenantAllowBlockListTemplate.value
 
-    $ResolvedTemplates = @(foreach ($_ in @($TemplateId)) {
-            $TemplateId = $_
+    $ResolvedTemplates = @(foreach ($Id in @($TemplateId)) {
+            $TemplateId = $Id
             $Filter = "PartitionKey eq 'TenantAllowBlockListTemplate' and RowKey eq '$TemplateId'"
             $TemplateEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
