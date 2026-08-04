@@ -60,11 +60,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
             'roleScopeTagIds'               = @()
             'outOfBoxExperienceSetting'     = $OutOfBoxSetting
         }
-        if ($Language -eq 'user-select') {
-            #Add language query to body only if user-select, as Graph API treats empty string differently than null
-            $ObjBody.locale = ''
-            $ObjBody | Add-Member -MemberType NoteProperty -Name 'language' -Value '' -Force
-        }
+
         $Body = ConvertTo-Json -InputObject $ObjBody -Depth 10
         Write-Information $Body
 
