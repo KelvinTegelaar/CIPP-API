@@ -67,6 +67,38 @@ function Invoke-CIPPBaselineStandard {
         $Definition = Get-CIPPBaselineDefinition -Name $Item.BaseName
         if (-not $Definition) { throw "No definition found for standard $($Item.BaseName)." }
         $Label = $Definition.label ?? $Item.Standard
+
+        # License gate (moved out of the starter so Run Baseline Now responds instantly -
+        # the capability lookup happens here, parallel across the durable workers). The
+        # capabilities cache is per tenant with a 24h TTL, so at most one Graph call per
+        # tenant per day. A oneoff is an explicit operator ask and bypasses the gate - the
+        # cache may not know about a license bought after the last sync.
+        $Required = @($Definition.requiredCapabilities)
+        if ($Required.Count -gt 0 -and $Mode -ne 'oneoff') {
+            $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
+            if (@($Required | Where-Object { $Capabilities.$_ -eq $true }).Count -eq 0) {
+                $Skipped = [PSCustomObject]@{
+                    Item                = $Item
+                    Mode                = $Mode
+                    TriggeredBy         = $TriggeredBy
+                    ExpectedValue       = $null
+                    CurrentValue        = $null
+                    Compliant           = $false
+                    PendingVerification = $false
+                    LicenseAvailable    = $false
+                    Status              = 'Skipped - No License'
+                    Remediated          = $false
+                    Outcome             = 'Skipped-License'
+                    Diff                = $null
+                    Inheritance         = @($Item.Tiers)
+                    AlertEvent          = $null
+                    CacheType           = $null
+                }
+                Set-CIPPBaselineResult -Result $Skipped -Prior $null -RunId $RunId
+                return $Skipped
+            }
+        }
+
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Started `"$Label`" ($Mode) - Run $RunId" -Sev 'Info'
 
         # 1a. Custom standards own their whole flow in their per-standard script.

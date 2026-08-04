@@ -6,11 +6,10 @@ function Start-CIPPBaselineOrchestrator {
         The scheduled (12h) baseline entry point, also called directly by ExecBaselineRun for
         on-demand run/compare/oneoff (manual runs carry -Force, so remediation writes even
         when the pre-check shows no drift). Evaluates stage graduations first, then resolves
-        the effective (tenant, standard instance) work items from the deltas, strips the pairs
-        the tenant is not licensed for - writing a License Missing resolved row so the feedback
-        shows - and fans the rest out as ONE durable wave, each item its own activity
-        (Push-CIPPBaselineStandard). No deltas = no-op; the timer itself is gated by the
-        Baselines feature flag.
+        the effective (tenant, standard instance) work items from the deltas and fans them
+        out as ONE durable wave, each item its own activity (Push-CIPPBaselineStandard).
+        The per-tenant license gate lives in the engine (parallel, off the HTTP path), not
+        here. No deltas = no-op; the timer itself is gated by the Baselines feature flag.
     .FUNCTIONALITY
         Entrypoint
     #>
@@ -69,58 +68,12 @@ function Start-CIPPBaselineOrchestrator {
     $RunId = [string](New-Guid).Guid
     Set-CippBaselineRunContext -RunId $RunId
 
-    # License prefilter: collect each item's required capabilities, compare against the
-    # tenant's licenses ONCE per tenant, and strip unlicensed pairs before anything runs.
-    # The stripped pairs still get a License Missing resolved row so the tenant view shows
-    # why. A oneoff is an explicit operator ask and skips the strip - the capability cache
-    # may not know about a license bought after the last sync.
-    $Definitions = Get-CIPPBaselineDefinition
-    $CapabilitiesByTenant = @{}
-    $LicensedItems = [System.Collections.Generic.List[object]]::new()
-    foreach ($Item in $WorkItems) {
-        $Definition = $Definitions | Where-Object { $_.name -eq $Item.BaseName } | Select-Object -First 1
-        $Required = @($Definition.requiredCapabilities)
-        $Licensed = $true
-        if ($Required.Count -gt 0 -and $Mode -ne 'oneoff') {
-            if (-not $CapabilitiesByTenant.ContainsKey($Item.TenantFilter)) {
-                $CapabilitiesByTenant[$Item.TenantFilter] = $(try { Get-CIPPTenantCapabilities -TenantFilter $Item.TenantFilter } catch { $null })
-            }
-            $Capabilities = $CapabilitiesByTenant[$Item.TenantFilter]
-            $Licensed = @($Required | Where-Object { $Capabilities.$_ -eq $true }).Count -gt 0
-        }
-        if ($Licensed) {
-            $LicensedItems.Add($Item)
-        } else {
-            try {
-                Set-CIPPBaselineResult -Prior $null -RunId $RunId -Result ([PSCustomObject]@{
-                        Item                = $Item
-                        Mode                = $Mode
-                        TriggeredBy         = $TriggeredBy
-                        ExpectedValue       = $null
-                        CurrentValue        = $null
-                        Compliant           = $false
-                        PendingVerification = $false
-                        LicenseAvailable    = $false
-                        Status              = 'Skipped - No License'
-                        Remediated          = $false
-                        Outcome             = 'Skipped-License'
-                        Diff                = $null
-                        Inheritance         = @($Item.Tiers)
-                        AlertEvent          = $null
-                    })
-            } catch {
-                Write-Information "Baselines: failed to record License Missing for $($Item.Standard) on $($Item.TenantFilter): $($_.Exception.Message)"
-            }
-        }
-    }
-    if ($LicensedItems.Count -eq 0) {
-        Write-Information 'Start-CIPPBaselineOrchestrator: no licensed work items remain - nothing to queue.'
-        Set-CippBaselineRunContext -RunId $null
-        return 0
-    }
-
-    $Queue = New-CippQueueEntry -Name "Baseline $Mode ($($LicensedItems.Count) checks) - Run $RunId" -TotalTasks $LicensedItems.Count
-    $Batch = foreach ($Item in $LicensedItems) {
+    # Licensing is NOT checked here: the engine gates each (tenant, standard) itself,
+    # writing the License Missing row (oneoff bypasses the gate). Doing it in the starter
+    # meant one sequential capability lookup per tenant inside the HTTP request - on a
+    # large fleet with a cold capability cache, Run Baseline Now took minutes to respond.
+    $Queue = New-CippQueueEntry -Name "Baseline $Mode ($($WorkItems.Count) checks) - Run $RunId" -TotalTasks $WorkItems.Count
+    $Batch = foreach ($Item in $WorkItems) {
         [PSCustomObject]@{
             FunctionName = 'CIPPBaselineStandard'
             Item         = $Item
@@ -145,7 +98,7 @@ function Start-CIPPBaselineOrchestrator {
         }
     }
     $null = Start-CIPPOrchestrator -InputObject $InputObject
-    Write-LogMessage -API 'Baselines' -message "Baseline $Mode started by ${TriggeredBy}: $($LicensedItems.Count) (tenant, standard) checks queued - Run $RunId" -Sev 'Info'
+    Write-LogMessage -API 'Baselines' -message "Baseline $Mode started by ${TriggeredBy}: $($WorkItems.Count) (tenant, standard) checks queued - Run $RunId" -Sev 'Info'
 
     # 90-day history retention (design doc §4.3): prune on the scheduled run only. The newest
     # row per (tenant, standard) partition always survives, even when it is older than 90 days.
@@ -166,5 +119,5 @@ function Start-CIPPBaselineOrchestrator {
     }
 
     Set-CippBaselineRunContext -RunId $null
-    return $LicensedItems.Count
+    return $WorkItems.Count
 }
