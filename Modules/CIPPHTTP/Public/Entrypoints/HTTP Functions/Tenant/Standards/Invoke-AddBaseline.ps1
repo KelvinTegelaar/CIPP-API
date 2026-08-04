@@ -37,12 +37,20 @@ function Invoke-AddBaseline {
             })
         $RolloutTable = Get-CippTable -tablename 'BaselineRollouts'
         $RolloutTable.Force = $true
+        # The editor round-trips the tenant selector's own option objects ({label, value,
+        # type}) verbatim via assignedTo/excludedTo; the flat excludedTenants values keep
+        # the exclusion logic simple. Raw string values are accepted everywhere too.
+        $ExcludedValues = @($Request.Body.excludedTenants | ForEach-Object {
+                if ($null -eq $_) { } elseif ($_ -is [string]) { $_ } else { "$($_.value)" }
+            } | Where-Object { $_ })
         Add-CIPPAzDataTableEntity @RolloutTable -Entity @{
             PartitionKey    = 'rollout'
             RowKey          = "$GUID"
             templateName    = "$($Request.Body.templateName)"
             description     = "$($Request.Body.description)"
-            excludedTenants = (ConvertTo-Json -Compress -Depth 10 -InputObject @($Request.Body.excludedTenants))
+            assignedTo      = (ConvertTo-Json -Compress -Depth 10 -InputObject @($Request.Body.assignedTenants))
+            excludedTo      = (ConvertTo-Json -Compress -Depth 10 -InputObject @($Request.Body.excludedTenants))
+            excludedTenants = (ConvertTo-Json -Compress -Depth 10 -InputObject $ExcludedValues)
             alertEmails     = "$($Request.Body.alertEmails)"
             alertWebhookUrl = "$($Request.Body.alertWebhookUrl)"
             Stages          = (ConvertTo-Json -Compress -Depth 100 -InputObject $StageDefinitions)
@@ -65,15 +73,19 @@ function Invoke-AddBaseline {
         $Groups = @()
         try { $Groups = @(Get-TenantGroups) } catch { Write-Information "AddBaseline: tenant group lookup failed: $($_.Exception.Message)" }
         $Scopes = foreach ($Assignment in @($Request.Body.assignedTenants)) {
-            if ($Assignment -eq 'AllTenants') {
+            if ($null -eq $Assignment) { continue }
+            # Selector option objects carry the key in .value; raw strings are the key itself.
+            $Value = if ($Assignment -is [string]) { $Assignment } else { "$($Assignment.value)" }
+            if (-not $Value) { continue }
+            if ($Value -eq 'AllTenants') {
                 @{ scope = 'allTenants'; scopeId = 'AllTenants'; scopeName = 'AllTenants'; segment = 'allTenants' }
             } else {
-                # The tenant selector sends group IDs; the editor round-trips names. Accept both.
-                $Group = $Groups | Where-Object { $_.Id -eq $Assignment -or $_.Name -eq $Assignment } | Select-Object -First 1
+                # Group selections send the group ID; older saves round-tripped names. Accept both.
+                $Group = $Groups | Where-Object { $_.Id -eq $Value -or $_.Name -eq $Value } | Select-Object -First 1
                 if ($Group) {
                     @{ scope = 'group'; scopeId = "$($Group.Id)"; scopeName = "$($Group.Name)"; segment = "group_$($Group.Id)" }
                 } else {
-                    @{ scope = 'tenant'; scopeId = $Assignment; scopeName = $Assignment; segment = "tenant_$Assignment" }
+                    @{ scope = 'tenant'; scopeId = $Value; scopeName = $Value; segment = "tenant_$Value" }
                 }
             }
         }

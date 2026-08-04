@@ -83,6 +83,23 @@ function Get-CIPPBaseline {
             $AssignedTenants = @($AssignmentScopes | ForEach-Object {
                     if ($_.scope -eq 'allTenants') { 'AllTenants' } else { $_.scopeName }
                 } | Where-Object { $_ } | Select-Object -Unique)
+            # The editor restores the tenant selector from the selections stored verbatim at
+            # save time (assignedTo/excludedTo). Baselines saved before those columns existed
+            # fall back to selector-shaped options rebuilt from the delta scopes.
+            $AssignedTo = @()
+            try { if ($RolloutRow.assignedTo) { $AssignedTo = @($RolloutRow.assignedTo | ConvertFrom-Json -ErrorAction Stop) } } catch { }
+            $ExcludedTo = @()
+            try { if ($RolloutRow.excludedTo) { $ExcludedTo = @($RolloutRow.excludedTo | ConvertFrom-Json -ErrorAction Stop) } } catch { }
+            $Assignments = @($AssignmentScopes | ForEach-Object {
+                    if ($_.scope -eq 'allTenants') {
+                        [PSCustomObject]@{ value = 'AllTenants'; label = '*All Tenants* (AllTenants)'; type = 'Tenant' }
+                    } elseif ($_.scope -eq 'group') {
+                        [PSCustomObject]@{ value = $_.scopeId; label = $_.scopeName; type = 'Group' }
+                    } else {
+                        $Label = if ($TenantNames[$_.scopeId]) { '{0} ({1})' -f $TenantNames[$_.scopeId], $_.scopeId } else { $_.scopeId }
+                        [PSCustomObject]@{ value = $_.scopeId; label = $Label; type = 'Tenant' }
+                    }
+                })
 
             $UniqueStandards = @($Deltas.standardName | ForEach-Object { ($_ -split '#')[0] } | Select-Object -Unique)
 
@@ -174,6 +191,8 @@ function Get-CIPPBaseline {
                 baselineName       = $RolloutRow.templateName
                 description        = $RolloutRow.description
                 assignedTenants    = $AssignedTenants
+                assignments        = $(if ($AssignedTo.Count -gt 0) { $AssignedTo } else { $Assignments })
+                exclusions         = $(if ($ExcludedTo.Count -gt 0) { $ExcludedTo } else { @($ExcludedTenants | ForEach-Object { [PSCustomObject]@{ label = $_; value = $_ } }) })
                 excludedTenants    = $ExcludedTenants
                 alertEmails        = $RolloutRow.alertEmails
                 alertWebhookUrl    = $RolloutRow.alertWebhookUrl
