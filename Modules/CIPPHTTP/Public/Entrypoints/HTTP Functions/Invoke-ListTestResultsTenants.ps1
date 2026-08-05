@@ -27,6 +27,7 @@ function Invoke-ListTestResultsTenants {
         $TestType = $Request.Query.testType ?? $Request.Body.testType
         $Risk = $Request.Query.risk ?? $Request.Body.risk
         $Category = $Request.Query.category ?? $Request.Body.category
+        $SummaryOnly = $Request.Query.summaryOnly ?? $Request.Body.summaryOnly
 
         # Normalise inputs that may arrive as a single string, a comma-delimited string, or an
         # array of strings / {value,label} objects (the frontend autocomplete posts the latter).
@@ -50,6 +51,7 @@ function Invoke-ListTestResultsTenants {
         if ($TestType) { $Params.TestType = $TestType }
         if ($Risk) { $Params.Risk = $Risk }
         if ($Category) { $Params.Category = $Category }
+        if ([string]$SummaryOnly -eq 'true') { $Params.SummaryOnly = $true }
 
         $Results = @(Get-CIPPTestResultsTenants @Params)
 

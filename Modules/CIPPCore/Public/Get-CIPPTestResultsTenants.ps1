@@ -31,6 +31,12 @@ function Get-CIPPTestResultsTenants {
     .PARAMETER Category
         Restrict to a single category.
 
+    .PARAMETER SummaryOnly
+        Project away ResultMarkdown and ResultDataJson server-side. Those two columns are unbounded
+        blobs (per-user finding tables and raw result data) that dominate the payload of a
+        cross-tenant read; everything a list or a count needs survives the projection. Fetch the
+        single full row (TenantFilter + TestId) on demand for detail rendering.
+
     .EXAMPLE
         Get-CIPPTestResultsTenants -TestId 'CustomScript-1234' -TestType 'Custom'
     #>
@@ -52,7 +58,10 @@ function Get-CIPPTestResultsTenants {
         [string]$Risk,
 
         [Parameter(Mandatory = $false)]
-        [string]$Category
+        [string]$Category,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$SummaryOnly
     )
 
     $Table = Get-CippTable -tablename 'CippTestResults'
@@ -83,9 +92,24 @@ function Get-CIPPTestResultsTenants {
 
     $GetParams = @{}
     if ($Filter) { $GetParams.Filter = $Filter }
+    if ($SummaryOnly) {
+        $GetParams.Property = [string[]]@(
+            'PartitionKey', 'RowKey', 'Timestamp', 'Status', 'Risk', 'Name', 'Pillar',
+            'UserImpact', 'ImplementationEffort', 'Category', 'TestType'
+        )
+    }
     $Results = @(Get-CIPPAzDataTableEntity @Table @GetParams)
 
     if ($Results.Count -eq 0) { return @() }
+
+    # Label rows with their suite via the canonical suite patterns (shared with
+    # Invoke-CIPPTestCollection). A TestId is the test function name minus the 'Invoke-CippTest'
+    # prefix, so the patterns apply to RowKeys once that prefix is stripped. Pattern-based, never
+    # path-based: production images ship compiled modules with no per-test files to enumerate.
+    $SuiteIdPatterns = [ordered]@{}
+    foreach ($SuiteEntry in (Get-CippTestSuitePatterns).GetEnumerator()) {
+        $SuiteIdPatterns[$SuiteEntry.Key] = $SuiteEntry.Value -replace '^Invoke-CippTest', ''
+    }
 
     # Map tenant domain (PartitionKey) -> tenant identity for display and access control.
     $TenantLookup = @{}
@@ -134,6 +158,16 @@ function Get-CIPPTestResultsTenants {
         $Result | Add-Member -NotePropertyName 'TenantId' -NotePropertyValue ($TenantInfo.customerId ?? '') -Force
         $Result | Add-Member -NotePropertyName 'TenantName' -NotePropertyValue ($TenantInfo.displayName ?? $Result.PartitionKey) -Force
 
+        $Suite = ''
+        if ($Result.RowKey -like 'CustomScript-*') {
+            $Suite = 'Custom'
+        } else {
+            foreach ($SuitePattern in $SuiteIdPatterns.GetEnumerator()) {
+                if ($Result.RowKey -like $SuitePattern.Value) { $Suite = $SuitePattern.Key; break }
+            }
+        }
+        $Result | Add-Member -NotePropertyName 'Suite' -NotePropertyValue $Suite -Force
+
         # Surface the Azure entity timestamp as a stable, serialisable last-run field.
         $LastRun = $Result.Timestamp
         if ($LastRun -is [DateTimeOffset]) {
@@ -149,7 +183,9 @@ function Get-CIPPTestResultsTenants {
                 $Meta = $CustomMeta[$ScriptGuid]
                 $Result | Add-Member -NotePropertyName 'Description' -NotePropertyValue $Meta.Description -Force
                 $Result | Add-Member -NotePropertyName 'ReturnType' -NotePropertyValue $Meta.ReturnType -Force
-                $Result | Add-Member -NotePropertyName 'MarkdownTemplate' -NotePropertyValue $Meta.MarkdownTemplate -Force
+                if (-not $SummaryOnly) {
+                    $Result | Add-Member -NotePropertyName 'MarkdownTemplate' -NotePropertyValue $Meta.MarkdownTemplate -Force
+                }
                 $Result | Add-Member -NotePropertyName 'Enabled' -NotePropertyValue $Meta.Enabled -Force
                 if ([string]::IsNullOrWhiteSpace($Result.Name) -and $Meta.ScriptName) {
                     $Result | Add-Member -NotePropertyName 'Name' -NotePropertyValue $Meta.ScriptName -Force
