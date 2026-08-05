@@ -144,7 +144,11 @@ function Invoke-ListGroups {
                 SID                    = (Convert-AzureAdObjectIdToSid -ObjectID $((($RawGraphRequest | Where-Object { $_.id -eq 1 }).body).id))
             }
         } else {
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
+            # Reached only for the plain list view: a groupID, members or owners request all
+            # add a bulk sub-request above, so this branch always means "every group in the
+            # tenant". The URL previously interpolated $GroupID and $Members, both necessarily
+            # empty here, which produced 'groups//' and only worked because Graph tolerated it.
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
             @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } },
             @{Name = 'ownersCsv'; Expression = { $_.owners.userPrincipalName -join ',' } },
             @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } },

@@ -44,7 +44,7 @@ function Invoke-ListSites {
         }
 
         if ($null -ne $GraphRequest) {
-            if ($Request.query.URLOnly -eq 'true') {
+            if ($Request.query.URLOnly -eq $true) {
                 $GraphRequest = $GraphRequest | Where-Object { $null -ne $_.webUrl }
             }
 
@@ -141,7 +141,7 @@ function Invoke-ListSites {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
     }
-    if ($Request.query.URLOnly -eq 'true') {
+    if ($Request.query.URLOnly -eq $true) {
         $GraphRequest = $GraphRequest | Where-Object { $null -ne $_.webUrl }
     }
 
