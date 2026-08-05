@@ -115,22 +115,6 @@ function Push-CIPPStandard {
             $Settings = $SettingsForRun
         }
 
-        # Prepare telemetry metadata for standard execution
-        $metadata = @{
-            Standard     = $Standard
-            Tenant       = $Tenant
-            TemplateId   = $Item.TemplateId
-            FunctionName = $FunctionName
-            TriggerType  = 'Standard'
-        }
-
-        if ($Standard -eq 'IntuneTemplate' -and $Item.Settings.TemplateList.value) {
-            $metadata['IntuneTemplateId'] = $Item.Settings.TemplateList.value
-        }
-        if ($Standard -eq 'ConditionalAccessTemplate' -and $Item.Settings.TemplateList.value) {
-            $metadata['CATemplateId'] = $Item.Settings.TemplateList.value
-        }
-
         & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop
 
         $result = 'Success'
