@@ -1,0 +1,66 @@
+{
+  "name": "DisableVoice",
+  "label": "Disables Voice call as an MFA method",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.2.3.5)",
+    "EIDSCA.AV01",
+    "NIST CSF 2.0 (PR.AA-03)",
+    "SMB1001 (2.5)",
+    "SMB1001 (2.6)",
+    "SMB1001 (2.9)"
+  ],
+  "impact": "High Impact",
+  "helpText": "This blocks users from using Voice call as an MFA method. If a user only has Voice as a MFA method, they will be unable to log in.",
+  "executiveText": "Disables voice call authentication due to security vulnerabilities and social engineering risks. This forces users to adopt more secure authentication methods like authenticator apps, improving overall account security by eliminating phone-based attack vectors.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "label": "Voice call authentication method",
+      "options": [
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        },
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        }
+      ],
+      "default": "disabled",
+      "recommended": "disabled"
+    }
+  },
+  "expected": {
+    "state": "%state%"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "Voice"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/Voice",
+        "body": {
+          "@odata.type": "#microsoft.graph.voiceAuthenticationMethodConfiguration",
+          "state": "%state%"
+        }
+      }
+    ]
+  }
+}

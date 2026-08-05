@@ -42,6 +42,8 @@ function Convert-CIPPBaselineResolvedEntity {
         stage               = $(if ($Entity.StageName) { $Entity.StageName } elseif ($Entity.Stage) { "Stage $($Entity.Stage)" } else { $null })
         inheritance         = @(& $ParseJson $Entity.Inheritance)
         acceptedPaths       = (& $ParseJson $Entity.AcceptedPaths) ?? [PSCustomObject]@{}
+        diff                = @(& $ParseJson $Entity.Diff)
+        manual              = & $ParseJson $Entity.Manual
         status              = $Entity.Status
         deviationReason     = $Entity.DeviationReason
         deviationBy         = $Entity.DeviationBy

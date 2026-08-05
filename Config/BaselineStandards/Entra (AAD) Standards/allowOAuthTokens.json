@@ -1,0 +1,60 @@
+{
+  "name": "allowOAuthTokens",
+  "label": "Enable OTP Software OAuth tokens",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "EIDSCA.AT01",
+    "EIDSCA.AT02"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Allows you to use any software OAuth token generator",
+  "executiveText": "Allows employees to use third-party authentication apps and password managers to generate secure login codes, providing flexibility in authentication methods while maintaining security standards. This accommodates diverse user preferences and existing security tools.",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "label": "Third-party software OATH token authentication method",
+      "options": [
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        }
+      ],
+      "default": "enabled",
+      "recommended": "enabled"
+    }
+  },
+  "expected": {
+    "state": "%state%"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "SoftwareOath"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath",
+        "body": {
+          "@odata.type": "#microsoft.graph.softwareOathAuthenticationMethodConfiguration",
+          "state": "%state%"
+        }
+      }
+    ]
+  }
+}

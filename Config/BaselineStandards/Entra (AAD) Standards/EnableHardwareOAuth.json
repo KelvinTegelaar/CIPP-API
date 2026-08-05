@@ -1,0 +1,61 @@
+{
+  "name": "EnableHardwareOAuth",
+  "label": "Enable Hardware OAuth tokens",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "SMB1001 (2.5)",
+    "SMB1001 (2.6)",
+    "SMB1001 (2.9)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Enables the HardwareOath authenticationMethod for the tenant. This allows you to use hardware tokens for generating 6 digit MFA codes.",
+  "executiveText": "Enables physical hardware tokens that generate secure authentication codes, providing an alternative to smartphone-based authentication. This is particularly valuable for employees who cannot use mobile devices or require the highest security standards for accessing sensitive systems.",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "label": "Hardware OATH token authentication method",
+      "options": [
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        }
+      ],
+      "default": "enabled",
+      "recommended": "enabled"
+    }
+  },
+  "expected": {
+    "state": "%state%"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "HardwareOath"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/HardwareOath",
+        "body": {
+          "@odata.type": "#microsoft.graph.hardwareOathAuthenticationMethodConfiguration",
+          "state": "%state%"
+        }
+      }
+    ]
+  }
+}

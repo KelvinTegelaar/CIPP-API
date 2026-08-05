@@ -1,0 +1,55 @@
+{
+  "name": "TAP",
+  "label": "Enable Temporary Access Passes (TAP)",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables TAP and sets the default TAP lifetime to 1 hour. This configuration also allows you to select if a TAP is single use or multi-logon.",
+  "executiveText": "Enables temporary access passes that IT administrators can generate for employees who are locked out or need emergency access to systems. These time-limited passes provide a secure way to restore access without compromising long-term security policies.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "isUsableOnce": {
+      "type": "switch",
+      "label": "TAP is usable only once (off allows multiple logons)",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "state": "enabled",
+    "isUsableOnce": "%isUsableOnce%"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "TemporaryAccessPass"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/TemporaryAccessPass",
+        "body": {
+          "@odata.type": "#microsoft.graph.temporaryAccessPassAuthenticationMethodConfiguration",
+          "state": "enabled",
+          "isUsableOnce": "%isUsableOnce%",
+          "minimumLifetimeInMinutes": 60,
+          "maximumLifetimeInMinutes": 480,
+          "defaultLifetimeInMinutes": 60,
+          "defaultLength": 8
+        }
+      }
+    ]
+  }
+}

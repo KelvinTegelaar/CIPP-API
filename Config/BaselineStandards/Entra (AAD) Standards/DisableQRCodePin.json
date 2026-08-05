@@ -1,0 +1,57 @@
+{
+  "name": "DisableQRCodePin",
+  "label": "Disables QR Code Pin as an MFA method",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "This blocks users from using QR Code Pin as an MFA method. If a user only has QR Code Pin as a MFA method, they will be unable to log in.",
+  "executiveText": "Disables QR Code Pin authentication method due to security concerns, forcing users to adopt more secure authentication alternatives. This helps standardize authentication methods and reduces potential security vulnerabilities while ensuring employees use more robust multi-factor authentication options.",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "label": "QR Code Pin authentication method",
+      "options": [
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        },
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        }
+      ],
+      "default": "disabled",
+      "recommended": "disabled"
+    }
+  },
+  "expected": {
+    "state": "%state%"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "QRCodePin"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/QRCodePin",
+        "body": {
+          "@odata.type": "#microsoft.graph.qrCodePinAuthenticationMethodConfiguration",
+          "state": "%state%"
+        }
+      }
+    ]
+  }
+}

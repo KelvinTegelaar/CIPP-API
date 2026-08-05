@@ -48,6 +48,12 @@ function Set-CIPPBaselineResult {
         PendingVerification = [bool]$Result.PendingVerification
         LicenseAvailable    = [bool]$Result.LicenseAvailable
         Inheritance         = (ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.Inheritance))
+        # The engine's per-property deviations (pre-acceptance): the frontend renders
+        # these verbatim instead of re-deriving compares - single source of truth.
+        Diff                = (ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.RowDiff ?? @()))
+        # Manual tasks: the rendered task block, so the UI can show what the operator
+        # must do (name, instructions, documentation link).
+        Manual              = $(if ($Result.Manual) { ConvertTo-Json -Compress -Depth 20 -InputObject $Result.Manual } else { $Prior.Manual ?? '' })
         AcceptedPaths       = "$($Prior.AcceptedPaths ?? '{}')"
         Status              = "$($Result.Status ?? 'Drift')"
         DeviationReason     = $(if ($KeepTriage) { "$($Prior.DeviationReason)" } else { '' })
