@@ -22,12 +22,16 @@ function Convert-CIPPBaselineResolvedEntity {
     $StandardName = $Entity.StandardName ?? ($Entity.RowKey -split '-')[0]
     $BaseName = ($StandardName -split '#')[0]
     $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
+    # Manual tasks all share one definition label; without the task name, ten manual
+    # tasks are ten identical rows.
+    $Manual = & $ParseJson $Entity.Manual
+    $Label = if ($Manual.taskName) { 'Manual Task - {0}' -f $Manual.taskName } else { $Definition.label ?? $StandardName }
 
     [PSCustomObject]@{
         tenantFilter        = $Entity.PartitionKey
         tenantName          = $Entity.TenantName ?? $Entity.PartitionKey
         standardName        = $StandardName
-        standardLabel       = $Definition.label ?? $StandardName
+        standardLabel       = $Label
         category            = $Definition.cat ?? 'Uncategorized'
         impact              = $Definition.impact
         secureScoreImpact   = $Definition.secureScoreImpact ?? 0
@@ -43,7 +47,7 @@ function Convert-CIPPBaselineResolvedEntity {
         inheritance         = @(& $ParseJson $Entity.Inheritance)
         acceptedPaths       = (& $ParseJson $Entity.AcceptedPaths) ?? [PSCustomObject]@{}
         diff                = @(& $ParseJson $Entity.Diff)
-        manual              = & $ParseJson $Entity.Manual
+        manual              = $Manual
         status              = $Entity.Status
         deviationReason     = $Entity.DeviationReason
         deviationBy         = $Entity.DeviationBy

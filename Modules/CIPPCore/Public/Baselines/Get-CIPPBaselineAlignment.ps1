@@ -27,6 +27,13 @@ function Get-CIPPBaselineAlignment {
         $HistoryTable = Get-CippTable -tablename 'BaselineHistory'
         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
         $Rows = Get-CIPPAzDataTableEntity @HistoryTable -Filter ("PartitionKey ge '{0}_' and PartitionKey lt '{0}{1}'" -f $SafeTenant, [char]0x60)
+        # Manual task instances all share one definition label; the resolved rows carry
+        # each instance's task name, so timeline events can show it too.
+        $ManualLabels = @{}
+        foreach ($Resolved in @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant'")) {
+            $TaskName = $(try { ($Resolved.Manual | ConvertFrom-Json).taskName } catch { $null })
+            if ($TaskName) { $ManualLabels[$Resolved.StandardName] = 'Manual Task - {0}' -f $TaskName }
+        }
         $Events = foreach ($Row in $Rows) {
             if (-not $Row) { continue }
             $StandardName = "$($Row.PartitionKey)".Substring($TenantFilter.Length + 1)
@@ -35,7 +42,7 @@ function Get-CIPPBaselineAlignment {
             [PSCustomObject]@{
                 timestamp     = $(if ($Row.Timestamp -is [System.DateTimeOffset]) { $Row.Timestamp.ToUnixTimeSeconds() } else { $Row.Timestamp })
                 standardName  = $StandardName
-                standardLabel = $Definition.label ?? $StandardName
+                standardLabel = $ManualLabels[$StandardName] ?? $Definition.label ?? $StandardName
                 mode          = $Row.Mode
                 triggeredBy   = $Row.TriggeredBy
                 outcome       = $Row.Outcome
@@ -156,11 +163,14 @@ function Get-CIPPBaselineAlignment {
                     $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
                     $Config = $StageDef.standardsConfig | Where-Object { ($_.instance ?? $_.standard) -eq $InstanceKey } | Select-Object -First 1
                     $Expected = & $RenderExpected $Definition $Config.variables
+                    # Manual tasks all share one definition label - carry the task name so
+                    # multiple instances stay distinguishable before their first run too.
+                    $SynthLabel = if ($Definition.manual -and $Config.variables.taskName) { 'Manual Task - {0}' -f $Config.variables.taskName } else { $Definition.label ?? $InstanceKey }
                     $SynthesizedRows.Add([PSCustomObject]@{
                             tenantFilter        = $TenantFilter
                             tenantName          = $State.tenantName
                             standardName        = $InstanceKey
-                            standardLabel       = $Definition.label ?? $InstanceKey
+                            standardLabel       = $SynthLabel
                             category            = $Definition.cat ?? 'Uncategorized'
                             impact              = $Definition.impact
                             secureScoreImpact   = $Definition.secureScoreImpact ?? 0
