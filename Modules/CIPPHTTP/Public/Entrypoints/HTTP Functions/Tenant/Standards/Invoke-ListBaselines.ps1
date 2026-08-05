@@ -13,7 +13,7 @@ function Invoke-ListBaselines {
 
     $APIName = $Request.Params.CIPPEndpoint
     try {
-        $Results = @(Get-CIPPBaseline)
+        $Results = @(Get-CIPPBaseline -ResolveIdentityLabels)
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to list baselines: $($_.Exception.Message)" -Sev 'Error'

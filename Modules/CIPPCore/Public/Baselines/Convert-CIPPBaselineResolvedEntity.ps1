@@ -29,7 +29,7 @@ function Convert-CIPPBaselineResolvedEntity {
     $Manual = & $ParseJson $Entity.Manual
     $ExpectedParsed = & $ParseJson $Entity.ExpectedValue
     $IdentitySuffix = if ($Manual.taskName) { $Manual.taskName }
-    elseif ($Definition.instanceIdentity) { $ExpectedParsed.displayName ?? $ExpectedParsed.$($Definition.instanceIdentity) }
+    elseif ($Definition.instanceIdentity) { $ExpectedParsed.displayName ?? $ExpectedParsed.name ?? $ExpectedParsed.$($Definition.instanceIdentity) }
     $Label = if ($IdentitySuffix) { '{0} - {1}' -f ($Definition.label ?? $BaseName), $IdentitySuffix } else { $Definition.label ?? $StandardName }
 
     [PSCustomObject]@{

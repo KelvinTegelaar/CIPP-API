@@ -31,6 +31,32 @@ function Invoke-ExecUpdateBaselineDeviation {
         $Table = Get-CippTable -tablename 'BaselineAlignment'
         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
         $SafeStandard = ConvertTo-CIPPODataFilterValue -Value $Standard
+
+        # Standard-view bulk complete: mark this manual task done on EVERY tenant's row.
+        if ($Action -eq 'CompleteTask' -and $TenantFilter -in @('AllTenants', 'allTenants')) {
+            $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter "StandardName eq '$SafeStandard'")
+            if ($Entities.Count -eq 0) { throw "No resolved data for $Standard yet - run the baseline first." }
+            $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
+            $Table.Force = $true
+            foreach ($TaskEntity in $Entities) {
+                $TaskEntity | Add-Member -NotePropertyName 'Status' -NotePropertyValue 'Compliant' -Force
+                $TaskEntity | Add-Member -NotePropertyName 'Compliant' -NotePropertyValue $true -Force
+                $TaskEntity | Add-Member -NotePropertyName 'LastRemediated' -NotePropertyValue $Now -Force
+                if ($TaskEntity.CurrentValue) {
+                    $CurrentTask = $TaskEntity.CurrentValue | ConvertFrom-Json
+                    $CurrentTask | Add-Member -NotePropertyName 'completed' -NotePropertyValue $true -Force
+                    $TaskEntity | Add-Member -NotePropertyName 'CurrentValue' -NotePropertyValue (ConvertTo-Json -Compress -Depth 20 -InputObject $CurrentTask) -Force
+                }
+                Add-CIPPAzDataTableEntity @Table -Entity $TaskEntity
+            }
+            $Message = "Marked the manual task $Standard as completed for $($Entities.Count) tenant$($Entities.Count -eq 1 ? '' : 's')."
+            Write-LogMessage -headers $Request.Headers -API $APIName -message $Message -Sev 'Info'
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = [pscustomobject]@{ Results = $Message }
+                })
+        }
+
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and StandardName eq '$SafeStandard'"
         if (-not $Entity) {
             $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and RowKey eq '$SafeStandard'"

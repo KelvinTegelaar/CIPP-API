@@ -14,7 +14,14 @@ function Get-CIPPBaseline {
         Internal
     #>
     [CmdletBinding()]
-    param($ID)
+    param(
+        $ID,
+        # Editor/display reads only: resolve identity-carrying template ids to
+        # {label, value} option objects. NEVER set on engine-pipeline reads
+        # (work items, alignment, graduation) - those need the raw stored values
+        # for rendering, prepare lookups and conflict fingerprints.
+        [switch]$ResolveIdentityLabels
+    )
 
     $RolloutTable = Get-CippTable -tablename 'BaselineRollouts'
     $Filter = "PartitionKey eq 'rollout'"
@@ -27,6 +34,57 @@ function Get-CIPPBaseline {
 
     $DeltaTable = Get-CippTable -tablename 'Baselines'
     $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
+
+    # Identity-carrying standards (CA/Intune templates) store the raw template id in
+    # their variables; the editor's pickers and instance titles need the template's
+    # display name. Resolve lazily from the template store (partition = the remediate
+    # executor name) and hand the variable back as a {label, value} option object -
+    # the editor consumes it verbatim and unwraps back to the raw id on save.
+    $IdentityDefinitions = @{}
+    if ($ResolveIdentityLabels) {
+        foreach ($Definition in @(Get-CIPPBaselineDefinition)) {
+            if ($Definition.instanceIdentity) {
+                $IdentityDefinitions[$Definition.name] = @{ Variable = $Definition.instanceIdentity; Partition = "$($Definition.remediate.executor)" }
+            }
+        }
+    }
+    $TemplateNameMaps = @{}
+    $ResolveTemplateName = {
+        param($Partition, $Id)
+        if (-not $Partition -or -not $Id) { return $null }
+        if (-not $TemplateNameMaps.ContainsKey($Partition)) {
+            $Map = @{}
+            try {
+                $TemplatesTable = Get-CippTable -tablename 'templates'
+                $SafePartition = ConvertTo-CIPPODataFilterValue -Value $Partition
+                foreach ($TemplateRow in @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$SafePartition'")) {
+                    $TemplateName = $(try { ($TemplateRow.JSON | ConvertFrom-Json).displayName } catch { $null })
+                    if ($TemplateName) {
+                        $Map["$($TemplateRow.RowKey)"] = $TemplateName
+                        if ($TemplateRow.GUID) { $Map["$($TemplateRow.GUID)"] = $TemplateName }
+                    }
+                }
+            } catch {
+                Write-Information "Get-CIPPBaseline: template name lookup for $Partition failed: $($_.Exception.Message)"
+            }
+            $TemplateNameMaps[$Partition] = $Map
+        }
+        $TemplateNameMaps[$Partition]["$Id"]
+    }
+    $EnrichIdentityVariable = {
+        param($InstanceKey, $Variables)
+        if (-not $ResolveIdentityLabels) { return $Variables }
+        $Identity = $IdentityDefinitions[(($InstanceKey) -split '#')[0]]
+        if ($Identity -and $Variables.PSObject.Properties[$Identity.Variable]) {
+            $RawId = $Variables.$($Identity.Variable)
+            if ($RawId -is [System.Management.Automation.PSCustomObject]) { $RawId = $RawId.value }
+            if ($RawId) {
+                $Label = (& $ResolveTemplateName $Identity.Partition "$RawId") ?? "$RawId"
+                $Variables.$($Identity.Variable) = [PSCustomObject]@{ label = $Label; value = "$RawId" }
+            }
+        }
+        $Variables
+    }
 
     # Tenant + group context for assignment expansion and display names.
     $AllTenants = @()
@@ -65,7 +123,7 @@ function Get-CIPPBaseline {
                             [PSCustomObject]@{
                                 standard         = (($_.standardName) -split '#')[0]
                                 instance         = $_.standardName
-                                variables        = $(try { $_.expectedValue | ConvertFrom-Json } catch { [PSCustomObject]@{} })
+                                variables        = (& $EnrichIdentityVariable $_.standardName $(try { $_.expectedValue | ConvertFrom-Json } catch { [PSCustomObject]@{} }))
                                 remediateEnabled = [bool]$_.remediateEnabled
                                 alertEnabled     = [bool]$_.alertEnabled
                                 alertOnRemediate = [bool]$_.alertOnRemediate

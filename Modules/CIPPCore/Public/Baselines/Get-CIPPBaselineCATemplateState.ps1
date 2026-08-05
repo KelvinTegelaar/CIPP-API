@@ -152,8 +152,14 @@ function Get-CIPPBaselineCATemplateState {
     # --- the live side, from the ConditionalAccessPolicies cache
     $Policies = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' | Where-Object { $_ })
     if ($Policies.Count -eq 0) {
-        # No cache data at all: the engine's collector-on-miss / No Data / fail-open
-        # semantics take over.
+        # The collector stamps a Count metadata row even for a tenant with zero CA
+        # policies. Metadata present means the template's policy is really missing
+        # (brand-new tenant) => drift so remediation deploys it. No metadata means no
+        # data - the engine's collector-on-miss / No Data / fail-open semantics take over.
+        $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -CountsOnly } catch { $null })
+        if ($null -ne $CacheMeta) {
+            return @{ Expected = $Expected; Current = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' } }
+        }
         return @{ Expected = $Expected; Current = $null }
     }
 

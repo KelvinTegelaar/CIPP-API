@@ -294,8 +294,14 @@ function Invoke-CIPPBaselineStandard {
         $JustRefreshed = $false
         $CacheCollector = Get-Command -Name "Set-CIPPDBCache$($Definition.read.cacheType)" -ErrorAction SilentlyContinue
         if ($CacheCollector -and $Definition.prepare) {
-            $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Definition.read.cacheType -CountsOnly } catch { $null })
-            if ($null -eq $CacheMeta -or $CacheMeta.Timestamp -lt (Get-Date).AddHours(-3) -or [int]($CacheMeta.DataCount ?? 0) -eq 0) {
+            # freshnessType: umbrella collectors (IntunePolicies) store rows under family
+            # cache types - the gate checks a representative family's age instead.
+            $FreshnessType = $Definition.read.freshnessType ?? $Definition.read.cacheType
+            $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $FreshnessType -CountsOnly } catch { $null })
+            # A fresh-but-empty cache is authoritative (the tenant genuinely has no such
+            # policies - the prepare surfaces that as missing-policy drift), so emptiness
+            # alone must not force a re-collect on every run.
+            if ($null -eq $CacheMeta -or $CacheMeta.Timestamp -lt (Get-Date).AddHours(-3)) {
                 try {
                     $null = & $CacheCollector -TenantFilter $TenantFilter
                     $JustRefreshed = $true
@@ -361,7 +367,10 @@ function Invoke-CIPPBaselineStandard {
             # member of the set compares equal, a non-member diffs against the canonical.
             $CompareExpected = & $ResolveAnyOf $ExpectedTemplate $Current $true
             # Compare-CIPPIntuneObject emits $null (not an empty set) when nothing differs.
-            $Differences = @(Compare-CIPPIntuneObject -ReferenceObject $CompareExpected -DifferenceObject $Projected | Where-Object { $_ })
+            # A prepare hook may request a CompareType (e.g. 'Catalog' flattens settings
+            # catalog policies to per-setting rows, 'AppProtection' widens the excludes).
+            $CompareTypes = @($Prepared.CompareType | Where-Object { $_ })
+            $Differences = @(Compare-CIPPIntuneObject -ReferenceObject $CompareExpected -DifferenceObject $Projected -CompareType $CompareTypes | Where-Object { $_ })
 
             # Hard compares: the shared compare treats false/0/null/''/[] as interchangeable
             # empties, which would let 'not configured' satisfy an explicit false/0
@@ -464,6 +473,7 @@ function Invoke-CIPPBaselineStandard {
                     'TeamsRequest' { Invoke-CIPPBaselineTeamsRequest -Remediate $Rendered -TenantFilter $TenantFilter }
                     'SPOTenant' { Invoke-CIPPBaselineSPOTenant -Remediate $Rendered -TenantFilter $TenantFilter }
                     'CATemplate' { Invoke-CIPPBaselineCATemplate -Remediate $Rendered -TenantFilter $TenantFilter }
+                    'IntuneTemplate' { Invoke-CIPPBaselineIntuneTemplate -Remediate $Rendered -TenantFilter $TenantFilter }
                     default { throw "Unknown remediate executor '$($Definition.remediate.executor)' on $($Definition.name)." }
                 }
             } catch {

@@ -510,8 +510,9 @@ function Compare-CIPPIntuneObject {
             return $results
         }
 
-        # Process reference object settings
-        $referenceItems = $ReferenceObject.settings | ForEach-Object {
+        # Process reference object settings. Piping $null runs the block once with a null
+        # $_, which crashes the collection index lookup - filter those out up front.
+        $referenceItems = $ReferenceObject.settings | Where-Object { $_ -and $_.settingInstance } | ForEach-Object {
             $settingInstance = $_.settingInstance
             $intuneObj = $intuneCollectionIndex[$settingInstance.settingDefinitionId]
             $tempOutput = switch ($settingInstance.'@odata.type') {
@@ -620,7 +621,7 @@ function Compare-CIPPIntuneObject {
         }
 
         # Process difference object settings
-        $differenceItems = $DifferenceObject.settings | ForEach-Object {
+        $differenceItems = $DifferenceObject.settings | Where-Object { $_ -and $_.settingInstance } | ForEach-Object {
             $settingInstance = $_.settingInstance
             $intuneObj = $intuneCollectionIndex[$settingInstance.settingDefinitionId]
             $tempOutput = switch ($settingInstance.'@odata.type') {
