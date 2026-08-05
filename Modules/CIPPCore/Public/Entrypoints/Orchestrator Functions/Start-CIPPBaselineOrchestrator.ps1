@@ -72,7 +72,9 @@ function Start-CIPPBaselineOrchestrator {
     # writing the License Missing row (oneoff bypasses the gate). Doing it in the starter
     # meant one sequential capability lookup per tenant inside the HTTP request - on a
     # large fleet with a cold capability cache, Run Baseline Now took minutes to respond.
-    $Queue = New-CippQueueEntry -Name "Baseline $Mode ($($WorkItems.Count) checks) - Run $RunId" -TotalTasks $WorkItems.Count
+    # Reference tags the queue entry so the frontend run tracker can discover the
+    # latest baseline run without knowing its id.
+    $Queue = New-CippQueueEntry -Name "Baseline $Mode ($($WorkItems.Count) checks) - Run $RunId" -Reference 'BaselineRun' -TotalTasks $WorkItems.Count
     $Batch = foreach ($Item in $WorkItems) {
         [PSCustomObject]@{
             FunctionName = 'CIPPBaselineStandard'
