@@ -27,7 +27,12 @@
     }
   },
   "expected": {
-    "policyMigrationState": "%migrationState%"
+    "policyMigrationState": {
+      "$anyOf": [
+        "%migrationState%",
+        null
+      ]
+    }
   },
   "read": {
     "cacheType": "AuthenticationMethodsPolicy"

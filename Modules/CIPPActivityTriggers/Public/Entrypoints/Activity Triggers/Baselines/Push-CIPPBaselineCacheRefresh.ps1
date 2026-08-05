@@ -3,12 +3,13 @@ function Push-CIPPBaselineCacheRefresh {
     .SYNOPSIS
         PostExecution for baseline runs: refresh only the caches remediations touched.
     .DESCRIPTION
-        Runs once after every check in a baseline run has finished. Receives all
-        Push-CIPPBaselineStandard return values, keeps the (tenant, cacheType) pairs where a
-        remediation actually wrote, dedupes them (many standards share a cacheType), and
-        starts one flat orchestrator reusing the existing per-type cache collection activity.
-        Nothing remediated = no cache work at all - and without this, the next run would
-        re-read the stale pre-remediation cache and re-detect drift that is already fixed.
+        Runs once after every check in a baseline run has finished. Records today's fleet
+        trend rollup, then receives all Push-CIPPBaselineStandard return values, keeps the
+        (tenant, cacheType) pairs where a remediation actually wrote, dedupes them (many
+        standards share a cacheType), and starts one flat orchestrator reusing the existing
+        per-type cache collection activity. Nothing remediated = no cache work at all - and
+        without this, the next run would re-read the stale pre-remediation cache and
+        re-detect drift that is already fixed.
     .FUNCTIONALITY
         Entrypoint
     #>
@@ -17,6 +18,13 @@ function Push-CIPPBaselineCacheRefresh {
 
     try {
         Set-CippBaselineRunContext -RunId $Item.Parameters.RunId
+
+        # Every finished run re-verified state, so record today's fleet rollup for the
+        # trend chart - even when nothing was remediated.
+        try { Set-CIPPBaselineTrendPoint } catch {
+            Write-Information "Baseline trend point skipped: $($_.Exception.Message)"
+        }
+
         $Impacted = @{}
         foreach ($ActivityResult in @($Item.Results)) {
             foreach ($Record in @($ActivityResult)) {

@@ -1,0 +1,63 @@
+{
+  "name": "DisableSMS",
+  "label": "Disables SMS as an MFA method",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 5.0 (2.3.5)",
+    "EIDSCA.AS04",
+    "NIST CSF 2.0 (PR.AA-03)"
+  ],
+  "impact": "High Impact",
+  "helpText": "This blocks users from using SMS as an MFA method. If a user only has SMS as a MFA method, they will be unable to log in.",
+  "executiveText": "Disables SMS text messages as a multi-factor authentication method due to security vulnerabilities like SIM swapping attacks. This forces users to adopt more secure authentication methods like authenticator apps or hardware tokens, significantly improving account security.",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "label": "SMS authentication method",
+      "options": [
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        },
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        }
+      ],
+      "default": "disabled",
+      "recommended": "disabled"
+    }
+  },
+  "expected": {
+    "state": "%state%"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "Sms"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/Sms",
+        "body": {
+          "@odata.type": "#microsoft.graph.smsAuthenticationMethodConfiguration",
+          "state": "%state%"
+        }
+      }
+    ]
+  }
+}

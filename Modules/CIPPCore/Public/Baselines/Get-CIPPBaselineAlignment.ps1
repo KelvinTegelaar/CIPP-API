@@ -328,15 +328,25 @@ function Get-CIPPBaselineAlignment {
         }
 
         $Fleet = & $ScoreRows $Rows
-        # Until the engine writes daily history rollups, the trend is today's live score so the
-        # chart renders as soon as resolved data exists.
-        $Trend = if ($Rows.Count -gt 0) {
-            @([PSCustomObject]@{
-                    date     = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
-                    aligned  = $Fleet.alignedPercentage
-                    verified = $Fleet.verifiedPercentage
-                })
-        } else { @() }
+        # Trend = the daily rollups Set-CIPPBaselineTrendPoint writes after every run (last
+        # 90 days), with today's point always replaced by the LIVE score so the chart never
+        # lags the rest of the page.
+        $Today = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
+        $Trend = [System.Collections.Generic.List[object]]::new()
+        try {
+            $TrendTable = Get-CippTable -tablename 'BaselineTrend'
+            $Cutoff = (Get-Date).ToUniversalTime().AddDays(-90).ToString('yyyy-MM-dd')
+            $TrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter "PartitionKey eq 'fleet' and RowKey ge '$Cutoff' and RowKey lt '$Today'") | Sort-Object -Property RowKey
+            foreach ($Point in $TrendRows) {
+                $Trend.Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
+            }
+        } catch {
+            Write-Information "Baseline trend read skipped: $($_.Exception.Message)"
+        }
+        if ($Rows.Count -gt 0) {
+            $Trend.Add([PSCustomObject]@{ date = $Today; aligned = $Fleet.alignedPercentage; verified = $Fleet.verifiedPercentage })
+        }
+        $Trend = @($Trend)
 
         return [PSCustomObject]@{
             fleet            = [PSCustomObject]$Fleet
