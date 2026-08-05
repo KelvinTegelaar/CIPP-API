@@ -308,15 +308,7 @@ function Invoke-ExecContainerManagement {
 
                 # Update checking only works with GHCR-hosted images
                 if ($CurrentImage -notmatch '^ghcr\.io/') {
-                    $Body = @{
-                        Results = @{
-                            Message         = "Update checking is only supported for GHCR-hosted images. Current image: $CurrentImage"
-                            UpdateAvailable = $false
-                            RunningDigest   = $null
-                            RemoteDigest    = $null
-                            CheckedTag      = $null
-                        }
-                    }
+                    $Body = @{ Results = "Update checking is only supported for GHCR-hosted images. Current image: $CurrentImage" }
                     break
                 }
 
@@ -369,17 +361,9 @@ function Invoke-ExecContainerManagement {
                 } else {
                     $Result = "Container is up to date. Version: $RunningVersion"
                 }
-                $Body = @{
-                    Results = @{
-                        Message         = $Result
-                        UpdateAvailable = $UpdateAvailable
-                        RunningVersion  = $RunningVersion
-                        RemoteVersion   = $RemoteVersion
-                        RemoteDigest    = $RemoteDigest
-                        RemoteBuildDate = $RemoteBuildDate
-                        CheckedTag      = $CheckTag
-                    }
-                }
+                # Structured update state is persisted to UpdateConfig and surfaced via the
+                # Status action; the POST response only carries the human-readable outcome.
+                $Body = @{ Results = $Result }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API $APIName -headers $Headers -message "Failed to check for update: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

@@ -28,6 +28,8 @@ function Invoke-ListTestResultsTenants {
         $Risk = $Request.Query.risk ?? $Request.Body.risk
         $Category = $Request.Query.category ?? $Request.Body.category
         $SummaryOnly = $Request.Query.summaryOnly ?? $Request.Body.summaryOnly
+        $RowStatusRaw = $Request.Query.rowStatus ?? $Request.Body.rowStatus
+        $IncludeCounts = $Request.Query.includeCounts ?? $Request.Body.includeCounts
 
         # Normalise inputs that may arrive as a single string, a comma-delimited string, or an
         # array of strings / {value,label} objects (the frontend autocomplete posts the latter).
@@ -43,31 +45,36 @@ function Invoke-ListTestResultsTenants {
         $TenantFilterList = & $ToArray $TenantFilterRaw
         $TestIdList = & $ToArray $TestIdRaw
         $StatusList = & $ToArray $StatusRaw
+        $RowStatusList = & $ToArray $RowStatusRaw
 
         $Params = @{}
         if ($TenantFilterList.Count -gt 0) { $Params.TenantFilter = $TenantFilterList }
         if ($TestIdList.Count -gt 0) { $Params.TestId = $TestIdList }
         if ($StatusList.Count -gt 0) { $Params.Status = $StatusList }
+        if ($RowStatusList.Count -gt 0) { $Params.RowStatus = $RowStatusList }
         if ($TestType) { $Params.TestType = $TestType }
         if ($Risk) { $Params.Risk = $Risk }
         if ($Category) { $Params.Category = $Category }
         if ([string]$SummaryOnly -eq 'true') { $Params.SummaryOnly = $true }
-
-        $Results = @(Get-CIPPTestResultsTenants @Params)
+        if ([string]$IncludeCounts -eq 'true') { $Params.IncludeCounts = $true }
 
         # Restrict to tenants the caller is allowed to see. Test-CIPPAccess returns the list of
-        # permitted customerIds, or 'AllTenants' for unrestricted users.
+        # permitted customerIds, or 'AllTenants' for unrestricted users. Passed into the query so
+        # disallowed tenants are dropped before any counting or row building — a post-hoc filter
+        # would leak estate size through the counts and burn time filtering rows at scale.
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         if ($AllowedTenants -notcontains 'AllTenants') {
-            $AllowedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-            foreach ($Allowed in $AllowedTenants) {
-                if ($Allowed) { [void]$AllowedSet.Add([string]$Allowed) }
-            }
-            $Results = @($Results | Where-Object { $_.TenantId -and $AllowedSet.Contains([string]$_.TenantId) })
+            $Params.AllowedTenantIds = @($AllowedTenants | Where-Object { $_ })
         }
 
+        $Response = Get-CIPPTestResultsTenants @Params
+
         $StatusCode = [HttpStatusCode]::OK
-        $Body = @{ Results = @($Results) }
+        if ($Params.IncludeCounts) {
+            $Body = @{ Results = @($Response.Results); Counts = $Response.Counts }
+        } else {
+            $Body = @{ Results = @($Response) }
+        }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -message "Error retrieving cross-tenant test results: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
