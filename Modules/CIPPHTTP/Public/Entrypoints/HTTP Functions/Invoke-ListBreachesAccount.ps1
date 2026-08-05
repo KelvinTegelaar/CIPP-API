@@ -1,7 +1,7 @@
-Function Invoke-ListBreachesAccount {
+function Invoke-ListBreachesAccount {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION
@@ -19,8 +19,8 @@ Function Invoke-ListBreachesAccount {
     }
 
     return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($results)
-        }
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($results)
+    }
 
 }
