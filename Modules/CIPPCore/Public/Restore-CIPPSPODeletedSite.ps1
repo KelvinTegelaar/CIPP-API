@@ -5,7 +5,7 @@ function Restore-CIPPSPODeletedSite {
 
     .DESCRIPTION
     Restores a deleted site collection using the CSOM RestoreDeletedSite method against the
-    SharePoint admin endpoint (same ProcessQuery pattern as Set-CIPPSharePointPerms).
+    SharePoint admin endpoint (same ProcessQuery pattern as Get-CIPPSPODeletedSites).
 
     .PARAMETER TenantFilter
     Tenant the site belongs to
