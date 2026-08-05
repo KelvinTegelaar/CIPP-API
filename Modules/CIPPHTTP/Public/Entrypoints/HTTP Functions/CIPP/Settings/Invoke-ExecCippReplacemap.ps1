@@ -110,8 +110,9 @@ function Invoke-ExecCippReplacemap {
             if (!$Variables) {
                 $Variables = @()
             }
-            $IncludeGlobal = $Request.Query.includeGlobal ?? $Request.Body.includeGlobal
-            if ($IncludeGlobal -eq 'true' -and $customerId -ne 'AllTenants') {
+            # Also return the AllTenants-scoped variables alongside this tenant's own.
+            $IncludeGlobal = ($Request.Query.includeGlobal -eq $true) -or ($Request.Body.includeGlobal -eq $true)
+            if ($IncludeGlobal -and $customerId -ne 'AllTenants') {
                 $GlobalVariables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AllTenants'" | ForEach-Object {
                     $_ | Add-Member -NotePropertyName 'Scope' -NotePropertyValue 'Global' -PassThru
                 }

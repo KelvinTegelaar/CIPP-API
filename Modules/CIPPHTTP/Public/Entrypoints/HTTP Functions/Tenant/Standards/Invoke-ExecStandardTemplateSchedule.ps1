@@ -12,7 +12,7 @@ function Invoke-ExecStandardTemplateSchedule {
   $Headers = $Request.Headers
   $ID = $Request.Body.TemplateId ?? $Request.Query.TemplateId
   # The stored field is runManually: $true means "do not run on schedule".
-  $RunManually = $Request.Body.runManually -eq $true -or $Request.Body.runManually -eq 'true'
+  $RunManually = $Request.Body.runManually -eq $true
   $StatusCode = [HttpStatusCode]::InternalServerError
 
   try {

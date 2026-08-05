@@ -13,12 +13,13 @@ function Invoke-ListCalendarPermissions {
     $APIName = $Request.Params.CIPPEndpoint
     $UserID = $Request.Query.UserID
     $TenantFilter = $Request.Query.tenantFilter
-    $UseReportDB = $Request.Query.UseReportDB
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     $ByUser = $Request.Query.ByUser
 
     try {
         # If UseReportDB is specified and no specific UserID, retrieve from report database
-        if ($UseReportDB -eq 'true' -and -not $UserID) {
+        if ($UseReportDB -and -not $UserID) {
 
             # Call the report function with proper parameters
             $ReportParams = @{

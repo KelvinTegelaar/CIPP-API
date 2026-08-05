@@ -11,16 +11,31 @@ function Invoke-ListGroups {
     param($Request, $TriggerMetadata)
     $TenantFilter = $Request.Query.tenantFilter
     $GroupID = $Request.Query.groupID
+    # Type of the group named by groupID, used to pick the owners lookup. This does NOT filter the group list.
     $GroupType = $Request.Query.groupType
-    $Members = $Request.Query.members
-    $Owners = $Request.Query.owners
+    # Return the members of the group named by groupID instead of the group list. Requires groupID.
+    $Members = $Request.Query.members -eq $true
+    # Return the owners of the group named by groupID instead of the group list. Requires groupID.
+    $Owners = $Request.Query.owners -eq $true
 
-    $ExpandMembers = $Request.Query.expandMembers ?? $false
-    $ExpandOwners = $Request.Query.expandOwners ?? $false
-    $UseReportDB = $Request.Query.UseReportDB
+    # Expand each listed group's members inline. Graph allows only one expand, and members wins over owners.
+    $ExpandMembers = $Request.Query.expandMembers -eq $true
+    # Expand each listed group's owners inline. Ignored when expandMembers is also set.
+    $ExpandOwners = $Request.Query.expandOwners -eq $true
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
+
+    # members/owners read groups/<groupID>/..., so without a groupID the URL collapses to
+    # groups//members and the failure surfaces as an opaque parameter binding error.
+    if (($Members -or $Owners) -and -not $GroupID) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = "The 'members' and 'owners' parameters require 'groupID' to be set." }
+            })
+    }
 
     # Cache path: list view only — skip when fetching a specific group's details
-    if ((-not $GroupID) -and (-not $Members) -and (-not $Owners) -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+    if ((-not $GroupID) -and (-not $Members) -and (-not $Owners) -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
         try {
             $GraphRequest = Get-CIPPGroupsReport -TenantFilter $TenantFilter -ErrorAction Stop
             $StatusCode = [HttpStatusCode]::OK
@@ -33,9 +48,9 @@ function Invoke-ListGroups {
 
     $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,assignedLicenses,userPrincipalName,licenseProcessingState'
     # Graph allows only one navigational $expand on groups; members wins if both are requested
-    if ($ExpandMembers -ne $false) {
+    if ($ExpandMembers) {
         $SelectString = '{0}&$expand=members($select=userPrincipalName)' -f $SelectString
-    } elseif ($ExpandOwners -ne $false) {
+    } elseif ($ExpandOwners) {
         $SelectString = '{0}&$expand=owners($select=userPrincipalName)' -f $SelectString
     }
 

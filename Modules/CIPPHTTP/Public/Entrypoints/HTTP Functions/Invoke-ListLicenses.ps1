@@ -11,7 +11,7 @@ function Invoke-ListLicenses {
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $IncludeExcluded = $Request.Query.IncludeExcluded -eq 'true'
+    $IncludeExcluded = $Request.Query.IncludeExcluded -eq $true
     if ($TenantFilter -ne 'AllTenants') {
         $GraphRequest = Get-CIPPLicenseOverview -TenantFilter $TenantFilter -IncludeExcluded:$IncludeExcluded | ForEach-Object {
             $_

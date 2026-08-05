@@ -53,7 +53,7 @@ function Invoke-ListDBCache {
     $APIName = $TriggerMetadata.FunctionName
     $TenantFilter = $Request.Query.tenantFilter
     $Type = $Request.Query.type
-    $CountsOnly = $Request.Query.countsOnly -eq 'true'
+    $CountsOnly = $Request.Query.countsOnly -eq $true
 
     if (-not $TenantFilter) {
         return ([HttpResponseContext]@{

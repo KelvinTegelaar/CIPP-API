@@ -14,7 +14,7 @@ function Invoke-ListCommunityRepos {
 
     $Table = Get-CIPPTable -TableName CommunityRepos
 
-    if ($Request.Query.WriteAccess -eq 'true') {
+    if ($Request.Query.WriteAccess -eq $true) {
         $Filter = "PartitionKey eq 'CommunityRepos' and WriteAccess eq true"
     } else {
         $Filter = ''

@@ -10,14 +10,14 @@ function Invoke-ListMDEOnboarding {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $TenantFilter = $Request.Query.tenantFilter
-    $UseReportDB = $Request.Query.UseReportDB
-
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     if ($TenantFilter -eq 'AllTenants') {
         $UseReportDB = 'true'
     }
 
     try {
-        if ($UseReportDB -eq 'true') {
+        if ($UseReportDB) {
             try {
                 $GraphRequest = Get-CIPPMDEOnboardingReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK

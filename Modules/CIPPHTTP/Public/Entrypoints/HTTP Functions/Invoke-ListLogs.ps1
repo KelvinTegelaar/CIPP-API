@@ -85,7 +85,7 @@ function Invoke-ListLogs {
             }
         }
     } else {
-        if ($request.Query.Filter -eq 'True') {
+        if ($request.Query.Filter -eq $true) {
             $LogLevel = if ($Request.Query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert' }
             $PartitionKey = $Request.Query.DateFilter
             $username = $Request.Query.User ?? '*'

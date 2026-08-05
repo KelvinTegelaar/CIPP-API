@@ -16,9 +16,9 @@ function Invoke-ListBaselineAlignment {
 
     $APIName = $Request.Params.CIPPEndpoint
     try {
-        $Results = if ($Request.Query.byStandard -eq 'true') {
+        $Results = if ($Request.Query.byStandard -eq $true) {
             Get-CIPPBaselineAlignment -ByStandard
-        } elseif ($Request.Query.tenantFilter -and $Request.Query.history -eq 'true') {
+        } elseif ($Request.Query.tenantFilter -and $Request.Query.history -eq $true) {
             Get-CIPPBaselineAlignment -TenantFilter $Request.Query.tenantFilter -History
         } elseif ($Request.Query.tenantFilter) {
             Get-CIPPBaselineAlignment -TenantFilter $Request.Query.tenantFilter

@@ -16,7 +16,9 @@ Function Invoke-ExecCreateTAP {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $UserID = $Request.Query.ID ?? $Request.Body.ID
     $LifetimeInMinutes = $Request.Query.lifetimeInMinutes ?? $Request.Body.lifetimeInMinutes
-    $IsUsableOnce = $Request.Query.isUsableOnce ?? $Request.Body.isUsableOnce
+    # Restrict the pass to a single use. New-CIPPTAP takes a [bool], and casting the
+    # string 'false' yields $true, so this must be normalised before it is forwarded.
+    $IsUsableOnce = ($Request.Query.isUsableOnce -eq $true) -or ($Request.Body.isUsableOnce -eq $true)
     $StartDateTime = $Request.Query.startDateTime ?? $Request.Body.startDateTime
 
     try {

@@ -20,12 +20,13 @@ function Invoke-ListScheduledItems {
         $ScheduledItemFilter.Add("RowKey eq '$($Id)'")
     } else {
         # Interact with query parameters or the body of the request.
-        $ShowHidden = $Request.Query.ShowHidden ?? $Request.Body.ShowHidden
+        # Include tasks CIPP hides from the normal task list (internal/system-scheduled work).
+        $ShowHidden = ($Request.Query.ShowHidden -eq $true) -or ($Request.Body.ShowHidden -eq $true)
         $Name = $Request.Query.Name ?? $Request.Body.Name
         $Type = $Request.Query.Type ?? $Request.Body.Type
         $SearchTitle = $Request.query.SearchTitle ?? $Request.body.SearchTitle
 
-        if ($ShowHidden -eq $true) {
+        if ($ShowHidden) {
             $ScheduledItemFilter.Add("(Hidden eq true or Hidden eq 'True')")
         } else {
             $ScheduledItemFilter.Add("(Hidden eq false or Hidden eq 'False')")
@@ -41,11 +42,6 @@ function Invoke-ListScheduledItems {
 
     Write-Host "Filter: $Filter"
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
-    if ($ShowHidden -eq $true) {
-        $HiddenTasks = $false
-    } else {
-        $HiddenTasks = $true
-    }
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     Write-Information "Retrieved $($Tasks.Count) scheduled tasks from storage."
     if ($Type) {

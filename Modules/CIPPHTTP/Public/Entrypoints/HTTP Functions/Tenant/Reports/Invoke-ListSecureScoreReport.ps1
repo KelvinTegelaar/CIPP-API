@@ -19,7 +19,7 @@ function Invoke-ListSecureScoreReport {
 
     $APIName = $TriggerMetadata.FunctionName
     $TenantFilter = $Request.Query.tenantFilter ?? 'AllTenants'
-    $IncludeHistory = $Request.Query.includeHistory -eq 'true'
+    $IncludeHistory = $Request.Query.includeHistory -eq $true
 
     try {
         $Results = @(Get-CIPPSecureScoreReport -TenantFilter $TenantFilter -IncludeHistory:$IncludeHistory)

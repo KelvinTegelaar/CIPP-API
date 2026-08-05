@@ -16,10 +16,12 @@ function Invoke-ExecAccessChecks {
     $4HoursAgo = (Get-Date).AddHours(-1).ToUniversalTime()
     $TimestampFilter = $4HoursAgo.ToString('yyyy-MM-ddTHH:mm:ss.fffK')
 
+    # Re-run the check instead of serving the cached result.
+    $SkipCache = $Request.Query.SkipCache -eq $true
 
     switch ($Request.Query.Type) {
         'Permissions' {
-            if ($Request.Query.SkipCache -ne 'true' -or $Request.Query.SkipCache -ne $true) {
+            if (-not $SkipCache) {
                 try {
                     $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions' and Timestamp and Timestamp ge datetime'$TimestampFilter'"
                     $Results = $Cache.Data | ConvertFrom-Json -ErrorAction Stop
@@ -103,7 +105,7 @@ function Invoke-ExecAccessChecks {
                 }
             }
 
-            if ($Request.Query.SkipCache -eq 'true' -or $Request.Query.SkipCache -eq $true -or $LastRun -lt $4HoursAgo) {
+            if ($SkipCache -or $LastRun -lt $4HoursAgo) {
                 $Message = Test-CIPPAccessTenant -Headers $Request.Headers
             }
 
@@ -115,7 +117,7 @@ function Invoke-ExecAccessChecks {
 
         }
         'GDAP' {
-            if (!$Request.Query.SkipCache -eq 'true' -or !$Request.Query.SkipCache -eq $true) {
+            if (-not $SkipCache) {
                 try {
                     $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships' and Timestamp ge datetime'$TimestampFilter'"
                     $Results = $Cache.Data | ConvertFrom-Json -ErrorAction Stop

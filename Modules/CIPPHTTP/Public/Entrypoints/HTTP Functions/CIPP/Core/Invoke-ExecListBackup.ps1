@@ -11,7 +11,7 @@ function Invoke-ExecListBackup {
     param($Request, $TriggerMetadata)
     $Type = $Request.Query.Type
     $TenantFilter = $Request.Query.tenantFilter
-    $NameOnly = $Request.Query.NameOnly -eq 'true'
+    $NameOnly = $Request.Query.NameOnly -eq $true
     $BackupName = $Request.Query.BackupName
 
     $CippBackupParams = @{}

@@ -14,13 +14,14 @@ function Invoke-ListIntunePolicy {
     $id = $Request.Query.ID
     $URLName = $Request.Query.URLName
     $DefinitionIds = $Request.Query.DefinitionIds
-    $UseReportDB = $Request.Query.UseReportDB
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     $IncludeSettingDefinitions = [System.Convert]::ToBoolean($Request.Query.IncludeSettingDefinitions ?? 'false')
     $IsGroupPolicyDefinitionLookup = ($URLName -ieq 'GroupPolicyDefinitions') -and -not [string]::IsNullOrWhiteSpace($DefinitionIds)
 
     try {
         # Return cached report data when AllTenants is requested or UseReportDB is set
-        if (-not $IsGroupPolicyDefinitionLookup -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+        if (-not $IsGroupPolicyDefinitionLookup -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
             try {
                 $GraphRequest = Get-CIPPIntunePolicyReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK

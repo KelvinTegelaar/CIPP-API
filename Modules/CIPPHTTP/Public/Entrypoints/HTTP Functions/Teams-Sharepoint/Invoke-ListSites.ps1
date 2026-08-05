@@ -14,8 +14,8 @@ function Invoke-ListSites {
 
     $TenantFilter = $Request.Query.TenantFilter
     $Type = $Request.Query.Type
-    $UseReportDB = $Request.Query.UseReportDB
-
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     if (!$TenantFilter) {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
@@ -30,7 +30,7 @@ function Invoke-ListSites {
             })
     }
 
-    if ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true') {
+    if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {
         try {
             if ($Type -eq 'SharePointSiteUsage') {
                 $GraphRequest = Get-CIPPSharePointSiteUsageReport -TenantFilter $TenantFilter -ErrorAction Stop

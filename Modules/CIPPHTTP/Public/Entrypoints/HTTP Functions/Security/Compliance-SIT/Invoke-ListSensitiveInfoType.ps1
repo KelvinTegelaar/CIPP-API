@@ -10,7 +10,8 @@ Function Invoke-ListSensitiveInfoType {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $TenantFilter = $Request.Query.tenantFilter
-    $IncludeBuiltIn = ($Request.Query.IncludeBuiltIn -eq 'true' -or $Request.Query.IncludeBuiltIn -eq $true)
+    # Include Microsoft's built-in sensitive information types alongside the tenant's custom ones.
+    $IncludeBuiltIn = $Request.Query.IncludeBuiltIn -eq $true
 
     try {
         $SITs = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DlpSensitiveInformationType' -Compliance | Select-Object * -ExcludeProperty *odata*, *data.type*

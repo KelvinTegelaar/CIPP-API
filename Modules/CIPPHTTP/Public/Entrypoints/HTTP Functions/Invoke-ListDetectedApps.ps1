@@ -12,7 +12,8 @@ function Invoke-ListDetectedApps {
 
     $TenantFilter = $Request.Query.tenantFilter
     $DeviceID = $Request.Query.DeviceID
-    $IncludeDevices = $Request.Query.includeDevices
+    # Also return the devices each detected app is installed on.
+    $IncludeDevices = $Request.Query.includeDevices -eq $true
 
     # This is all about the deviceManagement/detectedApps endpoint
     # We need to get the detected apps for a given device or the entire tenant

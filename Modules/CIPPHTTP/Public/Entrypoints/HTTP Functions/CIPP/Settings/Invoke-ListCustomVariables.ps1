@@ -172,13 +172,13 @@ function Invoke-ListCustomVariables {
         # Use a hashtable to track variables by name to handle overrides
         $VariableMap = @{}
 
-        if ($Request.Query.includeSystem -and $Request.Query.includeSystem -ne 'true') {
+        if ($Request.Query.includeSystem -and $Request.Query.includeSystem -ne $true) {
             $ReservedVariables = $ReservedVariables | Where-Object { $_.Category -ne 'system' }
         }
 
         # Filter out global reserved variables if requested (for tenant group rules)
         # These variables are the same for all tenants so they're not useful for grouping
-        if ($Request.Query.excludeGlobalReserved -eq 'true') {
+        if ($Request.Query.excludeGlobalReserved -eq $true) {
             $ReservedVariables = $ReservedVariables | Where-Object {
                 $_.Category -notin @('partner', 'cipp', 'system')
             }
@@ -218,7 +218,7 @@ function Invoke-ListCustomVariables {
         # variable *name* that exists anywhere, not the set belonging to whichever tenant happens to
         # be selected. Values are deliberately not returned here: they differ per tenant, so there is
         # no single correct one to show.
-        if ($Request.Query.allTenants -eq 'true') {
+        if ($Request.Query.allTenants -eq $true) {
             $EveryCustomVariable = Get-CIPPAzDataTableEntity @ReplaceTable
             foreach ($Variable in $EveryCustomVariable) {
                 if (-not $Variable.RowKey -or -not $Variable.Value) { continue }

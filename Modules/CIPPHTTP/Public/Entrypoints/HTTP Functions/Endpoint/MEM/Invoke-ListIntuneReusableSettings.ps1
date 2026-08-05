@@ -15,8 +15,8 @@ function Invoke-ListIntuneReusableSettings {
 
     $TenantFilter = $Request.Query.tenantFilter
     $SettingId = $Request.Query.ID
-    $UseReportDB = $Request.Query.UseReportDB
-
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     if (-not $TenantFilter) {
         return ([HttpResponseContext]@{
             StatusCode = [System.Net.HttpStatusCode]::BadRequest
@@ -25,7 +25,7 @@ function Invoke-ListIntuneReusableSettings {
     }
 
     try {
-        if (-not $SettingId -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+        if (-not $SettingId -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
             try {
                 $Settings = Get-CIPPIntuneReusableSettingsReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [System.Net.HttpStatusCode]::OK
