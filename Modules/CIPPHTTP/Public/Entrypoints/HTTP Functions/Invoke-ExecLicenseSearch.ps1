@@ -4,6 +4,8 @@ function Invoke-ExecLicenseSearch {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Finds which tenants hold the given licence SKUs, searching the cached licence overview rather than querying each tenant live. Takes an array of skuIds in the body.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

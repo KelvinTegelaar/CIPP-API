@@ -4,6 +4,8 @@ function Invoke-ExecAppInsightsQuery {
         Entrypoint
     .ROLE
         CIPP.SuperAdmin.Read
+    .DESCRIPTION
+        Runs a Kusto (KQL) query against the CIPP instance's own Application Insights telemetry and returns the result rows. The query is echoed back in Metadata.
     #>
     [CmdletBinding()]
     param (

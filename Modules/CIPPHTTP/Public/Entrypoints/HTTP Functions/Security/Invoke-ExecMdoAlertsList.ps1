@@ -4,6 +4,8 @@ function Invoke-ExecMDOAlertsList {
         Entrypoint
     .ROLE
         Security.Alert.Read
+    .DESCRIPTION
+        Lists Microsoft Defender for Office 365 alerts for a tenant, filtered to that service source. tenantFilter=AllTenants reads the cached alert table rather than querying each tenant live.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

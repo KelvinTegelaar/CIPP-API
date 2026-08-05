@@ -4,6 +4,8 @@ function Invoke-ExecUniversalSearch {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Searches every tenant for a user by display name or user principal name, using a cross-tenant Graph query. Superseded by ExecUniversalSearchV2, which searches the cached data and covers groups, applications and licences as well.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

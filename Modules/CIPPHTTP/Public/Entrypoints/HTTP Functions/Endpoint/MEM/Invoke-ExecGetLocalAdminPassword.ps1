@@ -4,6 +4,8 @@ Function Invoke-ExecGetLocalAdminPassword {
         Entrypoint
     .ROLE
         Endpoint.Device.Read
+    .DESCRIPTION
+        Retrieves the Windows LAPS local administrator password for a device, identified by its Entra device GUID. Returns a live credential in plain text; the retrieval is written to the CIPP audit log.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

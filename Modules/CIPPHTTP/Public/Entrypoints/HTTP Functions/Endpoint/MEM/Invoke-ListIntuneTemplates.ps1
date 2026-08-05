@@ -4,6 +4,8 @@ function Invoke-ListIntuneTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists the saved Intune policy templates. On first call the templates shipped with CIPP are imported into the templates table. These are CIPP templates, not a tenant's deployed policies.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -4,6 +4,8 @@ function Invoke-ExecBreachSearch {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Queues a breach search for a tenant against Have I Been Pwned. The search runs as a background job and can take up to 24 hours; this returns as soon as it is queued, not with the results. Read the results with ListBreachesTenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

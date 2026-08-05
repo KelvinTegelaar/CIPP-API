@@ -4,6 +4,8 @@ function Invoke-ExecListBackup {
         Entrypoint
     .ROLE
         CIPP.Backup.Read
+    .DESCRIPTION
+        Lists stored CIPP backups, optionally narrowed by Type, tenantFilter or BackupName. NameOnly=true returns just the backup names and the items each one contains, without the backup payload.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

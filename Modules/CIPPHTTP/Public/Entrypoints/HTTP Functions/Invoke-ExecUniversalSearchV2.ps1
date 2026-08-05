@@ -4,6 +4,8 @@ function Invoke-ExecUniversalSearchV2 {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Searches across every tenant the caller can access and returns matches with the tenant each belongs to. type selects what is searched: Users (the default), Groups, Applications or Licenses. Reads the cached report data, so results are as fresh as the last cache run.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

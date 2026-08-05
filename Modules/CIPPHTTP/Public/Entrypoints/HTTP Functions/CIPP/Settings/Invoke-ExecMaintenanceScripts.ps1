@@ -4,6 +4,8 @@ Function Invoke-ExecMaintenanceScripts {
         Entrypoint
     .ROLE
         CIPP.AppSettings.Read
+    .DESCRIPTION
+        Returns the maintenance scripts shipped with CIPP. Called without ScriptFile it lists the available scripts; with one it returns that script with the deployment's own tenant, subscription and resource details substituted in. MakeLink stores the result behind a one-time link instead.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -4,6 +4,8 @@ function Invoke-ExecGraphExplorerPreset {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Manages the caller's saved Graph Explorer presets. The action field selects the operation: Copy duplicates a preset, Save creates or updates one, and Delete removes one. Save and Delete modify stored data despite the Read role on this endpoint, and a caller may only modify presets they own.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

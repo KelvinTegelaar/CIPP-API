@@ -4,6 +4,8 @@ function Invoke-ExecBitlockerSearch {
         Entrypoint,AnyTenant
     .ROLE
         Endpoint.Device.Read
+    .DESCRIPTION
+        Finds a BitLocker recovery key across every tenant the caller can access, by keyId or deviceId. Intended for the case where a user has a recovery key ID from the BitLocker prompt but the tenant is unknown.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -4,6 +4,8 @@ function Invoke-GetVersion {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Compares the caller's reported CIPP version against the latest published release and reports whether the frontend or the API is out of date.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

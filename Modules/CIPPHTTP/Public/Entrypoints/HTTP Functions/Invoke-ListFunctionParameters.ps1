@@ -4,6 +4,8 @@ function Invoke-ListFunctionParameters {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists the CIPP PowerShell functions that can be run from the scheduler, with each one's parameters and help text. Filter with Module or Function. Internal and entrypoint functions are excluded, so this is the set of commands a scheduled task may call.
     #>
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.

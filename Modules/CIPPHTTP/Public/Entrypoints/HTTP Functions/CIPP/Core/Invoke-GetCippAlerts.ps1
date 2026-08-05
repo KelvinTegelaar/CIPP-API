@@ -4,6 +4,8 @@ function Invoke-GetCippAlerts {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Returns the CIPP dashboard banner notifications: any hosted maintenance notice, today's most recent entries from the alert log, and warnings for an out-of-date or misconfigured deployment.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

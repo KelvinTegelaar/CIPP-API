@@ -4,6 +4,8 @@ function Invoke-ListIntuneReusableSettingTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists the saved Intune reusable setting templates, the shared setting groups that settings catalog policies reference rather than redefining. Pass ID to return a single template.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

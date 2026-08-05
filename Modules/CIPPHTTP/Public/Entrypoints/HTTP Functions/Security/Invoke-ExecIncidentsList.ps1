@@ -4,6 +4,8 @@ function Invoke-ExecIncidentsList {
         Entrypoint
     .ROLE
         Security.Incident.Read
+    .DESCRIPTION
+        Lists Microsoft 365 Defender security incidents for a tenant, optionally bounded by StartDate and EndDate (both YYYYMMDD). tenantFilter=AllTenants reads the cached incident table rather than querying each tenant live.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

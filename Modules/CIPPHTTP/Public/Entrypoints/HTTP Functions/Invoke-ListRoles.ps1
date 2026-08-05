@@ -4,6 +4,8 @@ function Invoke-ListRoles {
         Entrypoint
     .ROLE
         Identity.Role.Read
+    .DESCRIPTION
+        Lists a tenant's activated Entra ID directory roles along with the members of each. Roles that have never been activated in the tenant are not returned by Graph and so do not appear.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

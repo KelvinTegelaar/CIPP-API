@@ -4,6 +4,8 @@ function Invoke-ListSPOVersionCleanup {
         Entrypoint
     .ROLE
         Sharepoint.Site.Read
+    .DESCRIPTION
+        Reports the file version history cleanup status for a SharePoint site, given its SiteUrl. Shows whether a trim job is configured or running and what it has reclaimed.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

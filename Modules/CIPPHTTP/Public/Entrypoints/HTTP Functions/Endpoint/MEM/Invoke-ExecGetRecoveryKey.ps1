@@ -4,6 +4,8 @@ function Invoke-ExecGetRecoveryKey {
         Entrypoint
     .ROLE
         Endpoint.Device.Read
+    .DESCRIPTION
+        Retrieves a device's disk encryption recovery key by device GUID. RecoveryKeyType selects BitLocker (the default) or FileVault. Returns a live recovery key in plain text; the retrieval is written to the CIPP audit log.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

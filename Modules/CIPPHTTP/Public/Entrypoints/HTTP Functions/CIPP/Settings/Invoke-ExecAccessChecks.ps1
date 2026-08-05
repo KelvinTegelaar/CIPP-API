@@ -4,6 +4,8 @@ function Invoke-ExecAccessChecks {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.AppSettings.Read
+    .DESCRIPTION
+        Runs the CIPP deployment's self-diagnostics and returns the result. Type selects the check: 'Permissions' verifies the SAM application's Graph permissions, 'Tenants' tests access to each tenant, and 'GDAP' inspects the GDAP relationships and role mappings. Results are cached for an hour unless SkipCache is true.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

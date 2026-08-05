@@ -4,6 +4,8 @@ function Invoke-ListAvailableTests {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Dashboard.Read
+    .DESCRIPTION
+        Lists the compliance tests CIPP can run against a tenant, both the built-in framework tests (CIS, CISA, Essential Eight, EIDSCA, ORCA) and any custom PowerShell tests added to this instance. Returns the catalogue of tests, not their results.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
