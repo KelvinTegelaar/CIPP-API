@@ -26,6 +26,26 @@ function Get-CIPPTextReplacement {
         return $Encoded.Substring(1, $Encoded.Length - 2)
     }
 
+    # -replace reads the replacement string as a substitution pattern, so '$&', '$1' and '${x}' in a
+    # variable's value would be expanded instead of written out. Every value here is literal text,
+    # so a lone $ is doubled - the escape the regex engine recognises for one literal dollar sign.
+    function ConvertTo-CIPPLiteralReplacement {
+        param($Value)
+        if ($null -eq $Value) { return '' }
+        return ([string]$Value).Replace('$', '$$')
+    }
+
+    # Substitutes one %token%. Escaping is decided here rather than at each site so the built-in
+    # tenant tokens get exactly what the custom variables get: a value CIPP does not control -
+    # a tenant display name is free text - is never spliced into JSON unescaped.
+    function Set-CIPPReplacementToken {
+        param([string]$Text, [string]$Token, $Value, [bool]$Escape)
+        # A token whose source is unset resolves to empty, which is what it has always done.
+        if ($null -eq $Value) { $Value = '' }
+        $Replacement = if ($Escape) { ConvertTo-CIPPJsonEscapedString -Value $Value } else { [string]$Value }
+        return $Text -replace [regex]::Escape($Token), (ConvertTo-CIPPLiteralReplacement -Value $Replacement)
+    }
+
     # Renders a typed variable as a bare JSON literal. Returns $null for an untyped variable, for the
     # default string type, and when the value does not actually parse as the type it claims - the
     # caller then substitutes it the way it always did, which keeps existing variables byte-identical
@@ -109,20 +129,15 @@ function Get-CIPPTextReplacement {
     # Global Variables
     $ReplaceTable = Get-CIPPTable -tablename 'CippReplacemap'
     $GlobalMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq 'AllTenants'"
+    # Values are kept unescaped here and escaped at substitution time, so every token - custom and
+    # built-in alike - goes through one code path. A typed variable is rendered from the raw value
+    # too: escaping is a no-op for a number, and would break a JSON one.
     $Vars = @{}
-    # The declared type of each variable, and its unescaped value. A typed variable is rendered from
-    # the raw value: escaping is a no-op for a number, and would break a JSON one.
     $VarTypes = @{}
-    $RawVars = @{}
     if ($GlobalMap) {
         foreach ($Var in $GlobalMap) {
             if (-not $Var.PSObject.Properties['Value']) { continue }
-            $Val = $Var.Value
-            if ($EscapeForJson.IsPresent) {
-                $Val = ConvertTo-CIPPJsonEscapedString -Value $Val
-            }
-            $Vars[$Var.RowKey] = $Val
-            $RawVars[$Var.RowKey] = $Var.Value
+            $Vars[$Var.RowKey] = $Var.Value
             $VarTypes[$Var.RowKey] = $Var.VariableType
         }
     }
@@ -137,12 +152,7 @@ function Get-CIPPTextReplacement {
         if ($ReplaceMap) {
             foreach ($Var in $ReplaceMap) {
                 if (-not $Var.PSObject.Properties['Value']) { continue }
-                $Val = $Var.Value
-                if ($EscapeForJson.IsPresent) {
-                    $Val = ConvertTo-CIPPJsonEscapedString -Value $Val
-                }
-                $Vars[$Var.RowKey] = $Val
-                $RawVars[$Var.RowKey] = $Var.Value
+                $Vars[$Var.RowKey] = $Var.Value
                 $VarTypes[$Var.RowKey] = $Var.VariableType
             }
         }
@@ -165,35 +175,39 @@ function Get-CIPPTextReplacement {
             # part of that string. A value that does not parse as its declared type also falls
             # through, so a mistyped variable degrades to the old behaviour instead of emitting
             # invalid JSON.
-            $Literal = ConvertTo-CIPPJsonLiteral -Value $RawVars[$Replace.Key] -VariableType $VarTypes[$Replace.Key]
+            $Literal = ConvertTo-CIPPJsonLiteral -Value $Vars[$Replace.Key] -VariableType $VarTypes[$Replace.Key]
             if ($null -ne $Literal) {
-                $Text = $Text -replace ('"{0}"' -f [regex]::Escape($String)), $Literal
+                $Text = $Text -replace ('"{0}"' -f [regex]::Escape($String)), (ConvertTo-CIPPLiteralReplacement -Value $Literal)
             }
-            $Text = $Text -replace $String, $Replace.Value
+            $Text = Set-CIPPReplacementToken -Text $Text -Token $String -Value $Replace.Value -Escape $EscapeForJson.IsPresent
         }
     }
     #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
-    $Text = $Text -replace '%tenantid%', $Tenant.customerId
-    $Text = $Text -replace '%organizationid%', $Tenant.customerId
-    $Text = $Text -replace '%tenantfilter%', $Tenant.defaultDomainName
-    $Text = $Text -replace '%defaultdomain%', $Tenant.defaultDomainName
-    $Text = $Text -replace '%initialdomain%', $Tenant.initialDomainName
-    $Text = $Text -replace '%tenantname%', $Tenant.displayName
-
-    # Partner specific replacements
-    $Text = $Text -replace '%partnertenantid%', $env:TenantID
-    $Text = $Text -replace '%samappid%', $env:ApplicationID
+    $BuiltInVars = [ordered]@{
+        '%tenantid%'        = $Tenant.customerId
+        '%organizationid%'  = $Tenant.customerId
+        '%tenantfilter%'    = $Tenant.defaultDomainName
+        '%defaultdomain%'   = $Tenant.defaultDomainName
+        '%initialdomain%'   = $Tenant.initialDomainName
+        '%tenantname%'      = $Tenant.displayName
+        # Partner specific replacements
+        '%partnertenantid%' = $env:TenantID
+        '%samappid%'        = $env:ApplicationID
+    }
+    foreach ($BuiltIn in $BuiltInVars.GetEnumerator()) {
+        $Text = Set-CIPPReplacementToken -Text $Text -Token $BuiltIn.Key -Value $BuiltIn.Value -Escape $EscapeForJson.IsPresent
+    }
 
     if ($Text -match '%cippuserschema%') {
         $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
-        $Text = $Text -replace '%cippuserschema%', $Schema.id
+        $Text = Set-CIPPReplacementToken -Text $Text -Token '%cippuserschema%' -Value $Schema.id -Escape $EscapeForJson.IsPresent
     }
 
     if ($Text -match '%cippurl%') {
         $ConfigTable = Get-CIPPTable -tablename 'Config'
         $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
         if ($Config) {
-            $Text = $Text -replace '%cippurl%', $Config.Value
+            $Text = Set-CIPPReplacementToken -Text $Text -Token '%cippurl%' -Value $Config.Value -Escape $EscapeForJson.IsPresent
         }
     }
     return $Text
