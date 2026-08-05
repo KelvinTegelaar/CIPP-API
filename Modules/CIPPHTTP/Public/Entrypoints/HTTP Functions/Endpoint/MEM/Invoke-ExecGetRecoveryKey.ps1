@@ -23,6 +23,7 @@ function Invoke-ExecGetRecoveryKey {
         switch ($RecoveryKeyType) {
             'BitLocker' { $Result = Get-CIPPBitLockerKey -Device $GUID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers }
             'FileVault' { $Result = Get-CIPPFileVaultKey -Device $GUID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers }
+            'BiosPassword' { $Result = Get-CIPPBiosPassword -Device $GUID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers }
             default { throw "Invalid RecoveryKeyType specified: $RecoveryKeyType." }
         }
         $StatusCode = [HttpStatusCode]::OK
