@@ -58,6 +58,20 @@ function Start-CIPPStatsTimer {
         $MigrationTable = Get-CIPPTable -tablename 'SSOMigration'
         $MigrationConfig = Get-CIPPAzDataTableEntity @MigrationTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue
         $MigrationStatus = $MigrationConfig.Status
+        # SSO provisioned outside the setup wizard (ARM-level during NG migration) never writes a
+        # migration row. Live EasyAuth is authoritative: when it's active and the row is missing or
+        # points at a different app, report complete — same rule as Invoke-ExecSSOSetup's Status action.
+        if ($CIPPNG -and $env:WEBSITE_AUTH_ENABLED -eq 'True' -and $env:WEBSITE_AUTH_V2_CONFIG_JSON) {
+            try {
+                $LiveConfig = $env:WEBSITE_AUTH_V2_CONFIG_JSON | ConvertFrom-Json -ErrorAction Stop
+                $LiveAppId = $LiveConfig.identityProviders.azureActiveDirectory.registration.clientId
+                if ($LiveAppId -and $MigrationConfig.AppId -ne $LiveAppId) {
+                    $MigrationStatus = 'complete'
+                }
+            } catch {
+                Write-Information "Could not parse EasyAuth config for SSO stats: $($_.Exception.Message)"
+            }
+        }
 
         $SendingObject = [PSCustomObject]@{
             rgid                   = $env:WEBSITE_SITE_NAME
