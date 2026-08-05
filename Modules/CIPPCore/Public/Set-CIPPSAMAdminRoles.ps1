@@ -104,14 +104,27 @@ function Set-CIPPSAMAdminRoles {
 
             Write-Verbose ($Requests | ConvertTo-Json -Depth 5)
             $Results = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($Requests)
-            $Results | ForEach-Object {
-                if ($_.status -eq 204) {
-                    $ActionLogs.Add("Added service principal to directory role $($_.id)")
-                } elseif ($_.status -eq 404) {
-                    $ActionLogs.Add("Directory role $($_.id) does not exist in tenant, skipping")
+            $MissingRoles = [System.Collections.Generic.List[object]]::new()
+            foreach ($Result in $Results) {
+                if ($Result.status -eq 204) {
+                    $ActionLogs.Add("Added service principal to directory role $($Result.id)")
+                } elseif ($Result.status -eq 404) {
+                    # 404 means the role template was never activated in this tenant
+                    $Role = $SAMRoles | Where-Object { $_.label -eq $Result.id } | Select-Object -First 1
+                    if ($Role) { $MissingRoles.Add($Role) }
                 } else {
-                    $ActionLogs.Add("Failed to add service principal to directoryRole $($_.id):  $($_ | ConvertTo-Json -Depth 5)")
-                    Write-Verbose ($_ | ConvertTo-Json -Depth 5)
+                    $ActionLogs.Add("Failed to add service principal to directoryRole $($Result.id):  $($Result | ConvertTo-Json -Depth 5)")
+                    Write-Verbose ($Result | ConvertTo-Json -Depth 5)
+                    $HasFailures = $true
+                }
+            }
+            foreach ($Role in $MissingRoles) {
+                try {
+                    $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/directoryRoles' -tenantid $TenantFilter -body (@{ roleTemplateId = $Role.value } | ConvertTo-Json -Compress)
+                    $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles(roleTemplateId='$($Role.value)')/members/`$ref" -tenantid $TenantFilter -body (@{ '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$($id)" } | ConvertTo-Json -Compress)
+                    $ActionLogs.Add("Activated directory role $($Role.label) from its template and added service principal")
+                } catch {
+                    $ActionLogs.Add("Failed to activate directory role $($Role.label): $($_.Exception.Message)")
                     $HasFailures = $true
                 }
             }
