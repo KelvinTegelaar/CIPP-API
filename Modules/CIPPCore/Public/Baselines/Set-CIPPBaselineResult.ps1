@@ -69,7 +69,9 @@ function Set-CIPPBaselineResult {
     $HistoryTable.Force = $true
     $InvertedTicks = '{0:D19}' -f ([DateTime]::MaxValue.Ticks - [DateTime]::UtcNow.Ticks)
     Add-CIPPAzDataTableEntity @HistoryTable -Entity @{
-        PartitionKey = ('{0}_{1}' -f $Item.TenantFilter, $Item.Standard)
+        # '#' is forbidden in Azure Table keys - instance keys sanitize to '~', exactly
+        # like the resolved row's RowKey (readers reverse the mapping).
+        PartitionKey = ('{0}_{1}' -f $Item.TenantFilter, ($Item.Standard -replace '#', '~'))
         RowKey       = ('{0}-{1}' -f $InvertedTicks, $RunId)
         RunId        = $RunId
         Mode         = "$($Result.Mode)"

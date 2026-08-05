@@ -1,6 +1,6 @@
 {
   "name": "ManualTask",
-  "label": "Manual task for an operator",
+  "label": "Manual Task",
   "cat": "Manual Tasks",
   "tag": [
     "Manual"

@@ -27,16 +27,23 @@ function Get-CIPPBaselineAlignment {
         $HistoryTable = Get-CippTable -tablename 'BaselineHistory'
         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
         $Rows = Get-CIPPAzDataTableEntity @HistoryTable -Filter ("PartitionKey ge '{0}_' and PartitionKey lt '{0}{1}'" -f $SafeTenant, [char]0x60)
-        # Manual task instances all share one definition label; the resolved rows carry
-        # each instance's task name, so timeline events can show it too.
+        # Multi-instance standards share one definition label; the resolved rows carry
+        # each instance's identity (task name / deployed template displayName), so
+        # timeline events can show it too.
         $ManualLabels = @{}
         foreach ($Resolved in @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant'")) {
-            $TaskName = $(try { ($Resolved.Manual | ConvertFrom-Json).taskName } catch { $null })
-            if ($TaskName) { $ManualLabels[$Resolved.StandardName] = 'Manual Task - {0}' -f $TaskName }
+            $ResolvedBase = ("$($Resolved.StandardName)" -split '#')[0]
+            $ResolvedDefinition = $Definitions | Where-Object { $_.name -eq $ResolvedBase } | Select-Object -First 1
+            $Suffix = $(try { ($Resolved.Manual | ConvertFrom-Json).taskName } catch { $null })
+            if (-not $Suffix -and $ResolvedDefinition.instanceIdentity) {
+                $Suffix = $(try { ($Resolved.ExpectedValue | ConvertFrom-Json).displayName } catch { $null })
+            }
+            if ($Suffix) { $ManualLabels[$Resolved.StandardName] = '{0} - {1}' -f ($ResolvedDefinition.label ?? $ResolvedBase), $Suffix }
         }
         $Events = foreach ($Row in $Rows) {
             if (-not $Row) { continue }
-            $StandardName = "$($Row.PartitionKey)".Substring($TenantFilter.Length + 1)
+            # Reverse the '#'->'~' key sanitization to recover the instance key.
+            $StandardName = "$($Row.PartitionKey)".Substring($TenantFilter.Length + 1) -replace '~', '#'
             $BaseName = ($StandardName -split '#')[0]
             $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
             [PSCustomObject]@{
@@ -94,7 +101,8 @@ function Get-CIPPBaselineAlignment {
         # partition lists newest-first).
         $HistoryTable = Get-CippTable -tablename 'BaselineHistory'
         foreach ($Row in $Rows) {
-            $SafeHistoryPk = ConvertTo-CIPPODataFilterValue -Value ('{0}_{1}' -f $TenantFilter, $Row.standardName)
+            # History partitions sanitize '#' to '~' (forbidden in Azure Table keys).
+            $SafeHistoryPk = ConvertTo-CIPPODataFilterValue -Value ('{0}_{1}' -f $TenantFilter, ($Row.standardName -replace '#', '~'))
             $HistoryRows = Get-CIPPAzDataTableEntity @HistoryTable -Filter "PartitionKey eq '$SafeHistoryPk'" -First 5
             $Row | Add-Member -NotePropertyName 'history' -NotePropertyValue @(
                 $HistoryRows | ForEach-Object {
@@ -117,6 +125,32 @@ function Get-CIPPBaselineAlignment {
             $TenantGroupNames = @((Get-TenantGroups | Where-Object { $_.Members.defaultDomainName -contains $TenantFilter }).Name)
         } catch {
             Write-Information "Get-CIPPBaselineAlignment: tenant group lookup failed: $($_.Exception.Message)"
+        }
+        # Lazy template-name lookup for identity-carrying standards: the template store
+        # partition matches the remediate executor name (CATemplate, IntuneTemplate).
+        # Loaded once per partition, only when a synthesized row needs it.
+        $TemplateNameMaps = @{}
+        $ResolveTemplateName = {
+            param($Partition, $Id)
+            if (-not $Partition -or -not $Id) { return $null }
+            if (-not $TemplateNameMaps.ContainsKey($Partition)) {
+                $Map = @{}
+                try {
+                    $TemplatesTable = Get-CippTable -tablename 'templates'
+                    $SafePartition = ConvertTo-CIPPODataFilterValue -Value $Partition
+                    foreach ($TemplateRow in @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$SafePartition'")) {
+                        $TemplateName = $(try { ($TemplateRow.JSON | ConvertFrom-Json).displayName } catch { $null })
+                        if ($TemplateName) {
+                            $Map["$($TemplateRow.RowKey)"] = $TemplateName
+                            if ($TemplateRow.GUID) { $Map["$($TemplateRow.GUID)"] = $TemplateName }
+                        }
+                    }
+                } catch {
+                    Write-Information "Get-CIPPBaselineAlignment: template name lookup for $Partition failed: $($_.Exception.Message)"
+                }
+                $TemplateNameMaps[$Partition] = $Map
+            }
+            $TemplateNameMaps[$Partition]["$Id"]
         }
         # Render a definition's %var% expected template from configured variable values: splice
         # the values into the serialized template ("%var%" as an exact JSON value keeps its
@@ -165,9 +199,18 @@ function Get-CIPPBaselineAlignment {
                     $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
                     $Config = $StageDef.standardsConfig | Where-Object { ($_.instance ?? $_.standard) -eq $InstanceKey } | Select-Object -First 1
                     $Expected = & $RenderExpected $Definition $Config.variables
-                    # Manual tasks all share one definition label - carry the task name so
-                    # multiple instances stay distinguishable before their first run too.
-                    $SynthLabel = if ($Definition.manual -and $Config.variables.taskName) { 'Manual Task - {0}' -f $Config.variables.taskName } else { $Definition.label ?? $InstanceKey }
+                    # Multi-instance labels carry the instance identity before the first
+                    # run too: the task name for manual tasks; for identity-carrying
+                    # standards the configured id resolves to the template's displayName
+                    # via the template store (partition = the remediate executor name).
+                    $SynthIdentity = if ($Definition.manual -and $Config.variables.taskName) {
+                        $Config.variables.taskName
+                    } elseif ($Definition.instanceIdentity) {
+                        $IdentityValue = $Config.variables.$($Definition.instanceIdentity)
+                        if ($IdentityValue -is [System.Management.Automation.PSCustomObject]) { $IdentityValue = $IdentityValue.value }
+                        (& $ResolveTemplateName "$($Definition.remediate.executor)" "$IdentityValue") ?? $IdentityValue
+                    }
+                    $SynthLabel = if ($SynthIdentity) { '{0} - {1}' -f ($Definition.label ?? $InstanceKey), $SynthIdentity } else { $Definition.label ?? $InstanceKey }
                     $SynthesizedRows.Add([PSCustomObject]@{
                             tenantFilter        = $TenantFilter
                             tenantName          = $State.tenantName

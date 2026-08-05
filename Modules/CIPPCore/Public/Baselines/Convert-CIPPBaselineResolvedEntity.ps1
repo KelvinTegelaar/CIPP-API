@@ -22,10 +22,15 @@ function Convert-CIPPBaselineResolvedEntity {
     $StandardName = $Entity.StandardName ?? ($Entity.RowKey -split '-')[0]
     $BaseName = ($StandardName -split '#')[0]
     $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
-    # Manual tasks all share one definition label; without the task name, ten manual
-    # tasks are ten identical rows.
+    # Multi-instance standards all share one definition label - the row label carries the
+    # instance's identity so ten instances are ten distinguishable rows: the task name for
+    # manual tasks, the deployed template's displayName for identity-carrying standards
+    # (CA/Intune templates - their normalized ExpectedValue is the full policy).
     $Manual = & $ParseJson $Entity.Manual
-    $Label = if ($Manual.taskName) { 'Manual Task - {0}' -f $Manual.taskName } else { $Definition.label ?? $StandardName }
+    $ExpectedParsed = & $ParseJson $Entity.ExpectedValue
+    $IdentitySuffix = if ($Manual.taskName) { $Manual.taskName }
+    elseif ($Definition.instanceIdentity) { $ExpectedParsed.displayName ?? $ExpectedParsed.$($Definition.instanceIdentity) }
+    $Label = if ($IdentitySuffix) { '{0} - {1}' -f ($Definition.label ?? $BaseName), $IdentitySuffix } else { $Definition.label ?? $StandardName }
 
     [PSCustomObject]@{
         tenantFilter        = $Entity.PartitionKey
@@ -36,7 +41,7 @@ function Convert-CIPPBaselineResolvedEntity {
         impact              = $Definition.impact
         secureScoreImpact   = $Definition.secureScoreImpact ?? 0
         templateId          = $Entity.TemplateId
-        expectedValue       = & $ParseJson $Entity.ExpectedValue
+        expectedValue       = $ExpectedParsed
         currentValue        = & $ParseJson $Entity.CurrentValue
         compliant           = [bool]$Entity.Compliant
         pendingVerification = [bool]$Entity.PendingVerification

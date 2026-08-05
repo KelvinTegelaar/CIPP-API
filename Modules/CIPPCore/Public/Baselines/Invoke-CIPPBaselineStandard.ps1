@@ -123,7 +123,13 @@ function Invoke-CIPPBaselineStandard {
         $ResolveAnyOf = {
             param($Node, $Current, $UseCurrent)
             if ($Node -is [System.Collections.IDictionary]) { $Node = [PSCustomObject]$Node }
-            if ($Node -isnot [System.Management.Automation.PSCustomObject]) { return $Node }
+            if ($Node -isnot [System.Management.Automation.PSCustomObject]) {
+                # The comma keeps single-element arrays as arrays - a bare return
+                # enumerates them, which flattened ['block'] to 'block' and broke
+                # every array-valued expected property.
+                if ($Node -is [array]) { return , $Node }
+                return $Node
+            }
             $Names = @($Node.PSObject.Properties.Name)
             if ($Names.Count -eq 1 -and $Names[0] -eq '$anyOf') {
                 $Allowed = @($Node.'$anyOf')
@@ -157,7 +163,10 @@ function Invoke-CIPPBaselineStandard {
             [PSCustomObject]@{
                 templateName = $Tier.templateName
                 assignedTo   = $Tier.assignedTo
-                value        = (& $ResolveAnyOf (& $Render $Definition.expected $Tier.variables) $null $false)
+                # Template-backed (prepare) standards: the rendered declarative expected
+                # is just a template reference and misleads - show what the tier
+                # CONFIGURES instead; the full expected value lives on the resolved row.
+                value        = $(if ($Definition.prepare) { $Tier.variables } else { & $ResolveAnyOf (& $Render $Definition.expected $Tier.variables) $null $false })
                 effective    = [bool]$Tier.effective
             }
         }
@@ -275,12 +284,55 @@ function Invoke-CIPPBaselineStandard {
             }
             $Value
         }
-        $Current = & $ReadCurrent
-        if ($null -eq $Current) {
-            $Collector = Get-Command -Name "Set-CIPPDBCache$($Definition.read.cacheType)" -ErrorAction SilentlyContinue
-            if ($Collector) {
+        # Freshness gate (V2's CA pattern), for TEMPLATE standards only (prepare hook =
+        # CA now, Intune next): their verdicts drive policy deploys, so they are never
+        # based on cache data older than 3 hours - a stale or empty cache refreshes
+        # inline BEFORE the read, and a compare shortly after an operator's change in
+        # M365 sees the fix. Everything else tolerates normal CIPPDb cadence staleness.
+        # Parallel activities sharing a cacheType can occasionally refresh the same cache
+        # twice in one run; accepted, bounded by worker concurrency.
+        $JustRefreshed = $false
+        $CacheCollector = Get-Command -Name "Set-CIPPDBCache$($Definition.read.cacheType)" -ErrorAction SilentlyContinue
+        if ($CacheCollector -and $Definition.prepare) {
+            $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Definition.read.cacheType -CountsOnly } catch { $null })
+            if ($null -eq $CacheMeta -or $CacheMeta.Timestamp -lt (Get-Date).AddHours(-3) -or [int]($CacheMeta.DataCount ?? 0) -eq 0) {
                 try {
-                    $null = & $Collector -TenantFilter $TenantFilter
+                    $null = & $CacheCollector -TenantFilter $TenantFilter
+                    $JustRefreshed = $true
+                } catch {
+                    Write-Information "Baselines: cache refresh for $($Definition.read.cacheType) on $TenantFilter failed: $($_.Exception.Message)"
+                }
+            }
+        }
+
+        if ($Definition.prepare) {
+            # Prepare hook: complex standards (CA/Intune templates) produce their own
+            # NORMALIZED Expected/Current pair - both sides translated to one canonical
+            # vocabulary from CIPPDb caches only. The engine still owns everything else:
+            # compare, hard gaps, accepted paths, triage, conflict, remediation and
+            # persistence. Collector-on-miss applies exactly like the declarative read.
+            $PrepareFunction = Get-Command -Name $Definition.prepare -ErrorAction SilentlyContinue
+            if (-not $PrepareFunction) { throw "Prepare function $($Definition.prepare) is not available." }
+            $Prepared = & $Definition.prepare -Item $Item -TenantFilter $TenantFilter
+            if ($null -eq $Prepared.Current -and $CacheCollector -and -not $JustRefreshed) {
+                try {
+                    $null = & $CacheCollector -TenantFilter $TenantFilter
+                    $Prepared = & $Definition.prepare -Item $Item -TenantFilter $TenantFilter
+                } catch {
+                    Write-Information "Baselines: cache collection for $($Definition.read.cacheType) on $TenantFilter failed: $($_.Exception.Message)"
+                }
+            }
+            if ($null -ne $Prepared.Expected) {
+                $ExpectedTemplate = $Prepared.Expected
+                $Expected = $Prepared.Expected
+                $Result.ExpectedValue = $Expected
+            }
+            $Current = $Prepared.Current
+        } else {
+            $Current = & $ReadCurrent
+            if ($null -eq $Current -and $CacheCollector -and -not $JustRefreshed) {
+                try {
+                    $null = & $CacheCollector -TenantFilter $TenantFilter
                     $Current = & $ReadCurrent
                 } catch {
                     Write-Information "Baselines: cache collection for $($Definition.read.cacheType) on $TenantFilter failed: $($_.Exception.Message)"
