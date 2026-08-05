@@ -66,6 +66,9 @@ function New-CIPPUserTask {
         $CopyFrom = Set-CIPPCopyGroupMembers -Headers $Headers -CopyFromId $UserObj.copyFrom.value -UserID $CreationResults.Username -TenantFilter $UserObj.tenantFilter
         $CopyFrom.Success | ForEach-Object { $Results.Add($_) }
         $CopyFrom.Error | ForEach-Object { $Results.Add($_) }
+        # Groups deliberately left out (dynamic, AD-synced, public, already assigned) are reported
+        # too: silently dropping them reads as the copy having missed something.
+        $CopyFrom.Skipped | ForEach-Object { $Results.Add($_) }
     }
 
     # Add to groups
@@ -80,7 +83,10 @@ function New-CIPPUserTask {
             } catch {
                 # EXO group adds frequently fail right after user creation due to Exchange directory replication lag.
                 # Schedule a delayed retry so the user lands in the group automatically once EXO sees the recipient.
-                if ($GroupType -in $ExoGroupTypes) {
+                # Groups selected from a template often carry no type at all (older templates stored only a label
+                # and a value), and an untyped group is just as likely to be a distribution list as anything else,
+                # so treat unknown the same as Exchange rather than failing the onboarding outright.
+                if (-not $GroupType -or $GroupType -in $ExoGroupTypes) {
                     try {
                         $TaskBody = [PSCustomObject]@{
                             TenantFilter  = $UserObj.tenantFilter

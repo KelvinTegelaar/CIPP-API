@@ -12,8 +12,19 @@ function Set-CIPPUser {
     $AddToGroups = $UserObj.AddToGroups
     $RemoveFromGroups = $UserObj.RemoveFromGroups
 
+    # Graph cannot change membership on a classic distribution list or a mail-enabled security
+    # group; those have to go through Add-/Remove-DistributionGroupMember. $ResolvedType is what
+    # Graph says the group actually is and always wins. The fields on the autocomplete option are
+    # only a fallback for groups the lookup could not answer for - they are whatever the form held
+    # when the option was built, so they are missing on older saved selections and stale on any
+    # group converted since.
+    # Note the vocabulary of calculatedGroupType: 'security' means a MAIL-ENABLED security group
+    # (Exchange), while a plain security group is 'generic' (Graph).
     $UseExchangeForGroup = {
-        param($AddedFields)
+        param($AddedFields, $ResolvedType)
+        if ($ResolvedType) {
+            return $ResolvedType -in @('Distribution List', 'Mail-Enabled Security')
+        }
         $Calculated = $AddedFields.calculatedGroupType
         if ($Calculated) {
             return $Calculated -in @('distributionList', 'security')
@@ -191,19 +202,59 @@ function Set-CIPPUser {
 
     if ($UserObj.CopyFrom.value) {
         $CopyFrom = Set-CIPPCopyGroupMembers -Headers $Headers -CopyFromId $UserObj.CopyFrom.value -UserID $UserPrincipalName -TenantFilter $UserObj.tenantFilter
-        $Results.AddRange(@($CopyFrom))
+        # Set-CIPPCopyGroupMembers hands back a single object carrying a Success list and an Error
+        # list. Adding that object straight to a string list renders the whole copy as
+        # "@{Success=System.Object[]; Error=System.Object[]}", which hides every per-group outcome -
+        # the failures included. Flatten it the way New-CIPPUserTask already does.
+        foreach ($CopyResult in @($CopyFrom)) {
+            @($CopyResult.Success) | Where-Object { $_ } | ForEach-Object { $Results.Add($_) }
+            @($CopyResult.Error) | Where-Object { $_ } | ForEach-Object { $Results.Add($_) }
+            # Groups deliberately left out (dynamic, AD-synced, public, already assigned) are
+            # reported too: silently dropping them reads as the copy having missed something.
+            @($CopyResult.Skipped) | Where-Object { $_ } | ForEach-Object { $Results.Add($_) }
+        }
+    }
+
+    # Ask Graph what every group in this request actually is, in one call, so the Exchange-vs-Graph
+    # decision below does not depend on what the form happened to post. A failure here is not fatal:
+    # the loops fall back to the option's own fields.
+    $ResolvedGroupTypes = @{}
+    $GroupsToResolve = @(@($AddToGroups) + @($RemoveFromGroups) | Where-Object { $_.value } |
+            Select-Object -ExpandProperty value -Unique)
+    if ($GroupsToResolve.Count -gt 0) {
+        try {
+            $GroupLookups = New-GraphBulkRequest -tenantid $UserObj.tenantFilter -Requests @(
+                foreach ($ResolveId in $GroupsToResolve) {
+                    @{
+                        id     = $ResolveId
+                        method = 'GET'
+                        url    = "groups/$($ResolveId)?`$select=id,groupTypes,mailEnabled,securityEnabled"
+                    }
+                }
+            )
+            foreach ($Lookup in $GroupLookups) {
+                $LookupGroup = $Lookup.body
+                if ($null -eq $LookupGroup.mailEnabled -and $null -eq $LookupGroup.securityEnabled) { continue }
+                $ResolvedGroupTypes[$Lookup.id] = if ($LookupGroup.groupTypes -contains 'Unified') { 'Microsoft 365' }
+                elseif ($LookupGroup.mailEnabled -and $LookupGroup.securityEnabled) { 'Mail-Enabled Security' }
+                elseif ($LookupGroup.mailEnabled) { 'Distribution List' }
+                else { 'Security' }
+            }
+        } catch {
+            Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -Sev 'Warn' -message "Could not look up group types, falling back to the types supplied by the request: $($_.Exception.Message)"
+        }
     }
 
     if ($AddToGroups) {
         $AddToGroups | ForEach-Object {
 
-            $GroupType = $_.addedFields.groupType
             $GroupID = $_.value
+            $GroupType = $ResolvedGroupTypes[$GroupID] ?? $_.addedFields.groupType
             $GroupName = $_.label
             Write-Host "About to add $($UserObj.userPrincipalName) to $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
-                if (& $UseExchangeForGroup $_.addedFields) {
+                if (& $UseExchangeForGroup $_.addedFields $ResolvedGroupTypes[$GroupID]) {
                     Write-Host 'Adding to group via Add-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
@@ -229,13 +280,13 @@ function Set-CIPPUser {
     if ($RemoveFromGroups) {
         $RemoveFromGroups | ForEach-Object {
 
-            $GroupType = $_.addedFields.groupType
             $GroupID = $_.value
+            $GroupType = $ResolvedGroupTypes[$GroupID] ?? $_.addedFields.groupType
             $GroupName = $_.label
             Write-Host "About to remove $($UserObj.userPrincipalName) from $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
-                if (& $UseExchangeForGroup $_.addedFields) {
+                if (& $UseExchangeForGroup $_.addedFields $ResolvedGroupTypes[$GroupID]) {
                     Write-Host 'Removing From group via Remove-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
