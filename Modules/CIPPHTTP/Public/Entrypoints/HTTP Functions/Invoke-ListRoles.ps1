@@ -5,7 +5,7 @@ function Invoke-ListRoles {
     .ROLE
         Identity.Role.Read
     .DESCRIPTION
-        Lists a tenant's activated Entra ID directory roles along with the members of each. Roles that have never been activated in the tenant are not returned by Graph and so do not appear.
+        Lists a tenant's Entra ID role definitions along with the active members of each, via the unified RBAC API. Unlike the legacy /directoryRoles endpoint this includes every built-in and custom role definition, even ones with no assignments.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -13,43 +13,55 @@ function Invoke-ListRoles {
     $TenantFilter = $Request.Query.tenantFilter
 
     try {
-        [System.Collections.Generic.List[PSCustomObject]]$Roles = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/directoryRoles' -tenantid $TenantFilter
+        $Definitions = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions?$select=id,templateId,displayName,description,isBuiltIn,isEnabled' -tenantid $TenantFilter
+        $Assignments = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$select=id,principalId,roleDefinitionId,directoryScopeId&$top=999' -tenantid $TenantFilter
 
-        $MemberRequests = $Roles | ForEach-Object {
-            @{
-                id     = $_.id
-                method = 'GET'
-                url    = "/directoryRoles/$($_.id)/members"
-            }
+        # Resolve principals in bulk; $expand=principal costs seconds of Graph server time
+        # even for a handful of assignments, while getByIds returns in milliseconds.
+        $Principals = @{}
+        $PrincipalIds = @($Assignments.principalId | Sort-Object -Unique)
+        for ($i = 0; $i -lt $PrincipalIds.Count; $i += 1000) {
+            $Body = ConvertTo-Json -InputObject @{ ids = @($PrincipalIds[$i..([Math]::Min($i + 999, $PrincipalIds.Count - 1))]) } -Compress
+            $Resolved = New-GraphPOSTRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/v1.0/directoryObjects/getByIds?$select=id,displayName,userPrincipalName' -body $Body
+            foreach ($Principal in $Resolved.value) { $Principals[$Principal.id] = $Principal }
         }
-        $MemberResponses = New-GraphBulkRequest -Requests $MemberRequests -tenantid $TenantFilter -Version 'v1.0'
 
+        # Group assignments by role definition. A principal assigned at both tenant scope and an
+        # administrative-unit scope appears once per scope; keep the first occurrence per principal.
         $MemberMap = @{}
-        foreach ($Response in $MemberResponses) {
-            $MemberMap[$Response.id] = $Response.body.value
+        foreach ($Assignment in $Assignments) {
+            if (-not $MemberMap.ContainsKey($Assignment.roleDefinitionId)) {
+                $MemberMap[$Assignment.roleDefinitionId] = [System.Collections.Generic.List[object]]::new()
+            }
+            if ($MemberMap[$Assignment.roleDefinitionId].id -notcontains $Assignment.principalId) {
+                $MemberMap[$Assignment.roleDefinitionId].Add([PSCustomObject]@{
+                        displayName       = $Principals[$Assignment.principalId].displayName
+                        userPrincipalName = $Principals[$Assignment.principalId].userPrincipalName
+                        id                = $Assignment.principalId
+                        directoryScopeId  = $Assignment.directoryScopeId
+                    })
+            }
         }
 
-        $GraphRequest = foreach ($Role in $Roles) {
-            $Members = if ($MemberMap[$Role.id]) {
-                $MemberMap[$Role.id] | ForEach-Object { [PSCustomObject]@{
-                        displayName       = $_.displayName
-                        userPrincipalName = $_.userPrincipalName
-                        id                = $_.id
-                    } }
-            }
+        $GraphRequest = foreach ($Definition in $Definitions) {
+            # Built-in definitions have id == templateId; custom roles have templateId = null
+            $Members = if ($MemberMap.ContainsKey($Definition.id)) { @($MemberMap[$Definition.id]) } else { @() }
             [PSCustomObject]@{
-                Id             = $Role.id
-                roleTemplateId = $Role.roleTemplateId
-                DisplayName    = $Role.displayName
-                Description    = $Role.description
+                Id             = $Definition.id
+                roleTemplateId = $Definition.templateId
+                DisplayName    = $Definition.displayName
+                Description    = $Definition.description
                 Members        = @($Members)
-                SID            = (Convert-AzureAdObjectIdToSid -ObjectID $Role.id)
+                MemberCount    = $Members.Count
+                isBuiltIn      = $Definition.isBuiltIn
+                isEnabled      = $Definition.isEnabled
+                SID            = (Convert-AzureAdObjectIdToSid -ObjectID ($Definition.templateId ?? $Definition.id))
             }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        "Failed to list roles for tenant $TenantFilter. $($ErrorMessage.NormalizedError)"
+        $GraphRequest = "Failed to list roles for tenant $TenantFilter. $($ErrorMessage.NormalizedError)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
