@@ -189,6 +189,22 @@ function Invoke-CIPPBaselineStandard {
             CacheType           = $Definition.read.cacheType
         }
 
+        # 1b0. Conflict: two baselines configure this identity at the same level with
+        # different settings, so even the expected value is ambiguous - nothing is
+        # compared, nothing is written to the tenant. The row parks at 'Conflict' (with
+        # every colliding source in its inheritance tiers) until an operator changes one
+        # of the baselines. Alerts fire on the transition in.
+        if ($Item.Conflicted -eq $true) {
+            $Result.ExpectedValue = $null
+            $Result.Outcome = 'Conflict'
+            $Result.Status = 'Conflict'
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Conflict: `"$Label`" is configured with different settings at the same level by $(@($Item.ConflictWith) -join ' and ') - nothing runs until one of them changes. - Run $RunId" -Sev 'Warning'
+            if ($PriorStatus -ne 'Conflict' -and $Item.AlertEnabled) { $Result.AlertEvent = 'Conflict' }
+            Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
+            if ($Result.AlertEvent) { Send-CIPPBaselineAlert -Result $Result }
+            return $Result
+        }
+
         # 1b. Manual tasks: state lives on the resolved row; the operator completes them.
         if ($Definition.manual) {
             $Manual = & $Render $Definition.manual $Item.Variables

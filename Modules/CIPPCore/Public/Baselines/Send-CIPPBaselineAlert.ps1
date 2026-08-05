@@ -17,6 +17,8 @@ function Send-CIPPBaselineAlert {
     $AlertEvent = $Result.AlertEvent
     $Title = if ($AlertEvent -eq 'Remediated') {
         "Baseline standard auto-remediated: $($Item.Standard) on $($Item.TenantFilter)"
+    } elseif ($AlertEvent -eq 'Conflict') {
+        "Baseline conflict: $($Item.Standard) on $($Item.TenantFilter) is configured differently by $(@($Item.ConflictWith) -join ' and ')"
     } else {
         "Baseline drift detected: $($Item.Standard) on $($Item.TenantFilter)"
     }

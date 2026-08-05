@@ -18,6 +18,7 @@
   ],
   "secureScoreImpact": 30,
   "compare": "subset",
+  "instanceIdentity": "caTemplate",
   "multiple": true,
   "variables": {
     "caTemplate": {

@@ -67,6 +67,7 @@ function Get-CIPPBaselineAlignment {
         $Accepted = @($Rows | Where-Object { $_.status -eq 'Accepted' }).Count
         $Drift = @($Rows | Where-Object { $_.status -in @('Drift', 'Partially Accepted') }).Count
         $Denied = @($Rows | Where-Object { $_.status -like 'Denied - *' }).Count
+        $Conflicts = @($Rows | Where-Object { $_.status -eq 'Conflict' }).Count
         $Pct = { param($Count) if ($Applicable) { [math]::Round(($Count / $Applicable) * 100) } else { 0 } }
         @{
             total              = $Total
@@ -77,6 +78,7 @@ function Get-CIPPBaselineAlignment {
             accepted           = $Accepted
             drift              = $Drift
             denied             = $Denied
+            conflicts          = $Conflicts
             verifiedPercentage = & $Pct $Compliant
             alignedPercentage  = & $Pct ($Compliant + $Accepted)
             acceptedPercentage = & $Pct $Accepted
