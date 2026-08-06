@@ -1,14 +1,15 @@
 function Get-CippMcpToolResult {
     <#
     .SYNOPSIS
-        Executes a single MCP 'tools/call' by re-dispatching it through the CIPP API router.
+        Dispatches a single MCP 'tools/call' through the five-tool gateway.
     .DESCRIPTION
-        Validates the requested tool against the read-only MCP tool list, then invokes the
-        corresponding /api endpoint via New-CippCoreRequest using the caller's own principal
-        headers. This guarantees Test-CIPPAccess (RBAC + tenant scoping + logging) runs for
-        every tool call exactly as for a normal API request. The synthetic request is tagged
-        with 'X-CIPP-Origin: mcp' so model-initiated calls are distinguishable in logs.
-        Returns an MCP tool result object ({ content, isError }). Not an HTTP entrypoint.
+        SearchTools and GetToolInfo are answered locally from the read-only tool catalog.
+        ListTenants, ListGraphRequest and ExecTool targets are re-dispatched through
+        New-CippCoreRequest via Invoke-CippMcpApiRequest, so RBAC and tenant scoping are enforced
+        on every execution. Direct calls to bare catalog tool names are still accepted for
+        compatibility with clients configured before the five-tool gateway existed — the catalog
+        remains the server-side allowlist either way. Returns an MCP tool result object
+        ({ content, isError }). Not an HTTP entrypoint.
     .FUNCTIONALITY
         Internal
     #>
@@ -24,72 +25,73 @@ function Get-CippMcpToolResult {
         throw [pscustomobject]@{ code = -32602; message = 'Invalid params: tool name is required' }
     }
 
-    # The tool list is the read-only allowlist; anything not in it cannot be called.
-    $Tool = Get-CippMcpToolList | Where-Object { $_.name -eq $ToolName } | Select-Object -First 1
-    if (-not $Tool) {
-        throw [pscustomobject]@{ code = -32602; message = "Unknown or unavailable tool: $ToolName" }
-    }
+    $ArgHash = ConvertTo-CippMcpHashtable -InputObject $Arguments
 
-    # Determine the HTTP method from the spec (defaults to GET for the read surface).
-    $Spec = Get-CippMcpSpec
-    $PathItem = $Spec['paths']["/api/$ToolName"]
-    $Method = if ($PathItem -and $PathItem.Contains('post')) { 'POST' } else { 'GET' }
-
-    # Flatten the MCP arguments object into a parameter hashtable. Arguments may arrive as a
-    # dictionary or as a PSCustomObject depending on how the JSON-RPC body was deserialized.
-    $ArgHash = @{}
-    if ($Arguments -is [System.Collections.IDictionary]) {
-        foreach ($Entry in $Arguments.GetEnumerator()) {
-            $ArgHash[$Entry.Key] = $Entry.Value
+    switch ($ToolName) {
+        'SearchTools' {
+            $Limit = $ArgHash['limit'] -as [int]
+            if (-not $Limit) { $Limit = 25 }
+            $SearchResult = Find-CippMcpTool -Request $Request -Query ([string]$ArgHash['query']) -Category ([string]$ArgHash['category']) -Limit $Limit
+            return [ordered]@{
+                content = @(@{ type = 'text'; text = ($SearchResult | ConvertTo-Json -Depth 10 -Compress) })
+                isError = $false
+            }
         }
-    } elseif ($Arguments) {
-        foreach ($Prop in $Arguments.PSObject.Properties) {
-            $ArgHash[$Prop.Name] = $Prop.Value
+        'GetToolInfo' {
+            $Names = @(@($ArgHash['names'] ?? $ArgHash['name']) | ForEach-Object { [string]$_ } | Where-Object { $_ } | Select-Object -Unique -First 20)
+            if ($Names.Count -eq 0) {
+                throw [pscustomobject]@{ code = -32602; message = 'Invalid params: names (array of tool names from SearchTools) is required' }
+            }
+            $Catalog = @(Get-CippMcpToolCatalog -Request $Request)
+            $Infos = [System.Collections.Generic.List[object]]::new()
+            foreach ($Name in $Names) {
+                $Candidates = @($Catalog | Where-Object { $_.name -eq $Name })
+                $Entry = @($Candidates | Where-Object { $_._method -eq 'POST' })[0] ?? $Candidates[0]
+                if ($Entry) {
+                    $Infos.Add([ordered]@{
+                            name        = $Entry.name
+                            category    = $Entry._category
+                            description = $Entry.description
+                            inputSchema = $Entry.inputSchema
+                        })
+                } else {
+                    $Infos.Add([ordered]@{ name = $Name; error = 'Unknown tool — find valid names with SearchTools.' })
+                }
+            }
+            $InfoResult = [ordered]@{
+                tools = @($Infos)
+                hint  = 'Run a tool with ExecTool: { "name": "<tool>", "arguments": { ... } }.'
+            }
+            return [ordered]@{
+                content = @(@{ type = 'text'; text = ($InfoResult | ConvertTo-Json -Depth 20 -Compress) })
+                isError = $false
+            }
         }
-    }
-
-    # Clone caller headers (preserves the EasyAuth principal) and tag the origin for auditing.
-    # The Functions worker exposes Headers as Dictionary[string,string]; PSObject.Properties on a
-    # dictionary yields .NET members (Count, Keys, ...) rather than entries, dropping every header.
-    $Headers = @{}
-    if ($Request.Headers -is [System.Collections.IDictionary]) {
-        foreach ($Entry in $Request.Headers.GetEnumerator()) {
-            $Headers[$Entry.Key] = $Entry.Value
+        'ExecTool' {
+            $TargetName = [string]$ArgHash['name']
+            if ([string]::IsNullOrWhiteSpace($TargetName)) {
+                throw [pscustomobject]@{ code = -32602; message = 'Invalid params: name (the tool to execute) is required' }
+            }
+            $Candidates = @(Get-CippMcpToolCatalog -Request $Request | Where-Object { $_.name -eq $TargetName })
+            $Entry = @($Candidates | Where-Object { $_._method -eq 'POST' })[0] ?? $Candidates[0]
+            if (-not $Entry) {
+                throw [pscustomobject]@{ code = -32602; message = "Unknown or unavailable tool: $TargetName. Use SearchTools to discover valid tool names." }
+            }
+            return Invoke-CippMcpApiRequest -Request $Request -TriggerMetadata $TriggerMetadata -ToolName $TargetName -Arguments $ArgHash['arguments'] -Method $Entry._method -ParamAlias $Entry._paramAlias
         }
-    } elseif ($Request.Headers) {
-        foreach ($Header in $Request.Headers.PSObject.Properties) {
-            $Headers[$Header.Name] = $Header.Value
+        default {
+            # Core passthroughs (always available) and legacy direct catalog calls (respect connector scoping).
+            $Catalog = if ($ToolName -in @('ListTenants', 'ListGraphRequest')) {
+                @(Get-CippMcpToolCatalog)
+            } else {
+                @(Get-CippMcpToolCatalog -Request $Request)
+            }
+            $Candidates = @($Catalog | Where-Object { $_.name -eq $ToolName })
+            $Entry = @($Candidates | Where-Object { $_._method -eq 'POST' })[0] ?? $Candidates[0]
+            if (-not $Entry) {
+                throw [pscustomobject]@{ code = -32602; message = "Unknown or unavailable tool: $ToolName. Use SearchTools to discover valid tool names." }
+            }
+            return Invoke-CippMcpApiRequest -Request $Request -TriggerMetadata $TriggerMetadata -ToolName $ToolName -Arguments $Arguments -Method $Entry._method -ParamAlias $Entry._paramAlias
         }
-    }
-    $Headers['X-CIPP-Origin'] = 'mcp'
-
-    $Query = @{}
-    $Body = @{}
-    if ($Method -eq 'GET') { $Query = $ArgHash } else { $Body = $ArgHash }
-
-    $InnerRequest = [pscustomobject]@{
-        Params  = @{ CIPPEndpoint = $ToolName }
-        Method  = $Method
-        Headers = $Headers
-        Query   = $Query
-        Body    = $Body
-    }
-
-    try {
-        $Response = New-CippCoreRequest -Request $InnerRequest -TriggerMetadata $TriggerMetadata
-    } catch {
-        return [ordered]@{
-            content = @(@{ type = 'text'; text = "Tool execution failed: $($_.Exception.Message)" })
-            isError = $true
-        }
-    }
-
-    $ResultBody = $Response.Body
-    $Text = if ($ResultBody -is [string]) { $ResultBody } else { $ResultBody | ConvertTo-Json -Depth 20 -Compress }
-    $IsError = $null -ne $Response.StatusCode -and [int]$Response.StatusCode -ge 400
-
-    return [ordered]@{
-        content = @(@{ type = 'text'; text = "$Text" })
-        isError = $IsError
     }
 }
