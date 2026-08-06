@@ -166,6 +166,11 @@ function Invoke-CIPPBaselineStandard {
         # compare, the remediation gate, and the resulting status.
         $AcceptedPaths = $(try { $Prior.AcceptedPaths | ConvertFrom-Json } catch { $null })
         $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name | Where-Object { $_ })
+        # Per-path verdicts: entries default to 'accept' (tolerate); 'denyDelete' marks
+        # the path's object for deletion once delete executors exist. Both filter the
+        # diff (the operator decided), but deny-delete parks the row at Delete Pending
+        # instead of scoring it Accepted.
+        $DenyDeleteKeys = @($AcceptedPaths.PSObject.Properties | Where-Object { $_.Name -and $_.Value.verdict -eq 'denyDelete' } | ForEach-Object { $_.Name })
         $ExpectedTemplate = & $Render $Definition.expected $Item.Variables
         $Expected = & $ResolveAnyOf $ExpectedTemplate $null $false
         $Tiers = foreach ($Tier in @($Item.Tiers)) {
@@ -491,13 +496,18 @@ function Invoke-CIPPBaselineStandard {
             Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
             return $Result
         }
-        if ($Compliant -and $PathAccepted -and -not "$PriorStatus".StartsWith('Denied')) {
-            # Aligned only because every deviating property is individually accepted: that
-            # scores as Accepted (aligned via acceptance), not Compliant, and the tolerated
-            # diff stays visible in history.
+        if ($Compliant -and $PathAccepted -and $PriorStatus -ne 'Denied - Remediate Pending') {
+            # Aligned only because every deviating property is individually triaged: all
+            # accepts score as Accepted (aligned via acceptance, not compliance); any
+            # deny-delete verdict with live drift parks the row at Delete Pending until
+            # delete executors exist. The tolerated diff stays visible in history.
+            $DenyDeleteLive = $DenyDeleteKeys.Count -gt 0 -and @($PreFilterDifferences | Where-Object {
+                    $Property = $_.Property
+                    $DenyDeleteKeys | Where-Object { $Property -eq $_ -or $Property.StartsWith("$_.") }
+                }).Count -gt 0
             $Result.Diff = $PreFilterDifferences
             $Result.Outcome = 'Drift'
-            $Result.Status = 'Accepted'
+            $Result.Status = $(if ($DenyDeleteLive) { 'Denied - Delete Pending' } else { 'Accepted' })
             Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
             return $Result
         }
@@ -512,7 +522,9 @@ function Invoke-CIPPBaselineStandard {
         # checkBeforeRun=false standards cannot prove a write unnecessary.
         $WriteNeeded = (-not $Compliant) -or $Force.IsPresent -or (-not $CheckBeforeRun)
 
-        if ($Mode -ne 'compare' -and $RemediationAllowed -and $WriteNeeded) {
+        # Detect standards carry no remediate executor by design - they are report-only
+        # tripwires; deletion happens only via explicit per-path deny verdicts.
+        if ($Mode -ne 'compare' -and $RemediationAllowed -and $WriteNeeded -and $Definition.remediate) {
             $ExpectedJson = ConvertTo-Json -Compress -Depth 100 -InputObject $Expected
             try {
                 $Rendered = & $Render $Definition.remediate $Item.Variables

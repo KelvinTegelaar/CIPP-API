@@ -211,8 +211,12 @@ function Get-CIPPBaselineIntuneTemplateState {
         $AssignTo = "$(& $Unwrap $Variables.assignTo)"
         $CustomGroup = "$(& $Unwrap $Variables.customGroup)"
         if ($CustomGroup) { $AssignTo = 'customGroup' }
-        $AssignmentsMatch = Compare-CIPPIntuneAssignments -ExistingAssignments @($Live.assignments) -ExpectedAssignTo $AssignTo -ExpectedCustomGroup $CustomGroup -ExpectedExcludeGroup "$(& $Unwrap $Variables.excludeGroup)" -ExpectedAssignmentFilter "$(& $Unwrap $Variables.assignmentFilter)" -ExpectedAssignmentFilterType "$(& $Unwrap $Variables.assignmentFilterType)" -TenantFilter $TenantFilter
-        $Current | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue ([bool]$AssignmentsMatch) -Force
+        $AssignmentsResult = Compare-CIPPIntuneAssignments -ExistingAssignments @($Live.assignments) -ExpectedAssignTo $AssignTo -ExpectedCustomGroup $CustomGroup -ExpectedExcludeGroup "$(& $Unwrap $Variables.excludeGroup)" -ExpectedAssignmentFilter "$(& $Unwrap $Variables.assignmentFilter)" -ExpectedAssignmentFilterType "$(& $Unwrap $Variables.assignmentFilterType)" -PolicyType $TemplateType -TenantFilter $TenantFilter
+        # The helper returns a verdict object: Matched (bool) plus Unknown for transient
+        # failures - Unknown must NOT be recorded as drift (a deviation no remediation
+        # can clear), so it mirrors the expected value this run and retries the next.
+        $IsAssigned = if ($AssignmentsResult.Unknown) { $true } else { [bool]$AssignmentsResult.Matched }
+        $Current | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue $IsAssigned -Force
         # The Catalog flatten compares ONLY the settings arrays - top-level properties
         # like isAssigned never reach it. StrictCompare makes the engine diff these
         # explicitly, regardless of the family's compare type.

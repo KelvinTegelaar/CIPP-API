@@ -24,8 +24,8 @@ function Invoke-ExecUpdateBaselineDeviation {
         if (-not ($Action -and $TenantFilter -and $Standard)) {
             throw 'Provide action, tenantFilter, and standard.'
         }
-        if ($Action -in @('Accept', 'AcceptPath') -and -not $Request.Body.reason) {
-            throw 'A reason is required to accept a deviation.'
+        if ($Action -in @('Accept', 'AcceptPath', 'DenyPath') -and -not $Request.Body.reason) {
+            throw 'A reason is required to triage a deviation.'
         }
 
         $Table = Get-CippTable -tablename 'BaselineAlignment'
@@ -112,24 +112,39 @@ function Invoke-ExecUpdateBaselineDeviation {
                 & $Set 'AcceptedPaths' '{}'
                 $Message = "Cleared the triage and any accepted properties on $Standard for $TenantFilter - it re-surfaces as Drift."
             }
-            'AcceptPath' {
+            { $_ -in @('AcceptPath', 'DenyPath', 'ClearPath') } {
                 $Path = $Request.Body.path
-                if (-not $Path) { throw 'AcceptPath requires the property path to accept.' }
+                if (-not $Path) { throw "$Action requires the property path." }
                 $AcceptedPaths = if ($Entity.AcceptedPaths) { $Entity.AcceptedPaths | ConvertFrom-Json } else { [PSCustomObject]@{} }
-                $AcceptedPaths | Add-Member -NotePropertyName $Path -NotePropertyValue ([PSCustomObject]@{
-                        reason = $Request.Body.reason
-                        by     = $User
-                        at     = $Now
-                    }) -Force
+                # Per-path verdicts: 'accept' tolerates that property's drift; 'denyDelete'
+                # queues the path's object for deletion once delete executors exist. Both
+                # count as triaged. ClearPath removes a single verdict.
+                if ($Action -eq 'ClearPath') {
+                    $AcceptedPaths.PSObject.Properties.Remove($Path)
+                    $Message = "Cleared the triage on property $Path of $Standard for $TenantFilter - it re-surfaces as drift on the next run."
+                } else {
+                    $Verdict = if ($Action -eq 'DenyPath') { 'denyDelete' } else { 'accept' }
+                    $AcceptedPaths | Add-Member -NotePropertyName $Path -NotePropertyValue ([PSCustomObject]@{
+                            reason  = $Request.Body.reason
+                            by      = $User
+                            at      = $Now
+                            verdict = $Verdict
+                        }) -Force
+                    $Message = if ($Action -eq 'DenyPath') {
+                        "Denied $Path of $Standard for $TenantFilter - queued for deletion once delete support lands. Other properties keep alerting."
+                    } else {
+                        "Accepted the deviation on property $Path of $Standard for $TenantFilter. Other properties keep alerting."
+                    }
+                }
                 & $Set 'AcceptedPaths' (ConvertTo-Json -Compress -Depth 20 -InputObject $AcceptedPaths)
-                # Reflect the acceptance in the status immediately instead of waiting for the
-                # next run: rediff the stored values with the accepted paths filtered out -
-                # nothing left means every deviating property is accepted (Accepted), anything
-                # left keeps alerting (Partially Accepted). Denied rows keep the operator's
-                # order; rows without stored values wait for the engine.
-                $Message = "Accepted the deviation on property $Path of $Standard for $TenantFilter. Other properties keep alerting."
-                if ($Entity.Status -in @('Drift', 'Partially Accepted', 'Accepted') -and $Entity.ExpectedValue -and $Entity.CurrentValue) {
+                # Reflect the verdict in the status immediately instead of waiting for the
+                # next run: rediff the stored values with all triaged paths filtered out.
+                # Nothing left: all accepts -> Accepted; any deny-delete -> Delete Pending.
+                # Anything left keeps alerting (Partially Accepted, or Drift when no
+                # verdicts remain). Rows without stored values wait for the engine.
+                if ($Entity.Status -in @('Drift', 'Partially Accepted', 'Accepted', 'Denied - Delete Pending') -and $Entity.ExpectedValue -and $Entity.CurrentValue) {
                     $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name)
+                    $DenyDeleteKeys = @($AcceptedPaths.PSObject.Properties | Where-Object { $_.Value.verdict -eq 'denyDelete' } | ForEach-Object { $_.Name })
                     $Remaining = $null
                     try {
                         $Differences = @(Compare-CIPPIntuneObject -ReferenceObject ($Entity.ExpectedValue | ConvertFrom-Json) -DifferenceObject ($Entity.CurrentValue | ConvertFrom-Json) | Where-Object { $_ })
@@ -139,14 +154,19 @@ function Invoke-ExecUpdateBaselineDeviation {
                             })
                     } catch { $Remaining = $null }
                     if ($null -ne $Remaining) {
-                        & $Set 'Status' $(if ($Remaining.Count -eq 0) { 'Accepted' } else { 'Partially Accepted' })
-                        & $Set 'DeviationReason' "$($Request.Body.reason)"
-                        & $Set 'DeviationBy' "$User"
-                        & $Set 'DeviationAt' $Now
-                        $Message = if ($Remaining.Count -eq 0) {
-                            "Accepted the deviation on property $Path of $Standard for $TenantFilter - every deviating property is now accepted."
-                        } else {
-                            "Accepted the deviation on property $Path of $Standard for $TenantFilter. $($Remaining.Count) unaccepted deviating $(if ($Remaining.Count -eq 1) { 'property keeps' } else { 'properties keep' }) alerting."
+                        $NewStatus = if ($Remaining.Count -gt 0) {
+                            $(if ($AcceptedKeys.Count -gt 0) { 'Partially Accepted' } else { 'Drift' })
+                        } elseif ($DenyDeleteKeys.Count -gt 0) { 'Denied - Delete Pending' }
+                        elseif ($AcceptedKeys.Count -gt 0) { 'Accepted' }
+                        else { 'Drift' }
+                        & $Set 'Status' $NewStatus
+                        if ($Action -ne 'ClearPath') {
+                            & $Set 'DeviationReason' "$($Request.Body.reason)"
+                            & $Set 'DeviationBy' "$User"
+                            & $Set 'DeviationAt' $Now
+                        }
+                        if ($Remaining.Count -gt 0) {
+                            $Message = "$Message $($Remaining.Count) untriaged deviating $(if ($Remaining.Count -eq 1) { 'property keeps' } else { 'properties keep' }) alerting."
                         }
                     }
                 }
@@ -163,7 +183,7 @@ function Invoke-ExecUpdateBaselineDeviation {
                 $Message = "Marked the manual task $Standard as completed for $TenantFilter."
             }
             default {
-                throw "Unknown action '$Action'. Use Accept, Deny, Clear, AcceptPath, or CompleteTask."
+                throw "Unknown action '$Action'. Use Accept, Deny, Clear, AcceptPath, DenyPath, ClearPath, or CompleteTask."
             }
         }
 

@@ -1,0 +1,28 @@
+{
+  "name": "DetectConditionalAccessDrift",
+  "label": "Detect Conditional Access Drift",
+  "cat": "Templates",
+  "tag": ["HighImpact"],
+  "impact": "Low Impact",
+  "helpText": "Flags every Conditional Access policy in the tenant that is not covered by a CA template from a baseline applying to it (matched by display name across ALL baselines). Each unmanaged policy is its own deviation: accept it to tolerate a tenant-specific policy, or deny it to queue it for deletion. Report-only - nothing is ever changed automatically.",
+  "executiveText": "Watches for sign-in security policies created outside the agreed baseline - for example by a local admin - and raises each one for review, so unauthorized changes to account protection never go unnoticed.",
+  "recommendedBy": ["CIPP"],
+  "requiredCapabilities": ["AAD_PREMIUM", "AAD_PREMIUM_P2"],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "hardCompare": false,
+  "variables": {},
+  "read": {
+    "cacheType": "ConditionalAccessPolicies",
+    "requiredCaches": [
+      "ConditionalAccessPolicies",
+      "NamedLocations",
+      "AuthenticationStrengths"
+    ],
+    "liveCount": {
+      "uri": "identity/conditionalAccess/policies",
+      "cacheType": "ConditionalAccessPolicies"
+    }
+  },
+  "prepare": "Get-CIPPBaselineDetectCADriftState"
+}
