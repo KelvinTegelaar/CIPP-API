@@ -50,8 +50,33 @@ function Start-CIPPBaselineOrchestrator {
             $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
             $ResolvedKeys = @{}
             foreach ($Item in $WorkItems) { $ResolvedKeys[('{0}|{1}' -f $Item.TenantFilter, $Item.Standard)] = $true }
-            $Orphans = @(Get-CIPPAzDataTableEntity @ResolvedTable | Where-Object { -not $ResolvedKeys.ContainsKey(('{0}|{1}' -f $_.PartitionKey, $_.StandardName)) })
-            if ($Orphans) { Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $Orphans }
+            # One row per (tenant, standard): RowKey is the sanitized standard name.
+            # Legacy '<standard>-<templateId>' rows migrate their newest state into the
+            # canonical key (preserving triage metadata); pairs nothing resolves anymore
+            # are cleared entirely.
+            $Orphans = [System.Collections.Generic.List[object]]::new()
+            $AllResolved = @(Get-CIPPAzDataTableEntity @ResolvedTable)
+            foreach ($Pair in ($AllResolved | Group-Object -Property { '{0}|{1}' -f $_.PartitionKey, $_.StandardName })) {
+                if (-not $ResolvedKeys.ContainsKey($Pair.Name)) {
+                    foreach ($Row in $Pair.Group) { $Orphans.Add($Row) }
+                    continue
+                }
+                $CanonicalKey = "$($Pair.Group[0].StandardName)" -replace '#', '~'
+                $Legacy = @($Pair.Group | Where-Object { $_.RowKey -ne $CanonicalKey })
+                if ($Legacy.Count -eq 0) { continue }
+                if (@($Pair.Group | Where-Object { $_.RowKey -eq $CanonicalKey }).Count -eq 0) {
+                    $Newest = $Legacy | Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending | Select-Object -First 1
+                    $Migrated = @{}
+                    foreach ($Prop in $Newest.PSObject.Properties) {
+                        if ($Prop.Name -in @('ETag', 'Timestamp', 'OriginalEntityId')) { continue }
+                        $Migrated[$Prop.Name] = $Prop.Value
+                    }
+                    $Migrated['RowKey'] = $CanonicalKey
+                    Add-CIPPAzDataTableEntity @ResolvedTable -Entity $Migrated -Force
+                }
+                foreach ($Row in $Legacy) { $Orphans.Add($Row) }
+            }
+            if ($Orphans.Count -gt 0) { Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity @($Orphans) }
         } catch {
             Write-Information "Baseline resolved-store reconciliation skipped: $($_.Exception.Message)"
         }

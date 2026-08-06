@@ -150,7 +150,17 @@ function Invoke-CIPPBaselineStandard {
             $Resolved
         }
 
-        $Prior = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and StandardName eq '$SafeStandard'" | Select-Object -First 1
+        # One row per (tenant, standard): RowKey = the sanitized standard name. Rows
+        # written under the old '<standard>-<templateId>' keys are self-healed here -
+        # the newest state (by LastRun) becomes Prior so triage survives, and every
+        # non-canonical sibling is deleted before this run writes the canonical row.
+        $PriorRows = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and StandardName eq '$SafeStandard'")
+        $CanonicalRowKey = $Item.Standard -replace '#', '~'
+        $StaleRows = @($PriorRows | Where-Object { $_.RowKey -ne $CanonicalRowKey })
+        if ($StaleRows.Count -gt 0) {
+            try { Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $StaleRows } catch { Write-Information "Baselines: stale resolved-row cleanup for $($Item.Standard) on $TenantFilter failed: $($_.Exception.Message)" }
+        }
+        $Prior = $PriorRows | Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending | Select-Object -First 1
         $PriorStatus = $Prior.Status
         # Per-property acceptances (design addendum): parsed up front because they shape the
         # compare, the remediation gate, and the resulting status.
@@ -161,13 +171,18 @@ function Invoke-CIPPBaselineStandard {
         $Tiers = foreach ($Tier in @($Item.Tiers)) {
             if (-not $Tier) { continue }
             [PSCustomObject]@{
-                templateName = $Tier.templateName
-                assignedTo   = $Tier.assignedTo
+                templateName     = $Tier.templateName
+                assignedTo       = $Tier.assignedTo
                 # Template-backed (prepare) standards: the rendered declarative expected
                 # is just a template reference and misleads - show what the tier
                 # CONFIGURES instead; the full expected value lives on the resolved row.
-                value        = $(if ($Definition.prepare) { $Tier.variables } else { & $ResolveAnyOf (& $Render $Definition.expected $Tier.variables) $null $false })
-                effective    = [bool]$Tier.effective
+                value            = $(if ($Definition.prepare) { $Tier.variables } else { & $ResolveAnyOf (& $Render $Definition.expected $Tier.variables) $null $false })
+                # Action posture per source, so the UI can show WHY two tiers with
+                # identical settings still conflict (differing remediate/alert flags).
+                remediateEnabled = [bool]$Tier.remediateEnabled
+                alertEnabled     = [bool]$Tier.alertEnabled
+                alertOnRemediate = [bool]$Tier.alertOnRemediate
+                effective        = [bool]$Tier.effective
             }
         }
 

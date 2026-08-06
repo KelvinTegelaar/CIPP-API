@@ -126,6 +126,18 @@ function Set-CIPPDBCacheIntunePolicies {
                     @()
                 }
 
+                if ($PolicyType.CacheType -eq 'IntuneDeviceConfigurations') {
+                    foreach ($Policy in $Policies) {
+                        if (@($Policy.omaSettings | Where-Object { $_.secretReferenceValueId }).Count -gt 0) {
+                            try {
+                                $null = Get-CIPPOmaSettingDecryptedValue -DeviceConfiguration $Policy -DeviceConfigurationId $Policy.id -TenantFilter $TenantFilter
+                            } catch {
+                                & $AddWarning "Failed to decrypt OMA settings for $($Policy.displayName): $($_.Exception.Message)"
+                            }
+                        }
+                    }
+                }
+
                 # Get assignments only for legacy collections whose list endpoints do
                 # not support expand. Report-backed ManagedAppPolicies intentionally
                 # remains identical to the live endpoint and does not use this fan-out.

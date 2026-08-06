@@ -114,6 +114,24 @@ function Get-CIPPBaselineIntuneTemplateState {
             }
             $Policy = $Projection
         }
+        # Custom (OMA-URI) policies: templates carry values as strings ('true') while
+        # Graph returns typed values (true) - a type difference the shared compare
+        # correctly flags but nobody means. Coerce value to string on BOTH sides, drop
+        # Graph's decoration (isEncrypted/secretReferenceValueId/empty description) and
+        # sort by omaUri so ordering never drifts. The collector decrypts encrypted
+        # values at cache time, so value holds the comparable plaintext.
+        if ($Policy.PSObject.Properties['omaSettings'] -and $Policy.omaSettings) {
+            $Policy.omaSettings = @($(foreach ($OmaSetting in $Policy.omaSettings) {
+                        $Clean = [PSCustomObject]@{
+                            '@odata.type' = $OmaSetting.'@odata.type'
+                            displayName   = "$($OmaSetting.displayName)"
+                            omaUri        = "$($OmaSetting.omaUri)"
+                            value         = "$($OmaSetting.value)"
+                        }
+                        if ("$($OmaSetting.description)") { $Clean | Add-Member -NotePropertyName description -NotePropertyValue "$($OmaSetting.description)" }
+                        $Clean
+                    }) | Sort-Object -Property omaUri)
+        }
         $Policy
     }
 

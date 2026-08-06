@@ -37,14 +37,16 @@ function Get-CIPPBaselineWorkItems {
     if ($TemplateId) { $Baselines = @($Baselines | Where-Object { $_.GUID -eq $TemplateId }) }
     $Definitions = @(Get-CIPPBaselineDefinition)
 
-    # Canonical settings fingerprint: variables (property-order independent) + the
-    # remediation posture. Two candidates with the same fingerprint are the same config.
+    # Canonical settings fingerprint: the variables only (property-order independent).
+    # Conflict means the baselines disagree about the DESIRED STATE - the action posture
+    # (remediate/alert flags) is deliberately excluded: identical settings with different
+    # postures merge, strictest action wins, exactly like the alert flags OR-merge.
     $Fingerprint = {
-        param($Variables, $RemediateEnabled)
+        param($Variables)
         $Pairs = @(($Variables ?? [PSCustomObject]@{}).PSObject.Properties | Sort-Object -Property Name | ForEach-Object {
                 '{0}={1}' -f $_.Name, (ConvertTo-Json -Compress -Depth 50 -InputObject $_.Value)
             })
-        ('{0}|remediate={1}' -f ($Pairs -join ';'), [bool]$RemediateEnabled)
+        ($Pairs -join ';')
     }
 
     # key "<tenant>|<identity>" -> @{ Rank; Candidates = List of @{ Item; UpdatedAt; Fingerprint } }
@@ -121,14 +123,17 @@ function Get-CIPPBaselineWorkItems {
                         AlertEmails      = $Baseline.alertEmails
                         AlertWebhookUrl  = $Baseline.alertWebhookUrl
                         Tiers            = @([PSCustomObject]@{
-                                templateName = $Baseline.templateName
-                                assignedTo   = ($Baseline.assignedTenants -join ', ')
-                                variables    = ($Config.variables ?? [PSCustomObject]@{})
-                                effective    = $true
+                                templateName     = $Baseline.templateName
+                                assignedTo       = ($Baseline.assignedTenants -join ', ')
+                                variables        = ($Config.variables ?? [PSCustomObject]@{})
+                                remediateEnabled = [bool]$Config.remediateEnabled
+                                alertEnabled     = [bool]$Config.alertEnabled
+                                alertOnRemediate = [bool]$Config.alertOnRemediate
+                                effective        = $true
                             })
                     }
                 }
-                $Candidate.Fingerprint = & $Fingerprint $Config.variables $Config.remediateEnabled
+                $Candidate.Fingerprint = & $Fingerprint $Config.variables
 
                 $Existing = $Effective[$Key]
                 if (-not $Existing -or $Candidate.Rank -gt $Existing.Rank) {
@@ -140,10 +145,16 @@ function Get-CIPPBaselineWorkItems {
                 } elseif ($Candidate.Rank -eq $Existing.Rank) {
                     $Twin = $Existing.Candidates | Where-Object { $_.Fingerprint -eq $Candidate.Fingerprint } | Select-Object -First 1
                     if ($Twin) {
-                        # Identical settings from another baseline: dedupe, but a wish to
-                        # alert from EITHER baseline survives the merge.
+                        # Identical settings from another baseline: dedupe. The strictest
+                        # request from EITHER baseline survives the merge - a wish to
+                        # remediate or alert always wins over report-only/muted. Both
+                        # sources stay visible in the inheritance tiers with their own
+                        # posture, so the merge is explainable in the UI.
+                        $Twin.Item.RemediateEnabled = [bool]($Twin.Item.RemediateEnabled -or $Candidate.Item.RemediateEnabled)
                         $Twin.Item.AlertEnabled = [bool]($Twin.Item.AlertEnabled -or $Candidate.Item.AlertEnabled)
                         $Twin.Item.AlertOnRemediate = [bool]($Twin.Item.AlertOnRemediate -or $Candidate.Item.AlertOnRemediate)
+                        $Twin.Item.SourceTemplate = @(@($Twin.Item.SourceTemplate -split ', ') + $Candidate.Item.TemplateName | Where-Object { $_ } | Select-Object -Unique) -join ', '
+                        $Twin.Item.Tiers = @(@($Twin.Item.Tiers) + @($Candidate.Item.Tiers) | Where-Object { $_ })
                         if ($Candidate.UpdatedAt -gt $Twin.UpdatedAt) { $Twin.UpdatedAt = $Candidate.UpdatedAt }
                     } else {
                         # Same level, same identity, different settings: conflict.
@@ -182,17 +193,20 @@ function Get-CIPPBaselineWorkItems {
             $Tiers.Add($Tier)
         }
         $Tiers.Add([PSCustomObject]@{
-                templateName = 'Tenant Override'
-                assignedTo   = $Delta.scopeId
-                variables    = $Variables
-                effective    = $true
+                templateName     = 'Tenant Override'
+                assignedTo       = $Delta.scopeId
+                variables        = $Variables
+                remediateEnabled = [bool]$Delta.remediateEnabled
+                alertEnabled     = [bool]$Delta.alertEnabled
+                alertOnRemediate = [bool]$Delta.alertOnRemediate
+                effective        = $true
             })
         $OverrideCandidates = [System.Collections.Generic.List[object]]::new()
         $OverrideCandidates.Add(@{
                 Rank        = 3
                 Stage       = $Winning.Stage ?? 1
                 UpdatedAt   = [int64]($Delta.updatedAt ?? 0)
-                Fingerprint = & $Fingerprint $Variables $Delta.remediateEnabled
+                Fingerprint = & $Fingerprint $Variables
                 Item        = [PSCustomObject]@{
                     TenantFilter     = $Delta.scopeId
                     TenantName       = $Winning.Item.TenantName ?? $Delta.scopeId
@@ -223,10 +237,11 @@ function Get-CIPPBaselineWorkItems {
             continue
         }
         # Same rank, same identity, different settings: even the expected value is
-        # ambiguous. Emit ONE item flagged Conflicted - the engine parks the row at
-        # 'Conflict' and refuses to compare or remediate; every colliding source shows in
-        # the inheritance tiers (none effective).
-        $Primary = $Candidates[0].Item
+        # ambiguous. Emit one item flagged Conflicted per involved INSTANCE KEY (multi-
+        # instance standards configure the same identity under different keys - every
+        # configured instance must show Conflict, not one Conflict plus a stale row).
+        # The engine parks each row at 'Conflict' and refuses to compare or remediate;
+        # every colliding source shows in the inheritance tiers (none effective).
         $ConflictTiers = [System.Collections.Generic.List[object]]::new()
         $ConflictAlert = $false
         foreach ($ConflictCandidate in $Candidates) {
@@ -237,12 +252,19 @@ function Get-CIPPBaselineWorkItems {
                 $ConflictTiers.Add($Tier)
             }
         }
-        $ConflictItem = $Primary.PSObject.Copy()
-        $ConflictItem.RemediateEnabled = $false
-        $ConflictItem.AlertEnabled = $ConflictAlert
-        $ConflictItem.Tiers = @($ConflictTiers)
-        $ConflictItem | Add-Member -NotePropertyName Conflicted -NotePropertyValue $true -Force
-        $ConflictItem | Add-Member -NotePropertyName ConflictWith -NotePropertyValue @($Candidates | ForEach-Object { $_.Item.TemplateName } | Select-Object -Unique) -Force
-        $ConflictItem
+        $ConflictNames = @($Candidates | ForEach-Object { $_.Item.TemplateName } | Select-Object -Unique)
+        $EmittedKeys = [System.Collections.Generic.HashSet[string]]::new()
+        foreach ($ConflictCandidate in $Candidates) {
+            if (-not $EmittedKeys.Add("$($ConflictCandidate.Item.Standard)")) { continue }
+            $ConflictItem = $ConflictCandidate.Item.PSObject.Copy()
+            $ConflictItem.RemediateEnabled = $false
+            $ConflictItem.AlertEnabled = $ConflictAlert
+            $ConflictItem.Tiers = @($ConflictTiers)
+            # Attribute the row to every colliding baseline, not just its own source.
+            $ConflictItem.SourceTemplate = ($ConflictNames -join ', ')
+            $ConflictItem | Add-Member -NotePropertyName Conflicted -NotePropertyValue $true -Force
+            $ConflictItem | Add-Member -NotePropertyName ConflictWith -NotePropertyValue $ConflictNames -Force
+            $ConflictItem
+        }
     }
 }

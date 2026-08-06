@@ -34,7 +34,11 @@ function Set-CIPPBaselineResult {
     $ResolvedTable.Force = $true
     Add-CIPPAzDataTableEntity @ResolvedTable -Entity @{
         PartitionKey        = "$($Item.TenantFilter)"
-        RowKey              = ('{0}-{1}' -f ($Item.Standard -replace '#', '~'), ($Item.TemplateId ? $Item.TemplateId : 'adhoc'))
+        # ONE row per (tenant, standard instance) - never per baseline. A templateId
+        # suffix here left a stale row behind whenever ownership changed (baseline B
+        # starts configuring a standard baseline A resolved yesterday -> two rows, one
+        # Conflict and one stale Compliant). TemplateId stays available as a column.
+        RowKey              = ($Item.Standard -replace '#', '~')
         StandardName        = "$($Item.Standard)"
         TenantName          = "$($Item.TenantName)"
         TemplateId          = "$($Item.TemplateId)"

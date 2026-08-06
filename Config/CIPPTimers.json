@@ -280,7 +280,9 @@
     "Command": "Start-CIPPBaselineOrchestrator",
     "Description": "Baseline run: graduations, drift detection and remediation for all baselines",
     "Cron": "0 0 */12 * * *",
-    "Priority": 10,
-    "RunOnProcessor": true
+    "Priority": 4,
+    "RunOnProcessor": true,
+    "TZOffset": true,
+    "PreferredProcessor": "standards"
   }
 ]
