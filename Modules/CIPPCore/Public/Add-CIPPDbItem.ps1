@@ -74,7 +74,11 @@ function Add-CIPPDbItem {
                 $Batch.Add(@{
                         PartitionKey = $TenantFilter
                         RowKey       = $RowKey
-                        Data         = [string]($Item | ConvertTo-Json -Depth 10 -Compress)
+                        # Depth 100, not 10: settings-catalog policies (e.g. macOS
+                        # Platform SSO) nest deeper than 10 levels - a lower depth
+                        # silently strips @odata.type/settingDefinitionId from deep
+                        # children and every consumer sees a mangled object.
+                        Data         = [string]($Item | ConvertTo-Json -Depth 100 -Compress)
                         Type         = $Type
                     })
                 if ($Batch.Count -ge $BatchSize) {

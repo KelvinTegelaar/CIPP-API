@@ -158,7 +158,9 @@ function Get-CIPPBaselineCATemplateState {
         # data - the engine's collector-on-miss / No Data / fail-open semantics take over.
         $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -CountsOnly } catch { $null })
         if ($null -ne $CacheMeta) {
-            return @{ Expected = $Expected; Current = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' } }
+            # EmptyFamily: see the engine's cross-check - a tenant whose CA policies all
+            # vanished at once is more likely a failed collection than a mass deletion.
+            return @{ Expected = $Expected; Current = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }; EmptyFamily = $true }
         }
         return @{ Expected = $Expected; Current = $null }
     }

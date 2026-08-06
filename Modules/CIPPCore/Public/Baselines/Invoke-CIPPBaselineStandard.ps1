@@ -299,31 +299,18 @@ function Invoke-CIPPBaselineStandard {
             }
             $Value
         }
-        # Freshness gate (V2's CA pattern), for TEMPLATE standards only (prepare hook =
-        # CA now, Intune next): their verdicts drive policy deploys, so they are never
-        # based on cache data older than 3 hours - a stale or empty cache refreshes
-        # inline BEFORE the read, and a compare shortly after an operator's change in
-        # M365 sees the fix. Everything else tolerates normal CIPPDb cadence staleness.
-        # Parallel activities sharing a cacheType can occasionally refresh the same cache
-        # twice in one run; accepted, bounded by worker concurrency.
+        # Pre-check gate, for TEMPLATE standards only (prepare hook = CA/Intune): their
+        # verdicts drive policy deploys and their domains change under external hands.
+        # Wait-CIPPBaselineCacheReady verifies the cache is complete (all required
+        # family caches collected), recent (3h), and consistent with live state (CA
+        # live-count probe) - and enforces SINGLE-FLIGHT collection: one job per
+        # (tenant, cacheType) collects while every parallel peer waits, so activities
+        # never compare against a half-written cache and users never get race alerts.
+        # Everything else tolerates normal CIPPDb cadence staleness.
         $JustRefreshed = $false
         $CacheCollector = Get-Command -Name "Set-CIPPDBCache$($Definition.read.cacheType)" -ErrorAction SilentlyContinue
         if ($CacheCollector -and $Definition.prepare) {
-            # freshnessType: umbrella collectors (IntunePolicies) store rows under family
-            # cache types - the gate checks a representative family's age instead.
-            $FreshnessType = $Definition.read.freshnessType ?? $Definition.read.cacheType
-            $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $FreshnessType -CountsOnly } catch { $null })
-            # A fresh-but-empty cache is authoritative (the tenant genuinely has no such
-            # policies - the prepare surfaces that as missing-policy drift), so emptiness
-            # alone must not force a re-collect on every run.
-            if ($null -eq $CacheMeta -or $CacheMeta.Timestamp -lt (Get-Date).AddHours(-3)) {
-                try {
-                    $null = & $CacheCollector -TenantFilter $TenantFilter
-                    $JustRefreshed = $true
-                } catch {
-                    Write-Information "Baselines: cache refresh for $($Definition.read.cacheType) on $TenantFilter failed: $($_.Exception.Message)"
-                }
-            }
+            $JustRefreshed = Wait-CIPPBaselineCacheReady -TenantFilter $TenantFilter -Definition $Definition -RunId $RunId
         }
 
         if ($Definition.prepare) {
@@ -347,6 +334,30 @@ function Invoke-CIPPBaselineStandard {
                 $ExpectedTemplate = $Prepared.Expected
                 $Expected = $Prepared.Expected
                 $Result.ExpectedValue = $Expected
+            }
+            # Fail-safe against poisoned-empty caches: when the WHOLE policy family came
+            # back empty but this policy was observed live within the last 7 days, a
+            # failed or flaky collection (Graph intermittently returns empty collections)
+            # is far more likely than a mass deletion. Report No Data and retry instead
+            # of declaring every policy missing and fanning out false drift/deploys. A
+            # genuinely emptied family resumes drifting once the hold ages out (skips
+            # never advance LastRun).
+            if ($Prepared.EmptyFamily) {
+                # 'Seen live' means the prior current state carried actual policy data -
+                # not the missing-policy marker, and not the marker's all-null projection.
+                $PriorCurrentParsed = $(try { $Prior.CurrentValue | ConvertFrom-Json -ErrorAction Stop } catch { $null })
+                $PriorHadLiveData = if ($PriorCurrentParsed -is [System.Management.Automation.PSCustomObject]) {
+                    (-not $PriorCurrentParsed.PSObject.Properties['policyStatus']) -and
+                    @($PriorCurrentParsed.PSObject.Properties | Where-Object { $null -ne $_.Value }).Count -gt 0
+                } else { $null -ne $PriorCurrentParsed }
+                $PriorSawPolicy = $PriorHadLiveData -and
+                ([int64]($Prior.LastRun ?? 0) -gt ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - 604800))
+                if ($PriorSawPolicy) {
+                    Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "$($Item.Standard): the $($Definition.read.cacheType) family cache is empty but this policy was live recently - treating as No Data (suspected collection failure), retrying next run." -Sev 'Warning'
+                    $Result.Outcome = 'Skipped-NoCache'
+                    $Result.Status = $PriorStatus ?? 'No Data'
+                    return $Result
+                }
             }
             $Current = $Prepared.Current
         } else {
@@ -392,10 +403,20 @@ function Invoke-CIPPBaselineStandard {
             # expectation. The shared function stays untouched (CA/Intune depend on its
             # semantics) - this only ADDS the diffs the engine's stricter reading requires:
             # an expected boolean or number against an empty current value is drift.
+            # Definition-controlled via `hardCompare` (default ON; the CA/Intune template
+            # definitions set false - their prepare pipelines carry their own extensive
+            # normalization and the lenient empties-equivalence is load-bearing there).
+            # Two boundaries when enabled: properties the compare deliberately excludes
+            # (read-only server state like qualityUpdatesWillBeRolledBack) are never
+            # hard-gapped - same list, one source; and flatten-based Catalog compares
+            # skip the walker entirely (their paths don't align with the raw tree).
+            $HardCompareEnabled = $Definition.hardCompare -ne $false
+            $HardGapExclusions = @(Get-CIPPIntuneCompareExclusions -AppProtection:($CompareTypes -contains 'AppProtection'))
             $AddHardGaps = $null
             $AddHardGaps = {
                 param($ExpectedNode, $CurrentNode, $Prefix, $Gaps)
                 foreach ($ExpectedProperty in ($ExpectedNode ?? [PSCustomObject]@{}).PSObject.Properties) {
+                    if ($HardGapExclusions -contains $ExpectedProperty.Name -or $ExpectedProperty.Name -like '*@OData*' -or $ExpectedProperty.Name -like '#microsoft.graph*') { continue }
                     $Path = if ($Prefix) { '{0}.{1}' -f $Prefix, $ExpectedProperty.Name } else { $ExpectedProperty.Name }
                     $ExpectedLeaf = $ExpectedProperty.Value
                     $CurrentLeaf = if ($null -ne $CurrentNode) { $CurrentNode.$($ExpectedProperty.Name) } else { $null }
@@ -409,7 +430,9 @@ function Invoke-CIPPBaselineStandard {
                 }
             }
             $HardGaps = [System.Collections.Generic.List[object]]::new()
-            & $AddHardGaps $CompareExpected $Projected '' $HardGaps
+            if ($HardCompareEnabled -and $CompareTypes -notcontains 'Catalog') {
+                & $AddHardGaps $CompareExpected $Projected '' $HardGaps
+            }
             if ($HardGaps.Count -gt 0) {
                 $Merged = [System.Collections.Generic.List[object]]::new()
                 foreach ($Difference in $Differences) { $Merged.Add($Difference) }

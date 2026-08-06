@@ -13,39 +13,10 @@ function Compare-CIPPIntuneObject {
         [string[]]$CompareType = @()
     )
     if ($CompareType -notcontains 'Catalog') {
-        $defaultExcludeProperties = @(
-            'id',
-            'createdDateTime',
-            'lastModifiedDateTime',
-            'supportsScopeTags',
-            'modifiedDateTime',
-            'version',
-            'roleScopeTagIds',
-            'settingCount',
-            'creationSource',
-            'priorityMetaData'
-            'featureUpdatesWillBeRolledBack',
-            'qualityUpdatesWillBeRolledBack',
-            'qualityUpdatesPauseStartDate',
-            'featureUpdatesPauseStartDate'
-            'wslDistributions',
-            'lastSuccessfulSyncDateTime',
-            'tenantFilter',
-            'agents',
-            'isSynced'
-            'locationInfo',
-            'templateId',
-            'source',
-            'package',
-            'assignments'
-        )
-
-        # App protection templates store apps[] and deployedAppCount, but deployment strips apps
-        # and the policy read-back never returns either, so they can never match. Scoped to
-        # AppProtection because Device configs carry legitimate nested 'apps' (e.g. kiosk profiles).
-        if ($CompareType -contains 'AppProtection') {
-            $defaultExcludeProperties = $defaultExcludeProperties + @('apps', 'deployedAppCount')
-        }
+        # The exclusion list lives in Get-CIPPIntuneCompareExclusions - the baseline
+        # engine's hard-gap pass consumes the SAME list so it never resurrects a
+        # property this compare deliberately ignores.
+        $defaultExcludeProperties = @(Get-CIPPIntuneCompareExclusions -AppProtection:($CompareType -contains 'AppProtection'))
 
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties
         $result = [System.Collections.Generic.List[PSObject]]::new()
@@ -404,6 +375,11 @@ function Compare-CIPPIntuneObject {
             $results = [System.Collections.Generic.List[PSCustomObject]]::new()
 
             foreach ($child in $Children) {
+                # Null children and null settingDefinitionIds occur in malformed or
+                # partially-captured templates. A $null hashtable index throws, and an
+                # id-less child is un-deployable (Graph drops it on write) - comparing
+                # it guarantees permanent phantom drift, so skip it entirely.
+                if ($null -eq $child -or -not "$($child.settingDefinitionId)") { continue }
                 $childIntuneObj = $IntuneCollectionIndex[$child.settingDefinitionId]
                 $childLabel = if ($childIntuneObj?.displayName) {
                     $childIntuneObj.displayName
@@ -512,9 +488,12 @@ function Compare-CIPPIntuneObject {
 
         # Process reference object settings. Piping $null runs the block once with a null
         # $_, which crashes the collection index lookup - filter those out up front.
-        $referenceItems = $ReferenceObject.settings | Where-Object { $_ -and $_.settingInstance } | ForEach-Object {
+        # Items whose settingInstance has no settingDefinitionId are un-deployable
+        # template artifacts - Graph requires definition ids and silently drops such
+        # instances on write, so comparing them guarantees permanent phantom drift.
+        $referenceItems = $ReferenceObject.settings | Where-Object { $_ -and $_.settingInstance -and "$($_.settingInstance.settingDefinitionId)" } | ForEach-Object {
             $settingInstance = $_.settingInstance
-            $intuneObj = $intuneCollectionIndex[$settingInstance.settingDefinitionId]
+            $intuneObj = if ($null -ne $settingInstance.settingDefinitionId) { $intuneCollectionIndex[$settingInstance.settingDefinitionId] } else { $null }
             $tempOutput = switch ($settingInstance.'@odata.type') {
                 '#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance' {
                     if ($null -ne $settingInstance.groupSettingCollectionValue) {
@@ -621,9 +600,9 @@ function Compare-CIPPIntuneObject {
         }
 
         # Process difference object settings
-        $differenceItems = $DifferenceObject.settings | Where-Object { $_ -and $_.settingInstance } | ForEach-Object {
+        $differenceItems = $DifferenceObject.settings | Where-Object { $_ -and $_.settingInstance -and "$($_.settingInstance.settingDefinitionId)" } | ForEach-Object {
             $settingInstance = $_.settingInstance
-            $intuneObj = $intuneCollectionIndex[$settingInstance.settingDefinitionId]
+            $intuneObj = if ($null -ne $settingInstance.settingDefinitionId) { $intuneCollectionIndex[$settingInstance.settingDefinitionId] } else { $null }
             $tempOutput = switch ($settingInstance.'@odata.type') {
                 '#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance' {
                     if ($null -ne $settingInstance.groupSettingCollectionValue) {

@@ -21,6 +21,35 @@ function Get-CIPPBaselineAlignment {
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
     $Definitions = Get-CIPPBaselineDefinition
 
+    # Lazy template-name lookup for identity-carrying standards: the template store
+    # partition matches the remediate executor name (CATemplate, IntuneTemplate).
+    # Loaded once per partition, only when a row actually needs it. Rows written before
+    # the prepare ran (Conflict, license-skip) carry the raw template id as their
+    # displayName - every labeling path resolves it to the template's real name.
+    $TemplateNameMaps = @{}
+    $ResolveTemplateName = {
+        param($Partition, $Id)
+        if (-not $Partition -or -not $Id) { return $null }
+        if (-not $TemplateNameMaps.ContainsKey($Partition)) {
+            $Map = @{}
+            try {
+                $TemplatesTable = Get-CippTable -tablename 'templates'
+                $SafePartition = ConvertTo-CIPPODataFilterValue -Value $Partition
+                foreach ($TemplateRow in @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$SafePartition'")) {
+                    $TemplateName = $(try { ($TemplateRow.JSON | ConvertFrom-Json).displayName } catch { $null })
+                    if ($TemplateName) {
+                        $Map["$($TemplateRow.RowKey)"] = $TemplateName
+                        if ($TemplateRow.GUID) { $Map["$($TemplateRow.GUID)"] = $TemplateName }
+                    }
+                }
+            } catch {
+                Write-Information "Get-CIPPBaselineAlignment: template name lookup for $Partition failed: $($_.Exception.Message)"
+            }
+            $TemplateNameMaps[$Partition] = $Map
+        }
+        $TemplateNameMaps[$Partition]["$Id"]
+    }
+
     # Historic view: every recorded run event for the tenant, flattened and newest-first.
     # History partitions are '<tenant>_<standard>', so a partition range scan covers them all.
     if ($TenantFilter -and $History) {
@@ -37,6 +66,7 @@ function Get-CIPPBaselineAlignment {
             $Suffix = $(try { ($Resolved.Manual | ConvertFrom-Json).taskName } catch { $null })
             if (-not $Suffix -and $ResolvedDefinition.instanceIdentity) {
                 $Suffix = $(try { ($Resolved.ExpectedValue | ConvertFrom-Json).displayName } catch { $null })
+                if ($Suffix) { $Suffix = (& $ResolveTemplateName "$($ResolvedDefinition.remediate.executor)" "$Suffix") ?? $Suffix }
             }
             if ($Suffix) { $ManualLabels[$Resolved.StandardName] = '{0} - {1}' -f ($ResolvedDefinition.label ?? $ResolvedBase), $Suffix }
         }
@@ -95,7 +125,7 @@ function Get-CIPPBaselineAlignment {
     if ($TenantFilter) {
         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
         $Entities = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant'"
-        $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions })
+        $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions -ResolveTemplateName $ResolveTemplateName })
 
         # Attach the last runs from history (§4.3 columns; RowKey is inverted ticks so the
         # partition lists newest-first).
@@ -125,32 +155,6 @@ function Get-CIPPBaselineAlignment {
             $TenantGroupNames = @((Get-TenantGroups | Where-Object { $_.Members.defaultDomainName -contains $TenantFilter }).Name)
         } catch {
             Write-Information "Get-CIPPBaselineAlignment: tenant group lookup failed: $($_.Exception.Message)"
-        }
-        # Lazy template-name lookup for identity-carrying standards: the template store
-        # partition matches the remediate executor name (CATemplate, IntuneTemplate).
-        # Loaded once per partition, only when a synthesized row needs it.
-        $TemplateNameMaps = @{}
-        $ResolveTemplateName = {
-            param($Partition, $Id)
-            if (-not $Partition -or -not $Id) { return $null }
-            if (-not $TemplateNameMaps.ContainsKey($Partition)) {
-                $Map = @{}
-                try {
-                    $TemplatesTable = Get-CippTable -tablename 'templates'
-                    $SafePartition = ConvertTo-CIPPODataFilterValue -Value $Partition
-                    foreach ($TemplateRow in @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$SafePartition'")) {
-                        $TemplateName = $(try { ($TemplateRow.JSON | ConvertFrom-Json).displayName } catch { $null })
-                        if ($TemplateName) {
-                            $Map["$($TemplateRow.RowKey)"] = $TemplateName
-                            if ($TemplateRow.GUID) { $Map["$($TemplateRow.GUID)"] = $TemplateName }
-                        }
-                    }
-                } catch {
-                    Write-Information "Get-CIPPBaselineAlignment: template name lookup for $Partition failed: $($_.Exception.Message)"
-                }
-                $TemplateNameMaps[$Partition] = $Map
-            }
-            $TemplateNameMaps[$Partition]["$Id"]
         }
         # Render a definition's %var% expected template from configured variable values: splice
         # the values into the serialized template ("%var%" as an exact JSON value keeps its
@@ -357,7 +361,7 @@ function Get-CIPPBaselineAlignment {
 
     if ($ByStandard) {
         $Entities = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey ne ''"
-        $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions })
+        $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions -ResolveTemplateName $ResolveTemplateName })
 
         $Standards = foreach ($Group in ($Rows | Group-Object -Property standardName)) {
             $First = $Group.Group | Select-Object -First 1

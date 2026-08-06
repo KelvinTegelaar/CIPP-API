@@ -20,6 +20,7 @@
   ],
   "secureScoreImpact": 30,
   "compare": "subset",
+  "hardCompare": false,
   "instanceIdentity": "caTemplate",
   "multiple": true,
   "variables": {
@@ -77,7 +78,12 @@
     "state": "%state%"
   },
   "read": {
-    "cacheType": "ConditionalAccessPolicies"
+    "cacheType": "ConditionalAccessPolicies",
+    "requiredCaches": ["ConditionalAccessPolicies", "NamedLocations", "AuthenticationStrengths"],
+    "liveCount": {
+      "uri": "identity/conditionalAccess/policies",
+      "cacheType": "ConditionalAccessPolicies"
+    }
   },
   "prepare": "Get-CIPPBaselineCATemplateState",
   "remediate": {

@@ -158,10 +158,15 @@ function Get-CIPPBaselineIntuneTemplateState {
         foreach ($CacheType in $Family.Caches) {
             $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $CacheType -CountsOnly } catch { $null })
             if ($null -ne $CacheMeta) {
+                # EmptyFamily: the WHOLE family came back empty, not just this policy.
+                # The engine cross-checks against the prior state - a family that held
+                # this policy recently going completely empty is more likely a failed
+                # or flaky collection than a mass deletion.
                 return @{
                     Expected    = $Expected
                     Current     = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }
                     CompareType = $null
+                    EmptyFamily = $true
                 }
             }
         }

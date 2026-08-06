@@ -14,7 +14,11 @@ function Convert-CIPPBaselineResolvedEntity {
     [CmdletBinding()]
     param(
         $Entity,
-        $Definitions
+        $Definitions,
+        # Optional { param($Partition, $Id) -> displayName or $null } lookup. Rows written
+        # before the prepare ran (Conflict, license-skip) carry the RAW template id as
+        # their displayName - this resolves it to the template's real name for the label.
+        [scriptblock]$ResolveTemplateName
     )
 
     $ParseJson = { param($Value) if ($Value) { try { $Value | ConvertFrom-Json -ErrorAction Stop } catch { $null } } else { $null } }
@@ -30,6 +34,10 @@ function Convert-CIPPBaselineResolvedEntity {
     $ExpectedParsed = & $ParseJson $Entity.ExpectedValue
     $IdentitySuffix = if ($Manual.taskName) { $Manual.taskName }
     elseif ($Definition.instanceIdentity) { $ExpectedParsed.displayName ?? $ExpectedParsed.name ?? $ExpectedParsed.$($Definition.instanceIdentity) }
+    if ($IdentitySuffix -and $Definition.instanceIdentity -and $ResolveTemplateName) {
+        # A real display name misses the lookup and stays as-is; a raw template id resolves.
+        $IdentitySuffix = (& $ResolveTemplateName "$($Definition.remediate.executor)" "$IdentitySuffix") ?? $IdentitySuffix
+    }
     $Label = if ($IdentitySuffix) { '{0} - {1}' -f ($Definition.label ?? $BaseName), $IdentitySuffix } else { $Definition.label ?? $StandardName }
 
     [PSCustomObject]@{

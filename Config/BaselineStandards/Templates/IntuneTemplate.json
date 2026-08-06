@@ -21,6 +21,7 @@
   ],
   "secureScoreImpact": 20,
   "compare": "subset",
+  "hardCompare": false,
   "instanceIdentity": "intuneTemplate",
   "multiple": true,
   "variables": {
@@ -113,7 +114,19 @@
   },
   "read": {
     "cacheType": "IntunePolicies",
-    "freshnessType": "IntuneDeviceConfigurations"
+    "freshnessType": "IntuneDeviceConfigurations",
+    "requiredCaches": [
+      "IntuneDeviceConfigurations",
+      "IntuneConfigurationPolicies",
+      "IntuneDeviceCompliancePolicies",
+      "IntuneGroupPolicyConfigurations",
+      "IntuneAppProtectionPolicies",
+      "IntuneMobileAppConfigurations",
+      "IntuneWindowsDriverUpdateProfiles",
+      "IntuneWindowsFeatureUpdateProfiles",
+      "IntuneWindowsQualityUpdatePolicies",
+      "IntuneWindowsQualityUpdateProfiles"
+    ]
   },
   "prepare": "Get-CIPPBaselineIntuneTemplateState",
   "remediate": {
