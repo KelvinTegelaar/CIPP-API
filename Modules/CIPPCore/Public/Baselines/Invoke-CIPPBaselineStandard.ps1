@@ -429,6 +429,17 @@ function Invoke-CIPPBaselineStandard {
                     }
                 }
             }
+            # StrictCompare: properties a prepare declares as always-compared, exact and
+            # type-strict, regardless of compare type (e.g. isAssigned - the Catalog
+            # flatten only sees settings arrays and would silently ignore it).
+            foreach ($StrictProperty in @($Prepared.StrictCompare | Where-Object { $_ })) {
+                $ExpectedStrict = $CompareExpected.$StrictProperty
+                $CurrentStrict = $Projected.$StrictProperty
+                if ("$ExpectedStrict" -ne "$CurrentStrict" -and @($Differences | Where-Object { $_.Property -eq $StrictProperty }).Count -eq 0) {
+                    $Differences = @($Differences) + @([PSCustomObject]@{ Property = $StrictProperty; ExpectedValue = $ExpectedStrict; ReceivedValue = $CurrentStrict })
+                }
+            }
+
             $HardGaps = [System.Collections.Generic.List[object]]::new()
             if ($HardCompareEnabled -and $CompareTypes -notcontains 'Catalog') {
                 & $AddHardGaps $CompareExpected $Projected '' $HardGaps
