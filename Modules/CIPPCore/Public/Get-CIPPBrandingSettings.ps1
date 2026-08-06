@@ -28,16 +28,25 @@ function Get-CIPPBrandingSettings {
 
     if (-not $BrandingConfig) {
         return [pscustomobject]@{
-            colour         = '#F77F00'
-            logoImageId    = $null
-            logoImageIds   = @()
-            coverStock     = $DefaultCoverStock
-            coverImageId   = $null
-            coverImageIds  = @()
-            logo           = $null
-            logoUploads    = @()
-            coverImage     = $null
-            coverUploads   = @()
+            colour           = '#F77F00'
+            secondaryColour  = ''
+            logoImageId      = $null
+            logoImageIds     = @()
+            coverStock       = $DefaultCoverStock
+            coverImageId     = $null
+            coverImageIds    = @()
+            logo             = $null
+            logoUploads      = @()
+            coverImage       = $null
+            coverUploads     = @()
+            footerText       = ''
+            coverFooterText  = ''
+            showFooter       = $true
+            showPageNumbers  = $true
+            watermarkText    = ''
+            watermarkEnabled = $true
+            reportDefaults   = [pscustomobject]@{}
+            roleColours      = [pscustomobject]@{}
         }
     }
 
@@ -213,16 +222,68 @@ function Get-CIPPBrandingSettings {
         $CoverImageData = "$($BrandingConfig.coverImage)"
     }
 
+    # Report chrome. A missing property means the setting predates this feature, so each falls back
+    # to the behaviour reports had before it existed: footer and page numbers on, watermark off.
+    # An unset secondaryColour stays empty rather than defaulting to a colour — the frontend reads
+    # empty as 'use the primary', which keeps existing reports looking exactly as they did.
+    $SecondaryColour = if ($BrandingConfig.secondaryColour) { "$($BrandingConfig.secondaryColour)" } else { '' }
+    $FooterText = if ($BrandingConfig.footerText) { "$($BrandingConfig.footerText)" } else { '' }
+    # The confidentiality note on the cover. Empty leaves each report's own wording in place —
+    # several say something more specific than 'Confidential & Proprietary'.
+    $CoverFooterText = if ($BrandingConfig.coverFooterText) { "$($BrandingConfig.coverFooterText)" } else { '' }
+    $WatermarkText = if ($BrandingConfig.watermarkText) { "$($BrandingConfig.watermarkText)" } else { '' }
+    # Which preset each report type defaults to, as a report-id -> preset-id map. Stored as JSON
+    # because Azure Table has no nested types, and returned as an object so the frontend does not
+    # have to know that. An unparseable value is treated as unset rather than failing the whole
+    # settings read — a broken default is worth far less than the rest of the branding.
+    $ReportDefaults = [pscustomobject]@{}
+    if ($BrandingConfig.reportDefaults) {
+        try {
+            $Parsed = ConvertFrom-Json -InputObject "$($BrandingConfig.reportDefaults)" -ErrorAction Stop
+            if ($Parsed -is [pscustomobject]) { $ReportDefaults = $Parsed }
+        } catch {
+            Write-Warning "Ignoring unparseable branding reportDefaults: $($_.Exception.Message)"
+        }
+    }
+
+    # Per-role report colours — headings, body, footer, charts, cards and so on — as a
+    # setting-name -> hex map. One JSON column rather than a property per role, so the frontend can
+    # add a role without a backend change. Same tolerance as reportDefaults above: an unparseable
+    # value is treated as unset, because a broken colour override is worth far less than the rest of
+    # the branding, and every role falls back to the brand colour anyway.
+    $RoleColours = [pscustomobject]@{}
+    if ($BrandingConfig.roleColours) {
+        try {
+            $Parsed = ConvertFrom-Json -InputObject "$($BrandingConfig.roleColours)" -ErrorAction Stop
+            if ($Parsed -is [pscustomobject]) { $RoleColours = $Parsed }
+        } catch {
+            Write-Warning "Ignoring unparseable branding roleColours: $($_.Exception.Message)"
+        }
+    }
+
+    $ShowFooter = if ($null -eq $BrandingConfig.showFooter) { $true } else { [bool]$BrandingConfig.showFooter }
+    $ShowPageNumbers = if ($null -eq $BrandingConfig.showPageNumbers) { $true } else { [bool]$BrandingConfig.showPageNumbers }
+    $WatermarkEnabled = if ($null -eq $BrandingConfig.watermarkEnabled) { $true } else { [bool]$BrandingConfig.watermarkEnabled }
+
     return [pscustomobject]@{
-        colour        = if ($BrandingConfig.colour) { $BrandingConfig.colour } else { '#F77F00' }
-        logoImageId   = $LogoImageId
-        logoImageIds  = [string[]]@($LogoImageIds)
-        coverStock    = $CoverStock
-        coverImageId  = $CoverImageId
-        coverImageIds = [string[]]@($CoverImageIds)
-        logo          = $LogoData
-        logoUploads   = [string[]]@($LogoUploads)
-        coverImage    = $CoverImageData
-        coverUploads  = [string[]]@($CoverUploads)
+        colour           = if ($BrandingConfig.colour) { $BrandingConfig.colour } else { '#F77F00' }
+        secondaryColour  = $SecondaryColour
+        logoImageId      = $LogoImageId
+        logoImageIds     = [string[]]@($LogoImageIds)
+        coverStock       = $CoverStock
+        coverImageId     = $CoverImageId
+        coverImageIds    = [string[]]@($CoverImageIds)
+        logo             = $LogoData
+        logoUploads      = [string[]]@($LogoUploads)
+        coverImage       = $CoverImageData
+        coverUploads     = [string[]]@($CoverUploads)
+        footerText       = $FooterText
+        coverFooterText  = $CoverFooterText
+        showFooter       = $ShowFooter
+        showPageNumbers  = $ShowPageNumbers
+        watermarkText    = $WatermarkText
+        watermarkEnabled = $WatermarkEnabled
+        reportDefaults   = $ReportDefaults
+        roleColours      = $RoleColours
     }
 }

@@ -35,6 +35,7 @@ function Invoke-ListReportBuilderTemplates {
                     RowKey      = $_.RowKey
                     Name        = $TemplateData.Name
                     Blocks      = $Blocks
+                    Settings    = $TemplateData.Settings
                     Sections    = $Blocks.Count
                     TestCount   = $TestCount
                     CustomCount = $CustomCount

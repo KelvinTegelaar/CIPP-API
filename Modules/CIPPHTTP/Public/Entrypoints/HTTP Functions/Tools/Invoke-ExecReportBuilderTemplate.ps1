@@ -27,9 +27,15 @@ function Invoke-ExecReportBuilderTemplate {
                 }
 
                 $GUID = if ($Body.GUID) { $Body.GUID } else { (New-Guid).GUID }
+                # Settings carries page setup for the template — page size, orientation, and which
+                # branding preset to render against. Stored as given: it is the browser that renders
+                # the PDF. Templates saved before cover/footer/watermark overrides were removed may
+                # still carry those keys; the renderer ignores them, so they are neither stripped
+                # here nor honoured.
                 $JSON = ConvertTo-Json -InputObject @{
                     Name      = $Body.Name
                     Blocks    = @($Body.Blocks)
+                    Settings  = $Body.Settings
                     GUID      = $GUID
                     CreatedAt = (Get-Date).ToString('o')
                 } -Depth 20 -Compress

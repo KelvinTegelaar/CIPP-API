@@ -51,6 +51,16 @@ function Invoke-ListGeneratedReports {
                         $Blocks = @()
                     }
                 }
+                # Page setup and branding the report was generated with. Older reports have none,
+                # and the renderer falls back to its defaults for those.
+                $ReportSettings = $null
+                if ($_.Settings) {
+                    try {
+                        $ReportSettings = ConvertFrom-Json -InputObject $_.Settings
+                    } catch {
+                        $ReportSettings = $null
+                    }
+                }
                 $SectionCount = $Blocks.Count
                 $TestCount = @($Blocks | Where-Object { $_.type -eq 'test' }).Count
                 $CustomCount = @($Blocks | Where-Object { $_.type -eq 'blank' }).Count
@@ -59,6 +69,7 @@ function Invoke-ListGeneratedReports {
                     TemplateName = $_.TemplateName
                     TenantFilter = $_.TenantFilter
                     Blocks       = $Blocks
+                    Settings     = $ReportSettings
                     Sections     = $SectionCount
                     TestCount    = $TestCount
                     CustomCount  = $CustomCount

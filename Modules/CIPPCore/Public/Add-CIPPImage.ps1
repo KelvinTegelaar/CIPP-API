@@ -7,7 +7,12 @@ function Add-CIPPImage {
     .PARAMETER PartitionKey
         Image kind / purpose (e.g. logo, brandingCover).
     .PARAMETER Data
-        Image as a data URL (data:image/...;base64,...). Max 2MB decoded.
+        Image as a data URL (data:image/...;base64,...). Max 5MB decoded.
+
+        The ceiling is a payload-size choice, not a storage limit: Add-CIPPAzDataTableEntity splits
+        oversized entities across properties and `{RowKey}-partN` rows, so the table service is not
+        what constrains this. What does is that branding images are returned inline as data URLs in
+        ListUserSettings on every page load, and base64 adds about a third to whatever is stored.
     #>
     [CmdletBinding()]
     param(
@@ -32,8 +37,9 @@ function Add-CIPPImage {
         throw "Invalid base64 image data: $($_.Exception.Message)"
     }
 
-    if ($ImageBytes.Length -gt 2097152) {
-        throw 'Image size must be less than 2MB.'
+    $MaxImageBytes = 5242880
+    if ($ImageBytes.Length -gt $MaxImageBytes) {
+        throw 'Image size must be less than 5MB.'
     }
 
     $Id = [guid]::NewGuid().ToString()
