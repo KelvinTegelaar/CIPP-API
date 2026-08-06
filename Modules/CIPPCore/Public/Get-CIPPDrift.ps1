@@ -284,7 +284,11 @@ function Get-CIPPDrift {
                             }
                         }
                     }
-                    $IntunePoliciesCollected = $true
+                    # Graph $batch returns 200 even when individual sub-requests fail (e.g. 429
+                    # throttling on one endpoint), silently dropping that policy type from the
+                    # collection - which must not count as evidence the policies are gone, or their
+                    # drift rows get pruned and decided statuses reset to New.
+                    $IntunePoliciesCollected = @($IntuneGraphRequest | Where-Object { $_.status -and [int]$_.status -ge 400 }).Count -eq 0
                 } catch {
                     Write-Warning "Failed to get Intune policies: $($_.Exception.Message)"
                 }
@@ -301,7 +305,9 @@ function Get-CIPPDrift {
                     )
                     $CAGraphRequest = New-GraphBulkRequest -Requests $CARequests -tenantid $TenantFilter -asapp $true
                     $TenantCAPolicies = ($CAGraphRequest | Where-Object { $_.id -eq 'policies' }).body.value
-                    $CAPoliciesCollected = $true
+                    # Same per-item check as the Intune collection: a throttled $batch item returns
+                    # inside a 200 response and must not arm the prune.
+                    $CAPoliciesCollected = @($CAGraphRequest | Where-Object { $_.status -and [int]$_.status -ge 400 }).Count -eq 0
                 } catch {
                     Write-Warning "Failed to get Conditional Access policies: $($_.Exception.Message)"
                     $TenantCAPolicies = @()
@@ -554,28 +560,35 @@ function Get-CIPPDrift {
         }
 
         # Prune stale tenantDrift rows so the alignment score only counts real deviations.
-        # A row goes stale when its policy was deleted/recreated in the tenant, or its template was
-        # removed from the drift standard (directly or via a package). Policy rows require a
-        # successful Graph collection this run before they are eligible for deletion.
-        $StaleDriftEntities = foreach ($Entity in $DriftEntities) {
-            $EntityName = [string]$Entity.StandardName
-            if ([string]::IsNullOrWhiteSpace($EntityName) -or $ValidDriftKeys.Contains($EntityName)) { continue }
-            if ($EntityName -like 'IntuneTemplates.*') {
-                if ($IntunePoliciesCollected) { $Entity }
-            } elseif ($EntityName -like 'ConditionalAccessTemplates.*') {
-                if ($CAPoliciesCollected) { $Entity }
-            } else {
-                $Entity
-            }
-        }
-        if ($StaleDriftEntities) {
-            try {
-                foreach ($StaleEntity in $StaleDriftEntities) {
-                    Remove-CIPPAzDataTableEntity @DriftTable -Entity $StaleEntity
+        # Policy rows (IntuneTemplates.* / ConditionalAccessTemplates.*) count against the score by
+        # existence, so they are pruned regardless of Status - but only when every Graph batch item
+        # for that collection succeeded this run, which is the evidence the policy is actually gone
+        # (this is also what clears a DeniedDelete row after its policy is deleted). All other rows
+        # are invisible to the score once their key leaves ComparisonDetails, so only undecided rows
+        # ('New' or missing Status) are pruned there: Accepted/Denied*/CustomerSpecific decisions must
+        # survive transient key-enumeration drops (package/tag membership changes, template
+        # re-saves). A template-scoped run cannot see every valid key, so it never prunes.
+        if (-not $TemplateId) {
+            $StaleDriftEntities = foreach ($Entity in $DriftEntities) {
+                $EntityName = [string]$Entity.StandardName
+                if ([string]::IsNullOrWhiteSpace($EntityName) -or $ValidDriftKeys.Contains($EntityName)) { continue }
+                if ($EntityName -like 'IntuneTemplates.*') {
+                    if ($IntunePoliciesCollected) { $Entity }
+                } elseif ($EntityName -like 'ConditionalAccessTemplates.*') {
+                    if ($CAPoliciesCollected) { $Entity }
+                } elseif ([string]::IsNullOrWhiteSpace([string]$Entity.Status) -or [string]$Entity.Status -eq 'New') {
+                    $Entity
                 }
-                Write-Information "Removed $(@($StaleDriftEntities).Count) stale drift deviation entries for $TenantFilter"
-            } catch {
-                Write-Warning "Failed to remove stale drift deviation entries for $($TenantFilter): $($_.Exception.Message)"
+            }
+            if ($StaleDriftEntities) {
+                try {
+                    foreach ($StaleEntity in $StaleDriftEntities) {
+                        Remove-CIPPAzDataTableEntity @DriftTable -Entity $StaleEntity
+                    }
+                    Write-Information "Removed $(@($StaleDriftEntities).Count) stale drift deviation entries for $TenantFilter"
+                } catch {
+                    Write-Warning "Failed to remove stale drift deviation entries for $($TenantFilter): $($_.Exception.Message)"
+                }
             }
         }
 
