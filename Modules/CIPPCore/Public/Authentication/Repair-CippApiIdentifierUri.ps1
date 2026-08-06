@@ -61,9 +61,16 @@ function Repair-CippApiIdentifierUri {
         Write-Information "Identifier URI missing or incorrect. Setting to '$DesiredUri'"
 
         if ($PSCmdlet.ShouldProcess($App.appId, "Set identifier URI to '$DesiredUri'")) {
-            $PatchBody = @{
-                identifierUris = @($DesiredUri)
+            # Merge rather than replace: MCP resource clients carry additional host-based
+            # identifier URIs (see Set-CIPPMCPClientApp) that must survive a repair.
+            $MergedUris = [System.Collections.Generic.List[string]]::new()
+            foreach ($Uri in $CurrentUris) {
+                if (-not [string]::IsNullOrWhiteSpace($Uri) -and -not $MergedUris.Contains($Uri)) { $MergedUris.Add($Uri) }
             }
+            $MergedUris.Add($DesiredUri)
+            $PatchBody = @{
+                identifierUris = @($MergedUris)
+            } | ConvertTo-Json -Depth 5 -Compress
 
             $Retries = 0
             $MaxRetries = 3

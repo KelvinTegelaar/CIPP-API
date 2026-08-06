@@ -165,7 +165,7 @@ function Invoke-ExecApiClient {
                 if ([bool]($Request.Body.MCPAllowed ?? $false)) {
                     try {
                         $null = Set-CIPPMCPClientApp -AppId $ClientId -Headers $Request.Headers
-                        $Results.Add('MCP resource URIs and v2 tokens configured on the app registration. Run Save to Azure to apply the changes.')
+                        $Results.Add('MCP resource URIs, v2 tokens, and callbacks for known MCP clients (Claude, ChatGPT, VS Code, Copilot) configured on the app registration. Run Save to Azure to apply the changes.')
                     } catch {
                         $Results.Add(@{
                                 resultText = "Client saved, but MCP app configuration failed: $($_.Exception.Message)"
