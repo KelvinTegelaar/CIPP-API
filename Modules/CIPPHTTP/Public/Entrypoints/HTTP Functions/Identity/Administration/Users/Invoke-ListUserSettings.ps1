@@ -56,21 +56,11 @@ function Invoke-ListUserSettings {
 
         if (!$UserSettings) {
             $UserSettings = [pscustomobject]@{
-                direction      = 'ltr'
-                paletteMode    = 'light'
-                currentTheme   = @{ value = 'light'; label = 'light' }
-                pinNav         = $true
-                showDevtools   = $false
-                customBranding = @{
-                    colour        = '#F77F00'
-                    logo          = $null
-                    coverImage    = $null
-                    coverStock    = '/reportImages/soc.jpg'
-                    coverUploads  = @()
-                    logoImageId   = $null
-                    coverImageId  = $null
-                    coverImageIds = @()
-                }
+                direction    = 'ltr'
+                paletteMode  = 'light'
+                currentTheme = @{ value = 'light'; label = 'light' }
+                pinNav       = $true
+                showDevtools = $false
             }
         }
 
@@ -107,15 +97,9 @@ function Invoke-ListUserSettings {
             Write-Warning "Failed to convert UserBookmarks JSON: $($_.Exception.Message)"
         }
 
-        #Get branding settings (hydrated image refs from Images table)
-        if ($UserSettings) {
-            try {
-                $HydratedBranding = Get-CIPPBrandingSettings -PersistMigration
-                $UserSettings | Add-Member -MemberType NoteProperty -Name 'customBranding' -Value $HydratedBranding -Force | Out-Null
-            } catch {
-                Write-Warning "Failed to load branding settings: $($_.Exception.Message)"
-            }
-        }
+        # Branding is deliberately not returned here. It used to be, which put every uploaded cover
+        # image inline as a data URL in a response fetched on every page load, and ran the legacy
+        # image migration — a write — on that same read path. See Invoke-ListBrandingSettings.
 
         if ($UserSpecificSettings) {
             $UserSettings | Add-Member -MemberType NoteProperty -Name 'UserSpecificSettings' -Value $UserSpecificSettings -Force | Out-Null

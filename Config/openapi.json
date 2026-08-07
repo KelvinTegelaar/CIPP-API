@@ -38362,6 +38362,55 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListBrandingSettings": {
+      "get": {
+        "summary": "ListBrandingSettings",
+        "operationId": "ListBrandingSettings",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Returns the report branding: colours, logo and cover images, footer and watermark text.\n\nThis used to ride along inside ListUserSettings, which meant every page load carried every\nuploaded cover as an inline data URL — megabytes of images fetched to render a settings\nmenu. Worse, hydrating branding also ran the legacy-image migration, so a GET issued on\nevery page load wrote the BrandingSettings row back from a snapshot it had read moments\nearlier, and any upload that landed in between was overwritten.\n\nBranding therefore has its own endpoint, fetched by the things that actually draw it, and\nthis read never writes. Migration belongs to ExecBrandingSettings -Action Get: the settings\npage opening is a deliberate, infrequent, single-user action, which is the one place where\nrewriting the row is safe.\n\nIts role matches ListUserSettings rather than the branding write role — every user who\nrenders a report needs the branding on it, and that is exactly who could read it before.",
+        "parameters": [
+          {
+            "name": "includeGallery",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListBreachesAccount": {
       "get": {
         "summary": "ListBreachesAccount",
@@ -44736,6 +44785,7 @@
           {
             "name": "$top",
             "in": "query",
+            "description": "Graph's page size, NOT a result limit. This endpoint follows @odata.nextLink to the end by default, so $top alone changes how many round trips it makes and not how many records come back - asking for 1 still returns everything. Pair it with NoPagination to stop after one page, or manualPagination to page through deliberately.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44752,6 +44802,7 @@
           {
             "name": "CountOnly",
             "in": "query",
+            "description": "Return just the number of matching records instead of the records themselves. The cheapest way to size a collection before deciding whether to fetch it.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44760,6 +44811,7 @@
           {
             "name": "Endpoint",
             "in": "query",
+            "description": "The Graph path to call, without the version prefix - 'users', 'deviceManagement/managedDevices', 'groups/<id>/members'. Use ListGraphSchema to check what an endpoint returns before spending a call on it.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44801,6 +44853,7 @@
           {
             "name": "manualPagination",
             "in": "query",
+            "description": "Return one page plus its @odata.nextLink in the response metadata, so the caller can fetch the next page itself by passing that link back as nextLink. Use this to walk a large collection in bounded steps rather than pulling it all at once.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44809,6 +44862,7 @@
           {
             "name": "nextLink",
             "in": "query",
+            "description": "Continue a manualPagination walk: pass back the @odata.nextLink returned with the previous page. Endpoint is still required, and the other query options are already encoded in the link.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44817,6 +44871,7 @@
           {
             "name": "NoPagination",
             "in": "query",
+            "description": "Return only the first page and stop. The default follows every @odata.nextLink until the collection is exhausted, which on a large tenant is both slow and very large - use this with $top when a sample is enough.",
             "required": false,
             "schema": {
               "type": "string"
@@ -57115,9 +57170,6 @@
                     "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                     "properties": {
                       "currentTheme": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "customBranding": {
                         "x-cipp-field-source": "backend"
                       },
                       "direction": {
