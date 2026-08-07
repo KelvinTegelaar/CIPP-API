@@ -28,10 +28,14 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
 
         try {
             $CAPolicies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $TenantFilter
-            if ($CAPolicies) {
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -Data $CAPolicies -AddCount
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($CAPolicies.Count) CA policies" -sev Debug
-            }
+            # -ClearOnEmpty marks the response AUTHORITATIVE: the read throws on failure,
+            # so reaching here means this is the tenant's full policy set. Cleanup then
+            # keys off the exact row keys written instead of the timestamp heuristic,
+            # whose 5-minute skew margin left policies deleted just before a re-collect
+            # sitting in the cache. An authoritative EMPTY set clears the cache too - a
+            # tenant whose last policy was removed must not keep reporting yesterday's.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -Data @($CAPolicies) -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(@($CAPolicies).Count) CA policies" -sev Debug
             $CAPolicies = $null
         } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache CA policies: $($_.Exception.Message)" -sev Warning
@@ -39,11 +43,8 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
 
         try {
             $NamedLocations = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter
-
-            if ($NamedLocations) {
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'NamedLocations' -Data $NamedLocations -AddCount
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($NamedLocations.Count) named locations" -sev Debug
-            }
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'NamedLocations' -Data @($NamedLocations) -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(@($NamedLocations).Count) named locations" -sev Debug
             $NamedLocations = $null
         } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache named locations: $($_.Exception.Message)" -sev Warning
@@ -51,11 +52,8 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
 
         try {
             $AuthStrengths = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -tenantid $TenantFilter
-
-            if ($AuthStrengths) {
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationStrengths' -Data $AuthStrengths -AddCount
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AuthStrengths.Count) authentication strengths" -sev Debug
-            }
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationStrengths' -Data @($AuthStrengths) -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(@($AuthStrengths).Count) authentication strengths" -sev Debug
             $AuthStrengths = $null
         } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache authentication strengths: $($_.Exception.Message)" -sev Warning
