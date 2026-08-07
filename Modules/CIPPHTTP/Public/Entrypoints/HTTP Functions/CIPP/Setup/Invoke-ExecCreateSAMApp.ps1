@@ -95,6 +95,48 @@ function Invoke-ExecCreateSAMApp {
                 Set-CippKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Appid.appId -AsPlainText -Force)
                 Set-CippKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $AppPassword -AsPlainText -Force)
             }
+            # Populate this process straight from the values we just created. The wizard
+            # moves to the next step immediately and every reader treats $env:ApplicationID
+            # as the "setup complete" signal, so nothing downstream should have to wait on
+            # the store catching up.
+            $env:ApplicationID = $AppId.appId
+            $env:TenantID = $TenantId
+            $env:ApplicationSecret = $AppPassword
+
+            # Then confirm the store actually hands back what we just wrote. Fresh
+            # deployments seed the vault with the deployment template's placeholder values
+            # rather than leaving the secrets absent, so a write that is not visible yet
+            # reads back as 'LongApplicationId' instead of 404-ing - which is how a
+            # correctly configured instance ends up looking like setup never ran. Poll
+            # before reporting success, and before the Get-CIPPAuthentication reload below
+            # has a chance to put those placeholders back over the new credentials.
+            $ReadAttempts = 3
+            $ReadDelay = 2
+            $SecretsReadable = $false
+            for ($ReadAttempt = 1; $ReadAttempt -le $ReadAttempts; $ReadAttempt++) {
+                try {
+                    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+                        $StoredAppId = (Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'").applicationid
+                    } else {
+                        $StoredAppId = Get-CippKeyVaultSecret -AsPlainText -VaultName $kv -Name 'ApplicationID'
+                    }
+                    if ($StoredAppId -eq $AppId.appId) {
+                        $SecretsReadable = $true
+                        break
+                    }
+                    Write-Information "Attempt $ReadAttempt of $ReadAttempts - stored application id is '$StoredAppId', expected '$($AppId.appId)'. Waiting for the write to become visible."
+                } catch {
+                    Write-Information "Attempt $ReadAttempt of $ReadAttempts - could not read the application id back: $($_.Exception.Message)"
+                }
+                if ($ReadAttempt -lt $ReadAttempts) {
+                    Start-Sleep -Seconds $ReadDelay
+                    $ReadDelay *= 2
+                }
+            }
+            if (-not $SecretsReadable) {
+                Write-LogMessage -message "Created the application registration but could not read the application id back from storage after $ReadAttempts attempts. This instance holds the new credentials, but other instances may still serve the previous values until the write propagates." -Sev 'Warning'
+            }
+
             $ConfigTable = Get-CippTable -tablename 'Config'
             #update the ConfigTable with the latest appId, for caching compare.
             $NewConfig = @{
@@ -106,6 +148,16 @@ function Invoke-ExecCreateSAMApp {
 
             # Reload credentials into env vars
             $null = Get-CIPPAuthentication
+
+            # The reload above reads the store back unconditionally, so if it was still
+            # serving the old values it just overwrote the credentials we created. The
+            # values from this request are the authoritative ones - put them back.
+            if ($env:ApplicationID -ne $AppId.appId) {
+                Write-Information "Credential reload returned application id '$($env:ApplicationID)' - restoring the one created by this request."
+                $env:ApplicationID = $AppId.appId
+                $env:TenantID = $TenantId
+                $env:ApplicationSecret = $AppPassword
+            }
 
             # Create the SAM certificate alongside the secret so certificate auth is available
             # immediately. Uses the wizard's delegated token because the app secret was created
