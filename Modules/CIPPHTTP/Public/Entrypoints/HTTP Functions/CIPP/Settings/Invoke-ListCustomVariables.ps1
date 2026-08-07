@@ -271,6 +271,25 @@ function Invoke-ListCustomVariables {
                         }
                     }
                 }
+
+                $Resolvable = @($VariableMap.Values | Where-Object {
+                        $_.Type -eq 'reserved' -and $_.Category -ne 'system'
+                    })
+                if ($Resolvable.Count -gt 0) {
+                    $Separator = '<<|CIPPVAR|>>'
+                    $Tokens = @($Resolvable | ForEach-Object { $_.Variable })
+                    $Resolved = @((Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text ($Tokens -join $Separator)) -split ([regex]::Escape($Separator)))
+
+                    if ($Resolved.Count -eq $Tokens.Count) {
+                        for ($i = 0; $i -lt $Tokens.Count; $i++) {
+                            if ($Resolved[$i] -ne $Tokens[$i]) {
+                                $Resolvable[$i].Value = $Resolved[$i]
+                            }
+                        }
+                    } else {
+                        Write-LogMessage -API $APIName -message "Skipped resolving reserved variables for $TenantFilter : expected $($Tokens.Count) values, got $($Resolved.Count)" -sev 'Warning'
+                    }
+                }
             } catch {
                 Write-LogMessage -API $APIName -message "Could not retrieve tenant-specific variables for $TenantFilter : $($_.Exception.Message)" -sev 'Warning'
             }
