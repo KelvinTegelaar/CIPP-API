@@ -455,8 +455,12 @@ Describe 'response records from frontend columns' {
     }
 
     It 'keeps the record open, because display columns are not the whole record' {
+        # Open by omission, not by an explicit additionalProperties: the two mean the same
+        # in JSON Schema, but Swagger UI renders the explicit form as a placeholder field
+        # called additionalProp1 that reads as something CIPP actually returns.
         $Record = Get-ResponseRecord -Spec $script:Spec -Endpoint 'ListThings'
-        $Record.additionalProperties | Should -BeTrue
+        $Record.Contains('additionalProperties') | Should -BeFalse
+        $Record.properties.Keys | Should -Not -BeNullOrEmpty
     }
 
     It 'sorts columns so output stays deterministic' {
@@ -530,7 +534,7 @@ apiUrl="/api/ListThings"
         $Spec = Invoke-Generator -Name 'fe-conflict' -With @{ FrontendPath = $Dir }
         $Record = Get-ResponseRecord -Spec $Spec -Endpoint 'ListThings'
         $Record.properties.Keys | Should -BeNullOrEmpty
-        $Record.additionalProperties | Should -BeTrue
+        $Record.Contains('additionalProperties') | Should -BeFalse
     }
 
     It 'ignores a file whose columns cannot be attributed to one endpoint' {
