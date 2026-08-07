@@ -5,68 +5,39 @@ function Invoke-ListTenantAllowBlockList {
     .ROLE
         Exchange.SpamFilter.Read
     .DESCRIPTION
-        Lists Tenant Allow/Block List entries (senders, URLs, file hashes, IPs) from Exchange Online Protection.
+        Lists Tenant Allow/Block List entries (senders, URLs, file hashes, IPs) from Exchange Online Protection. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $ListTypes = 'Sender', 'Url', 'FileHash', 'IP'
+    # Serve from the reporting database cache instead of live Exchange. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
+
     try {
-        if ($TenantFilter -ne 'AllTenants') {
-            $Results = $ListTypes | ForEach-Object -Parallel {
-                Import-Module CIPPCore
-                $TempResults = New-ExoRequest -tenantid $using:TenantFilter -cmdlet 'Get-TenantAllowBlockListItems' -cmdParams @{ ListType = $_ }
-                $TempResults | Add-Member -MemberType NoteProperty -Name ListType -Value $_ -Force
-                $TempResults | Add-Member -MemberType NoteProperty -Name Tenant -Value $using:TenantFilter -Force
-                $TempResults | Select-Object -ExcludeProperty *'@data.type'*, *'(DateTime])'*
-            } -ThrottleLimit 5
-            $Metadata = [PSCustomObject]@{}
-        } else {
-            $Table = Get-CIPPTable -TableName 'cacheTenantAllowBlockList'
-            $PartitionKey = 'TenantAllowBlockList'
-            $Filter = "PartitionKey eq '$PartitionKey'"
-            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-60)
-            $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-            $RunningQueue = Get-CIPPQueueData -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
-            if ($RunningQueue) {
-                $Metadata = [PSCustomObject]@{
-                    QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
-                    QueueId      = $RunningQueue.RowKey
-                }
-                $Results = @()
-            } elseif (!$Rows -and !$RunningQueue) {
-                $TenantList = Get-Tenants -IncludeErrors
-                $Queue = New-CippQueueEntry -Name 'Tenant Allow/Block List - All Tenants' -Link '/tenant/administration/allow-block-list?customerId=AllTenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
-                $Metadata = [PSCustomObject]@{
-                    QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
-                    QueueId      = $Queue.RowKey
-                }
-                $InputObject = [PSCustomObject]@{
-                    OrchestratorName = 'TenantAllowBlockListOrchestrator'
-                    QueueFunction    = @{
-                        FunctionName = 'GetTenants'
-                        QueueId      = $Queue.RowKey
-                        TenantParams = @{
-                            IncludeErrors = $true
-                        }
-                        DurableName  = 'ListTenantAllowBlockListAllTenants'
-                    }
-                    SkipLog          = $true
-                }
-                Start-CIPPOrchestrator -InputObject $InputObject | Out-Null
-                $Results = @()
-            } else {
-                $TenantList = Get-Tenants -IncludeErrors
-                $Rows = $Rows | Where-Object { $TenantList.defaultDomainName -contains $_.Tenant }
-                $Metadata = [PSCustomObject]@{
-                    QueueId = $RunningQueue.RowKey ?? $null
-                }
-                $Results = foreach ($Row in $Rows) {
-                    $Row.Entry | ConvertFrom-Json
-                }
+        # AllTenants has no live path - fanning out to every tenant on request is what the cache is for.
+        if ($UseReportDB -or $TenantFilter -eq 'AllTenants') {
+            try {
+                $Results = Get-CIPPTenantAllowBlockListReport -TenantFilter $TenantFilter -ErrorAction Stop
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                Write-Host "Error retrieving Tenant Allow/Block List from report database: $($_.Exception.Message)"
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $Results = $_.Exception.Message
             }
+
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($Results)
+                })
         }
+
+        # Live Exchange path - every list type in one batched request.
+        $Results = foreach ($Entry in @(Get-CIPPTenantAllowBlockListItems -TenantFilter $TenantFilter)) {
+            $Entry | Add-Member -MemberType NoteProperty -Name Tenant -Value $TenantFilter -Force
+            $Entry
+        }
+
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -74,15 +45,8 @@ function Invoke-ListTenantAllowBlockList {
         $Results = $ErrorMessage
     }
 
-    if (!$Body) {
-        $Body = [PSCustomObject]@{
-            Results  = @($Results)
-            Metadata = $Metadata
-        }
-    }
-
-    return [HttpResponseContext]@{
-        StatusCode = $StatusCode
-        Body       = $Body
-    }
+    return ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = @($Results)
+        })
 }

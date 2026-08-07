@@ -77,7 +77,9 @@ function Invoke-ListMailboxes {
 
         $GraphRequest = foreach ($Mailbox in @(New-ExoRequest @ExoRequest)) {
             $AutoExpandingArchiveState = Get-CIPPAutoExpandingArchiveState -MailboxAutoExpandingArchiveEnabled $Mailbox.AutoExpandingArchiveEnabled -OrgAutoExpandingArchiveEnabled $OrgAutoExpandingArchiveEnabled
-            $Mailbox | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
+            # Id, not id: Select-Object matches case-insensitively but emits the object's
+            # own casing, and JSON is case-sensitive.
+            $Mailbox | Select-Object Id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
             @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
             @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
             @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
