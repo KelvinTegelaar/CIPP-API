@@ -92,15 +92,15 @@ function Invoke-ExecDeployAppTemplate {
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                "Failed '$($App.appName)': $($ErrorMessage.NormalizedMessage)"
-                Write-LogMessage -headers $Headers -API $APIName -message "Failed to deploy app '$($App.appName)' from template: $($ErrorMessage.NormalizedMessage)" -Sev 'Error' -LogData $ErrorMessage
+                "Failed '$($App.appName)': $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APIName -message "Failed to deploy app '$($App.appName)' from template: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
             }
         }
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Results = "Failed to deploy app template: $($ErrorMessage.NormalizedMessage)"
+        $Results = "Failed to deploy app template: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

@@ -50,7 +50,7 @@ function Push-ListGraphRequestQueue {
             $CippException = Get-CippException -Exception $_.Exception
             [PSCustomObject]@{
                 Tenant        = $Item.TenantFilter
-                CippStatus    = "Could not connect to tenant. $($CippException.NormalizedMessage)"
+                CippStatus    = "Could not connect to tenant. $($CippException.NormalizedError)"
                 CippException = [string]($CippException | ConvertTo-Json -Depth 10 -Compress)
             }
         }
