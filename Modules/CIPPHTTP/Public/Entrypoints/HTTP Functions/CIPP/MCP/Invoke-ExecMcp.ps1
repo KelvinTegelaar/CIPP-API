@@ -39,11 +39,25 @@ function Invoke-ExecMcp {
     }
 
     $Rpc = $Request.Body
+
+    # A JSON-RPC batch is an array. MCP removed batching in 2025-06-18, so refusing one is
+    # correct - but it has to be refused, not accepted: the ids were merged into a single
+    # call and the caller got back one reply carrying an array of ids, matching no request
+    # it had sent.
+    if ($Rpc -is [System.Collections.IList] -and $Rpc -isnot [string]) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Headers    = @{ 'Content-Type' = 'application/json' }
+                Body       = (@{ jsonrpc = '2.0'; id = $null; error = @{ code = -32600; message = 'Batch requests are not supported; send one JSON-RPC request per call.' } } | ConvertTo-Json -Compress)
+            })
+    }
+
     $RpcId = $Rpc.id
 
-    # JSON-RPC notifications carry no id and receive no response body.
+    # JSON-RPC notifications carry no id and receive no response body. Body is set to an
+    # empty string explicitly, because leaving it unset serialises as the four bytes 'null'.
     if ($null -eq $RpcId) {
-        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Accepted })
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Accepted; Body = '' })
     }
 
     try {
@@ -54,12 +68,21 @@ function Invoke-ExecMcp {
         switch ($Rpc.method) {
             'initialize' {
                 $Result = [ordered]@{
-                    protocolVersion = $Rpc.params.protocolVersion ?? '2025-06-18'
+                    # Answer with a version this server actually speaks. Echoing whatever
+                    # the client asked for meant a request for '1999-01-01' came back
+                    # confirmed as agreed, and the client would then hold the server to a
+                    # protocol it does not implement.
+                    protocolVersion = $(
+                        $Supported = @('2025-06-18', '2025-03-26', '2024-11-05')
+                        $Wanted = [string]$Rpc.params.protocolVersion
+                        if ($Wanted -and $Supported -contains $Wanted) { $Wanted } else { $Supported[0] }
+                    )
                     capabilities    = @{ tools = @{ listChanged = $false } }
                     serverInfo      = [ordered]@{
                         name    = 'CIPP'
                         version = $Request.Headers.'X-CIPP-Version' ?? 'unknown'
                     }
+                    instructions    = 'CIPP is a gateway to the read-only CIPP API. Five tools are exposed: ListTenants (enumerate managed tenants; most tools need a tenantFilter — use the tenant''s defaultDomainName), ListGraphRequest (proxy an arbitrary Microsoft Graph GET), SearchTools (browse or keyword-search the full tool catalog), GetToolInfo (fetch a tool''s input schema), and ExecTool (run any discovered tool by name). Typical flow: ListTenants -> SearchTools -> GetToolInfo -> ExecTool.'
                 }
             }
             'ping' { $Result = @{} }

@@ -38,7 +38,12 @@ function Get-CippMcpToolResult {
             }
         }
         'GetToolInfo' {
-            $Names = @(@($ArgHash['names'] ?? $ArgHash['name']) | ForEach-Object { [string]$_ } | Where-Object { $_ } | Select-Object -Unique -First 20)
+            $MaxNames = 20
+            $Requested = @(@($ArgHash['names'] ?? $ArgHash['name']) | ForEach-Object { [string]$_ } | Where-Object { $_ } | Select-Object -Unique)
+            $Names = @($Requested | Select-Object -First $MaxNames)
+            # Past the cap the extra names were dropped without a word, so a caller asking
+            # for 25 schemas got 20 back and no way to tell which five were missing.
+            $Dropped = @($Requested | Select-Object -Skip $MaxNames)
             if ($Names.Count -eq 0) {
                 throw [pscustomobject]@{ code = -32602; message = 'Invalid params: names (array of tool names from SearchTools) is required' }
             }
@@ -60,7 +65,12 @@ function Get-CippMcpToolResult {
             }
             $InfoResult = [ordered]@{
                 tools = @($Infos)
-                hint  = 'Run a tool with ExecTool: { "name": "<tool>", "arguments": { ... } }.'
+            }
+            if ($Dropped.Count -gt 0) {
+                $InfoResult['truncated'] = @($Dropped)
+                $InfoResult['hint'] = "Only the first $MaxNames names were resolved; ask again for the rest, listed in truncated. Run a tool with ExecTool: { ""name"": ""<tool>"", ""arguments"": { ... } }."
+            } else {
+                $InfoResult['hint'] = 'Run a tool with ExecTool: { "name": "<tool>", "arguments": { ... } }.'
             }
             return [ordered]@{
                 content = @(@{ type = 'text'; text = ($InfoResult | ConvertTo-Json -Depth 20 -Compress) })
@@ -75,7 +85,17 @@ function Get-CippMcpToolResult {
             $Candidates = @(Get-CippMcpToolCatalog -Request $Request | Where-Object { $_.name -eq $TargetName })
             $Entry = @($Candidates | Where-Object { $_._method -eq 'POST' })[0] ?? $Candidates[0]
             if (-not $Entry) {
-                throw [pscustomobject]@{ code = -32602; message = "Unknown or unavailable tool: $TargetName. Use SearchTools to discover valid tool names." }
+                # A wrong name here is a bad ARGUMENT to a valid tool, not an unknown tool,
+                # so it comes back as a tool result the caller can act on rather than a
+                # JSON-RPC error that reads as a transport failure. SearchTools' own scorer
+                # supplies the alternatives: 'ListUser' is one character from 'ListUsers'
+                # and the caller should be able to correct itself without a round trip.
+                $Near = @((Find-CippMcpTool -Request $Request -Query $TargetName -Limit 5).tools | ForEach-Object { $_.name })
+                $Hint = if ($Near.Count -gt 0) { " Did you mean: $($Near -join ', ')?" } else { ' Use SearchTools to discover valid tool names.' }
+                return [ordered]@{
+                    content = @(@{ type = 'text'; text = "No read-only tool named '$TargetName'.$Hint" })
+                    isError = $true
+                }
             }
             return Invoke-CippMcpApiRequest -Request $Request -TriggerMetadata $TriggerMetadata -ToolName $TargetName -Arguments $ArgHash['arguments'] -Method $Entry._method -ParamAlias $Entry._paramAlias
         }

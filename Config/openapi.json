@@ -4110,7 +4110,8 @@
                     "type": "string"
                   },
                   "displayName": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Nothing has been stored yet, so refusing costs the caller nothing and keeps a template that cannot deploy out of the list entirely."
                   },
                   "ID": {
                     "type": "string"
@@ -4119,10 +4120,37 @@
                     "type": "string"
                   },
                   "RawJSON": {
-                    "type": "string"
+                    "type": "object",
+                    "properties": {
+                      "@odata.context": {
+                        "type": "string",
+                        "description": ".../$metadata#deviceAppManagement/<collection>[/microsoft.graph.<type>]/$entity"
+                      },
+                      "@odata.type": {
+                        "type": "string",
+                        "description": "deviceConfigurations is polymorphic - without the discriminator Graph cannot tell which concrete configuration type is being created."
+                      },
+                      "added": {
+                        "type": "string"
+                      },
+                      "settings": {
+                        "type": "string",
+                        "description": "Endpoint Security templates expose different settings per tenant. Deployment drops the ones the tenant does not offer, so the policy that lands is a subset - worth saying out loud before someone compares the two and calls it drift."
+                      },
+                      "templateReference": {
+                        "type": "object",
+                        "properties": {
+                          "templateId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "description": "Nothing has been stored yet, so refusing costs the caller nothing and keeps a template that cannot deploy out of the list entirely."
                   },
                   "TemplateType": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Nothing has been stored yet, so refusing costs the caller nothing and keeps a template that cannot deploy out of the list entirely."
                   },
                   "tenantFilter": {
                     "type": "string"
@@ -4196,7 +4224,11 @@
           }
         ],
         "x-cipp-role": "Endpoint.MEM.ReadWrite",
-        "x-cipp-any-tenant": true
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Get-CIPPAppProtectionPolicyUrl",
+          "Test-CIPPIntuneTemplate"
+        ]
       }
     },
     "/api/AddJITAdminTemplate": {
@@ -4655,7 +4687,32 @@
                     "type": "string"
                   },
                   "RAWJson": {
-                    "type": "string"
+                    "type": "object",
+                    "properties": {
+                      "@odata.context": {
+                        "type": "string",
+                        "description": ".../$metadata#deviceAppManagement/<collection>[/microsoft.graph.<type>]/$entity"
+                      },
+                      "@odata.type": {
+                        "type": "string",
+                        "description": "deviceConfigurations is polymorphic - without the discriminator Graph cannot tell which concrete configuration type is being created."
+                      },
+                      "added": {
+                        "type": "string"
+                      },
+                      "settings": {
+                        "type": "string",
+                        "description": "Endpoint Security templates expose different settings per tenant. Deployment drops the ones the tenant does not offer, so the policy that lands is a subset - worth saying out loud before someone compares the two and calls it drift."
+                      },
+                      "templateReference": {
+                        "type": "object",
+                        "properties": {
+                          "templateId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
                   },
                   "replacemap": {
                     "type": "string"
@@ -4673,7 +4730,8 @@
                     "type": "string"
                   },
                   "TemplateType": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Checked per tenant because the payload is not the same for each: the replacemap above rewrites it, so a template can be sound for one tenant and not another. Static checks only - Set-CIPPIntunePolicy does its own tenant-specific setting filtering, and repeating that here would double the Graph calls for every deployment."
                   },
                   "tenantFilter": {
                     "$ref": "#/components/schemas/LabelValue"
@@ -4709,7 +4767,11 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Endpoint.MEM.ReadWrite"
+        "x-cipp-role": "Endpoint.MEM.ReadWrite",
+        "x-cipp-reads-via": [
+          "Get-CIPPAppProtectionPolicyUrl",
+          "Test-CIPPIntuneTemplate"
+        ]
       }
     },
     "/api/AddQuarantinePolicy": {
@@ -19675,12 +19737,9 @@
                     "properties": {
                       "@odata.type": {
                         "type": "string"
-                      },
-                      "settings": {
-                        "type": "string"
                       }
                     },
-                    "description": "Intune identifies a policy and every setting in it by @odata.type, and rejects a policy that is missing them. An editor that rebuilds the body from form state can drop them silently, which stores a template that only fails at deployment time - so refuse the write here rather than let a working template be replaced by one that cannot deploy."
+                    "description": "A regression check that validation cannot make on its own: @odata.type is not required by every policy type, so its absence is only definitely wrong when the stored policy had one and the submitted policy does not. An editor that rebuilds the body from form state can drop it silently, and the result only fails at deployment time. The structural checks Set-CIPPIntuneTemplate runs cover the rest."
                   },
                   "Type": {
                     "type": "string"
@@ -24529,6 +24588,9 @@
           },
           "202": {
             "description": "Accepted - work was queued and runs asynchronously"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -34937,6 +34999,104 @@
         "x-cipp-role": "CIPP.Core.ReadWrite"
       }
     },
+    "/api/ExecValidateIntuneTemplate": {
+      "post": {
+        "summary": "Check an Intune template for problems that would stop it deploying.",
+        "operationId": "ExecValidateIntuneTemplate",
+        "tags": [
+          "Endpoint > MEM"
+        ],
+        "description": "Runs the same checks the store and deploy paths run, and reports everything it finds instead\nof stopping at the first problem. Nothing is written and no policy is deployed.\n\nValidates either a stored template, by ID, or a payload supplied directly - which is how the\neditor checks an edit before saving it. Supplying a tenant adds the checks that need one:\nwhether the replacement variables resolve, and whether an Endpoint Security template keeps\nits settings once filtered to what that tenant offers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "description": "Template display name, used to resolve the name the policy would deploy under."
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "GUID of a stored template to validate. Omit when supplying RAWJson directly."
+                  },
+                  "RAWJson": {
+                    "type": "string",
+                    "description": "Policy payload to validate as-is, instead of reading a stored template."
+                  },
+                  "TemplateType": {
+                    "type": "string",
+                    "description": "Template type, e.g. Catalog or deviceCompliancePolicies. Inferred from the payload if omitted."
+                  },
+                  "tenantFilter": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Tenant to run the tenant-specific checks against. Omit for static validation only. The tenant selector sends {value,label}; the API sends a bare string."
+                  }
+                },
+                "required": [
+                  "ID",
+                  "RAWJson"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "GUID of a stored template to validate. Omit when supplying RAWJson directly.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Tenant to run the tenant-specific checks against. Omit for static validation only. The tenant selector sends {value,label}; the API sends a bare string.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.MEM.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecWebhookSubscriptions": {
       "post": {
         "summary": "ExecWebhookSubscriptions",
@@ -44733,6 +44893,7 @@
           {
             "name": "$top",
             "in": "query",
+            "description": "Graph's page size, NOT a result limit. This endpoint follows @odata.nextLink to the end by default, so $top alone changes how many round trips it makes and not how many records come back - asking for 1 still returns everything. Pair it with NoPagination to stop after one page, or manualPagination to page through deliberately.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44749,6 +44910,7 @@
           {
             "name": "CountOnly",
             "in": "query",
+            "description": "Return just the number of matching records instead of the records themselves. The cheapest way to size a collection before deciding whether to fetch it.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44757,6 +44919,7 @@
           {
             "name": "Endpoint",
             "in": "query",
+            "description": "The Graph path to call, without the version prefix - 'users', 'deviceManagement/managedDevices', 'groups/<id>/members'. Use ListGraphSchema to check what an endpoint returns before spending a call on it.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44798,6 +44961,7 @@
           {
             "name": "manualPagination",
             "in": "query",
+            "description": "Return one page plus its @odata.nextLink in the response metadata, so the caller can fetch the next page itself by passing that link back as nextLink. Use this to walk a large collection in bounded steps rather than pulling it all at once.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44806,6 +44970,7 @@
           {
             "name": "nextLink",
             "in": "query",
+            "description": "Continue a manualPagination walk: pass back the @odata.nextLink returned with the previous page. Endpoint is still required, and the other query options are already encoded in the link.",
             "required": false,
             "schema": {
               "type": "string"
@@ -44814,6 +44979,7 @@
           {
             "name": "NoPagination",
             "in": "query",
+            "description": "Return only the first page and stop. The default follows every @odata.nextLink until the collection is exhausted, which on a large tenant is both slow and very large - use this with $top when a sample is enough.",
             "required": false,
             "schema": {
               "type": "string"
@@ -46134,6 +46300,86 @@
           }
         ],
         "x-cipp-role": "Endpoint.MEM.Read"
+      }
+    },
+    "/api/ListIntuneSettingDefinitions": {
+      "get": {
+        "summary": "Search the Intune setting catalog for settings to add to a policy.",
+        "operationId": "ListIntuneSettingDefinitions",
+        "tags": [
+          "Endpoint > MEM"
+        ],
+        "description": "The editor fetches a setting definition by the hash of its id, which answers \"what is this\nsetting\" for a policy that already names one. It cannot answer \"what settings are there\",\nbecause a hash-addressed directory cannot be enumerated - so adding a setting to a policy\nneeds a search, and the search has to happen where the whole catalog already is.\n\nThat is here: Get-CIPPIntuneCatalogIndex holds the catalog in memory for the life of the\nworker, so this costs a scan rather than a 47MB download the browser would otherwise repeat.\n\nReturns summaries, not whole definitions. The client fetches the full definition for the one\nsetting the user actually picks, through the same per-definition files it already uses.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of settings to return. Defaults to 100.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "description": "Restrict to settings that apply to a platform, e.g. windows10, macOS, android.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Text to match against a setting's name, id, description and Intune's own search keywords.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "technology",
+            "in": "query",
+            "description": "Restrict to a management technology, e.g. mdm, windows10XManagement.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.MEM.Read",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListIntuneTemplates": {

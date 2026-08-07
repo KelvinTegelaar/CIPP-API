@@ -187,6 +187,31 @@ Describe 'invariants the MCP projection depends on' {
         $Bad | Should -BeNullOrEmpty
     }
 
+    It 'never documents an endpoint that changes something as GET' {
+        # The counterpart to the rule above, and the direction that actually hurts: GET is
+        # defined as safe, so callers, caches and link prefetchers may repeat one freely.
+        # RemoveStandard was documented as GET purely because it happens to read its
+        # arguments from the query string, which says nothing about what it does.
+        #
+        # Two independent signals, because neither covers the other: the CIPP verb prefix
+        # catches Remove/Add/Edit and friends, and the role catches the Exec* endpoints
+        # whose names are silent about intent - ExecServicePrincipals holds
+        # Tenant.Application.ReadWrite while ExecAccessChecks only reads.
+        $MutationVerb = [regex]::new('^(Add|Set|Remove|Delete|Edit|New|Update|Disable|Enable|Reset|Revoke|Push|Clear|Start|Stop|Rename|Move|Copy)')
+        $Bad = @(
+            foreach ($Entry in $script:Spec.paths.GetEnumerator()) {
+                $Endpoint = $Entry.Key -replace '^/api/', ''
+                foreach ($Method in $Entry.Value.Keys) {
+                    if ($Method -ne 'get') { continue }
+                    $Role = [string]$Entry.Value[$Method].'x-cipp-role'
+                    if ($MutationVerb.IsMatch($Endpoint)) { "$Endpoint is GET but its name is a mutation" }
+                    elseif ($Role -match '\.ReadWrite$') { "$Endpoint is GET but holds $Role" }
+                }
+            }
+        )
+        $Bad | Should -BeNullOrEmpty
+    }
+
     It 'gives every operation an x-cipp-role' {
         $Bad = @(
             foreach ($Entry in $script:Spec.paths.GetEnumerator()) {

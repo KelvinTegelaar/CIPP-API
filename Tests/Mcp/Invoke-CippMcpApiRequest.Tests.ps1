@@ -98,6 +98,33 @@ Describe 'MCP tool result normalisation' {
         }
     }
 
+    Context 'array shape survives the row count' {
+        # PowerShell's pipeline unrolls a collection, so `$Body | ConvertTo-Json` turns a
+        # one-row array into a bare object and an empty one into an empty string. The same
+        # tool then changes JSON type with the number of rows it happens to find, which no
+        # caller can parse reliably.
+        It 'keeps a single-row result an array' {
+            $Result = Invoke-ToolResult -Body @(@{ id = 'only' })
+            $Result.content[0].text | Should -BeLike '`[*`]'
+            @($Result.content[0].text | ConvertFrom-Json).Count | Should -Be 1
+        }
+
+        It 'keeps an empty result an empty array, not an empty string' {
+            $Result = Invoke-ToolResult -Body @()
+            $Result.content[0].text | Should -Be '[]'
+        }
+
+        It 'keeps a multi-row result an array' {
+            $Result = Invoke-ToolResult -Body @(@{ id = 1 }, @{ id = 2 })
+            @($Result.content[0].text | ConvertFrom-Json).Count | Should -Be 2
+        }
+
+        It 'keeps a single-row Results envelope an array once unwrapped' {
+            $Result = Invoke-ToolResult -Body @{ Results = @(@{ id = 'only' }) }
+            $Result.content[0].text | Should -BeLike '`[*`]'
+        }
+    }
+
     Context 'errors' {
         It 'keeps the envelope on an error so the message survives' {
             $Result = Invoke-ToolResult -Body @{ Results = "The 'Action' parameter is required." } -StatusCode 400

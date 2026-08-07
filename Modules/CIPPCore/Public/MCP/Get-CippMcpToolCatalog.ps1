@@ -34,8 +34,11 @@ function Get-CippMcpToolCatalog {
         foreach ($PathEntry in $Spec['paths'].GetEnumerator()) {
             $Endpoint = $PathEntry.Key -replace '^/api/', ''
 
-            # Never expose the MCP transport itself as a tool.
-            if ($Endpoint -eq 'ExecMcp') { continue }
+            # Never expose the MCP transport itself as a tool, nor the spec endpoint that
+            # backs the in-app documentation browser: it returns the whole ~1.5 MB OpenAPI
+            # document, which would flood the caller's context to tell it what SearchTools
+            # already answers.
+            if ($Endpoint -in @('ExecMcp', 'ListOpenApiSpec')) { continue }
 
             foreach ($MethodEntry in $PathEntry.Value.GetEnumerator()) {
                 $Method = [string]$MethodEntry.Key
@@ -63,6 +66,18 @@ function Get-CippMcpToolCatalog {
                     if ($Param -isnot [System.Collections.IDictionary]) { continue }
                     if ($Param['in'] -notin @('query', 'path')) { continue }
                     $Schema = if ($Param['schema']) { $Param['schema'] } else { @{ type = 'string' } }
+
+                    # In OpenAPI a query parameter's description sits on the parameter, not on
+                    # its schema - and only the schema was being kept, so every one of them was
+                    # dropped on the way to the tool definition. That is the difference between
+                    # a caller knowing that ListGraphRequest's $top is a page size rather than a
+                    # result limit and having to discover it by getting the wrong answer. Copied
+                    # onto the schema, which is the only place an MCP inputSchema can carry it.
+                    if ($Param['description'] -and -not $Schema['description']) {
+                        $Schema = [ordered]@{} + $Schema
+                        $Schema['description'] = [string]$Param['description']
+                    }
+
                     $Properties[[string]$Param['name']] = $Schema
                     if ($Param['required']) { $RequiredList.Add([string]$Param['name']) }
                 }
@@ -117,8 +132,16 @@ function Get-CippMcpToolCatalog {
                 $Description = Get-CippMcpDescription -Operation $Op
 
                 # Compact one-liner used by SearchTools results (schema-free, token-cheap).
+                #
+                # The spec's summary is only useful when it says something. build-openapi.ps1
+                # emits `summary = $Contract.Synopsis ?? $Contract.Name`, and almost no
+                # entrypoint carries a .SYNOPSIS, so 253 of 265 summaries were just the tool
+                # name repeated - SearchTools results read "ListUsers: ListUsers" and the
+                # caller had to spend a GetToolInfo call to learn anything. The descriptions
+                # are there and are good, so fall back to the first line of one whenever the
+                # summary carries no information beyond the name.
                 $Summary = [string]$Op['summary']
-                if ([string]::IsNullOrWhiteSpace($Summary)) {
+                if ([string]::IsNullOrWhiteSpace($Summary) -or $Summary -eq $Endpoint) {
                     $Summary = (($Description -replace '^\[[^\]]+\]\s*', '') -split "\r?\n")[0].Trim()
                 }
                 if ($Summary.Length -gt 160) { $Summary = $Summary.Substring(0, 157) + '...' }
@@ -146,6 +169,14 @@ function Get-CippMcpToolCatalog {
     $TagFilter = "$($Query.tags ?? $Query.category ?? $Query.tag)".Trim()
     if ($TagFilter) {
         $WantedCats = @($TagFilter -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        # A misspelt tag matched nothing and left an empty catalog, so the connector came up
+        # advertising "0 read-only CIPP tools" with no indication why. Say which tag was not
+        # recognised, in the log the operator will actually look at when that happens.
+        $Known = @($Filtered | ForEach-Object { [string]$_._category } | Sort-Object -Unique)
+        $Unknown = @($WantedCats | Where-Object { $_ -notin $Known })
+        if ($Unknown.Count -gt 0) {
+            Write-Warning "[MCP] Unknown connector tag(s): $($Unknown -join ', '). Known categories: $($Known -join ', ')."
+        }
         $Filtered = @($Filtered | Where-Object { $_._category -in $WantedCats })
     }
 

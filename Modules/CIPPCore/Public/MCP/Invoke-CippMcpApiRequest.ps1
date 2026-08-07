@@ -118,7 +118,12 @@ function Invoke-CippMcpApiRequest {
         -not [string]::IsNullOrWhiteSpace([string]$Metadata)
     }
 
-    $Text = if ($ResultBody -is [string]) { $ResultBody } else { $ResultBody | ConvertTo-Json -Depth 20 -Compress }
+    # -InputObject, not the pipeline: piping unrolls the collection, so a one-row result
+    # serialises as a bare object and an empty one as an empty string. The same tool then
+    # changes JSON shape with the row count - ListDomains returned an array for a tenant
+    # with five domains and an object for a tenant with one - which is unusable for a
+    # caller that has to parse it.
+    $Text = if ($ResultBody -is [string]) { $ResultBody } else { ConvertTo-Json -InputObject $ResultBody -Depth 20 -Compress }
 
     $Content = [System.Collections.Generic.List[object]]::new()
     $Content.Add(@{ type = 'text'; text = "$Text" })
