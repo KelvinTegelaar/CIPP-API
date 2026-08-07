@@ -55,10 +55,31 @@ function Set-CippKeyVaultSecret {
 
         # Call Key Vault REST API
         $uri = "https://$VaultName.vault.azure.net/secrets/$Name`?api-version=7.4"
-        $response = Invoke-CIPPRestMethod -Uri $uri -Headers @{
-            Authorization = "Bearer $token"
+        $headers = @{
+            Authorization  = "Bearer $token"
             'Content-Type' = 'application/json'
-        } -Method Put -Body $body -ErrorAction Stop
+        }
+        $response = Invoke-CIPPRestMethod -Uri $uri -Headers $headers -Method Put -Body $body -SkipHttpErrorCheck -StatusCodeVariable KvStatus -ErrorAction Stop
+
+        if ($KvStatus -eq 409) {
+            # Soft delete (mandatory on all vaults) reserves a deleted secret's name
+            # for the retention window, and the PUT 409s until it is recovered or
+            # purged. This is exactly what re-running setup hits after an instance
+            # reset deleted the SAM secrets. Recover the deleted secret, then retry
+            # the write - recovery is asynchronous, so poll until the name is live.
+            Write-Information "Secret '$Name' is soft-deleted and blocking the write - recovering it"
+            $null = Invoke-CIPPRestMethod -Uri "https://$VaultName.vault.azure.net/deletedsecrets/$Name/recover?api-version=7.4" -Headers $headers -Method Post -ErrorAction Stop
+            $Deadline = [DateTime]::UtcNow.AddSeconds(60)
+            do {
+                Start-Sleep -Seconds 3
+                $response = Invoke-CIPPRestMethod -Uri $uri -Headers $headers -Method Put -Body $body -SkipHttpErrorCheck -StatusCodeVariable KvStatus -ErrorAction Stop
+            } while ($KvStatus -eq 409 -and [DateTime]::UtcNow -lt $Deadline)
+        }
+
+        if ($KvStatus -ge 400) {
+            $KvError = $response.error.message ?? ($response | ConvertTo-Json -Depth 5 -Compress)
+            throw "Key Vault returned $KvStatus for secret '$Name': $KvError"
+        }
 
         # Return object similar to Set-AzKeyVaultSecret for compatibility
         return @{
@@ -70,7 +91,11 @@ function Set-CippKeyVaultSecret {
             Updated = $response.attributes.updated
         }
     } catch {
-        Write-Error "Failed to set secret '$Name' in vault '$VaultName': $($_.Exception.Message)"
+        # ErrorDetails carries the response body (Invoke-CIPPRestMethod attaches it),
+        # which holds the actual Key Vault error - the exception message alone is
+        # just the status line
+        $Detail = $_.ErrorDetails.Message ?? $_.Exception.Message
+        Write-Error "Failed to set secret '$Name' in vault '$VaultName': $Detail"
         throw
     }
 }

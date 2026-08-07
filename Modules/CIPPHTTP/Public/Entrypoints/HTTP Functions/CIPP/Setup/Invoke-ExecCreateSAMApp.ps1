@@ -124,7 +124,15 @@ function Invoke-ExecCreateSAMApp {
         }
 
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)"; severity = 'failed' }
+        # ErrorDetails holds the HTTP response body (Graph / Key Vault error JSON);
+        # the exception message alone is just the status line, which made failures
+        # like a soft-deleted Key Vault secret (409) undiagnosable from the UI
+        $ErrorDetail = if ($_.ErrorDetails.Message) {
+            Get-NormalizedError -message $_.ErrorDetails.Message
+        } else {
+            $_.Exception.Message
+        }
+        $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $ErrorDetail"; severity = 'failed' }
     }
 
     return ([HttpResponseContext]@{

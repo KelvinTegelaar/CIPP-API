@@ -15,22 +15,25 @@ function Invoke-ExecListAppId {
         "$origin/api/ExecSAMSetup"
     }
     #make sure we get the very latest version of the appid from kv:
+    # Only overwrite the env vars with real values - $env:ApplicationID is the
+    # process-wide "setup complete" signal, so assigning $null (missing row) removes
+    # it and assigning an error string makes a broken instance look configured.
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
         $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
-        $env:ApplicationID = $Secret.ApplicationID
-        $env:TenantID = $Secret.TenantID
+        if ($Secret.ApplicationID) { $env:ApplicationID = $Secret.ApplicationID }
+        if ($Secret.TenantID) { $env:TenantID = $Secret.TenantID }
     } else {
         $keyvaultname = Get-CippKeyVaultName
         try {
-            $env:ApplicationID = (Get-CippKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'ApplicationID')
-            $env:TenantID = (Get-CippKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'TenantID')
+            $ApplicationID = (Get-CippKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'ApplicationID')
+            $TenantID = (Get-CippKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'TenantID')
+            if ($ApplicationID) { $env:ApplicationID = $ApplicationID }
+            if ($TenantID) { $env:TenantID = $TenantID }
             Write-Information "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"
         } catch {
             Write-Information "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"
             Write-LogMessage -message "Failed to retrieve secrets from KeyVault: $keyvaultname" -LogData (Get-CippException -Exception $_) -Sev 'Error'
-            $env:ApplicationID = (Get-CippException -Exception $_)
-            $env:TenantID = (Get-CippException -Exception $_)
         }
     }
 
