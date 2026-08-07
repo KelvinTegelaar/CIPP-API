@@ -3,7 +3,7 @@
   "info": {
     "title": "CIPP API",
     "version": "auto",
-    "description": "The CIPP HTTP API. Every path maps one-to-one onto a PowerShell entrypoint:\r\nNew-CippCoreRequest resolves /api/<Name> to Invoke-<Name>, so the path segment is\r\nthe function name and is case-sensitive.\r\n\r\nThis spec is generated from the PowerShell AST of those entrypoints on every\r\nbuild. Request schemas describe the fields the backend actually reads, including\r\nnested ones: a property typed as LabelValue is read as `$Field.value` by the\r\nbackend and must be sent as an object, not a bare string.",
+    "description": "The CIPP HTTP API. Every path maps one-to-one onto a PowerShell entrypoint:\nNew-CippCoreRequest resolves /api/<Name> to Invoke-<Name>, so the path segment is\nthe function name and is case-sensitive.\n\nThis spec is generated from the PowerShell AST of those entrypoints on every\nbuild. Request schemas describe the fields the backend actually reads, including\nnested ones: a property typed as LabelValue is read as `$Field.value` by the\nbackend and must be sent as an object, not a bare string.",
     "x-cipp-docs": "https://docs.cipp.app"
   },
   "servers": [
@@ -573,8 +573,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -742,8 +741,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -800,8 +798,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -876,8 +873,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -1091,8 +1087,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -1363,8 +1358,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -1553,8 +1547,7 @@
                     "Version": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -3194,8 +3187,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -3713,8 +3705,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -3800,8 +3791,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -4078,8 +4068,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -4386,8 +4375,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -4494,8 +4482,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -4970,8 +4957,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -5040,8 +5026,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -5184,8 +5169,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -5328,8 +5312,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -5939,8 +5922,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -6012,8 +5994,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -6097,8 +6078,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -6398,8 +6378,7 @@
                       "type": "array",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -6541,8 +6520,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -6668,8 +6646,7 @@
                     "version": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -6784,8 +6761,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -6983,8 +6959,7 @@
                     "User": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -7084,8 +7059,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -7380,8 +7354,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -7422,8 +7395,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -7484,8 +7456,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -7644,8 +7615,7 @@
                     "version": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -7788,8 +7758,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -8242,8 +8211,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -8395,8 +8363,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -8761,8 +8728,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -8927,8 +8893,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -9232,8 +9197,7 @@
                       "type": "array",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -9607,8 +9571,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -10058,8 +10021,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -10341,8 +10303,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -10463,8 +10424,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -10549,8 +10509,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -10965,8 +10924,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -11145,8 +11103,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -11211,8 +11168,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -11622,8 +11578,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -11892,8 +11847,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -12234,8 +12188,7 @@
                       "type": "array",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -12561,8 +12514,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -12597,8 +12549,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -12651,8 +12602,7 @@
                     "link": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -12784,8 +12734,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -12852,8 +12801,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -13107,8 +13055,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage,backend,frontend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -13235,8 +13182,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -13423,8 +13369,7 @@
                       "type": "string",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -13915,8 +13860,7 @@
                       "type": "array",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -14036,8 +13980,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -14079,8 +14022,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -14150,8 +14092,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -14315,8 +14256,7 @@
                     "watermarkText": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -14388,8 +14328,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -14464,8 +14403,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -14529,8 +14467,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -14640,8 +14577,7 @@
                     "UserId": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -14704,8 +14640,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -14873,8 +14808,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -15097,8 +15031,7 @@
                     "watermarkText": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -15191,8 +15124,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -15518,8 +15450,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -15588,8 +15519,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -15652,8 +15582,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -15738,8 +15667,7 @@
                     "Status": {
                       "x-cipp-field-source": "frontend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -15805,8 +15733,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -16102,8 +16029,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -16292,8 +16218,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -16379,8 +16304,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -16551,8 +16475,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -16697,8 +16620,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -16844,8 +16766,7 @@
                       "type": "string",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -17091,8 +17012,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -17226,8 +17146,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -17289,8 +17208,7 @@
                     "severity": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -17471,8 +17389,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -17678,8 +17595,7 @@
                     "tenant": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -18001,8 +17917,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -18061,8 +17976,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -18130,8 +18044,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -18295,8 +18208,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -18608,8 +18520,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -19090,8 +19001,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -19213,8 +19123,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -19275,8 +19184,7 @@
                     "Success": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -19367,8 +19275,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -19633,8 +19540,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -19764,8 +19670,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -19925,8 +19830,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -20095,8 +19999,7 @@
                       "type": "string",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -20189,8 +20092,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -20362,8 +20264,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -20487,8 +20388,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -20534,8 +20434,7 @@
                     "StatusCode": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -20644,8 +20543,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -20724,8 +20622,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -20789,8 +20686,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -21117,8 +21013,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -21241,8 +21136,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -21277,8 +21171,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -21384,8 +21277,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -21534,8 +21426,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -21631,8 +21522,7 @@
                     "userUPN": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -21761,8 +21651,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -21825,8 +21714,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -21888,8 +21776,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -22038,8 +21925,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -22214,8 +22100,7 @@
                     "Timings": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -22533,8 +22418,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -22896,8 +22780,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -23165,8 +23048,7 @@
                     "watermarkText": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -23227,8 +23109,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -23479,8 +23360,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -23546,8 +23426,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -23712,8 +23591,7 @@
                     "watermarkText": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -23798,8 +23676,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -23934,8 +23811,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -24006,8 +23882,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -24063,8 +23938,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -24260,8 +24134,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -24387,8 +24260,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -24470,8 +24342,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -24704,8 +24575,7 @@
                       "type": "string",
                       "x-cipp-field-source": "graph,frontend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -25150,8 +25020,7 @@
                       "type": "string",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -25605,8 +25474,7 @@
                       "type": "string",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -26068,8 +25936,7 @@
                       "type": "string",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -26506,8 +26373,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -26592,8 +26458,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -26700,8 +26565,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -26875,8 +26739,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -27270,8 +27133,7 @@
                     "watermarkText": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -27422,8 +27284,7 @@
                     "wordCount": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -27535,8 +27396,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -27676,8 +27536,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -28715,8 +28574,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -28904,8 +28762,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -29216,8 +29073,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -29545,8 +29401,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -29641,8 +29496,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -29753,8 +29607,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -29992,8 +29845,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -30088,8 +29940,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -30407,8 +30258,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -30486,8 +30336,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -30549,8 +30398,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -30791,8 +30639,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -31080,8 +30927,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -31663,8 +31509,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -31976,8 +31821,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -32176,8 +32020,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -33044,8 +32887,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -33449,8 +33291,7 @@
                       "type": "object",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -33491,8 +33332,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -33583,8 +33423,7 @@
                     "UpdatedBy": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -33729,8 +33568,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -33795,8 +33633,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -33972,8 +33809,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -34065,8 +33901,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -34146,8 +33981,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -34226,8 +34060,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -34370,8 +34203,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -34422,8 +34254,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -34502,8 +34333,7 @@
                       "Type": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -34593,8 +34423,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -34709,8 +34538,7 @@
                     "Tenant": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -34802,8 +34630,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -34938,8 +34765,7 @@
                       "Results": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -35002,8 +34828,7 @@
                       "Results": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -35112,8 +34937,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -35159,8 +34983,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -35253,8 +35076,7 @@
                       "userPrincipalName": {
                         "x-cipp-field-source": "backend,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -35297,8 +35119,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -35503,8 +35324,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -35706,8 +35526,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -35792,8 +35611,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -35861,8 +35679,7 @@
                       "Tenants": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -35967,8 +35784,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -36157,8 +35973,7 @@
                       "WhenCreated": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -36311,8 +36126,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -36350,8 +36164,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -36449,8 +36262,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -36551,8 +36363,7 @@
                       "scopes": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -36670,8 +36481,7 @@
                         "type": "object",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -36732,8 +36542,7 @@
                       "tenantName": {
                         "x-cipp-field-source": "backend,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -36802,8 +36611,7 @@
                       "PolicyTypeName": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -36878,8 +36686,7 @@
                       "publishingState": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -36961,8 +36768,7 @@
                       "version": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -37014,8 +36820,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -37122,8 +36927,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -37226,8 +37030,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -37334,8 +37137,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -37512,8 +37314,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -37606,8 +37407,7 @@
                       "Title": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -37729,8 +37529,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -37789,8 +37588,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -37849,8 +37647,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -37973,8 +37770,7 @@
                       "Version": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -38064,8 +37860,7 @@
                       "raw": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -38124,8 +37919,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -38192,8 +37986,7 @@
                       "updatedBy": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -38234,8 +38027,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -38611,8 +38403,7 @@
                         "type": "object",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -38716,8 +38507,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -38812,8 +38602,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -38863,8 +38652,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -38917,8 +38705,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -38993,8 +38780,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -39079,8 +38865,7 @@
                       "User": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -39206,8 +38991,7 @@
                       "value": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -39310,8 +39094,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -39349,8 +39132,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -39461,8 +39243,7 @@
                       "TotalTasks": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -39504,8 +39285,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -39626,8 +39406,7 @@
                         "type": "boolean",
                         "x-cipp-field-source": "storage,backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -39693,8 +39472,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -39767,8 +39545,7 @@
                       "PolicyTypeName": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -39893,8 +39670,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -40003,8 +39779,7 @@
                         "type": "array",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -40067,8 +39842,7 @@
                       "Name": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -40172,8 +39946,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -40242,8 +40015,7 @@
                       "User": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -40385,8 +40157,7 @@
                       "WindowsEmailAddress": {
                         "x-cipp-field-source": "backend,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -40497,8 +40268,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -40652,8 +40422,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -40735,8 +40504,7 @@
                       "value": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -40896,8 +40664,7 @@
                       "wordActive": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -40960,8 +40727,7 @@
                       "TermInfo": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -41023,8 +40789,7 @@
                       "sku": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -41131,8 +40896,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -41170,8 +40934,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -41318,8 +41081,7 @@
                       "Version": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -41417,8 +41179,7 @@
                       "VariableType": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -41479,8 +41240,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -41964,8 +41724,7 @@
                         "type": "integer",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -42040,8 +41799,7 @@
                       "vulnerabilitySeverityLevel": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -42084,8 +41842,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -42208,8 +41965,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -42269,8 +42025,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -42687,8 +42442,7 @@
                         "type": "integer",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -43069,8 +42823,7 @@
                         "type": "integer",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -43139,8 +42892,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -43208,8 +42960,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -43282,8 +43033,7 @@
                       "Workload": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -43387,8 +43137,7 @@
                       "Workload": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -43470,8 +43219,7 @@
                       "SPFPassAll": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -43588,8 +43336,7 @@
                       "Results": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -43689,8 +43436,7 @@
                         "type": "array",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -43731,8 +43477,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -43861,8 +43606,7 @@
                       "workingHoursTimeZone": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -43937,8 +43681,7 @@
                       "TlsSettings": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44007,8 +43750,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44106,8 +43848,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44199,8 +43940,7 @@
                       "Results": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44275,8 +44015,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -44334,8 +44073,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44472,8 +44210,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44522,8 +44259,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -44579,8 +44315,7 @@
                       "Name": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44683,8 +44418,7 @@
                       "Type": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44806,8 +44540,7 @@
                       "TotalSeconds": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44881,8 +44614,7 @@
                       "status": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -44957,8 +44689,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -45044,8 +44775,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -45162,8 +44892,7 @@
                         "type": "object",
                         "x-cipp-field-source": "graph,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -45239,8 +44968,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -45400,8 +45128,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -45442,8 +45169,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -45502,8 +45228,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -45564,8 +45289,7 @@
                       "RecipientTypeDetails": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -45644,8 +45368,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -45768,8 +45491,7 @@
                       "uri": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -46029,8 +45751,7 @@
                       "Results": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -46111,8 +45832,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -46345,8 +46065,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -46415,8 +46134,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -46535,8 +46253,7 @@
                       "username": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -46601,8 +46318,7 @@
                       "value": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -46720,8 +46436,7 @@
                       "WhenCreated": {
                         "x-cipp-field-source": "backend,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -46801,8 +46516,7 @@
                       "userPrincipalName": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -46930,8 +46644,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -47035,8 +46748,7 @@
                       "PolicyTypeName": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -47197,8 +46909,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -47274,8 +46985,7 @@
                       "scriptType": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -47410,8 +47120,7 @@
                       "value": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -47450,8 +47159,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -47639,8 +47347,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -47679,8 +47386,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -47755,8 +47461,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -47854,8 +47559,7 @@
                       "TotalLicenses": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48079,8 +47783,7 @@
                       "User": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48159,8 +47862,7 @@
                       "SmtpClientAuthenticationDisabled": {
                         "x-cipp-field-source": "backend,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48301,8 +48003,7 @@
                       "WhenSoftDeleted": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48386,8 +48087,7 @@
                       "UPN": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48482,8 +48182,7 @@
                       "status": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48567,8 +48266,7 @@
                       "User": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48655,8 +48353,7 @@
                       "WhenCreated": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48748,8 +48445,7 @@
                       "UserPrincipalName": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48864,8 +48560,7 @@
                       "Type": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -48916,8 +48611,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -49010,8 +48704,7 @@
                       "ZapEnabled": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -49163,8 +48856,7 @@
                         "type": "boolean",
                         "x-cipp-field-source": "graph,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -49294,8 +48986,7 @@
                       "ToIP": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -49407,8 +49098,7 @@
                       "UserType": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -49485,8 +49175,7 @@
                       "rangeOrLocation": {
                         "x-cipp-field-source": "backend,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -49628,8 +49317,7 @@
                       "usernameSpaceHandling": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -49758,8 +49446,7 @@
                       "webhookAuthUsername": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -49831,8 +49518,7 @@
                       "Tenant": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -49975,8 +49661,7 @@
                       "warnings": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -50022,8 +49707,7 @@
                       "Results": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -50077,8 +49761,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -50119,8 +49802,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -50289,8 +49971,7 @@
                         "type": "array",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -50338,8 +50019,7 @@
                       "Results": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -50432,8 +50112,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -50504,8 +50183,7 @@
                       "packagename": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -50610,8 +50288,7 @@
                       "WhenCreated": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -50702,8 +50379,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -50744,8 +50420,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -50815,8 +50490,7 @@
                       "TemporaryBlock": {
                         "x-cipp-field-source": "backend,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -50888,8 +50562,7 @@
                       "Workload": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -50990,8 +50663,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -51064,8 +50736,7 @@
                       "SID": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -51179,8 +50850,7 @@
                       "primDomain": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -51374,8 +51044,7 @@
                       "WorkingHoursTimeZone": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -51453,8 +51122,7 @@
                       "WhenCreated": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -51574,8 +51242,7 @@
                       "WhenCreated": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -51815,8 +51482,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -51882,8 +51548,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -52111,8 +51776,7 @@
                       "value": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -52169,8 +51833,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -52249,8 +51912,7 @@
                       "Type": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -52322,8 +51984,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -52421,8 +52082,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -52501,8 +52161,7 @@
                       "SiteAndGroupProtectionEnabled": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -52606,8 +52265,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -52744,8 +52402,7 @@
                       "type": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -53158,8 +52815,7 @@
                         "type": "object",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -53572,8 +53228,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -53619,8 +53274,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -53671,8 +53325,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -53855,8 +53508,7 @@
                       "uniquePermissionLibraries": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -53899,8 +53551,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -54065,8 +53716,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -54231,8 +53881,7 @@
                       "usageSynced": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -54323,8 +53972,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -54719,8 +54367,7 @@
                         "type": "object",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -54803,8 +54450,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -55337,8 +54983,7 @@
                       "webUrl": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -55546,8 +55191,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -55623,8 +55267,7 @@
                       "WhenCreated": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -55725,8 +55368,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -55866,8 +55508,7 @@
                       "StandardsExport": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -55955,8 +55596,7 @@
                       "Value": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -56045,8 +55685,7 @@
                       "Value": {
                         "x-cipp-field-source": "storage,backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -56169,8 +55808,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -56278,8 +55916,7 @@
                       "visibility": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -56359,8 +55996,7 @@
                       "UPN": {
                         "x-cipp-field-source": "backend,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -56492,8 +56128,7 @@
                       "ValidationStatus": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -56939,8 +56574,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -57086,8 +56720,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -57188,8 +56821,7 @@
                       "Value": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -57296,8 +56928,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -57463,8 +57094,7 @@
                         "type": "array",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -57510,8 +57140,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -57593,8 +57222,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -57675,8 +57303,7 @@
                         "type": "string",
                         "x-cipp-field-source": "storage,frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -57859,8 +57486,7 @@
                       "version": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -58015,8 +57641,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -58091,8 +57716,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -58195,8 +57819,7 @@
                       "WhenChanged": {
                         "x-cipp-field-source": "frontend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -58299,8 +57922,7 @@
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -58352,8 +57974,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -58396,8 +58017,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -58842,8 +58462,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -59273,8 +58892,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -59410,8 +59028,7 @@
                       "WhenSoftDeleted": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -59470,8 +59087,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -59531,8 +59147,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -59976,8 +59591,7 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -60074,8 +59688,7 @@
                       "showDevtools": {
                         "x-cipp-field-source": "backend"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -60448,8 +60061,7 @@
                         "type": "object",
                         "x-cipp-field-source": "graph"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -60511,8 +60123,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -60643,8 +60254,7 @@
                       "webhookAuthUsername": {
                         "x-cipp-field-source": "storage"
                       }
-                    },
-                    "additionalProperties": true
+                    }
                   }
                 }
               }
@@ -60780,8 +60390,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                    "additionalProperties": true
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -60928,8 +60537,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -61018,8 +60626,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -61053,8 +60660,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -61145,8 +60751,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -61220,8 +60825,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -61552,8 +61156,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -61735,8 +61338,7 @@
                       "type": "string",
                       "x-cipp-field-source": "graph"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -61831,8 +61433,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -61966,8 +61567,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -62088,8 +61688,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -62924,8 +62523,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -63131,8 +62729,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -63800,8 +63397,7 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -64051,8 +63647,7 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -64535,8 +64130,7 @@
                     "webhookAuthUsername": {
                       "x-cipp-field-source": "storage"
                     }
-                  },
-                  "additionalProperties": true
+                  }
                 }
               }
             }
@@ -64598,8 +64192,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.",
-                  "additionalProperties": true
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
