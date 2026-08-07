@@ -400,7 +400,9 @@ function Invoke-CIPPStandardAuthenticationMethods {
                     }
                 }
 
-                Set-CIPPAuthenticationPolicy @Params
+                # Assign the return value so it does not leak into the standard's output stream.
+                # A failed read or write throws, so reaching the log line means the PATCH was accepted.
+                $null = Set-CIPPAuthenticationPolicy @Params
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "AuthenticationMethods: Remediated $($Result.Method.Label). Changes: $($Result.Drifts -join '; ')" -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
