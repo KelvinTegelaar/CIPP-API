@@ -351,6 +351,8 @@ function Invoke-CIPPStandardAuthenticationMethods {
                     if ($ResolvedGroupIds) {
                         $Params['GroupIds'] = $ResolvedGroupIds
                     }
+                } elseif ($Result.Method.Enabled) {
+                    $Params['GroupIds'] = @('all_users')
                 }
 
                 # Add method-specific parameters
