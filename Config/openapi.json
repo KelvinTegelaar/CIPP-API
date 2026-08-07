@@ -3,7 +3,7 @@
   "info": {
     "title": "CIPP API",
     "version": "auto",
-    "description": "The CIPP HTTP API. Every path maps one-to-one onto a PowerShell entrypoint:\nNew-CippCoreRequest resolves /api/<Name> to Invoke-<Name>, so the path segment is\nthe function name and is case-sensitive.\n\nThis spec is generated from the PowerShell AST of those entrypoints on every\nbuild. Request schemas describe the fields the backend actually reads, including\nnested ones: a property typed as LabelValue is read as `$Field.value` by the\nbackend and must be sent as an object, not a bare string.",
+    "description": "The CIPP HTTP API. Every path maps one-to-one onto a PowerShell entrypoint:\r\nNew-CippCoreRequest resolves /api/<Name> to Invoke-<Name>, so the path segment is\r\nthe function name and is case-sensitive.\r\n\r\nThis spec is generated from the PowerShell AST of those entrypoints on every\r\nbuild. Request schemas describe the fields the backend actually reads, including\r\nnested ones: a property typed as LabelValue is read as `$Field.value` by the\r\nbackend and must be sent as an object, not a bare string.",
     "x-cipp-docs": "https://docs.cipp.app"
   },
   "servers": [
