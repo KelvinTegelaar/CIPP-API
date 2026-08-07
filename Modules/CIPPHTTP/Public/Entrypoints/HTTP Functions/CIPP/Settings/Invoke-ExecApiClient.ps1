@@ -243,7 +243,7 @@ function Invoke-ExecApiClient {
                             token_endpoint_auth_methods_supported = @('none', 'client_secret_post', 'client_secret_basic')
                             scopes_supported                      = @('openid', 'profile', 'offline_access', $McpScope)
                         } | ConvertTo-Json -Compress
-                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'CRAFT_PRM' = "$PrmDocument"; 'CRAFT_PRM_AS' = "$AsDocument" } -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES')
+                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'CRAFT_PRM' = "$PrmDocument"; 'CRAFT_PRM_AS' = "$AsDocument"; 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = $McpScope }
                     } else {
                         $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation" }
                     }

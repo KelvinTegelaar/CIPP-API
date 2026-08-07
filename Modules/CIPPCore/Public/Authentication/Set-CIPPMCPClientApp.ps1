@@ -92,15 +92,10 @@ function Set-CIPPMCPClientApp {
     }
     $Api.preAuthorizedApplications = @($PreAuthorized)
 
-    # Register the callback URLs of known MCP clients, preserving anything already on the app.
-    $WebRedirectUris = [System.Collections.Generic.List[string]]::new()
-    foreach ($Uri in @($App.web.redirectUris)) {
-        if (-not [string]::IsNullOrWhiteSpace($Uri) -and $WebRedirectUris -notcontains $Uri) { $WebRedirectUris.Add($Uri) }
-    }
-    foreach ($Uri in $KnownClients.WebRedirectUris) {
-        if ($WebRedirectUris -notcontains $Uri) { $WebRedirectUris.Add($Uri) }
-    }
-
+    # Register the callback URLs of known MCP clients under the platform each client's token
+    # exchange requires — see Get-CippMcpKnownClients for why the bucket decides success. Every
+    # list below is rebuilt from the live app so a URI that an earlier version filed under the
+    # wrong platform is moved rather than duplicated (Entra rejects the same URI twice).
     $PublicRedirectUris = [System.Collections.Generic.List[string]]::new()
     foreach ($Uri in @($App.publicClient.redirectUris)) {
         if (-not [string]::IsNullOrWhiteSpace($Uri) -and $PublicRedirectUris -notcontains $Uri) { $PublicRedirectUris.Add($Uri) }
@@ -109,13 +104,35 @@ function Set-CIPPMCPClientApp {
         if ($PublicRedirectUris -notcontains $Uri) { $PublicRedirectUris.Add($Uri) }
     }
 
+    # Web keeps the app's own confidential callbacks — the EasyAuth login callback above all —
+    # plus the secret-authenticating clients, minus anything now claimed by another platform.
+    $WebRedirectUris = [System.Collections.Generic.List[string]]::new()
+    foreach ($Uri in @($App.web.redirectUris)) {
+        if ([string]::IsNullOrWhiteSpace($Uri) -or $WebRedirectUris -contains $Uri) { continue }
+        if ($PublicRedirectUris -contains $Uri) { continue }
+        $WebRedirectUris.Add($Uri)
+    }
+    foreach ($Uri in $KnownClients.ConfidentialRedirectUris) {
+        if ($WebRedirectUris -notcontains $Uri -and $PublicRedirectUris -notcontains $Uri) { $WebRedirectUris.Add($Uri) }
+    }
+
+    # Nothing of ours belongs under 'spa' (those tokens can only be redeemed cross-origin, which
+    # no MCP client does), so preserve any URI the tenant added there but drop ours.
+    $SpaRedirectUris = [System.Collections.Generic.List[string]]::new()
+    foreach ($Uri in @($App.spa.redirectUris)) {
+        if ([string]::IsNullOrWhiteSpace($Uri) -or $SpaRedirectUris -contains $Uri) { continue }
+        if ($PublicRedirectUris -contains $Uri -or $WebRedirectUris -contains $Uri) { continue }
+        $SpaRedirectUris.Add($Uri)
+    }
+
     $PatchBody = @{
         identifierUris         = @($IdentifierUris)
         api                    = $Api
         web                    = @{ redirectUris = @($WebRedirectUris) }
+        spa                    = @{ redirectUris = @($SpaRedirectUris) }
         publicClient           = @{ redirectUris = @($PublicRedirectUris) }
-        # Desktop/CLI clients (VS Code, Copilot CLI) redeem the authorization code without a
-        # client secret; without this flag Entra rejects the exchange with AADSTS7000218.
+        # "Allow public client flows" — required for the secret-less PKCE redemption every MCP
+        # client above performs.
         isFallbackPublicClient = $true
     } | ConvertTo-Json -Depth 10 -Compress
 
@@ -123,7 +140,7 @@ function Set-CIPPMCPClientApp {
         try {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($App.id)" -type PATCH -body $PatchBody -NoAuthCheck $true -asapp $true
             Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "Configured app registration $AppId as MCP resource (identifier URIs, v2 tokens, known MCP client callbacks + pre-authorization)." -Sev 'Info'
-            return @{ Success = $true; IdentifierUris = @($IdentifierUris); RedirectUris = @($WebRedirectUris) }
+            return @{ Success = $true; IdentifierUris = @($IdentifierUris); RedirectUris = @($PublicRedirectUris) }
         } catch {
             $ErrMsg = $_.Exception.Message
             if ($ErrMsg -match 'identifierUri' -or $ErrMsg -match 'already exists' -or $ErrMsg -match 'in use') {

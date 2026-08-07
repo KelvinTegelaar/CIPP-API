@@ -9,11 +9,20 @@ function Get-CippMcpKnownClients {
         the app registration and Set-CippApiAuth allows the first-party clients in EasyAuth,
         so connecting a client never requires manual portal changes.
 
-        - WebRedirectUris: browser/server-side callback URLs. These clients authenticate with
-          this app's own client ID, so their callbacks must be registered as web redirect URIs.
-        - PublicClientRedirectUris: loopback redirects for desktop/CLI clients. Entra ignores
-          the port component on http://127.0.0.1 loopback redirects, which covers VS Code
-          (port 33418) and Copilot CLI (random port) without per-port registration.
+        Which platform bucket a redirect URI is registered under decides how Entra treats the
+        token exchange, and getting it wrong fails at the very last step of the flow:
+
+        - PublicClientRedirectUris -> 'publicClient' ("Mobile and desktop applications").
+          For clients that redeem the code with PKCE, no client secret, and no Origin header
+          (server-side redemption) — which is what Claude and ChatGPT do, and what loopback CLI
+          clients do. This is the ONLY platform that permits that combination: 'web' rejects the
+          secret-less exchange with AADSTS7000218, and 'spa' rejects the non-browser exchange with
+          AADSTS9002327 ("may only be redeemed via cross-origin requests"). Verified end-to-end
+          with Claude, Aug 7 2026. Entra ignores the port on http://127.0.0.1, so one loopback
+          entry covers VS Code (33418) and Copilot CLI (random ports).
+        - ConfidentialRedirectUris -> 'web'. For clients that authenticate with a client secret,
+          i.e. the Power Platform connector behind Copilot Studio / M365 Copilot agents, whose
+          wizard collects a client ID and secret.
         - PreAuthorizedClientIds: first-party Entra applications that bring their own client ID
           (VS Code, also used by GitHub Copilot Chat). These need pre-authorization on the
           user_impersonation scope and an EasyAuth allowedApplications entry, not a redirect URI.
@@ -24,20 +33,22 @@ function Get-CippMcpKnownClients {
     param()
 
     [PSCustomObject]@{
-        WebRedirectUris          = @(
+        PublicClientRedirectUris = @(
             # Claude (claude.ai today; Anthropic documents claude.com as its successor)
             'https://claude.ai/api/mcp/auth_callback'
             'https://claude.com/api/mcp/auth_callback'
             # ChatGPT connectors
             'https://chatgpt.com/connector_platform_oauth_redirect'
-            # VS Code (stable + insiders) web callback used by its MCP OAuth flow
+            # VS Code (stable + insiders) web callback, used when it registers dynamically rather
+            # than falling back to its first-party client ID below
             'https://vscode.dev/redirect'
             'https://insiders.vscode.dev/redirect'
+            # Loopback for desktop/CLI clients (port-agnostic in Entra)
+            'http://127.0.0.1'
+        )
+        ConfidentialRedirectUris = @(
             # Copilot Studio / M365 Copilot agents (Power Platform connector redirect)
             'https://global.consent.azure-apim.net/redirect'
-        )
-        PublicClientRedirectUris = @(
-            'http://127.0.0.1'
         )
         PreAuthorizedClientIds   = @(
             # Visual Studio Code (first-party; also used by GitHub Copilot Chat in VS Code)
