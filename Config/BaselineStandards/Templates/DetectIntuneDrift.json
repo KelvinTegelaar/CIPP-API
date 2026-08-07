@@ -34,5 +34,8 @@
       "IntuneWindowsQualityUpdateProfiles"
     ]
   },
-  "prepare": "Get-CIPPBaselineDetectIntuneDriftState"
+  "prepare": "Get-CIPPBaselineDetectIntuneDriftState",
+  "delete": {
+    "executor": "IntunePolicy"
+  }
 }

@@ -11,8 +11,8 @@ function Get-CIPPBaselineDetectIntuneDriftState {
         individually through the per-path triage.
         Matching is by display name, case-insensitive, after tenant-token replacement -
         exactly how the template deploy names its policies. Report-only by design: the
-        definition carries no remediate executor; deletion happens only through explicit
-        per-path deny verdicts once delete executors exist.
+        definition carries no remediate executor, so nothing is ever rewritten - the only
+        write is a deletion, and only for a policy an operator explicitly denied.
     .FUNCTIONALITY
         Internal
     #>
@@ -46,16 +46,16 @@ function Get-CIPPBaselineDetectIntuneDriftState {
 
     # --- live set: the template-manageable policy families from CIPPDb
     $Families = @(
-        @{ Caches = @('IntuneDeviceConfigurations'); Label = 'Device Configuration'; NameProperty = 'displayName' }
-        @{ Caches = @('IntuneConfigurationPolicies'); Label = 'Settings Catalog'; NameProperty = 'name' }
-        @{ Caches = @('IntuneDeviceCompliancePolicies'); Label = 'Compliance Policy'; NameProperty = 'displayName' }
-        @{ Caches = @('IntuneGroupPolicyConfigurations'); Label = 'Administrative Template'; NameProperty = 'displayName' }
-        @{ Caches = @('IntuneAppProtectionManagedAppPolicies', 'IntuneAppProtectionPolicies'); Label = 'App Protection'; NameProperty = 'displayName' }
-        @{ Caches = @('IntuneAppProtectionMobileAppConfigurations', 'IntuneMobileAppConfigurations'); Label = 'App Configuration'; NameProperty = 'displayName' }
-        @{ Caches = @('IntuneWindowsDriverUpdateProfiles'); Label = 'Driver Update'; NameProperty = 'displayName' }
-        @{ Caches = @('IntuneWindowsFeatureUpdateProfiles'); Label = 'Feature Update'; NameProperty = 'displayName' }
-        @{ Caches = @('IntuneWindowsQualityUpdatePolicies'); Label = 'Quality Update'; NameProperty = 'displayName' }
-        @{ Caches = @('IntuneWindowsQualityUpdateProfiles'); Label = 'Quality Update Profile'; NameProperty = 'displayName' }
+        @{ Caches = @('IntuneDeviceConfigurations'); Label = 'Device Configuration'; NameProperty = 'displayName'; Resource = 'deviceManagement/deviceConfigurations' }
+        @{ Caches = @('IntuneConfigurationPolicies'); Label = 'Settings Catalog'; NameProperty = 'name'; Resource = 'deviceManagement/configurationPolicies' }
+        @{ Caches = @('IntuneDeviceCompliancePolicies'); Label = 'Compliance Policy'; NameProperty = 'displayName'; Resource = 'deviceManagement/deviceCompliancePolicies' }
+        @{ Caches = @('IntuneGroupPolicyConfigurations'); Label = 'Administrative Template'; NameProperty = 'displayName'; Resource = 'deviceManagement/groupPolicyConfigurations' }
+        @{ Caches = @('IntuneAppProtectionManagedAppPolicies', 'IntuneAppProtectionPolicies'); Label = 'App Protection'; NameProperty = 'displayName'; ResourceFromPolicy = $true }
+        @{ Caches = @('IntuneAppProtectionMobileAppConfigurations', 'IntuneMobileAppConfigurations'); Label = 'App Configuration'; NameProperty = 'displayName'; Resource = 'deviceAppManagement/mobileAppConfigurations' }
+        @{ Caches = @('IntuneWindowsDriverUpdateProfiles'); Label = 'Driver Update'; NameProperty = 'displayName'; Resource = 'deviceManagement/windowsDriverUpdateProfiles' }
+        @{ Caches = @('IntuneWindowsFeatureUpdateProfiles'); Label = 'Feature Update'; NameProperty = 'displayName'; Resource = 'deviceManagement/windowsFeatureUpdateProfiles' }
+        @{ Caches = @('IntuneWindowsQualityUpdatePolicies'); Label = 'Quality Update'; NameProperty = 'displayName'; Resource = 'deviceManagement/windowsQualityUpdatePolicies' }
+        @{ Caches = @('IntuneWindowsQualityUpdateProfiles'); Label = 'Quality Update Profile'; NameProperty = 'displayName'; Resource = 'deviceManagement/windowsQualityUpdateProfiles' }
     )
 
     $AnyCollected = $false
@@ -74,13 +74,18 @@ function Get-CIPPBaselineDetectIntuneDriftState {
             if (-not $PolicyName) { continue }
             if ($ManagedNames.Contains($PolicyName)) { continue }
             $Key = '{0} [{1}]' -f $PolicyName, $Family.Label
+            $Resource = if ($Family.ResourceFromPolicy) {
+                Get-CIPPIntunePolicyGraphPath -UrlName "$($Policy.URLName ?? $Policy.'@odata.type')"
+            } else { $Family.Resource }
             # Unmanaged: expected empty (the policy should be covered by a baseline
-            # template or removed), current carries the identifying facts.
+            # template or removed), current carries the identifying facts - including the
+            # Graph resource the delete executor needs if an operator denies it.
             $Expected | Add-Member -NotePropertyName $Key -NotePropertyValue $null -Force
             $Current | Add-Member -NotePropertyName $Key -NotePropertyValue ([PSCustomObject]@{
                     policyType = $Family.Label
                     id         = "$($Policy.id)"
                     status     = 'Not covered by any baseline template'
+                    resource   = "$Resource"
                 }) -Force
         }
     }

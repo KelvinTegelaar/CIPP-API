@@ -60171,17 +60171,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "enum": [
-                "androidManagedAppProtection",
-                "iosManagedAppProtection",
-                "managedAppPolicies",
-                "mdmWindowsInformationProtectionPolicy",
-                "mobileAppConfigurations",
-                "targetedManagedAppConfiguration",
-                "windowsInformationProtectionPolicy",
-                "windowsManagedAppProtection"
-              ]
+              "type": "string"
             }
           }
         ],

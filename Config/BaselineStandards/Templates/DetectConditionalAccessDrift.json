@@ -24,5 +24,8 @@
       "cacheType": "ConditionalAccessPolicies"
     }
   },
-  "prepare": "Get-CIPPBaselineDetectCADriftState"
+  "prepare": "Get-CIPPBaselineDetectCADriftState",
+  "delete": {
+    "executor": "CAPolicy"
+  }
 }

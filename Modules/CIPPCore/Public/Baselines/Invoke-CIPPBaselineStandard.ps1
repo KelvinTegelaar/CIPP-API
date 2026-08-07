@@ -475,6 +475,51 @@ function Invoke-CIPPBaselineStandard {
         # (full or partial) is owed to acceptances, not to the tenant matching the baseline.
         $PathAccepted = $PreFilterDifferences.Count -gt $Differences.Count
 
+        if ($Mode -ne 'compare' -and $Definition.delete -and $DenyDeleteKeys.Count -gt 0 -and $null -ne $Current) {
+            $DeletedKeys = [System.Collections.Generic.List[string]]::new()
+            foreach ($DenyKey in $DenyDeleteKeys) {
+                $Target = $Current.$DenyKey
+                # No target means the object is already gone from the tenant - the
+                # verdict is stale, drop it rather than calling Graph.
+                if (-not $Target -or -not "$($Target.id)") {
+                    $DeletedKeys.Add($DenyKey)
+                    continue
+                }
+                try {
+                    switch ($Definition.delete.executor) {
+                        'IntunePolicy' { Invoke-CIPPBaselineDeleteIntunePolicy -Target $Target -TenantFilter $TenantFilter }
+                        'CAPolicy' { Invoke-CIPPBaselineDeleteCAPolicy -Target $Target -TenantFilter $TenantFilter }
+                        default { throw "Unknown delete executor '$($Definition.delete.executor)' on $($Definition.name)." }
+                    }
+                    $DeletedKeys.Add($DenyKey)
+                    Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Deleted `"$DenyKey`" for `"$Label`" as ordered by the denied deviation - Run $RunId" -Sev 'Info'
+                } catch {
+                    Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to delete `"$DenyKey`" for `"$Label`": $($_.Exception.Message) - Run $RunId" -Sev 'Error'
+                }
+            }
+            if ($DeletedKeys.Count -gt 0) {
+                foreach ($DeletedKey in $DeletedKeys) { $AcceptedPaths.PSObject.Properties.Remove($DeletedKey) }
+                $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name | Where-Object { $_ })
+                $DenyDeleteKeys = @($AcceptedPaths.PSObject.Properties | Where-Object { $_.Name -and $_.Value.verdict -eq 'denyDelete' } | ForEach-Object { $_.Name })
+                 if ($Prior) { $Prior | Add-Member -NotePropertyName 'AcceptedPaths' -NotePropertyValue (ConvertTo-Json -Compress -Depth 20 -InputObject $AcceptedPaths) -Force }
+                 $DropDeleted = {
+                    param($Entries)
+                    @($Entries | Where-Object {
+                            $Property = $_.Property
+                            -not ($DeletedKeys | Where-Object { $Property -eq $_ -or $Property.StartsWith("$_.") })
+                        })
+                }
+                $PreFilterDifferences = & $DropDeleted $PreFilterDifferences
+                $Differences = & $DropDeleted $Differences
+                $Result.Diff = $Differences
+                $Result.RowDiff = $PreFilterDifferences
+                $Result.Remediated = $true
+                $Compliant = ($Differences.Count -eq 0)
+                $PathAccepted = $PreFilterDifferences.Count -gt $Differences.Count
+                   if ($DenyDeleteKeys.Count -eq 0 -and $PriorStatus -eq 'Denied - Delete Pending') { $PriorStatus = 'Drift' }
+            }
+        }
+
         # 4. Status lifecycle + write gate.
         $Expires = if ("$($Prior.DeviationExpires)" -match '^\d+$') { [int64]$Prior.DeviationExpires } else { 0 }
         $AcceptActive = $PriorStatus -eq 'Accepted' -and ($Expires -eq 0 -or $Now -lt $Expires)
@@ -490,7 +535,9 @@ function Invoke-CIPPBaselineStandard {
             return $Result
         }
         if (-not $Compliant -and $null -ne $Current -and $PriorStatus -eq 'Denied - Delete Pending') {
-            # The delete executor lands with object-type standards; hold the status until then.
+            # Held: either a ROW-level deny (which never bulk-deletes - deletion is a
+            # per-object decision, so it waits for per-path verdicts), or a per-path
+            # verdict whose delete failed this run. Both retry on the next run.
             $Result.Outcome = 'Drift'
             $Result.Status = 'Denied - Delete Pending'
             Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId

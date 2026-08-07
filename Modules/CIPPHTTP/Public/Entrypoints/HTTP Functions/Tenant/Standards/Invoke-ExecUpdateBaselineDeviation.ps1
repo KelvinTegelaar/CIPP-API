@@ -131,7 +131,7 @@ function Invoke-ExecUpdateBaselineDeviation {
                             verdict = $Verdict
                         }) -Force
                     $Message = if ($Action -eq 'DenyPath') {
-                        "Denied $Path of $Standard for $TenantFilter - queued for deletion once delete support lands. Other properties keep alerting."
+                        "Denied $Path of $Standard for $TenantFilter - it is deleted on the next remediation run. Other properties keep alerting."
                     } else {
                         "Accepted the deviation on property $Path of $Standard for $TenantFilter. Other properties keep alerting."
                     }
