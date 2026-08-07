@@ -16,6 +16,14 @@ BeforeAll {
     $OverrideDir = Join-Path $TestDrive 'overrides'
     $null = New-Item -ItemType Directory -Path $OverrideDir -Force
 
+    # The generator writes a second, static copy of the spec for the frontend. Its default
+    # is the repo's real frontend/public/openapi.json, so every invocation below has to
+    # redirect it into TestDrive - otherwise a fixture run silently overwrites the shipped
+    # spec with six fake endpoints.
+    $PublicCopy = Join-Path $TestDrive 'public/openapi.json'
+    $null = New-Item -ItemType Directory -Path (Split-Path -Parent $PublicCopy) -Force
+    $script:PublicCopy = $PublicCopy
+
     # Stand-in for backend/Modules: the generator indexes these so it can follow a
     # request body handed to a shared helper. Kept local so the suite never depends
     # on the real CIPPCore.
@@ -188,7 +196,7 @@ function Invoke-NotAnEndpoint {
 '@
 
     $OutputPath = Join-Path $TestDrive 'openapi.json'
-    & $GeneratorPath -EntrypointPath $FixtureRoot -ModulesPath $ModulesRoot -OverridePath $OverrideDir `
+    & $GeneratorPath -EntrypointPath $FixtureRoot -ModulesPath $ModulesRoot -OverridePath $OverrideDir -PublicPath $PublicCopy `
         -FrontendPath $FrontendDir -OutputPath $OutputPath | Out-Null
     $script:Spec = Get-Content $OutputPath -Raw | ConvertFrom-Json -AsHashtable
     $script:GeneratorPath = $GeneratorPath
@@ -207,6 +215,7 @@ function Invoke-NotAnEndpoint {
             OverridePath   = $script:OverrideDir
             FrontendPath   = $script:FrontendDir
             OutputPath     = Join-Path $TestDrive "$Name.json"
+            PublicPath     = $script:PublicCopy
         }
         foreach ($Key in $With.Keys) { $Arguments[$Key] = $With[$Key] }
         & $script:GeneratorPath @Arguments | Out-Null
@@ -370,7 +379,7 @@ Describe 'downstream helpers' {
 
     It 'documents only the entrypoint when no modules are indexed' {
         $Path = Join-Path $TestDrive 'no-modules.json'
-        & $script:GeneratorPath -EntrypointPath $script:FixtureRoot -ModulesPath (Join-Path $TestDrive 'absent') `
+        & $script:GeneratorPath -PublicPath $script:PublicCopy -EntrypointPath $script:FixtureRoot -ModulesPath (Join-Path $TestDrive 'absent') `
             -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $Path | Out-Null
         $Shallow = Get-Content $Path -Raw | ConvertFrom-Json -AsHashtable
         $Properties = $Shallow.paths['/api/EditFixtureUser'].post.requestBody.content.'application/json'.schema.properties
@@ -584,7 +593,7 @@ Describe 'overrides' {
 }
 '@
         $Path = Join-Path $TestDrive 'openapi-override.json'
-        & $script:GeneratorPath -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath $script:OverrideDir -OutputPath $Path | Out-Null
+        & $script:GeneratorPath -PublicPath $script:PublicCopy -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath $script:OverrideDir -OutputPath $Path | Out-Null
         $script:Overridden = Get-Content $Path -Raw | ConvertFrom-Json -AsHashtable
     }
 
@@ -608,24 +617,51 @@ Describe 'overrides' {
     }
 }
 
+Describe 'static copy for the frontend' {
+    # /openapi.json is served as a build artefact rather than through the API, so the
+    # generator has to emit both copies or the docs page renders a stale spec.
+    It 'writes a second copy at the public path' {
+        Test-Path $script:PublicCopy | Should -BeTrue
+    }
+
+    It 'writes the two copies byte-identically' {
+        # generated fresh rather than reusing the BeforeAll output: later Describes reuse
+        # $script:PublicCopy, so its contents are whichever fixture ran last
+        $Main = Join-Path $TestDrive 'pair-main.json'
+        $Public = Join-Path $TestDrive 'public/pair-public.json'
+        & $script:GeneratorPath -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot `
+            -OverridePath $script:OverrideDir -FrontendPath $script:FrontendDir `
+            -OutputPath $Main -PublicPath $Public | Out-Null
+        (Get-Content $Public -Raw) | Should -Be (Get-Content $Main -Raw)
+    }
+
+    It 'skips the copy rather than failing when the directory does not exist' {
+        # the image's openapi build stage has no frontend/ checked out; the Dockerfile
+        # injects the spec into out/ itself, after yarn build
+        $Absent = Join-Path $TestDrive 'no-such-dir/openapi.json'
+        { Invoke-Generator -Name 'no-public' -With @{ PublicPath = $Absent } } | Should -Not -Throw
+        Test-Path $Absent | Should -BeFalse
+    }
+}
+
 Describe 'determinism and drift checking' {
     It 'produces byte-identical output across runs' {
         $A = Join-Path $TestDrive 'run-a.json'
         $B = Join-Path $TestDrive 'run-b.json'
-        & $script:GeneratorPath -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $A | Out-Null
-        & $script:GeneratorPath -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $B | Out-Null
+        & $script:GeneratorPath -PublicPath $script:PublicCopy -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $A | Out-Null
+        & $script:GeneratorPath -PublicPath $script:PublicCopy -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $B | Out-Null
         (Get-Content $A -Raw) | Should -Be (Get-Content $B -Raw)
     }
 
     It '-Check passes against a spec it just wrote' {
         $Path = Join-Path $TestDrive 'check.json'
-        & $script:GeneratorPath -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $Path | Out-Null
-        { & $script:GeneratorPath -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $Path -Check } | Should -Not -Throw
+        & $script:GeneratorPath -PublicPath $script:PublicCopy -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $Path | Out-Null
+        { & $script:GeneratorPath -PublicPath $script:PublicCopy -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $Path -Check } | Should -Not -Throw
     }
 
     It '-Check fails when the committed spec is stale' {
         $Path = Join-Path $TestDrive 'stale.json'
         Set-Content -Path $Path -Value '{"openapi":"3.1.0"}'
-        { & $script:GeneratorPath -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $Path -Check } | Should -Throw -ExpectedMessage '*stale*'
+        { & $script:GeneratorPath -PublicPath $script:PublicCopy -EntrypointPath $script:FixtureRoot -ModulesPath $script:ModulesRoot -OverridePath (Join-Path $TestDrive 'empty') -OutputPath $Path -Check } | Should -Throw -ExpectedMessage '*stale*'
     }
 }

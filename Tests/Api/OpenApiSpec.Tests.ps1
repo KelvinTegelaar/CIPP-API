@@ -24,6 +24,7 @@ BeforeAll {
     # deliberately a plain scan, independent of the generator's AST walk
     $ValueRead = [regex]::new('\$Request\.Body\.([A-Za-z0-9_]+)\.(value|label)\b')
     $BodyRead = [regex]::new('\$Request\.Body\.([A-Za-z0-9_]+)')
+    $QueryRead = [regex]::new('\$Request\.Query\.([A-Za-z0-9_]+)')
 
     $script:Sources = @(
         foreach ($File in Get-ChildItem -Path $script:EntrypointRoot -Filter 'Invoke-*.ps1' -Recurse -File) {
@@ -38,6 +39,7 @@ BeforeAll {
                 File        = $File.Name
                 ValueFields = @($ValueRead.Matches($Text) | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
                 BodyFields  = @($BodyRead.Matches($Text) | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+                QueryFields = @($QueryRead.Matches($Text) | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
             }
         }
     )
@@ -161,14 +163,25 @@ Describe 'invariants the MCP projection depends on' {
         $Bad | Should -BeNullOrEmpty
     }
 
-    It 'classifies an endpoint that reads the request body as POST' {
-        # Get-CippMcpToolResult picks Query vs Body purely from the spec's method, so a
-        # body-reading endpoint documented as GET receives none of its arguments
+    It 'documents a body-reading endpoint as POST unless the query can carry every field' {
+        # Invoke-CippMcpApiRequest sends a tool's arguments as the query string for a GET
+        # and as the body for a POST, purely from the spec's method - so an endpoint
+        # documented as GET that can only read a field from the body never receives it.
+        #
+        # Reading the body does not by itself mean POST. Many read endpoints are written as
+        # `$Request.Query.X ?? $Request.Body.X` and accept either, and the UI calls them
+        # with a query string; documenting those as POST described a shape no caller uses.
+        # They are safe as GET precisely because every field is also readable from the
+        # query, which is what this checks.
         $Bad = @(
             foreach ($Source in $script:Sources) {
                 if ($Source.BodyFields.Count -eq 0) { continue }
                 $Entry = Get-SoleOperation -Endpoint $Source.Endpoint
-                if ($Entry -and $Entry.Method -ne 'post') { "$($Source.Endpoint) is $($Entry.Method) but reads the body" }
+                if (-not $Entry -or $Entry.Method -eq 'post') { continue }
+                $Unreachable = @($Source.BodyFields | Where-Object { $_ -notin $Source.QueryFields })
+                if ($Unreachable.Count -gt 0) {
+                    "$($Source.Endpoint) is $($Entry.Method) but reads $($Unreachable -join ', ') only from the body"
+                }
             }
         )
         $Bad | Should -BeNullOrEmpty
