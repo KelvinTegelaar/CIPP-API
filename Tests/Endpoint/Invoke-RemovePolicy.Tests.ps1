@@ -5,6 +5,11 @@ BeforeAll {
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-RemovePolicy.ps1' -File |
         Select-Object -First 1 -ExpandProperty FullName
 
+    # The URLName -> Graph segment mapping lives in its own function and is exactly what the
+    # assertions below check, so load the real one rather than stubbing it.
+    $GraphPathPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Get-CIPPIntunePolicyGraphPath.ps1' -File |
+        Select-Object -First 1 -ExpandProperty FullName
+
     ([PSObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')).GetMethod('Add').Invoke(
         $null, @('HttpStatusCode', [System.Net.HttpStatusCode]))
 
@@ -17,6 +22,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $message, $Sev, $tenant, $LogData) }
     function Get-CippException { param($Exception) }
 
+    . $GraphPathPath
     . $FunctionPath
 }
 

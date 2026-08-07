@@ -17,7 +17,7 @@ function Invoke-CippTestCIS_3_2_2 {
             $_.Mode -eq 'Enable' -and $_.Enabled -eq $true -and (
                 $_.TeamsLocation -or
                 $_.Workload -match 'Teams' -or
-                $_.TeamsLocationException -ne $null
+                $_.TeamsLocationException
             )
         }
 

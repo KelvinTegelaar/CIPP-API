@@ -35,7 +35,7 @@ function Invoke-ExecRemoveEnrollmentProfile {
     } catch {
         $StatusCode = [HttpStatusCode]::InternalServerError
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to delete enrollment profile ${DisplayName}: $($ErrorMessage.NormalizedMessage)"
+        $Result = "Failed to delete enrollment profile ${DisplayName}: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
     }
 

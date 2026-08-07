@@ -16,10 +16,10 @@ function Invoke-ListAssignmentFilters {
     # Get the tenant filter
     $TenantFilter = $Request.Query.tenantFilter
     $FilterId = $Request.Query.filterId
-    $UseReportDB = $Request.Query.UseReportDB
-
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     try {
-        if (-not $FilterId -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+        if (-not $FilterId -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
             try {
                 $AssignmentFilters = Get-CIPPAssignmentFilterReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK

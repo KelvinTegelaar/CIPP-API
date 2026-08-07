@@ -23,7 +23,7 @@ function Invoke-CIPPStandardCollaborationDomainRestriction {
         ADDEDDATE
             2026-05-06
         POWERSHELLEQUIVALENT
-            Graph API PATCH https://graph.microsoft.com/beta/policies/b2bManagementPolicies/default
+            Graph API PATCH https://graph.microsoft.com/beta/policies/b2bManagementPolicies/{id}
         RECOMMENDEDBY
             "CIS"
         REQUIREDCAPABILITIES
@@ -35,21 +35,40 @@ function Invoke-CIPPStandardCollaborationDomainRestriction {
 
     param($Tenant, $Settings)
 
-    $Uri = 'https://graph.microsoft.com/beta/policies/b2bManagementPolicies/default'
+    # b2bManagementPolicies is a collection keyed by GUID - there is no 'default' singleton.
+    # The policy inherits from stsPolicy, so the actual settings live in definition[0] as a JSON string:
+    # {"B2BManagementPolicy":{"InvitationsAllowedAndBlockedDomainsPolicy":{"AllowedDomains":[],"BlockedDomains":[]},"AutoRedeemPolicy":{...}}}
+    $Uri = 'https://graph.microsoft.com/beta/policies/b2bManagementPolicies'
 
     try {
-        $CurrentState = New-GraphGetRequest -Uri $Uri -tenantid $Tenant
+        $Policies = @(New-GraphGetRequest -Uri $Uri -tenantid $Tenant)
+        $CurrentState = $Policies | Where-Object { $_.isOrganizationDefault -eq $true } | Select-Object -First 1
+        if (-not $CurrentState) { $CurrentState = $Policies | Select-Object -First 1 }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get B2B management policy. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         return
     }
 
-    $CurrentDomains = $CurrentState.invitationsAllowedAndBlockedDomainsPolicy
-    $HasRestrictions = $CurrentDomains -and (
-        ($CurrentDomains.allowedDomains -and $CurrentDomains.allowedDomains.Count -gt 0) -or
-        ($CurrentDomains.blockedDomains -and $CurrentDomains.blockedDomains.Count -gt 0)
-    )
+    # Parse the definition blob. Keep the whole object around so remediation can preserve sibling
+    # settings such as AutoRedeemPolicy instead of overwriting the entire definition.
+    $Definition = $null
+    if ($CurrentState.definition) {
+        try {
+            $Definition = @($CurrentState.definition)[0] | ConvertFrom-Json
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not parse the B2B management policy definition. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            return
+        }
+    }
+
+    $DomainPolicy = $Definition.B2BManagementPolicy.InvitationsAllowedAndBlockedDomainsPolicy
+    $CurrentDomains = [PSCustomObject]@{
+        allowedDomains = @($DomainPolicy.AllowedDomains)
+        blockedDomains = @($DomainPolicy.BlockedDomains)
+    }
+    $HasRestrictions = ($CurrentDomains.allowedDomains.Count -gt 0) -or ($CurrentDomains.blockedDomains.Count -gt 0)
 
     $DesiredDomains = @()
     if ($Settings.allowedDomains) {
@@ -59,7 +78,7 @@ function Invoke-CIPPStandardCollaborationDomainRestriction {
     if ($DesiredDomains.Count -gt 0) {
         $CurrentAllowed = @($CurrentDomains.allowedDomains | Sort-Object)
         $DesiredSorted = @($DesiredDomains | Sort-Object)
-        $StateIsCorrect = ($null -ne $CurrentDomains) -and ($CurrentAllowed -join ',') -eq ($DesiredSorted -join ',')
+        $StateIsCorrect = ($CurrentAllowed -join ',') -eq ($DesiredSorted -join ',')
     } else {
         $StateIsCorrect = $HasRestrictions
     }
@@ -71,13 +90,29 @@ function Invoke-CIPPStandardCollaborationDomainRestriction {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'B2B collaboration domain restrictions are already configured correctly.' -sev Info
         } else {
             try {
+                # Rebuild the definition on top of the existing one so AutoRedeemPolicy and any other
+                # settings inside the blob survive. AllowedDomains and BlockedDomains are mutually
+                # exclusive in the portal, so setting an allow list clears the block list.
+                if ($null -eq $Definition) { $Definition = [PSCustomObject]@{} }
+                if ($null -eq $Definition.B2BManagementPolicy) {
+                    $Definition | Add-Member -NotePropertyName 'B2BManagementPolicy' -NotePropertyValue ([PSCustomObject]@{}) -Force
+                }
+                $Definition.B2BManagementPolicy | Add-Member -NotePropertyName 'InvitationsAllowedAndBlockedDomainsPolicy' -NotePropertyValue ([PSCustomObject]@{
+                        AllowedDomains = @($DesiredDomains)
+                        BlockedDomains = @()
+                    }) -Force
+
                 $Body = @{
-                    invitationsAllowedAndBlockedDomainsPolicy = @{
-                        allowedDomains = $DesiredDomains
-                    }
+                    displayName           = 'B2BManagementPolicy'
+                    definition            = @(($Definition | ConvertTo-Json -Depth 10 -Compress))
+                    isOrganizationDefault = $true
                 } | ConvertTo-Json -Depth 10 -Compress
 
-                $null = New-GraphPostRequest -Uri $Uri -Body $Body -TenantID $Tenant -Type PATCH -ContentType 'application/json'
+                if ($CurrentState.id) {
+                    $null = New-GraphPostRequest -Uri "$Uri/$($CurrentState.id)" -Body $Body -TenantID $Tenant -Type PATCH -ContentType 'application/json'
+                } else {
+                    $null = New-GraphPostRequest -Uri $Uri -Body $Body -TenantID $Tenant -Type POST -ContentType 'application/json'
+                }
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set B2B collaboration allowed domains to: $($DesiredDomains -join ', ')" -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_

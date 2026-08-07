@@ -120,9 +120,17 @@ function Set-CIPPDBCacheDetectedApps {
             $App.deviceCount++
         }
 
-        $DetectedApps = @($AppsByKey.Values)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedApps -AddCount
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($DetectedApps.Count) detected apps with devices from export $JobId" -sev Info
+        # The grouped apps already hold every device row, so release the parse tree before the
+        # write rather than carrying both through it.
+        $ExportRows = $null
+
+        # Streamed into the writer instead of copied into an array first: Add-CIPPDbItem batches
+        # internally, so this drops a full-length copy of the app list at the point where the
+        # grouped devices are still live.
+        $DetectedAppCount = $AppsByKey.Count
+        $AppsByKey.Values | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -AddCount
+        $AppsByKey = $null
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $DetectedAppCount detected apps with devices from export $JobId" -sev Info
 
         Remove-CIPPAzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
     } catch {

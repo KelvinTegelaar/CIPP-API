@@ -4,6 +4,8 @@ function Invoke-ExecSendPush {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Sends a test MFA push notification to a user's authenticator app and reports whether it was approved. Used to confirm a user's MFA registration works. This causes a real prompt on the user's device.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

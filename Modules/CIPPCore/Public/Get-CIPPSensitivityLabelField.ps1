@@ -14,11 +14,24 @@ function Get-CIPPSensitivityLabelField {
         'Priority' is included here but is only valid on Set-Label, not New-Label - Set-CIPPSensitivityLabel
         applies it via a dedicated Set-Label call. 'Disabled' is intentionally absent because it is not a
         valid parameter on either cmdlet.
+    .PARAMETER NonPortable
+        Return instead the subset of fields that carry tenant-scoped RMS template identifiers. They remain
+        valid deploy parameters - hand-authored JSON may legitimately target a template known to exist in
+        the destination - but they are stripped from labels captured out of another tenant, where the id
+        resolves to nothing and the deploy fails with RmsTemplateNotFoundException.
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [switch] $NonPortable
+    )
+
+    if ($NonPortable) {
+        # EncryptionRMSTemplateId is not a New-/Set-Label parameter, but Get-Label has reported the template
+        # under that name, so it is listed here to be stripped rather than stored in a template.
+        return @('EncryptionTemplateId', 'EncryptionLinkedTemplateId', 'EncryptionRMSTemplateId')
+    }
 
     return @(
         # Core

@@ -1,12 +1,16 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-    Runs static analysis and the OpenAPI response schema Pester suite.
+    Runs static analysis and the Pester suites for the build-stage generators.
 
 .DESCRIPTION
-    Conventional one-command verification for the response schema build stage.
-    Checks PSScriptAnalyzer warning and error findings for the stage script and
-    its tests, then runs the focused Pester 5 suite. Exits non-zero on failure.
+    One-command verification for the scripts under build/tools that produce
+    generated artifacts shipped in the image: function-parameters.json and
+    openapi.json. Checks PSScriptAnalyzer findings for each generator and its
+    tests, then runs the Pester suites in this folder. Exits non-zero on failure.
+
+    Write-Host is excluded to match the repository's CI policy: these are build
+    scripts whose progress output is the point.
 #>
 [CmdletBinding()]
 param()
@@ -14,13 +18,22 @@ param()
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$scriptPath = Join-Path $repoRoot '.build' 'Add-OpenApiResponseSchemas.ps1'
-$testPath = Join-Path $PSScriptRoot 'Add-OpenApiResponseSchemas.Tests.ps1'
+$toolsRoot = Join-Path (Split-Path -Parent $repoRoot) 'build' 'tools'
+
+$generators = @('build-function-parameters.ps1', 'build-openapi.ps1') |
+    ForEach-Object { Join-Path $toolsRoot $_ }
+
+$missing = @($generators | Where-Object { -not (Test-Path $_) })
+if ($missing.Count -gt 0) {
+    throw "Generator script(s) not found: $($missing -join ', ')"
+}
+
+$testFiles = @(Get-ChildItem -Path $PSScriptRoot -Filter '*.Tests.ps1' -File)
 
 Write-Information 'Running PSScriptAnalyzer...' -InformationAction Continue
 $analysisFindings = @(
-    foreach ($path in @($scriptPath, $testPath)) {
-        Invoke-ScriptAnalyzer -Path $path -Severity Warning, Error
+    foreach ($path in @($generators) + @($testFiles.FullName)) {
+        Invoke-ScriptAnalyzer -Path $path -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost, PSUseBOMForUnicodeEncodedFile
     }
 )
 
@@ -32,7 +45,7 @@ Write-Information "PSScriptAnalyzer Warning/Error findings: $($analysisFindings.
 
 Write-Information 'Running Pester...' -InformationAction Continue
 $pesterConfig = New-PesterConfiguration
-$pesterConfig.Run.Path = $testPath
+$pesterConfig.Run.Path = $PSScriptRoot
 $pesterConfig.Run.PassThru = $true
 $pesterConfig.Run.Exit = $false
 $pesterConfig.Output.Verbosity = 'Detailed'

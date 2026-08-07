@@ -4,6 +4,8 @@ Function Invoke-ExecExtensionTest {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Extension.Read
+    .DESCRIPTION
+        Tests the stored credentials for a configured third-party integration and reports whether CIPP can connect. extensionName selects which one: HaloPSA, Gradient, NinjaOne, PWPush, Hudu, Sherweb, HIBP or GitHub.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

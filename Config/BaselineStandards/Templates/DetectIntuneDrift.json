@@ -1,0 +1,41 @@
+{
+  "name": "DetectIntuneDrift",
+  "label": "Detect Intune Drift",
+  "cat": "Templates",
+  "tag": ["HighImpact"],
+  "impact": "Low Impact",
+  "helpText": "Flags every Intune policy in the tenant that is not covered by a baseline template applying to it (matched by display name across ALL baselines). Each unmanaged policy is its own deviation: accept it to tolerate a tenant-specific policy, or deny it to queue it for deletion. Report-only - nothing is ever changed automatically.",
+  "executiveText": "Watches for device management policies created outside the agreed baseline - for example by a local admin - and raises each one for review, so unauthorized or forgotten configuration never accumulates unnoticed.",
+  "recommendedBy": ["CIPP"],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "hardCompare": false,
+  "variables": {},
+  "read": {
+    "cacheType": "IntunePolicies",
+    "freshnessType": "IntuneDeviceConfigurations",
+    "requiredCaches": [
+      "IntuneDeviceConfigurations",
+      "IntuneConfigurationPolicies",
+      "IntuneDeviceCompliancePolicies",
+      "IntuneGroupPolicyConfigurations",
+      "IntuneAppProtectionPolicies",
+      "IntuneMobileAppConfigurations",
+      "IntuneWindowsDriverUpdateProfiles",
+      "IntuneWindowsFeatureUpdateProfiles",
+      "IntuneWindowsQualityUpdatePolicies",
+      "IntuneWindowsQualityUpdateProfiles"
+    ]
+  },
+  "prepare": "Get-CIPPBaselineDetectIntuneDriftState",
+  "delete": {
+    "executor": "IntunePolicy"
+  }
+}

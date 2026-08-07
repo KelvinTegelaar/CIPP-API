@@ -4,6 +4,8 @@ function Invoke-ExecBackendURLs {
         Entrypoint
     .ROLE
         CIPP.AppSettings.Read
+    .DESCRIPTION
+        Returns Azure portal deep links for the CIPP deployment's own infrastructure (resource group, key vault, function app, static web app) plus its subscription, SKU, hosting mode and timezone.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

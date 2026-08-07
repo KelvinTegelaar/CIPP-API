@@ -333,10 +333,15 @@ function Send-CIPPAlert {
         }
         if ($PSCmdlet.ShouldProcess('PSA', 'Sending alert')) {
             try {
+                # Tag every CIPP-generated PSA ticket title with a "[CIPP]" prefix so technicians
+                # can filter, group and search for them in HaloPSA's ticket views with one query.
+                # The prefix is only added on the PSA path - email and webhook subjects keep the
+                # untouched title to preserve existing recipient inbox rules.
+                $PsaTitle = if ($Title -match '^\[CIPP\]\s') { "$Title" } else { "[CIPP] $Title" }
                 $Alert = @{
                     TenantId   = $TenantFilter
                     AlertText  = "$HTMLContent"
-                    AlertTitle = "$($Title)"
+                    AlertTitle = "$PsaTitle"
                 }
                 if ($AffectedUser) {
                     $Alert.AffectedUser = $AffectedUser

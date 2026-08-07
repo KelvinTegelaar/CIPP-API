@@ -1,0 +1,47 @@
+{
+  "name": "AutoArchive",
+  "label": "Configure Auto-Archiving Threshold",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Configures the auto-archiving threshold percentage for the tenant. When a mailbox exceeds this threshold, the oldest items are automatically moved to the archive mailbox. Archive must be enabled manually or via the CIPP standard 'Enable Online Archive for all users'. More information can be found in [Microsoft's documentation.](https://learn.microsoft.com/en-us/exchange/security-and-compliance/messaging-records-management/auto-archiving)",
+  "executiveText": "Configures automatic archiving of mailbox items when storage approaches capacity, preventing email delivery failures due to full mailboxes. This proactive storage management ensures business continuity and reduces helpdesk tickets related to mailbox quota issues.",
+  "docsDescription": "Configures the auto-archiving threshold at the organization level. Auto-archiving automatically moves the oldest items from a user's primary mailbox to their archive mailbox when mailbox usage exceeds the configured threshold percentage. This prevents mail flow disruptions caused by full mailboxes. Valid range is 80-100, where 100 disables auto-archiving for the tenant. More information can be found in [Microsoft's documentation.](https://learn.microsoft.com/en-us/exchange/security-and-compliance/messaging-records-management/auto-archiving)",
+  "impactColour": "info",
+  "addedDate": "2025-12-11",
+  "powershellEquivalent": "Set-OrganizationConfig -AutoArchivingThresholdPercentage 80-100",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "threshold": {
+      "type": "number",
+      "label": "Auto-Archiving Threshold Percentage (80-100, default 96, 100 disables)",
+      "default": 96
+    }
+  },
+  "expected": {
+    "AutoArchivingThresholdPercentage": "%threshold%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "AutoArchivingThresholdPercentage": "%threshold%"
+        }
+      }
+    ]
+  }
+}

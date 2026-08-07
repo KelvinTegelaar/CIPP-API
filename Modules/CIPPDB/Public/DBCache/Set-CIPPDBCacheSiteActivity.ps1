@@ -188,8 +188,16 @@ function Set-CIPPDBCacheSiteActivity {
 
         $CachedAt = (Get-Date).ToString('o')
         $OneDriveSiteIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        $Records = [System.Collections.Generic.List[object]]::new()
         $SkippedIncomplete = 0
+
+        # Rows are handed to the writer as they are projected rather than collected into a list
+        # of every site first - Add-CIPPDbItem batches internally, so peak retention is one batch
+        # instead of the whole tenant's sites on top of the report rows they came from.
+        #
+        # The pipeline is opened on the first record so a run where nothing is cache-complete
+        # still writes nothing at all, leaving the previous cache and its count row untouched.
+        $RecordCount = 0
+        $Writer = $null
 
         function Test-SiteActivityCacheComplete {
             param(
@@ -238,7 +246,12 @@ function Set-CIPPDBCacheSiteActivity {
             [void]$OneDriveSiteIds.Add($SiteKey)
             $OneDriveLastActivity = $Row.lastActivityDate
 
-            $Records.Add([PSCustomObject]@{
+            if ($null -eq $Writer) {
+                $Writer = { Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SiteActivity' -AddCount }.GetSteppablePipeline()
+                $Writer.Begin($true)
+            }
+            $RecordCount++
+            $Writer.Process([PSCustomObject]@{
                     id                           = $SiteKey
                     siteId                       = $SiteKey
                     siteType                     = 'OneDrive'
@@ -261,6 +274,7 @@ function Set-CIPPDBCacheSiteActivity {
                     cachedAt                     = $CachedAt
                 })
         }
+        $OneDriveRows = $null
 
         foreach ($Row in $SharePointRows) {
             if ($null -eq $Row -or $Row.isDeleted -eq $true) { continue }
@@ -342,10 +356,14 @@ function Set-CIPPDBCacheSiteActivity {
             }
 
             if ($SiteType -eq 'SharePointAndTeams') {
-                $Record | Add-Member -NotePropertyName 'teamsTeamId' -NotePropertyValue $TeamsTeamId -Force
-                $Record | Add-Member -NotePropertyName 'teamsTeamName' -NotePropertyValue $TeamsTeamName -Force
-                $Record | Add-Member -NotePropertyName 'teamsLastActivityDate' -NotePropertyValue $TeamsLastActivity -Force
-                $Record | Add-Member -NotePropertyName 'teamsLinkStatus' -NotePropertyValue $TeamsLinkStatus -Force
+                # One call rather than four: each Add-Member rebuilds the object's property bag.
+                # [ordered] keeps the emitted JSON property order identical to the sequential adds.
+                $Record | Add-Member -NotePropertyMembers ([ordered]@{
+                        teamsTeamId           = $TeamsTeamId
+                        teamsTeamName         = $TeamsTeamName
+                        teamsLastActivityDate = $TeamsLastActivity
+                        teamsLinkStatus       = $TeamsLinkStatus
+                    }) -Force
             }
 
             if (-not (Test-SiteActivityCacheComplete -SiteType $SiteType -WebUrl $WebUrl -DisplayName $DisplayName -TeamsTeamId $TeamsTeamId -TeamsTeamName $TeamsTeamName)) {
@@ -353,14 +371,25 @@ function Set-CIPPDBCacheSiteActivity {
                 continue
             }
 
-            $Records.Add($Record)
+            if ($null -eq $Writer) {
+                $Writer = { Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SiteActivity' -AddCount }.GetSteppablePipeline()
+                $Writer.Begin($true)
+            }
+            $RecordCount++
+            $Writer.Process($Record)
         }
+        $SharePointRows = $null
+        $SiteIndex = $null
+        $TeamActivityById = $null
+        $TeamProvisionedById = $null
+        $TeamSiteBySiteKey = $null
+        $FoundationalResults = $null
 
         if ($SkippedIncomplete -gt 0) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SiteActivity: skipped $SkippedIncomplete report rows with incomplete required data" -sev Debug
         }
 
-        if ($Records.Count -eq 0) {
+        if ($RecordCount -eq 0) {
             if ($SkippedIncomplete -gt 0) {
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SiteActivity: no rows were cache-complete (skipped $SkippedIncomplete); preserving existing SiteActivity cache" -sev Warning
                 return
@@ -370,10 +399,17 @@ function Set-CIPPDBCacheSiteActivity {
             return
         }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SiteActivity' -Data @($Records) -AddCount
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached SiteActivity successfully ($($Records.Count) sites)" -sev Debug
+        # Flushes the final partial batch, runs orphan cleanup and writes the count row.
+        $Writer.End()
+        $Writer.Dispose()
+        $Writer = $null
+
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached SiteActivity successfully ($RecordCount sites)" -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache SiteActivity: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
+    } finally {
+        # Only set on the failure paths - the success path ends and clears it above.
+        if ($Writer) { $Writer.Dispose() }
     }
 }

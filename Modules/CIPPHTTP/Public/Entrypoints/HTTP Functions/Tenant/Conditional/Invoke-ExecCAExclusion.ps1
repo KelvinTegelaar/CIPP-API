@@ -74,7 +74,7 @@ function Invoke-ExecCAExclusion {
         }
 
         $PolicyName = $Policy.displayName
-        if ($Request.Body.vacation -eq 'true') {
+        if ($Request.Body.vacation -eq $true) {
             $StartDate = $Request.Body.StartDate
             $EndDate = $Request.Body.EndDate
             # Detect if policy targets specific named locations (GUIDs) and user requested audit log exclusion

@@ -325,7 +325,11 @@ function Push-ExecScheduledCommand {
         }
     } catch {
         Write-Information "Failed to run task: $($_.Exception.Message)"
-        $errorMessage = $_.Exception.Message
+        # Captured before anything else can overwrite $_. Get-NormalizedError unwraps a JSON Graph or
+        # Exchange error body and returns the original string when it recognises nothing, so this is
+        # never less informative than the raw exception message it replaced.
+        $ExceptionData = Get-CippException -Exception $_
+        $errorMessage = $ExceptionData.NormalizedError
         #if recurrence is just a number, add it in days.
         if ($task.Recurrence -match '^\d+$') {
             $task.Recurrence = $task.Recurrence + 'd'
@@ -356,7 +360,7 @@ function Push-ExecScheduledCommand {
                 TaskState     = $State
             }
         }
-        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): $errorMessage" -sev Error -LogData (Get-CippExceptionData -Exception $_.Exception)
+        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): $errorMessage" -sev Error -LogData $ExceptionData
     }
 
     # For orchestrator-based commands, skip post-execution alerts as they will be handled by the orchestrator's post-execution function

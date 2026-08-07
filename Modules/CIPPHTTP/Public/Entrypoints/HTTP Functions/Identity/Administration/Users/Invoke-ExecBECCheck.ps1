@@ -4,6 +4,8 @@ Function Invoke-ExecBECCheck {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Returns the business email compromise assessment for a user: recent sign-ins, mailbox rules, added applications and password changes. If no cached result exists the check is queued as a background job and the response reports it as waiting, so poll rather than expecting results on the first call. Pass overwrite=true to force a fresh run.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

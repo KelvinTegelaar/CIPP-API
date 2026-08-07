@@ -171,10 +171,11 @@ function Invoke-CippWebhookProcessing {
                 Write-Host 'email should be sent'
             }
             'generatePSA' {
+                $GeneratePSA = New-CIPPAlertTemplate -format 'psa' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -Tenant $Tenant.defaultDomainName -AuditLogLink $AuditLogLink -AlertComment $AlertComment -CustomSubject $Data.CIPPCustomSubject
                 $CIPPAlert = @{
                     Type         = 'psa'
-                    Title        = $GenerateEmail.title
-                    HTMLContent  = $GenerateEmail.htmlcontent
+                    Title        = $GeneratePSA.title
+                    HTMLContent  = $GeneratePSA.htmlcontent
                     TenantFilter = $TenantFilter
                 }
                 if ($AffectedUser) {

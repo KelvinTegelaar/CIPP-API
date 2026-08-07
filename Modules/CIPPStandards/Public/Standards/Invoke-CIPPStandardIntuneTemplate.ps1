@@ -95,7 +95,11 @@ function Invoke-CIPPStandardIntuneTemplate {
     # rather than the template's Displayname, so find them under the name they were created with.
     $PolicyName = Get-CIPPIntunePolicyName -TemplateType $TemplateType -RawJSON $RawJSON -DisplayName $displayname
 
+    # Read the assignment intent once and share it between the check and the remediation, so the two
+    # cannot disagree about what this standard manages. See Get-CIPPIntuneAssignTarget.
+    $AssignmentTarget = Get-CIPPIntuneAssignTarget -AssignTo $Settings.AssignTo
     $AssignmentsMatch = $null
+    $AssignmentDetail = $null
     try {
         $ExistingPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $PolicyName -TemplateType $TemplateType -APIName 'IntuneTemplate'
     } catch {
@@ -111,14 +115,17 @@ function Invoke-CIPPStandardIntuneTemplate {
         try {
             Write-Information "Verifying assignments for tenant $Tenant"
             $ExistingAssignments = Get-CIPPIntunePolicyAssignments -PolicyId $ExistingPolicy.id -TemplateType $TemplateType -TenantFilter $Tenant -ExistingPolicy $ExistingPolicy
-            $AssignmentsMatch = Compare-CIPPIntuneAssignments -ExistingAssignments $ExistingAssignments -ExpectedAssignTo $Settings.AssignTo -ExpectedCustomGroup $Settings.customGroup -ExpectedExcludeGroup $Settings.excludeGroup -ExpectedAssignmentFilter $Settings.assignmentFilter -ExpectedAssignmentFilterType $Settings.assignmentFilterType -TenantFilter $Tenant
+            $AssignmentDetail = Compare-CIPPIntuneAssignments -ExistingAssignments $ExistingAssignments -ExpectedAssignTo $Settings.AssignTo -ExpectedCustomGroup $Settings.customGroup -ExpectedExcludeGroup $Settings.excludeGroup -ExpectedAssignmentFilter $Settings.assignmentFilter -ExpectedAssignmentFilterType $Settings.assignmentFilterType -PolicyType $TemplateType -TenantFilter $Tenant
+            # Unknown stays $null all the way through to the report; it is not a deviation.
+            $AssignmentsMatch = if ($AssignmentDetail.Unknown) { $null } else { $AssignmentDetail.Matched }
 
-            Write-Information "AssignmentsMatch for tenant $($Tenant): $AssignmentsMatch"
+            Write-Information "AssignmentsMatch for tenant $($Tenant): $AssignmentsMatch $(if ($AssignmentDetail.Reasons) { "($($AssignmentDetail.Reasons -join '; '))" })"
         } catch {
             # The policy itself read back fine, so still report on its configuration rather than
             # discarding the whole check because the assignment lookup failed.
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not verify assignments for Intune policy '$PolicyName'. Error: $($_.Exception.Message)" -sev 'Error'
             $AssignmentsMatch = $null
+            $AssignmentDetail = $null
         }
     }
     Write-Information "[IntuneTemplate][$Tenant] GetPolicy '$PolicyName' ($TemplateType): $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
@@ -182,6 +189,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         assignmentFilter     = $Settings.assignmentFilter
         assignmentFilterType = $Settings.assignmentFilterType
         AssignmentsMatch     = $AssignmentsMatch
+        AssignmentDetail     = $AssignmentDetail
     }
 
     if ($Settings.remediate) {
@@ -204,14 +212,49 @@ function Invoke-CIPPStandardIntuneTemplate {
                 $PolicyParams.AssignmentFilterType = $CompareResult.assignmentFilterType ?? 'include'
             }
 
+            # When the standard names an assignment target it owns the policy's assignments, and the
+            # check demands an exact set. Appending can never remove a target the template does not
+            # define, so an exact-set check against an append-only remediation is a deviation that no
+            # run can clear. Replace instead, so what is checked is what remediation delivers.
+            if ($AssignmentTarget.Managed) {
+                $PolicyParams.AssignmentMode = 'replace'
+            }
+
             # Pass fuzzy-match threshold (0 = exact only, which preserves previous behaviour)
             $PolicyParams.LevenshteinDistance = [int]($Settings.levenshteinDistance ?? 0)
 
             Set-CIPPIntunePolicy @PolicyParams
-            # Remediation succeeded — accept Graph return and update state so report reflects it
+            # The policy body is safe to accept: Set-CIPPIntunePolicy throws when Graph rejects the
+            # write, so reaching this line means the write succeeded.
             $CompareResult.compare = $null
             $CompareResult.MatchFailed = $false
-            $CompareResult.AssignmentsMatch = $true
+
+            # Assignments are not. Asserting them writes a compliant result that the skip cache in
+            # Push-CIPPStandardsList then keeps for as long as nothing else in the tenant changes, so
+            # a policy whose assignment does not actually match the standard reads as green for days
+            # and the deviation reappears out of nowhere. Read them back instead.
+            if ($Settings.verifyAssignments -eq $true -and $AssignmentTarget.Applied) {
+                $CompareResult.AssignmentsMatch = $null
+                $CompareResult.AssignmentDetail = $null
+                try {
+                    $RemediatedPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $PolicyName -TemplateType $TemplateType -APIName 'IntuneTemplate'
+                    if ($RemediatedPolicy.id) {
+                        $RemediatedAssignments = Get-CIPPIntunePolicyAssignments -PolicyId $RemediatedPolicy.id -TemplateType $TemplateType -TenantFilter $Tenant -ExistingPolicy $RemediatedPolicy
+                        $CompareResult.AssignmentDetail = Compare-CIPPIntuneAssignments -ExistingAssignments $RemediatedAssignments -ExpectedAssignTo $Settings.AssignTo -ExpectedCustomGroup $Settings.customGroup -ExpectedExcludeGroup $Settings.excludeGroup -ExpectedAssignmentFilter $Settings.assignmentFilter -ExpectedAssignmentFilterType $Settings.assignmentFilterType -PolicyType $TemplateType -TenantFilter $Tenant
+                        $CompareResult.AssignmentsMatch = if ($CompareResult.AssignmentDetail.Unknown) { $null } else { $CompareResult.AssignmentDetail.Matched }
+
+                        if ($CompareResult.AssignmentsMatch -eq $false) {
+                            # Graph accepted the assign call and the result still does not match, so
+                            # the standard is asking for something deployment does not produce. Name
+                            # it: this is the only place that difference is visible.
+                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Assignments for Intune policy '$PolicyName' still do not match after remediation: $(@($CompareResult.AssignmentDetail.Reasons) -join '; ')" -sev 'Warning'
+                        }
+                    }
+                } catch {
+                    # Leave it unknown. The next report run reads the assignments again.
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not re-check assignments for Intune policy '$PolicyName' after remediation. Error: $($_.Exception.Message)" -sev 'Error'
+                }
+            }
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $($CompareResult.displayname), Error: $ErrorMessage" -sev 'Error'
@@ -222,14 +265,21 @@ function Invoke-CIPPStandardIntuneTemplate {
     }
 
     if ($Settings.alert) {
-        $AlertObj = $CompareResult | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId, AssignmentsMatch
+        $AlertObj = $CompareResult | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId, AssignmentsMatch, AssignmentDetail
         $AssignmentsDiffer = $Settings.verifyAssignments -and ($null -ne $CompareResult.AssignmentsMatch -and -not $CompareResult.AssignmentsMatch)
         $HasDifference = $CompareResult.compare -or $AssignmentsDiffer
         if ($HasDifference) {
             $Message = if ($CompareResult.compare) {
                 "Template $($CompareResult.displayname) does not match the expected configuration."
             } elseif ($AssignmentsDiffer) {
-                "Template $($CompareResult.displayname) has incorrect assignments."
+                # Name what differs. "Incorrect assignments" against a policy whose assignment looks
+                # right in the portal is not something an operator can act on.
+                $AssignmentReason = @($CompareResult.AssignmentDetail.Reasons) -join '; '
+                if ($AssignmentReason) {
+                    "Template $($CompareResult.displayname) has incorrect assignments: $AssignmentReason"
+                } else {
+                    "Template $($CompareResult.displayname) has incorrect assignments."
+                }
             } else {
                 "Template $($CompareResult.displayname) does not match the expected configuration."
             }
@@ -259,9 +309,19 @@ function Invoke-CIPPStandardIntuneTemplate {
             isCompliant = $true
         }
 
-        if ($Settings.verifyAssignments) {
-            $CurrentValue['isAssigned'] = if ($null -ne $CompareResult.AssignmentsMatch) { $CompareResult.AssignmentsMatch } else { $false }
+        # A failed assignment lookup is unknown, not a deviation. Recording it as $false writes drift
+        # that survives every later run until the lookup next succeeds, and points the operator at a
+        # policy that was never wrong. Leave the dimension out of the comparison until it can be read.
+        if ($Settings.verifyAssignments -and $null -ne $CompareResult.AssignmentsMatch) {
+            $CurrentValue['isAssigned'] = $CompareResult.AssignmentsMatch
             $ExpectedValue['isAssigned'] = $true
+
+            # Carry the actual delta into the report. Without it the drift UI can only say the
+            # assignments differ, which is unactionable when the portal looks correct.
+            $AssignmentReason = @($CompareResult.AssignmentDetail.Reasons) -join '; '
+            if (-not $CompareResult.AssignmentsMatch -and $AssignmentReason) {
+                $CurrentValue['assignmentDifferences'] = $AssignmentReason
+            }
         }
         Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         #Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant

@@ -90,15 +90,15 @@ function Get-CIPPAzStorageQueueAnalysis {
             }
 
             $durableMessages++
-            $event     = $msgData.TaskMessage?.Event
+            $TaskEvent = $msgData.TaskMessage?.Event
             $orchInst  = $msgData.TaskMessage?.OrchestrationInstance
 
             # Parse the Input field (JSON string inside the message)
             $inputTasks = @()
-            if ($event -and $event.Input) {
+            if ($TaskEvent -and $TaskEvent.Input) {
                 try {
-                    if (Test-Json -Json $event.Input -ErrorAction SilentlyContinue) {
-                        $inputTasks = @($event.Input | ConvertFrom-Json -Depth 10)
+                    if (Test-Json -Json $TaskEvent.Input -ErrorAction SilentlyContinue) {
+                        $inputTasks = @($TaskEvent.Input | ConvertFrom-Json -Depth 10)
                     }
                 } catch { }
             }
@@ -142,7 +142,7 @@ function Get-CIPPAzStorageQueueAnalysis {
                     FunctionName   = $funcName
                     QueueId        = $queueId
                     OrchestrationInstanceId = $orchId
-                    EventTimestamp = $event?.Timestamp
+                    EventTimestamp = $TaskEvent?.Timestamp
                 })
             }
         }

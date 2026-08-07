@@ -1,0 +1,95 @@
+function Invoke-ListGeneratedReports {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
+    .DESCRIPTION
+        Lists generated reports from the CIPP Report Builder, filterable by tenant or report GUID.
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+
+    $APIName = $TriggerMetadata.FunctionName
+    Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    try {
+        $TenantFilter = $Request.Query.TenantFilter ?? $Request.Query.tenantFilter
+        $ReportGUID = $Request.Query.ReportGUID
+
+        $Table = Get-CippTable -tablename 'ReportBuilderReports'
+
+        if ($ReportGUID) {
+            # Fetch specific report
+            $ReportGUID = ConvertTo-CIPPODataFilterValue -Value $ReportGUID -Type 'Guid'
+            $Filter = "RowKey eq '$ReportGUID'"
+            $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+        } elseif ($TenantFilter) {
+            # Fetch all reports for tenant
+            $TenantFilter = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type 'String'
+            if ($TenantFilter -ne 'AllTenants') {
+                $Filter = "PartitionKey eq '$TenantFilter'"
+                $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+            } else {
+                $Tenants = Get-Tenants -IncludeErrors
+                $AllReports = Get-CIPPAzDataTableEntity @Table
+                $Entities = foreach ($Tenant in $Tenants) {
+                    $AllReports | Where-Object { $_.PartitionKey -eq $Tenant.defaultDomainName }
+                }
+            }
+        } else {
+            # Fetch all reports
+            $Entities = @(Get-CIPPAzDataTableEntity @Table)
+        }
+
+        $Reports = @($Entities | ForEach-Object {
+                $Blocks = @()
+                if ($_.Blocks) {
+                    try {
+                        $Blocks = @(ConvertFrom-Json -InputObject $_.Blocks)
+                    } catch {
+                        $Blocks = @()
+                    }
+                }
+                # Page setup and branding the report was generated with. Older reports have none,
+                # and the renderer falls back to its defaults for those.
+                $ReportSettings = $null
+                if ($_.Settings) {
+                    try {
+                        $ReportSettings = ConvertFrom-Json -InputObject $_.Settings
+                    } catch {
+                        $ReportSettings = $null
+                    }
+                }
+                $SectionCount = $Blocks.Count
+                $TestCount = @($Blocks | Where-Object { $_.type -eq 'test' }).Count
+                $CustomCount = @($Blocks | Where-Object { $_.type -eq 'blank' }).Count
+                [PSCustomObject]@{
+                    RowKey       = $_.RowKey
+                    TemplateName = $_.TemplateName
+                    TenantFilter = $_.TenantFilter
+                    Blocks       = $Blocks
+                    Settings     = $ReportSettings
+                    Sections     = $SectionCount
+                    TestCount    = $TestCount
+                    CustomCount  = $CustomCount
+                    GeneratedAt  = $_.GeneratedAt
+                    Status       = $_.Status
+                    ReportURL    = "/tools/report-builder?reportId=$($_.RowKey)"
+                }
+            })
+
+        $StatusCode = [HttpStatusCode]::OK
+        $Body = @($Reports)
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -message "Failed to list generated reports: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $Body = @{ Results = "Error: $($ErrorMessage.NormalizedError)" }
+        $StatusCode = [HttpStatusCode]::BadRequest
+    }
+
+    return ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = ConvertTo-Json -InputObject $Body -Depth 20 -Compress
+        })
+}

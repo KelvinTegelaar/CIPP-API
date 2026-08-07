@@ -1,0 +1,86 @@
+{
+  "name": "TeamsExternalFileSharing",
+  "label": "Define approved cloud storage services for external file sharing in Teams",
+  "cat": "Teams Standards",
+  "tag": [
+    "CIS M365 7.0.0 (8.1.1)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Ensure external file sharing in Teams is enabled for only approved cloud storage services.",
+  "executiveText": "Controls which external cloud storage services (like Google Drive, Dropbox, Box) employees can access through Teams, ensuring file sharing occurs only through approved and secure platforms. This helps maintain data governance while supporting necessary business integrations.",
+  "impactColour": "info",
+  "addedDate": "2024-07-28",
+  "powershellEquivalent": "Set-CsTeamsClientConfiguration -AllowGoogleDrive $false -AllowShareFile $false -AllowBox $false -AllowDropBox $false -AllowEgnyte $false",
+  "appliesToTest": [
+    "CIS_8_1_1"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "AllowGoogleDrive": {
+      "type": "switch",
+      "label": "Allow Google Drive",
+      "default": false,
+      "recommended": false
+    },
+    "AllowShareFile": {
+      "type": "switch",
+      "label": "Allow ShareFile",
+      "default": false,
+      "recommended": false
+    },
+    "AllowBox": {
+      "type": "switch",
+      "label": "Allow Box",
+      "default": false,
+      "recommended": false
+    },
+    "AllowDropBox": {
+      "type": "switch",
+      "label": "Allow Dropbox",
+      "default": false,
+      "recommended": false
+    },
+    "AllowEgnyte": {
+      "type": "switch",
+      "label": "Allow Egnyte",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "AllowGoogleDrive": "%AllowGoogleDrive%",
+    "AllowShareFile": "%AllowShareFile%",
+    "AllowBox": "%AllowBox%",
+    "AllowDropBox": "%AllowDropBox%",
+    "AllowEgnyte": "%AllowEgnyte%"
+  },
+  "read": {
+    "cacheType": "CsTeamsClientConfiguration"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsClientConfiguration",
+        "params": {
+          "AllowGoogleDrive": "%AllowGoogleDrive%",
+          "AllowShareFile": "%AllowShareFile%",
+          "AllowBox": "%AllowBox%",
+          "AllowDropBox": "%AllowDropBox%",
+          "AllowEgnyte": "%AllowEgnyte%"
+        }
+      }
+    ]
+  }
+}

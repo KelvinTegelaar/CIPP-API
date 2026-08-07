@@ -34,9 +34,21 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
         )
 
         $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter
-        $Groups = ($BulkResults | Where-Object { $_.id -eq 'Groups' }).body.value
-        $ManagedAppPolicies = ($BulkResults | Where-Object { $_.id -eq 'ManagedAppPolicies' }).body.value
-        $MobileAppConfigs = ($BulkResults | Where-Object { $_.id -eq 'MobileAppConfigurations' }).body.value
+        # A batch sub-request failure must PRESERVE the previous cache (rows and Count
+        # metadata) - writing an empty collection on error poisons every consumer that
+        # treats a fresh empty cache as authoritative (baseline drift detection).
+        $GetChecked = {
+            param($Results, $Id)
+            $Result = $Results | Where-Object { $_.id -eq $Id } | Select-Object -First 1
+            if (-not $Result -or $null -eq $Result.status -or [int]$Result.status -lt 200 -or [int]$Result.status -ge 300) {
+                $GraphError = $Result.body.error.message ?? $Result.body.message ?? 'no batch response'
+                throw "Graph request '$Id' failed (HTTP $($Result.status)): $GraphError - preserving the previous cache"
+            }
+            @($Result.body.value)
+        }
+        $Groups = & $GetChecked $BulkResults 'Groups'
+        $ManagedAppPolicies = & $GetChecked $BulkResults 'ManagedAppPolicies'
+        $MobileAppConfigs = & $GetChecked $BulkResults 'MobileAppConfigurations'
 
         $ManagedAppPoliciesWithAssignments = [System.Collections.Generic.List[object]]::new()
         if ($ManagedAppPolicies) {
@@ -62,7 +74,10 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
             if ($ManagedAppPoliciesBulkRequests) {
                 $ManagedAppPoliciesBulkResults = New-GraphBulkRequest -Requests @($ManagedAppPoliciesBulkRequests) -tenantid $TenantFilter
                 foreach ($Result in $ManagedAppPoliciesBulkResults) {
-                    foreach ($Policy in @($Result.body.value)) {
+                    # Every per-type fetch must succeed - a partial set written as the
+                    # full collection would report the failed types' policies as gone.
+                    $Policies = & $GetChecked $ManagedAppPoliciesBulkResults $Result.id
+                    foreach ($Policy in $Policies) {
                         if ($null -eq $Policy) { continue }
                         $Policy | Add-Member -NotePropertyName 'URLName' -NotePropertyValue $Result.id -Force
                         $ManagedAppPoliciesWithAssignments.Add($Policy)
@@ -70,9 +85,6 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
                 }
             }
         }
-
-        if (-not $Groups) { $Groups = @() }
-        if (-not $MobileAppConfigs) { $MobileAppConfigs = @() }
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @($Groups) -AddCount
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @($ManagedAppPoliciesWithAssignments) -AddCount

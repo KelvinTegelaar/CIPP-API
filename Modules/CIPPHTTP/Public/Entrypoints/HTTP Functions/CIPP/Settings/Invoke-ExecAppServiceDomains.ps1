@@ -13,12 +13,12 @@ function Invoke-ExecAppServiceDomains {
         Management page uses.
 
         Actions (passed as Query.Action or Body.Action):
-            List           - Site metadata (default hostname, inbound IP, verification id) plus every
-                             hostname binding and any App Service Managed Certificate that matches.
-            CheckDns       - Live DoH lookup of the records a custom domain needs. A matching CNAME
-                             alias verifies on its own; the ownership TXT at asuid.<host> is only
-                             required for apex/A, wildcard or proxied aliases — and a stale TXT
-                             (wrong value) is flagged for removal. Powers wizard step 1 + resume.
+            List           - Site metadata (default hostname, inbound IP) plus every hostname
+                             binding and any App Service Managed Certificate that matches.
+            CheckDns       - Live DoH lookup of the alias record a custom domain needs. CIPP no
+                             longer uses domain-verification TXT records, so a leftover
+                             asuid.<host> record is detected and flagged for removal rather than
+                             requested. Powers wizard step 1 + resume.
             AddBinding     - Create the hostname binding (wizard step 2). Azure re-validates ownership.
             AddCertificate - Create an App Service Managed Certificate and enable the SNI SSL binding
                              (wizard step 3). Safe to re-run — reuses an existing cert if present.
@@ -53,16 +53,15 @@ function Invoke-ExecAppServiceDomains {
         return "https://management.azure.com/subscriptions/$($Site.Subscription)/resourceGroups/$($Site.RGName)/providers/Microsoft.Web/sites/$($Site.SiteName)"
     }
 
-    # Work out which DNS records a given custom hostname needs. Azure accepts either a CNAME (to the
-    # app's default hostname) or an A record (to the inbound IP) for the alias itself. A matching
-    # CNAME proves ownership by itself; the TXT record at asuid.<host> is only needed when it can't
-    # (apex/A aliases, proxied CNAMEs, and wildcards — which verify ownership at the parent domain).
+    # Work out which DNS record a given custom hostname needs. Azure accepts either a CNAME (to the
+    # app's default hostname) or an A record (to the inbound IP) for the alias. That alias is the
+    # only record CIPP asks for — LegacyAsuidHost is carried along purely so CheckDns can look for a
+    # leftover asuid.<host> TXT record from an older setup and tell the operator to remove it.
     function Get-DomainRecordPlan {
         param(
             [string]$Hostname,
             [string]$DefaultHostName,
-            [string]$InboundIp,
-            [string]$VerificationId
+            [string]$InboundIp
         )
         $IsWildcard = $Hostname.StartsWith('*.')
         $BaseHost = $IsWildcard ? $Hostname.Substring(2) : $Hostname
@@ -71,19 +70,17 @@ function Invoke-ExecAppServiceDomains {
         # → CNAME. This is a heuristic (multi-part TLDs like co.uk can't be detected without a public
         # suffix list); the UI lets the operator pick the other record type, and Azure accepts either.
         $IsApex = -not $IsWildcard -and $Labels.Count -le 2
-        $AsuidHost = $IsWildcard ? "asuid.$BaseHost" : "asuid.$Hostname"
 
         return [pscustomobject]@{
-            Hostname          = $Hostname
-            IsWildcard        = $IsWildcard
-            IsApex            = $IsApex
-            RecommendedType   = $IsApex ? 'A' : 'CNAME'
-            AsuidHost         = $AsuidHost
-            VerificationId    = $VerificationId
-            CnameAlias        = $Hostname
-            CnameTarget       = $DefaultHostName
-            ARecordAlias      = $Hostname
-            ARecordTarget     = $InboundIp
+            Hostname        = $Hostname
+            IsWildcard      = $IsWildcard
+            IsApex          = $IsApex
+            RecommendedType = $IsApex ? 'A' : 'CNAME'
+            LegacyAsuidHost = $IsWildcard ? "asuid.$BaseHost" : "asuid.$Hostname"
+            CnameAlias      = $Hostname
+            CnameTarget     = $DefaultHostName
+            ARecordAlias    = $Hostname
+            ARecordTarget   = $InboundIp
         }
     }
 
@@ -110,7 +107,6 @@ function Invoke-ExecAppServiceDomains {
                 $SiteObj = New-CIPPAzRestRequest -Uri "$($ArmBase)?api-version=$ApiVersion" -Method GET
                 $DefaultHostName = $SiteObj.properties.defaultHostName
                 $InboundIp = $SiteObj.properties.inboundIpAddress
-                $VerificationId = $SiteObj.properties.customDomainVerificationId
 
                 $BindingResponse = New-CIPPAzRestRequest -Uri "$($ArmBase)/hostNameBindings?api-version=$ApiVersion" -Method GET
 
@@ -147,12 +143,11 @@ function Invoke-ExecAppServiceDomains {
 
                 $Body = @{
                     Results = @{
-                        SiteName                   = $Site.SiteName
-                        ResourceGroup              = $Site.RGName
-                        DefaultHostName            = $DefaultHostName
-                        InboundIpAddress           = $InboundIp
-                        CustomDomainVerificationId = $VerificationId
-                        Domains                    = @($Domains | Sort-Object -Property IsDefault, Hostname)
+                        SiteName         = $Site.SiteName
+                        ResourceGroup    = $Site.RGName
+                        DefaultHostName  = $DefaultHostName
+                        InboundIpAddress = $InboundIp
+                        Domains          = @($Domains | Sort-Object -Property IsDefault, Hostname)
                     }
                 }
             }
@@ -172,24 +167,20 @@ function Invoke-ExecAppServiceDomains {
                 $SiteObj = New-CIPPAzRestRequest -Uri "$($ArmBase)?api-version=$ApiVersion" -Method GET
                 $Plan = Get-DomainRecordPlan -Hostname $HostName `
                     -DefaultHostName $SiteObj.properties.defaultHostName `
-                    -InboundIp $SiteObj.properties.inboundIpAddress `
-                    -VerificationId $SiteObj.properties.customDomainVerificationId
+                    -InboundIp $SiteObj.properties.inboundIpAddress
 
-                # Ownership TXT at asuid.<host>. A matching CNAME alias proves ownership by itself,
-                # so the TXT record is only REQUIRED when Azure cannot see such a CNAME: apex/A
-                # aliases, wildcards, and proxied records (e.g. Cloudflare orange-cloud). A TXT
-                # record with the WRONG value is worse than none — Azure hard-fails the binding on
-                # a mismatched asuid even when the CNAME is correct, so surface it for removal.
-                $TxtValues = Resolve-DohRecord -Name $Plan.AsuidHost -Type 'TXT'
-                $AsuidState = if ($TxtValues.Count -eq 0) { 'Absent' } elseif ($TxtValues -contains $Plan.VerificationId) { 'Match' } else { 'Mismatch' }
-                $StaleAsuid = ($AsuidState -eq 'Mismatch')
+                # CIPP no longer asks for a domain-verification TXT record at asuid.<host>, but an
+                # old one left behind by a previous setup is actively harmful: Azure hard-fails the
+                # binding when the asuid value doesn't match this App Service, even if the alias
+                # record is correct. Detect any leftover record so the wizard can flag it.
+                $LegacyAsuidValues = Resolve-DohRecord -Name $Plan.LegacyAsuidHost -Type 'TXT'
+                $LegacyAsuid = $LegacyAsuidValues.Count -gt 0
 
                 # Alias: accept a CNAME to the default hostname OR an A record to the inbound IP.
-                # Wildcards can't be resolved directly, so ownership alone gates them here — Azure
-                # validates the wildcard alias when the binding is created.
+                # Wildcards can't be resolved directly, so they pass this check unconditionally —
+                # Azure validates the wildcard alias when the binding is created.
                 $AliasVerified = $false
                 $AliasDetail = $null
-                $CnameMatch = $null
                 if ($Plan.IsWildcard) {
                     $AliasVerified = $true
                     $AliasDetail = 'Wildcard alias is validated by Azure when the binding is created.'
@@ -210,47 +201,31 @@ function Invoke-ExecAppServiceDomains {
                     }
                 }
 
-                # TXT required whenever a matching CNAME can't vouch for the hostname.
-                $OwnershipRequired = [bool]($Plan.IsWildcard -or -not $CnameMatch)
-                $OwnershipVerified = $OwnershipRequired ? ($AsuidState -eq 'Match') : (-not $StaleAsuid)
-                # Proceed when a clean CNAME verified the domain, or the TXT record proves
-                # ownership (covers apex/A, wildcard and proxied aliases — Azure then makes the
-                # final call at binding time, matching the previous wizard behavior).
-                $CanProceed = ($CnameMatch -and -not $StaleAsuid) -or ($AsuidState -eq 'Match')
+                # The alias is the only record the wizard gates on now — Azure makes the final
+                # ownership call when the binding is created.
+                $CanProceed = [bool]$AliasVerified
 
-                $Records = [System.Collections.Generic.List[object]]::new()
-                if ($OwnershipRequired -or $StaleAsuid) {
-                    $Records.Add([pscustomobject]@{
-                            Purpose  = 'Ownership'
-                            Type     = 'TXT'
-                            Host     = $Plan.AsuidHost
-                            Value    = $Plan.VerificationId
-                            Verified = ($AsuidState -eq 'Match')
-                        })
-                }
-                $Records.Add([pscustomobject]@{
+                $Records = @(
+                    [pscustomobject]@{
                         Purpose  = 'Alias'
                         Type     = $Plan.RecommendedType
                         Host     = $Plan.IsApex ? '@' : $HostName
                         Value    = $Plan.IsApex ? $Plan.ARecordTarget : $Plan.CnameTarget
                         Verified = $AliasVerified
-                    })
+                    }
+                )
 
                 $Body = @{
                     Results = @{
-                        Hostname          = $HostName
-                        RecommendedType   = $Plan.RecommendedType
-                        IsWildcard        = $Plan.IsWildcard
-                        OwnershipVerified = $OwnershipVerified
-                        OwnershipRequired = $OwnershipRequired
-                        AsuidState        = $AsuidState
-                        StaleAsuid        = $StaleAsuid
-                        AsuidHost         = $Plan.AsuidHost
-                        AliasVerified     = $AliasVerified
-                        AllVerified       = ($OwnershipVerified -and $AliasVerified)
-                        CanProceed        = [bool]$CanProceed
-                        AliasDetail       = $AliasDetail
-                        Records           = @($Records)
+                        Hostname        = $HostName
+                        RecommendedType = $Plan.RecommendedType
+                        IsWildcard      = $Plan.IsWildcard
+                        LegacyAsuid     = $LegacyAsuid
+                        LegacyAsuidHost = $Plan.LegacyAsuidHost
+                        AliasVerified   = $AliasVerified
+                        CanProceed      = $CanProceed
+                        AliasDetail     = $AliasDetail
+                        Records         = @($Records)
                     }
                 }
             }
@@ -264,10 +239,10 @@ function Invoke-ExecAppServiceDomains {
                 $Site = Get-AppServiceSiteInfo
                 $ArmBase = Get-SiteArmBase -Site $Site
 
-                # Azure enforces domain-ownership validation during this PUT: a matching CNAME
-                # suffices on its own; the asuid TXT is the fallback for apex/A, wildcard and
-                # proxied aliases. A TXT record with the WRONG value hard-fails validation even
-                # when the CNAME is correct, so append removal guidance to that error.
+                # Azure enforces domain-ownership validation during this PUT, using the alias
+                # record. A leftover asuid TXT record from an older setup hard-fails validation
+                # when its value doesn't match this App Service — even if the alias is correct —
+                # so append removal guidance to that error.
                 $BindingUri = "$($ArmBase)/hostNameBindings/$HostName`?api-version=$ApiVersion"
                 $BindingBody = @{
                     properties = @{
@@ -281,7 +256,7 @@ function Invoke-ExecAppServiceDomains {
                     $BindingError = $_.Exception.Message
                     if ($BindingError -match 'TXT record|asuid|CanonicalName') {
                         $AsuidHint = $HostName.StartsWith('*.') ? "asuid.$($HostName.Substring(2))" : "asuid.$HostName"
-                        throw "$BindingError — If a TXT record named '$AsuidHint' already exists with a different value, remove or update it: a stale domain-verification record blocks validation even when the CNAME/A alias is correct."
+                        throw "$BindingError — If a TXT record named '$AsuidHint' exists from a previous setup, remove it: CIPP no longer uses domain-verification TXT records, and a leftover one blocks validation even when the CNAME/A alias is correct."
                     }
                     throw
                 }

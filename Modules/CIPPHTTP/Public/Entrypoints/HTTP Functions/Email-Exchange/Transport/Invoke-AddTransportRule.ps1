@@ -15,7 +15,7 @@ function Invoke-AddTransportRule {
     $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, HasSenderOverride, ExceptIfHasSenderOverride, ExceptIfMessageContainsDataClassifications, MessageContainsDataClassifications
 
     # Remove null properties from payload
-    $RequestParams.PSObject.Properties | Where-Object { $_.Value -eq $null } | ForEach-Object { $RequestParams.PSObject.Properties.Remove($_.Name) }
+    $RequestParams.PSObject.Properties | Where-Object { $null -eq $_.Value } | ForEach-Object { $RequestParams.PSObject.Properties.Remove($_.Name) }
 
     $Tenants = ($Request.body.selectedTenants).value
 

@@ -49,13 +49,13 @@ function ConvertTo-CIPPSitComparable {
         $name = if ($resMap.ContainsKey($eid) -and $resMap[$eid].Name) { $resMap[$eid].Name } else { $eid }
 
         $patterns = @(foreach ($p in $ent.SelectNodes("*[local-name()='Pattern']")) {
-                $matches = @($p.SelectNodes(".//*[@idRef]") | ForEach-Object {
+                $PatternMatches = @($p.SelectNodes(".//*[@idRef]") | ForEach-Object {
                         $ref = [string]$_.idRef
                         if ($regexMap.ContainsKey($ref)) { "regex:$($regexMap[$ref])" }
                         elseif ($keywordMap.ContainsKey($ref)) { "keyword:$($keywordMap[$ref])" }
                         else { "ref:$ref" }
                     }) | Sort-Object
-                [ordered]@{ level = [string]$p.confidenceLevel; matches = @($matches) }
+                [ordered]@{ level = [string]$p.confidenceLevel; matches = @($PatternMatches) }
             })
 
         $result[$name] = [ordered]@{

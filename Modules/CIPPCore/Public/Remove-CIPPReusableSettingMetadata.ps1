@@ -14,7 +14,7 @@ function Remove-CIPPReusableSettingMetadata {
         'auditRuleInformation'
     )
 
-    function Normalize-Object {
+    function ConvertTo-NormalizedObject {
         param($Value)
 
         if ($null -eq $Value) { return $null }
@@ -32,7 +32,7 @@ function Remove-CIPPReusableSettingMetadata {
             )
         }
 
-        function Normalize-Entries {
+        function ConvertTo-NormalizedEntry {
             param($Entries)
 
             $output = [ordered]@{}
@@ -44,9 +44,9 @@ function Remove-CIPPReusableSettingMetadata {
                     if ($null -eq $item) {
                         $output[$name] = @()
                     } elseif (Test-IsCollection -Candidate $item) {
-                        $output[$name] = Normalize-Object -Value $item
+                        $output[$name] = ConvertTo-NormalizedObject -Value $item
                     } else {
-                        $output[$name] = @(Normalize-Object -Value $item)
+                        $output[$name] = @(ConvertTo-NormalizedObject -Value $item)
                     }
                     continue
                 }
@@ -58,16 +58,16 @@ function Remove-CIPPReusableSettingMetadata {
                     }
 
                     if (Test-IsCollection -Candidate $item) {
-                        $output[$name] = Normalize-Object -Value $item
+                        $output[$name] = ConvertTo-NormalizedObject -Value $item
                     } else {
-                        $output[$name] = @(Normalize-Object -Value $item)
+                        $output[$name] = @(ConvertTo-NormalizedObject -Value $item)
                     }
                     continue
                 }
 
                 if ($null -eq $item) { continue }
                 if ($name -in $metadataFields) { continue }
-                $output[$name] = Normalize-Object -Value $item
+                $output[$name] = ConvertTo-NormalizedObject -Value $item
             }
 
             if ($output.Contains('children') -and -not (Test-IsCollection -Candidate $output['children'])) {
@@ -88,13 +88,13 @@ function Remove-CIPPReusableSettingMetadata {
             $entries = foreach ($key in $Value.Keys) {
                 [pscustomobject]@{ Name = $key; Value = $Value[$key] }
             }
-            return Normalize-Entries -Entries $entries
+            return ConvertTo-NormalizedEntry -Entries $entries
         }
 
         if ($Value -is [System.Collections.IEnumerable] -and $Value -isnot [string]) {
             $cleanArray = [System.Collections.Generic.List[object]]::new()
             foreach ($entry in $Value) {
-                $cleanArray.Add((Normalize-Object -Value $entry))
+                $cleanArray.Add((ConvertTo-NormalizedObject -Value $entry))
             }
             return $cleanArray
         }
@@ -103,11 +103,11 @@ function Remove-CIPPReusableSettingMetadata {
             $entries = foreach ($prop in $Value.PSObject.Properties) {
                 [pscustomobject]@{ Name = $prop.Name; Value = $prop.Value }
             }
-            return Normalize-Entries -Entries $entries
+            return ConvertTo-NormalizedEntry -Entries $entries
         }
 
         return $Value
     }
 
-    return Normalize-Object -Value $InputObject
+    return ConvertTo-NormalizedObject -Value $InputObject
 }

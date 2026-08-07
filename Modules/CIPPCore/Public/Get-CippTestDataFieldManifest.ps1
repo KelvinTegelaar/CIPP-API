@@ -79,7 +79,7 @@ function Get-CippTestDataFieldManifest {
             'AuthenticationMethodsPolicy'        = @('authenticationMethodConfigurations', 'policyMigrationState', 'reportSuspiciousActivitySettings', 'systemCredentialPreferences')
             'AuthenticationStrengths'            = @('id', 'displayName', 'policyType', 'allowedCombinations')
             'AuthorizationPolicy'                = @('defaultUserRolePermissions', 'guestUserRoleId', 'allowInvitesFrom', 'allowedToUseSSPR', 'allowedToSignUpEmailBasedSubscriptions', 'allowEmailVerifiedUsersToJoinOrganization', 'permissionGrantPolicyIdsAssignedToDefaultUserRole', 'allowUserConsentForRiskyApps', 'allowedToCreateTenants')
-            'B2BManagementPolicy'                = @('allowInvitesFrom', 'invitationsAllowedAndBlockedDomainsPolicy', 'definition')
+            'B2BManagementPolicy'                = @('allowInvitesFrom', 'invitationsAllowedAndBlockedDomainsPolicy', 'definition', 'isOrganizationDefault')
             'CASMailbox'                         = @('Identity', 'DisplayName', 'SmtpClientAuthenticationDisabled')
             'ConditionalAccessPolicies'          = @('id', 'displayName', 'state', 'conditions', 'grantControls', 'sessionControls', 'createdDateTime', 'modifiedDateTime')
             'CopilotReadinessActivity'           = @('userPrincipalName', 'usesOutlookEmail', 'usesTeamsMeetings', 'usesTeamsChat', 'usesOfficeDocs', 'onQualifiedUpdateChannel', 'hasCopilotLicenseAssigned')

@@ -81,18 +81,26 @@ function Get-CIPPOfficeAppBody {
         infoPath           = $true
         sharePointDesigner = $true
         excel              = $false
+        groove             = $false
         lync               = $false
         oneNote            = $false
         outlook            = $false
         powerPoint         = $false
         publisher          = $false
         teams              = $false
+        visio              = $false
         word               = $false
         access             = $false
         bing               = $false
     }
     foreach ($ExcludedApp in $ExcludedAppNames) {
-        $ExcludedApps.$ExcludedApp = $true
+        # Templates created via the API or older versions may carry values outside the Graph
+        # excludedApps schema; setting a property that doesn't exist on the object would throw.
+        if ($ExcludedApps.PSObject.Properties[$ExcludedApp]) {
+            $ExcludedApps.$ExcludedApp = $true
+        } else {
+            Write-Warning "Ignoring unknown excluded Office app '$ExcludedApp' - not a valid excludedApps property."
+        }
     }
 
     return [PSCustomObject]@{

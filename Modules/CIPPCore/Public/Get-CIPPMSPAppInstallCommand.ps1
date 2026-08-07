@@ -93,7 +93,8 @@ function Get-CIPPMSPAppInstallCommand {
             $AutomateLocationId = ConvertTo-CIPPSafePwshArg -Value (Resolve-MSPValue $InstallParams.LocationID)
             $installCommandLine = "c:\windows\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass .\install.ps1 -Server $AutomateServer -InstallerToken $AutomateInstallerToken -LocationID $AutomateLocationId"
             $uninstallCommandLine = "c:\windows\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1 -Server $AutomateServer"
-            $DetectionScriptContent = (Get-Content 'AddMSPApp\automate.detection.ps1' -Raw) -replace '##SERVER##', $ServerRaw
+            $DetectionScriptPath = Join-Path $env:CIPPRootPath 'AddMSPApp\automate.detection.ps1'
+            $DetectionScriptContent = (Get-Content -LiteralPath $DetectionScriptPath -Raw) -replace '##SERVER##', $ServerRaw
         }
         'cwcommand' {
             $CwClientUrl = ConvertTo-CIPPSafePwshArg -Value (Resolve-MSPValue $InstallParams.ClientURL)

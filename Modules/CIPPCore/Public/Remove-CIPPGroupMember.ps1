@@ -63,50 +63,64 @@ function Remove-CIPPGroupMember {
             }
             @{
                 id     = 'group'
-                url    = "groups/$($GroupId)?`$select=id,displayName"
+                url    = "groups/$($GroupId)?`$select=id,displayName,groupTypes,mailEnabled,securityEnabled"
                 method = 'GET'
             }
         )
         $BulkResults = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter
         $Users = @($BulkResults | Where-Object { $_.id -like 'users-*' })
+        $GroupObject = ($BulkResults | Where-Object { $_.id -eq 'group' }).body
         # Group display name for logging; falls back to the id if the lookup failed
         # (e.g. the group was addressed by mail rather than GUID).
-        $GroupName = ($BulkResults | Where-Object { $_.id -eq 'group' }).body.displayName ?? $GroupId
+        $GroupName = $GroupObject.displayName ?? $GroupId
+        # Same routing rule as Add-CIPPGroupMember: Graph cannot change membership on a classic
+        # distribution list or a mail-enabled security group, so trust what Graph says the group is
+        # rather than the type the caller happened to pass in.
+        $ResolvedGroupType = if ($null -ne $GroupObject.mailEnabled -or $null -ne $GroupObject.securityEnabled) {
+            if ($GroupObject.groupTypes -contains 'Unified') { 'Microsoft 365' }
+            elseif ($GroupObject.mailEnabled -and $GroupObject.securityEnabled) { 'Mail-Enabled Security' }
+            elseif ($GroupObject.mailEnabled) { 'Distribution list' }
+            else { 'Security' }
+        } else {
+            $GroupType
+        }
         $SuccessfulUsers = [System.Collections.Generic.List[string]]::new()
         $FailedUsers = [System.Collections.Generic.List[string]]::new()
 
-        if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
+        if ($ResolvedGroupType -eq 'Distribution list' -or $ResolvedGroupType -eq 'Mail-Enabled Security') {
             $ExoBulkRequests = [System.Collections.Generic.List[object]]::new()
             $ExoLogs = [System.Collections.Generic.List[object]]::new()
 
             foreach ($User in $Users) {
+                # Tag each operation so its result can be matched back exactly. New-ExoBulkRequest
+                # stamps the OperationGuid onto both the error and the success record it returns.
+                $OperationGuid = [Guid]::NewGuid().ToString()
                 $Params = @{ Identity = $GroupId; Member = $User.body.userPrincipalName; BypassSecurityGroupManagerCheck = $true }
                 $ExoBulkRequests.Add(@{
-                        CmdletInput = @{
+                        CmdletInput   = @{
                             CmdletName = 'Remove-DistributionGroupMember'
                             Parameters = $Params
                         }
+                        OperationGuid = $OperationGuid
                     })
                 $ExoLogs.Add(@{
-                        message = "Removed member $($User.body.userPrincipalName) from group $($GroupName)"
-                        target  = $User.body.userPrincipalName
+                        message       = "Removed member $($User.body.userPrincipalName) from group $($GroupName)"
+                        target        = $User.body.userPrincipalName
+                        OperationGuid = $OperationGuid
                     })
             }
 
             if ($ExoBulkRequests.Count -gt 0) {
                 $RawExoRequest = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($ExoBulkRequests)
-                $LastError = $RawExoRequest | Select-Object -Last 1
+                $ExoResults = Resolve-CippExoBulkResult -Response $RawExoRequest -Operations $ExoLogs
 
-                foreach ($ExoError in $LastError.error) {
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoError -Sev 'Error'
-                    throw $ExoError
-                }
-
-                foreach ($ExoLog in $ExoLogs) {
-                    $ExoError = $LastError | Where-Object { $ExoLog.target -in $_.target -and $_.error }
-                    if (!$LastError -or ($LastError.error -and $LastError.target -notcontains $ExoLog.target)) {
-                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoLog.message -Sev 'Info'
-                        $SuccessfulUsers.Add($ExoLog.target)
+                foreach ($ExoResult in $ExoResults) {
+                    if ($ExoResult.Success) {
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoResult.Operation.message -Sev 'Info'
+                        $SuccessfulUsers.Add($ExoResult.Operation.target)
+                    } else {
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to remove member $($ExoResult.Operation.target) from group $($GroupName): $($ExoResult.ErrorMessage)" -Sev 'Error'
+                        $FailedUsers.Add("$($ExoResult.Operation.target) ($($ExoResult.ErrorMessage))")
                     }
                 }
             }

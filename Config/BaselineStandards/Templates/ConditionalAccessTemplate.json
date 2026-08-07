@@ -1,0 +1,96 @@
+{
+  "name": "ConditionalAccessTemplate",
+  "label": "Conditional Access Template",
+  "cat": "Templates",
+  "tag": [
+    "CIS M365 7.0.0 (5.2.2)",
+    "HighImpact"
+  ],
+  "impact": "High Impact",
+  "helpText": "Deploys and drift-checks a Conditional Access policy from a CA template. Deploy in report-only first, then enforce via a later stage.",
+  "executiveText": "Manages the sign-in rules that protect accounts - for example requiring a second factor or blocking legacy sign-in methods. The single most effective control against account takeover.",
+  "recommendedBy": [
+    "CIS",
+    "Microsoft",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "secureScoreImpact": 30,
+  "compare": "subset",
+  "hardCompare": false,
+  "instanceIdentity": "caTemplate",
+  "multiple": true,
+  "variables": {
+    "caTemplate": {
+      "type": "autoComplete",
+      "label": "Select Conditional Access Template",
+      "api": {
+        "url": "/api/ListCATemplates",
+        "labelField": "displayName",
+        "valueField": "GUID",
+        "queryKey": "ListCATemplates",
+        "showRefresh": true,
+        "templateView": {
+          "title": "Conditional Access Policy"
+        }
+      }
+    },
+    "state": {
+      "type": "autoComplete",
+      "label": "What state should we deploy this template in?",
+      "options": [
+        {
+          "label": "Do not change state",
+          "value": "donotchange"
+        },
+        {
+          "label": "Report only",
+          "value": "enabledForReportingButNotEnforced"
+        },
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        }
+      ],
+      "default": "enabledForReportingButNotEnforced",
+      "recommended": "enabled"
+    },
+    "disableSD": {
+      "type": "switch",
+      "label": "Disable Security Defaults when deploying policy",
+      "default": false
+    },
+    "createGroups": {
+      "type": "switch",
+      "label": "Create groups if they do not exist",
+      "default": false
+    }
+  },
+  "expected": {
+    "displayName": "%caTemplate%",
+    "state": "%state%"
+  },
+  "read": {
+    "cacheType": "ConditionalAccessPolicies",
+    "requiredCaches": ["ConditionalAccessPolicies", "NamedLocations", "AuthenticationStrengths"],
+    "liveCount": {
+      "uri": "identity/conditionalAccess/policies",
+      "cacheType": "ConditionalAccessPolicies"
+    }
+  },
+  "prepare": "Get-CIPPBaselineCATemplateState",
+  "remediate": {
+    "executor": "CATemplate",
+    "caTemplate": "%caTemplate%",
+    "state": "%state%",
+    "disableSD": "%disableSD%",
+    "createGroups": "%createGroups%"
+  }
+}

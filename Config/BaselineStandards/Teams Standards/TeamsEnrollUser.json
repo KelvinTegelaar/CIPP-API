@@ -1,0 +1,57 @@
+{
+  "name": "TeamsEnrollUser",
+  "label": "Default voice and face enrollment",
+  "cat": "Teams Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Controls whether users with this policy can set the voice profile capture and enrollment through the Recognition tab in their Teams client settings.",
+  "executiveText": "Determines whether employees can enroll their voice and face profiles for recognition features in Teams, enabling personalized experiences like voice identification. This setting balances convenience features with privacy considerations and organizational policies regarding biometric data collection.",
+  "docsDescription": "Controls whether users with this policy can set the voice profile capture and enrollment through the Recognition tab in their Teams client settings.",
+  "impactColour": "info",
+  "addedDate": "2024-11-12",
+  "powershellEquivalent": "Set-CsTeamsMeetingPolicy -Identity Global -EnrollUserOverride $false",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "EnrollUserOverride": {
+      "type": "autoComplete",
+      "label": "Voice and Face Enrollment",
+      "options": [
+        {
+          "label": "Disabled",
+          "value": "Disabled"
+        },
+        {
+          "label": "Enabled",
+          "value": "Enabled"
+        }
+      ],
+      "default": "Disabled"
+    }
+  },
+  "expected": {
+    "EnrollUserOverride": "%EnrollUserOverride%"
+  },
+  "read": {
+    "cacheType": "CsTeamsMeetingPolicy"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsMeetingPolicy",
+        "params": {
+          "EnrollUserOverride": "%EnrollUserOverride%"
+        }
+      }
+    ]
+  }
+}

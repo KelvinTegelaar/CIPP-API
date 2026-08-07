@@ -7,7 +7,7 @@
   {
     "type": "Groups",
     "friendlyName": "Groups",
-    "description": "All Azure AD groups with members"
+    "description": "All Azure AD groups with members and owners"
   },
   {
     "type": "Guests",

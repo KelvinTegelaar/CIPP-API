@@ -32,7 +32,7 @@ function Get-CIPPAzStorageQueue {
     )
 
     begin {
-        function Parse-ConnString {
+        function ConvertFrom-ConnectionString {
             param([string]$Conn)
             $map = @{}
             if (-not $Conn) { return $map }
@@ -109,7 +109,7 @@ function Get-CIPPAzStorageQueue {
     }
 
     process {
-        $connParams = Parse-ConnString -Conn $ConnectionString
+        $connParams = ConvertFrom-ConnectionString -Conn $ConnectionString
         $baseInfo = Get-QueueBaseInfo -ConnParams $connParams
 
         # Determine server-side prefix optimization

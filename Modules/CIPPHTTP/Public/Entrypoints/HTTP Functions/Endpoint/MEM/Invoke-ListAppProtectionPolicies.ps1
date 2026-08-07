@@ -1,4 +1,4 @@
-﻿function Invoke-ListAppProtectionPolicies {
+function Invoke-ListAppProtectionPolicies {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,10 +15,10 @@
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = $Request.Query.tenantFilter
-    $UseReportDB = $Request.Query.UseReportDB
-
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     try {
-        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true') {
+        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {
             try {
                 $GraphRequest = Get-CIPPIntuneAppProtectionPolicyReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK

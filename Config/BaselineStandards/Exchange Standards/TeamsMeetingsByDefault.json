@@ -1,0 +1,46 @@
+{
+  "name": "TeamsMeetingsByDefault",
+  "label": "Set Teams Meetings by default state",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the default state for automatically turning meetings into Teams meetings for the tenant. This can be overridden by the user in Outlook.",
+  "executiveText": "Automatically adds Microsoft Teams meeting links to calendar invitations by default, streamlining the process of creating virtual meetings. This improves collaboration efficiency and ensures consistent meeting experiences across the organization, though users can override this setting when needed.",
+  "impactColour": "info",
+  "addedDate": "2024-05-31",
+  "powershellEquivalent": "Set-OrganizationConfig -OnlineMeetingsByDefaultEnabled",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "switch",
+      "label": "Turn meetings into Teams meetings by default",
+      "default": true
+    }
+  },
+  "expected": {
+    "OnlineMeetingsByDefaultEnabled": "%state%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "OnlineMeetingsByDefaultEnabled": "%state%"
+        }
+      }
+    ]
+  }
+}

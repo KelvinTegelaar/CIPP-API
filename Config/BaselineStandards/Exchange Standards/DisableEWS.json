@@ -1,0 +1,50 @@
+{
+  "name": "DisableEWS",
+  "label": "Disable Exchange Web Services",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Disables Exchange Web Services (EWS) organization-wide. This reduces the attack surface by blocking legacy API access to mailbox data. Warning: This may break Office web add-ins on builds older than 16.0.19127.",
+  "executiveText": "Disables Exchange Web Services (EWS) across the organization to reduce attack surface and prevent legacy API access to sensitive mailbox data. This aligns with Microsoft's Baseline Security Mode recommendation to minimize exploitable endpoints while requiring updates to applications that depend on EWS.",
+  "docsDescription": "Disables Exchange Web Services (EWS) at the organization level to reduce attack surface. EWS provides cross-platform API access to sensitive Exchange Online data such as emails, meetings, and contacts. If compromised, attackers can access confidential data, send phishing emails, or spoof identities. Disabling EWS also reduces legacy app usage and minimizes exploitable endpoints. Note that this may break first-party features including web add-ins for Word, Excel, PowerPoint, and Outlook on builds older than 16.0.19127.",
+  "impactColour": "danger",
+  "addedDate": "2026-04-28",
+  "powershellEquivalent": "Set-OrganizationConfig -EwsEnabled $false",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "ewsEnabled": {
+      "type": "switch",
+      "label": "Exchange Web Services enabled",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "EwsEnabled": "%ewsEnabled%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "EwsEnabled": "%ewsEnabled%"
+        }
+      }
+    ]
+  }
+}

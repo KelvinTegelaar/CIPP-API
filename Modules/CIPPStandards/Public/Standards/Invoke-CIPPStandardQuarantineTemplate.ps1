@@ -63,6 +63,14 @@ function Invoke-CIPPStandardQuarantineTemplate {
         # Compare the settings from standard with the current policies
         $CompareList = foreach ($Policy in $Settings) {
             try {
+                # displayName comes from an autoComplete, so it is normally an object with a .value.
+                # Drift remediation and hand-built templates can pass it as a plain string.
+                $PolicyDisplayName = $Policy.displayName.value ?? [string]$Policy.displayName
+                if ([string]::IsNullOrWhiteSpace($PolicyDisplayName)) {
+                    Write-LogMessage -API $APIName -tenant $Tenant -message 'Skipping a Quarantine policy entry with no display name.' -sev 'Warning'
+                    continue
+                }
+
                 # Create hashtable with desired Quarantine Setting
                 $EndUserQuarantinePermissions = @{
                     # ViewHeader and Download are set to false because the value 0 or 1 does nothing per Microsoft documentation
@@ -77,13 +85,13 @@ function Invoke-CIPPStandardQuarantineTemplate {
                 }
 
                 # If the Quarantine Policy already exists
-                if ($Policy.displayName.value -in $CurrentPolicies.Name) {
+                if ($PolicyDisplayName -in $CurrentPolicies.Name) {
                     #Get the current policy and convert EndUserQuarantinePermissions from string to hashtable for compare
-                    $ExistingPolicy = $CurrentPolicies | Where-Object -Property Name -EQ $Policy.displayName.value
+                    $ExistingPolicy = $CurrentPolicies | Where-Object -Property Name -EQ $PolicyDisplayName
                     $ExistingPolicyEndUserQuarantinePermissions = Convert-QuarantinePermissionsValue -InputObject $ExistingPolicy.EndUserQuarantinePermissions -ErrorAction Stop
 
                     #Compare the current policy
-                    $StateIsCorrect = ($ExistingPolicy.Name -eq $Policy.displayName.value) -and
+                    $StateIsCorrect = ($ExistingPolicy.Name -eq $PolicyDisplayName) -and
                     ($ExistingPolicy.ESNEnabled -eq $Policy.ESNEnabled) -and
                     ($ExistingPolicy.IncludeMessagesFromBlockedSenderAddress -eq $Policy.IncludeMessagesFromBlockedSenderAddress) -and
                     (!(Compare-Object @($ExistingPolicyEndUserQuarantinePermissions.values) @($EndUserQuarantinePermissions.values)))
@@ -94,7 +102,7 @@ function Invoke-CIPPStandardQuarantineTemplate {
                             missing                                 = $false
                             StateIsCorrect                          = $StateIsCorrect
                             Action                                  = 'None'
-                            displayName                             = $Policy.displayName.value
+                            displayName                             = $PolicyDisplayName
                             EndUserQuarantinePermissions            = $EndUserQuarantinePermissions
                             ESNEnabled                              = $Policy.ESNEnabled
                             IncludeMessagesFromBlockedSenderAddress = $Policy.IncludeMessagesFromBlockedSenderAddress
@@ -109,7 +117,7 @@ function Invoke-CIPPStandardQuarantineTemplate {
                             missing                                 = $false
                             StateIsCorrect                          = $StateIsCorrect
                             Action                                  = 'Update'
-                            displayName                             = $Policy.displayName.value
+                            displayName                             = $PolicyDisplayName
                             EndUserQuarantinePermissions            = $EndUserQuarantinePermissions
                             ESNEnabled                              = $Policy.ESNEnabled
                             IncludeMessagesFromBlockedSenderAddress = $Policy.IncludeMessagesFromBlockedSenderAddress
@@ -125,7 +133,7 @@ function Invoke-CIPPStandardQuarantineTemplate {
                         missing                                 = $true
                         StateIsCorrect                          = $false
                         Action                                  = 'Create'
-                        displayName                             = $Policy.displayName.value
+                        displayName                             = $PolicyDisplayName
                         EndUserQuarantinePermissions            = $EndUserQuarantinePermissions
                         ESNEnabled                              = $Policy.ESNEnabled
                         IncludeMessagesFromBlockedSenderAddress = $Policy.IncludeMessagesFromBlockedSenderAddress
@@ -136,7 +144,7 @@ function Invoke-CIPPStandardQuarantineTemplate {
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                $Message = "Failed to compare Quarantine policy $($Policy.displayName.value), Error: $ErrorMessage"
+                $Message = "Failed to compare Quarantine policy $PolicyDisplayName, Error: $ErrorMessage"
                 Write-LogMessage -API $APIName -tenant $tenant -message $Message -sev 'Error'
                 return $Message
             }

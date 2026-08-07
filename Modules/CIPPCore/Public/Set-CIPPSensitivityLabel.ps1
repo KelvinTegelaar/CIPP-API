@@ -59,13 +59,60 @@ function Set-CIPPSensitivityLabel {
             }
         }
 
-        $ExistingLabels = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Label' -Compliance | Select-Object Name, DisplayName } catch { @() }
+        # Template-based encryption is rebuilt in the target tenant from its rights definitions, because the
+        # RMS template it was captured against is tenant-scoped and is deliberately dropped when the template
+        # is normalized. Without rights definitions Purview has nothing to mint a template from, so fail with
+        # something actionable rather than letting the compliance endpoint reject a half-configured label.
+        # An explicit template id means the author is targeting a template that already exists here, so the
+        # rights definitions are Purview's problem rather than ours.
+        if ("$($LabelParams['EncryptionProtectionType'])" -eq 'Template' -and
+            $LabelParams['EncryptionEnabled'] -ne $false -and
+            -not $LabelParams['EncryptionTemplateId']) {
+            $RightsCount = @($LabelParams['EncryptionRightsDefinitions'] | Where-Object { $_ }).Count
+            if ($RightsCount -eq 0) {
+                throw "Sensitivity label '$LabelName' uses template-based encryption but carries no rights definitions, so its protection cannot be rebuilt in another tenant. Re-create the template from the source label, or add EncryptionRightsDefinitions (e.g. 'AuthenticatedUsers:VIEW,DOCEDIT') to it."
+            }
+        }
+
+        $ExistingLabels = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Label' -Compliance | Select-Object Name, DisplayName, Guid, ImmutableId } catch { @() }
         $ExistingLabelPolicies = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-LabelPolicy' -Compliance | Select-Object Name } catch { @() }
 
         $LabelExists = [bool]($ExistingLabels | Where-Object { $_.Name -eq $LabelName -or $_.DisplayName -eq $LabelName })
 
+        # ParentId identifies the parent of a sublabel by GUID, which is tenant-scoped in exactly the way an
+        # RMS template id is: the source tenant's value addresses nothing here. Re-resolve it against this
+        # tenant's labels, and if the parent has not been deployed yet create the label at the top level so
+        # one missing parent does not fail the whole deploy. Only the create path needs this - an existing
+        # label keeps whatever parent it already has.
+        if (-not $LabelExists -and $LabelParams.ContainsKey('ParentId')) {
+            $ParentId = "$($LabelParams['ParentId'])"
+            $ParentInTenant = $ExistingLabels | Where-Object { "$($_.Guid)" -eq $ParentId -or "$($_.ImmutableId)" -eq $ParentId }
+
+            if (-not $ParentInTenant) {
+                # Only usable when the capture recorded a parent name alongside the GUID; Get-Label does not
+                # always supply one, hence the fallback below.
+                $ParentName = "$($NormalizedLabel.ParentLabelDisplayName ?? $NormalizedLabel.ParentLabelName)".Trim()
+                $ParentByName = if ($ParentName) {
+                    $ExistingLabels | Where-Object { $_.Name -eq $ParentName -or $_.DisplayName -eq $ParentName } | Select-Object -First 1
+                }
+
+                if ($ParentByName) {
+                    $LabelParams['ParentId'] = $ParentByName.Guid ?? $ParentByName.ImmutableId
+                } else {
+                    $LabelParams.Remove('ParentId')
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "The parent label for '$LabelName' does not exist in $TenantFilter, so it was deployed as a top-level label. Deploy the parent label first to keep the hierarchy." -sev Warning
+                }
+            }
+        }
+
         if ($LabelExists) {
-            $SetParams = ConvertTo-CIPPComplianceSetParams -Params $LabelParams -Identity $LabelName
+            # ParentId is a New-Label parameter only - an existing label cannot be reparented in place.
+            $UpdateParams = @{}
+            foreach ($Key in $LabelParams.Keys) {
+                if ($Key -eq 'ParentId') { continue }
+                $UpdateParams[$Key] = $LabelParams[$Key]
+            }
+            $SetParams = ConvertTo-CIPPComplianceSetParams -Params $UpdateParams -Identity $LabelName
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Label' -cmdParams $SetParams -Compliance -useSystemMailbox $true
             $LabelAction = "Updated sensitivity label '$LabelName' in $TenantFilter."
         } else {

@@ -11,13 +11,36 @@ function Update-CIPPSSORedirectUri {
     2. Ensures the SSO app's web.redirectUris includes a callback URI for each hostname.
     3. Verifies and patches signInAudience on the app reg if it doesn't match the stored
        multi-tenant flag (AzureADMyOrg for single-tenant, AzureADMultipleOrgs for multi).
+
+    Additive only — it never removes a URI, so a domain bound out-of-band keeps working.
+
+    .PARAMETER PassThru
+    Emit a result object describing what happened. Off by default so warmup callers
+    (Initialize-CIPPAuth) don't pick up stray pipeline output.
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [switch]$PassThru
+    )
+
+    $EmitResult = $PassThru.IsPresent
+
+    # Local helper so every exit point returns the same shape (or nothing, without -PassThru)
+    $Result = {
+        param([string]$Status, [string[]]$RedirectUris, [string[]]$AddedUris, [string]$Message)
+        if (-not $EmitResult) { return }
+        [PSCustomObject]@{
+            Status       = $Status
+            RedirectUris = @($RedirectUris)
+            AddedUris    = @($AddedUris)
+            Message      = $Message
+        }
+    }
 
     $CurrentHost = $env:WEBSITE_HOSTNAME
     if (-not $CurrentHost) {
         Write-Information '[SSO-Redirect] WEBSITE_HOSTNAME not set, skipping redirect URI update'
+        & $Result 'skipped' @() @() 'WEBSITE_HOSTNAME is not set — cannot determine this instance''s hostnames.'
         return
     }
 
@@ -46,36 +69,17 @@ function Update-CIPPSSORedirectUri {
 
     if (-not $SSOAppId) {
         Write-Information '[SSO-Redirect] No SSO AppId found, skipping redirect URI update'
+        & $Result 'skipped' @() @() 'No SSO app registration is configured for this instance.'
         return
     }
 
-    # Discover all bound hostnames via ARM (custom domains + default)
-    $AllHostnames = @($CurrentHost)
-    try {
-        $SiteName = $env:WEBSITE_SITE_NAME
-        $ResourceGroup = $env:WEBSITE_RESOURCE_GROUP
-        $SubscriptionId = if ($env:WEBSITE_OWNER_NAME) { ($env:WEBSITE_OWNER_NAME -split '\+')[0] } else { $null }
-
-        if ($SiteName -and $ResourceGroup -and $SubscriptionId -and $env:IDENTITY_ENDPOINT -and $env:IDENTITY_HEADER) {
-            $TokenUri = "$($env:IDENTITY_ENDPOINT)?resource=https://management.azure.com/&api-version=2019-08-01"
-            $TokenResponse = Invoke-RestMethod -Uri $TokenUri -Headers @{ 'X-IDENTITY-HEADER' = $env:IDENTITY_HEADER } -Method Get
-            $ArmToken = $TokenResponse.access_token
-
-            $SiteUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Web/sites/$SiteName`?api-version=2024-11-01"
-            $SiteResponse = Invoke-RestMethod -Uri $SiteUri -Headers @{ Authorization = "Bearer $ArmToken" } -Method Get
-
-            if ($SiteResponse.properties.hostNames) {
-                $AllHostnames = @($SiteResponse.properties.hostNames)
-                Write-Information "[SSO-Redirect] Discovered hostnames from ARM: $($AllHostnames -join ', ')"
-            }
-        }
-    } catch {
-        Write-Information "[SSO-Redirect] ARM hostname discovery failed (using WEBSITE_HOSTNAME only): $($_.Exception.Message)"
-    }
-
-    # Build required redirect URIs from all hostnames
-    $RequiredUris = foreach ($Hostname in $AllHostnames) {
-        "https://$Hostname/.auth/login/aad/callback"
+    # Every bound hostname (custom domains + default) needs its own callback. When ARM can't be
+    # reached this list is a best-effort fallback, not the full set of bound domains - the patch
+    # below is still safe (it only adds), but we must not report "nothing missing" as an all-clear.
+    $HostnameState = Get-CIPPSiteHostname -IncludeStatus
+    $RequiredUris = @($HostnameState.RedirectUris)
+    if (-not $HostnameState.Discovered) {
+        Write-Information "[SSO-Redirect] Could not enumerate bound domains — working from known hostnames only: $($HostnameState.Error)"
     }
 
     try {
@@ -83,7 +87,7 @@ function Update-CIPPSSORedirectUri {
         $ExistingUris = @($AppResponse.web.redirectUris)
 
         # Determine which URIs are missing
-        $MissingUris = $RequiredUris | Where-Object { $_ -notin $ExistingUris }
+        $MissingUris = @($RequiredUris | Where-Object { $_ -notin $ExistingUris })
 
         # Determine the expected signInAudience
         $ExpectedAudience = if ($SSOMultiTenant) { 'AzureADMultipleOrgs' } else { 'AzureADMyOrg' }
@@ -91,6 +95,11 @@ function Update-CIPPSSORedirectUri {
 
         if ($MissingUris.Count -eq 0 -and -not $AudienceMismatch) {
             Write-Information '[SSO-Redirect] All redirect URIs present and signInAudience correct'
+            if ($HostnameState.Discovered) {
+                & $Result 'nochange' $ExistingUris @() 'All sign-in URLs are already registered.'
+            } else {
+                & $Result 'partial' $ExistingUris @() "The sign-in URLs we could identify are already registered, but the list of custom domains bound to this instance could not be read, so some may be missing: $($HostnameState.Error)"
+            }
             return
         }
 
@@ -99,12 +108,12 @@ function Update-CIPPSSORedirectUri {
         # single-tenant fails with "SigninAudienceRestrictions with restricted mode can be
         # configured only on multi-tenants apps"). Sending them together would let that
         # rejection also drop the redirect URI additions, which are needed for sign-in.
+        $UpdatedUris = [System.Collections.Generic.List[string]]::new()
+        $ExistingUris | ForEach-Object { $UpdatedUris.Add($_) }
         if ($MissingUris.Count -gt 0) {
-            $UpdatedUris = [System.Collections.Generic.List[string]]::new()
-            $ExistingUris | ForEach-Object { $UpdatedUris.Add($_) }
             $MissingUris | ForEach-Object { $UpdatedUris.Add($_) }
             $UriBody = @{ web = @{ redirectUris = $UpdatedUris } } | ConvertTo-Json -Depth 5
-            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $UriBody -type PATCH -NoAuthCheck $true -AsApp $true
+            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $UriBody -type PATCH -NoAuthCheck $true -AsApp $true
             Write-Information "[SSO-Redirect] Added redirect URIs: $($MissingUris -join ', ')"
             Write-LogMessage -API 'SSO-Redirect' -message "Added redirect URIs: $($MissingUris -join ', ')" -sev Info
         }
@@ -113,7 +122,7 @@ function Update-CIPPSSORedirectUri {
             Write-Information "[SSO-Redirect] Correcting signInAudience: $($AppResponse.signInAudience) -> $ExpectedAudience"
             try {
                 $AudienceBody = @{ signInAudience = $ExpectedAudience } | ConvertTo-Json -Compress
-                New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $AudienceBody -type PATCH -NoAuthCheck $true -AsApp $true
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $AudienceBody -type PATCH -NoAuthCheck $true -AsApp $true
                 Write-LogMessage -API 'SSO-Redirect' -message "Updated signInAudience to $ExpectedAudience (multiTenant=$SSOMultiTenant)" -sev Info
             } catch {
                 # Non-fatal: a tenant app-management policy is blocking the audience change.
@@ -122,7 +131,18 @@ function Update-CIPPSSORedirectUri {
                 Write-Information "[SSO-Redirect] signInAudience change to $ExpectedAudience was rejected by tenant policy (leaving app reg as $($AppResponse.signInAudience)): $($_.Exception.Message)"
             }
         }
+
+        $Summary = if ($MissingUris.Count -gt 0) { "Registered $($MissingUris.Count) new sign-in URL(s)." } else { 'Sign-in URLs were already up to date.' }
+        if ($HostnameState.Discovered) {
+            & $Result 'updated' $UpdatedUris $MissingUris $Summary
+        } else {
+            & $Result 'partial' $UpdatedUris $MissingUris "$Summary The full list of custom domains bound to this instance could not be read, so others may still be missing: $($HostnameState.Error)"
+        }
+        return
     } catch {
-        Write-LogMessage -API 'SSO-Redirect' -message "Failed to update SSO app registration: $_" -LogData (Get-CippException -Exception $_) -sev Warning
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'SSO-Redirect' -message "Failed to update SSO app registration: $_" -LogData $ErrorMessage -sev Warning
+        & $Result 'error' @() @() $ErrorMessage.NormalizedError
+        return
     }
 }

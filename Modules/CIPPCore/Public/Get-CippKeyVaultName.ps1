@@ -7,7 +7,12 @@ function Get-CippKeyVaultName {
         The Key Vault is named after the main App Service instance, so its name equals
         $env:WEBSITE_SITE_NAME on the main app.
 
-        Two things have to be handled:
+        Setting $env:CIPP_KV_NAME overrides all derivation for unique setups where the
+        vault is not named after the instance (self-hosted with a pre-existing vault,
+        renamed resources, shared vaults). The override is used exactly as given - no
+        offload-suffix stripping - because an explicit name should be taken literally.
+
+        When deriving, two things have to be handled:
 
         1. Dashed instance names. Earlier code derived the vault name as
            ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0], which keeps only the segment before
@@ -31,6 +36,12 @@ function Get-CippKeyVaultName {
     [CmdletBinding()]
     [OutputType([string])]
     param()
+
+    # Explicit override for unique setups (vault not named after the instance).
+    # Returned verbatim: no offload-suffix stripping on a name someone chose deliberately.
+    if (-not [string]::IsNullOrWhiteSpace($env:CIPP_KV_NAME)) {
+        return $env:CIPP_KV_NAME
+    }
 
     # Primary: the App Service site name IS the vault name (on the main app).
     # Fallback: the full deployment id. Never split on '-' (that is the truncation bug this

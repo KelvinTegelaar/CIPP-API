@@ -4,6 +4,8 @@ function Invoke-ExecCaCheck {
         Entrypoint
     .ROLE
         Tenant.ConditionalAccess.Read
+    .DESCRIPTION
+        Runs a Conditional Access "what if" evaluation, reporting which policies would apply to a sign-in with the given user, application, device platform, location, client app type and risk levels. Evaluation only - no sign-in occurs and no policy is changed.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -36,8 +36,8 @@ function Invoke-CippTestCISAMSEXO121 {
             $null = $Result.Append(":`n`n")
             $null = $Result.Append("| Value | Action | List Type |`n")
             $null = $Result.Append("| :---- | :----- | :-------- |`n")
-            foreach ($Sender in ($AllowedSenders | Select-Object -First 10)) {
-                $null = $Result.Append("| $($Sender.Value) | $($Sender.Action) | $($Sender.ListType) |`n")
+            foreach ($AllowedSender in ($AllowedSenders | Select-Object -First 10)) {
+                $null = $Result.Append("| $($AllowedSender.Value) | $($AllowedSender.Action) | $($AllowedSender.ListType) |`n")
             }
             $Status = 'Failed'
         }

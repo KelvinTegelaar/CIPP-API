@@ -51,12 +51,7 @@ function Invoke-ExecDeployAppTemplate {
             try {
                 $Config = $App.config
                 if ($Config -is [string]) {
-                    # Parse case-sensitive to survive templates carrying both 'applicationName'
-                    # and 'ApplicationName', then collapse them via a case-insensitive dictionary.
-                    $Parsed = $Config | ConvertFrom-Json -Depth 100 -AsHashtable
-                    $Config = [ordered]@{}
-                    foreach ($Key in $Parsed.Keys) { $Config[$Key] = $Parsed[$Key] }
-                    $Config = [PSCustomObject]$Config
+                    $Config = $Config | ConvertFrom-CippAppConfig
                 }
 
                 $AppType = "$($App.appType ?? $App.AppType)"
@@ -97,15 +92,15 @@ function Invoke-ExecDeployAppTemplate {
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                "Failed '$($App.appName)': $($ErrorMessage.NormalizedMessage)"
-                Write-LogMessage -headers $Headers -API $APIName -message "Failed to deploy app '$($App.appName)' from template: $($ErrorMessage.NormalizedMessage)" -Sev 'Error' -LogData $ErrorMessage
+                "Failed '$($App.appName)': $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APIName -message "Failed to deploy app '$($App.appName)' from template: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
             }
         }
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Results = "Failed to deploy app template: $($ErrorMessage.NormalizedMessage)"
+        $Results = "Failed to deploy app template: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

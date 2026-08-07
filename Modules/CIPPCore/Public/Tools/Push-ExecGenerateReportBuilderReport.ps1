@@ -12,12 +12,25 @@ function Push-ExecGenerateReportBuilderReport {
         $TemplateName,
         $Blocks,
         $TemplateGUID,
-        $IncludeRawAttachments
+        $IncludeRawAttachments,
+        $Settings
     )
 
     try {
         if ([string]::IsNullOrEmpty($TenantFilter)) {
             throw 'TenantFilter is required'
+        }
+
+        # Page setup and branding for this report — page size, orientation, cover, footer,
+        # watermark and which branding preset to render against. Carried through untouched: the
+        # PDF is rendered in the browser, so this side only has to store what it was given.
+        $ParsedSettings = $null
+        if ($Settings) {
+            if ($Settings -is [string]) {
+                try { $ParsedSettings = ConvertFrom-Json -InputObject $Settings } catch { $ParsedSettings = $null }
+            } else {
+                $ParsedSettings = $Settings
+            }
         }
 
         # Parse Blocks
@@ -34,6 +47,11 @@ function Push-ExecGenerateReportBuilderReport {
             if ($Template -and $Template.JSON) {
                 $TemplateData = ConvertFrom-Json -InputObject $Template.JSON
                 $ParsedBlocks = @($TemplateData.Blocks)
+                # A schedule created before page setup existed passes no Settings, so fall back to
+                # whatever the template itself was saved with.
+                if (-not $ParsedSettings -and $TemplateData.Settings) {
+                    $ParsedSettings = $TemplateData.Settings
+                }
             }
         }
 
@@ -138,6 +156,7 @@ function Push-ExecGenerateReportBuilderReport {
             Blocks       = [string](ConvertTo-Json -InputObject @($EnrichedBlocks) -Depth 20 -Compress)
             GeneratedAt  = [string](Get-Date).ToString('o')
             Status       = 'Completed'
+            Settings     = if ($ParsedSettings) { [string](ConvertTo-Json -InputObject $ParsedSettings -Depth 10 -Compress) } else { '' }
         }
 
         Add-CIPPAzDataTableEntity @ReportTable -Entity $ReportEntity -Force

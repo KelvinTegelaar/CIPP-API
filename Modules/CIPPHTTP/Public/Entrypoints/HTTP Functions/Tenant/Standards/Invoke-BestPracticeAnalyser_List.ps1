@@ -4,6 +4,8 @@ Function Invoke-BestPracticeAnalyser_List {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.BestPracticeAnalyser.Read
+    .DESCRIPTION
+        Returns the cached Best Practice Analyser results for every tenant. The BPA is populated by a scheduled job, so this reads the last run rather than evaluating anything; if it has never run, a single placeholder row saying so is returned.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

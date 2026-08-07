@@ -26,7 +26,7 @@ function Get-CIPPAzStorageContainer {
     )
 
     begin {
-        function Parse-ConnString {
+        function ConvertFrom-ConnectionString {
             param([string]$Conn)
             $map = @{}
             if (-not $Conn) { return $map }
@@ -103,7 +103,7 @@ function Get-CIPPAzStorageContainer {
     }
 
     process {
-        $connParams = Parse-ConnString -Conn $ConnectionString
+        $connParams = ConvertFrom-ConnectionString -Conn $ConnectionString
         $baseInfo = Get-BlobBaseInfo -ConnParams $connParams
 
         # Determine server-side prefix optimization

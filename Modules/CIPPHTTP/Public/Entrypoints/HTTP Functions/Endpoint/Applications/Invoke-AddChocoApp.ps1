@@ -32,8 +32,10 @@ function Invoke-AddChocoApp {
             })
     }
 
-    $intuneBody = Get-Content 'AddChocoApp\Choco.app.json' | ConvertFrom-Json
+    $AppTemplatePath = Join-Path $env:CIPPRootPath 'AddChocoApp\Choco.app.json'
+    $intuneBody = Get-Content -LiteralPath $AppTemplatePath -Raw | ConvertFrom-Json
     $AssignTo = $Request.Body.AssignTo -eq 'customGroup' ? $Request.Body.CustomGroup : $Request.Body.AssignTo
+    $ExcludeGroup = $Request.Body.excludeGroup
     $intuneBody.description = $ChocoApp.description
     $intuneBody.displayName = $ChocoApp.ApplicationName
     $intuneBody.installExperience.runAsAccount = if ($ChocoApp.InstallAsSystem) { 'system' } else { 'user' }
@@ -67,6 +69,7 @@ function Invoke-AddChocoApp {
                 tenant             = $Tenant
                 ApplicationName    = $ChocoApp.ApplicationName
                 assignTo           = $AssignTo
+                excludeGroup       = $ExcludeGroup
                 InstallationIntent = $Request.Body.InstallationIntent
                 IntuneBody         = $TenantIntuneBody
             } | ConvertTo-Json -Depth 15

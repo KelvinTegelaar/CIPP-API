@@ -31,7 +31,7 @@ function Test-CIPPGDAPRelationships {
                             Issue        = 'The relationship has global administrator access. Auto-Extend is not available.'
                             Tenant       = [string]$Group.customer.displayName
                             Relationship = [string]$Group.displayName
-                            Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
+                            Link         = 'https://docs.cipp.app/setup/maintaining-cipp/recommended-roles'
 
                         }) | Out-Null
                 }
@@ -80,7 +80,7 @@ function Test-CIPPGDAPRelationships {
                         Issue        = "$($ExpectedGroup) is not assigned to the SAM user $me. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                         Tenant       = '*Partner Tenant'
                         Relationship = 'None'
-                        Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
+                        Link         = 'https://docs.cipp.app/setup/maintaining-cipp/recommended-roles'
 
                     }) | Out-Null
                 $MissingGroups.Add([PSCustomObject]@{
@@ -95,7 +95,7 @@ function Test-CIPPGDAPRelationships {
                     Issue        = "We only found $($CIPPGroupCount) of the 15 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                     Tenant       = '*Partner Tenant'
                     Relationship = 'None'
-                    Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
+                    Link         = 'https://docs.cipp.app/setup/maintaining-cipp/recommended-roles'
 
                 }) | Out-Null
         }
@@ -119,7 +119,7 @@ function Test-CIPPGDAPRelationships {
                             Issue        = "The GDAP role mapping for '$($MappingResult.GroupName)' references a security group that no longer exists in the partner tenant. Onboarding group mapping will fail until the GDAP roles are recreated."
                             Tenant       = '*Partner Tenant'
                             Relationship = 'None'
-                            Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
+                            Link         = 'https://docs.cipp.app/setup/maintaining-cipp/recommended-roles'
                         }) | Out-Null
                 } elseif ($MappingResult.Status -eq 'Stale') {
                     $GDAPissues.add([PSCustomObject]@{
@@ -128,7 +128,7 @@ function Test-CIPPGDAPRelationships {
                             Issue        = "The GDAP role mapping for '$($MappingResult.GroupName)' points at a stale group id but a matching group still exists. Use 'Repair Role Mappings' under Details to correct the stored group id."
                             Tenant       = '*Partner Tenant'
                             Relationship = 'None'
-                            Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
+                            Link         = 'https://docs.cipp.app/setup/maintaining-cipp/recommended-roles'
                         }) | Out-Null
                 }
             }

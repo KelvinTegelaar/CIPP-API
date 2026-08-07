@@ -27,12 +27,21 @@ function Set-CIPPDBCacheMailboxes {
 
         # Get mailboxes and user details in a single bulk request
         $ZeroArchiveGuid = '00000000-0000-0000-0000-000000000000'
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,RemotePowerShellEnabled,Guid,Identity'
+        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,RemotePowerShellEnabled,Guid,Identity,AutoExpandingArchiveEnabled'
         $BulkRequests = @(
             @{ CmdletInput = @{ CmdletName = 'Get-Mailbox'; Parameters = @{} } }
             @{ CmdletInput = @{ CmdletName = 'Get-User'; Parameters = @{} } }
         )
         $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $BulkRequests -useSystemMailbox $true -Select $Select -ReturnWithCommand $true
+
+        # Separate OrgConfig call (avoid shared mailbox $Select on Get-OrganizationConfig).
+        # On failure, fall back to mailbox-only resolution and log so live/cache skew is diagnosable.
+        $OrgAutoExpandingArchiveEnabled = $null
+        try {
+            $OrgAutoExpandingArchiveEnabled = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-OrganizationConfig' -Select 'AutoExpandingArchiveEnabled' -useSystemMailbox $true).AutoExpandingArchiveEnabled
+        } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to get OrganizationConfig for Auto Expanding Archive; using mailbox-level values only. Error: $($_.Exception.Message)" -sev Warning
+        }
 
         # Build a lookup hashtable from Get-User results for O(1) matching
         $UserLookup = @{}
@@ -46,11 +55,14 @@ function Set-CIPPDBCacheMailboxes {
         $Mailboxes = [System.Collections.Generic.List[PSObject]]::new()
         foreach ($Mailbox in @($BulkResults.'Get-Mailbox')) {
             $MatchedUser = $UserLookup[$Mailbox.ExternalDirectoryObjectId]
+            $AutoExpandingArchiveState = Get-CIPPAutoExpandingArchiveState -MailboxAutoExpandingArchiveEnabled $Mailbox.AutoExpandingArchiveEnabled -OrgAutoExpandingArchiveEnabled $OrgAutoExpandingArchiveEnabled
             $Mailboxes.Add(($Mailbox | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
                     @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
                     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                     @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
                     @{ Name = 'ArchiveEnabled'; Expression = { $_.ArchiveGuid -and $_.ArchiveGuid.ToString() -ne $ZeroArchiveGuid } },
+                    @{ Name = 'AutoExpandingArchive'; Expression = { $AutoExpandingArchiveState.AutoExpandingArchive } },
+                    @{ Name = 'AutoExpandingArchiveScope'; Expression = { $AutoExpandingArchiveState.AutoExpandingArchiveScope } },
                     @{ Name = 'ArchiveSize'; Expression = { 0 } },
                     @{ Name = 'ArchiveItemCount'; Expression = { 0 } },
                     @{ Name = 'storageUsedInBytes'; Expression = { 0 } },
@@ -80,6 +92,11 @@ function Set-CIPPDBCacheMailboxes {
                     @{ Name = 'Identity'; Expression = { $MatchedUser.Identity } }))
         }
 
+        # The raw Get-Mailbox/Get-User payloads are a second and third full copy of the tenant's
+        # mailboxes; everything downstream reads the projected $Mailboxes list, so release them.
+        $BulkResults = $null
+        $UserLookup = $null
+
         # $MailboxByUPN is the only lookup that stores mailbox objects. Enrichment steps below
         # resolve back through this lookup before updating the objects written by Add-CIPPDbItem.
         $MailboxByUPN = @{}
@@ -99,6 +116,7 @@ function Set-CIPPDBCacheMailboxes {
                     $Mailbox.MailboxItemCount = try { [int64]$Usage.itemCount } catch { 0 }
                 }
             }
+            $MailboxUsage = $null
         } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache mailbox usage details: $($_.Exception.Message)" -sev Warning
         }
@@ -163,8 +181,45 @@ function Set-CIPPDBCacheMailboxes {
                 # Separate batches for permissions and rules
                 $PermissionBatches = [System.Collections.Generic.List[object]]::new()
                 $RuleBatches = [System.Collections.Generic.List[object]]::new()
-                $AllMailboxData = @($Mailboxes | Select-Object id, UPN, GrantSendOnBehalfTo)
                 $AllMailboxUPNs = @($Mailboxes | Select-Object -ExpandProperty UPN)
+
+                # Every permission batch used to carry a copy of all mailboxes. Start-CIPPOrchestrator
+                # serialises the entire batch array into one ConvertTo-Json string, so that payload
+                # grew with the square of the mailbox count - a 10k-mailbox tenant produced 200
+                # batches x 10k entries in a single string.
+                #
+                # Push-GetMailboxPermissionsBatch only reads MailboxData two ways: it builds an
+                # id -> UPN lookup used to resolve send-on-behalf delegates, and it reads
+                # GrantSendOnBehalfTo for mailboxes in its own batch. So a batch needs its own
+                # mailboxes plus the mailboxes actually referenced as a delegate - never all of them.
+                # Delegates that are absent from the lookup are already skipped there, so the
+                # narrower slice resolves exactly the same set of delegates.
+                $MailboxSlimByUPN = @{}
+                foreach ($Mailbox in $Mailboxes) {
+                    if ($Mailbox.UPN) {
+                        $MailboxSlimByUPN[[string]$Mailbox.UPN] = $Mailbox | Select-Object id, UPN, GrantSendOnBehalfTo
+                    }
+                }
+
+                $DelegateIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                foreach ($Mailbox in $Mailboxes) {
+                    foreach ($Delegate in @($Mailbox.GrantSendOnBehalfTo)) {
+                        if ($Delegate) { [void]$DelegateIds.Add([string]$Delegate) }
+                    }
+                }
+
+                # GrantSendOnBehalfTo is dropped here: these entries exist only to resolve a
+                # delegate id to a UPN. The mailbox's own batch carries its full entry.
+                $DelegateDirectory = @(foreach ($Mailbox in $Mailboxes) {
+                        if ($Mailbox.id -and $Mailbox.UPN -and $DelegateIds.Contains([string]$Mailbox.id)) {
+                            [PSCustomObject]@{
+                                id                  = $Mailbox.id
+                                UPN                 = $Mailbox.UPN
+                                GrantSendOnBehalfTo = $null
+                            }
+                        }
+                    })
+                $DelegateIds = $null
 
                 # Build permission batches (mailbox + calendar in their respective sizes)
                 if ($Types -contains 'Permissions') {
@@ -172,12 +227,25 @@ function Set-CIPPDBCacheMailboxes {
                     for ($i = 0; $i -lt $Mailboxes.Count; $i += $PermissionBatchSize) {
                         $BatchMailboxUPNs = $AllMailboxUPNs[$i..[Math]::Min($i + $PermissionBatchSize - 1, $Mailboxes.Count - 1)]
                         $BatchNumber = [Math]::Floor($i / $PermissionBatchSize) + 1
+
+                        # Batch members keep $Mailboxes order, so the send-on-behalf rows this
+                        # batch emits come out in the same order as before. Delegate-only entries
+                        # are appended and carry no GrantSendOnBehalfTo, so they add no rows.
+                        $BatchUPNSet = [System.Collections.Generic.HashSet[string]]::new(
+                            [string[]]@($BatchMailboxUPNs), [System.StringComparer]::OrdinalIgnoreCase)
+                        $BatchMailboxData = @(
+                            foreach ($UPN in $BatchMailboxUPNs) { $MailboxSlimByUPN[[string]$UPN] }
+                            foreach ($Entry in $DelegateDirectory) {
+                                if (-not $BatchUPNSet.Contains([string]$Entry.UPN)) { $Entry }
+                            }
+                        )
+
                         $PermissionBatches.Add([PSCustomObject]@{
                                 FunctionName = 'GetMailboxPermissionsBatch'
                                 QueueName    = "Mailbox Permissions Batch $BatchNumber/$TotalPermBatches - $TenantFilter"
                                 TenantFilter = $TenantFilter
                                 Mailboxes    = $BatchMailboxUPNs
-                                MailboxData  = $AllMailboxData
+                                MailboxData  = $BatchMailboxData
                                 BatchNumber  = $BatchNumber
                                 TotalBatches = $TotalPermBatches
                             })
@@ -276,6 +344,12 @@ function Set-CIPPDBCacheMailboxes {
 
         # Clear mailbox data to free memory
         $Mailboxes = $null
+        $MailboxByUPN = $null
+        $MailboxSlimByUPN = $null
+        $DelegateDirectory = $null
+        $AllMailboxUPNs = $null
+        $PermissionBatches = $null
+        $RuleBatches = $null
         [System.GC]::Collect()
 
     } catch {
