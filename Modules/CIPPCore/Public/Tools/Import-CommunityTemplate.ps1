@@ -32,6 +32,21 @@ function Import-CommunityTemplate {
             $Existing = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Template.RowKey)' and PartitionKey eq '$($Template.PartitionKey)'" -ErrorAction SilentlyContinue
 
             if ($Existing) {
+                # This write is a full replace keyed on RowKey, so an unchanged repo file would
+                # silently revert edits made in CIPP. Only write when the SHA moved, or when -Force
+                # makes the overwrite explicit.
+                if ($Existing.SHA -eq $SHA -and -not $Force) {
+                    $StatusMessage = "Template '$($Template.RowKey)' from source '$Source' is already up to date. Skipping import."
+                    Write-Information $StatusMessage
+                    return $StatusMessage
+                }
+
+                # Package membership is assigned in CIPP and never carried in the repo file, so the
+                # replace has to bring it across or the template drops out of its package.
+                if ($Existing.Package -and -not $Template.Package) {
+                    $Template | Add-Member -MemberType NoteProperty -Name Package -Value $Existing.Package -Force
+                }
+
                 if ($Existing.PartitionKey -eq 'StandardsTemplateV2') {
                     # Convert existing JSON to object for updates
                     if (Test-Json $Existing.JSON -ErrorAction SilentlyContinue) {
@@ -72,7 +87,8 @@ function Import-CommunityTemplate {
             if ($Existing -and $Existing.SHA -ne $SHA) {
                 $StatusMessage = "Updated template '$($Template.RowKey)' from source '$Source' (SHA changed)."
             } elseif ($Existing) {
-                $StatusMessage = "Template '$($Template.RowKey)' from source '$Source' is already up to date."
+                # Only reachable with -Force; the unchanged case returned above.
+                $StatusMessage = "Overwrote template '$($Template.RowKey)' from source '$Source' (forced)."
             } else {
                 $StatusMessage = "Created template '$($Template.RowKey)' from source '$Source'."
             }
