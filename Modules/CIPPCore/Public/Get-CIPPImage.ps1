@@ -1,4 +1,4 @@
-function Get-CIPPImage {
+﻿function Get-CIPPImage {
     <#
     .FUNCTIONALITY
         Internal
@@ -13,6 +13,14 @@ function Get-CIPPImage {
         Add-CIPPAzDataTableEntity may store them across the original RowKey and
         `{RowKey}-partN` rows. Filters must include those part rows or
         Get-CIPPAzDataTableEntity cannot reassemble `data`.
+
+        Those rows are matched by RowKey range, not by OriginalEntityId. The Edm
+        type of that property is decided by whatever wrote the row, so naming it
+        in a filter means guessing: comparing it to both a string and a guid
+        literal is accepted by Azurite and rejected outright by the real table
+        service, and a rejected query looks identical here to a missing image -
+        which is how an uploaded logo could sit visibly in the table and still
+        read back as "no logo". A RowKey range needs no type at all.
     .PARAMETER PartitionKey
         Image kind / purpose (e.g. logo, brandingCover). Required.
     .PARAMETER Id
@@ -38,13 +46,9 @@ function Get-CIPPImage {
     }
 
     $Table = Get-CIPPTable -TableName 'Images'
-
-    # Include OriginalEntityId so multi-row large entities are fetched with their parts.
-    # Filtering only on RowKey eq id drops `{id}-partN` rows and breaks reassembly.
-    # Match both string and guid Edm types (same pattern as other CIPP large-entity reads).
     $IdClauses = foreach ($ImageId in $Ids) {
         $SafeId = $ImageId.Replace("'", "''")
-        "(RowKey eq '$SafeId' or OriginalEntityId eq '$SafeId' or OriginalEntityId eq guid'$SafeId')"
+        "(RowKey ge '$SafeId' and RowKey lt '$SafeId~')"
     }
     $Filter = "PartitionKey eq '$($PartitionKey.Replace("'","''"))' and ($($IdClauses -join ' or '))"
 
