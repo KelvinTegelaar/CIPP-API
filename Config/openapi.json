@@ -667,9 +667,9 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Creates or updates a baseline. There is no baseline blob: the Baselines\ndelta rows (design doc §4.1) are the editable source of truth for every standard's\nconfiguration, and the BaselineRollouts row (§12.2) holds the baseline-level data -\nname, description, exclusions, alert destinations, and the ordered stage definitions.\nBaselines are reconstructed from those rows on read.",
+        "description": "Creates or updates a baseline. There is no baseline blob: the Baselines\ndelta rows (design doc §4.1) are the editable source of truth for every standard's\nconfiguration, and the BaselineRollouts row (§12.2) holds the baseline-level data -\nname, description, exclusions, alert destinations, and the ordered stage definitions.\nBaselines are reconstructed from those rows on read. The actual write lives in\nNew-CIPPBaseline, shared with the community-repo import.",
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -722,9 +722,9 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "templateName"
-                ]
+                "additionalProperties": true,
+                "x-cipp-passthrough": true,
+                "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
               }
             }
           }
@@ -764,7 +764,10 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.Standards.ReadWrite",
+        "x-cipp-reads-via": [
+          "New-CIPPBaseline"
+        ]
       }
     },
     "/api/AddBPATemplate": {
@@ -16301,6 +16304,7 @@
                       "SetBranch",
                       "SetTemplateTypes",
                       "Update",
+                      "UploadBaseline",
                       "UploadScript",
                       "UploadTemplate"
                     ]
@@ -16315,7 +16319,8 @@
                     "type": "string"
                   },
                   "GUID": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "A baseline is not a templates-table row: Export-CIPPBaselineTemplate assembles the portable set - the BaselineTemplate file plus one standard template file per referenced CA/Intune template (packages expanded to their current members). Related templates are separate files, exactly the shape UploadTemplate writes, so they import through the untouched path."
                   },
                   "Id": {
                     "type": "string"
@@ -44396,7 +44401,7 @@
         "tags": [
           "Tools > GitHub"
         ],
-        "description": "Returns release metadata for the provided repository and semantic version. Hotfix\nversions (e.g. v8.5.2) map back to the base release tag (v8.5.0).",
+        "description": "Returns release metadata for the provided repository. Results are cached and refreshed\nwhen the cache has no entry for the running version - hotfix releases (e.g. v8.5.2)\npublish their own notes, so a v8.5.0 entry no longer counts as current.",
         "responses": {
           "200": {
             "description": "Success",

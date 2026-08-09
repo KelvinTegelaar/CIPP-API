@@ -36,6 +36,11 @@ function Get-CIPPBaselineWorkItems {
     $Baselines = @(Get-CIPPBaseline)
     if ($TemplateId) { $Baselines = @($Baselines | Where-Object { $_.GUID -eq $TemplateId }) }
     $Definitions = @(Get-CIPPBaselineDefinition)
+    $DefinitionsByName = @{}
+    foreach ($Definition in $Definitions) { if ($Definition.name) { $DefinitionsByName[$Definition.name] = $Definition } }
+    # Template rows per partition, fetched once per call: package expansion runs inside
+    # the per-(baseline, tenant) loop and must not query the table every iteration.
+    $PackageTemplateRows = @{}
 
     # Canonical settings fingerprint: the variables only (property-order independent).
     # Conflict means the baselines disagree about the DESIRED STATE - the action posture
@@ -91,6 +96,27 @@ function Get-CIPPBaselineWorkItems {
                 $StageNumber++
                 foreach ($Config in @($Stage.standardsConfig)) {
                     if (-not $Config) { continue }
+                    # Package standards never become work items themselves: they expand
+                    # here (late binding, resolved fresh every call) into one member
+                    # config per tagged template, indistinguishable from hand-added
+                    # instances - so identity-based dedupe/conflict, the engine, and the
+                    # detect-drift managed sets all treat members natively. An empty or
+                    # deleted package expands to zero members.
+                    $ConfigDefinition = $DefinitionsByName[("$($Config.instance ?? $Config.standard)" -split '#')[0]]
+                    if ($ConfigDefinition.package) {
+                        $Partition = "$($ConfigDefinition.package.templatePartition)"
+                        if (-not $PackageTemplateRows.ContainsKey($Partition)) {
+                            $TemplatesTable = Get-CippTable -tablename 'templates'
+                            $SafePartition = ConvertTo-CIPPODataFilterValue -Value $Partition
+                            $PackageTemplateRows[$Partition] = @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$SafePartition'")
+                        }
+                        foreach ($Member in @(Expand-CIPPBaselineTemplatePackage -Definition $ConfigDefinition -Config $Config -TemplateRows $PackageTemplateRows[$Partition])) {
+                            $StageConfigs[$Member.instance] = $Member
+                            $StageNumbers[$Member.instance] = $StageNumber
+                            $StageNames[$Member.instance] = $Stage.name
+                        }
+                        continue
+                    }
                     $StageConfigs[$Config.instance] = $Config
                     $StageNumbers[$Config.instance] = $StageNumber
                     $StageNames[$Config.instance] = $Stage.name
@@ -117,7 +143,9 @@ function Get-CIPPBaselineWorkItems {
                         AlertEnabled     = [bool]$Config.alertEnabled
                         AlertOnRemediate = [bool]$Config.alertOnRemediate
                         SourceScope      = $Scope
-                        SourceTemplate   = $Baseline.templateName
+                        # Package members attribute their origin so the alignment view
+                        # reads 'Baseline X (PackageName)' instead of hiding the bundle.
+                        SourceTemplate   = $(if ($Config.fromPackage) { '{0} ({1})' -f $Baseline.templateName, $Config.fromPackage } else { $Baseline.templateName })
                         Stage            = $StageNumbers[$InstanceKey]
                         StageName        = $StageNames[$InstanceKey]
                         AlertEmails      = $Baseline.alertEmails

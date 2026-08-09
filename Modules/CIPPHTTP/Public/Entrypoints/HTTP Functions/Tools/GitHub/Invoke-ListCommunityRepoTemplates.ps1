@@ -58,21 +58,32 @@ function Invoke-ListCommunityRepoTemplates {
     # Community-imported template rows carry Source (repo FullName) and SHA (git blob sha),
     # which lets us mark imported/update-available without any extra GitHub calls.
     $TemplatesTable = Get-CippTable -tablename 'templates'
-    $ImportedTemplates = foreach ($Row in (Get-CIPPAzDataTableEntity @TemplatesTable)) {
-        if ([string]::IsNullOrEmpty($Row.Source)) { continue }
-        $Name = $null
-        try {
-            $Data = $Row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
-            $Name = $Data.displayName ?? $Data.Displayname ?? $Data.templateName ?? $Data.name
-        } catch {
-            # Name matching is best-effort; SHA matching still works without it
-        }
-        [PSCustomObject]@{
-            Source        = $Row.Source
-            SHA           = $Row.SHA
-            SanitizedName = if ($Name) { ($Name -replace '\s', '_' -replace '[^\w\d_]', '') } else { $null }
-        }
-    }
+    $ImportedTemplates = @(foreach ($Row in (Get-CIPPAzDataTableEntity @TemplatesTable)) {
+            if ([string]::IsNullOrEmpty($Row.Source)) { continue }
+            $Name = $null
+            try {
+                $Data = $Row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
+                $Name = $Data.displayName ?? $Data.Displayname ?? $Data.templateName ?? $Data.name
+            } catch {
+                # Name matching is best-effort; SHA matching still works without it
+            }
+            [PSCustomObject]@{
+                Source        = $Row.Source
+                SHA           = $Row.SHA
+                SanitizedName = if ($Name) { ($Name -replace '\s', '_' -replace '[^\w\d_]', '') } else { $null }
+            }
+        })
+    # Imported baselines live on BaselineRollouts, not the templates table - join them the
+    # same way so BaselineTemplate catalog items get Imported/UpdateAvailable badges.
+    $RolloutTable = Get-CippTable -tablename 'BaselineRollouts'
+    $ImportedTemplates = $ImportedTemplates + @(foreach ($Row in (Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout'")) {
+            if ([string]::IsNullOrEmpty($Row.Source)) { continue }
+            [PSCustomObject]@{
+                Source        = $Row.Source
+                SHA           = $Row.SHA
+                SanitizedName = if ($Row.templateName) { ("$($Row.templateName)" -replace '\s', '_' -replace '[^\w\d_]', '') } else { $null }
+            }
+        })
 
     # Folder names in CIPP-native repos are templates-table PartitionKeys ("Save to GitHub"
     # writes {PartitionKey}/{Name}.json), so these folder names reliably identify the type.
@@ -82,7 +93,7 @@ function Invoke-ListCommunityRepoTemplates {
         'ExConnectorTemplate', 'AppTemplate', 'ContactTemplate', 'JITAdminTemplate',
         'UserDefaultTemplate', 'AssignmentFilterTemplate', 'IntuneReusableSettingTemplate',
         'SharePointTemplate', 'DlpCompliancePolicyTemplate', 'RetentionCompliancePolicyTemplate',
-        'SensitivityLabelTemplate', 'SensitiveInfoTypeTemplate'
+        'SensitivityLabelTemplate', 'SensitiveInfoTypeTemplate', 'BaselineTemplate'
     )
 
     $Warnings = [System.Collections.Generic.List[string]]::new()

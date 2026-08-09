@@ -166,6 +166,38 @@ function Invoke-ExecCommunityRepo {
                 }
             }
         }
+        'UploadBaseline' {
+            # A baseline is not a templates-table row: Export-CIPPBaselineTemplate
+            # assembles the portable set - the BaselineTemplate file plus one standard
+            # template file per referenced CA/Intune template (packages expanded to
+            # their current members). Related templates are separate files, exactly the
+            # shape UploadTemplate writes, so they import through the untouched path.
+            $GUID = $Request.Body.GUID
+            $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
+            $Export = Export-CIPPBaselineTemplate -GUID $GUID
+            if ($Export) {
+                $Message = $Request.Body.Message
+                foreach ($TemplateEntity in $Export.Templates) {
+                    $TemplateJson = $(try { $TemplateEntity.JSON | ConvertFrom-Json -Depth 100 } catch { $null })
+                    $DisplayName = "$($TemplateJson.Displayname ?? $TemplateJson.displayName ?? $TemplateJson.name ?? $TemplateEntity.RowKey)"
+                    $Basename = $DisplayName -replace '\s', '_' -replace '[^\w\d_]', ''
+                    $Path = '{0}/{1}.json' -f $TemplateEntity.PartitionKey, $Basename
+                    $null = Push-GitHubContent -FullName $Request.Body.FullName -Path $Path -Content ($TemplateEntity | ConvertTo-Json -Compress -Depth 100) -Message $Message -Branch $Branch
+                }
+                $BaselineBasename = "$($Export.Baseline.templateName)" -replace '\s', '_' -replace '[^\w\d_]', ''
+                $BaselinePath = 'BaselineTemplate/{0}.json' -f $BaselineBasename
+                $null = Push-GitHubContent -FullName $Request.Body.FullName -Path $BaselinePath -Content ($Export.Baseline | ConvertTo-Json -Compress -Depth 100) -Message $Message -Branch $Branch
+                $Results = @{
+                    resultText = "Baseline '$($Export.Baseline.templateName)' uploaded with $(@($Export.Templates).Count) related template$(if (@($Export.Templates).Count -eq 1) { '' } else { 's' })"
+                    state      = 'success'
+                }
+            } else {
+                $Results = @{
+                    resultText = "Baseline '$($GUID)' not found"
+                    state      = 'error'
+                }
+            }
+        }
         'SetBranch' {
             if (!$RepoEntity) {
                 $Results = @{
@@ -196,25 +228,38 @@ function Invoke-ExecCommunityRepo {
                 $Template = Get-GitHubFileContents -FullName $FullName -Path $Path -Branch $Branch
 
                 $Content = $Template.content | ConvertFrom-Json
-                if ($Content.'@odata.type' -like '*conditionalAccessPolicy*') {
-                    $Files = (Get-GitHubFileTree -FullName $FullName -Branch $Branch).tree | Where-Object { $_.path -match '.json$' -and $_.path -notmatch 'NativeImport' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }, @{n = 'name'; e = { ($_.path -split '/')[ -1 ] -replace '\.json$', '' } }
-
-                    $MigrationTable = $Files | Where-Object { $_.name -eq 'MigrationTable' } | Select-Object -Last 1
-                    if ($MigrationTable) {
-                        Write-Host "Found a migration table, getting contents for $FullName"
-                        $MigrationTable = (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $MigrationTable.path).content | ConvertFrom-Json
+                if ($Content.TemplateType -eq 'BaselineTemplate') {
+                    # Baseline files carry a referencedTemplates manifest: the importer
+                    # fetches every related template from this repo first (the same
+                    # related-items pattern as CA named locations), then creates the
+                    # baseline itself. Never a templates-table write.
+                    $User = $(try { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } catch { $null })
+                    $ImportResult = Import-CIPPBaselineTemplate -Baseline $Content -FullName $FullName -Branch $Branch -SHA $Template.sha -User $User -Force:$Force
+                    $Results = @{
+                        resultText = $ImportResult ?? 'Baseline imported'
+                        state      = 'success'
                     }
+                } else {
+                    if ($Content.'@odata.type' -like '*conditionalAccessPolicy*') {
+                        $Files = (Get-GitHubFileTree -FullName $FullName -Branch $Branch).tree | Where-Object { $_.path -match '.json$' -and $_.path -notmatch 'NativeImport' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }, @{n = 'name'; e = { ($_.path -split '/')[ -1 ] -replace '\.json$', '' } }
 
-                    $NamedLocations = $Files | Where-Object { $_.name -match 'ALLOWED COUNTRIES' }
-                    $LocationData = foreach ($Location in $NamedLocations) {
-                        (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $Location.path).content | ConvertFrom-Json
+                        $MigrationTable = $Files | Where-Object { $_.name -eq 'MigrationTable' } | Select-Object -Last 1
+                        if ($MigrationTable) {
+                            Write-Host "Found a migration table, getting contents for $FullName"
+                            $MigrationTable = (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $MigrationTable.path).content | ConvertFrom-Json
+                        }
+
+                        $NamedLocations = $Files | Where-Object { $_.name -match 'ALLOWED COUNTRIES' }
+                        $LocationData = foreach ($Location in $NamedLocations) {
+                            (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $Location.path).content | ConvertFrom-Json
+                        }
                     }
-                }
-                $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName -Force:$Force
+                    $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName -Force:$Force
 
-                $Results = @{
-                    resultText = $ImportResult ?? 'Template imported'
-                    state      = 'success'
+                    $Results = @{
+                        resultText = $ImportResult ?? 'Template imported'
+                        state      = 'success'
+                    }
                 }
             } catch {
                 $Results = @{

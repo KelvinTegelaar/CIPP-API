@@ -67,6 +67,10 @@ function Invoke-CIPPBaselineStandard {
     try {
         $Definition = Get-CIPPBaselineDefinition -Name $Item.BaseName
         if (-not $Definition) { throw "No definition found for standard $($Item.BaseName)." }
+        # Package standards are authoring artifacts: the work-item resolver expands them
+        # into member instances before anything is queued. One reaching the engine is a
+        # resolver bug - fail loudly rather than comparing a package against nothing.
+        if ($Definition.package) { throw "Package standard $($Item.BaseName) must be expanded by the resolver and never executes directly." }
         $Label = $Definition.label ?? $Item.Standard
 
         # License gate (moved out of the starter so Run Baseline Now responds instantly -
