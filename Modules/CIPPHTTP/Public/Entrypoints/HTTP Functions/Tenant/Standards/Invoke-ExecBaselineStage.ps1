@@ -44,6 +44,8 @@ function Invoke-ExecBaselineStage {
         }
 
         $StageName = $Baseline.stages[$NewStage - 1].name
+        $User = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
+        $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Baseline.templateName -Mode 'stage' -TriggeredBy $User -Outcome 'Stage Advanced' -Detail "Moved to stage $NewStage ($StageName) - the stage's standards apply on the next run"
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Moved $TenantFilter to stage $NewStage ($StageName) of baseline $($Baseline.templateName)." -Sev 'Info'
         $Results = [pscustomobject]@{ Results = "Moved $TenantFilter to stage $NewStage ($StageName) of $($Baseline.templateName). The stage's standards apply on the next run." }
         $StatusCode = [HttpStatusCode]::OK

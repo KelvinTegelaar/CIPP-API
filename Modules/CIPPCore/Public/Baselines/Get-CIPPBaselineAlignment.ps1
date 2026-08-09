@@ -85,6 +85,8 @@ function Get-CIPPBaselineAlignment {
                 outcome       = $Row.Outcome
                 remediated    = [bool]$Row.Remediated
                 runId         = $Row.RunId
+                detail        = "$($Row.Detail)"
+                alerted       = [bool]$Row.Alerted
                 diff          = $(if ($Row.Diff) { try { $Row.Diff | ConvertFrom-Json } catch { $null } } else { $null })
             }
         }
@@ -143,6 +145,8 @@ function Get-CIPPBaselineAlignment {
                         triggeredBy = $_.TriggeredBy
                         outcome     = $_.Outcome
                         remediated  = [bool]$_.Remediated
+                        detail      = "$($_.Detail)"
+                        alerted     = [bool]$_.Alerted
                         diff        = if ($_.Diff) { try { $_.Diff | ConvertFrom-Json } catch { $null } } else { $null }
                     }
                 }

@@ -31,6 +31,7 @@ function Invoke-ExecUpdateBaselineDeviation {
         $Table = Get-CippTable -tablename 'BaselineAlignment'
         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
         $SafeStandard = ConvertTo-CIPPODataFilterValue -Value $Standard
+        $User = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
 
         # Standard-view bulk complete: mark this manual task done on EVERY tenant's row.
         if ($Action -eq 'CompleteTask' -and $TenantFilter -in @('AllTenants', 'allTenants')) {
@@ -48,6 +49,7 @@ function Invoke-ExecUpdateBaselineDeviation {
                     $TaskEntity | Add-Member -NotePropertyName 'CurrentValue' -NotePropertyValue (ConvertTo-Json -Compress -Depth 20 -InputObject $CurrentTask) -Force
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $TaskEntity
+                $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TaskEntity.PartitionKey -Standard $Standard -Mode 'triage' -TriggeredBy $User -Outcome 'Task Completed' -Detail 'Marked completed for all tenants from the standard view'
             }
             $Message = "Marked the manual task $Standard as completed for $($Entities.Count) tenant$($Entities.Count -eq 1 ? '' : 's')."
             Write-LogMessage -headers $Request.Headers -API $APIName -message $Message -Sev 'Info'
@@ -66,7 +68,6 @@ function Invoke-ExecUpdateBaselineDeviation {
         }
         $Entity = $Entity | Select-Object -First 1
 
-        $User = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
         $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
         $Set = { param($Name, $Value) $Entity | Add-Member -NotePropertyName $Name -NotePropertyValue $Value -Force }
 
@@ -79,6 +80,8 @@ function Invoke-ExecUpdateBaselineDeviation {
                 & $Set 'DeviationExpires' ($Request.Body.expires ?? '')
                 & $Set 'RemediateOnExpire' ([bool]$Request.Body.remediateOnExpire)
                 $Message = "Accepted the deviation on $Standard for $TenantFilter."
+                $EventOutcome = 'Accepted'
+                $EventDetail = 'Accepted the deviation{0}{1}' -f $(if ($Request.Body.reason) { ": $($Request.Body.reason)" }), $(if ($Request.Body.expires) { " (expires $($Request.Body.expires))" })
             }
             'Deny' {
                 $Method = $Request.Body.method ?? 'remediate'
@@ -95,6 +98,8 @@ function Invoke-ExecUpdateBaselineDeviation {
                 # block the (whole-object) remediation, so the deny supersedes them.
                 & $Set 'AcceptedPaths' '{}'
                 $Message = "Denied the deviation on $Standard for $TenantFilter - $Method pending on the next run."
+                $EventOutcome = $(if ($Method -eq 'delete') { 'Denied - Delete Ordered' } else { 'Denied - Remediation Ordered' })
+                $EventDetail = 'Denied the deviation{0} - {1} on the next run' -f $(if ($Request.Body.reason) { ": $($Request.Body.reason)" }), $(if ($Method -eq 'delete') { 'the object is deleted' } else { 'the baseline is enforced' })
             }
             'Clear' {
                 # Only a triaged status re-surfaces as Drift; clearing leftover accepted
@@ -111,6 +116,8 @@ function Invoke-ExecUpdateBaselineDeviation {
                 # behind would flip straight back to (Partially) Accepted on the next run.
                 & $Set 'AcceptedPaths' '{}'
                 $Message = "Cleared the triage and any accepted properties on $Standard for $TenantFilter - it re-surfaces as Drift."
+                $EventOutcome = 'Triage Cleared'
+                $EventDetail = 'Cleared the triage and any accepted properties - the deviation re-surfaces as Drift'
             }
             { $_ -in @('AcceptPath', 'DenyPath', 'ClearPath') } {
                 $Path = $Request.Body.path
@@ -122,6 +129,8 @@ function Invoke-ExecUpdateBaselineDeviation {
                 if ($Action -eq 'ClearPath') {
                     $AcceptedPaths.PSObject.Properties.Remove($Path)
                     $Message = "Cleared the triage on property $Path of $Standard for $TenantFilter - it re-surfaces as drift on the next run."
+                    $EventOutcome = 'Property Triage Cleared'
+                    $EventDetail = "Cleared the triage on '$Path' - it re-surfaces as drift on the next run"
                 } else {
                     $Verdict = if ($Action -eq 'DenyPath') { 'denyDelete' } else { 'accept' }
                     $AcceptedPaths | Add-Member -NotePropertyName $Path -NotePropertyValue ([PSCustomObject]@{
@@ -135,6 +144,8 @@ function Invoke-ExecUpdateBaselineDeviation {
                     } else {
                         "Accepted the deviation on property $Path of $Standard for $TenantFilter. Other properties keep alerting."
                     }
+                    $EventOutcome = $(if ($Action -eq 'DenyPath') { 'Property Denied' } else { 'Property Accepted' })
+                    $EventDetail = '{0} ''{1}''{2}' -f $(if ($Action -eq 'DenyPath') { 'Denied - queued for deletion:' } else { 'Accepted the deviation on' }), $Path, $(if ($Request.Body.reason) { " - $($Request.Body.reason)" })
                 }
                 & $Set 'AcceptedPaths' (ConvertTo-Json -Compress -Depth 20 -InputObject $AcceptedPaths)
                 # Reflect the verdict in the status immediately instead of waiting for the
@@ -181,6 +192,8 @@ function Invoke-ExecUpdateBaselineDeviation {
                     & $Set 'CurrentValue' (ConvertTo-Json -Compress -Depth 20 -InputObject $Current)
                 }
                 $Message = "Marked the manual task $Standard as completed for $TenantFilter."
+                $EventOutcome = 'Task Completed'
+                $EventDetail = 'Marked the manual task as completed'
             }
             default {
                 throw "Unknown action '$Action'. Use Accept, Deny, Clear, AcceptPath, DenyPath, ClearPath, or CompleteTask."
@@ -189,6 +202,7 @@ function Invoke-ExecUpdateBaselineDeviation {
 
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity $Entity
+        $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Standard -Mode 'triage' -TriggeredBy $User -Outcome $EventOutcome -Detail $EventDetail
 
         Write-LogMessage -headers $Request.Headers -API $APIName -message $Message -Sev 'Info'
         $Results = [pscustomobject]@{ Results = $Message }
