@@ -18600,6 +18600,9 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
@@ -30168,6 +30171,53 @@
           }
         ],
         "x-cipp-role": "CIPP.SuperAdmin.ReadWrite"
+      }
+    },
+    "/api/ExecSamSecretStatus": {
+      "post": {
+        "summary": "Reports whether the stored SAM application secret is usable yet.",
+        "operationId": "ExecSamSecretStatus",
+        "tags": [
+          "CIPP > Setup"
+        ],
+        "description": "The setup wizard creates a client secret on one step and uses it on the next, but Entra\ncan take several minutes to replicate a newly created secret. Until it has, every token\nrequest fails with AADSTS7000215 even though the value CIPP holds is correct. This lets\nthe wizard wait on that instead of failing the user after they have already signed in.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecScheduleForwardingVacation": {
