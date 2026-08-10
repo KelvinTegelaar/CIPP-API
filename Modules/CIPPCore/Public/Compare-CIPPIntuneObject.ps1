@@ -335,6 +335,32 @@ function Compare-CIPPIntuneObject {
             $DifferenceObject
         }
 
+        # CompareType 'ca': a CA template stores grantControls.authenticationStrength as a bare
+        # { id } reference - which is also all New-CIPPCAPolicy ever writes - while Graph returns
+        # the strength fully expanded on read. Comparing those two shapes reported displayName,
+        # description, policyType, requirementsSatisfied and allowedCombinations as drift on every
+        # run, which remediation could never clear because none of them are writable through the CA
+        # policy. Collapse both sides to the display name, the identity deployment matches on.
+        if ($CompareType -contains 'ca' -and $obj1 -and $obj2) {
+            # Clone first - the callers keep using their objects after the compare.
+            $obj1 = $obj1 | ConvertTo-Json -Depth 100 -Compress | ConvertFrom-Json -Depth 100
+            $obj2 = $obj2 | ConvertTo-Json -Depth 100 -Compress | ConvertFrom-Json -Depth 100
+            # Graph always expands on read, so the live side names the template's bare id for us.
+            $StrengthNames = @{}
+            foreach ($Side in @($obj1, $obj2)) {
+                $Strength = $Side.grantControls.authenticationStrength
+                if ($Strength -isnot [System.Management.Automation.PSCustomObject]) { continue }
+                if ($Strength.id -and $Strength.displayName) { $StrengthNames["$($Strength.id)"] = "$($Strength.displayName)" }
+            }
+            foreach ($Side in @($obj1, $obj2)) {
+                $Strength = $Side.grantControls.authenticationStrength
+                if ($Strength -isnot [System.Management.Automation.PSCustomObject]) { continue }
+                $Side.grantControls.authenticationStrength = [PSCustomObject]@{
+                    displayName = if ($Strength.displayName) { "$($Strength.displayName)" } else { $StrengthNames["$($Strength.id)"] ?? "$($Strength.id)" }
+                }
+            }
+        }
+
         if ($obj1 -and $obj2) {
             Compare-ObjectsRecursively -Object1 $obj1 -Object2 $obj2
         }
