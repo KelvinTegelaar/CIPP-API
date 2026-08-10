@@ -23,16 +23,18 @@ function Set-CIPPDBCacheManagedDeviceEncryptionStates {
         # The writer is opened on the first record: an empty result previously skipped
         # Add-CIPPDbItem altogether, and piping into it unconditionally would run its end block
         # and overwrite the count row with 0.
+        # Language foreach (not ForEach-Object) so Begin/Process/End share function scope with the
+        # steppable pipeline. Do not wrap New-GraphGetRequest in (...): that buffers the stream.
         $Writer = $null
         $CachedCount = 0
         try {
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceEncryptionStates?$top=999' -tenantid $TenantFilter -Stream | ForEach-Object {
+            foreach ($Item in New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceEncryptionStates?$top=999' -tenantid $TenantFilter -Stream) {
                 if ($null -eq $Writer) {
                     $Writer = { Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ManagedDeviceEncryptionStates' -AddCount }.GetSteppablePipeline()
                     $Writer.Begin($true)
                 }
                 $CachedCount++
-                $Writer.Process($_)
+                $Writer.Process($Item)
             }
             if ($Writer) {
                 $Writer.End()
