@@ -38374,7 +38374,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Returns the report branding: colours, logo and cover images, footer and watermark text.\n\nThis used to ride along inside ListUserSettings, which meant every page load carried every\nuploaded cover as an inline data URL — megabytes of images fetched to render a settings\nmenu. Worse, hydrating branding also ran the legacy-image migration, so a GET issued on\nevery page load wrote the BrandingSettings row back from a snapshot it had read moments\nearlier, and any upload that landed in between was overwritten.\n\nBranding therefore has its own endpoint, fetched by the things that actually draw it, and\nthis read never writes. Migration belongs to ExecBrandingSettings -Action Get: the settings\npage opening is a deliberate, infrequent, single-user action, which is the one place where\nrewriting the row is safe.\n\nIts role matches ListUserSettings rather than the branding write role — every user who\nrenders a report needs the branding on it, and that is exactly who could read it before.",
+        "description": "Returns the report branding: colours, logo and cover images, footer and watermark text.\n\nBranding was previously returned by ListUserSettings, which put every uploaded cover\ninline on every page load and ran the legacy-image migration - a write - on that read\npath. This read never writes; migration belongs to ExecBrandingSettings -Action Get.\n\nThe role matches ListUserSettings rather than the branding write role, since every user\nwho renders a report needs the branding on it.",
         "parameters": [
           {
             "name": "includeGallery",

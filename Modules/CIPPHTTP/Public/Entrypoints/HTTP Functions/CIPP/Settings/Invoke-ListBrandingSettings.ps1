@@ -7,26 +7,16 @@
     .DESCRIPTION
         Returns the report branding: colours, logo and cover images, footer and watermark text.
 
-        This used to ride along inside ListUserSettings, which meant every page load carried every
-        uploaded cover as an inline data URL — megabytes of images fetched to render a settings
-        menu. Worse, hydrating branding also ran the legacy-image migration, so a GET issued on
-        every page load wrote the BrandingSettings row back from a snapshot it had read moments
-        earlier, and any upload that landed in between was overwritten.
+        Branding was previously returned by ListUserSettings, which put every uploaded cover
+        inline on every page load and ran the legacy-image migration - a write - on that read
+        path. This read never writes; migration belongs to ExecBrandingSettings -Action Get.
 
-        Branding therefore has its own endpoint, fetched by the things that actually draw it, and
-        this read never writes. Migration belongs to ExecBrandingSettings -Action Get: the settings
-        page opening is a deliberate, infrequent, single-user action, which is the one place where
-        rewriting the row is safe.
-
-        Its role matches ListUserSettings rather than the branding write role — every user who
-        renders a report needs the branding on it, and that is exactly who could read it before.
+        The role matches ListUserSettings rather than the branding write role, since every user
+        who renders a report needs the branding on it.
     .PARAMETER includeGallery
-        Return every uploaded logo and cover, not just the selected ones.
-
-        Only the branding settings page needs the galleries, and it is the difference between a
-        response of a few hundred KB and one of several MB: the uploads are inline base64 and an
-        MSP accumulates them. A report needs the logo and cover that are actually selected, which
-        `logo` and `coverImage` already carry, so it asks for neither list.
+        Return every uploaded logo and cover, not just the selected ones. Only the branding
+        settings page needs them, and inline base64 makes it the difference between a response of
+        a few hundred KB and several MB. A report uses `logo` and `coverImage`, returned either way.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
