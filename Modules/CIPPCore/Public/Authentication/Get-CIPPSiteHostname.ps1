@@ -22,19 +22,26 @@ function Get-CIPPSiteHostname {
     .PARAMETER AsRedirectUri
         Return the EasyAuth callback URI for each hostname instead of the bare hostname.
     .PARAMETER IncludeStatus
-        Return an object with Hostnames, RedirectUris, Discovered and Error instead of a bare
-        list, so the caller can distinguish an authoritative list from a best-effort fallback.
+        Return an object with Hostnames, RedirectUris, DefaultHostname, CustomHostnames,
+        PreferredHostname, Discovered and Error instead of a bare list, so the caller can
+        distinguish an authoritative list from a best-effort fallback.
+    .PARAMETER NoFallback
+        Skip the best-effort fallback entirely and return nothing when ARM cannot be queried.
+        For callers that only act on an authoritative answer - the fallback reads the stored
+        instance URL, which is the very value a reconciler is trying to verify.
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
     param(
         [switch]$AsRedirectUri,
-        [switch]$IncludeStatus
+        [switch]$IncludeStatus,
+        [switch]$NoFallback
     )
 
     $Discovered = $false
     $DiscoveryError = $null
+    $DefaultHostname = $null
     $Hostnames = [System.Collections.Generic.List[string]]::new()
     $IsLocalDev = $env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true'
 
@@ -58,6 +65,7 @@ function Get-CIPPSiteHostname {
         }
 
         $SiteResponse.properties.hostNames | ForEach-Object { $Hostnames.Add($_) }
+        $DefaultHostname = $SiteResponse.properties.defaultHostName
         $Discovered = $true
         Write-Information "[SiteHostname] Discovered hostnames from ARM: $($Hostnames -join ', ')"
     } catch {
@@ -65,7 +73,9 @@ function Get-CIPPSiteHostname {
         Write-Information "[SiteHostname] ARM hostname discovery failed — falling back to known hostnames: $DiscoveryError"
     }
 
-    if (-not $Discovered) {
+    if (-not $Discovered -and $NoFallback) {
+        Write-Information '[SiteHostname] -NoFallback set - returning nothing rather than a best-effort list'
+    } elseif (-not $Discovered) {
         # Best effort: the platform hostname, plus the last URL the instance was actually
         # served from (Config/InstanceProperties/CIPPURL), which is usually the custom domain.
         if ($env:WEBSITE_HOSTNAME) { $Hostnames.Add($env:WEBSITE_HOSTNAME) }
@@ -99,12 +109,26 @@ function Get-CIPPSiteHostname {
 
     $RedirectUris = @($Hostnames | ForEach-Object { "https://$_/.auth/login/aad/callback" })
 
+    # ARM names the hostname it handed out itself; outside ARM the platform variable is the same
+    # thing. Everything else bound to the site is a custom domain the customer put there.
+    if (-not $DefaultHostname) { $DefaultHostname = $env:WEBSITE_HOSTNAME }
+    $CustomHostnames = @($Hostnames | Where-Object { $_ -ne $DefaultHostname -and $_ -notlike '*.azurewebsites.net' })
+
+    # Anything that builds a user-facing URL (webhook registrations, emailed links) should use the
+    # custom domain, not the platform one. A site can carry several, and there is no "primary" flag
+    # in ARM to pick from - so take the first binding. That order is stable across restarts, which
+    # matters because warmup runs on every node and they all have to land on the same answer.
+    $PreferredHostname = if ($CustomHostnames.Count -gt 0) { $CustomHostnames[0] } else { $DefaultHostname }
+
     if ($IncludeStatus) {
         return [PSCustomObject]@{
-            Hostnames    = @($Hostnames)
-            RedirectUris = $RedirectUris
-            Discovered   = $Discovered
-            Error        = $DiscoveryError
+            Hostnames         = @($Hostnames)
+            RedirectUris      = $RedirectUris
+            DefaultHostname   = $DefaultHostname
+            CustomHostnames   = $CustomHostnames
+            PreferredHostname = $PreferredHostname
+            Discovered        = $Discovered
+            Error             = $DiscoveryError
         }
     }
     if ($AsRedirectUri) {

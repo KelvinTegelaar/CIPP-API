@@ -11,6 +11,11 @@ function Get-CIPPHostname {
         The request headers, usually $Request.Headers. Optional - omit for non-HTTP contexts.
     .PARAMETER Save
         Persist the resolved hostname to Config/InstanceProperties/CIPPURL so background jobs pick up the current URL.
+    .PARAMETER PreferCustomDomain
+        Resolve from the custom domain bound to the App Service ahead of the inbound request.
+        Use it for anything that outlives the request - webhook registrations, stored URLs - so
+        an admin who happens to browse in on the *.azurewebsites.net hostname does not pin
+        background work to it.
     .FUNCTIONALITY
         Internal
     .EXAMPLE
@@ -19,12 +24,32 @@ function Get-CIPPHostname {
     [CmdletBinding()]
     param(
         $Headers,
-        [switch]$Save
+        [switch]$Save,
+        [switch]$PreferCustomDomain
     )
 
     $Hostname = $null
 
-    if ($Headers) {
+    # Only an authoritative ARM answer wins here. When the lookup fails we fall through to the
+    # request host rather than guessing: demoting a working custom domain to the platform hostname
+    # on a transient 403 would silently rewrite every link CIPP sends out.
+    if ($PreferCustomDomain.IsPresent) {
+        try {
+            $SiteState = Get-CIPPSiteHostname -IncludeStatus -NoFallback
+            if ($SiteState.Discovered -and ![string]::IsNullOrWhiteSpace($SiteState.PreferredHostname)) {
+                $Hostname = $SiteState.PreferredHostname
+                if ($SiteState.CustomHostnames.Count -gt 1) {
+                    Write-Information "Get-CIPPHostname: $($SiteState.CustomHostnames.Count) custom domains bound ($($SiteState.CustomHostnames -join ', ')) - using the first, '$Hostname'"
+                }
+            } else {
+                Write-Information "Get-CIPPHostname: custom domain lookup was not authoritative, falling back to the request host: $($SiteState.Error)"
+            }
+        } catch {
+            Write-Information "Get-CIPPHostname: custom domain lookup failed: $($_.Exception.Message)"
+        }
+    }
+
+    if (!$Hostname -and $Headers) {
         # x-ms-original-url carries the full URL the client requested, including any custom domain
         $Candidates = @(
             $Headers.'x-ms-original-url'
