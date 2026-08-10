@@ -85,6 +85,8 @@ function Get-CIPPBaselineAlignment {
                 outcome       = $Row.Outcome
                 remediated    = [bool]$Row.Remediated
                 runId         = $Row.RunId
+                detail        = "$($Row.Detail)"
+                alerted       = [bool]$Row.Alerted
                 diff          = $(if ($Row.Diff) { try { $Row.Diff | ConvertFrom-Json } catch { $null } } else { $null })
             }
         }
@@ -143,6 +145,8 @@ function Get-CIPPBaselineAlignment {
                         triggeredBy = $_.TriggeredBy
                         outcome     = $_.Outcome
                         remediated  = [bool]$_.Remediated
+                        detail      = "$($_.Detail)"
+                        alerted     = [bool]$_.Alerted
                         diff        = if ($_.Diff) { try { $_.Diff | ConvertFrom-Json } catch { $null } } else { $null }
                     }
                 }
@@ -196,12 +200,32 @@ function Get-CIPPBaselineAlignment {
             # Every standard rolled out to this tenant (current + previous stages) that the
             # engine has not resolved yet appears as a 'No Data' row.
             foreach ($StageDef in ($Baseline.stages | Select-Object -First $State.currentStage)) {
-                foreach ($InstanceKey in @($StageDef.standards)) {
-                    if ($KnownStandards -contains $InstanceKey) { continue }
-                    $KnownStandards.Add($InstanceKey)
-                    $BaseName = ($InstanceKey -split '#')[0]
-                    $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
-                    $Config = $StageDef.standardsConfig | Where-Object { ($_.instance ?? $_.standard) -eq $InstanceKey } | Select-Object -First 1
+                foreach ($StageInstanceKey in @($StageDef.standards)) {
+                    if ($KnownStandards -contains $StageInstanceKey) { continue }
+                    $KnownStandards.Add($StageInstanceKey)
+                    $StageBaseName = ($StageInstanceKey -split '#')[0]
+                    $StageDefinition = $Definitions | Where-Object { $_.name -eq $StageBaseName } | Select-Object -First 1
+                    $StageConfig = $StageDef.standardsConfig | Where-Object { ($_.instance ?? $_.standard) -eq $StageInstanceKey } | Select-Object -First 1
+                    # Package standards never resolve under their own key: synthesize one
+                    # row per MEMBER, with the same derived instance keys the work-item
+                    # resolver produces - pre-run 'No Data' rows then meld into the
+                    # engine's resolved rows instead of leaving a phantom package row.
+                    $SynthTargets = if ($StageDefinition.package) {
+                        $MemberDefinition = $Definitions | Where-Object { $_.name -eq "$($StageDefinition.package.memberStandard)" } | Select-Object -First 1
+                        @(Expand-CIPPBaselineTemplatePackage -Definition $StageDefinition -Config $StageConfig | ForEach-Object {
+                                [PSCustomObject]@{ InstanceKey = $_.instance; Definition = $MemberDefinition; Config = $_ }
+                            })
+                    } else {
+                        @([PSCustomObject]@{ InstanceKey = $StageInstanceKey; Definition = $StageDefinition; Config = $StageConfig })
+                    }
+                    foreach ($SynthTarget in $SynthTargets) {
+                    $InstanceKey = $SynthTarget.InstanceKey
+                    $Definition = $SynthTarget.Definition
+                    $Config = $SynthTarget.Config
+                    if ($StageDefinition.package) {
+                        if ($KnownStandards -contains $InstanceKey) { continue }
+                        $KnownStandards.Add($InstanceKey)
+                    }
                     $Expected = & $RenderExpected $Definition $Config.variables
                     # Multi-instance labels carry the instance identity before the first
                     # run too: the task name for manual tasks; for identity-carrying
@@ -230,7 +254,7 @@ function Get-CIPPBaselineAlignment {
                             pendingVerification = $false
                             licenseAvailable    = $true
                             sourceScope         = 'baseline'
-                            sourceTemplate      = $Baseline.templateName
+                            sourceTemplate      = $(if ($Config.fromPackage) { '{0} ({1})' -f $Baseline.templateName, $Config.fromPackage } else { $Baseline.templateName })
                             stage               = $StageDef.name
                             inheritance         = @([PSCustomObject]@{
                                     templateName = $Baseline.templateName
@@ -249,6 +273,7 @@ function Get-CIPPBaselineAlignment {
                             lastRemediated      = $null
                             history             = @()
                         })
+                    }
                 }
             }
 

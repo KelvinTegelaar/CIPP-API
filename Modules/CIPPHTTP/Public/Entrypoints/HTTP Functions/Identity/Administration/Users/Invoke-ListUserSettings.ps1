@@ -97,9 +97,8 @@ function Invoke-ListUserSettings {
             Write-Warning "Failed to convert UserBookmarks JSON: $($_.Exception.Message)"
         }
 
-        # Branding is deliberately not returned here. It used to be, which put every uploaded cover
-        # image inline as a data URL in a response fetched on every page load, and ran the legacy
-        # image migration — a write — on that same read path. See Invoke-ListBrandingSettings.
+        # Branding is served by Invoke-ListBrandingSettings, not from here: it carries inline
+        # images and its migration writes, neither of which belong on every page load.
 
         if ($UserSpecificSettings) {
             $UserSettings | Add-Member -MemberType NoteProperty -Name 'UserSpecificSettings' -Value $UserSpecificSettings -Force | Out-Null

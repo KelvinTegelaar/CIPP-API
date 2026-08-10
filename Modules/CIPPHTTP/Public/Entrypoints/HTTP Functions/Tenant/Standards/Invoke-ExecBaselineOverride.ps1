@@ -99,6 +99,7 @@ function Invoke-ExecBaselineOverride {
                     Add-CIPPAzDataTableEntity @ResolvedTable -Entity $ResolvedEntity
                 }
                 $Message = "Created a tenant override of $Standard for $TenantFilter."
+                $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Standard -Mode 'triage' -TriggeredBy $User -Outcome 'Override Created' -Detail 'Created a tenant override - its configured values replace what the baselines apply'
             }
             'deleteOverride' {
                 $SafeDeltaRowKey = ConvertTo-CIPPODataFilterValue -Value $DeltaRowKey
@@ -128,6 +129,7 @@ function Invoke-ExecBaselineOverride {
                     }
                 }
                 $Message = "Removed the tenant override of $Standard for $TenantFilter - it falls back to the inherited configuration."
+                $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Standard -Mode 'triage' -TriggeredBy $User -Outcome 'Override Removed' -Detail 'Removed the tenant override - the standard falls back to the inherited configuration'
             }
             default {
                 throw "Unknown action '$Action'. Use createOverride or deleteOverride."

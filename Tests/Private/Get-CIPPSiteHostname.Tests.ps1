@@ -48,7 +48,8 @@ Describe 'Get-CIPPSiteHostname' {
         Mock -CommandName New-CIPPAzRestRequest -MockWith {
             [PSCustomObject]@{
                 properties = [PSCustomObject]@{
-                    hostNames = @($script:DefaultHost, $script:CustomHostA, $script:CustomHostB)
+                    hostNames       = @($script:DefaultHost, $script:CustomHostA, $script:CustomHostB)
+                    defaultHostName = $script:DefaultHost
                 }
             }
         }
@@ -99,6 +100,95 @@ Describe 'Get-CIPPSiteHostname' {
             Get-CIPPSiteHostname | Out-Null
 
             Should -Invoke Get-CIPPHostname -Times 0 -Exactly
+        }
+    }
+
+    Context 'When picking the domain user-facing URLs should use' {
+        It 'separates the custom domains from the hostname Azure handed out' {
+            $Result = Get-CIPPSiteHostname -IncludeStatus
+
+            $Result.DefaultHostname | Should -Be $script:DefaultHost
+            $Result.CustomHostnames | Should -HaveCount 2
+            $Result.CustomHostnames | Should -Not -Contain $script:DefaultHost
+        }
+
+        It 'prefers the first custom domain when several are bound' {
+            # Warmup runs on every node and they all have to land on the same answer, so the choice
+            # has to be positional rather than "whichever one came back first this time".
+            $Result = Get-CIPPSiteHostname -IncludeStatus
+
+            $Result.PreferredHostname | Should -Be $script:CustomHostA
+        }
+
+        It 'falls back to the platform hostname when no custom domain is bound' {
+            Mock -CommandName New-CIPPAzRestRequest -MockWith {
+                [PSCustomObject]@{
+                    properties = [PSCustomObject]@{
+                        hostNames       = @($script:DefaultHost)
+                        defaultHostName = $script:DefaultHost
+                    }
+                }
+            }
+
+            $Result = Get-CIPPSiteHostname -IncludeStatus
+
+            $Result.CustomHostnames | Should -HaveCount 0
+            $Result.PreferredHostname | Should -Be $script:DefaultHost
+        }
+
+        It 'treats a regional *.azurewebsites.net hostname as the platform one even when ARM omits defaultHostName' {
+            $script:RegionalHost = 'cippxyz-abc123.centralus-01.azurewebsites.net'
+            Mock -CommandName New-CIPPAzRestRequest -MockWith {
+                [PSCustomObject]@{
+                    properties = [PSCustomObject]@{
+                        hostNames = @($script:RegionalHost, $script:CustomHostA)
+                    }
+                }
+            }
+
+            $Result = Get-CIPPSiteHostname -IncludeStatus
+
+            $Result.CustomHostnames | Should -Be @($script:CustomHostA)
+            $Result.PreferredHostname | Should -Be $script:CustomHostA
+        }
+    }
+
+    Context 'When -NoFallback is set' {
+        # The fallback reads the stored instance URL, which is the very value the reconciler is
+        # trying to verify. Feeding it back would make every stale value look self-consistent.
+        BeforeEach {
+            Mock -CommandName New-CIPPAzRestRequest -MockWith { throw 'AuthorizationFailed' }
+        }
+
+        It 'returns nothing instead of a best-effort list' {
+            $Result = Get-CIPPSiteHostname -IncludeStatus -NoFallback
+
+            $Result.Discovered | Should -BeFalse
+            $Result.Hostnames | Should -HaveCount 0
+            $Result.CustomHostnames | Should -HaveCount 0
+            Should -Invoke Get-CIPPHostname -Times 0 -Exactly
+        }
+
+        It 'still surfaces why the lookup failed' {
+            $Result = Get-CIPPSiteHostname -IncludeStatus -NoFallback
+
+            $Result.Error | Should -Match 'AuthorizationFailed'
+        }
+
+        It 'does not suppress the fallback when ARM answered' {
+            Mock -CommandName New-CIPPAzRestRequest -MockWith {
+                [PSCustomObject]@{
+                    properties = [PSCustomObject]@{
+                        hostNames       = @($script:DefaultHost, $script:CustomHostA)
+                        defaultHostName = $script:DefaultHost
+                    }
+                }
+            }
+
+            $Result = Get-CIPPSiteHostname -IncludeStatus -NoFallback
+
+            $Result.Discovered | Should -BeTrue
+            $Result.PreferredHostname | Should -Be $script:CustomHostA
         }
     }
 

@@ -83,5 +83,8 @@ function Set-CIPPBaselineResult {
         Outcome      = "$($Result.Outcome)"
         Remediated   = [bool]$Result.Remediated
         Diff         = $(if ($Result.Diff) { ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.Diff) } else { '' })
+        Detail       = ''
+        # Whether this run raises an alert - the timeline shows delivery, not just drift.
+        Alerted      = [bool]$Result.AlertEvent
     }
 }

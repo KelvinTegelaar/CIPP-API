@@ -66,8 +66,22 @@ function New-GraphDeltaQuery {
             SkipLog          = $true
         }
         Write-Information "Starting delta query orchestration for $($Tenants.Count) tenants."
-        Write-Information "Orchestration Input: $($InputObject | ConvertTo-Json -Compress -Depth 5)"
-        $Orchestration = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+        if ($env:CIPPNG -eq 'true') {
+            # Craft runtime: go through Start-CIPPOrchestrator like every other fan-out, so this gets
+            # the streamed batch handoff instead of one whole-batch string.
+            #
+            # This was the only orchestration start in the codebase that reached past that wrapper
+            # straight to Start-NewOrchestration, which is a Durable Functions cmdlet - it does not
+            # exist in the Craft runtime, so on CIPPNG this branch could never have worked.
+            #
+            # The batch-as-JSON log below is deliberately not repeated here: it serialises the entire
+            # batch purely to print it, which for AllTenants is the exact allocation this change exists
+            # to remove. The tenant count above is the part worth logging.
+            $Orchestration = Start-CIPPOrchestrator -InputObject ([PSCustomObject]$InputObject)
+        } else {
+            Write-Information "Orchestration Input: $($InputObject | ConvertTo-Json -Compress -Depth 5)"
+            $Orchestration = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+        }
 
     } else {
         $Table = Get-CIPPTable -TableName 'DeltaQueries'

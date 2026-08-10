@@ -67,6 +67,10 @@ function Invoke-CIPPBaselineStandard {
     try {
         $Definition = Get-CIPPBaselineDefinition -Name $Item.BaseName
         if (-not $Definition) { throw "No definition found for standard $($Item.BaseName)." }
+        # Package standards are authoring artifacts: the work-item resolver expands them
+        # into member instances before anything is queued. One reaching the engine is a
+        # resolver bug - fail loudly rather than comparing a package against nothing.
+        if ($Definition.package) { throw "Package standard $($Item.BaseName) must be expanded by the resolver and never executes directly." }
         $Label = $Definition.label ?? $Item.Standard
 
         # License gate (moved out of the starter so Run Baseline Now responds instantly -
@@ -485,6 +489,9 @@ function Invoke-CIPPBaselineStandard {
                     $DeletedKeys.Add($DenyKey)
                     continue
                 }
+                # The verdict author is the accountable party - captured before the
+                # carried-out verdict is cleared, and stamped on the audit event.
+                $VerdictBy = "$($AcceptedPaths.$DenyKey.by)"
                 try {
                     switch ($Definition.delete.executor) {
                         'IntunePolicy' { Invoke-CIPPBaselineDeleteIntunePolicy -Target $Target -TenantFilter $TenantFilter }
@@ -493,8 +500,12 @@ function Invoke-CIPPBaselineStandard {
                     }
                     $DeletedKeys.Add($DenyKey)
                     Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Deleted `"$DenyKey`" for `"$Label`" as ordered by the denied deviation - Run $RunId" -Sev 'Info'
+                    # A deletion is irreversible: it gets its own immutable history event
+                    # naming the object AND who ordered it, not just Remediated=true.
+                    $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Item.Standard -Mode 'delete' -TriggeredBy ($VerdictBy ? $VerdictBy : $TriggeredBy) -Outcome 'Deleted' -Detail "Deleted '$DenyKey' (id $($Target.id)) as ordered by the denied deviation" -RunId $RunId -Remediated $true
                 } catch {
                     Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to delete `"$DenyKey`" for `"$Label`": $($_.Exception.Message) - Run $RunId" -Sev 'Error'
+                    $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Item.Standard -Mode 'delete' -TriggeredBy ($VerdictBy ? $VerdictBy : $TriggeredBy) -Outcome 'Delete Failed' -Detail "Failed to delete '$DenyKey': $($_.Exception.Message)" -RunId $RunId
                 }
             }
             if ($DeletedKeys.Count -gt 0) {

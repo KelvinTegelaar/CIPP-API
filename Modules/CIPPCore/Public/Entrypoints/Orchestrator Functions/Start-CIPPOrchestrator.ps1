@@ -58,8 +58,6 @@ function Start-CIPPOrchestrator {
             $OrchestratorName = "$OrchestratorName-$BatchQueueId"
         }
 
-        $BatchJson = ConvertTo-Json -InputObject @($InputObject.Batch) -Depth 10 -Compress
-
         $PostExecFunctionName = $null
         $PostExecParametersJson = $null
         if ($InputObject.PostExecution) {
@@ -69,10 +67,43 @@ function Start-CIPPOrchestrator {
             }
         }
 
-        Write-Information "Craft: Queuing orchestrator '$OrchestratorName' ($($InputObject.Batch.Count) tasks$(if ($PostExecFunctionName) { ", PostExec: $PostExecFunctionName" }))"
-        [Craft.Services.OrchestratorBridge]::QueueOrchestration(
+        # Write the batch as JSON Lines — one task per line — and hand Craft the path.
+        #
+        # This used to be a single `ConvertTo-Json @($InputObject.Batch)`, which put the entire
+        # fan-out in one string. That is what made per-task payloads so expensive: Set-CIPPDBCacheMailboxes
+        # notes it directly, because every permission batch carrying a copy of all mailboxes turned a
+        # 10k-mailbox tenant into 200 batches x 10k entries in ONE string. Narrowing what each batch
+        # carries reduced that, but the whole-batch-as-one-string shape was the reason it mattered.
+        # Serialising one task at a time means peak memory is one task, whether the run has 10 or 10,000
+        # — and Craft parses it back a line at a time for the same reason.
+        #
+        # Depth is per task now rather than per array, so tasks get one more level than before. That can
+        # only include detail that was previously truncated to a type name, never less.
+        $BatchPath = Join-Path ([System.IO.Path]::GetTempPath()) "cipp-batch-$([guid]::NewGuid().ToString('N')).jsonl"
+        $TaskCount = 0
+        try {
+            $Writer = [System.IO.StreamWriter]::new($BatchPath, $false, [System.Text.Encoding]::UTF8)
+            try {
+                foreach ($BatchItem in @($InputObject.Batch)) {
+                    if ($null -eq $BatchItem) { continue }
+                    $Writer.WriteLine((ConvertTo-Json -InputObject $BatchItem -Depth 10 -Compress))
+                    $TaskCount++
+                }
+            } finally {
+                $Writer.Dispose()
+            }
+        } catch {
+            # Queue nothing on a partial write — a half-written batch would start a run missing tasks,
+            # which looks like success. Drop the file and let the caller see the failure.
+            Remove-Item -LiteralPath $BatchPath -Force -ErrorAction SilentlyContinue
+            Write-Error "Failed to write batch file for '$OrchestratorName': $($_.Exception.Message)"
+            throw
+        }
+
+        Write-Information "Craft: Queuing orchestrator '$OrchestratorName' ($TaskCount tasks$(if ($PostExecFunctionName) { ", PostExec: $PostExecFunctionName" }))"
+        [Craft.Services.OrchestratorBridge]::QueueOrchestrationFromFile(
             $OrchestratorName,
-            $BatchJson,
+            $BatchPath,
             4,
             $PostExecFunctionName,
             $PostExecParametersJson,

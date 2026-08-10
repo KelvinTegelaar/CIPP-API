@@ -667,9 +667,9 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Creates or updates a baseline. There is no baseline blob: the Baselines\ndelta rows (design doc §4.1) are the editable source of truth for every standard's\nconfiguration, and the BaselineRollouts row (§12.2) holds the baseline-level data -\nname, description, exclusions, alert destinations, and the ordered stage definitions.\nBaselines are reconstructed from those rows on read.",
+        "description": "Creates or updates a baseline. There is no baseline blob: the Baselines\ndelta rows (design doc §4.1) are the editable source of truth for every standard's\nconfiguration, and the BaselineRollouts row (§12.2) holds the baseline-level data -\nname, description, exclusions, alert destinations, and the ordered stage definitions.\nBaselines are reconstructed from those rows on read. The actual write lives in\nNew-CIPPBaseline, shared with the community-repo import.",
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -722,9 +722,9 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "templateName"
-                ]
+                "additionalProperties": true,
+                "x-cipp-passthrough": true,
+                "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
               }
             }
           }
@@ -764,7 +764,10 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.Standards.ReadWrite",
+        "x-cipp-reads-via": [
+          "New-CIPPBaseline"
+        ]
       }
     },
     "/api/AddBPATemplate": {
@@ -15079,7 +15082,8 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.AppSettings.ReadWrite"
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecBreachSearch": {
@@ -16301,6 +16305,7 @@
                       "SetBranch",
                       "SetTemplateTypes",
                       "Update",
+                      "UploadBaseline",
                       "UploadScript",
                       "UploadTemplate"
                     ]
@@ -16315,7 +16320,8 @@
                     "type": "string"
                   },
                   "GUID": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "A baseline is not a templates-table row: Export-CIPPBaselineTemplate assembles the portable set - the BaselineTemplate file plus one standard template file per referenced CA/Intune template (packages expanded to their current members). Related templates are separate files, exactly the shape UploadTemplate writes, so they import through the untouched path."
                   },
                   "Id": {
                     "type": "string"
@@ -18594,6 +18600,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -30165,6 +30174,53 @@
         "x-cipp-role": "CIPP.SuperAdmin.ReadWrite"
       }
     },
+    "/api/ExecSamSecretStatus": {
+      "post": {
+        "summary": "Reports whether the stored SAM application secret is usable yet.",
+        "operationId": "ExecSamSecretStatus",
+        "tags": [
+          "CIPP > Setup"
+        ],
+        "description": "The setup wizard creates a client secret on one step and uses it on the next, but Entra\ncan take several minutes to replicate a newly created secret. Until it has, every token\nrequest fails with AADSTS7000215 even though the value CIPP holds is correct. This lets\nthe wizard wait on that instead of failing the user after they have already signed in.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecScheduleForwardingVacation": {
       "post": {
         "summary": "ExecScheduleForwardingVacation",
@@ -38369,7 +38425,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Returns the report branding: colours, logo and cover images, footer and watermark text.\n\nThis used to ride along inside ListUserSettings, which meant every page load carried every\nuploaded cover as an inline data URL — megabytes of images fetched to render a settings\nmenu. Worse, hydrating branding also ran the legacy-image migration, so a GET issued on\nevery page load wrote the BrandingSettings row back from a snapshot it had read moments\nearlier, and any upload that landed in between was overwritten.\n\nBranding therefore has its own endpoint, fetched by the things that actually draw it, and\nthis read never writes. Migration belongs to ExecBrandingSettings -Action Get: the settings\npage opening is a deliberate, infrequent, single-user action, which is the one place where\nrewriting the row is safe.\n\nIts role matches ListUserSettings rather than the branding write role — every user who\nrenders a report needs the branding on it, and that is exactly who could read it before.",
+        "description": "Returns the report branding: colours, logo and cover images, footer and watermark text.\n\nBranding was previously returned by ListUserSettings, which put every uploaded cover\ninline on every page load and ran the legacy-image migration - a write - on that read\npath. This read never writes; migration belongs to ExecBrandingSettings -Action Get.\n\nThe role matches ListUserSettings rather than the branding write role, since every user\nwho renders a report needs the branding on it.",
         "parameters": [
           {
             "name": "includeGallery",
@@ -44396,7 +44452,7 @@
         "tags": [
           "Tools > GitHub"
         ],
-        "description": "Returns release metadata for the provided repository and semantic version. Hotfix\nversions (e.g. v8.5.2) map back to the base release tag (v8.5.0).",
+        "description": "Returns release metadata for the provided repository. Results are cached and refreshed\nwhen the cache has no entry for the running version - hotfix releases (e.g. v8.5.2)\npublish their own notes, so a v8.5.0 entry no longer counts as current.",
         "responses": {
           "200": {
             "description": "Success",

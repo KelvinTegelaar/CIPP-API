@@ -272,14 +272,18 @@ function Invoke-ListCustomVariables {
                     }
                 }
 
+                # Resolved through Get-CIPPTextReplacement so there is one definition of what each
+                # token means. System tokens are skipped: they are expanded on the endpoint, not here.
                 $Resolvable = @($VariableMap.Values | Where-Object {
                         $_.Type -eq 'reserved' -and $_.Category -ne 'system'
                     })
                 if ($Resolvable.Count -gt 0) {
+                    # Joined into one call by a separator no domain, GUID or URL can contain.
                     $Separator = '<<|CIPPVAR|>>'
                     $Tokens = @($Resolvable | ForEach-Object { $_.Variable })
                     $Resolved = @((Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text ($Tokens -join $Separator)) -split ([regex]::Escape($Separator)))
 
+                    # A mismatch would misalign every value after it, so none are used.
                     if ($Resolved.Count -eq $Tokens.Count) {
                         for ($i = 0; $i -lt $Tokens.Count; $i++) {
                             if ($Resolved[$i] -ne $Tokens[$i]) {

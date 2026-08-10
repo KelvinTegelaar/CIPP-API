@@ -3,8 +3,9 @@
     .SYNOPSIS
         Retrieves release notes for a GitHub repository.
     .DESCRIPTION
-        Returns release metadata for the provided repository and semantic version. Hotfix
-        versions (e.g. v8.5.2) map back to the base release tag (v8.5.0).
+        Returns release metadata for the provided repository. Results are cached and refreshed
+        when the cache has no entry for the running version - hotfix releases (e.g. v8.5.2)
+        publish their own notes, so a v8.5.0 entry no longer counts as current.
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
@@ -34,26 +35,20 @@
     try {
         $Latest = $false
         if ($Rows) {
-            $Releases = ConvertFrom-Json -InputObject $Rows.GitHubReleases -Depth 10
-            $CurrentVersion = [semver]($env:CippVersion ?? $env:APP_VERSION)
-            $CurrentMajorMinor = "$($CurrentVersion.Major).$($CurrentVersion.Minor)"
+            $CachedRow = $Rows | Select-Object -First 1
+            $Releases = ConvertFrom-Json -InputObject $CachedRow.GitHubReleases -Depth 10
+            $CurrentTag = 'v{0}' -f (($env:CippVersion ?? $env:APP_VERSION) -replace '^v', '')
 
-            foreach ($Release in $Releases) {
-                $Version = $Release.releaseTag -replace 'v', ''
-                try {
-                    $ReleaseVersion = [semver]$Version
-                    $ReleaseMajorMinor = "$($ReleaseVersion.Major).$($ReleaseVersion.Minor)"
+            # Hotfixes publish their own release, so the cache is only current when it holds an
+            # entry for the exact running version. Matching on major.minor kept serving v10.8.0's
+            # notes to a v10.8.2 build forever, because the .0 release is always in the cache.
+            $HasCurrentRelease = $null -ne ($Releases | Where-Object { $_.releaseTag -eq $CurrentTag } | Select-Object -First 1)
 
-                    # Check if we have cached notes for the current major.minor version series
-                    if ($ReleaseMajorMinor -eq $CurrentMajorMinor) {
-                        $Latest = $true
-                        break
-                    }
-                } catch {
-                    # Skip invalid semver versions
-                    continue
-                }
-            }
+            # Versions with no release of their own (nightly, local, or a bump that lands before
+            # the tag is published) would otherwise refetch on every page load, so they fall back
+            # to a 15 minute floor instead of hammering the GitHub API.
+            $MaxAge = $HasCurrentRelease ? (Get-Date).AddHours(-24) : (Get-Date).AddMinutes(-15)
+            $Latest = $CachedRow.Timestamp -gt $MaxAge
         }
 
         if (-not $Latest) {
