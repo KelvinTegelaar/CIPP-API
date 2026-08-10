@@ -1,7 +1,7 @@
 Function Invoke-ExecBrandingSettings {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.AppSettings.ReadWrite
     #>

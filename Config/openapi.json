@@ -15082,7 +15082,8 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.AppSettings.ReadWrite"
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecBreachSearch": {
