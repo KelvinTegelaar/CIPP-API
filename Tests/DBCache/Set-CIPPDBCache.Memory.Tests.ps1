@@ -48,19 +48,23 @@ BeforeAll {
             [int]$SkewMarginMinutes = 5
         )
         begin {
-            $script:DbWrites.Add([pscustomobject]@{
-                    Type     = $Type
-                    Tenant   = $TenantFilter
-                    AddCount = $AddCount.IsPresent
-                    Rows     = [System.Collections.Generic.List[object]]::new()
-                })
+            # EndRan is what proves the count row / orphan cleanup would have happened: collectors
+            # that open their writer up front still must not call End() on an empty result.
+            $Entry = [pscustomobject]@{
+                Type     = $Type
+                Tenant   = $TenantFilter
+                AddCount = $AddCount.IsPresent
+                Rows     = [System.Collections.Generic.List[object]]::new()
+                EndRan   = $false
+            }
+            $script:DbWrites.Add($Entry)
         }
         process {
             foreach ($Item in @($InputObject)) {
-                if ($null -ne $Item) { $script:DbWrites[-1].Rows.Add($Item) }
+                if ($null -ne $Item) { $Entry.Rows.Add($Item) }
             }
         }
-        end { }
+        end { $Entry.EndRan = $true }
     }
 
     function New-BulkReportResponse {
@@ -443,14 +447,18 @@ Describe 'DBCache collectors reworked for bounded memory' {
             $script:DbWrites[0].Rows.id | Should -Be @('u1', 'u2')
         }
 
-        It 'does not invoke the writer at all when the report is empty' {
-            # The pre-existing behaviour: an empty report leaves the previous cache and its count row
-            # untouched. Piping unconditionally would have run the writer's end block and zeroed it.
+        It 'does not run the writer end block when the report is empty' {
+            # An empty report leaves the previous cache and its count row untouched. The writer is
+            # opened before the Graph pipeline starts - its steppable pipeline has to capture this
+            # collector's scope rather than New-GraphGetRequest's - so the invocation itself is
+            # expected. What must not happen is End(), which writes the count row and clears orphans.
             Mock -CommandName New-GraphGetRequest -MockWith { @() }
 
             Set-CIPPDBCacheUserRegistrationDetails -TenantFilter 'contoso.com'
 
-            $script:DbWrites.Count | Should -Be 0
+            $script:DbWrites.Count | Should -Be 1
+            $script:DbWrites[0].Rows | Should -BeNullOrEmpty
+            $script:DbWrites[0].EndRan | Should -BeFalse
         }
     }
 
