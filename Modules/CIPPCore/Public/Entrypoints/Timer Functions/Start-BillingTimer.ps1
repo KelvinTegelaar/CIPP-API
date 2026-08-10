@@ -8,7 +8,7 @@ function Start-BillingTimer {
         Entrypoint
     #>
 
-    [CmdletBinding(SupportsShouldProcess = $true)]
+    [CmdletBinding()]
     param()
     try {
         Write-LogMessage -API 'Scheduler_Billing' -tenant 'none' -message 'Starting billing processing.' -sev Info

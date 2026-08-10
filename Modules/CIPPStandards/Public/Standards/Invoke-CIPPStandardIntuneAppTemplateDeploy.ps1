@@ -71,7 +71,7 @@ function Invoke-CIPPStandardIntuneAppTemplateDeploy {
 
         for ($i = 0; $i -lt $AppTypes.Count; $i++) {
             $RawConfig = $AppConfigs[$i]
-            $Config = if ($RawConfig -is [string]) { $RawConfig | ConvertFrom-Json -Depth 100 } else { $RawConfig }
+            $Config = if ($RawConfig -is [string]) { $RawConfig | ConvertFrom-CippAppConfig } else { $RawConfig }
             $AppType = [string]$AppTypes[$i]
             $DisplayName = [string]($Config.ApplicationName ?? $Config.displayName ?? $AppNames[$i])
 

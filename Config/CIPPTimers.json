@@ -139,6 +139,16 @@
     "IsSystem": true
   },
   {
+    "Id": "f3a1c7d2-9b64-4e58-8a07-1d5e2c9b4f36",
+    "Command": "Start-CIPPPermissionCheck",
+    "Description": "Check the CIPP application for permissions that need to be applied",
+    "Cron": "0 30 0 * * *",
+    "Priority": 10,
+    "RunOnProcessor": true,
+    "TZOffset": true,
+    "IsSystem": true
+  },
+  {
     "Id": "467787cf-01c5-4d20-8097-c2eef691a20e",
     "Command": "Start-BillingTimer",
     "Description": "Timer to process billing",
@@ -264,5 +274,15 @@
     "Priority": 11,
     "RunOnProcessor": false,
     "IsSystem": true
+  },
+  {
+    "Id": "9f2c7b1e-4a6d-4c3f-8b9a-5e1d2f7c0a44",
+    "Command": "Start-CIPPBaselineOrchestrator",
+    "Description": "Baseline run: graduations, drift detection and remediation for all baselines",
+    "Cron": "0 0 */12 * * *",
+    "Priority": 4,
+    "RunOnProcessor": true,
+    "TZOffset": true,
+    "PreferredProcessor": "standards"
   }
 ]

@@ -20,6 +20,11 @@ function ConvertTo-CIPPSensitivityLabelParams {
         an 'AdvancedSettings' dictionary that New-/Set-Label accept. An explicit 'AdvancedSettings' value
         already on the template wins over captured values.
 
+        Reshaping a captured label also strips its RMS template ids, which are tenant-scoped and cannot be
+        deployed anywhere but the tenant they came from, and converts its rights definitions (which are
+        portable) into the form the write shape expects. Between them that is what makes a template-encrypted
+        label re-deployable across tenants.
+
         Deploy-time validation/allowlisting still happens in Set-CIPPSensitivityLabel via
         Get-CIPPSensitivityLabelField; this function only reshapes.
     .PARAMETER Label
@@ -36,15 +41,27 @@ function ConvertTo-CIPPSensitivityLabelParams {
     $HasActions = [bool]$Label.PSObject.Properties['LabelActions']
     # Read-shape arrays that are not valid New-/Set-Label input - dropped when reshaping a captured label.
     $ReadShapeArrays = @('LabelActions', 'Settings', 'LocaleSettings', 'Conditions')
+    # Azure RMS templates are provisioned per tenant, so a template id read out of the tenant a label was
+    # captured from does not resolve anywhere else and fails the deploy with RmsTemplateNotFoundException.
+    # They are dropped from captured labels: with no template id supplied, Purview mints a fresh
+    # tenant-local template from the (portable) rights definitions instead. Flat manual JSON is left alone,
+    # so an author naming a template id there is still targeting a template they know exists.
+    $NonPortableFields = @(Get-CIPPSensitivityLabelField -NonPortable)
 
     $Flat = [ordered]@{}
     foreach ($Prop in $Label.PSObject.Properties) {
-        if ($HasActions -and $Prop.Name -in $ReadShapeArrays) { continue }
+        if ($HasActions -and ($Prop.Name -in $ReadShapeArrays -or $Prop.Name -in $NonPortableFields)) { continue }
         $Flat[$Prop.Name] = $Prop.Value
     }
 
     if (-not $HasActions) {
         return [pscustomobject]$Flat
+    }
+
+    # Get-Label reports rights as {Identity, Rights} objects, which the parameter binder rejects.
+    # The LabelActions loop below overrides this when the encrypt action carries its own copy.
+    if ($Flat['EncryptionRightsDefinitions']) {
+        $Flat['EncryptionRightsDefinitions'] = @(ConvertTo-CIPPSensitivityLabelRights -RightsDefinitions $Flat['EncryptionRightsDefinitions'])
     }
 
     # Writable advanced settings that Get-Label only reports inside the read-only Settings array
@@ -96,11 +113,22 @@ function ConvertTo-CIPPSensitivityLabelParams {
                 $ProtectionType = "$($Set['protectiontype'])".ToLower()
                 if ($ProtectionType -eq 'template') {
                     $Flat['EncryptionProtectionType'] = 'Template'
-                    if ($Set['templateid']) { $Flat['EncryptionTemplateId'] = $Set['templateid'] }
+                    # 'templateid'/'linkedtemplateid' are deliberately not carried over - see $NonPortableFields.
+                    # 'rightsdefinitions' is the portable description of who gets which rights, and is what
+                    # Purview rebuilds the tenant-local RMS template from when no template id is supplied.
+                    # EncryptionRightsDefinitions is only valid alongside the Template protection type, so it
+                    # is mapped here rather than for every encrypt action.
+                    if ($Set['rightsdefinitions']) {
+                        $Rights = @(ConvertTo-CIPPSensitivityLabelRights -RightsDefinitions $Set['rightsdefinitions'])
+                        if ($Rights.Count -gt 0) { $Flat['EncryptionRightsDefinitions'] = $Rights }
+                    }
                     if ($Set.ContainsKey('contentexpiredondateindaysornever')) { $Flat['EncryptionContentExpiredOnDateInDaysOrNever'] = $Set['contentexpiredondateindaysornever'] }
                     if ($Set.ContainsKey('offlineaccessdays')) { $Flat['EncryptionOfflineAccessDays'] = [int]$Set['offlineaccessdays'] }
                 } else {
                     $Flat['EncryptionProtectionType'] = 'UserDefined'
+                    # Rights are chosen by the user at apply time here, and EncryptionRightsDefinitions is
+                    # rejected outside the Template protection type - drop anything the flat read shape carried.
+                    $Flat.Remove('EncryptionRightsDefinitions')
                     if ($Set.ContainsKey('donotforward')) { $Flat['EncryptionDoNotForward'] = ($Set['donotforward'] -eq 'true') }
                     if ($Set.ContainsKey('encryptonly')) { $Flat['EncryptionEncryptOnly'] = ($Set['encryptonly'] -eq 'true') }
                     if ($Set.ContainsKey('promptuser')) { $Flat['EncryptionPromptUser'] = ($Set['promptuser'] -eq 'true') }

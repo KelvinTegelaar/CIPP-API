@@ -39,6 +39,10 @@ function Invoke-ListGraphRequest {
         $Parameters.'expand' = $Request.Query.expand
     }
 
+    # Graph's page size, NOT a result limit. This endpoint follows @odata.nextLink to the
+    # end by default, so $top alone changes how many round trips it makes and not how many
+    # records come back - asking for 1 still returns everything. Pair it with NoPagination
+    # to stop after one page, or manualPagination to page through deliberately.
     if ($Request.Query.'$top') {
         $Parameters.'$top' = $Request.Query.'$top'
     }
@@ -61,6 +65,9 @@ function Invoke-ListGraphRequest {
     }
 
     $GraphRequestParams = @{
+        # The Graph path to call, without the version prefix - 'users',
+        # 'deviceManagement/managedDevices', 'groups/<id>/members'. Use ListGraphSchema to
+        # check what an endpoint returns before spending a call on it.
         Endpoint   = $Request.Query.Endpoint
         Parameters = $Parameters
         CippLink   = $CippLink
@@ -78,18 +85,29 @@ function Invoke-ListGraphRequest {
         $GraphRequestParams.Version = $Request.Query.Version
     }
 
+    # Return only the first page and stop. The default follows every @odata.nextLink until
+    # the collection is exhausted, which on a large tenant is both slow and very large - use
+    # this with $top when a sample is enough.
     if ($Request.Query.NoPagination) {
         $GraphRequestParams.NoPagination = [System.Convert]::ToBoolean($Request.Query.NoPagination)
     }
 
+    # Return one page plus its @odata.nextLink in the response metadata, so the caller can
+    # fetch the next page itself by passing that link back as nextLink. Use this to walk a
+    # large collection in bounded steps rather than pulling it all at once.
     if ($Request.Query.manualPagination) {
         $GraphRequestParams.ManualPagination = [System.Convert]::ToBoolean($Request.Query.manualPagination)
     }
 
+    # Continue a manualPagination walk: pass back the @odata.nextLink returned with the
+    # previous page. Endpoint is still required, and the other query options are already
+    # encoded in the link.
     if ($Request.Query.nextLink) {
         $GraphRequestParams.nextLink = $Request.Query.nextLink
     }
 
+    # Return just the number of matching records instead of the records themselves. The
+    # cheapest way to size a collection before deciding whether to fetch it.
     if ($Request.Query.CountOnly) {
         $GraphRequestParams.CountOnly = [System.Convert]::ToBoolean($Request.Query.CountOnly)
     }

@@ -103,7 +103,7 @@ function Test-DeltaQueryConditions {
     if ($Trigger.UseConditions -eq $true -and $Trigger.Conditions) {
         try {
             # Parse conditions from JSON (similar to audit log processing)
-            $conditions = $Trigger.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' -and $_.Input.value -ne $null }
+            $conditions = $Trigger.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' -and $null -ne $_.Input.value }
 
             if ($conditions) {
                 # Build human-readable clause for logging

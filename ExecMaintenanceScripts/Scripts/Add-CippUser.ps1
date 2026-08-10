@@ -28,7 +28,7 @@ Write-Host "Connected to $($Context.Account)"
 
 $swa = Get-AzStaticWebApp -ResourceGroupName $ResourceGroup
 $Domain = $swa.CustomDomain | Select-Object -First 1
-if ($Domain -eq $null) { $Domain = $swa.DefaultHostname }
+if ($null -eq $Domain) { $Domain = $swa.DefaultHostname }
 Write-Host "CIPP SWA - $($swa.name)"
 
 if (!$Role) {

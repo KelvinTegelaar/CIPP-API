@@ -1,0 +1,73 @@
+{
+  "name": "DisableEmail",
+  "label": "Disables Email as an MFA method",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.2.3.7)",
+    "NIST CSF 2.0 (PR.AA-03)",
+    "SMB1001 (2.5)",
+    "SMB1001 (2.6)",
+    "SMB1001 (2.9)"
+  ],
+  "impact": "High Impact",
+  "helpText": "This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead prompts them to create a Microsoft account.",
+  "executiveText": "Disables email-based authentication codes due to security concerns with email interception and account compromise. This forces users to adopt more secure authentication methods, particularly affecting guest users who must use stronger verification methods.",
+  "impactColour": "danger",
+  "addedDate": "2023-12-18",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
+  "appliesToTest": [
+    "CIS_5_2_3_7",
+    "SMB1001_2_5",
+    "SMB1001_2_5_L4",
+    "SMB1001_2_6",
+    "SMB1001_2_9"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "label": "Email OTP authentication method",
+      "options": [
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        },
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        }
+      ],
+      "default": "disabled",
+      "recommended": "disabled"
+    }
+  },
+  "expected": {
+    "state": "%state%"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "Email"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/Email",
+        "body": {
+          "@odata.type": "#microsoft.graph.emailAuthenticationMethodConfiguration",
+          "state": "%state%"
+        }
+      }
+    ]
+  }
+}

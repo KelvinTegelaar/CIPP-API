@@ -57,8 +57,8 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
     } #we're done.
 
     try {
-        $CurrentState = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$expand=assignments&orderBy=priority&`$filter=deviceEnrollmentConfigurationType eq 'WindowsHelloForBusiness'" -tenantID $Tenant -AsApp $true |
-            Select-Object -Property id, pinMinimumLength, pinMaximumLength, pinUppercaseCharactersUsage, pinLowercaseCharactersUsage, pinSpecialCharactersUsage, state, securityDeviceRequired, unlockWithBiometricsEnabled, remotePassportEnabled, pinPreviousBlockCount, pinExpirationInDays, enhancedBiometricsState, enhancedSignInSecurity, securityKeyForSignIn
+        $CurrentState = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$orderby=priority&`$filter=deviceEnrollmentConfigurationType eq 'WindowsHelloForBusiness'" -tenantID $Tenant -AsApp $true |
+            Select-Object -First 1 -Property id, pinMinimumLength, pinMaximumLength, pinUppercaseCharactersUsage, pinLowercaseCharactersUsage, pinSpecialCharactersUsage, state, securityDeviceRequired, unlockWithBiometricsEnabled, remotePassportEnabled, pinPreviousBlockCount, pinExpirationInDays, enhancedBiometricsState, enhancedSignInSecurity, securityKeyForSignIn
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnrollmentWindowsHelloForBusinessConfiguration state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage

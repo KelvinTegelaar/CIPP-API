@@ -4,6 +4,8 @@ function Invoke-ListGroupTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Identity.Group.Read
+    .DESCRIPTION
+        Lists the saved group templates, each with its display name, description and group type. Pass id to return a single template. These are CIPP templates, not a tenant's existing groups.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

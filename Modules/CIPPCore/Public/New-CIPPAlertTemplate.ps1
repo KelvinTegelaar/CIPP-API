@@ -310,10 +310,39 @@ function New-CIPPAlertTemplate {
                 $ButtonText = 'User Management'
             }
         }
+
+        # Append a deep-link to the source audit event so technicians can jump straight from
+        # the ticket to the raw record in CIPP for forensics, regardless of which action page
+        # the primary button takes them to.
+        if (![string]::IsNullOrWhiteSpace($AuditLogLink)) {
+            $AfterButtonText = "$AfterButtonText<p>For forensics, <a href=`"$AuditLogLink`">view the source audit event in CIPP</a>.</p>"
+        }
     }
 
     if (![string]::IsNullOrWhiteSpace($CustomSubject)) {
-        $Title = '{0} - {1}' -f $Tenant, $CustomSubject
+        # Resolve %property% tokens against the alert data so subjects like
+        # '%username% - suspicious login' carry the actual value. Unknown tokens stay as-is.
+        # $Data is a single object for audit logs but an array of rows for logbook alerts,
+        # so only resolve when every row agrees - a multi-user alert has no one username.
+        $ResolvedSubject = [regex]::Replace($CustomSubject, '%(\w+)%', {
+            param($Match)
+            $PropertyName = switch ($Match.Groups[1].Value) {
+                'username' { 'UserId' }
+                'tenant' { return $Tenant }
+                default { $Match.Groups[1].Value }
+            }
+            $Values = foreach ($Row in @($Data)) {
+                if ($null -eq $Row) { continue }
+                if ($Row -is [System.Collections.IDictionary]) {
+                    $Row[$PropertyName]
+                } else {
+                    ($Row.PSObject.Properties | Where-Object { $_.Name -ieq $PropertyName } | Select-Object -First 1).Value
+                }
+            }
+            $Distinct = @($Values | Where-Object { ![string]::IsNullOrWhiteSpace("$_") } | ForEach-Object { "$_" } | Select-Object -Unique)
+            if ($Distinct.Count -eq 1) { $Distinct[0] } else { $Match.Value }
+        })
+        $Title = '{0} - {1}' -f $Tenant, $ResolvedSubject
     }
 
     if ($Format -eq 'html') {
@@ -322,6 +351,24 @@ function New-CIPPAlertTemplate {
         return [pscustomobject]@{
             title       = $Title
             htmlcontent = $AssembledHtml
+        }
+    } elseif ($Format -eq 'psa') {
+        # PSA ticket bodies get a bare fragment instead of the full email template: the
+        # template styles its tables with a <style> block and classes, which Halo stores
+        # but never applies, so the tables lose their borders and padding (#4243).
+        $PsaContent = $IntroText
+        if ($ButtonUrl -and $ButtonText) {
+            $PsaContent = "$PsaContent<p><a href=`"$ButtonUrl`">$ButtonText</a></p>"
+        }
+        if ($AfterButtonText) {
+            $PsaContent = "$PsaContent$AfterButtonText"
+        }
+        if ($AuditLogLink) {
+            $PsaContent = "$PsaContent<p><a href=`"$AuditLogLink`">View the audit log entry in CIPP</a></p>"
+        }
+        return [pscustomobject]@{
+            title       = $Title
+            htmlcontent = (ConvertTo-PSAHtml -Html $PsaContent)
         }
     } elseif ($Format -eq 'json') {
         if ($InputObject -eq 'auditlog') {

@@ -4,6 +4,11 @@ function Add-CIPPDbItem {
         Add items to the CIPP Reporting database
     .FUNCTIONALITY
         Internal
+
+    .PARAMETER ClearOnEmpty
+        Authorizes removal of existing rows when InputObject is an authoritative empty
+        collection and exact row-key cleanup for a non-empty authoritative collection.
+        Callers must only use this after a successful source response.
     #>
     [CmdletBinding()]
     param(
@@ -22,6 +27,7 @@ function Add-CIPPDbItem {
         [switch]$Count,
         [switch]$AddCount,
         [switch]$Append,
+        [switch]$ClearOnEmpty,
 
         [ValidateRange(0, 60)]
         [int]$SkewMarginMinutes = 5
@@ -31,7 +37,10 @@ function Add-CIPPDbItem {
         $Table = Get-CippTable -tablename 'CippReportingDB'
         $BatchSize = 100
         $Batch = [System.Collections.Generic.List[hashtable]]::new($BatchSize)
+        # Track batch duplicates separately from the full authoritative run used for cleanup.
         $SeenInBatch = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $SeenRowKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        # Allow for storage timestamp lag before considering untouched rows stale.
         $RunStartUtc = [DateTimeOffset]::UtcNow.AddMinutes(-$SkewMarginMinutes)
 
         $TotalProcessed = 0
@@ -61,10 +70,15 @@ function Add-CIPPDbItem {
             $ItemId = $Item.ExternalDirectoryObjectId ?? $Item.id ?? $Item.Identity ?? $Item.skuId ?? $Item.userPrincipalName ?? [guid]::NewGuid().ToString()
             $RowKey = $RowKeyControlRegex.Replace($RowKeyPathRegex.Replace("$Type-$ItemId", '_'), '')
             if ($SeenInBatch.Add($RowKey)) {
+                $null = $SeenRowKeys.Add($RowKey)
                 $Batch.Add(@{
                         PartitionKey = $TenantFilter
                         RowKey       = $RowKey
-                        Data         = [string]($Item | ConvertTo-Json -Depth 10 -Compress)
+                        # Depth 100, not 10: settings-catalog policies (e.g. macOS
+                        # Platform SSO) nest deeper than 10 levels - a lower depth
+                        # silently strips @odata.type/settingDefinitionId from deep
+                        # children and every consumer sees a mangled object.
+                        Data         = [string]($Item | ConvertTo-Json -Depth 100 -Compress)
                         Type         = $Type
                     })
                 if ($Batch.Count -ge $BatchSize) {
@@ -84,13 +98,20 @@ function Add-CIPPDbItem {
         }
 
         # Clean up orphaned rows (entities that no longer exist in the new dataset).
-        if (-not $Count.IsPresent -and -not $Append.IsPresent -and $TotalProcessed -gt 0) {
+        # Empty collections only clear existing data when the caller explicitly confirms
+        # the response was authoritative by passing -ClearOnEmpty.
+        if (-not $Count.IsPresent -and -not $Append.IsPresent -and ($TotalProcessed -gt 0 -or $ClearOnEmpty.IsPresent)) {
             $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}0'" -f $TenantFilter, $Type
             $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag, OriginalEntityId, Timestamp
             if ($Existing) {
                 $Undated = 0
                 $Orphans = foreach ($Row in @($Existing)) {
                     if ($Row.RowKey -eq "$Type-Count") { continue }
+
+                    if ($ClearOnEmpty.IsPresent) {
+                        if (-not $SeenRowKeys.Contains($Row.RowKey)) { $Row }
+                        continue
+                    }
 
                     $Stamp = $Row.Timestamp -as [datetimeoffset]
                     if ($null -eq $Stamp) { $Undated++; continue }

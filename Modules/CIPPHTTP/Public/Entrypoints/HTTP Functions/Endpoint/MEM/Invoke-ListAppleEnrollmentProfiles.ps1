@@ -72,7 +72,7 @@ function Invoke-ListAppleEnrollmentProfiles {
     } catch {
         $StatusCode = [HttpStatusCode]::InternalServerError
         $ErrorMessage = Get-CippException -Exception $_
-        $Body = @{ Results = "Failed to list Apple ADE enrollment profiles: $($ErrorMessage.NormalizedMessage)" }
+        $Body = @{ Results = "Failed to list Apple ADE enrollment profiles: $($ErrorMessage.NormalizedError)" }
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Body.Results -Sev Error -LogData $ErrorMessage
     }
 

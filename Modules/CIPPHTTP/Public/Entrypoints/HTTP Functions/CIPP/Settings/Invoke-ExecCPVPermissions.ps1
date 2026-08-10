@@ -17,7 +17,7 @@ function Invoke-ExecCPVPermissions {
         $CPVConsentParams = @{
             TenantFilter = $TenantFilter
         }
-        if ($Request.Query.ResetSP -eq 'true') {
+        if ($Request.Query.ResetSP -eq $true) {
             $CPVConsentParams.ResetSP = $true
         }
 

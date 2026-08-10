@@ -77,19 +77,43 @@ function Set-CIPPDBCacheSharePointSiteUsage {
             }
         }
 
-        $LibraryLists = @()
+        # Reduce the library responses to one list id per site key as they are read, rather than
+        # holding every document library object for the whole tenant. The previous version kept
+        # them all and rescanned the array for each site, which is O(sites x libraries).
+        # parentReference.siteId is a composite ('hostname,siteCollectionId,webId'), so each
+        # comma-separated component is indexed - that is what the old '-like "*$siteId*"' test
+        # matched, since a site GUID can only occur as a whole component. First writer wins,
+        # matching the previous 'Select-Object -First 1'.
+        $ListIdBySiteKey = @{}
+        # A site with no sharepointIds.siteId produced the wildcard pattern '**' in the old
+        # filter, which matches every library, so the first one won. Kept so those rows are
+        # unchanged.
+        $FirstLibraryListId = $null
         if ($ListRequests.Count -gt 0) {
             try {
-                $LibraryLists = @((New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($ListRequests) -asapp $true).body.value | Where-Object { $_.list.template -eq 'DocumentLibrary' })
+                $LibraryLists = (New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($ListRequests) -asapp $true).body.value
+                foreach ($List in $LibraryLists) {
+                    if ($List.list.template -ne 'DocumentLibrary') { continue }
+                    if ($null -eq $FirstLibraryListId) { $FirstLibraryListId = $List.id }
+                    $ParentSiteId = $List.parentReference.siteId
+                    if (-not $ParentSiteId) { continue }
+                    foreach ($Key in ([string]$ParentSiteId -split ',')) {
+                        if ($Key -and -not $ListIdBySiteKey.ContainsKey($Key)) { $ListIdBySiteKey[$Key] = $List.id }
+                    }
+                }
+                $LibraryLists = $null
             } catch {
                 Write-LogMessage -Message "Error getting auto map urls for SharePoint cache: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter -API 'CIPPDBCache' -LogData (Get-CippException -Exception $_)
             }
         }
+        $ListRequests = $null
 
         foreach ($Site in $SiteListing) {
-            $ListId = ($LibraryLists | Where-Object { $_.parentReference.siteId -like "*$($Site.sharepointIds.siteId)*" } | Select-Object -First 1 -ExpandProperty id)
+            $SiteKey = [string]$Site.sharepointIds.siteId
+            $ListId = if ($SiteKey) { $ListIdBySiteKey[$SiteKey] } else { $FirstLibraryListId }
             $Site.AutoMapUrl = "tenantId=$($TenantId)&webId={$($Site.sharepointIds.webId)}&siteid={$($Site.sharepointIds.siteId)}&webUrl=$($Site.webUrl)&listId={$($ListId)}"
         }
+        $ListIdBySiteKey = $null
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteListing' -Data @($SiteListing) -AddCount
 

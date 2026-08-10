@@ -22,6 +22,7 @@ function Invoke-ExecAzBobbyTables {
         'New-AzDataTable'
         'Remove-CIPPAzDataTableEntity'
         'Remove-AzDataTable'
+        'Remove-AzDataTableEntity'
     )
 
     $Function = $Request.Body.FunctionName

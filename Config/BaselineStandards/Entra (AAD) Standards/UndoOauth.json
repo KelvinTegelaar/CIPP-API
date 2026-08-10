@@ -1,0 +1,39 @@
+{
+  "name": "UndoOauth",
+  "label": "Undo App Consent Standard",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Disables App consent and set to Allow user consent for apps",
+  "executiveText": "Reverses application consent restrictions, allowing employees to approve applications independently without administrative oversight. This increases productivity and user autonomy but reduces security controls over data access permissions.",
+  "impactColour": "danger",
+  "addedDate": "2022-01-07",
+  "powershellEquivalent": "Update-MgPolicyAuthorizationPolicy",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "permissionGrantPolicyIdsAssignedToDefaultUserRole": [
+      "ManagePermissionGrantsForSelf.microsoft-user-default-legacy"
+    ]
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authorizationPolicy/authorizationPolicy",
+        "body": {
+          "permissionGrantPolicyIdsAssignedToDefaultUserRole": [
+            "ManagePermissionGrantsForSelf.microsoft-user-default-legacy"
+          ]
+        }
+      }
+    ]
+  }
+}

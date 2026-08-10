@@ -1,0 +1,65 @@
+{
+  "name": "EnableMailboxAuditing",
+  "label": "Enable Mailbox auditing",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (6.1.1)",
+    "CIS M365 7.0.0 (6.1.2)",
+    "CIS M365 7.0.0 (6.1.3)",
+    "exo_mailboxaudit",
+    "Essential 8 (1509)",
+    "Essential 8 (1683)",
+    "NIST CSF 2.0 (DE.CM-09)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Enables Mailbox auditing for all mailboxes and on tenant level. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.",
+  "executiveText": "Enables comprehensive logging of all email access and modifications across all employee mailboxes, providing detailed audit trails for security investigations and compliance requirements. This helps detect unauthorized access, data breaches, and supports regulatory compliance efforts.",
+  "docsDescription": "Enables mailbox auditing on tenant level and for all mailboxes. Disables audit bypass on all mailboxes. By default Microsoft does not enable mailbox auditing for Resource Mailboxes, Public Folder Mailboxes and DiscoverySearch Mailboxes. Unified Audit Log needs to be enabled for this standard to function.",
+  "impactColour": "info",
+  "addedDate": "2024-01-08",
+  "powershellEquivalent": "Set-OrganizationConfig -AuditDisabled $false",
+  "appliesToTest": [
+    "CISAMSEXO131",
+    "CIS_6_1_1",
+    "CIS_6_1_2",
+    "CIS_6_1_3"
+  ],
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "auditDisabled": {
+      "type": "switch",
+      "label": "Tenant-level mailbox audit disabled (keep off to enforce auditing)",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "AuditDisabled": "%auditDisabled%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "AuditDisabled": "%auditDisabled%"
+        }
+      }
+    ]
+  }
+}

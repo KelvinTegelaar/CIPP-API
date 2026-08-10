@@ -1,0 +1,61 @@
+{
+  "name": "Disablex509Certificate",
+  "label": "Disables Certificates as an MFA method",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "This blocks users from using Certificates as an MFA method.",
+  "executiveText": "Disables certificate-based authentication as a multi-factor authentication method, typically used when organizations want to standardize on other authentication methods or when certificate management becomes too complex for the security benefit provided.",
+  "docsDescription": "",
+  "impactColour": "danger",
+  "addedDate": "2023-12-18",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "label": "Certificate-based authentication method",
+      "options": [
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        },
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        }
+      ],
+      "default": "disabled",
+      "recommended": "disabled"
+    }
+  },
+  "expected": {
+    "state": "%state%"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "X509Certificate"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/x509Certificate",
+        "body": {
+          "@odata.type": "#microsoft.graph.x509CertificateAuthenticationMethodConfiguration",
+          "state": "%state%"
+        }
+      }
+    ]
+  }
+}

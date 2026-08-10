@@ -23,7 +23,11 @@ Function Invoke-EditContact {
             Identity = $contactInfo.ContactID
         }
 
-        # Map of properties to check and add
+        # Map of properties to check and add.
+        # WindowsEmailAddress only updates the contact's 'mail' attribute (what the contacts list
+        # displays). Mail routing follows ExternalEmailAddress, which is set via Set-MailContact
+        # below - setting one without the other leaves the contact displaying one address while
+        # still delivering to the old one.
         $ContactPropertyMap = @{
             'DisplayName'         = $contactInfo.displayName
             'WindowsEmailAddress' = $contactInfo.email
@@ -62,6 +66,12 @@ Function Invoke-EditContact {
         # Prepare mail contact specific parameters
         $MailContactParams = @{
             Identity = $contactInfo.ContactID
+        }
+
+        # ExternalEmailAddress is the actual routing target for a mail contact. This runs after
+        # Set-Contact so the routing update is the last write to land.
+        if (![string]::IsNullOrWhiteSpace($contactInfo.email)) {
+            $MailContactParams.ExternalEmailAddress = $contactInfo.email
         }
 
         # Handle boolean conversion safely

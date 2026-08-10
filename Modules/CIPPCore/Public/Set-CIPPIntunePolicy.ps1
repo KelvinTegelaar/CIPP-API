@@ -13,7 +13,12 @@ function Set-CIPPIntunePolicy {
         $AssignmentFilterName,
         $AssignmentFilterType = 'include',
         [array]$ReusableSettings,
-        [int]$LevenshteinDistance = 0
+        [int]$LevenshteinDistance = 0,
+        # 'append' (default) adds the requested assignments and leaves everything else in place.
+        # 'replace' makes the policy's assignments exactly what was requested - used by callers that
+        # own the assignment, so that a comparison demanding an exact set is actually satisfiable.
+        [ValidateSet('append', 'replace')]
+        [string]$AssignmentMode = 'append'
     )
 
     $RawJSON = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $RawJSON -EscapeForJson
@@ -26,16 +31,17 @@ function Set-CIPPIntunePolicy {
         switch ($TemplateType) {
             'AppProtection' {
                 $PlatformType = 'deviceAppManagement'
-                $TemplateType = ($RawJSON | ConvertFrom-Json).'@odata.type' -replace '#microsoft.graph.', ''
-                if ([string]::IsNullOrWhiteSpace($TemplateType)) {
-                    throw "App Protection template '$DisplayName' does not contain @odata.type, so the policy type cannot be determined. Recreate the template or re-run the template sync to include @odata.type."
-                }
                 $PolicyFile = $RawJSON | ConvertFrom-Json
+                $TemplateTypeURL = Get-CIPPAppProtectionPolicyUrl -Policy $PolicyFile
+                if (-not $TemplateTypeURL) {
+                    throw "App Protection template '$DisplayName' identifies no platform - it carries no @odata.type, no @odata.context and no platform-specific settings - so the policy type cannot be determined. Recreate the template or re-run the template sync."
+                }
                 $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value $Description -Force
                 $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $DisplayName -Force
-                $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty 'apps'
+                # Read-only properties Graph echoes back on a GET. They are carried in the template
+                # because the capture keeps the payload whole, and Graph rejects them on the way in.
+                $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty 'apps', id, createdDateTime, lastModifiedDateTime, version, '@odata.context', isAssigned, deployedAppCount
                 $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 20
-                $TemplateTypeURL = if ($TemplateType -eq 'windowsInformationProtectionPolicy') { 'windowsInformationProtectionPolicies' } else { "$($TemplateType)s" }
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance
                 if ($FuzzyResult) {
@@ -302,12 +308,13 @@ function Set-CIPPIntunePolicy {
             Write-Host "ID is $($CreateRequest.id)"
 
             $AssignParams = @{
-                GroupName    = $AssignTo
-                PolicyId     = $CreateRequest.id
-                PlatformType = $PlatformType
-                Type         = $TemplateTypeURL
-                TenantFilter = $tenantFilter
-                ExcludeGroup = $ExcludeGroup
+                GroupName      = $AssignTo
+                PolicyId       = $CreateRequest.id
+                PlatformType   = $PlatformType
+                Type           = $TemplateTypeURL
+                TenantFilter   = $tenantFilter
+                ExcludeGroup   = $ExcludeGroup
+                AssignmentMode = $AssignmentMode
             }
 
             if ($AssignmentFilterName) {

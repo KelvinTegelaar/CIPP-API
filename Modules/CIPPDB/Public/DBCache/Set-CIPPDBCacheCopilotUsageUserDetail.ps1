@@ -19,14 +19,18 @@ function Set-CIPPDBCacheCopilotUsageUserDetail {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Copilot usage user detail' -sev Debug
 
-        $Data = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMicrosoft365CopilotUsageUserDetail(period='D30')" -tenantid $TenantFilter -AsApp $true
+        # Streamed into the writer: this report returns a row per user and is iterated once, so
+        # there is no reason to hold the whole set. Both previous branches ended in an
+        # Add-CIPPDbItem call - the empty one wrote the -Data @() marker - and a pipeline that
+        # yields nothing still runs the writer's end block, so that marker is still written.
+        $CachedRecords = 0
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMicrosoft365CopilotUsageUserDetail(period='D30')" -tenantid $TenantFilter -AsApp $true -Stream |
+            ForEach-Object { $CachedRecords++; $_ } |
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUsageUserDetail' -AddCount
 
-        if ($Data) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUsageUserDetail' -Data $Data -AddCount
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Data.Count) Copilot usage user detail records" -sev Debug
+        if ($CachedRecords -gt 0) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $CachedRecords Copilot usage user detail records" -sev Debug
         } else {
-            # Write an empty marker so tests can distinguish "no data yet" from "cache not run"
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUsageUserDetail' -Data @() -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Copilot usage user detail: no records returned (no active Copilot usage)' -sev Debug
         }
 

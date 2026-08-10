@@ -12,7 +12,8 @@ function Invoke-ListHVEAccounts {
 
     $TenantFilter = $Request.Query.tenantFilter
     $Identity = $Request.Query.Identity
-    $UseReportDB = $Request.Query.UseReportDB
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     $ListBillingPolicies = $Request.Query.ListBillingPolicies
 
     try {
@@ -78,7 +79,7 @@ function Invoke-ListHVEAccounts {
                 })
         }
 
-        if ($UseReportDB -eq 'true') {
+        if ($UseReportDB) {
             try {
                 $HVEItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'HVEAccounts' | Where-Object { $_.RowKey -ne 'HVEAccounts-Count' }
                 if (-not $HVEItems) {

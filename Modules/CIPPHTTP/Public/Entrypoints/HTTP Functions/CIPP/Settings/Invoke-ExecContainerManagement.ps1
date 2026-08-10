@@ -13,6 +13,19 @@ function Invoke-ExecContainerManagement {
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
     $ValidChannels = @('latest', 'dev', 'nightly')
+
+    # Throwaway images built from an unmerged branch by .github/workflows/preview-container.yml,
+    # tagged <branch-type>-<name> (optionally + '-<shortsha>' for a pinned build). The type list
+    # must stay in sync with that workflow and with preview-cleanup.yml. Nothing here can match
+    # 'latest', 'dev', 'nightly' or a bare semver, so a build tag can never shadow a real channel.
+    $BuildChannelPattern = '^(preview|feat|fix|refactor|perf|chore|build|revert)-[a-z0-9][a-z0-9._-]{0,54}$'
+
+    # Used only to LIST available tags when ARM cannot tell us what image is deployed — local
+    # development has no WEBSITE_SITE_NAME or managed identity, so the ARM lookup returns nothing
+    # and the picker would otherwise show no branch builds at all. Switching channels still
+    # derives its image base from the site's own linuxFxVersion, never from this.
+    $DefaultImageBase = 'ghcr.io/cyberdrain/cipp'
+
     $SettingsTable = Get-CippTable -tablename 'ContainerUpdateSettings'
 
     # Helper: resolve ARM site details
@@ -86,6 +99,39 @@ function Invoke-ExecContainerManagement {
         }
     }
 
+    # List the build-channel tags that actually exist on the registry, so the UI can offer a
+    # pick-list instead of asking an admin to type a tag from memory. A typo'd tag would leave
+    # linuxFxVersion pointing at a nonexistent image and the instance unable to start.
+    # Anonymous pull token, same as Get-GHCRImageInfo.
+    function Get-GHCRBuildChannel {
+        param([string]$ImageRef)
+
+        $imagePath = $ImageRef -replace '^ghcr\.io/', '' -replace ':.*$', ''
+        if (-not $imagePath) { return @() }
+
+        $tokenResp = Invoke-RestMethod -Uri "https://ghcr.io/token?scope=repository:${imagePath}:pull" -Method GET -ErrorAction Stop
+        $authHeader = @{ Authorization = "Bearer $($tokenResp.token)" }
+
+        $Tags = [System.Collections.Generic.List[string]]::new()
+        $Uri = "https://ghcr.io/v2/$imagePath/tags/list?n=100"
+        # GHCR paginates via a Link header; cap the walk so a huge tag list can't stall the page.
+        for ($Page = 0; $Page -lt 20 -and $Uri; $Page++) {
+            $Resp = Invoke-WebRequest -Uri $Uri -Method GET -Headers $authHeader -ErrorAction Stop
+            $Content = $Resp.Content
+            if ($Content -is [byte[]]) { $Content = [System.Text.Encoding]::UTF8.GetString($Content) }
+            ($Content | ConvertFrom-Json).tags | ForEach-Object { $Tags.Add($_) }
+
+            $Uri = $null
+            $Link = $Resp.Headers['Link']
+            if ($Link) {
+                if ($Link -is [array]) { $Link = $Link[0] }
+                if ($Link -match '<([^>]+)>\s*;\s*rel="next"') { $Uri = "https://ghcr.io$($Matches[1])" }
+            }
+        }
+
+        return @($Tags | Where-Object { $_ -match $BuildChannelPattern } | Sort-Object)
+    }
+
     switch ($Action) {
         'Status' {
             try {
@@ -144,18 +190,22 @@ function Invoke-ExecContainerManagement {
                     $UpdateInfo.RemoteBuildDate = $Settings.RemoteBuildDate ?? $null
                 }
 
+                # Note: the branch-build tag list is NOT fetched here. Status is polled, and each
+                # call would hit the registry. The channel picker loads it from ListChannels
+                # instead, which it can also re-fetch on demand.
                 $Body = @{
                     Results = @{
-                        CurrentVersion    = $CurrentVersion
-                        CommitSha         = $CommitSha
-                        ImageTag          = $ImageTag
-                        BuildDate         = $env:BUILD_DATE ?? 'unknown'
-                        CurrentChannel    = $CurrentChannel
-                        ConfiguredChannel = $ConfiguredChannel
-                        CurrentImage      = $CurrentImage
-                        SiteName          = $site.SiteName
-                        ValidChannels     = $ValidChannels
-                        UpdateSettings    = $UpdateInfo
+                        CurrentVersion      = $CurrentVersion
+                        CommitSha           = $CommitSha
+                        ImageTag            = $ImageTag
+                        BuildDate           = $env:BUILD_DATE ?? 'unknown'
+                        CurrentChannel      = $CurrentChannel
+                        ConfiguredChannel   = $ConfiguredChannel
+                        CurrentImage        = $CurrentImage
+                        SiteName            = $site.SiteName
+                        ValidChannels       = $ValidChannels
+                        BuildChannelPattern = $BuildChannelPattern
+                        UpdateSettings      = $UpdateInfo
                     }
                 }
             } catch {
@@ -163,6 +213,75 @@ function Invoke-ExecContainerManagement {
                 Write-LogMessage -API $APIName -headers $Headers -message "Failed to get container status: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 return [HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::InternalServerError
+                    Body       = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
+                }
+            }
+        }
+        'ListChannels' {
+            # Selectable channels for the picker: the standard three, plus whatever branch builds
+            # currently exist on the registry. Its own action rather than part of Status so the UI
+            # can refresh it on demand (a branch build pushed a minute ago shows up immediately)
+            # without the polled status call hitting the registry every time.
+            try {
+                $Channels = [System.Collections.Generic.List[object]]::new()
+                foreach ($Channel in $ValidChannels) {
+                    $Channels.Add([PSCustomObject]@{
+                            label = $Channel
+                            value = $Channel
+                            group = 'Standard channels'
+                        })
+                }
+
+                # Prefer the image actually deployed here, so a fork or a privately hosted image
+                # lists its own tags. ARM is unavailable in local development (no
+                # WEBSITE_SITE_NAME, no managed identity), so fall back to the published image
+                # rather than silently listing no branch builds at all.
+                $CurrentImage = $null
+                $site = Get-ContainerSiteInfo
+                if ($site.Subscription -and $site.RGName -and $site.SiteName) {
+                    try {
+                        $apiVersion = '2024-11-01'
+                        $uri = "https://management.azure.com/subscriptions/$($site.Subscription)/resourceGroups/$($site.RGName)/providers/Microsoft.Web/sites/$($site.SiteName)/config/web?api-version=$apiVersion"
+                        $webConfig = New-CIPPAzRestRequest -Uri $uri -Method GET
+                        if ($webConfig.properties.linuxFxVersion) {
+                            $CurrentImage = $webConfig.properties.linuxFxVersion -replace '^DOCKER\|', ''
+                        }
+                    } catch {
+                        Write-Information "Could not read container config from ARM: $($_.Exception.Message)"
+                    }
+                }
+                if (-not $CurrentImage) {
+                    $CurrentImage = $DefaultImageBase
+                    Write-Information "[Channels] No image reference from ARM, listing tags for $DefaultImageBase"
+                }
+
+                # An empty branch-build list must be distinguishable from a failed lookup - the
+                # standard channels rendering fine otherwise makes a silent failure look like
+                # "there are no branch builds", which is exactly what it is not.
+                if ($CurrentImage -match '^ghcr\.io/') {
+                    try {
+                        $BuildTags = @(Get-GHCRBuildChannel -ImageRef $CurrentImage)
+                        Write-Information "[Channels] Found $($BuildTags.Count) branch build tag(s) on $CurrentImage"
+                        foreach ($Tag in $BuildTags) {
+                            $Channels.Add([PSCustomObject]@{
+                                    label = $Tag
+                                    value = $Tag
+                                    group = 'Branch builds'
+                                })
+                        }
+                    } catch {
+                        Write-LogMessage -API $APIName -headers $Headers -message "Could not list branch build tags from $($CurrentImage): $($_.Exception.Message)" -sev Warning
+                    }
+                } else {
+                    Write-Information "[Channels] $CurrentImage is not a GHCR image - branch builds are not listed"
+                }
+
+                $Body = @{ Results = @($Channels) }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API $APIName -headers $Headers -message "Failed to list channels: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                return [HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
                     Body       = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
                 }
             }
@@ -189,15 +308,7 @@ function Invoke-ExecContainerManagement {
 
                 # Update checking only works with GHCR-hosted images
                 if ($CurrentImage -notmatch '^ghcr\.io/') {
-                    $Body = @{
-                        Results = @{
-                            Message         = "Update checking is only supported for GHCR-hosted images. Current image: $CurrentImage"
-                            UpdateAvailable = $false
-                            RunningDigest   = $null
-                            RemoteDigest    = $null
-                            CheckedTag      = $null
-                        }
-                    }
+                    $Body = @{ Results = "Update checking is only supported for GHCR-hosted images. Current image: $CurrentImage" }
                     break
                 }
 
@@ -250,17 +361,9 @@ function Invoke-ExecContainerManagement {
                 } else {
                     $Result = "Container is up to date. Version: $RunningVersion"
                 }
-                $Body = @{
-                    Results = @{
-                        Message         = $Result
-                        UpdateAvailable = $UpdateAvailable
-                        RunningVersion  = $RunningVersion
-                        RemoteVersion   = $RemoteVersion
-                        RemoteDigest    = $RemoteDigest
-                        RemoteBuildDate = $RemoteBuildDate
-                        CheckedTag      = $CheckTag
-                    }
-                }
+                # Structured update state is persisted to UpdateConfig and surfaced via the
+                # Status action; the POST response only carries the human-readable outcome.
+                $Body = @{ Results = $Result }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API $APIName -headers $Headers -message "Failed to check for update: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
@@ -331,8 +434,9 @@ function Invoke-ExecContainerManagement {
                 if ([string]::IsNullOrWhiteSpace($NewChannel)) {
                     throw 'Channel is required'
                 }
-                if ($NewChannel -notin $ValidChannels) {
-                    throw "Invalid channel: $NewChannel. Valid channels: $($ValidChannels -join ', ')"
+                $IsBuildChannel = $NewChannel -notin $ValidChannels -and $NewChannel -match $BuildChannelPattern
+                if ($NewChannel -notin $ValidChannels -and -not $IsBuildChannel) {
+                    throw "Invalid channel: $NewChannel. Valid channels: $($ValidChannels -join ', '), or a branch build tag."
                 }
 
                 $site = Get-ContainerSiteInfo
@@ -348,19 +452,40 @@ function Invoke-ExecContainerManagement {
                     throw 'Could not read current linuxFxVersion — is this a Linux container app?'
                 }
 
+                # Only ever the TAG is swapped — the image base comes from the site's existing
+                # linuxFxVersion. That is what keeps this endpoint from being "point my instance
+                # at any registry you like": a channel can only ever resolve to a tag on the
+                # image already deployed here. Do not refactor into accepting a full image ref.
                 $currentImage = $currentLinuxFx -replace '^DOCKER\|', ''
                 if ($currentImage -match '^(.+):([^:]+)$') {
                     $imageBase = $Matches[1]
-                    $newLinuxFx = "DOCKER|${imageBase}:${NewChannel}"
                 } else {
-                    $newLinuxFx = "DOCKER|${currentImage}:${NewChannel}"
+                    $imageBase = $currentImage
+                }
+                $newLinuxFx = "DOCKER|${imageBase}:${NewChannel}"
+
+                # A branch build tag is transient — the branch may have been deleted and the tag
+                # swept. Writing a nonexistent image to linuxFxVersion takes the instance down on
+                # next restart, so confirm the manifest resolves first. Built-in channels always
+                # exist and keep their previous behaviour (no extra registry round-trip).
+                if ($IsBuildChannel -and $imageBase -match '^ghcr\.io/') {
+                    try {
+                        $null = Get-GHCRImageInfo -ImageRef $imageBase -Tag $NewChannel
+                    } catch {
+                        throw "Branch build '$NewChannel' was not found in the registry — it may have been cleaned up after its branch was deleted. Pick another build, or rebuild the branch."
+                    }
                 }
 
                 $putBody = @{ properties = @{ linuxFxVersion = $newLinuxFx } }
                 New-CIPPAzRestRequest -Uri $getUri -Method PATCH -Body $putBody -ContentType 'application/json' | Out-Null
 
-                $Result = "Release channel updated to '$NewChannel'. Image: $newLinuxFx. The container will pull the new image on next restart."
-                Write-LogMessage -API $APIName -headers $Headers -message "Release channel changed to $NewChannel ($newLinuxFx)" -sev Info
+                if ($IsBuildChannel) {
+                    $Result = "Release channel updated to branch build '$NewChannel'. Image: $newLinuxFx. The container will pull the new image on next restart. This is an unsupported build and will not receive updates — switch back to a standard channel when you are done testing."
+                    Write-LogMessage -API $APIName -headers $Headers -message "Release channel changed to UNSUPPORTED branch build $NewChannel ($newLinuxFx)" -sev Warning
+                } else {
+                    $Result = "Release channel updated to '$NewChannel'. Image: $newLinuxFx. The container will pull the new image on next restart."
+                    Write-LogMessage -API $APIName -headers $Headers -message "Release channel changed to $NewChannel ($newLinuxFx)" -sev Info
+                }
                 $Body = @{ Results = $Result }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_

@@ -4,17 +4,25 @@ function Get-HaloTicketOutcome {
         Get Halo Ticket Outcome
     .DESCRIPTION
         Get Halo Ticket Outcome
+    .PARAMETER TicketType
+        Ticket type to scope the outcomes to. The settings page passes the value currently
+        selected in the form so the list follows the dropdown without needing a save first.
+        Falls back to the saved ticket type when not supplied.
     .EXAMPLE
         Get-HaloTicketOutcome
 
     #>
   [CmdletBinding()]
-  param ()
+  param (
+    $TicketType
+  )
   $Table = Get-CIPPTable -TableName Extensionsconfig
   try {
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
     $Token = Get-HaloToken -configuration $Configuration
-    $TicketType = $Configuration.TicketType.value ?? $Configuration.TicketType
+    if (-not $TicketType) {
+      $TicketType = $Configuration.TicketType.value ?? $Configuration.TicketType
+    }
     if ($TicketType) {
       $WorkflowId = (Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/tickettype/$TicketType" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }).workflow_id
       $Workflow = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/workflow/$WorkflowId" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
@@ -25,7 +33,7 @@ function Get-HaloTicketOutcome {
       # Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/outcome" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
       @(
         @{
-          buttonname = 'Select and save a Ticket Type first to see available outcomes'
+          buttonname = 'Select a Ticket Type first to see available outcomes'
           value      = -1
         }
       )

@@ -1,0 +1,65 @@
+{
+  "name": "AuditLog",
+  "label": "Enable the Unified Audit Log",
+  "cat": "Global Standards",
+  "tag": [
+    "CIS M365 7.0.0 (3.1.1)",
+    "mip_search_auditlog",
+    "NIST CSF 2.0 (DE.CM-09)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Enables the Unified Audit Log for tracking and auditing activities. Also runs Enable-OrganizationCustomization if necessary.",
+  "executiveText": "Activates comprehensive activity logging across Microsoft 365 services to track user actions, system changes, and security events. This provides essential audit trails for compliance requirements, security investigations, and regulatory reporting.",
+  "impactColour": "info",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Enable-OrganizationCustomization",
+  "appliesToTest": [
+    "CISAMSEXO171",
+    "CISAMSEXO173",
+    "CIS_3_1_1"
+  ],
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "enabled": {
+      "type": "switch",
+      "label": "Unified Audit Log ingestion enabled",
+      "default": true,
+      "recommended": true,
+      "locked": true
+    }
+  },
+  "expected": {
+    "UnifiedAuditLogIngestionEnabled": "%enabled%"
+  },
+  "read": {
+    "cacheType": "ExoAdminAuditLogConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Enable-OrganizationCustomization",
+        "params": {},
+        "continueOnError": true
+      },
+      {
+        "cmdlet": "Set-AdminAuditLogConfig",
+        "params": {
+          "UnifiedAuditLogIngestionEnabled": "%enabled%"
+        }
+      }
+    ]
+  }
+}

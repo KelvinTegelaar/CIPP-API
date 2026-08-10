@@ -55,6 +55,17 @@ function New-HaloPSATicket {
     $TicketType = $Configuration.TicketType.value ?? $Configuration.TicketType
     $object | Add-Member -MemberType NoteProperty -Name 'tickettype_id' -Value $TicketType -Force
   }
+  if ($Configuration.DefaultPriority) {
+    $Priority = $Configuration.DefaultPriority.value ?? $Configuration.DefaultPriority
+    $PriorityInt = $Priority -as [int]
+    if ($PriorityInt -and $PriorityInt -gt 0) {
+      $object | Add-Member -MemberType NoteProperty -Name 'priority_id' -Value $PriorityInt -Force
+    } else {
+      # Stored value isn't a valid Halo priority id (legacy data, hint-row selection, etc.).
+      # Skip priority_id rather than crashing the cast - Halo will fall back to its default.
+      Write-LogMessage -message "HaloPSA.DefaultPriority value '$Priority' is not a valid integer - omitting priority_id from ticket payload" -API 'HaloPSATicket' -sev Warning
+    }
+  }
   #use the token to create a new ticket in HaloPSA
   $body = ConvertTo-Json -Compress -Depth 10 -InputObject @($Object)
 

@@ -11,7 +11,7 @@ function Invoke-ListTenantAlignment {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Granular = $Request.Query.granular -eq 'true'
+    $Granular = $Request.Query.granular -eq $true
     try {
         # Use the new Get-CIPPTenantAlignment function to get alignment data
         $AlignmentData = Get-CIPPTenantAlignment

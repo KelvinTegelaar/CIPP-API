@@ -44,9 +44,11 @@ function Get-CIPPIntunePolicyAssignments {
         }
         'AppProtection' {
             $PlatformType = 'deviceAppManagement'
-            $OdataType = if ($ExistingPolicy) { $ExistingPolicy.'@odata.type' -replace '#microsoft.graph.', '' } else { $null }
-            if (-not $OdataType) { return $null }
-            $TypeUrl = if ($OdataType -eq 'windowsInformationProtectionPolicy') { 'windowsInformationProtectionPolicies' } else { "${OdataType}s" }
+            # App Protection spans several collections and assignments live under the concrete one.
+            # A policy read from its own collection has no @odata.type - Graph only emits it for
+            # reads through managedAppPolicies - so resolve from whatever the payload does carry.
+            $TypeUrl = if ($ExistingPolicy) { Get-CIPPAppProtectionPolicyUrl -Policy $ExistingPolicy } else { $null }
+            if (-not $TypeUrl) { return $null }
         }
         'windowsDriverUpdateProfiles' {
             $PlatformType = 'deviceManagement'

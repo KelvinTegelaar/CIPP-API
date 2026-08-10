@@ -1,0 +1,55 @@
+{
+  "name": "TeamsExternalChatWithAnyone",
+  "label": "Set Teams chat with anyone setting",
+  "cat": "Teams Standards",
+  "tag": [
+    "CIS M365 7.0.0 (8.2.3)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Controls whether users can start Teams chats with any email address, inviting external recipients as guests via email.",
+  "executiveText": "Allows organizations to decide if employees can launch Microsoft Teams chats with anyone on the internet using just an email address. Disabling the feature keeps conversations inside trusted boundaries and helps prevent accidental data exposure through unexpected external invitations.",
+  "docsDescription": "Manages the Teams messaging policy setting UseB2BInvitesToAddExternalUsers. When enabled, users can start chats with any email address and recipients receive an invitation to join the chat as guests. Disabling the setting prevents these external email chats from being created, keeping conversations limited to internal users and approved guests.",
+  "impactColour": "info",
+  "addedDate": "2025-11-03",
+  "powershellEquivalent": "Set-CsTeamsMessagingPolicy -Identity Global -UseB2BInvitesToAddExternalUsers $false/$true",
+  "appliesToTest": [
+    "CIS_8_2_3"
+  ],
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "UseB2BInvitesToAddExternalUsers": {
+      "type": "switch",
+      "label": "Allow chatting with anyone via email",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "UseB2BInvitesToAddExternalUsers": "%UseB2BInvitesToAddExternalUsers%"
+  },
+  "read": {
+    "cacheType": "CsTeamsMessagingPolicy"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsMessagingPolicy",
+        "params": {
+          "UseB2BInvitesToAddExternalUsers": "%UseB2BInvitesToAddExternalUsers%"
+        }
+      }
+    ]
+  }
+}

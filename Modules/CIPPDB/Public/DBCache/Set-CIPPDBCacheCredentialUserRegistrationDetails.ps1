@@ -19,13 +19,32 @@ function Set-CIPPDBCacheCredentialUserRegistrationDetails {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching credential user registration details' -sev Debug
 
-        $CredentialUserRegistrationDetails = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $TenantFilter
-
-        if ($CredentialUserRegistrationDetails) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CredentialUserRegistrationDetails' -Data $CredentialUserRegistrationDetails -AddCount
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($CredentialUserRegistrationDetails.Count) credential user registration details" -sev Debug
+        # A row per user, iterated once, so it is streamed into the writer instead of held whole.
+        # The writer is opened on the first record: an empty report previously skipped
+        # Add-CIPPDbItem altogether, and piping into it unconditionally would run its end block
+        # and overwrite the count row with 0.
+        $Writer = $null
+        $CachedCount = 0
+        try {
+            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $TenantFilter -Stream | ForEach-Object {
+                if ($null -eq $Writer) {
+                    $Writer = { Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CredentialUserRegistrationDetails' -AddCount }.GetSteppablePipeline()
+                    $Writer.Begin($true)
+                }
+                $CachedCount++
+                $Writer.Process($_)
+            }
+            if ($Writer) {
+                $Writer.End()
+                $Writer.Dispose()
+                $Writer = $null
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $CachedCount credential user registration details" -sev Debug
+            }
+        } finally {
+            # Only set if the stream threw part-way: dispose without End so a partial run never
+            # triggers the writer's orphan cleanup.
+            if ($Writer) { $Writer.Dispose() }
         }
-        $CredentialUserRegistrationDetails = $null
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache credential user registration details: $($_.Exception.Message)" -sev Error

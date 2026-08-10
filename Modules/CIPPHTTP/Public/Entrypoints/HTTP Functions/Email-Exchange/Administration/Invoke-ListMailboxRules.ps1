@@ -14,11 +14,11 @@ function Invoke-ListMailboxRules {
     if (-not [string]::IsNullOrEmpty($TenantFilter) -and $TenantFilter -ne 'AllTenants') {
         $TenantFilter = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
     }
-    $UseReportDB = $Request.Query.UseReportDB
-
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     try {
         # If UseReportDB is specified, retrieve from report database
-        if ($UseReportDB -eq 'true') {
+        if ($UseReportDB) {
             try {
                 $GraphRequest = Get-CIPPMailboxRulesReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK

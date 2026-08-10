@@ -13,10 +13,11 @@ function Invoke-ListTenantGroups {
     param($Request, $TriggerMetadata)
 
     $groupFilter = $Request.Query.groupId ?? $Request.Body.groupId
-    $includeUsage = $Request.Query.includeUsage ?? $Request.Body.includeUsage
+    # Include, per group, the standards templates and scheduled tasks that reference it.
+    $includeUsage = ($Request.Query.includeUsage -eq $true) -or ($Request.Body.includeUsage -eq $true)
     $TenantGroups = (Get-TenantGroups -GroupId $groupFilter -SkipCache) ?? @()
 
-    if ($includeUsage -eq 'true') {
+    if ($includeUsage) {
         $UsageByGroup = @{}
         foreach ($Group in $TenantGroups) {
             $UsageByGroup[$Group.Id] = [System.Collections.Generic.List[PSCustomObject]]::new()

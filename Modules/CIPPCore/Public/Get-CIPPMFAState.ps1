@@ -545,20 +545,26 @@ function Get-CIPPMFAState {
             $UserCAState.Add($PolicyObj)
         }
 
-        # Determine if user is covered by CA
-        if ($UserCAState.Count -gt 0 -and ($UserCAState | Where-Object { $_.UserIncluded -eq $true -and $_.PolicyState -eq 'enabled' })) {
-            $EnabledPolicies = $UserCAState | Where-Object { $_.UserIncluded -eq $true -and $_.PolicyState -eq 'enabled' }
-            if ($EnabledPolicies | Where-Object { $_.AllApps -eq $true }) {
-                $CoveredByCA = 'Enforced - All Apps'
-            } else {
-                $CoveredByCA = 'Enforced - Specific Apps'
+        # Determine if user is covered by CA. This is a single pass on purpose: it used to
+        # run three Where-Object pipelines per user, which on a 60k user tenant was tens of
+        # seconds of pipeline setup on its own.
+        $HasEnabledPolicy = $false
+        $HasAllAppsPolicy = $false
+        foreach ($Policy in $UserCAState) {
+            if ($Policy.UserIncluded -eq $true -and $Policy.PolicyState -eq 'enabled') {
+                $HasEnabledPolicy = $true
+                if ($Policy.AllApps -eq $true) {
+                    $HasAllAppsPolicy = $true
+                    break
+                }
             }
+        }
+        if ($HasEnabledPolicy) {
+            $CoveredByCA = if ($HasAllAppsPolicy) { 'Enforced - All Apps' } else { 'Enforced - Specific Apps' }
+        } elseif ($CASuccess -eq $false) {
+            $CoveredByCA = $CAError
         } else {
-            if ($CASuccess -eq $false) {
-                $CoveredByCA = $CAError
-            } else {
-                $CoveredByCA = 'Not Enforced'
-            }
+            $CoveredByCA = 'Not Enforced'
         }
         $IsAdmin = if ($adminObjectIds -contains $_.ObjectId) { $true } else { $false }
 

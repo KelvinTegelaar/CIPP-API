@@ -4,6 +4,8 @@ function Invoke-ExecCompareIntunePolicy {
         Entrypoint,AnyTenant
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Compares an Intune policy against another policy or a stored template and returns the differences setting by setting. Handles device configurations, settings catalog policies, ADMX templates, compliance policies, driver/feature/quality update profiles, intents and app protection policies.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

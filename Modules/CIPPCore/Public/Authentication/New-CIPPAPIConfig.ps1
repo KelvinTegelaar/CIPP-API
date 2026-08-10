@@ -149,7 +149,7 @@ function New-CIPPAPIConfig {
                     Write-Information "Setting Application Identifier URI to '$DesiredIdentifierUri'"
                     $IdentifierUriBody = @{
                         identifierUris = @($DesiredIdentifierUri)
-                    }
+                    } | ConvertTo-Json -Depth 5 -Compress
                     $IdentifierUriUpdated = $false
                     for ($Attempt = 1; $Attempt -le 6; $Attempt++) {
                         try {

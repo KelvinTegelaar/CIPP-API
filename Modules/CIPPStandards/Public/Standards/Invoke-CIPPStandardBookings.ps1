@@ -47,6 +47,12 @@ function Invoke-CIPPStandardBookings {
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
 
+    # Input validation. Cast to string so a bool $state never coerces 'Select a value' to $true
+    if (([string]::IsNullOrWhiteSpace($state) -or [string]$state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'BookingsEnabled: Invalid state parameter set' -sev Error
+        return
+    }
+
     try {
         $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').BookingsEnabled
     } catch {
@@ -65,17 +71,12 @@ function Invoke-CIPPStandardBookings {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ? $true : $CurrentState
         Set-CIPPStandardsCompareField -FieldName 'standards.Bookings' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        # Default is not set, not set means it's enabled
         if ($null -eq $CurrentState ) { $CurrentState = $true }
         Add-CIPPBPAField -FieldName 'BookingsState' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 
-    # Input validation
-    if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'BookingsEnabled: Invalid state parameter set' -sev Error
-        return
-    }
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $false) {
             try {

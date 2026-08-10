@@ -75,6 +75,14 @@ function Set-CippApiAuth {
             }
         }
 
+        # First-party MCP clients (e.g. VS Code) bring their own client ID, so the token's azp
+        # is theirs — EasyAuth's allowedApplications must include them when MCP is enabled.
+        if ($McpClientIds) {
+            foreach ($KnownId in (Get-CippMcpKnownClients).PreAuthorizedClientIds) {
+                [void]$AllAppIds.Add($KnownId)
+            }
+        }
+
         Write-Information "[ApiAuth] Merged allowedApplications: $($AllAppIds -join ', ')"
         Write-Information "[ApiAuth] Merged allowedAudiences: $($AllAudiences -join ', ')"
 
@@ -133,6 +141,18 @@ function Set-CippApiAuth {
         if (!$AllowedAudiences) { $AllowedAudiences = @() }
         if (!$ClientIds) { $ClientIds = @() }
 
+        # First-party MCP clients (e.g. VS Code) bring their own client ID, so the token's azp
+        # is theirs — allowedApplications must include them when MCP is enabled.
+        $AllowedApplications = [System.Collections.Generic.List[string]]::new()
+        foreach ($ClientId in $ClientIds) {
+            if (-not [string]::IsNullOrEmpty($ClientId) -and -not $AllowedApplications.Contains($ClientId)) { $AllowedApplications.Add($ClientId) }
+        }
+        if ($McpClientIds) {
+            foreach ($KnownId in (Get-CippMcpKnownClients).PreAuthorizedClientIds) {
+                if (-not $AllowedApplications.Contains($KnownId)) { $AllowedApplications.Add($KnownId) }
+            }
+        }
+
         # Set auth settings
 
         if (($ClientIds | Measure-Object).Count -gt 0) {
@@ -145,7 +165,7 @@ function Set-CippApiAuth {
                 validation   = @{
                     allowedAudiences           = @($AllowedAudiences)
                     defaultAuthorizationPolicy = @{
-                        allowedApplications = @($ClientIds)
+                        allowedApplications = @($AllowedApplications)
                     }
                 }
             }

@@ -99,28 +99,20 @@ function Push-CIPPStandard {
     # -------------------------------------
 
     try {
-        # Convert settings to JSON, replace %variables%, then convert back to object
-        $SettingsJSON = $Item.Settings | ConvertTo-Json -Depth 10 -Compress
+        # Convert settings to JSON, replace %variables%, then convert back to object.
+        #
+        # Two things have to hold for that round trip to be safe. The template picker's rawData
+        # snapshot is dropped first: it is a second copy of the selected template that no standard
+        # reads, and being a JSON document nested inside a JSON document it needs a different amount
+        # of escaping than the text around it. And because replacement runs against serialized JSON,
+        # values are escaped for that context - a variable holding a logon banner that reads
+        # 'property of "Contoso"' otherwise closes the string it lands in and the reparse fails.
+        $SettingsForRun = Remove-CIPPStandardSettingsRawData -Settings $Item.Settings
+        $SettingsJSON = $SettingsForRun | ConvertTo-Json -Depth 10 -Compress
         if ($SettingsJSON -match '%') {
-            $Settings = Get-CIPPTextReplacement -TenantFilter $Item.Tenant -Text $SettingsJSON | ConvertFrom-Json
+            $Settings = Get-CIPPTextReplacement -TenantFilter $Item.Tenant -Text $SettingsJSON -EscapeForJson | ConvertFrom-Json
         } else {
-            $Settings = $Item.Settings
-        }
-
-        # Prepare telemetry metadata for standard execution
-        $metadata = @{
-            Standard     = $Standard
-            Tenant       = $Tenant
-            TemplateId   = $Item.TemplateId
-            FunctionName = $FunctionName
-            TriggerType  = 'Standard'
-        }
-
-        if ($Standard -eq 'IntuneTemplate' -and $Item.Settings.TemplateList.value) {
-            $metadata['IntuneTemplateId'] = $Item.Settings.TemplateList.value
-        }
-        if ($Standard -eq 'ConditionalAccessTemplate' -and $Item.Settings.TemplateList.value) {
-            $metadata['CATemplateId'] = $Item.Settings.TemplateList.value
+            $Settings = $SettingsForRun
         }
 
         & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop

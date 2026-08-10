@@ -4,6 +4,11 @@ function Get-CippApiAuth {
         [string]$FunctionAppName
     )
 
+    # Set-CippApiAuth injects these into allowedApplications whenever any client has MCPAllowed set.
+    # They are not API clients, so they must not be reported back as such — the frontend compares this
+    # list against the enabled API clients and would otherwise always report unsaved changes.
+    $KnownMcpClientIds = @((Get-CippMcpKnownClients).PreAuthorizedClientIds)
+
     if ($env:CIPPNG) {
         $AuthSettings = $null
 
@@ -35,6 +40,8 @@ function Get-CippApiAuth {
                 $AllowedApps = @($AllowedApps | Where-Object { $_ -ne $SSOClientId })
             }
 
+            $AllowedApps = @($AllowedApps | Where-Object { $_ -notin $KnownMcpClientIds })
+
             $ExtractedTenantId = $Issuer -replace 'https://sts.windows.net/', '' -replace 'https://login.microsoftonline.com/', '' -replace '/v2.0', ''
             $TenantId = if ($ExtractedTenantId -eq 'common') { $env:TenantID } else { $ExtractedTenantId }
 
@@ -64,10 +71,13 @@ function Get-CippApiAuth {
         }
 
         if ($AuthSettings) {
+            $AllowedApps = @($AuthSettings.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedApplications)
+            $AllowedApps = @($AllowedApps | Where-Object { $_ -notin $KnownMcpClientIds })
+
             [PSCustomObject]@{
                 ApiUrl    = "https://$($env:WEBSITE_HOSTNAME)"
                 TenantID  = $AuthSettings.identityProviders.azureActiveDirectory.registration.openIdIssuer -replace 'https://sts.windows.net/', '' -replace '/v2.0', ''
-                ClientIDs = $AuthSettings.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedApplications
+                ClientIDs = $AllowedApps
                 Enabled   = $AuthSettings.identityProviders.azureActiveDirectory.enabled
             }
         } else {

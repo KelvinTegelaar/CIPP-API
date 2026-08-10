@@ -119,6 +119,8 @@ function Set-CIPPDBCacheIntuneAppInstallStatus {
             }
         }
         $AppStatuses = @($AppStatuses)
+        # The rollup rows are built; the parse tree behind them is dead weight through the write.
+        $ExportRows = $null
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppInstallStatusAggregate' -Data $AppStatuses -AddCount
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AppStatuses.Count) app install status rows from export $JobId" -sev Info

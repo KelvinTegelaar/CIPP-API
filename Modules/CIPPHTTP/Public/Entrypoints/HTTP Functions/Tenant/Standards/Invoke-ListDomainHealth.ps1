@@ -13,6 +13,23 @@ function Invoke-ListDomainHealth {
     $APIName = $Request.Params.CIPPEndpoint
     Import-Module DNSHealth
 
+    # The DNS check to run. Without it there is nothing to dispatch on, so reject rather
+    # than fall through and return an empty body that reads like "no findings".
+    if (-not $Request.Query.Action) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{'Results' = "The 'Action' parameter is required. Valid actions: GetDkimSelectors, ListDomainInfo, ReadAutoDiscover, ReadDkimRecord, ReadDmarcPolicy, ReadMXRecord, ReadNSRecord, ReadSpfRecord, ReadWhoisRecord, TestDNSSEC, TestHttpsCertificate, TestMtaSts." }
+            })
+    }
+
+    # The domain every check resolves against.
+    if (-not $Request.Query.Domain) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{'Results' = "The 'Domain' parameter is required." }
+            })
+    }
+
     try {
         $ConfigTable = Get-CippTable -tablename Config
         $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
@@ -144,9 +161,14 @@ function Invoke-ListDomainHealth {
                         }
                         $Body = Read-AutoDiscoverRecord @AutoDiscoverQuery
                     }
+                    default {
+                        $Body = [pscustomobject]@{'Results' = "Unknown Action '$($Request.Query.Action)'." }
+                        $StatusCode = [HttpStatusCode]::BadRequest
+                    }
                 }
             } else {
                 $body = [pscustomobject]@{'Results' = "Domain: $($Request.Query.Domain) is invalid" }
+                $StatusCode = [HttpStatusCode]::BadRequest
             }
         }
     } catch {

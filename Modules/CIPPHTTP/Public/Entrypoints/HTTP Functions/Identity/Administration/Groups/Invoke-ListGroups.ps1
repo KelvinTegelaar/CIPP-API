@@ -11,15 +11,31 @@ function Invoke-ListGroups {
     param($Request, $TriggerMetadata)
     $TenantFilter = $Request.Query.tenantFilter
     $GroupID = $Request.Query.groupID
+    # Type of the group named by groupID, used to pick the owners lookup. This does NOT filter the group list.
     $GroupType = $Request.Query.groupType
-    $Members = $Request.Query.members
-    $Owners = $Request.Query.owners
+    # Return the members of the group named by groupID instead of the group list. Requires groupID.
+    $Members = $Request.Query.members -eq $true
+    # Return the owners of the group named by groupID instead of the group list. Requires groupID.
+    $Owners = $Request.Query.owners -eq $true
 
-    $ExpandMembers = $Request.Query.expandMembers ?? $false
-    $UseReportDB = $Request.Query.UseReportDB
+    # Expand each listed group's members inline. Graph allows only one expand, and members wins over owners.
+    $ExpandMembers = $Request.Query.expandMembers -eq $true
+    # Expand each listed group's owners inline. Ignored when expandMembers is also set.
+    $ExpandOwners = $Request.Query.expandOwners -eq $true
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
+
+    # members/owners read groups/<groupID>/..., so without a groupID the URL collapses to
+    # groups//members and the failure surfaces as an opaque parameter binding error.
+    if (($Members -or $Owners) -and -not $GroupID) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = "The 'members' and 'owners' parameters require 'groupID' to be set." }
+            })
+    }
 
     # Cache path: list view only — skip when fetching a specific group's details
-    if ((-not $GroupID) -and (-not $Members) -and (-not $Owners) -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+    if ((-not $GroupID) -and (-not $Members) -and (-not $Owners) -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
         try {
             $GraphRequest = Get-CIPPGroupsReport -TenantFilter $TenantFilter -ErrorAction Stop
             $StatusCode = [HttpStatusCode]::OK
@@ -31,8 +47,11 @@ function Invoke-ListGroups {
     }
 
     $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,assignedLicenses,userPrincipalName,licenseProcessingState'
-    if ($ExpandMembers -ne $false) {
+    # Graph allows only one navigational $expand on groups; members wins if both are requested
+    if ($ExpandMembers) {
         $SelectString = '{0}&$expand=members($select=userPrincipalName)' -f $SelectString
+    } elseif ($ExpandOwners) {
+        $SelectString = '{0}&$expand=owners($select=userPrincipalName)' -f $SelectString
     }
 
 
@@ -125,8 +144,13 @@ function Invoke-ListGroups {
                 SID                    = (Convert-AzureAdObjectIdToSid -ObjectID $((($RawGraphRequest | Where-Object { $_.id -eq 1 }).body).id))
             }
         } else {
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
+            # Reached only for the plain list view: a groupID, members or owners request all
+            # add a bulk sub-request above, so this branch always means "every group in the
+            # tenant". The URL previously interpolated $GroupID and $Members, both necessarily
+            # empty here, which produced 'groups//' and only worked because Graph tolerated it.
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
             @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } },
+            @{Name = 'ownersCsv'; Expression = { $_.owners.userPrincipalName -join ',' } },
             @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } },
             @{Name = 'groupType'; Expression = {
                     if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }

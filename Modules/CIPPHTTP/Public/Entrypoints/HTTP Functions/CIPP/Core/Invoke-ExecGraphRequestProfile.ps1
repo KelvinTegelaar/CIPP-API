@@ -4,6 +4,8 @@ function Invoke-ExecGraphRequestProfile {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Profiles a Graph request for troubleshooting, timing the call and reporting what it returned. Passing Mode=Diagnostics instead returns a point-in-time snapshot of the CIPPSharp REST client and token cache counters without calling Graph at all, and Reset=true clears those counters after reading them.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

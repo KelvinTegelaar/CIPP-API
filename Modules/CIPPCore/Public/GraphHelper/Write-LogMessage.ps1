@@ -82,6 +82,9 @@ function Write-LogMessage {
     if ($script:CippScheduledTaskIdStorage.Value) {
         $TableRow.ScheduledTaskId = [string]$script:CippScheduledTaskIdStorage.Value
     }
+    if ($script:CippBaselineRunIdStorage.Value) {
+        $TableRow.BaselineRunId = [string]$script:CippBaselineRunIdStorage.Value
+    }
 
     $Table.Entity = $TableRow
     Add-CIPPAzDataTableEntity @Table | Out-Null

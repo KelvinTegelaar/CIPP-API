@@ -4,6 +4,8 @@ function Invoke-ListAppTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.Read
+    .DESCRIPTION
+        Lists the saved application deployment templates, each with its display name, description and the applications it bundles. These are CIPP templates, not a tenant's deployed apps.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

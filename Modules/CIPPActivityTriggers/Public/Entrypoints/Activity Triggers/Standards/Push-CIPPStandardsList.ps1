@@ -94,7 +94,7 @@ function Push-CIPPStandardsList {
                         $Cached = Get-CIPPAzDataTableEntity @TrackingTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Result.id)'"
 
                         $CountChanged = $false
-                        if ($Cached -and $Cached.PolicyCount -ne $null) {
+                        if ($Cached -and $null -ne $Cached.PolicyCount) {
                             $CountChanged = ($GraphCount -ne $Cached.PolicyCount)
                         }
 
@@ -119,7 +119,7 @@ function Push-CIPPStandardsList {
                                 LatestPolicyId       = $GraphId
                                 PolicyCount          = $GraphCount
                             } -Force | Out-Null
-                        } elseif ($Cached -and $Cached.PolicyCount -ne $null) {
+                        } elseif ($Cached -and $null -ne $Cached.PolicyCount) {
                             # No timestamp available - fall back to count-based detection
                             $Changed = $CountChanged -or $IdChanged
                             Add-CIPPAzDataTableEntity @TrackingTable -Entity @{

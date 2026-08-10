@@ -193,6 +193,11 @@ function Push-BECRun {
                 url    = "servicePrincipals?`$select=displayName,createdDateTime,appId,appDisplayName,publisher&`$filter=createdDateTime ge $($startDate.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
                 method = 'GET'
             }
+            @{
+                id     = 'IntuneDevices'
+                url    = "users/$($SuspectUser)/managedDevices"
+                method = 'GET'
+            }
         )
 
         Write-Information 'Getting bulk requests'
@@ -203,6 +208,40 @@ function Push-BECRun {
         $MFADevices = ($GraphResults | Where-Object { $_.id -eq 'MFADevices' }).body.value ?? @()
         $NewSPs = ($GraphResults | Where-Object { $_.id -eq 'NewSPs' }).body.value ?? @()
 
+        # Intune managed devices for the suspect user — surface Graph failures instead of a silent empty list
+        $IntuneResponse = $GraphResults | Where-Object { $_.id -eq 'IntuneDevices' } | Select-Object -First 1
+        $IntuneDevicesError = $null
+        $IntuneDevices = @()
+        if (-not $IntuneResponse) {
+            $IntuneDevicesError = 'Intune device query did not return a response'
+        } elseif ([int]$IntuneResponse.status -ge 400) {
+            $IntuneDevicesError = $IntuneResponse.body.error.message
+            if ([string]::IsNullOrWhiteSpace($IntuneDevicesError)) {
+                $IntuneDevicesError = "Intune device query failed with status $($IntuneResponse.status)"
+            }
+            Write-LogMessage -API 'BECRun' -message "Failed to retrieve Intune devices for $($UserName): $IntuneDevicesError" -tenant $TenantFilter -sev Warning
+        } else {
+            $IntuneDevicesRaw = $IntuneResponse.body.value ?? @()
+            $IntuneDevices = @(
+                foreach ($Device in @($IntuneDevicesRaw)) {
+                    [PSCustomObject]@{
+                        id                     = $Device.id
+                        deviceName             = $Device.deviceName
+                        operatingSystem        = $Device.operatingSystem
+                        osVersion              = $Device.osVersion
+                        complianceState        = $Device.complianceState
+                        enrolledDateTime       = if ($Device.enrolledDateTime) { ($Device.enrolledDateTime | Out-String).Trim() } else { $null }
+                        lastSyncDateTime       = if ($Device.lastSyncDateTime) { ($Device.lastSyncDateTime | Out-String).Trim() } else { $null }
+                        deviceEnrollmentType   = $Device.deviceEnrollmentType
+                        manufacturer           = $Device.manufacturer
+                        model                  = $Device.model
+                        serialNumber           = $Device.serialNumber
+                        userPrincipalName      = $Device.userPrincipalName
+                        managedDeviceOwnerType = $Device.managedDeviceOwnerType
+                    }
+                }
+            )
+        }
 
         $Results = [PSCustomObject]@{
             AddedApps                = @($NewSPs)
@@ -216,6 +255,8 @@ function Push-BECRun {
             NewUsers                 = @($NewUsers)
             MFADevices               = @($MFADevices | Where-Object { $_.'@odata.type' -ne '#microsoft.graph.passwordAuthenticationMethod' })
             ChangedPasswords         = @($PasswordChanges)
+            IntuneDevices            = @($IntuneDevices)
+            IntuneDevicesError       = $IntuneDevicesError
             ExtractedAt              = (Get-Date)
             ExtractResult            = $ExtractResult
         }

@@ -35,11 +35,17 @@ Function Invoke-ExecExtensionMapping {
         $Result = Get-SherwebMapping -CIPPMapping $Table
       }
       'HaloPSAFields' {
+        # Outcomes and priorities are scoped to a ticket type. The settings page sends the
+        # ticket type currently selected in the form so the lists follow the dropdown; without
+        # it both fall back to whatever ticket type was last saved.
+        $SelectedTicketType = $Request.Query.TicketType
         $TicketTypes = Get-HaloTicketType
-        $Outcomes = Get-HaloTicketOutcome
+        $Outcomes = Get-HaloTicketOutcome -TicketType $SelectedTicketType
+        $Priorities = Get-HaloPriority -TicketType $SelectedTicketType
         $Result = @{
           'TicketTypes' = $TicketTypes
           'Outcomes'    = $Outcomes
+          'Priorities'  = $Priorities
         }
       }
       'PWPushFields' {
@@ -104,7 +110,9 @@ Function Invoke-ExecExtensionMapping {
           Write-Host "Started permissions orchestration with ID = '$InstanceId'"
           $Result = 'AutoMapping Request has been queued. Exact name matches will appear first and matches on device names and serials will take longer. Please check the CIPP Logbook and refresh the page once complete.'
         }
-
+        'HaloPSA' {
+          $Result = Invoke-HaloAutoMap -CIPPMapping $Table
+        }
       }
     }
     $StatusCode = [HttpStatusCode]::OK

@@ -22,7 +22,7 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
         EXECUTIVETEXT
             Establishes security-focused default settings for Teams meetings, controlling who can join meetings, present content, and participate in chats. These policies balance collaboration needs with security requirements, ensuring meetings remain productive while protecting against unauthorized access and disruption.
         ADDEDCOMPONENT
-            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.DesignatedPresenterRoleMode","label":"Default value of the `Who can present?`","options":[{"label":"Everyone","value":"EveryoneUserOverride"},{"label":"People in my organization","value":"EveryoneInCompanyUserOverride"},{"label":"People in my organization and trusted organizations","value":"EveryoneInSameAndFederatedCompanyUserOverride"},{"label":"Only organizer","value":"OrganizerOnlyUserOverride"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.DesignatedPresenterRoleMode","label":"Default value of the `Who can present?`","options":[{"label":"Everyone","value":"EveryoneUserOverride"},{"label":"People in my organization","value":"EveryoneInCompanyUserOverride"},{"label":"Only organizer","value":"OrganizerOnlyUserOverride"}]}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowAnonymousUsersToJoinMeeting","label":"Allow anonymous users to join meeting"}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowAnonymousUsersToStartMeeting","label":"Allow anonymous users to start meeting"}
             {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.AutoAdmittedUsers","label":"Who can bypass the lobby?","helperText":"If left blank, the current value will not be changed.","options":[{"label":"Only organizers and co-organizers","value":"OrganizerOnly"},{"label":"People in organization excluding guests","value":"EveryoneInCompanyExcludingGuests"},{"label":"People in same or federated organizations","value":"EveryoneInSameAndFederatedCompany"},{"label":"People who were invited","value":"InvitedUsers"},{"label":"Everyone","value":"Everyone"}]}
@@ -67,6 +67,14 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
 
     $MeetingChatEnabledType = $Settings.MeetingChatEnabledType.value ?? $Settings.MeetingChatEnabledType
     $DesignatedPresenterRoleMode = $Settings.DesignatedPresenterRoleMode.value ?? $Settings.DesignatedPresenterRoleMode
+
+    # Microsoft retired EveryoneInSameAndFederatedCompanyUserOverride; the ConfigApi now rejects it with a 400.
+    # Templates saved before it was removed from the picker still carry the value, so fail with a clear reason.
+    $ValidPresenterRoleModes = @('OrganizerOnlyUserOverride', 'EveryoneInCompanyUserOverride', 'EveryoneUserOverride')
+    if ($DesignatedPresenterRoleMode -and $DesignatedPresenterRoleMode -notin $ValidPresenterRoleModes) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "TeamsGlobalMeetingPolicy: '$DesignatedPresenterRoleMode' is no longer a valid value for 'Who can present?'. Microsoft retired this option; select one of $($ValidPresenterRoleModes -join ', ') in the standards template." -sev Error
+        return
+    }
     $AutoAdmittedUsers = $Settings.AutoAdmittedUsers.value ?? $Settings.AutoAdmittedUsers ?? $CurrentState.AutoAdmittedUsers # Default to current state if not set, for backward compatibility pre v8.6.0
 
     # Untoggled switches are absent from the settings; default them to $false (the CIS recommended value) so we never send null to the ConfigApi

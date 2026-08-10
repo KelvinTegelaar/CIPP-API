@@ -96,7 +96,9 @@ function New-CIPPBackupTask {
         'intuneprotection' {
             Measure-CippTask -TaskName 'IntuneProtection' -EventName 'CIPP.BackupCompleted' -Script {
                 New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/managedAppPolicies?$top=999' -tenantid $TenantFilter | ForEach-Object {
-                    New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'managedAppPolicies' -ID $_.ID
+                    # The listing is the only place the concrete type is visible; without it the
+                    # capture reads back a policy that does not say which platform it is for.
+                    New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'managedAppPolicies' -ID $_.ID -ODataType $_.'@odata.type'
                 }
             }
         }

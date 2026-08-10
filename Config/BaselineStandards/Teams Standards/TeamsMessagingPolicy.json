@@ -1,0 +1,123 @@
+{
+  "name": "TeamsMessagingPolicy",
+  "label": "Global Messaging Policy for Microsoft Teams",
+  "cat": "Teams Standards",
+  "tag": [
+    "CIS M365 7.0.0 (8.6.1)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Sets the properties of the Global messaging policy.",
+  "executiveText": "Defines what messaging capabilities employees have in Teams, including the ability to edit or delete messages, create custom emojis, and report inappropriate content. These policies help maintain professional communication standards while enabling necessary collaboration features.",
+  "docsDescription": "Sets the properties of the Global messaging policy. Messaging policies control which chat and channel messaging features are available to users in Teams.",
+  "impactColour": "warning",
+  "addedDate": "2025-01-10",
+  "powershellEquivalent": "Set-CsTeamsMessagingPolicy",
+  "appliesToTest": [
+    "CIS_8_6_1"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "AllowOwnerDeleteMessage": {
+      "type": "switch",
+      "label": "Allow Owner to Delete Messages",
+      "default": false
+    },
+    "AllowUserDeleteMessage": {
+      "type": "switch",
+      "label": "Allow User to Delete Messages",
+      "default": true
+    },
+    "AllowUserEditMessage": {
+      "type": "switch",
+      "label": "Allow User to Edit Messages",
+      "default": true
+    },
+    "AllowUserDeleteChat": {
+      "type": "switch",
+      "label": "Allow User to Delete Chats",
+      "default": true
+    },
+    "ReadReceiptsEnabledType": {
+      "type": "autoComplete",
+      "label": "Read Receipts Enabled Type",
+      "options": [
+        {
+          "label": "User controlled",
+          "value": "UserPreference"
+        },
+        {
+          "label": "Turned on for everyone",
+          "value": "Everyone"
+        },
+        {
+          "label": "Turned off for everyone",
+          "value": "None"
+        }
+      ],
+      "default": "UserPreference"
+    },
+    "CreateCustomEmojis": {
+      "type": "switch",
+      "label": "Allow Creating Custom Emojis",
+      "default": true
+    },
+    "DeleteCustomEmojis": {
+      "type": "switch",
+      "label": "Allow Deleting Custom Emojis",
+      "default": false
+    },
+    "AllowSecurityEndUserReporting": {
+      "type": "switch",
+      "label": "Allow reporting message as security concern",
+      "default": true,
+      "recommended": true
+    },
+    "AllowCommunicationComplianceEndUserReporting": {
+      "type": "switch",
+      "label": "Allow reporting message as inappropriate content",
+      "default": true
+    }
+  },
+  "expected": {
+    "AllowOwnerDeleteMessage": "%AllowOwnerDeleteMessage%",
+    "AllowUserDeleteMessage": "%AllowUserDeleteMessage%",
+    "AllowUserEditMessage": "%AllowUserEditMessage%",
+    "AllowUserDeleteChat": "%AllowUserDeleteChat%",
+    "ReadReceiptsEnabledType": "%ReadReceiptsEnabledType%",
+    "CreateCustomEmojis": "%CreateCustomEmojis%",
+    "DeleteCustomEmojis": "%DeleteCustomEmojis%",
+    "AllowSecurityEndUserReporting": "%AllowSecurityEndUserReporting%",
+    "AllowCommunicationComplianceEndUserReporting": "%AllowCommunicationComplianceEndUserReporting%"
+  },
+  "read": {
+    "cacheType": "CsTeamsMessagingPolicy"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsMessagingPolicy",
+        "params": {
+          "AllowOwnerDeleteMessage": "%AllowOwnerDeleteMessage%",
+          "AllowUserDeleteMessage": "%AllowUserDeleteMessage%",
+          "AllowUserEditMessage": "%AllowUserEditMessage%",
+          "AllowUserDeleteChat": "%AllowUserDeleteChat%",
+          "ReadReceiptsEnabledType": "%ReadReceiptsEnabledType%",
+          "CreateCustomEmojis": "%CreateCustomEmojis%",
+          "DeleteCustomEmojis": "%DeleteCustomEmojis%",
+          "AllowSecurityEndUserReporting": "%AllowSecurityEndUserReporting%",
+          "AllowCommunicationComplianceEndUserReporting": "%AllowCommunicationComplianceEndUserReporting%"
+        }
+      }
+    ]
+  }
+}

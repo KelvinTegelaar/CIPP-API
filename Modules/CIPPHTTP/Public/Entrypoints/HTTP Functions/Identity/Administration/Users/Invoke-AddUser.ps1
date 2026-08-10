@@ -79,6 +79,7 @@ function Invoke-AddUser {
                 'CopyFrom' = @{
                     'Success' = $CreationResults.CopyFrom.Success
                     'Error'   = $CreationResults.CopyFrom.Error
+                    'Skipped' = $CreationResults.CopyFrom.Skipped
                 }
                 'User'     = $CreationResults.User
             }

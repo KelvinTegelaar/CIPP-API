@@ -34,6 +34,17 @@ function Get-CIPPIntunePolicy {
                 $androidPolicies = ($BulkResults | Where-Object { $_.id -eq 'AndroidPolicies' }).body.value
                 $iOSPolicies = ($BulkResults | Where-Object { $_.id -eq 'iOSPolicies' }).body.value
 
+                # Reading a concrete collection makes Graph omit @odata.type from every item, but
+                # callers need the concrete type to address the policy - its assignments live under
+                # that collection. The collection a policy came from is the authoritative answer, so
+                # record it here rather than leaving each caller to infer it from the payload.
+                foreach ($Policy in $androidPolicies) {
+                    $null = $Policy | Add-Member -MemberType NoteProperty -Name '@odata.type' -Value '#microsoft.graph.androidManagedAppProtection' -Force
+                }
+                foreach ($Policy in $iOSPolicies) {
+                    $null = $Policy | Add-Member -MemberType NoteProperty -Name '@odata.type' -Value '#microsoft.graph.iosManagedAppProtection' -Force
+                }
+
                 if ($DisplayName) {
                     $androidPolicy = $androidPolicies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     $iOSPolicy = $iOSPolicies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1

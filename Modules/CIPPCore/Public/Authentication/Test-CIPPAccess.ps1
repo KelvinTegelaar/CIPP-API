@@ -236,11 +236,41 @@ function Test-CIPPAccess {
             $CanManageAppSettings = $Permissions -contains 'CIPP.AppSettings.ReadWrite'
             $HasAnyPermission = ($Permissions | Measure-Object).Count -gt 0
 
+            # Initial setup state: real (non-placeholder) SAM credentials loaded in this
+            # worker. Placeholder set matches Get-CIPPAuthentication/Initialize-CIPPAuth.
+            # The frontend blocks the whole UI behind the setup wizard until complete;
+            # samAppPresent distinguishes "no app registration at all" from "app exists
+            # but the refresh token is missing" so the wizard can offer a token reset.
+            $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
+            $TestSamCredentials = {
+                $HasAppId = [bool]($env:ApplicationID -and $env:ApplicationID -notmatch $PlaceholderPattern -and
+                    $env:TenantID -and $env:TenantID -notmatch $PlaceholderPattern)
+                $HasRefreshToken = [bool]($env:RefreshToken -and $env:RefreshToken -notmatch $PlaceholderPattern)
+                @{ HasAppId = $HasAppId; Complete = ($HasAppId -and $HasRefreshToken) }
+            }
+            $SamState = & $TestSamCredentials
+            if (-not $SamState.Complete) {
+                # Env vars are per-worker and loaded at warmup, so setup completed on
+                # another worker leaves this one stale. Reload at most once per 30s per
+                # worker, tracked in an env var because runspaces don't share script
+                # scope, so an unconfigured instance doesn't hit storage on every poll.
+                $NowUnix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+                $LastAttempt = [int64]0
+                $null = [int64]::TryParse($env:CippMeAuthReloadAt, [ref]$LastAttempt)
+                if (($NowUnix - $LastAttempt) -ge 30) {
+                    $env:CippMeAuthReloadAt = [string]$NowUnix
+                    $null = Get-CIPPAuthentication
+                    $SamState = & $TestSamCredentials
+                }
+            }
+            $MeResponse['initialSetupComplete'] = $SamState.Complete
+            $MeResponse['samAppPresent'] = $SamState.HasAppId
+
             # Forced SSO migration: non-dismissible prompt when migration env var is set.
             # Suppressed until initial setup (SAM app) is complete — the setup wizard has
             # to run first, and ExecSSOSetup needs the SAM app to create the CIPP-SSO
-            # registration. Same env check that drives the setupCompleted alert.
-            $InitialSetupComplete = $env:ApplicationID -and $env:ApplicationID -ne 'LongApplicationID'
+            # registration.
+            $InitialSetupComplete = $SamState.Complete
             if ($env:CIPP_SSO_MIGRATION_APPID -and $CanManageAppSettings -and $InitialSetupComplete) {
                 $MeResponse['forceSsoMigration'] = @{
                     appId  = $env:CIPP_SSO_MIGRATION_APPID

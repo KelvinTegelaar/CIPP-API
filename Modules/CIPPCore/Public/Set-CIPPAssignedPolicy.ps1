@@ -53,39 +53,21 @@ function Set-CIPPAssignedPolicy {
 
         $assignmentsList = [System.Collections.Generic.List[object]]::new()
         switch ($GroupName) {
-            'allLicensedUsers' {
-                $assignmentsList.Add(
-                    @{
-                        target = @{
-                            '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget'
-                        }
-                    }
-                )
-            }
-            'AllDevices' {
-                $assignmentsList.Add(
-                    @{
-                        target = @{
-                            '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget'
-                        }
-                    }
-                )
-            }
-            'AllDevicesAndUsers' {
-                $assignmentsList.Add(
-                    @{
-                        target = @{
-                            '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget'
-                        }
-                    }
-                )
-                $assignmentsList.Add(
-                    @{
-                        target = @{
-                            '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget'
-                        }
-                    }
-                )
+            { $_ -in 'allLicensedUsers', 'AllDevices', 'AllDevicesAndUsers' } {
+                # How a broad target is expressed depends on the policy type - the MAM service
+                # behind App Protection takes only group targets. Both this and the assignment
+                # comparison resolve it through the same helper so they cannot disagree.
+                $BroadTarget = Get-CIPPIntuneAssignmentTarget -AssignTo $GroupName -PolicyType $Type
+                if ($BroadTarget.Unsupported) {
+                    Write-LogMessage -headers $Headers -API $APIName -message $BroadTarget.Unsupported -sev 'Error' -tenant $TenantFilter
+                    throw $BroadTarget.Unsupported
+                }
+                foreach ($Dropped in $BroadTarget.Dropped) {
+                    Write-LogMessage -headers $Headers -API $APIName -message "Skipped the '$Dropped' target on policy $PolicyId : '$Type' policies cannot be assigned to it. The rest of the assignment was applied." -sev 'Warning' -tenant $TenantFilter
+                }
+                foreach ($BroadAssignment in $BroadTarget.Targets) {
+                    $assignmentsList.Add(@{ target = $BroadAssignment })
+                }
             }
             'On' {
                 # Do not assign to any group - used to turn on policy without assignments
@@ -278,6 +260,10 @@ function Set-CIPPAssignedPolicy {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to assign $GroupName to Policy $PolicyId, using Platform $PlatformType and $Type. The error is:$($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return "Failed to assign $GroupName to Policy $PolicyId. Error: $ErrorMessage"
+        # Throw rather than return the message. A returned string is indistinguishable from success
+        # to any caller that only watches for an exception, which is how a policy whose assignment
+        # failed still got recorded as correctly assigned. Both callers already handle a throw:
+        # Invoke-ExecAssignPolicy turns it into a 500, Set-CIPPIntunePolicy rethrows it.
+        throw "Failed to assign $GroupName to Policy $PolicyId. Error: $($ErrorMessage.NormalizedError)"
     }
 }

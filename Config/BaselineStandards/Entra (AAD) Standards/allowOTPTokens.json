@@ -1,0 +1,57 @@
+{
+  "name": "allowOTPTokens",
+  "label": "Enable OTP via Authenticator",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "EIDSCA.AM02"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Allows you to use MS authenticator OTP token generator",
+  "executiveText": "Enables one-time password generation through Microsoft Authenticator app, providing an additional secure authentication method for employees. This is particularly useful for secure VPN access and other systems requiring multi-factor authentication.",
+  "docsDescription": "Allows you to use Microsoft Authenticator OTP token generator. Useful for using the NPS extension as MFA on VPN clients.",
+  "impactColour": "info",
+  "addedDate": "2023-12-06",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
+  "appliesToTest": [
+    "EIDSCAAM02"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "isSoftwareOathEnabled": {
+      "type": "switch",
+      "label": "Microsoft Authenticator software OTP enabled",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "isSoftwareOathEnabled": "%isSoftwareOathEnabled%"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "MicrosoftAuthenticator"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator",
+        "body": {
+          "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethodConfiguration",
+          "state": "enabled",
+          "isSoftwareOathEnabled": "%isSoftwareOathEnabled%"
+        }
+      }
+    ]
+  }
+}

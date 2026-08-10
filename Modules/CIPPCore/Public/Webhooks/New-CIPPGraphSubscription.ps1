@@ -25,9 +25,9 @@ function New-CIPPGraphSubscription {
             # Required event types
             $EventList = [System.Collections.Generic.List[string]]@('test-created', 'granular-admin-relationship-approved')
             if (($EventType | Measure-Object).count -gt 0) {
-                foreach ($Event in $EventType) {
-                    if ($EventList -notcontains $Event) {
-                        $EventList.Add($Event)
+                foreach ($EventName in $EventType) {
+                    if ($EventList -notcontains $EventName) {
+                        $EventList.Add($EventName)
                     }
                 }
             }
@@ -38,7 +38,7 @@ function New-CIPPGraphSubscription {
             }
 
             # The URL we want registered right now, based on the URL CIPP is currently served from
-            $DesiredWebhookUrl = "https://$BaseURL/API/PublicWebhooks?CIPPID=$($CIPPID)&Type=PartnerCenter"
+            $DesiredWebhookUrl = "https://$BaseURL/api/PublicWebhooks?CIPPID=$($CIPPID)&Type=PartnerCenter"
             $Body = [PSCustomObject]@{
                 WebhookUrl    = $DesiredWebhookUrl
                 WebhookEvents = @($EventList)
@@ -110,7 +110,7 @@ function New-CIPPGraphSubscription {
                 $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
                 $params = @{
                     changeType         = $TypeofSubscription
-                    notificationUrl    = "https://$BaseURL/API/PublicWebhooks?EventType=$EventType&CIPPID=$($CIPPID)&Type=GraphSubscription"
+                    notificationUrl    = "https://$BaseURL/api/PublicWebhooks?EventType=$EventType&CIPPID=$($CIPPID)&Type=GraphSubscription"
                     resource           = $Resource
                     expirationDateTime = $expiredate
                 } | ConvertTo-Json
@@ -141,7 +141,7 @@ function New-CIPPGraphSubscription {
             } else {
                 # Check Graph directly for subscriptions matching this resource
                 $ExistingSubs = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscriptions' -tenantid $TenantFilter)
-                $MatchingSubs = @($ExistingSubs | Where-Object { $_.notificationUrl -match [regex]::Escape("https://$BaseURL/API/PublicWebhooks") -and $_.resource -eq $Resource } | Sort-Object -Property expirationDateTime -Descending)
+                $MatchingSubs = @($ExistingSubs | Where-Object { $_.notificationUrl -match [regex]::Escape("https://$BaseURL/api/PublicWebhooks") -and $_.resource -eq $Resource } | Sort-Object -Property expirationDateTime -Descending)
 
                 # Keep the newest subscription, delete the rest from Graph and the table
                 $KeptSub = $MatchingSubs | Select-Object -First 1
