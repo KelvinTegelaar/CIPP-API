@@ -108,19 +108,27 @@ function Push-BECRun {
                     sessionid      = (Get-Random -Minimum 10000 -Maximum 99999)
                     startDate      = $startDate
                     endDate        = $endDate
-                    UserIds        = $UserName
+                    # Must be an array: New-ExoRequest JSON-serializes cmdParams, and a bare
+                    # string binds to Search-UnifiedAuditLog's String[] UserIds as a scalar,
+                    # which EXO rejects with an argument transformation error.
+                    UserIds        = @($UserName)
                 }
-                (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Search-UnifiedAuditLog' -cmdParams $RuleSearchParam -Anchor $UserName).AuditData | ConvertFrom-Json -ErrorAction Stop |
-                    Where-Object { $_.UserId -eq $UserName -or $_.MailboxOwnerUPN -eq $UserName -or $_.ObjectId -like "*$UserName*" } | ForEach-Object {
-                        $RuleName = ($_.Parameters | Where-Object { $_.Name -eq 'Name' }).Value ?? $_.ObjectId
-                        [pscustomobject]@{
-                            Operation  = $_.Operation
-                            UserKey    = $_.UserId
-                            RuleName   = $RuleName
-                            Parameters = ($_.Parameters | Where-Object { $_ -and $_.Name -notin 'Identity', 'Name' } | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join '; '
-                            Date       = $_.CreationTime
+                # A search with no hits returns no AuditData at all, and piping that null into
+                # ConvertFrom-Json throws - which would report every clean user as a failure.
+                $RuleAuditData = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Search-UnifiedAuditLog' -cmdParams $RuleSearchParam -Anchor $UserName).AuditData
+                if (-not $RuleAuditData) { @() } else {
+                    $RuleAuditData | ConvertFrom-Json -ErrorAction Stop |
+                        Where-Object { $_.UserId -eq $UserName -or $_.MailboxOwnerUPN -eq $UserName -or $_.ObjectId -like "*$UserName*" } | ForEach-Object {
+                            $RuleName = ($_.Parameters | Where-Object { $_.Name -eq 'Name' }).Value ?? $_.ObjectId
+                            [pscustomobject]@{
+                                Operation  = $_.Operation
+                                UserKey    = $_.UserId
+                                RuleName   = $RuleName
+                                Parameters = ($_.Parameters | Where-Object { $_ -and $_.Name -notin 'Identity', 'Name' } | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join '; '
+                                Date       = $_.CreationTime
+                            }
                         }
-                    }
+                }
             }
         } catch {
             $RuleChangesLog = @()
