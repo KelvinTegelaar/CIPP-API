@@ -128,7 +128,6 @@ function Add-CIPPDbItem {
         }
 
         if ($Count.IsPresent -or $AddCount.IsPresent) {
-            $CntStart = $Stopwatch.ElapsedMilliseconds
             $NewCount = $TotalProcessed
             if ($Append.IsPresent) {
                 $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}-Count'" -f $TenantFilter, $Type
@@ -141,7 +140,6 @@ function Add-CIPPDbItem {
                 DataCount    = [int]$NewCount
                 Type         = $Type
             } -Force
-            $CountMs = $Stopwatch.ElapsedMilliseconds - $CntStart
         }
 
         Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Added $TotalProcessed items of type $Type" -sev Debug
