@@ -23,23 +23,13 @@ Function Invoke-ExecBrandingSettings {
     )
     $DefaultCoverStock = '/reportImages/soc.jpg'
 
-    function ConvertTo-IdList {
-        param($Value)
-        # Preserve single-element string[] — `return (…)` unwraps it to a scalar
-        # string, which then breaks ConvertTo-IdListJson / [0] indexing.
-        $Ids = ConvertTo-CIPPCoverImageIdList -Value $Value
-        if ($null -eq $Ids) {
-            return , [string[]]@()
-        }
-        return , [string[]]@($Ids)
-    }
-
     function ConvertTo-IdListJson {
         param($Value)
-        $Ids = ConvertTo-IdList -Value $Value
-        if ($null -eq $Ids) { $Ids = [string[]]@() }
-        # Ids is always a real string[] here — do not use -AsArray (that would
-        # wrap a one-element array as [["id"]]).
+        # Assign before casting. The id list comes back comma-wrapped so a one-element result
+        # cannot unwrap to a scalar, and assignment is what removes that wrapper - casting the
+        # wrapper straight to [string[]] coerces the inner array into one space-joined string.
+        $Ids = ConvertTo-CIPPCoverImageIdList -Value $Value
+        # Never -AsArray: that would wrap a one-element array as [["id"]].
         return ConvertTo-Json -InputObject ([string[]]$Ids) -Compress
     }
 
@@ -113,7 +103,7 @@ Function Invoke-ExecBrandingSettings {
                 try {
                     $Added = Add-CIPPImage -PartitionKey $PartitionKey -Data "$Data"
                     if ($Kind -eq 'logo') {
-                        $CurrentIds = ConvertTo-IdList -Value $BrandingConfig.logoImageIds
+                        $CurrentIds = ConvertTo-CIPPCoverImageIdList -Value $BrandingConfig.logoImageIds
                         $CurrentIds = @($Added.id) + @($CurrentIds | Where-Object { $_ -ne $Added.id })
                         $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'logoImageIds' -Value (ConvertTo-IdListJson -Value $CurrentIds) -Force
                         $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'logoImageId' -Value $Added.id -Force
@@ -121,7 +111,7 @@ Function Invoke-ExecBrandingSettings {
                         $BrandingConfig.RowKey = 'BrandingSettings'
                         Add-CIPPAzDataTableEntity @Table -Entity $BrandingConfig -Force | Out-Null
                     } elseif ($Kind -eq 'cover') {
-                        $CurrentIds = ConvertTo-IdList -Value $BrandingConfig.coverImageIds
+                        $CurrentIds = ConvertTo-CIPPCoverImageIdList -Value $BrandingConfig.coverImageIds
                         $CurrentIds = @($Added.id) + @($CurrentIds | Where-Object { $_ -ne $Added.id })
                         $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'coverImageIds' -Value (ConvertTo-IdListJson -Value $CurrentIds) -Force
                         $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'coverImageId' -Value $Added.id -Force
@@ -147,7 +137,12 @@ Function Invoke-ExecBrandingSettings {
                 if ($Kind -eq 'logo') {
                     $PartitionKey = 'logo'
                     Remove-CIPPImage -PartitionKey $PartitionKey -Id $ImageId
-                    $CurrentIds = @(ConvertTo-IdList -Value $BrandingConfig.logoImageIds | Where-Object { $_ -ne $ImageId })
+                    # .Where() rather than a pipe. The id list is returned comma-wrapped so a
+                    # one-element result cannot unwrap to a scalar, and piping that hands
+                    # Where-Object the whole array as one item: `$_ -ne $ImageId` then compares an
+                    # array to a string, which passes every id through as a single value and
+                    # serialises them space-joined into one bogus id, emptying the gallery.
+                    $CurrentIds = [string[]]@((ConvertTo-CIPPCoverImageIdList -Value $BrandingConfig.logoImageIds).Where({ $_ -ne $ImageId }))
                     $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'logoImageIds' -Value (ConvertTo-IdListJson -Value $CurrentIds) -Force
                     if ("$($BrandingConfig.logoImageId)" -eq $ImageId) {
                         $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'logoImageId' -Value '' -Force
@@ -155,7 +150,8 @@ Function Invoke-ExecBrandingSettings {
                 } elseif ($Kind -eq 'cover') {
                     $PartitionKey = 'brandingCover'
                     Remove-CIPPImage -PartitionKey $PartitionKey -Id $ImageId
-                    $CurrentIds = @(ConvertTo-IdList -Value $BrandingConfig.coverImageIds | Where-Object { $_ -ne $ImageId })
+                    # See the logo branch above for why this is .Where() and not a pipe.
+                    $CurrentIds = [string[]]@((ConvertTo-CIPPCoverImageIdList -Value $BrandingConfig.coverImageIds).Where({ $_ -ne $ImageId }))
                     $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'coverImageIds' -Value (ConvertTo-IdListJson -Value $CurrentIds) -Force
                     if ("$($BrandingConfig.coverImageId)" -eq $ImageId) {
                         $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'coverImageId' -Value '' -Force
@@ -329,7 +325,7 @@ Function Invoke-ExecBrandingSettings {
                 }
 
                 if (-not $ErrorMessage -and $Request.Body.PSObject.Properties.Name -contains 'logoImageIds') {
-                    $LogoIds = ConvertTo-IdList -Value $Request.Body.logoImageIds
+                    $LogoIds = ConvertTo-CIPPCoverImageIdList -Value $Request.Body.logoImageIds
                     if ($LogoIds.Count -eq 0 -or (Test-ImageIdsExist -PartitionKey 'logo' -Ids $LogoIds)) {
                         $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'logoImageIds' -Value (ConvertTo-IdListJson -Value $LogoIds) -Force
                         $Updated = $true
@@ -354,7 +350,7 @@ Function Invoke-ExecBrandingSettings {
                 }
 
                 if (-not $ErrorMessage -and $Request.Body.PSObject.Properties.Name -contains 'coverImageIds') {
-                    $CoverIds = ConvertTo-IdList -Value $Request.Body.coverImageIds
+                    $CoverIds = ConvertTo-CIPPCoverImageIdList -Value $Request.Body.coverImageIds
                     if ($CoverIds.Count -eq 0 -or (Test-ImageIdsExist -PartitionKey 'brandingCover' -Ids $CoverIds)) {
                         $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'coverImageIds' -Value (ConvertTo-IdListJson -Value $CoverIds) -Force
                         $Updated = $true
@@ -398,11 +394,11 @@ Function Invoke-ExecBrandingSettings {
                 }
             }
             'Reset' {
-                $LogoIds = ConvertTo-IdList -Value $BrandingConfig.logoImageIds
+                $LogoIds = ConvertTo-CIPPCoverImageIdList -Value $BrandingConfig.logoImageIds
                 if ($BrandingConfig.logoImageId) {
                     $LogoIds = @("$($BrandingConfig.logoImageId)") + @($LogoIds | Where-Object { $_ -ne "$($BrandingConfig.logoImageId)" })
                 }
-                $CoverIds = ConvertTo-IdList -Value $BrandingConfig.coverImageIds
+                $CoverIds = ConvertTo-CIPPCoverImageIdList -Value $BrandingConfig.coverImageIds
                 if ($BrandingConfig.coverImageId) {
                     $CoverIds = @("$($BrandingConfig.coverImageId)") + @($CoverIds | Where-Object { $_ -ne "$($BrandingConfig.coverImageId)" })
                 }
