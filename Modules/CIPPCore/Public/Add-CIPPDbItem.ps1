@@ -29,6 +29,12 @@ function Add-CIPPDbItem {
         [switch]$Append,
         [switch]$ClearOnEmpty,
 
+        # Stable run identity override. Callers whose logical "run" spans multiple invocations
+        # (resumable scans that append from many activities) pass the same id each time so a
+        # later cleanup can tell this run's rows from stale ones by identity, exactly like the
+        # single-invocation cleanup below does. Omit for the default: a new id per call.
+        [string]$RunId,
+
         [ValidateRange(0, 60)]
         [int]$SkewMarginMinutes = 5
     )
@@ -46,7 +52,7 @@ function Add-CIPPDbItem {
         # means nothing per-row is retained across the run - a previous design kept a HashSet of
         # every row key written for -ClearOnEmpty, which on a tenant-wide streaming cache was
         # tens of thousands of strings held purely to be compared once at the end.
-        $RunId = [guid]::NewGuid().ToString()
+        if (-not $RunId) { $RunId = [guid]::NewGuid().ToString() }
         # Allow for storage timestamp lag before considering untouched rows stale.
         $RunStartUtc = [DateTimeOffset]::UtcNow.AddMinutes(-$SkewMarginMinutes)
 
