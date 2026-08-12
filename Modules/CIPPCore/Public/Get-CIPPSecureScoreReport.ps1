@@ -59,6 +59,16 @@ function Get-CIPPSecureScoreReport {
             }
         }
 
+        # Drop partitions for tenants we no longer manage. Get-CIPPDbItem's allTenants read is
+        # deliberately unfiltered, and Add-CIPPDbItem's orphan cleanup only runs for a tenant that
+        # is still being written - so once a tenant is excluded or removed its cached rows stay
+        # forever. Without this, excluded tenants keep showing up in the estate-wide view (and in
+        # the Top/Bottom 5) with an empty TenantId and their domain in place of a display name.
+        # Every other AllTenants report already does this; this one only used the lookup for
+        # display and let misses fall through.
+        $Rows = @($Rows | Where-Object { $TenantLookup.ContainsKey([string]$_.PartitionKey) })
+        if ($Rows.Count -eq 0) { return @() }
+
         # Only these three fields are ever materialized; controlScores and friends are skipped by the parser.
         $Projection = [string[]]@('currentScore', 'maxScore', 'createdDateTime')
 
