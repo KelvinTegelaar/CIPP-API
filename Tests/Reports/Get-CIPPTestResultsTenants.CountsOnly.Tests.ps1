@@ -1,9 +1,7 @@
 # Pester tests for the CountsOnly aggregate mode of Get-CIPPTestResultsTenants.
 #
-# The All Tenants dashboard rendered three numbers and a four-item list by pulling every failed
-# test row for the estate (~928 KB / 1581 rows on a 12-tenant dev estate, growing linearly with
-# tenant count) and aggregating in the browser. CountsOnly moves that aggregation server-side:
-# same numbers, no rows, and the blob columns projected away before they are ever read.
+# The dashboard used to pull every failed test row for the estate and aggregate in the browser.
+# CountsOnly does it server-side: same numbers, no rows, blob columns projected away.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))

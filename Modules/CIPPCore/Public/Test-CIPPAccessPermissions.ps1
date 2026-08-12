@@ -104,7 +104,7 @@ function Test-CIPPAccessPermissions {
                 $SamSignIns = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$SignInFilter&`$top=10&`$select=createdDateTime,originalTransferMethod,authenticationProtocol" -tenantid $env:TenantID -NoAuthCheck $true -noPagination $true -ErrorAction Stop
                 $DeviceCodeSignIn = $SamSignIns | Where-Object { $_.originalTransferMethod -eq 'deviceCodeFlow' -or $_.authenticationProtocol -eq 'deviceCode' } | Select-Object -First 1
                 if ($DeviceCodeSignIn) {
-                    $ErrorMessages.Add('Your refresh token came from a device code login and will fail Conditional Access in some tenants. Refresh your SAM tokens, rotation will not replace it.') | Out-Null
+                    $ErrorMessages.Add('Your refresh token came from a device code login and will fail Conditional Access in some tenants. Refresh your token in the Setup Wizard.') | Out-Null
                     $Success = $false
                 } else {
                     $Messages.Add('Your refresh token is not from a device code login.') | Out-Null

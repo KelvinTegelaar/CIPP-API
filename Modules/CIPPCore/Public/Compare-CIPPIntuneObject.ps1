@@ -12,6 +12,40 @@ function Compare-CIPPIntuneObject {
         [Parameter(Mandatory = $false)]
         [string[]]$CompareType = @()
     )
+
+    # Reusable settings carry a per-entry instance id that Intune mints on create, held in the
+    # child whose settingDefinitionId ends in '_id'. A template keeps the ids from the tenant it
+    # was captured in, so every entry differs on first read and the setting reports drift forever
+    # even when it deployed correctly. The exclusion list cannot express this: it matches property
+    # names, and this is a value keyed by a sibling settingDefinitionId.
+    if ($CompareType -contains 'ReusablePolicySetting') {
+        function Clear-ReusableInstanceId {
+            param($Node)
+            if ($null -eq $Node) { return }
+            if ($Node -is [System.Collections.IEnumerable] -and $Node -isnot [string]) {
+                foreach ($Item in $Node) { Clear-ReusableInstanceId -Node $Item }
+                return
+            }
+            if ($Node -isnot [psobject]) { return }
+
+            foreach ($Child in @($Node.children)) {
+                if ($Child.settingDefinitionId -like '*_id' -and $Child.simpleSettingValue) {
+                    $Child.simpleSettingValue.value = ''
+                }
+            }
+            foreach ($Prop in $Node.PSObject.Properties) {
+                if ($Prop.Name -eq 'children') { continue }
+                Clear-ReusableInstanceId -Node $Prop.Value
+            }
+        }
+        # Copy first: these objects belong to the caller, and the standard reuses the template body
+        # to build the remediation payload, where the real ids still matter.
+        $ReferenceObject = $ReferenceObject | ConvertTo-Json -Depth 100 -Compress | ConvertFrom-Json
+        $DifferenceObject = $DifferenceObject | ConvertTo-Json -Depth 100 -Compress | ConvertFrom-Json
+        Clear-ReusableInstanceId -Node $ReferenceObject
+        Clear-ReusableInstanceId -Node $DifferenceObject
+    }
+
     if ($CompareType -notcontains 'Catalog') {
         # The exclusion list lives in Get-CIPPIntuneCompareExclusions - the baseline
         # engine's hard-gap pass consumes the SAME list so it never resurrects a

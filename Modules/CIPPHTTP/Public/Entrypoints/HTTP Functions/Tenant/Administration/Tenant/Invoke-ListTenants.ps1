@@ -136,9 +136,7 @@ function Invoke-ListTenants {
                 $Body = $Tenants
             }
             if ($Request.Query.Mode -eq 'TenantList') {
-                # Index tenant group membership by customerId so each tenant can carry the
-                # groups it belongs to. Get-TenantGroups is cached and already scoped to the
-                # groups the calling user is allowed to see, so restricted users only get theirs.
+                # Get-TenantGroups is cached and already scoped to the groups the caller may see.
                 $GroupsByCustomerId = @{}
                 try {
                     foreach ($Group in @(Get-TenantGroups)) {
@@ -157,10 +155,8 @@ function Invoke-ListTenants {
                     Write-LogMessage -headers $Headers -API $APIName -message "Failed to retrieve tenant groups for the tenant list. The error is: $($_.Exception.Message)" -Sev 'Warning'
                 }
 
-                # add portal link properties
-                # The unary comma on tenantGroups is required: Select-Object unrolls calculated
-                # property values, which would turn a single group into a bare object and no
-                # groups into $null instead of an empty array.
+                # add portal link properties. The unary comma on tenantGroups is required:
+                # Select-Object unrolls calculated property values.
                 $Body = $Body | Select-Object *, @{Name = 'tenantGroups'; Expression = { , @($GroupsByCustomerId[$_.customerId] | Sort-Object -Property Name) } },
                 @{Name = 'portal_m365'; Expression = { "https://admin.cloud.microsoft/?delegatedOrg=$($_.initialDomainName)" } },
                 @{Name = 'portal_exchange'; Expression = { "https://admin.cloud.microsoft/exchange?delegatedOrg=$($_.initialDomainName)" } },

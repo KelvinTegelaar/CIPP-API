@@ -57,10 +57,8 @@ function Get-CIPPTestResultsTenants {
         Return the aggregates with an empty Results array, and skip building rows entirely. Implies
         -IncludeCounts and the -SummaryOnly projection.
 
-        This exists because the All Tenants dashboard rendered three numbers and a four-item list
-        out of a 4.84 MB, 5654-row response — every row carrying blobs it never read. Aggregating in
-        the browser meant the whole estate's result set crossed the wire to produce a handful of
-        integers, and it grew linearly with tenant count.
+        For callers that render totals only. Returning the rows to aggregate client-side sends the
+        whole estate's result set over the wire, and grows linearly with tenant count.
 
     .PARAMETER AllowedTenantIds
         Customer ids the caller may see. When supplied, rows for other tenants are dropped before

@@ -120,8 +120,7 @@ function Invoke-ListTenantAlignment {
         }
 
         if ($Summary) {
-            # One score per tenant: a tenant with five templates is still one tenant in the buckets,
-            # so average its rows first, exactly as the estate view did client-side.
+            # Average a tenant's rows before bucketing: five templates is still one tenant.
             $ByTenant = @{}
             $PendingByTenant = @{}
             $PendingDeviations = 0

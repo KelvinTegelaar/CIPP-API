@@ -80,11 +80,9 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Started disabling Exchange Online PowerShell for $PowerShellEnabledCount users." -sev Info
 
             $Request = foreach ($User in $UsersWithPowerShell) {
-                # Set-User returns no body on success, and New-ExoBulkRequest only synthesises a
-                # { Success = $true } record when an OperationGuid was supplied. Without one every
-                # successful user came back as nothing at all, so a fully successful run still
-                # reported "0 out of N" with no errors to explain it. The UPN doubles as the batch
-                # correlation id so successes are counted and failures are attributable.
+                # New-ExoBulkRequest only emits a success record when an OperationGuid was given,
+                # and Set-User returns no body - so without one, a fully successful run reported
+                # "0 out of N". The UPN doubles as the correlation id.
                 $Identity = if ($User.Guid) { $User.Guid } else { $User.UPN }
                 @{
                     OperationGuid = $User.UPN
