@@ -35,8 +35,10 @@ function Get-DefenderTvmRaw {
 
         # New-GraphGetRequest already follows @odata.nextLink internally and returns the
         # flattened .value rows for every page, so this loop only ever runs once and
-        # $MaxPages never takes effect. Left as-is: Get-DefenderCves depends on the
-        # buffered return shape.
+        # $MaxPages never takes effect. Both in-repo callers (get-DefenderCVEs and
+        # Set-CIPPDBCacheDefenderCVEs) now pass -Stream, so this buffered path is kept only
+        # for ad-hoc use - it holds the whole tenant dataset, so don't put it back on a hot
+        # path.
         do {
             Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Fetching page $($page + 1)" -Sev 'Debug'
 

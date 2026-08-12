@@ -51,6 +51,9 @@ function Push-GetCalendarPermissionsBatch {
 
         Write-Information "Cache hits: $($FolderNameMap.Count), cache misses: $($CacheMissMailboxes.Count)"
 
+        # Declared out here because the completion log below reads its count even when Phase 1 is skipped
+        $NewCacheEntries = [System.Collections.Generic.List[hashtable]]::new()
+
         # Phase 1: Bulk discover calendar folder names for cache misses
         if ($CacheMissMailboxes.Count -gt 0) {
             $FolderStatsRequests = foreach ($MailboxUPN in $CacheMissMailboxes) {
@@ -69,7 +72,6 @@ function Push-GetCalendarPermissionsBatch {
             Write-Information "Phase 1: Bulk Get-MailboxFolderStatistics for $($CacheMissMailboxes.Count) mailboxes"
             $FolderStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($FolderStatsRequests)
 
-            $NewCacheEntries = [System.Collections.Generic.List[hashtable]]::new()
             foreach ($Result in $FolderStatsResults) {
                 if ($Result.error) {
                     Write-Information "Failed to get folder stats for $($Result.OperationGuid): $($Result.error)"

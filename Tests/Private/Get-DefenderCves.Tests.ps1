@@ -117,9 +117,10 @@ Describe 'get-DefenderCVEs' {
 
             $Result = @(get-DefenderCVEs -TenantFilter $script:Tenant)
 
-            # Piping the List into ConvertTo-Json (rather than -InputObject) is what produces
-            # the bare object for one device. Invoke-ListCVEManagement ConvertFrom-Json's this
-            # and foreach's the result, so both shapes have to keep working.
+            # The emit stage decides the shape off DeviceCount: one device stays a bare
+            # object, several get wrapped as an array - exactly what piping a List through
+            # ConvertTo-Json used to produce. Invoke-ListCVEManagement ConvertFrom-Json's
+            # this and foreach's the result, so both shapes have to keep working.
             ($Result | Where-Object { $_.cveId -eq 'CVE-SINGLE' }).deviceDetailsJson | Should -Match '^\{'
             ($Result | Where-Object { $_.cveId -eq 'CVE-MULTI' }).deviceDetailsJson | Should -Match '^\['
         }
@@ -208,6 +209,41 @@ Describe 'get-DefenderCVEs' {
             Should -Invoke Get-DefenderTvmRaw -Times 1 -Exactly -ParameterFilter {
                 $Stream.IsPresent -and $TenantId -eq 'contoso.onmicrosoft.com'
             }
+        }
+
+        It 'serialises each device once as it arrives, not once per row at emit' {
+            # Device metadata is folded into its CVE bucket as JSON text on arrival, so the
+            # aggregator holds strings rather than a hashtable per (device x software x CVE)
+            # record - the single largest thing this function would otherwise retain, and it
+            # runs on the HTTP worker pool per user request. One ConvertTo-Json call per
+            # incoming record; anything higher means a second serialisation crept back into
+            # the emit stage, which is what put two copies of a CVE's devices in memory.
+            Mock -CommandName Get-DefenderTvmRaw -MockWith {
+                foreach ($i in 1..30) { New-TvmRecord -cveId "CVE-$i" -deviceId "d$i" }
+            }
+
+            $script:JsonCalls = 0
+            Mock -CommandName ConvertTo-Json -MockWith { $script:JsonCalls++; '{}' }
+
+            $null = @(get-DefenderCVEs -TenantFilter $script:Tenant)
+
+            $script:JsonCalls | Should -Be 30
+        }
+
+        It 'emits each row to the pipeline individually rather than as one materialised list' {
+            Mock -CommandName Get-DefenderTvmRaw -MockWith {
+                foreach ($i in 1..25) { New-TvmRecord -cveId "CVE-$i" -deviceId "d$i" }
+            }
+
+            $Received = [System.Collections.Generic.List[object]]::new()
+            get-DefenderCVEs -TenantFilter $script:Tenant | ForEach-Object { $Received.Add($_) }
+
+            # ForEach-Object runs once per pipeline object, so 25 additions of single rows
+            # means the caller can fold and release them one at a time. A function that
+            # returned a List in one piece would arrive here as 25 items too - PowerShell
+            # unrolls it - but a wrapped (,$list) return would land as one 25-element item.
+            $Received.Count | Should -Be 25
+            $Received | ForEach-Object { @($_).Count | Should -Be 1 }
         }
 
         It 'folds each record as it arrives rather than after the whole fetch completes' {

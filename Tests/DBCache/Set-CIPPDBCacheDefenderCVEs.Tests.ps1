@@ -224,16 +224,11 @@ Describe 'Set-CIPPDBCacheDefenderCVEs' {
             $script:Rows | ForEach-Object { @($_).Count | Should -Be 1 }
         }
 
-        It 'stops building rows as soon as the consumer faults, proving rows are not pre-built' {
+        It 'stops feeding rows as soon as the consumer faults' {
             Mock -CommandName Get-DefenderTvmRaw -MockWith {
                 foreach ($i in 1..30) { New-TvmRecord -cveId "CVE-$i" -deviceId "d$i" }
             }
 
-            $script:JsonCalls = 0
-            # ConvertTo-Json is called once per row as that row is built. If the emit stage
-            # buffered into $Entities first, all 30 rows would be serialised before the
-            # consumer ever ran and the count would be 30 regardless of the fault.
-            Mock -CommandName ConvertTo-Json -MockWith { $script:JsonCalls++; '{}' }
             Mock -CommandName Add-CIPPDbItem -MockWith {
                 $script:Rows.Add($InputObject)
                 if ($script:Rows.Count -ge 3) { throw 'downstream failure' }
@@ -241,8 +236,33 @@ Describe 'Set-CIPPDBCacheDefenderCVEs' {
 
             Set-CIPPDBCacheDefenderCVEs -TenantFilter $script:Tenant
 
-            $script:JsonCalls | Should -Be 3
             $script:Rows.Count | Should -Be 3
+        }
+
+        It 'serialises each device once as it arrives, not once per row at emit' {
+            # Device metadata is folded into its CVE bucket as JSON text on arrival, so the
+            # aggregator holds strings rather than a hashtable per (device x software x CVE)
+            # record - the single largest thing this job used to retain on a big tenant.
+            #
+            # This assertion replaced one that counted ConvertTo-Json calls to prove the emit
+            # stage was lazy. That proxy only worked while row building was the only caller of
+            # ConvertTo-Json; now the fold does the serialising and the count reflects records
+            # in, not rows out. Emit-stage laziness is still enforced structurally by the
+            # `& { foreach ... } | Add-CIPPDbItem` pipeline and observed by the fault test
+            # above, but note it is no longer possible to distinguish a lazy producer from one
+            # that pre-builds every row and then pipes them, because nothing per-row is mockable.
+            Mock -CommandName Get-DefenderTvmRaw -MockWith {
+                foreach ($i in 1..30) { New-TvmRecord -cveId "CVE-$i" -deviceId "d$i" }
+            }
+
+            $script:JsonCalls = 0
+            Mock -CommandName ConvertTo-Json -MockWith { $script:JsonCalls++; '{}' }
+
+            Set-CIPPDBCacheDefenderCVEs -TenantFilter $script:Tenant
+
+            # One per incoming record. Anything higher means a second serialisation crept back
+            # into the emit stage, which is what put two copies of a CVE's devices in memory.
+            $script:JsonCalls | Should -Be 30
         }
 
         It 'passes AddCount exactly once so the stored count is the run total' {

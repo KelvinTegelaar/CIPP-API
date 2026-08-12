@@ -9,17 +9,20 @@ function get-DefenderCVEs {
         (Invoke-ListCVEManagement), so it shares the container's managed heap with the
         background pool and an OOM here takes user-facing requests down with it.
 
-        Raw records are therefore folded into per-CVE buckets as they arrive off the wire.
-        The ConvertFrom-Json PSCustomObject graph is by far the most expensive of the
-        representations this function would otherwise hold at once - roughly 6.5 KB of a
-        ~10 KB per-record peak - and streaming makes it collectable page by page instead of
-        keeping every record alive until the return. Each bucket is then dropped as soon as
-        its row is built, so the aggregator and the returned entity list never both hold the
-        whole tenant.
+        Both stages stream, mirroring Set-CIPPDBCacheDefenderCVEs:
 
-        Unlike Set-CIPPDBCacheDefenderCVEs the emit stage cannot stream into a writer: the
-        caller needs the full set for a single HTTP response. Peak is therefore the entity
-        list plus one page, rather than raw records + aggregator + entity list at once.
+          1. Raw records are folded into per-CVE buckets as they arrive off the wire, with
+             each device's metadata serialised immediately to the JSON text it will be
+             returned as. The ConvertFrom-Json PSCustomObject graph - by far the most
+             expensive of the representations this function would otherwise hold, roughly
+             6.5 KB of a ~10 KB per-record peak - is collectable page by page, and the
+             aggregator holds one string per CVE instead of a hashtable per record.
+          2. Rows are emitted straight to the pipeline as they are built. The caller folds
+             them one at a time, and each bucket is dropped as soon as its row is emitted,
+             so the aggregator and the emitted row set never both hold the whole tenant.
+
+        Peak is therefore the aggregated JSON text plus one page, rather than raw records
+        + aggregator + a fully materialised entity list all at once.
 
     .PARAMETER TenantFilter
         The tenant to retrieve vulnerabilities for
@@ -55,22 +58,34 @@ function get-DefenderCVEs {
                         recommendedSecurityUpdateUrl = $Vuln.recommendedSecurityUpdateUrl ?? ''
                         exploitabilityLevel          = $Vuln.exploitabilityLevel          ?? ''
 
-                        # Arrays to collect device metadata efficiently
-                        AffectedDevices              = [System.Collections.Generic.List[object]]::new()
+                        # Device metadata as the JSON text it will be returned as, not as objects.
+                        DeviceJson                   = [System.Text.StringBuilder]::new()
+                        DeviceCount                  = 0
                     }
                 }
 
-                # Extract properties specific to this device instance and append in one
-                # step, so a record that fails mid-extraction cannot leave a previous
-                # record's payload behind to be appended to the wrong CVE.
-                [void]$CveAggregator[$CveId].AffectedDevices.Add(@{
-                        deviceId        = ($Vuln.deviceId -join ',') ?? ''
-                        deviceName      = ($Vuln.deviceName -join ',') ?? ''
-                        osVersion       = $Vuln.osVersion ?? ''
-                        softwareVersion = ($Vuln.softwareVersion -join ',') ?? ''
-                        diskPaths       = if ($Vuln.diskPaths) { $Vuln.diskPaths -join ';' } else { '' }
-                        registryPaths   = if ($Vuln.registryPaths) { $Vuln.registryPaths -join ';' } else { '' }
-                    })
+                # Extract this device instance and fold it in as serialised text immediately -
+                # see Set-CIPPDBCacheDefenderCVEs for the full rationale. Keeping one hashtable
+                # per record alive until the stream ends is the single largest thing this
+                # function would otherwise retain, and this path runs per user request.
+                #
+                # ConvertTo-Json builds the fragment rather than string interpolation, so
+                # escaping of device names and registry paths stays correct.
+                $Fragment = @{
+                    deviceId        = ($Vuln.deviceId -join ',') ?? ''
+                    deviceName      = ($Vuln.deviceName -join ',') ?? ''
+                    osVersion       = $Vuln.osVersion ?? ''
+                    softwareVersion = ($Vuln.softwareVersion -join ',') ?? ''
+                    diskPaths       = if ($Vuln.diskPaths) { $Vuln.diskPaths -join ';' } else { '' }
+                    registryPaths   = if ($Vuln.registryPaths) { $Vuln.registryPaths -join ';' } else { '' }
+                } | ConvertTo-Json -Compress
+
+                # Appended only after the fragment is fully built, so a record that fails
+                # mid-extraction cannot leave a partial payload attached to the wrong CVE.
+                $Bucket = $CveAggregator[$CveId]
+                if ($Bucket.DeviceCount -gt 0) { [void]$Bucket.DeviceJson.Append(',') }
+                [void]$Bucket.DeviceJson.Append($Fragment)
+                $Bucket.DeviceCount++
             } catch {
                 $SkippedCount++
                 $ErrorMessage = Get-CippException -Exception $_
@@ -99,7 +114,9 @@ function get-DefenderCVEs {
         # single cacheTimeStamp per CVE.
         $LastUpdated = [string]$(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
 
-        $Entities = [System.Collections.Generic.List[object]]::new()
+        # One row per bucket, so this is the unique CVE count without a second pass. Logged
+        # before the emit loop because the buckets are consumed as rows go out.
+        Write-LogMessage -API 'DefenderCVEs' -tenant $TenantFilter -message "Retrieved $($CveAggregator.Count) Unique CVEs" -sev 'Info'
 
         # Snapshot the keys so buckets can be dropped while iterating - enumerating
         # $CveAggregator.Keys directly and removing from it throws InvalidOperationException.
@@ -108,41 +125,44 @@ function get-DefenderCVEs {
         foreach ($CveKey in $CveKeys) {
             $CveData = $CveAggregator[$CveKey]
 
-            # Flatten or convert device info arrays into a compact, compressed JSON string.
-            # Piped (not -InputObject) so a single-device CVE serialises to an object and a
-            # multi-device CVE to an array, exactly as before.
-            $CompactDeviceJson = $CveData.AffectedDevices | ConvertTo-Json -Compress
+            # The fragments are already JSON; only the surrounding shape is decided here.
+            # A single-device CVE stays a bare object and a multi-device CVE becomes an
+            # array, which is what piping a List through ConvertTo-Json used to produce and
+            # what Invoke-ListCVEManagement parses.
+            $CompactDeviceJson = if ($CveData.DeviceCount -eq 1) {
+                $CveData.DeviceJson.ToString()
+            } else {
+                [void]$CveData.DeviceJson.Insert(0, '[').Append(']')
+                $CveData.DeviceJson.ToString()
+            }
 
-            [void]$Entities.Add(@{
-                    PartitionKey                 = $CveKey
-                    RowKey                       = $TenantFilter # RowKey becomes just the Tenant, ensuring 1 row per CVE per Tenant
-                    customerId                   = $TenantFilter
-                    cveId                        = $CveKey
-                    softwareVendor               = $CveData.softwareVendor
-                    softwareName                 = $CveData.softwareName
-                    vulnerabilitySeverityLevel   = $CveData.vulnerabilitySeverityLevel
-                    recommendedSecurityUpdate    = $CveData.recommendedSecurityUpdate
-                    recommendedSecurityUpdateUrl = $CveData.recommendedSecurityUpdateUrl
-                    exploitabilityLevel          = $CveData.exploitabilityLevel
+            # Emitted straight to the pipeline: the caller merges each row as it arrives,
+            # so no entity list ever materialises here.
+            @{
+                PartitionKey                 = $CveKey
+                RowKey                       = $TenantFilter # RowKey becomes just the Tenant, ensuring 1 row per CVE per Tenant
+                customerId                   = $TenantFilter
+                cveId                        = $CveKey
+                softwareVendor               = $CveData.softwareVendor
+                softwareName                 = $CveData.softwareName
+                vulnerabilitySeverityLevel   = $CveData.vulnerabilitySeverityLevel
+                recommendedSecurityUpdate    = $CveData.recommendedSecurityUpdate
+                recommendedSecurityUpdateUrl = $CveData.recommendedSecurityUpdateUrl
+                exploitabilityLevel          = $CveData.exploitabilityLevel
 
-                    # Meta aggregation counts
-                    deviceCount                  = $CveData.AffectedDevices.Count
+                # Meta aggregation counts
+                deviceCount                  = $CveData.DeviceCount
 
-                    # All individual device variations compressed safely inside a single field
-                    deviceDetailsJson            = $CompactDeviceJson
+                # All individual device variations compressed safely inside a single field
+                deviceDetailsJson            = $CompactDeviceJson
 
-                    lastUpdated                  = $LastUpdated
-                })
+                lastUpdated                  = $LastUpdated
+            }
 
-            # The row is built; drop the bucket so its device list is collectable while the
-            # rest of the set is still being serialised.
+            # The row is emitted; drop the bucket so its device JSON is collectable once
+            # the caller has folded the row.
             $CveAggregator.Remove($CveKey)
         }
-
-        # One row per bucket, so this is the unique CVE count without a second pass.
-        Write-LogMessage -API 'DefenderCVEs' -tenant $TenantFilter -message "Retrieved $($Entities.Count) Unique CVEs" -sev 'Info'
-
-        return $Entities
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
