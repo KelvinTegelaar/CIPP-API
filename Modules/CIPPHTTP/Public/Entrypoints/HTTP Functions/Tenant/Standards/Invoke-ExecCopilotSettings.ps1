@@ -31,13 +31,31 @@ function Invoke-ExecCopilotSettings {
             })
     }
 
+    # Web search is three-state (0 = enabled everywhere, 1 = disabled everywhere, 2 = disabled in
+    # Copilot Work mode only), and image generation inverts the usual toggle ('1' disables it).
+    # These are only used for the log line - the value is passed through to Graph either way.
+    $WebSearchStates = @{
+        '0' = 'Enabled in Copilot and Copilot Chat'
+        '1' = 'Disabled in Copilot and Copilot Chat'
+        '2' = 'Disabled in Copilot Work mode, Enabled in Copilot Chat'
+    }
+    $InvertedToggleSettings = @('microsoft.copilot.imagegeneration')
+
     # 'clear'/'notconfigured'/blank -> remove the value (Not configured); otherwise set the string value.
     if ([string]::IsNullOrWhiteSpace($Value) -or $Value -in @('clear', 'notconfigured')) {
         $PatchBody = [pscustomobject]@{ value = $null } | ConvertTo-Json -Compress
         $StateText = 'Not configured'
     } else {
         $PatchBody = [pscustomobject]@{ value = [string]$Value } | ConvertTo-Json -Compress
-        $StateText = if ($Value -eq '1') { 'Enabled' } elseif ($Value -eq '0') { 'Disabled' } else { "value '$Value'" }
+        $StateText = if ($SettingId -eq 'microsoft.copilot.allowwebsearch' -and $WebSearchStates[[string]$Value]) {
+            $WebSearchStates[[string]$Value]
+        } elseif ($Value -eq '1') {
+            if ($SettingId -in $InvertedToggleSettings) { 'Disabled' } else { 'Enabled' }
+        } elseif ($Value -eq '0') {
+            if ($SettingId -in $InvertedToggleSettings) { 'Enabled' } else { 'Disabled' }
+        } else {
+            "value '$Value'"
+        }
     }
 
     # The Copilot admin APIs currently require delegated auth, so use the default delegated token.
