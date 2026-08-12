@@ -24,6 +24,12 @@ BeforeAll {
     if (-not $ResolverPath) { throw 'Could not locate Resolve-CippExoBulkResult.ps1 under Modules/' }
     . $ResolverPath
 
+    # The resolver delegates error-text extraction to this pure helper; use the real one too.
+    $ErrorTextPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Get-CippExoErrorText.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $ErrorTextPath) { throw 'Could not locate Get-CippExoErrorText.ps1 under Modules/' }
+    . $ErrorTextPath
+
     . $FunctionPath
 
     function New-LookupResponse {
