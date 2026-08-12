@@ -1557,8 +1557,10 @@ function Invoke-NinjaOneTenantSync {
             } catch {
                 $SharePointTenantName = ($Customer.initialDomainName -split '\.')[0]
                 if ($SharePointTenantName) {
+                    # Sovereign clouds do not use sharepoint.com - map the initial domain's suffix.
+                    $SharePointDomain = Get-CIPPSharePointDomain -TenantDomain $Customer.initialDomainName
+                    $SharePointAdminUrl = "https://$SharePointTenantName-admin.$SharePointDomain"
                     Write-Information "NinjaOneSync: Get-SharePointAdminLink failed for $($Customer.defaultDomainName), using fallback SharePoint admin URL '$SharePointAdminUrl'. Error: $($_.Exception.Message)"
-                    $SharePointAdminUrl = "https://$SharePointTenantName-admin.sharepoint.com"
                 }
             }
 
@@ -1585,7 +1587,11 @@ function Invoke-NinjaOneTenantSync {
                 },
                 @{
                     Name = 'SharePoint Admin'
-                    Link = $SharePointAdminUrl ?? "https://$($Customer.defaultDomainName)-admin.sharepoint.com"
+                    # No guess here: the old fallback pasted defaultDomainName in front of
+                    # '-admin.sharepoint.com' ('contoso.onmicrosoft.com-admin.sharepoint.com') and
+                    # assumed the commercial cloud. Unresolved links are dropped below instead -
+                    # NinjaOne keeps whatever we write, so a bad URL sticks around in their portal.
+                    Link = $SharePointAdminUrl
                     Icon = 'fas fa-shapes'
                 },
                 @{
@@ -1620,6 +1626,9 @@ function Invoke-NinjaOneTenantSync {
                 }
 
             )
+
+            # Drop any portal we could not build a URL for rather than publishing a dead link.
+            $ManagementLinksData = @($ManagementLinksData | Where-Object { $_.Link })
 
             $M365LinksHTML = Get-NinjaOneLinks -Data $ManagementLinksData -Title 'Portals' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
 

@@ -6,12 +6,21 @@ function Invoke-ListTenantAlignment {
         Tenant.Standards.Read
     .DESCRIPTION
         Lists tenant alignment data showing how well tenants conform to their assigned standards templates.
+
+        Pass summary=true for the estate roll-up only: per-tenant averages collapsed into score
+        buckets, the overall average, the lowest-scoring tenants and the pending-deviation totals.
+        The row list is one entry per tenant per standard, so an estate-wide caller that only
+        renders those aggregates would otherwise pull tenants x standards rows to compute a
+        handful of numbers.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
     $Granular = $Request.Query.granular -eq $true
+    $Summary = $Request.Query.summary -eq $true
+    # Granular flattens to one row per standard; it is a detail view and never a summary source.
+    if ($Summary) { $Granular = $false }
     try {
         # Use the new Get-CIPPTenantAlignment function to get alignment data
         $AlignmentData = Get-CIPPTenantAlignment
@@ -108,6 +117,69 @@ function Invoke-ListTenantAlignment {
                     latestDataCollection     = $_.LatestDataCollection
                 }
             }
+        }
+
+        if ($Summary) {
+            # One score per tenant: a tenant with five templates is still one tenant in the buckets,
+            # so average its rows first, exactly as the estate view did client-side.
+            $ByTenant = @{}
+            $PendingByTenant = @{}
+            $PendingDeviations = 0
+            foreach ($Row in @($Results)) {
+                $Key = [string]$Row.tenantFilter
+                if ([string]::IsNullOrWhiteSpace($Key)) { continue }
+
+                $Score = [double](($Row.combinedAlignmentScore ?? $Row.alignmentScore) ?? 0)
+                if (-not $ByTenant.ContainsKey($Key)) { $ByTenant[$Key] = @{ Total = 0.0; Count = 0 } }
+                $ByTenant[$Key].Total += $Score
+                $ByTenant[$Key].Count++
+
+                $Pending = [int]($Row.pendingDeviationsCount ?? 0)
+                if ($Pending -gt 0) {
+                    $PendingDeviations += $Pending
+                    $PendingByTenant[$Key] = ($PendingByTenant[$Key] ?? 0) + $Pending
+                }
+            }
+
+            $TenantLookupByDomain = @{}
+            foreach ($KnownTenant in (Get-Tenants -IncludeErrors)) {
+                if ($KnownTenant.defaultDomainName) { $TenantLookupByDomain[$KnownTenant.defaultDomainName] = $KnownTenant }
+            }
+
+            $Scores = [System.Collections.Generic.List[object]]::new()
+            foreach ($Key in $ByTenant.Keys) {
+                $Bucket = $ByTenant[$Key]
+                $Average = if ($Bucket.Count) { [math]::Round($Bucket.Total / $Bucket.Count) } else { 0 }
+                $Scores.Add([PSCustomObject]@{
+                        Tenant = $Key
+                        Name   = $TenantLookupByDomain[$Key].displayName ?? $Key
+                        Score  = [int]$Average
+                    })
+            }
+
+            $Buckets = [ordered]@{ Strong = 0; Good = 0; Weak = 0; Poor = 0 }
+            foreach ($Entry in $Scores) {
+                if ($Entry.Score -ge 90) { $Buckets['Strong']++ }
+                elseif ($Entry.Score -ge 75) { $Buckets['Good']++ }
+                elseif ($Entry.Score -ge 50) { $Buckets['Weak']++ }
+                else { $Buckets['Poor']++ }
+            }
+
+            $Overall = if ($Scores.Count) {
+                [int][math]::Round((($Scores | Measure-Object -Property Score -Sum).Sum) / $Scores.Count)
+            } else { 0 }
+
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = @{
+                        Average            = $Overall
+                        ScoredTenantCount  = $Scores.Count
+                        Buckets            = [PSCustomObject]$Buckets
+                        Lowest             = @($Scores | Sort-Object -Property Score, Tenant | Select-Object -First 4)
+                        PendingDeviations  = $PendingDeviations
+                        PendingTenantCount = $PendingByTenant.Keys.Count
+                    }
+                })
         }
 
         return ([HttpResponseContext]@{

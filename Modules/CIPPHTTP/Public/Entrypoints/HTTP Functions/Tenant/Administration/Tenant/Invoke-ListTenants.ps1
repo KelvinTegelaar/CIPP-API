@@ -175,7 +175,16 @@ function Invoke-ListTenants {
                         # tenant - it has to be resolved through Graph. Hand out the cached URL when we
                         # have one so the link behaves like every other portal, and fall back to the
                         # endpoint that resolves (and caches) it on first use.
-                        if ($_.SharepointAdminUrl) { $_.SharepointAdminUrl } else { "/api/ListSharePointAdminUrl?tenantFilter=$($_.defaultDomainName)" }
+                        #
+                        # A cached URL whose TLD does not match the tenant's own was stored before
+                        # sovereign clouds were handled (a .com link for a sharepoint.de tenant,
+                        # issue #269). Send those back through the resolver, which overwrites the row.
+                        $CachedAdminUrl = $_.SharepointAdminUrl
+                        if ($CachedAdminUrl -and $_.initialDomainName) {
+                            $ExpectedTld = (Get-CIPPSharePointDomain -TenantDomain $_.initialDomainName) -split '\.' | Select-Object -Last 1
+                            if ((([uri]$CachedAdminUrl).Host -split '\.' | Select-Object -Last 1) -ne $ExpectedTld) { $CachedAdminUrl = $null }
+                        }
+                        if ($CachedAdminUrl) { $CachedAdminUrl } else { "/api/ListSharePointAdminUrl?tenantFilter=$($_.defaultDomainName)" }
                     }
                 },
                 @{Name = 'portal_platform'; Expression = { "https://admin.powerplatform.microsoft.com/account/login/$($_.customerId)" } },

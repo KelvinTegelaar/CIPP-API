@@ -40,25 +40,43 @@ function Get-SharePointAdminLink {
             # Invoke autodiscover
             $Response = Invoke-RestMethod -UseBasicParsing -Method Post -Uri 'https://autodiscover-s.outlook.com/autodiscover/autodiscover.svc' -Body $body -Headers $AutoDiscoverHeaders
 
-            # Get the onmicrosoft.com domain from the response
+            # Get the onmicrosoft domain from the response. Sovereign clouds use their own
+            # suffix (onmicrosoft.de, onmicrosoft.us, partner.onmschina.cn), so don't filter on '.com'.
             $TenantDomains = $Response.Envelope.body.GetFederationInformationResponseMessage.response.Domains.Domain | Sort-Object
-            $OnMicrosoftDomains = $TenantDomains | Where-Object { $_ -like '*.onmicrosoft.com' }
+            # @() matters: a single match comes back as a bare string, and indexing a string with
+            # [0] yields a [char], which then has no .Split().
+            $OnMicrosoftDomains = @($TenantDomains | Where-Object { $_ -like '*.onmicrosoft.*' -or $_ -like '*.onmschina.cn' })
 
             if ($OnMicrosoftDomains.Count -eq 0) {
-                throw 'Could not find onmicrosoft.com domain through autodiscover'
+                throw 'Could not find onmicrosoft domain through autodiscover'
             } elseif ($OnMicrosoftDomains.Count -gt 1) {
-                throw "Multiple onmicrosoft.com domains found through autodiscover. Cannot determine the correct one: $($OnMicrosoftDomains -join ', ')"
+                throw "Multiple onmicrosoft domains found through autodiscover. Cannot determine the correct one: $($OnMicrosoftDomains -join ', ')"
             } else {
                 $OnMicrosoftDomain = $OnMicrosoftDomains[0]
                 $tenantName = $OnMicrosoftDomain.Split('.')[0]
+                # Best-effort mapping of the tenant domain suffix to the SharePoint one. Autodiscover
+                # cannot tell GCC High (sharepoint.us) from DoD (sharepoint-mil.us) - both are
+                # onmicrosoft.us - so DoD needs the Graph path below.
+                $SharePointDomain = Get-CIPPSharePointDomain -TenantDomain $OnMicrosoftDomain
             }
         } catch {
             throw "Failed to get SharePoint admin URL through autodiscover: $($_.Exception.Message)"
         }
     } else {
-        # id looks like 'contoso.sharepoint.com,<guid>,<guid>' - the host's first label is the name.
+        # id looks like 'contoso.sharepoint.com,<guid>,<guid>' - the host's first label is the name,
+        # and the rest is the SharePoint domain. That domain is not always 'sharepoint.com':
+        # sovereign clouds use sharepoint.de (Germany), sharepoint.cn (21Vianet),
+        # sharepoint.us (GCC High) and sharepoint-mil.us (DoD), so take it from the host we got
+        # back rather than assuming.
         $RootSite = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter
-        $tenantName = ($RootSite.id -split '\.')[0]
+        $SharePointHost = $RootSite.siteCollection.hostname
+        if ([string]::IsNullOrWhiteSpace($SharePointHost)) { $SharePointHost = ($RootSite.id -split ',')[0] }
+        if ([string]::IsNullOrWhiteSpace($SharePointHost) -and $RootSite.webUrl) { $SharePointHost = ([uri]$RootSite.webUrl).Host }
+
+        $tenantName = ($SharePointHost -split '\.')[0]
+        if ($SharePointHost -match '^[^.]+\.(?<Domain>sharepoint(?:-[a-z]+)?\.[a-z.]+)$') {
+            $SharePointDomain = $Matches.Domain
+        }
     }
 
     # Without a name every URL below is a well-formed link to nowhere ('https://-admin.sharepoint.com').
@@ -67,10 +85,14 @@ function Get-SharePointAdminLink {
         throw "Could not determine the SharePoint tenant name for $TenantFilter. The tenant may not have SharePoint provisioned, or the Sites.Read.All permission may be missing."
     }
 
+    # Commercial cloud is the fallback when the host did not look like a SharePoint one.
+    if ([string]::IsNullOrWhiteSpace($SharePointDomain)) { $SharePointDomain = 'sharepoint.com' }
+
     # Return object with all needed properties
     return [PSCustomObject]@{
-        AdminUrl      = "https://$tenantName-admin.sharepoint.com"
-        TenantName    = $tenantName
-        SharePointUrl = "https://$tenantName.sharepoint.com"
+        AdminUrl         = "https://$tenantName-admin.$SharePointDomain"
+        TenantName       = $tenantName
+        SharePointUrl    = "https://$tenantName.$SharePointDomain"
+        SharePointDomain = $SharePointDomain
     }
 }

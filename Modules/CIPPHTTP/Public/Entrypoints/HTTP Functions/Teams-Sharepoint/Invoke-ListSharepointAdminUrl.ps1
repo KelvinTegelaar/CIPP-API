@@ -34,7 +34,19 @@ function Invoke-ListSharepointAdminUrl {
             throw "Tenant '$TenantFilter' was not found."
         }
 
-        if ($Tenant.SharepointAdminUrl) {
+        # This cache has no expiry, so a value stored before sovereign clouds were handled would be
+        # a sharepoint.com URL that never heals (issue #269). The tenant's initial domain shares its
+        # TLD with its SharePoint domain, so a mismatch means the cached value predates the fix -
+        # re-resolve and overwrite it. Compared on TLD, not the full domain, because DoD is
+        # sharepoint-mil.us against an onmicrosoft.us tenant.
+        $CachedUrlIsStale = $false
+        if ($Tenant.SharepointAdminUrl -and $Tenant.initialDomainName) {
+            $ExpectedTld = (Get-CIPPSharePointDomain -TenantDomain $Tenant.initialDomainName) -split '\.' | Select-Object -Last 1
+            $CachedTld = ([uri]$Tenant.SharepointAdminUrl).Host -split '\.' | Select-Object -Last 1
+            $CachedUrlIsStale = $CachedTld -ne $ExpectedTld
+        }
+
+        if ($Tenant.SharepointAdminUrl -and -not $CachedUrlIsStale) {
             $AdminUrl = $Tenant.SharepointAdminUrl
         } else {
             # Throws rather than returning a placeholder if the name can't be resolved, so we never

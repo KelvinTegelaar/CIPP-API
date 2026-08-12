@@ -48,6 +48,20 @@ function Get-CIPPTestResultsTenants {
         over everything the scan matched — regardless of RowStatus. Changes the return shape to
         @{ Results; Counts }.
 
+        Counts also carries HighRiskTenants (distinct tenants with a high-risk failure) and
+        ByTestType — per test type, the failure count, the distinct tenants failing it, and the
+        checks failing across the most tenants. Those facets are computed over Failed rows only,
+        which is what "failing" means for every caller that has asked for them.
+
+    .PARAMETER CountsOnly
+        Return the aggregates with an empty Results array, and skip building rows entirely. Implies
+        -IncludeCounts and the -SummaryOnly projection.
+
+        This exists because the All Tenants dashboard rendered three numbers and a four-item list
+        out of a 4.84 MB, 5654-row response — every row carrying blobs it never read. Aggregating in
+        the browser meant the whole estate's result set crossed the wire to produce a handful of
+        integers, and it grew linearly with tenant count.
+
     .PARAMETER AllowedTenantIds
         Customer ids the caller may see. When supplied, rows for other tenants are dropped before
         any counting or row building, so counts never leak the size of an estate the caller cannot
@@ -86,8 +100,19 @@ function Get-CIPPTestResultsTenants {
         [switch]$IncludeCounts,
 
         [Parameter(Mandatory = $false)]
+        [switch]$CountsOnly,
+
+        [Parameter(Mandatory = $false)]
         [string[]]$AllowedTenantIds
     )
+
+    # CountsOnly is a stricter IncludeCounts: same aggregates, no rows built at all.
+    $WantCounts = $IncludeCounts.IsPresent -or $CountsOnly.IsPresent
+    # Counting only ever reads Status/Risk/Name/TestType, so the blob columns can always be
+    # projected away for a counts-only read even when the caller did not ask for SummaryOnly.
+    $ProjectColumns = $SummaryOnly.IsPresent -or $CountsOnly.IsPresent
+    # How many per-test-type checks to return in the ByTestType facet.
+    $TopCheckLimit = 10
 
     $Table = Get-CippTable -tablename 'CippTestResults'
 
@@ -142,7 +167,7 @@ function Get-CIPPTestResultsTenants {
     $PropertyFilter = $FilterParts -join ' and '
 
     $GetParams = @{}
-    if ($SummaryOnly) {
+    if ($ProjectColumns) {
         $GetParams.Property = [string[]]@(
             'PartitionKey', 'RowKey', 'Timestamp', 'Status', 'Risk', 'Name', 'Pillar',
             'UserImpact', 'ImplementationEffort', 'Category', 'TestType'
@@ -168,10 +193,12 @@ function Get-CIPPTestResultsTenants {
         HighRiskFailed     = 0
         TenantsWithResults = 0
         TenantsFailing     = 0
+        HighRiskTenants    = 0
+        ByTestType         = [PSCustomObject]@{}
     }
 
     if ($Results.Count -eq 0) {
-        if ($IncludeCounts) { return [PSCustomObject]@{ Results = @(); Counts = [PSCustomObject]$Counts } }
+        if ($WantCounts) { return [PSCustomObject]@{ Results = @(); Counts = [PSCustomObject]$Counts } }
         return @()
     }
 
@@ -221,6 +248,10 @@ function Get-CIPPTestResultsTenants {
 
     $TenantsSeen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $TenantsFailing = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $HighRiskTenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    # testType -> @{ Failed; Tenants (set); Checks (name -> set of tenants) }. Tenant sets rather
+    # than counters because the same check failing twice for one tenant is still one tenant.
+    $FailedByType = @{}
 
     # Single pass: count, then build only the rows the caller asked for. Access control already
     # happened at the partition level. Rows are rebuilt as fresh objects rather than mutated with
@@ -239,7 +270,32 @@ function Get-CIPPTestResultsTenants {
             'Failed' {
                 $Counts['Failed']++
                 [void]$TenantsFailing.Add($Result.PartitionKey)
-                if ([string]$Result.Risk -eq 'High') { $Counts['HighRiskFailed']++ }
+                if ([string]$Result.Risk -eq 'High') {
+                    $Counts['HighRiskFailed']++
+                    [void]$HighRiskTenants.Add($Result.PartitionKey)
+                }
+
+                $TypeKey = [string]$Result.TestType
+                if ($TypeKey) {
+                    if (-not $FailedByType.ContainsKey($TypeKey)) {
+                        $FailedByType[$TypeKey] = @{
+                            Failed  = 0
+                            Tenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                            Checks  = @{}
+                        }
+                    }
+                    $Bucket = $FailedByType[$TypeKey]
+                    $Bucket.Failed++
+                    [void]$Bucket.Tenants.Add($Result.PartitionKey)
+
+                    $CheckName = [string]$Result.Name
+                    if ($CheckName) {
+                        if (-not $Bucket.Checks.ContainsKey($CheckName)) {
+                            $Bucket.Checks[$CheckName] = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                        }
+                        [void]$Bucket.Checks[$CheckName].Add($Result.PartitionKey)
+                    }
+                }
             }
             'Investigate' { $Counts['Investigate']++ }
             'Skipped' { $Counts['Skipped']++ }
@@ -247,6 +303,8 @@ function Get-CIPPTestResultsTenants {
         }
 
         if ($RowStatusSet -and -not $RowStatusSet.Contains($StatusValue)) { continue }
+        # Counting is done for this row; a counts-only caller wants none of the row building below.
+        if ($CountsOnly) { continue }
 
         $Row = [ordered]@{}
         foreach ($Prop in $Result.PSObject.Properties) { $Row[$Prop.Name] = $Prop.Value }
@@ -294,11 +352,31 @@ function Get-CIPPTestResultsTenants {
         $Output.Add([PSCustomObject]$Row)
     }
 
-    if ($IncludeCounts) {
+    if ($WantCounts) {
         $Counts['TenantsWithResults'] = $TenantsSeen.Count
         $Counts['TenantsFailing'] = $TenantsFailing.Count
+        $Counts['HighRiskTenants'] = $HighRiskTenants.Count
+
+        $ByTestType = [ordered]@{}
+        foreach ($TypeKey in ($FailedByType.Keys | Sort-Object)) {
+            $Bucket = $FailedByType[$TypeKey]
+            # Ties broken by name so the list is stable between calls with identical data.
+            $TopChecks = @(
+                $Bucket.Checks.GetEnumerator() |
+                    Sort-Object -Property @{ Expression = { $_.Value.Count }; Descending = $true }, Key |
+                    Select-Object -First $TopCheckLimit |
+                    ForEach-Object { [PSCustomObject]@{ Name = $_.Key; TenantCount = $_.Value.Count } }
+            )
+            $ByTestType[$TypeKey] = [PSCustomObject]@{
+                Failed    = $Bucket.Failed
+                Tenants   = $Bucket.Tenants.Count
+                TopChecks = $TopChecks
+            }
+        }
+        $Counts['ByTestType'] = [PSCustomObject]$ByTestType
+
         return [PSCustomObject]@{
-            Results = $Output
+            Results = if ($CountsOnly) { @() } else { $Output }
             Counts  = [PSCustomObject]$Counts
         }
     }
