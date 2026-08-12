@@ -23,6 +23,9 @@
         # conditionalAccessStatus is 'success'/'notApplied'/'failure'; errorCode 0 is a successful
         # sign-in. Shared by every sign-in projection below.
         $SignInStatus = { if ($_.conditionalAccessStatus -in @('success', 'notApplied') -and $_.status.errorCode -eq 0) { 'Success' } else { 'Failed' } }
+        # ISO 8601 so the frontend table formatter and new Date() can both parse it - Out-String
+        # renders a locale string neither understands
+        $SignInDate = { if ($_.createdDateTime) { ([datetime]$_.createdDateTime).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null } }
 
         Write-Information 'Getting audit logs'
         try {
@@ -60,7 +63,7 @@
         Write-Information 'Getting last sign-in'
         try {
             $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$SuspectUser')&`$top=1&`$orderby=createdDateTime desc"
-            $LastSignIn = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | Select-Object @{ Name = 'CreatedDateTime'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
+            $LastSignIn = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | Select-Object @{ Name = 'CreatedDateTime'; Expression = $SignInDate },
             id,
             @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
             @{ Name = 'Status'; Expression = $SignInStatus },
@@ -79,7 +82,7 @@
         $SuspectUserSignInsError = $null
         try {
             $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$SuspectUser')&`$top=50&`$orderby=createdDateTime desc"
-            $SuspectUserSignIns = @(New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true | Select-Object @{ Name = 'CreatedDateTime'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
+            $SuspectUserSignIns = @(New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true | Select-Object @{ Name = 'CreatedDateTime'; Expression = $SignInDate },
                 id,
                 @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
                 @{ Name = 'ClientAppUsed'; Expression = { $_.clientAppUsed } },
@@ -104,17 +107,24 @@
         }
 
         try {
+            # for the target-mailbox heuristic below: canonical ObjectIds carry the alias, not the UPN
+            $UserLocalPart = ($UserName -split '@')[0]
             $PermissionsLog = ($7DaysLog | Where-Object -Property Operations -In 'Remove-MailboxPermission', 'Add-MailboxPermission', 'UpdateCalendarDelegation', 'AddFolderPermissions' ).AuditData | ConvertFrom-Json -ErrorAction Stop | ForEach-Object {
                 $perms = if ($_.Parameters) {
                     $_.Parameters | ForEach-Object { if ($_.Name -eq 'AccessRights') { $_.Value } }
                 } else
                 { $_.item.ParentFolder.MemberRights }
                 $objectID = if ($_.ObjectID) { $_.ObjectID } else { $($_.MailboxOwnerUPN) + $_.item.ParentFolder.Path }
+                # this is a tenant-wide search; flag the rows that concern the investigated mailbox
+                # so the threat score can weight them above unrelated tenant churn
+                $IdentityParam = if ($_.Parameters) { ($_.Parameters | Where-Object { $_.Name -eq 'Identity' }).Value }
+                $TargetCandidates = @($objectID, $IdentityParam, $_.MailboxOwnerUPN) -join ' '
                 [pscustomobject]@{
-                    Operation   = $_.Operation
-                    UserKey     = $_.UserKey
-                    ObjectId    = $objectId
-                    Permissions = $perms
+                    Operation      = $_.Operation
+                    UserKey        = $_.UserKey
+                    ObjectId       = $objectId
+                    Permissions    = $perms
+                    TargetsSuspect = ($TargetCandidates -like "*$UserName*" -or ($UserLocalPart -and $TargetCandidates -like "*$UserLocalPart*"))
                 }
             }
         } catch {
@@ -336,7 +346,7 @@
 
         Write-Information 'Getting last 50 tenant sign-ins'
         try {
-            $TenantLastSignIns = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userDisplayName ne 'On-Premises Directory Synchronization Service Account'&`$top=50&`$orderby=createdDateTime desc" -tenantid $TenantFilter -noPagination $true | Select-Object @{ Name = 'CreatedDateTime'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
+            $TenantLastSignIns = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userDisplayName ne 'On-Premises Directory Synchronization Service Account'&`$top=50&`$orderby=createdDateTime desc" -tenantid $TenantFilter -noPagination $true | Select-Object @{ Name = 'CreatedDateTime'; Expression = $SignInDate },
             id,
             @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
             @{ Name = 'Status'; Expression = $SignInStatus },
@@ -461,8 +471,8 @@
                         operatingSystem        = $Device.operatingSystem
                         osVersion              = $Device.osVersion
                         complianceState        = $Device.complianceState
-                        enrolledDateTime       = if ($Device.enrolledDateTime) { ($Device.enrolledDateTime | Out-String).Trim() } else { $null }
-                        lastSyncDateTime       = if ($Device.lastSyncDateTime) { ($Device.lastSyncDateTime | Out-String).Trim() } else { $null }
+                        enrolledDateTime       = if ($Device.enrolledDateTime) { ([datetime]$Device.enrolledDateTime).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null }
+                        lastSyncDateTime       = if ($Device.lastSyncDateTime) { ([datetime]$Device.lastSyncDateTime).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null }
                         deviceEnrollmentType   = $Device.deviceEnrollmentType
                         manufacturer           = $Device.manufacturer
                         model                  = $Device.model
@@ -530,6 +540,8 @@
             UserRegisteredCountry      = $SuspectUserDetail.country
             SignInCountries            = $SignInCountries
             ForeignSignInCount         = @($SuspectUserSignIns | Where-Object { $_.ForeignLocation -eq $true }).Count
+            # failed foreign attempts are password-spray background noise; only a success proves access
+            ForeignSuccessfulSignInCount = @($SuspectUserSignIns | Where-Object { $_.ForeignLocation -eq $true -and $_.Status -eq 'Success' }).Count
             ForeignRuleChangeCount     = @($RuleChangesLog | Where-Object { $_.ForeignLocation -eq $true }).Count
             ForeignSafelistChangeCount = @($SafelistChanges | Where-Object { $_.ForeignLocation -eq $true }).Count
             ForeignSharingChangeCount  = @($SharingChanges | Where-Object { $_.ForeignLocation -eq $true }).Count
