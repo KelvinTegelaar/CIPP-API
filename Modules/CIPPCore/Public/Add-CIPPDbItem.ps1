@@ -6,9 +6,9 @@ function Add-CIPPDbItem {
         Internal
 
     .PARAMETER ClearOnEmpty
-        Authorizes removal of existing rows when InputObject is an authoritative empty
-        collection and exact row-key cleanup for a non-empty authoritative collection.
-        Callers must only use this after a successful source response.
+        Authorizes removal of every row this run did not write, including when InputObject
+        is an authoritative empty collection (which clears the type entirely). Callers must
+        only use this after a successful source response.
     #>
     [CmdletBinding()]
     param(
@@ -29,6 +29,12 @@ function Add-CIPPDbItem {
         [switch]$Append,
         [switch]$ClearOnEmpty,
 
+        # Stable run identity override. Callers whose logical "run" spans multiple invocations
+        # (resumable scans that append from many activities) pass the same id each time so a
+        # later cleanup can tell this run's rows from stale ones by identity, exactly like the
+        # single-invocation cleanup below does. Omit for the default: a new id per call.
+        [string]$RunId,
+
         [ValidateRange(0, 60)]
         [int]$SkewMarginMinutes = 5
     )
@@ -39,7 +45,14 @@ function Add-CIPPDbItem {
         $Batch = [System.Collections.Generic.List[hashtable]]::new($BatchSize)
         # Track batch duplicates separately from the full authoritative run used for cleanup.
         $SeenInBatch = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        $SeenRowKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+        # Every row written this run is stamped with this id, and the cleanup below deletes only
+        # rows that do NOT carry it. Identity, not age: a run of any length can never delete its
+        # own writes, however the worker's and the storage service's clocks disagree. It also
+        # means nothing per-row is retained across the run - a previous design kept a HashSet of
+        # every row key written for -ClearOnEmpty, which on a tenant-wide streaming cache was
+        # tens of thousands of strings held purely to be compared once at the end.
+        if (-not $RunId) { $RunId = [guid]::NewGuid().ToString() }
         # Allow for storage timestamp lag before considering untouched rows stale.
         $RunStartUtc = [DateTimeOffset]::UtcNow.AddMinutes(-$SkewMarginMinutes)
 
@@ -70,7 +83,6 @@ function Add-CIPPDbItem {
             $ItemId = $Item.ExternalDirectoryObjectId ?? $Item.id ?? $Item.Identity ?? $Item.skuId ?? $Item.userPrincipalName ?? [guid]::NewGuid().ToString()
             $RowKey = $RowKeyControlRegex.Replace($RowKeyPathRegex.Replace("$Type-$ItemId", '_'), '')
             if ($SeenInBatch.Add($RowKey)) {
-                $null = $SeenRowKeys.Add($RowKey)
                 $Batch.Add(@{
                         PartitionKey = $TenantFilter
                         RowKey       = $RowKey
@@ -80,6 +92,7 @@ function Add-CIPPDbItem {
                         # children and every consumer sees a mangled object.
                         Data         = [string]($Item | ConvertTo-Json -Depth 100 -Compress)
                         Type         = $Type
+                        RunId        = $RunId
                     })
                 if ($Batch.Count -ge $BatchSize) {
                     $null = Add-CIPPAzDataTableEntity @Table -Entity $Batch.ToArray() -Force
@@ -102,24 +115,32 @@ function Add-CIPPDbItem {
         # the response was authoritative by passing -ClearOnEmpty.
         if (-not $Count.IsPresent -and -not $Append.IsPresent -and ($TotalProcessed -gt 0 -or $ClearOnEmpty.IsPresent)) {
             $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}0'" -f $TenantFilter, $Type
-            $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag, OriginalEntityId, Timestamp
+
+            # The Timestamp predicate is NARROWING ONLY: it lets the service return candidate
+            # orphans instead of every row of this type for the tenant, which at the end of a
+            # tenant-wide cache write was a second full copy of the dataset materialised exactly
+            # when the caller still held its first. The RunId check below is the delete
+            # authority, so if this predicate were ever dropped, unsupported, or subtly wrong,
+            # the candidate set merely changes size - rows this run wrote still cannot be
+            # deleted, because they carry this run's id.
+            #
+            # -ClearOnEmpty must consider every row (the source authoritatively returned the
+            # full - possibly empty - set), so it skips the narrowing.
+            if (-not $ClearOnEmpty.IsPresent) {
+                $Filter += " and Timestamp lt datetime'{0}'" -f $RunStartUtc.UtcDateTime.ToString('yyyy-MM-ddTHH:mm:ss.fffffffZ')
+            }
+
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag, OriginalEntityId, RunId
             if ($Existing) {
-                $Undated = 0
                 $Orphans = foreach ($Row in @($Existing)) {
                     if ($Row.RowKey -eq "$Type-Count") { continue }
 
-                    if ($ClearOnEmpty.IsPresent) {
-                        if (-not $SeenRowKeys.Contains($Row.RowKey)) { $Row }
-                        continue
-                    }
-
-                    $Stamp = $Row.Timestamp -as [datetimeoffset]
-                    if ($null -eq $Stamp) { $Undated++; continue }
-
-                    if ($Stamp -lt $RunStartUtc) { $Row }
-                }
-                if ($Undated -gt 0) {
-                    Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -sev Warning -message "Skipped $Undated $Type row(s) with no readable Timestamp during orphan cleanup — not deleting without positive evidence"
+                    # Identity is the authority: a row written by this run always carries this
+                    # run's id, no matter how long the run took, how the clocks drift, or what
+                    # the query returned. Anything else - an earlier run's row, or a legacy row
+                    # with no RunId at all - is an orphan by definition of an authoritative
+                    # full-set write.
+                    if ([string]$Row.RunId -ne $RunId) { $Row }
                 }
                 if ($Orphans) {
                     $null = Remove-CIPPAzDataTableEntity @Table -Entity @($Orphans) -Force
@@ -128,7 +149,6 @@ function Add-CIPPDbItem {
         }
 
         if ($Count.IsPresent -or $AddCount.IsPresent) {
-            $CntStart = $Stopwatch.ElapsedMilliseconds
             $NewCount = $TotalProcessed
             if ($Append.IsPresent) {
                 $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}-Count'" -f $TenantFilter, $Type
@@ -141,7 +161,6 @@ function Add-CIPPDbItem {
                 DataCount    = [int]$NewCount
                 Type         = $Type
             } -Force
-            $CountMs = $Stopwatch.ElapsedMilliseconds - $CntStart
         }
 
         Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Added $TotalProcessed items of type $Type" -sev Debug

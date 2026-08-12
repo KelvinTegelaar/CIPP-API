@@ -165,4 +165,119 @@ Describe 'Invoke-CIPPStandardReusableSettingsTemplate' {
         $compareFields[0].Expected.isCompliant | Should -BeTrue
         Should -Invoke -CommandName Write-StandardsAlert -Times 0
     }
+
+    # Alignment emits a key for every selected id. A key with no compare row reports NOT FOUND, and
+    # stays in ValidDriftKeys, which the drift prune skips - so it could never be cleared.
+    Context 'compare rows always cover every selected template' {
+        It 'writes a compare row for a template whose row no longer exists' {
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith { @() }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'template-deleted' }; remediate = $false; alert = $false; report = $true }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.template-deleted'
+            ($compareFields | Where-Object Field -EQ 'standards.ReusableSettingsTemplate.template-deleted').Current.isCompliant |
+                Should -BeFalse
+        }
+
+        It 'writes a compare row for a template whose stored JSON is empty' {
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith {
+                @([pscustomobject]@{ RowKey = 'template-empty'; JSON = ''; DisplayName = 'Empty' })
+            }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'template-empty' }; remediate = $false; alert = $false; report = $true }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.template-empty'
+        }
+
+        It 'covers the resolvable ids when only some of a selection resolve' {
+            # The unresolved id used to produce nothing at all, which is harder to spot.
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith {
+                @([pscustomobject]@{
+                        RowKey      = 'template-good'
+                        JSON        = '{"DisplayName":"Reusable Good","RawJSON":"{\"displayName\":\"Reusable Good\"}"}'
+                        DisplayName = 'Reusable Good'
+                    })
+            }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = @('template-good', 'template-missing') }; remediate = $false; alert = $false; report = $true }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.template-good'
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.template-missing'
+        }
+
+        It 'never pushes an empty body for an unresolved template' {
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith { @() }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'template-deleted' }; remediate = $true; alert = $false; report = $false }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            Should -Invoke -CommandName New-GraphPOSTRequest -Times 0
+        }
+    }
+
+    Context 'compare key matches the id the picker sent' {
+        It 'keys off TemplateList.value, not the GUID inside the stored JSON' {
+            # The JSON blob's GUID matches the RowKey for CIPP-created templates but not for
+            # imported rows, where it wrote the row under a key nobody reads.
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith {
+                @([pscustomobject]@{
+                        RowKey      = 'row-key-id'
+                        JSON        = '{"DisplayName":"Reusable A","GUID":"a-different-guid","RawJSON":"{\"displayName\":\"Reusable A\"}"}'
+                        DisplayName = 'Reusable A'
+                    })
+            }
+            Mock -CommandName New-GraphGETRequest -MockWith {
+                @([pscustomobject]@{ id = 'existing-9'; displayName = 'Reusable A' })
+            }
+            Mock -CommandName Compare-CIPPIntuneObject -MockWith { $null }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'row-key-id' }; remediate = $false; alert = $false; report = $true }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.row-key-id'
+            $compareFields.Field | Should -Not -Contain 'standards.ReusableSettingsTemplate.a-different-guid'
+        }
+
+        It 'raises its alert against the picker id too' {
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith {
+                @([pscustomobject]@{
+                        RowKey      = 'row-key-id'
+                        JSON        = '{"DisplayName":"Reusable A","GUID":"a-different-guid","RawJSON":"{\"displayName\":\"Reusable A\"}"}'
+                        DisplayName = 'Reusable A'
+                    })
+            }
+            Mock -CommandName New-GraphGETRequest -MockWith {
+                @([pscustomobject]@{ id = 'existing-9'; displayName = 'Reusable A' })
+            }
+            # [pscustomobject] to match what Compare-CIPPIntuneObject really returns.
+            Mock -CommandName Compare-CIPPIntuneObject -MockWith { [pscustomobject]@{ Difference = 'drift' } }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'row-key-id' }; remediate = $false; alert = $true; report = $false }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $alerts | Should -HaveCount 1
+            $alerts[0].Id | Should -BeExactly 'row-key-id'
+        }
+    }
 }

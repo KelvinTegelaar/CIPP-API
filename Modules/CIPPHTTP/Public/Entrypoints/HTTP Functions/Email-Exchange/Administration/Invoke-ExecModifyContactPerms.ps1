@@ -87,7 +87,8 @@ function Invoke-ExecModifyContactPerms {
                     UserID                 = $UserId
                     folderName             = $FolderName
                     UserToGetPermissions   = $TargetUser
-                    LoggingName            = $TargetUser
+                    # TargetUser may be a recipient id, so log the display name the caller saw
+                    LoggingName            = $Permission.DisplayName ?? $TargetUser
                     Permissions            = $PermissionLevel
                     SendNotificationToUser = $SendNotificationToUser
                 }

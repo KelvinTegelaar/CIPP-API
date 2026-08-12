@@ -9,7 +9,7 @@
   "docsDescription": "Disables the ability to add and run custom scripts on SharePoint and OneDrive sites at the tenant level. When custom scripts are allowed, governance cannot be enforced, and the capabilities of inserted code cannot be scoped or blocked. Microsoft recommends using the SharePoint Framework instead of custom scripts.",
   "impactColour": "danger",
   "addedDate": "2026-04-28",
-  "powershellEquivalent": "Set-SPOTenant -CustomScriptsRestrictMode $true",
+  "powershellEquivalent": "Portal only",
   "recommendedBy": [
     "CIPP"
   ],

@@ -19,76 +19,85 @@ function Push-StoreMailboxPermissions {
         Write-Information "Storing mailbox and calendar permissions for tenant $TenantFilter"
         Write-Information "Received $($Results.Count) batch results"
 
-        # Log each result for debugging
-        for ($i = 0; $i -lt $Results.Count; $i++) {
-            $result = $Results[$i]
-            Write-Information "Result $i type: $($result.GetType().Name), value: $($result | ConvertTo-Json -Depth 2 -Compress)"
+        # A batch result is normally the cmdlet-keyed hashtable, but an activity may return
+        # [hashtable, "status message"] - take the hashtable and ignore anything else.
+        $Unwrap = {
+            param($BatchResult)
+            $Actual = if ($BatchResult -is [array] -and $BatchResult.Count -gt 0) { $BatchResult[0] } else { $BatchResult }
+            if ($Actual -and ($Actual -is [hashtable] -or $Actual -is [System.Collections.IDictionary])) { $Actual }
         }
 
-        # Aggregate results by command type from all batches
-        $AllMailboxPermissions = [System.Collections.Generic.List[object]]::new()
-        $AllRecipientPermissions = [System.Collections.Generic.List[object]]::new()
-        $AllSendOnBehalfPermissions = [System.Collections.Generic.List[object]]::new()
-        $AllCalendarPermissions = [System.Collections.Generic.List[object]]::new()
+        # Grouped by cmdlet name due to ReturnWithCommand. Mailbox, recipient and
+        # send-on-behalf rows all land in the same MailboxPermissions type.
+        $MailboxCmdlets = 'Get-MailboxPermission', 'Get-RecipientPermission', 'Get-Mailbox'
 
+        # Count before writing. This pass only walks references that already live in
+        # $Item.Results, so it costs nothing next to the write; what it buys is the decision
+        # not to run a writer at all for a type with no rows. Add-CIPPDbItem's end block
+        # always writes the -Count row when -AddCount is present, so an unconditional
+        # pipeline would stamp a fresh count of 0 - without clearing the data rows - whenever
+        # every batch failed, and the freshness gates that read count rows (see
+        # Wait-CIPPBaselineCacheReady) would treat a stale cache as current.
+        $MailboxRows = 0
+        $CalendarRows = 0
         foreach ($BatchResult in $Results) {
-            # Activity functions may return an array [hashtable, "status message"]
-            # Extract the actual hashtable if result is an array
-            $ActualResult = $BatchResult
-            if ($BatchResult -is [array] -and $BatchResult.Count -gt 0) {
-                Write-Information "Result is array with $($BatchResult.Count) elements, extracting first element"
-                $ActualResult = $BatchResult[0]
-            }
+            $ActualResult = & $Unwrap $BatchResult
+            if (-not $ActualResult) { continue }
 
-            if ($ActualResult -and ($ActualResult -is [hashtable] -or $ActualResult -is [System.Collections.IDictionary])) {
-                Write-Information "Processing hashtable result with keys: $($ActualResult.Keys -join ', ')"
-                # Results are grouped by cmdlet name due to ReturnWithCommand
-                if ($ActualResult['Get-MailboxPermission']) {
-                    $MailboxPerms = @($ActualResult['Get-MailboxPermission'])
-                    Write-Information "Adding $($MailboxPerms.Count) mailbox permissions"
-                    $AllMailboxPermissions.AddRange($MailboxPerms)
+            foreach ($Cmdlet in $MailboxCmdlets) {
+                foreach ($Row in @($ActualResult[$Cmdlet])) {
+                    if ($null -ne $Row) { $MailboxRows++ }
                 }
-                if ($ActualResult['Get-RecipientPermission']) {
-                    $RecipientPerms = @($ActualResult['Get-RecipientPermission'])
-                    Write-Information "Adding $($RecipientPerms.Count) recipient permissions"
-                    $AllRecipientPermissions.AddRange($RecipientPerms)
-                }
-                if ($ActualResult['Get-Mailbox']) {
-                    $SendOnBehalfRows = @($ActualResult['Get-Mailbox'])
-                    Write-Information "Adding $($SendOnBehalfRows.Count) send-on-behalf permissions"
-                    $AllSendOnBehalfPermissions.AddRange($SendOnBehalfRows)
-                }
-                if ($ActualResult['Get-MailboxFolderPermission']) {
-                    $CalendarPerms = @($ActualResult['Get-MailboxFolderPermission'])
-                    Write-Information "Adding $($CalendarPerms.Count) calendar permissions"
-                    $AllCalendarPermissions.AddRange($CalendarPerms)
-                }
-            } else {
-                Write-Information "Skipping non-hashtable result: $($ActualResult.GetType().Name)"
+            }
+            foreach ($Row in @($ActualResult['Get-MailboxFolderPermission'])) {
+                if ($null -ne $Row) { $CalendarRows++ }
             }
         }
 
-        # Combine all permissions (mailbox and recipient) into a single collection
-        $AllPermissions = [System.Collections.Generic.List[object]]::new()
-        $AllPermissions.AddRange($AllMailboxPermissions)
-        $AllPermissions.AddRange($AllRecipientPermissions)
-        $AllPermissions.AddRange($AllSendOnBehalfPermissions)
+        # Rows are emitted straight into Add-CIPPDbItem rather than collected first.
+        #
+        # This used to build four Lists, then a fifth combining three of them, and hold all of it
+        # alongside $Item.Results - which is already the whole tenant's permission set - until both
+        # writes had finished. On a large tenant that is every permission record pinned twice over,
+        # and it showed: this job was one of two that took a production instance to 3.8GB.
+        #
+        # Feeding a script block into one pipeline keeps the peak at a single batch's rows, because
+        # Add-CIPPDbItem flushes every 100 and never accumulates. ONE invocation per Type is required,
+        # not merely tidier: its end block runs a single orphan cleanup keyed to the run id from its
+        # begin block and writes the -Count row once, so splitting the flush would have each later
+        # call treat rows the earlier ones just wrote as orphans (see Set-CIPPDBCacheDefenderCVEs).
+        if ($MailboxRows -gt 0) {
+            & {
+                foreach ($BatchResult in $Results) {
+                    $ActualResult = & $Unwrap $BatchResult
+                    if (-not $ActualResult) { continue }
 
-        Write-Information "Aggregated $($AllPermissions.Count) total permissions ($($AllMailboxPermissions.Count) mailbox + $($AllRecipientPermissions.Count) recipient + $($AllSendOnBehalfPermissions.Count) send-on-behalf)"
-        Write-Information "Aggregated $($AllCalendarPermissions.Count) calendar permissions"
+                    foreach ($Cmdlet in $MailboxCmdlets) {
+                        foreach ($Row in @($ActualResult[$Cmdlet])) {
+                            if ($null -ne $Row) { $Row }
+                        }
+                    }
+                }
+            } | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxPermissions' -AddCount
 
-        # Store all permissions together as MailboxPermissions
-        if ($AllPermissions.Count -gt 0) {
-            $AllPermissions | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxPermissions' -AddCount
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllPermissions.Count) mailbox permission records" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $MailboxRows mailbox permission records" -sev Info
         } else {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No mailbox permissions found to cache' -sev Info
         }
 
-        # Store calendar permissions separately
-        if ($AllCalendarPermissions.Count -gt 0) {
-            $AllCalendarPermissions | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' -AddCount
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllCalendarPermissions.Count) calendar permission records" -sev Info
+        if ($CalendarRows -gt 0) {
+            & {
+                foreach ($BatchResult in $Results) {
+                    $ActualResult = & $Unwrap $BatchResult
+                    if (-not $ActualResult) { continue }
+
+                    foreach ($Row in @($ActualResult['Get-MailboxFolderPermission'])) {
+                        if ($null -ne $Row) { $Row }
+                    }
+                }
+            } | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' -AddCount
+
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $CalendarRows calendar permission records" -sev Info
         } else {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No calendar permissions found to cache' -sev Info
         }

@@ -38,7 +38,13 @@ function Invoke-ExecEditCAPolicyFull {
 
         # Strip read-only properties that cannot be PATCHed
         $CleanBody = $PolicyBody | Select-Object -Property * -ExcludeProperty id, createdDateTime, modifiedDateTime, templateId
-        $RawJSON = ConvertTo-Json -InputObject $CleanBody -Depth 20 -Compress
+        # Round-trip so the canonicalizer always sees a PSCustomObject, whatever shape the request
+        # body deserialised into, then apply the same rules the template deploy path uses: managed
+        # keys the body omits are restored as their cleared form (that is how a PATCH clears an
+        # assignment) and a condition block Graph would reject half-populated becomes null instead.
+        $PolicyObject = ConvertTo-Json -InputObject $CleanBody -Depth 20 | ConvertFrom-Json
+        Format-CIPPCAPolicy -Policy $PolicyObject
+        $RawJSON = ConvertTo-Json -InputObject $PolicyObject -Depth 20 -Compress
 
         $null = New-GraphPOSTRequest `
             -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$PolicyId" `

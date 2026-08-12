@@ -16,7 +16,8 @@ function Invoke-ExecAddTrustedIP {
         })
     }
 
-    $tenantDomain = (Get-Tenants -TenantFilter $tenantfilter).defaultDomainName
+    $tenantDomain = if ($tenantfilter -eq 'AllTenants') { 'AllTenants' }
+    else { (Get-Tenants -TenantFilter $tenantfilter).defaultDomainName }
     if (-not $tenantDomain) {
         return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest

@@ -2,10 +2,10 @@
 #
 # The collector streams rows into a single Add-CIPPDbItem pipeline on purpose. Add-CIPPDbItem
 # runs its orphan cleanup and writes DefenderCVEs-Count once per pipeline, in its end block,
-# against the RunStartUtc captured in its begin block. Splitting the flush across several
-# calls would make each later call's cleanup delete rows written by earlier ones once the run
-# exceeded the skew margin, and would leave the stored count equal to the final chunk. These
-# tests fail if anyone reintroduces a per-chunk flush.
+# keyed to the run id minted in its begin block. Splitting the flush across several calls
+# would give each chunk its own run id, so each later call's cleanup would treat earlier
+# chunks' rows as orphans once the run exceeded the skew margin, and would leave the stored
+# count equal to the final chunk. These tests fail if anyone reintroduces a per-chunk flush.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -132,19 +132,23 @@ Describe 'Set-CIPPDBCacheDefenderCVEs flush semantics' {
         ($Payload.deviceDetailsJson | ConvertFrom-Json).deviceName | Should -Be @('PC-d1', 'PC-d2')
     }
 
-    It 'deletes only rows left over from an earlier run' {
+    It 'deletes only rows left over from an earlier run, never rows this run wrote' {
         Mock -CommandName Get-DefenderTvmRaw -MockWith { New-TvmRecord -cveId 'CVE-A' -deviceId 'd1' }
+        # Feed one of this run's own writes back through the cleanup query alongside a
+        # foreign row. The delete authority is the RunId stamped on every written row -
+        # identity, not age - so however slow the run or however far the storage clock
+        # drifts, only the foreign row may go.
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
-            @(
-                [pscustomobject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'DefenderCVEs-stale'; Timestamp = [datetimeoffset]::UtcNow.AddDays(-1) }
-                [pscustomobject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'DefenderCVEs-fresh'; Timestamp = [datetimeoffset]::UtcNow }
-            )
+            $OwnRows = foreach ($Write in $script:Writes) {
+                foreach ($E in $Write) { if ($E.RowKey -notlike '*-Count') { $E } }
+            }
+            @([pscustomobject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'DefenderCVEs-from-earlier-run'; ETag = '*' }) + @($OwnRows)
         }
 
         Set-CIPPDBCacheDefenderCVEs -TenantFilter $script:Tenant
 
         @($script:Removed).Count | Should -Be 1
-        $script:Removed[0].RowKey | Should -Be 'DefenderCVEs-stale'
+        $script:Removed[0].RowKey | Should -Be 'DefenderCVEs-from-earlier-run'
     }
 
     It 'does not touch the table when the fetch faults mid-stream' {

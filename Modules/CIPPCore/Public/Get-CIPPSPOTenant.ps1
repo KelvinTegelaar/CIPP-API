@@ -4,6 +4,9 @@ function Get-CIPPSPOTenant {
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
         [string]$SharepointPrefix,
+        # Only meaningful alongside SharepointPrefix. Sovereign clouds are not on sharepoint.com
+        # (see Get-SharePointAdminLink), so a prefix on its own cannot build the admin URL.
+        [string]$SharepointDomain = 'sharepoint.com',
         [switch]$SkipCache
     )
 
@@ -12,9 +15,10 @@ function Get-CIPPSPOTenant {
         $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
         $tenantName = $SharePointInfo.TenantName
         $AdminUrl = $SharePointInfo.AdminUrl
+        $SharepointDomain = $SharePointInfo.SharePointDomain
     } else {
         $tenantName = $SharepointPrefix
-        $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
+        $AdminUrl = "https://$($tenantName)-admin.$SharepointDomain"
     }
 
     $Table = Get-CIPPTable -tablename 'cachespotenant'
@@ -24,7 +28,12 @@ function Get-CIPPSPOTenant {
         $CachedTenant = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($CachedTenant -and (Test-Json $CachedTenant.JSON)) {
             $Results = $CachedTenant.JSON | ConvertFrom-Json
-            return $Results
+            # Rows written before SharepointDomain existed carry only the prefix, and everything
+            # downstream (Set-CIPPSPOTenant via the pipeline) would rebuild a sharepoint.com URL
+            # from it - wrong on sovereign clouds. Treat those rows as stale and re-resolve.
+            if ($Results.PSObject.Properties.Name -contains 'SharepointDomain') {
+                return $Results
+            }
         }
     }
 
@@ -36,9 +45,12 @@ function Get-CIPPSPOTenant {
         'Accept' = 'application/json;odata=verbose'
     }
 
-    $Results = New-GraphPostRequest -scope "$($AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($SharePointInfo.AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
+    # $AdminUrl, not $SharePointInfo.AdminUrl - the latter is empty when a prefix was supplied.
+    $Results = New-GraphPostRequest -scope "$($AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
 
-    $Results = $Results | Select-Object -Last 1 *, @{n = 'SharepointPrefix'; e = { $tenantName } }, @{n = 'TenantFilter'; e = { $TenantFilter } }
+    # SharepointDomain rides along with the prefix so Set-CIPPSPOTenant can rebuild the same
+    # admin URL from the pipeline (and from this cache row) without assuming .com.
+    $Results = $Results | Select-Object -Last 1 *, @{n = 'SharepointPrefix'; e = { $tenantName } }, @{n = 'SharepointDomain'; e = { $SharepointDomain } }, @{n = 'TenantFilter'; e = { $TenantFilter } }
 
     # Cache result
     $Entity = @{

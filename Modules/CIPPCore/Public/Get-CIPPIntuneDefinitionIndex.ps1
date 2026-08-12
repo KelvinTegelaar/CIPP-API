@@ -33,9 +33,9 @@ function Get-CIPPIntuneDefinitionIndex {
     [CmdletBinding()]
     param()
 
-    # Interpolated rather than Join-Path deliberately - this is the path expression the collection
-    # has always been read with, and path handling differs between the dev and container hosts.
-    $Path = "$env:CIPPRootPath\Config\intuneCollection.json"
+    # Join-Path, not an interpolated backslash: Get-Item normalises '\' on Linux but
+    # [System.IO.File] does not, so the read below threw and the index never loaded there.
+    $Path = Join-Path $env:CIPPRootPath 'Config/intuneCollection.json'
 
     # An index we already hold is always better than none. If the collection cannot be read or
     # parsed right now, keep serving the cached one rather than degrading every comparison to raw

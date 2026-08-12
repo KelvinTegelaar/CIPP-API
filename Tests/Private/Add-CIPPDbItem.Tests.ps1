@@ -59,4 +59,45 @@ Describe 'Add-CIPPDbItem authoritative empty collections' {
             $Entity.RowKey -eq 'IntuneIntents-old-policy'
         }
     }
+
+    It 'never deletes rows this run wrote, even when the cleanup query returns them' {
+        # The delete authority is the RunId stamped on every written row - identity, not
+        # age. This feeds a row THE RUN ITSELF WROTE back through the cleanup query, which
+        # is what an arbitrarily slow run or a storage clock running behind would produce;
+        # only the foreign row may be deleted.
+        $script:Flushed = [System.Collections.Generic.List[object]]::new()
+        Mock Add-CIPPAzDataTableEntity { $script:Flushed.AddRange(@($Entity)) }
+        Mock Get-CIPPAzDataTableEntity {
+            @(
+                [PSCustomObject]@{
+                    PartitionKey = 'contoso.onmicrosoft.com'
+                    RowKey       = 'IntuneIntents-earlier-run'
+                    ETag         = '*'
+                }
+            ) + @($script:Flushed | Where-Object { $_.RowKey -ne 'IntuneIntents-Count' })
+        }
+
+        $Policy = [PSCustomObject]@{ id = 'new-policy'; displayName = 'New policy' }
+        Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'IntuneIntents' -Data @($Policy) -AddCount -ClearOnEmpty
+
+        Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            @($Entity).Count -eq 1 -and @($Entity)[0].RowKey -eq 'IntuneIntents-earlier-run'
+        }
+    }
+
+    It 'stamps every written row with the run id the cleanup keys on' {
+        $script:Flushed = [System.Collections.Generic.List[object]]::new()
+        Mock Add-CIPPAzDataTableEntity { $script:Flushed.AddRange(@($Entity)) }
+        Mock Get-CIPPAzDataTableEntity { @() }
+
+        Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'IntuneIntents' -Data @(
+            [PSCustomObject]@{ id = 'a' }
+            [PSCustomObject]@{ id = 'b' }
+        )
+
+        $DataRows = @($script:Flushed | Where-Object { $_.RowKey -ne 'IntuneIntents-Count' })
+        $DataRows.Count | Should -Be 2
+        $DataRows | ForEach-Object { $_.RunId | Should -Not -BeNullOrEmpty }
+        ($DataRows.RunId | Sort-Object -Unique).Count | Should -Be 1
+    }
 }

@@ -86,7 +86,7 @@ function New-CIPPSharepointSite {
 
     $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
     $SitePath = $SiteName -replace ' ' -replace '[^A-Za-z0-9-]'
-    $SiteUrl = "https://$($SharePointInfo.TenantName).sharepoint.com/sites/$SitePath"
+    $SiteUrl = "$($SharePointInfo.SharePointUrl)/sites/$SitePath"
 
     # Resolve site language:
     # - Explicit positive LCID → use it (must be in $AllowedSiteLcids)
@@ -110,7 +110,7 @@ function New-CIPPSharepointSite {
             $RootLanguageError = $null
             try {
                 $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-                $RootWeb = New-GraphGetRequest -uri "https://$($SharePointInfo.TenantName).sharepoint.com/_api/web?`$select=Language" -tenantid $TenantFilter -scope "$($SharePointInfo.SharePointUrl)/.default" -extraHeaders $JsonAccept -UseCertificate -AsApp $true
+                $RootWeb = New-GraphGetRequest -uri "$($SharePointInfo.SharePointUrl)/_api/web?`$select=Language" -tenantid $TenantFilter -scope "$($SharePointInfo.SharePointUrl)/.default" -extraHeaders $JsonAccept -UseCertificate -AsApp $true
                 if ($RootWeb.Language -gt 0) {
                     $ResolvedLcid = [int]$RootWeb.Language
                 }

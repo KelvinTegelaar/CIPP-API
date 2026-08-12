@@ -4785,6 +4785,7 @@ Office 365 E5,ENTERPRISEPREMIUM,c7df2760-2c81-4ef7-b578-5b5392b571df,Deskless,8c
 Office 365 E5,ENTERPRISEPREMIUM,c7df2760-2c81-4ef7-b578-5b5392b571df,STREAM_O365_E5,6c6042f5-6f01-4d67-b8c1-eb99d36eed3e,Microsoft Stream for O365 E5 SKU
 Office 365 E5,ENTERPRISEPREMIUM,c7df2760-2c81-4ef7-b578-5b5392b571df,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,Microsoft Teams
 Office 365 E5,ENTERPRISEPREMIUM,c7df2760-2c81-4ef7-b578-5b5392b571df,RECORDS_MANAGEMENT,65cc641f-cccd-4643-97e0-a17e3045e541,Microsoft Records Management
+Office 365 E5,ENTERPRISEPREMIUM,c7df2760-2c81-4ef7-b578-5b5392b571df,MICROSOFT_TEAMS_EVENTS,29c62f1c-8ffc-4304-9cb9-398a6aa1852b,Microsoft Teams Events
 Office 365 E5 EEA (no Teams),Office_365_w/o_Teams_Bundle_E5,cf50bae9-29e8-4775-b07c-56ee10e3776d,DYN365_CDS_O365_P3,28b0fa46-c39a-4188-89e2-58e979a6b014,Common Data Service
 Office 365 E5 EEA (no Teams),Office_365_w/o_Teams_Bundle_E5,cf50bae9-29e8-4775-b07c-56ee10e3776d,POWER_VIRTUAL_AGENTS_O365_P3,ded3d325-1bdc-453e-8432-5bac26d7a014,Power Virtual Agents for Office 365
 Office 365 E5 EEA (no Teams),Office_365_w/o_Teams_Bundle_E5,cf50bae9-29e8-4775-b07c-56ee10e3776d,BI_AZURE_P2,70d33638-9c74-4d01-bfd3-562de28bd4ba,Power BI Pro
@@ -5989,3 +5990,10 @@ Agent 365,AGENT_365,796a6fb4-740b-4d36-bf56-9c12ca7fa069,ENTRA_ID_GOV_FOR_ASSIST
 Agent 365,AGENT_365,796a6fb4-740b-4d36-bf56-9c12ca7fa069,ENTRA_NETWORK_CONTROLS_FOR_ASSISTIVE_AGENTS,27e196a4-8b80-4930-bd65-53fd28581878,Microsoft Entra Network Controls for Assistive Agents
 Agent 365,AGENT_365,796a6fb4-740b-4d36-bf56-9c12ca7fa069,INFORMATION_PROTECTION_FOR_AGENTS,48478b49-91a1-4ded-94f0-066db80035ca,Microsoft Purview Information Protection for Agents
 Agent 365,AGENT_365,796a6fb4-740b-4d36-bf56-9c12ca7fa069,INSIDER_RISK_MANAGEMENT_FOR_AGENTS,004ddfc0-c92f-4b0a-90c5-c60646299d71,Microsoft Purview Insider Risk Management for Agents
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_MGMT,0504111f-feb8-4a3c-992a-70280f9a2869,Microsoft Teams Premium Intelligent
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_CUST,cc8c0802-a325-43df-8cba-995d0c6cb373,Microsoft Teams Premium Personalized
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_PROTECTION,f8b44f54-18bb-46a3-9658-44ab58712968,Microsoft Teams Premium Secure
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_VIRTUALAPPT,9104f592-f2a7-4f77-904c-ca5a5715883f,Microsoft Teams Premium Virtual Appointment
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,MCO_VIRTUAL_APPT,711413d0-b36e-4cd4-93db-0a50a4ab7ea3,Microsoft Teams Premium Virtual Appointments
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,QUEUES_APP,ab2d4fb5-f80a-4bf1-a11d-7f1da254041b,Queues app for Microsoft Teams
+Skype for Business PSTN Domestic and International Calling,MCOSMS2,d4009785-b899-4cab-97b6-d06a7c799507,MCOSMS2,d4009785-b899-4cab-97b6-d06a7c799507,DOMESTIC AND INTERNATIONAL CALLING PLAN

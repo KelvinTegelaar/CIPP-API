@@ -19,7 +19,7 @@ function Get-CIPPAlertHuntressRogueApps {
 
     try {
         $RogueApps = Invoke-RestMethod -Uri 'https://huntresslabs.github.io/rogueapps/rogueapps.json'
-        $CippRogueApps = (Get-Content -Path (Join-Path $env:CIPPRootPath 'Config\schemaDefinitions.json') | ConvertFrom-Json).applications.appId
+        $CippRogueApps = (Get-Content -Path (Join-Path $env:CIPPRootPath 'Config\MaliciousApps.json') | ConvertFrom-Json).applications.appId
         $HuntressRogueApps = $RogueApps.appId
         $RogueAppIds = @($CippRogueApps) + @($HuntressRogueApps) | Where-Object { $_ } | Select-Object -Unique
         $Requests = for ($i = 0; $i -lt $RogueAppIds.Count; $i += 15) {

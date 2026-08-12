@@ -43,6 +43,15 @@ function Invoke-ExecAzBobbyTables {
             if (!$Results) {
                 $Results = "Function $Function executed successfully"
             }
+            # Drop it from the Get-CIPPTable cache so it gets recreated on next use. The table
+            # name comes from the request, so clear everything when it was not supplied.
+            if ($Function -eq 'Remove-AzDataTable') {
+                if ($Request.Body.TableName) {
+                    Unregister-CIPPTable -TableName $Request.Body.TableName
+                } else {
+                    Unregister-CIPPTable -All
+                }
+            }
             $StatusCode = [HttpStatusCode]::OK
         } catch {
             $Results = $_.Exception.Message

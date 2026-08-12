@@ -84,7 +84,7 @@ function Invoke-CIPPSharePointTemplateDeploy {
                     $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
                     $SitePath = $SiteTemplate.displayName -replace ' ' -replace '[^A-Za-z0-9-]'
                     try {
-                        $ExistingSite = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/sites/$($SharePointInfo.TenantName).sharepoint.com:/sites/$($SitePath)?`$select=id" -tenantid $TenantFilter -AsApp $true
+                        $ExistingSite = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/sites/$($SharePointInfo.TenantName).$($SharePointInfo.SharePointDomain):/sites/$($SitePath)?`$select=id" -tenantid $TenantFilter -AsApp $true
                         $AlreadyExists = [bool]$ExistingSite.id
                     } catch {
                         # 404 means the site does not exist yet, which is the normal path.
@@ -141,7 +141,7 @@ function Invoke-CIPPSharePointTemplateDeploy {
                 $null = New-CIPPSharepointSite @SiteParams
                 $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
                 $SitePath = $SiteTemplate.displayName -replace ' ' -replace '[^A-Za-z0-9-]'
-                $SiteUrl = "https://$($SharePointInfo.TenantName).sharepoint.com/sites/$SitePath"
+                $SiteUrl = "$($SharePointInfo.SharePointUrl)/sites/$SitePath"
                 $Results.Add("[$TenantFilter] Created site '$($SiteTemplate.displayName)' at $SiteUrl")
             }
 

@@ -57,22 +57,44 @@ function Set-CIPPDBCacheDefenderCVEs {
                         recommendedSecurityUpdateUrl = $Vuln.recommendedSecurityUpdateUrl ?? ''
                         exploitabilityLevel          = $Vuln.exploitabilityLevel          ?? ''
 
-                        # Arrays to collect device metadata efficiently
-                        AffectedDevices              = [System.Collections.Generic.List[object]]::new()
+                        # Device metadata as the JSON text it will be stored as, not as objects.
+                        DeviceJson                   = [System.Text.StringBuilder]::new()
+                        DeviceCount                  = 0
                     }
                 }
 
-                # Extract properties specific to this device instance and append in one
-                # step, so a record that fails mid-extraction cannot leave a previous
-                # record's payload behind to be appended to the wrong CVE.
-                [void]$CveAggregator[$CveId].AffectedDevices.Add(@{
-                        deviceId        = ($Vuln.deviceId -join ',') ?? ''
-                        deviceName      = ($Vuln.deviceName -join ',') ?? ''
-                        osVersion       = $Vuln.osVersion ?? ''
-                        softwareVersion = ($Vuln.softwareVersion -join ',') ?? ''
-                        diskPaths       = if ($Vuln.diskPaths) { $Vuln.diskPaths -join ';' } else { '' }
-                        registryPaths   = if ($Vuln.registryPaths) { $Vuln.registryPaths -join ';' } else { '' }
-                    })
+                # Extract this device instance and fold it in as serialised text immediately.
+                #
+                # The aggregation itself is unavoidable: TVM returns one record per
+                # (device x software x CVE), so a CVE's records are scattered across the whole
+                # stream and its row cannot be written until the stream ends. What IS avoidable is
+                # keeping every record as a live object until then. This previously held one
+                # hashtable per record in a List per CVE - on a large tenant that is hundreds of
+                # thousands of hashtables, each carrying its own dictionary overhead plus six
+                # strings, and it is the single largest thing this job retains.
+                #
+                # Serialising on arrival keeps the same bytes in one allocation instead of eight,
+                # and lets the source record become collectable straight away. It also removes the
+                # second copy that used to exist at emit time, where a CVE's whole device List and
+                # the JSON produced from it were both live at once.
+                #
+                # ConvertTo-Json builds the fragment rather than string interpolation, so escaping
+                # of device names and registry paths stays correct.
+                $Fragment = @{
+                    deviceId        = ($Vuln.deviceId -join ',') ?? ''
+                    deviceName      = ($Vuln.deviceName -join ',') ?? ''
+                    osVersion       = $Vuln.osVersion ?? ''
+                    softwareVersion = ($Vuln.softwareVersion -join ',') ?? ''
+                    diskPaths       = if ($Vuln.diskPaths) { $Vuln.diskPaths -join ';' } else { '' }
+                    registryPaths   = if ($Vuln.registryPaths) { $Vuln.registryPaths -join ';' } else { '' }
+                } | ConvertTo-Json -Compress
+
+                # Appended only after the fragment is fully built, so a record that fails
+                # mid-extraction cannot leave a partial payload attached to the wrong CVE.
+                $Bucket = $CveAggregator[$CveId]
+                if ($Bucket.DeviceCount -gt 0) { [void]$Bucket.DeviceJson.Append(',') }
+                [void]$Bucket.DeviceJson.Append($Fragment)
+                $Bucket.DeviceCount++
             } catch {
                 $SkippedCount++
                 $ErrorMessage = Get-CippException -Exception $_
@@ -103,7 +125,7 @@ function Set-CIPPDBCacheDefenderCVEs {
         # this as a per-run cacheTimeStamp.
         $LastUpdated = [string]$(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
 
-        # Snapshot the keys so buckets can be dropped while iterating — enumerating
+        # Snapshot the keys so buckets can be dropped while iterating - enumerating
         # $CveAggregator.Keys directly and removing from it throws InvalidOperationException.
         $CveKeys = [string[]]$CveAggregator.Keys
 
@@ -111,19 +133,26 @@ function Set-CIPPDBCacheDefenderCVEs {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $UniqueCves CVEs" -sev 'Info'
 
             # A single Add-CIPPDbItem invocation, fed lazily. This is deliberate: the
-            # function's end block runs one orphan cleanup against the RunStartUtc captured
-            # in its begin block, and writes DefenderCVEs-Count once. Splitting the flush
-            # into several calls would make each later call's cleanup delete rows written by
-            # earlier ones as soon as the run exceeded the 5 minute skew margin, and would
-            # leave the stored count equal to the final chunk instead of the total.
+            # function's end block runs one orphan cleanup keyed to the run id minted in
+            # its begin block, and writes DefenderCVEs-Count once. Splitting the flush
+            # into several calls would give each chunk its own run id, so each later call's
+            # cleanup would treat earlier chunks' rows as orphans as soon as the run
+            # exceeded the 5 minute skew margin, and would leave the stored count equal to
+            # the final chunk instead of the total.
             & {
                 foreach ($CveKey in $CveKeys) {
                     $CveData = $CveAggregator[$CveKey]
 
-                    # Flatten or convert device info arrays into a compact, compressed JSON string.
-                    # Piped (not -InputObject) so a single-device CVE serialises to an object and a
-                    # multi-device CVE to an array, exactly as before.
-                    $CompactDeviceJson = $CveData.AffectedDevices | ConvertTo-Json -Compress
+                    # The fragments are already JSON; only the surrounding shape is decided here.
+                    # A single-device CVE stays a bare object and a multi-device CVE becomes an
+                    # array, which is what piping a List through ConvertTo-Json used to produce and
+                    # what Get-CIPPCVEReport and the CVE management endpoint parse.
+                    $CompactDeviceJson = if ($CveData.DeviceCount -eq 1) {
+                        $CveData.DeviceJson.ToString()
+                    } else {
+                        [void]$CveData.DeviceJson.Insert(0, '[').Append(']')
+                        $CveData.DeviceJson.ToString()
+                    }
 
                     @{
                         PartitionKey                 = $CveKey
@@ -138,7 +167,7 @@ function Set-CIPPDBCacheDefenderCVEs {
                         exploitabilityLevel          = $CveData.exploitabilityLevel
 
                         # Meta aggregation counts
-                        deviceCount                  = $CveData.AffectedDevices.Count
+                        deviceCount                  = $CveData.DeviceCount
 
                         # All individual device variations compressed safely inside a single field
                         deviceDetailsJson            = $CompactDeviceJson
