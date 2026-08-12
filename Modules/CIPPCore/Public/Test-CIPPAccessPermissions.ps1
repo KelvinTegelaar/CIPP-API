@@ -101,18 +101,18 @@ function Test-CIPPAccessPermissions {
             # non-interactive sign-ins, which are the redemptions themselves.
             try {
                 $SignInFilter = "appId eq '$($env:ApplicationID)' and signInEventTypes/any(t: t eq 'nonInteractiveUser')"
-                $SamSignIns = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$SignInFilter&`$top=10&`$select=createdDateTime,originalTransferMethod,authenticationProtocol" -tenantid $env:TenantID -NoAuthCheck $true -ErrorAction Stop
+                $SamSignIns = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$SignInFilter&`$top=10&`$select=createdDateTime,originalTransferMethod,authenticationProtocol" -tenantid $env:TenantID -NoAuthCheck $true -noPagination $true -ErrorAction Stop
                 $DeviceCodeSignIn = $SamSignIns | Where-Object { $_.originalTransferMethod -eq 'deviceCodeFlow' -or $_.authenticationProtocol -eq 'deviceCode' } | Select-Object -First 1
                 if ($DeviceCodeSignIn) {
-                    $ErrorMessages.Add('Your refresh token originated from a device code login. Security defaults and Conditional Access authentication flow policies block that flow when the token is redeemed, which fails Graph calls in affected tenants with a Conditional Access error. Refresh your SAM tokens to sign in again - the weekly token update will not replace it.') | Out-Null
+                    $ErrorMessages.Add('Your refresh token came from a device code login and will fail Conditional Access in some tenants. Refresh your SAM tokens, rotation will not replace it.') | Out-Null
                     $Success = $false
                 } else {
-                    $Messages.Add('Your refresh token did not originate from a device code login.') | Out-Null
+                    $Messages.Add('Your refresh token is not from a device code login.') | Out-Null
                 }
             } catch {
                 # Reading sign-in logs needs AuditLog.Read.All and an Entra ID P1 licence. Not
                 # having either is not an access check failure, it just leaves this unknown.
-                $Messages.Add('Could not determine whether your refresh token originated from a device code login. Reading sign-in logs requires AuditLog.Read.All and an Entra ID P1 license.') | Out-Null
+                $Messages.Add('Could not check for a device code login, this needs AuditLog.Read.All and Entra ID P1.') | Out-Null
             }
         }
 
