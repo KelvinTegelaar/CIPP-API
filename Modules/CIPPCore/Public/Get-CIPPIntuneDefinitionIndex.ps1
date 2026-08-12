@@ -33,9 +33,13 @@ function Get-CIPPIntuneDefinitionIndex {
     [CmdletBinding()]
     param()
 
-    # Interpolated rather than Join-Path deliberately - this is the path expression the collection
-    # has always been read with, and path handling differs between the dev and container hosts.
-    $Path = "$env:CIPPRootPath\Config\intuneCollection.json"
+    # Join-Path, not an interpolated backslash. The two path APIs below disagree about separators
+    # on Linux, which is what the container runs: PowerShell's provider normalises '\' to '/', so
+    # Get-Item -LiteralPath finds the file, but [System.IO.File] takes the path literally and
+    # throws "Could not find file". The index therefore never loaded on any Linux host - the read
+    # fell into the catch below and every Catalog comparison silently degraded to raw setting ids,
+    # which reads to a technician as drift on every setting of every policy.
+    $Path = Join-Path $env:CIPPRootPath 'Config/intuneCollection.json'
 
     # An index we already hold is always better than none. If the collection cannot be read or
     # parsed right now, keep serving the cached one rather than degrading every comparison to raw

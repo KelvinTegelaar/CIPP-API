@@ -22,7 +22,12 @@ BeforeAll {
     # function reads with, and the parent is derived from that string, so the test and the function
     # agree on where the file lives on both Windows and Linux.
     $script:FakeRoot = Join-Path ([System.IO.Path]::GetTempPath()) "cipp-defidx-$([guid]::NewGuid())"
-    $script:CollectionPath = "$script:FakeRoot\Config\intuneCollection.json"
+    # Join-Path, not an interpolated backslash: the collection is written below with
+    # [System.IO.File]::WriteAllText, which takes the path literally on Linux instead of
+    # normalising '\' the way PowerShell's provider does. Building it by hand put the fixture at a
+    # filename containing backslashes while the function looked in the real directory, so every
+    # test here failed on macOS and in Linux CI.
+    $script:CollectionPath = Join-Path $script:FakeRoot 'Config/intuneCollection.json'
     New-Item -ItemType Directory -Path (Split-Path -Parent $script:CollectionPath) -Force | Out-Null
     $env:CIPPRootPath = $script:FakeRoot
 
