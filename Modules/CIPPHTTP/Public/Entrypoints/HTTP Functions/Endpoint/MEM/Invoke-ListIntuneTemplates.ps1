@@ -33,20 +33,34 @@ function Invoke-ListIntuneTemplates {
     $RawTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
     if ($Request.query.View) {
         $Templates = $RawTemplates | ForEach-Object {
+            $Row = $_
             try {
-                $JSONData = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                $JSONData = $Row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
                 $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                if ($null -eq $data) { throw 'RAWJson is empty or not valid JSON' }
                 $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
                 $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
                 $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
-                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
-                $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $_.Package -Force
-                $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($_.SHA)) -Force
-                $data | Add-Member -NotePropertyName 'source' -NotePropertyValue $_.Source -Force
+                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $Row.RowKey -Force
+                $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $Row.Package -Force
+                $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($Row.SHA)) -Force
+                $data | Add-Member -NotePropertyName 'source' -NotePropertyValue $Row.Source -Force
                 $data | Add-Member -NotePropertyName 'reusableSettings' -NotePropertyValue $JSONData.ReusableSettings -Force
                 $data
             } catch {
-
+                # A row that fails to parse used to be dropped from this list entirely, so a corrupt
+                # template stayed selectable in the deploy pickers (which use the raw list) while
+                # being invisible here. Surface a stub so the broken row can be found and deleted.
+                [PSCustomObject]@{
+                    displayName = "$($JSONData.Displayname ?? $Row.RowKey) [corrupt template: $($_.Exception.Message)]"
+                    description = 'This template row failed to parse and cannot be deployed. Delete it from the template list and recreate it.'
+                    Type        = $JSONData.Type
+                    GUID        = $Row.RowKey
+                    package     = $Row.Package
+                    isSynced    = (![string]::IsNullOrEmpty($Row.SHA))
+                    source      = $Row.Source
+                    corrupt     = $true
+                }
             }
 
         } | Sort-Object -Property displayName

@@ -13,7 +13,12 @@ function Set-CIPPIntunePolicy {
         $AssignmentFilterName,
         $AssignmentFilterType = 'include',
         [array]$ReusableSettings,
-        [int]$LevenshteinDistance = 0
+        [int]$LevenshteinDistance = 0,
+        # 'append' (default) adds the requested assignments and leaves everything else in place.
+        # 'replace' makes the policy's assignments exactly what was requested - used by callers that
+        # own the assignment, so that a comparison demanding an exact set is actually satisfiable.
+        [ValidateSet('append', 'replace')]
+        [string]$AssignmentMode = 'append'
     )
 
     $RawJSON = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $RawJSON -EscapeForJson
@@ -23,19 +28,23 @@ function Set-CIPPIntunePolicy {
     }
 
     try {
+        if ([string]::IsNullOrWhiteSpace($RawJSON)) {
+            throw "The template contains no policy JSON (RAWJson is empty). The stored template row is corrupt, or a same-named duplicate row shadowed the one selected. Delete the broken copy of this template and recreate it."
+        }
         switch ($TemplateType) {
             'AppProtection' {
                 $PlatformType = 'deviceAppManagement'
-                $TemplateType = ($RawJSON | ConvertFrom-Json).'@odata.type' -replace '#microsoft.graph.', ''
-                if ([string]::IsNullOrWhiteSpace($TemplateType)) {
-                    throw "App Protection template '$DisplayName' does not contain @odata.type, so the policy type cannot be determined. Recreate the template or re-run the template sync to include @odata.type."
-                }
                 $PolicyFile = $RawJSON | ConvertFrom-Json
+                $TemplateTypeURL = Get-CIPPAppProtectionPolicyUrl -Policy $PolicyFile
+                if (-not $TemplateTypeURL) {
+                    throw "App Protection template '$DisplayName' identifies no platform - it carries no @odata.type, no @odata.context and no platform-specific settings - so the policy type cannot be determined. Recreate the template or re-run the template sync."
+                }
                 $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value $Description -Force
                 $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $DisplayName -Force
-                $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty 'apps'
+                # Read-only properties Graph echoes back on a GET. They are carried in the template
+                # because the capture keeps the payload whole, and Graph rejects them on the way in.
+                $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty 'apps', id, createdDateTime, lastModifiedDateTime, version, '@odata.context', isAssigned, deployedAppCount
                 $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 20
-                $TemplateTypeURL = if ($TemplateType -eq 'windowsInformationProtectionPolicy') { 'windowsInformationProtectionPolicies' } else { "$($TemplateType)s" }
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance
                 if ($FuzzyResult) {
@@ -138,6 +147,10 @@ function Set-CIPPIntunePolicy {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'deviceConfigurations'
                 $PolicyFile = $RawJSON | ConvertFrom-Json
+                if ([string]::IsNullOrWhiteSpace($DisplayName)) { $DisplayName = $PolicyFile.displayName ?? $PolicyFile.name }
+                if ([string]::IsNullOrWhiteSpace($DisplayName)) {
+                    throw "This device configuration template has no name - the template's Displayname column and the payload's displayName are both empty. Recreate the template."
+                }
                 $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value "$Description" -Force
                 $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $DisplayName -Force
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
@@ -166,6 +179,9 @@ function Set-CIPPIntunePolicy {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'configurationPolicies'
                 $DisplayName = Get-CIPPIntunePolicyName -TemplateType 'Catalog' -RawJSON $RawJSON -DisplayName $DisplayName
+                if ([string]::IsNullOrWhiteSpace($DisplayName)) {
+                    throw "This Settings Catalog template has no name - the payload's 'name' and the template's Displayname column are both empty. The stored template row is corrupt (often a duplicate created by a re-import); delete and recreate it."
+                }
                 if ($ReusableSettings) {
                     Write-Verbose "Catalog: ReusableSettings count $($ReusableSettings.Count)"
                     Write-Verbose ('Catalog: ReusableSettings detail ' + ($ReusableSettings | ConvertTo-Json -Depth 5 -Compress))
@@ -302,12 +318,13 @@ function Set-CIPPIntunePolicy {
             Write-Host "ID is $($CreateRequest.id)"
 
             $AssignParams = @{
-                GroupName    = $AssignTo
-                PolicyId     = $CreateRequest.id
-                PlatformType = $PlatformType
-                Type         = $TemplateTypeURL
-                TenantFilter = $tenantFilter
-                ExcludeGroup = $ExcludeGroup
+                GroupName      = $AssignTo
+                PolicyId       = $CreateRequest.id
+                PlatformType   = $PlatformType
+                Type           = $TemplateTypeURL
+                TenantFilter   = $tenantFilter
+                ExcludeGroup   = $ExcludeGroup
+                AssignmentMode = $AssignmentMode
             }
 
             if ($AssignmentFilterName) {

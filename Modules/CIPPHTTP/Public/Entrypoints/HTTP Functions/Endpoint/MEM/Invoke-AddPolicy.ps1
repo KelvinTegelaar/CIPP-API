@@ -38,7 +38,13 @@ function Invoke-AddPolicy {
         if (-not $reusableSettings -or $reusableSettings.Count -eq 0) {
             try {
                 $templatesTable = Get-CippTable -tablename 'templates'
-                $templateEntity = Get-CIPPAzDataTableEntity @templatesTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$($Request.Body.TemplateID ?? $Request.Body.TemplateId ?? $Request.Body.TemplateGuid ?? $Request.Body.TemplateGUID)'" | Select-Object -First 1
+                # The deploy drawer and wizard send the chosen row's GUID as TemplateList.value, not
+                # as TemplateID. Template display names are not unique - re-imports create same-named
+                # twins - so resolving by display name below can land on a different row than the one
+                # the user picked. The selected RowKey must win whenever the request carries one.
+                # String rather than Guid: built-in templates are stored with their filename as RowKey.
+                $SelectedTemplateId = ConvertTo-CIPPODataFilterValue -Value ($Request.Body.TemplateID ?? $Request.Body.TemplateId ?? $Request.Body.TemplateGuid ?? $Request.Body.TemplateGUID ?? $Request.Body.TemplateList.value) -Type String
+                $templateEntity = Get-CIPPAzDataTableEntity @templatesTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$SelectedTemplateId'" | Select-Object -First 1
                 if (-not $templateEntity -and $DisplayName) {
                     $templateEntity = Get-CIPPAzDataTableEntity @templatesTable -Filter "PartitionKey eq 'IntuneTemplate'" | Where-Object { ($_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue).Displayname -eq $DisplayName } | Select-Object -First 1
                 }
