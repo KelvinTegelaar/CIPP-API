@@ -38926,6 +38926,86 @@
         "x-cipp-role": "CIPP.Core.Read"
       }
     },
+    "/api/ListCippDocs": {
+      "get": {
+        "summary": "Search the CIPP documentation, or fetch one documentation page in full.",
+        "operationId": "ListCippDocs",
+        "tags": [
+          "CIPP > Core"
+        ],
+        "description": "Searches the GitBook documentation shipped with this build and returns matching sections,\neach with an excerpt and links back to docs.cipp.app and to the file on GitHub. Pages under\nuser-documentation also report the CIPP route they document, so a screen can be traced to\nits docs and back.\n\nPass path on its own to list the pages under a documentation subtree or a CIPP route, or\nwith full=true to return one page's entire text. This backs the SearchDocs and GetDoc MCP\ntools and is available to the UI and API clients on the same terms.",
+        "parameters": [
+          {
+            "name": "full",
+            "in": "query",
+            "description": "Return the whole page rather than matching sections. Requires path.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum results to return (default 8, max 25).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "description": "A documentation subtree ('user-documentation/identity') or a CIPP route ('/identity/administration/users').",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "description": "Keywords or a plain-language question, e.g. 'how do I set up GDAP'.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListCippQueue": {
       "get": {
         "summary": "ListCippQueue",
