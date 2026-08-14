@@ -9,6 +9,20 @@ function Set-CIPPMobileDevice(
     [string]$APIName = 'Mobile Device'
 ) {
 
+    # Delete is evaluated first: the caller sends Quarantine 'false' alongside Delete 'true', so
+    # testing Quarantine up front would allow the device and return before ever reaching the removal.
+    try {
+        if ($Delete -eq 'true') {
+            New-ExoRequest -tenant $TenantFilter -cmdlet 'Remove-MobileDevice' -cmdParams @{Identity = $Guid; Confirm = $false } -UseSystemMailbox $true
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Deleted Active Sync Device for $UserId" -Sev 'Info'
+            return "Deleted Active Sync Device for $UserId"
+        }
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete Mobile Device $($Guid): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        return "Failed to delete Mobile Device $($Guid): $($ErrorMessage.NormalizedError)"
+    }
+
     try {
         if ($Quarantine -eq 'false') {
             New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-CASMailbox' -cmdParams @{Identity = $UserId; ActiveSyncAllowedDeviceIDs = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $DeviceId } }
@@ -28,17 +42,5 @@ function Set-CIPPMobileDevice(
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to Block Active Sync Device for $($UserId): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
             return "Failed to Block Active Sync Device for $($UserId): $($ErrorMessage.NormalizedError)"
         }
-    }
-
-    try {
-        if ($Delete -eq 'true') {
-            New-ExoRequest -tenant $TenantFilter -cmdlet 'Remove-MobileDevice' -cmdParams @{Identity = $Guid; Confirm = $false } -UseSystemMailbox $true
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Deleted Active Sync Device for $UserId" -Sev 'Info'
-            return "Deleted Active Sync Device for $UserId"
-        }
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete Mobile Device $($Guid): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        return "Failed to delete Mobile Device $($Guid): $($ErrorMessage.NormalizedError)"
     }
 }
