@@ -19,6 +19,19 @@ function Invoke-GitHubApiRequest {
         $Configuration = @{ Enabled = $false }
     }
 
+    function Invoke-GitHubFunctionAppRequest {
+        param($Method, $Path, $Body, $Accept)
+        $Action = @{
+            Action = 'ApiCall'
+            Path   = $Path
+            Method = $Method
+            Body   = $Body
+            Accept = $Accept
+        }
+        $ActionBody = $Action | ConvertTo-Json -Depth 10
+        (Invoke-RestMethod -Uri 'https://cippy.azurewebsites.net/api/ExecGitHubAction' -Method POST -Body $ActionBody -ContentType 'application/json').Results
+    }
+
     if ($Configuration.Enabled) {
         $APIKey = Get-ExtensionAPIKey -Extension 'GitHub'
         $Headers = @{
@@ -54,18 +67,19 @@ function Invoke-GitHubApiRequest {
                 return $Response
             }
         } catch {
+            # A bad or rate-limited PAT shouldn't take down read paths the function app can serve
+            # anonymously. Writes stay on the PAT - the function app would run them as its own
+            # identity, not the user's.
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            if ($StatusCode -in 401, 403, 429) {
+                Write-LogMessage -API 'GitHub' -tenant 'CIPP' -Sev 'Error' -message "GitHub rejected the configured API token (status $StatusCode) for [$Method] $Path. Verify the GitHub integration API key is valid and has not expired. Error: $($_.Exception.Message)"
+                if ($Method -eq 'GET') {
+                    return Invoke-GitHubFunctionAppRequest -Method $Method -Path $Path -Body $Body -Accept $Accept
+                }
+            }
             throw $_.Exception.Message
         }
     } else {
-        $Action = @{
-            Action = 'ApiCall'
-            Path   = $Path
-            Method = $Method
-            Body   = $Body
-            Accept = $Accept
-        }
-        $Body = $Action | ConvertTo-Json -Depth 10
-
-        (Invoke-RestMethod -Uri 'https://cippy.azurewebsites.net/api/ExecGitHubAction' -Method POST -Body $Body -ContentType 'application/json').Results
+        Invoke-GitHubFunctionAppRequest -Method $Method -Path $Path -Body $Body -Accept $Accept
     }
 }
