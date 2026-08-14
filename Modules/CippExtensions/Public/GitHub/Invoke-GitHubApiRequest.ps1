@@ -8,7 +8,10 @@ function Invoke-GitHubApiRequest {
         [Parameter()]
         $Body,
         [string]$Accept = 'application/vnd.github+json',
-        [switch]$ReturnHeaders
+        [switch]$ReturnHeaders,
+        # Skip the anonymous function-app fallback so token failures surface to the caller -
+        # the test endpoint needs the real verdict on the configured PAT, not a masked success.
+        [switch]$NoFallback
     )
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
@@ -73,7 +76,7 @@ function Invoke-GitHubApiRequest {
             $StatusCode = $_.Exception.Response.StatusCode.value__
             if ($StatusCode -in 401, 403, 429) {
                 Write-LogMessage -API 'GitHub' -tenant 'CIPP' -Sev 'Error' -message "GitHub rejected the configured API token (status $StatusCode) for [$Method] $Path. Verify the GitHub integration API key is valid and has not expired. Error: $($_.Exception.Message)"
-                if ($Method -eq 'GET') {
+                if ($Method -eq 'GET' -and -not $NoFallback) {
                     return Invoke-GitHubFunctionAppRequest -Method $Method -Path $Path -Body $Body -Accept $Accept
                 }
             }
