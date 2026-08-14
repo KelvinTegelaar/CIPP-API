@@ -77,10 +77,13 @@ function Get-CIPPSharePointSiteUsageReport {
             throw 'No SharePoint site listing data found in reporting database. Sync SharePointSiteUsage cache first.'
         }
 
+        # No usage rows is a valid cached result, not a missing cache: getSharePointSiteUsageDetail
+        # returns an empty set for tenants Microsoft has no usage report for yet. The site listing
+        # is the backbone of this payload and the usage merge below is a left join, so an empty
+        # usage set yields the same rows-with-null-usage the live path returns. Throwing here made
+        # the single-tenant cached view fail on tenants the live view and the AllTenants branch of
+        # this same function both render fine.
         $UsageItems = @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteUsage' | Where-Object { $_.RowKey -ne 'SharePointSiteUsage-Count' })
-        if (-not $UsageItems) {
-            throw 'No SharePoint site usage data found in reporting database. Sync SharePointSiteUsage cache first.'
-        }
 
         $LatestSiteTimestamp = ($SiteItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
         $LatestUsageTimestamp = ($UsageItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp

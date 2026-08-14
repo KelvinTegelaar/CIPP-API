@@ -44,10 +44,11 @@ function Get-CIPPOneDriveUsageReport {
             throw 'No OneDrive site listing data found in reporting database. Sync OneDriveUsage cache first.'
         }
 
+        # No usage rows is a valid cached result, not a missing cache: getOneDriveUsageAccountDetail
+        # returns an empty set for tenants Microsoft has no usage report for yet. The site listing
+        # is the backbone of this payload and the usage merge below is a left join, so an empty
+        # usage set yields the same rows-with-null-usage the live path returns.
         $UsageItems = @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveUsage' | Where-Object { $_.RowKey -ne 'OneDriveUsage-Count' })
-        if (-not $UsageItems) {
-            throw 'No OneDrive usage data found in reporting database. Sync OneDriveUsage cache first.'
-        }
 
         $LatestSiteTimestamp = ($SiteItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
         $LatestUsageTimestamp = ($UsageItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
