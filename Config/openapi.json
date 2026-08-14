@@ -4670,10 +4670,20 @@
                     }
                   },
                   "TemplateGuid": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The deploy drawer and wizard send the chosen row's GUID as TemplateList.value, not as TemplateID. Template display names are not unique - re-imports create same-named twins - so resolving by display name below can land on a different row than the one the user picked. The selected RowKey must win whenever the request carries one. String rather than Guid: built-in templates are stored with their filename as RowKey."
                   },
                   "TemplateID": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The deploy drawer and wizard send the chosen row's GUID as TemplateList.value, not as TemplateID. Template display names are not unique - re-imports create same-named twins - so resolving by display name below can land on a different row than the one the user picked. The selected RowKey must win whenever the request carries one. String rather than Guid: built-in templates are stored with their filename as RowKey."
+                  },
+                  "TemplateList": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The deploy drawer and wizard send the chosen row's GUID as TemplateList.value, not as TemplateID. Template display names are not unique - re-imports create same-named twins - so resolving by display name below can land on a different row than the one the user picked. The selected RowKey must win whenever the request carries one. String rather than Guid: built-in templates are stored with their filename as RowKey."
                   },
                   "TemplateType": {
                     "type": "string"
@@ -46309,21 +46319,24 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "corrupt": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "description": {
-                        "x-cipp-field-source": "frontend"
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "displayName": {
-                        "x-cipp-field-source": "frontend"
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "guid": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,backend"
                       },
                       "isSynced": {
-                        "x-cipp-field-source": "frontend"
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "JSON": {
                         "x-cipp-field-source": "storage"
@@ -46332,7 +46345,7 @@
                         "x-cipp-field-source": "backend"
                       },
                       "package": {
-                        "x-cipp-field-source": "storage,frontend"
+                        "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
@@ -46348,7 +46361,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "source": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,backend"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -49142,6 +49155,48 @@
           }
         ],
         "x-cipp-role": "Tenant.Relationship.Read"
+      }
+    },
+    "/api/ListPartnerTenantInfo": {
+      "get": {
+        "summary": "ListPartnerTenantInfo",
+        "operationId": "ListPartnerTenantInfo",
+        "tags": [
+          "CIPP > Core"
+        ],
+        "description": "Reports whether the CIPP host tenant is a Microsoft Partner tenant, so the frontend can\ndecide whether partner-only flows (GDAP onboarding, reseller invites, GDAP permission\nchecks) apply to this instance.\n\nMarked AnyTenant deliberately. This answers a question about the CIPP instance, not\nabout a tenant the caller wants to act on, and Get-CippPartnerTenantInfo pins the lookup\nto $env:TenantID. Without the flag, Test-CIPPAccess falls back to $env:TenantID as the\ntenant filter and denies any custom role that blocks the partner tenant, which silently\ngreys out partner-only UI for roles that are otherwise fully permitted.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListPendingWebhooks": {
