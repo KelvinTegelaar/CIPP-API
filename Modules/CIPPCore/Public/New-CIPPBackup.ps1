@@ -54,6 +54,7 @@ function New-CIPPBackup {
                         'Extensions'
                         'WebhookRules'
                         'ScheduledTasks'
+                        'DeltaQueries'
                         'TenantProperties'
                         'TenantGroups'
                         'TenantGroupMembers'
