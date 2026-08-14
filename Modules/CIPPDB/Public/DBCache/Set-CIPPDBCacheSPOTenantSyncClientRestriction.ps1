@@ -30,21 +30,33 @@ function Set-CIPPDBCacheSPOTenantSyncClientRestriction {
 
         $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter
 
-        if ($SPOTenant) {
-            $SyncRestriction = [PSCustomObject]@{
-                TenantRestrictionEnabled = $SPOTenant.TenantRestrictionEnabled
-                AllowedDomainList        = $SPOTenant.AllowedDomainList
-                BlockMacSync             = $SPOTenant.BlockMacSync
-                ConditionalAccessPolicy  = $SPOTenant.ConditionalAccessPolicy
-                TenantFilter             = $TenantFilter
-            }
-            $Data = @($SyncRestriction)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenantSyncClientRestriction' -Data $Data -AddCount
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached SharePoint sync client restriction' -sev Debug
+        # An empty response is a failure too - see Set-CIPPDBCacheSPOTenant.
+        if (-not $SPOTenant) {
+            throw 'The SharePoint admin endpoint returned no tenant configuration'
         }
+
+        $SyncRestriction = [PSCustomObject]@{
+            TenantRestrictionEnabled = $SPOTenant.TenantRestrictionEnabled
+            AllowedDomainList        = $SPOTenant.AllowedDomainList
+            BlockMacSync             = $SPOTenant.BlockMacSync
+            ConditionalAccessPolicy  = $SPOTenant.ConditionalAccessPolicy
+            TenantFilter             = $TenantFilter
+        }
+        $Data = @($SyncRestriction)
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenantSyncClientRestriction' -Data $Data -AddCount
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached SharePoint sync client restriction' -sev Debug
         $SPOTenant = $null
 
     } catch {
+        # Missing SharePoint consent is a tenant state, not a collection failure - see
+        # Set-CIPPDBCacheSPOTenant.
+        if ($_.Exception.Data['SPOAccessDenied']) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message $_.Exception.Message -sev Warning
+            return
+        }
+
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache SPO sync client restriction: $($_.Exception.Message)" -sev Error
+        # Anything else is unexpected, so let the caller count it.
+        throw
     }
 }

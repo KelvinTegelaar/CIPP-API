@@ -177,8 +177,8 @@ function New-GraphDeltaQuery {
             # Always return full response with deltaLink
             return $result
         } catch {
-            Write-Error "Failed to create Delta Query: $(Get-NormalizedError -Message $_.Exception.message)"
             Write-Warning $_.InvocationInfo.PositionMessage
+            throw "Failed to create Delta Query: $(Get-NormalizedError -Message $_.Exception.message)"
         }
     }
 }

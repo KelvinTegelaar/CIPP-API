@@ -12,6 +12,9 @@ function Get-CIPPAzDataTableEntity {
     Kept as a wrapper for backward compatibility with existing call sites, to
     default MaxRetries to 3 for throttled requests, and to record entities the
     module could not reassemble.
+
+    On TableNotFound, invalidates the CreateTable cache, recreates the table, and
+    retries once so a stale CIPPEnsuredTables entry cannot permanently break reads.
     #>
     [CmdletBinding()]
     param(
@@ -33,6 +36,24 @@ function Get-CIPPAzDataTableEntity {
     $null = $Parameters.Remove('ErrorVariable')
 
     $Results = Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
+
+    # Do not pipe $null/$empty into Where-Object - PowerShell invokes the block once with $_ = $null.
+    $NotFoundErrors = [System.Collections.Generic.List[object]]::new()
+    foreach ($Candidate in @($TableErrors)) {
+        if ($null -ne $Candidate -and (Test-CIPPTableNotFound $Candidate)) {
+            $NotFoundErrors.Add($Candidate)
+        }
+    }
+    if ($NotFoundErrors.Count -and -not $script:CIPPRepairingTable) {
+        $script:CIPPRepairingTable = $true
+        try {
+            Repair-CIPPTable -Context $Context
+            $TableErrors = $null
+            $Results = Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
+        } finally {
+            $script:CIPPRepairingTable = $false
+        }
+    }
 
     foreach ($TableError in $TableErrors) {
         # An entity whose rows cannot be reassembled is skipped by the module and reported without

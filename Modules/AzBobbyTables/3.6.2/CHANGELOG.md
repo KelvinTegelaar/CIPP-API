@@ -7,10 +7,12 @@ The format is based on and uses the types of changes according to [Keep a Change
 ### Added
 
 - Added `Add-AzDataTableLargeEntity`, `Get-AzDataTableLargeEntity` and `Remove-AzDataTableLargeEntity` for working with entities that exceed the Azure Table Storage size limits (64 KiB per string property, 1 MiB per entity). Oversized string properties are split into chunk properties recorded in a `SplitOverProps` JSON manifest, and entities that are still too large are distributed over multiple rows marked with `OriginalEntityId` and `PartIndex`; reads reassemble the original entity transparently and removes delete all part rows. The existing entity cmdlets are unaffected.
+- Added `Update-AzDataTableLargeEntity` for updating entities that exceed the Azure Table Storage size limits. Unlike the upsert operation types of `Add-AzDataTableLargeEntity`, entities that do not exist cause an error instead of being created. `UpdateReplace` rewrites the logical entity and removes part rows the new version no longer uses; `UpdateMerge` merges a plain single-row entity in place, and reads, merges and rewrites entities that were split for size, since merging onto physical rows directly would corrupt reassembly.
 
 ### Fixed
 
 - `Get-AzDataTableEntity` no longer fails with `400 InvalidInput` when `-First` is given a value above 1000. The page-size hint introduced in 3.6.1 was passed to the service unclamped, and Azure Table Storage rejects a page size over its limit of 1000 rather than capping it. The hint is now clamped to that limit. Results are unchanged: the hint only sizes each page, so requests for more than 1000 entities are served by paging, as they were before 3.6.1.
+- `Update-AzDataTableEntity` no longer creates entities that do not exist when called with `-Force` or with entities that carry no ETag. Batched update actions were submitted without an `If-Match` header in those cases, which the table service treats as an insert-or-merge. Update actions now always carry `If-Match` (`*` when no ETag applies), matching the non-batched path and the documented behavior.
 
 ## [3.6.1] - 2026-07-29
 

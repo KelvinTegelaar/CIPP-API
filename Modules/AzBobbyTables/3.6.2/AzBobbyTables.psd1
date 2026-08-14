@@ -75,6 +75,7 @@ CmdletsToExport = @(
     'Remove-AzDataTableEntity'
     'Remove-AzDataTableLargeEntity'
     'Update-AzDataTableEntity'
+    'Update-AzDataTableLargeEntity'
     'New-AzDataTableContext'
     'Remove-AzDataTable'
     'New-AzDataTable'

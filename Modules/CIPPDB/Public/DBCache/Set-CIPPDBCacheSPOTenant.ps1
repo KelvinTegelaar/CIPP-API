@@ -28,14 +28,32 @@ function Set-CIPPDBCacheSPOTenant {
 
         $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter -SkipCache
 
-        if ($SPOTenant) {
-            $SPOTenantArray = @($SPOTenant)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenant' -Data $SPOTenantArray -AddCount
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached SharePoint Online tenant configuration' -sev Debug
+        # An empty response is a failure too: this collection only runs for SharePoint-licensed
+        # tenants, so there is always a configuration object to return. Falling through quietly
+        # left the stored count row untouched and indistinguishable from a successful run.
+        if (-not $SPOTenant) {
+            throw 'The SharePoint admin endpoint returned no tenant configuration'
         }
+
+        $SPOTenantArray = @($SPOTenant)
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenant' -Data $SPOTenantArray -AddCount
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached SharePoint Online tenant configuration' -sev Debug
         $SPOTenant = $null
 
     } catch {
+        # A tenant with no SharePoint consent is not a failed collection - it is a tenant nobody has
+        # consented yet, and it will answer 401 every night until that changes. Failing the activity
+        # for it would bury genuine failures under a permanent one, so record it and move on. The
+        # data still reads as stale on the dashboard, because it is.
+        if ($_.Exception.Data['SPOAccessDenied']) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message $_.Exception.Message -sev Warning
+            return
+        }
+
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache SPO tenant configuration: $($_.Exception.Message)" -sev Error
+        # Anything else is unexpected, so let the caller count it. Swallowing left
+        # Invoke-CIPPDBCacheCollection reporting 'N succeeded, 0 failed' and the queue Completed
+        # while the count row silently kept its old timestamp.
+        throw
     }
 }

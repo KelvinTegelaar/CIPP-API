@@ -1,15 +1,24 @@
 function Get-CippMcpToolList {
     <#
     .SYNOPSIS
-        Returns the fixed five-tool gateway advertised to MCP clients.
+        Returns the fixed core-tool gateway advertised to MCP clients.
     .DESCRIPTION
         tools/list never dumps the full read-only catalog (200+ tool schemas would flood the
-        client's context window). Instead every connection is offered the same five core tools:
+        client's context window). Instead every connection is offered the same core tools:
           - ListTenants       direct passthrough; the entry point for tenant resolution
           - ListGraphRequest  direct passthrough; arbitrary Microsoft Graph GET proxy
           - SearchTools       browse/search the catalog (compact results, no schemas)
           - GetToolInfo       full description + inputSchema for named catalog tools
           - ExecTool          execute any catalog tool by name
+          - SearchDocs        search the CIPP documentation
+          - GetDoc            fetch one documentation page in full
+
+        SearchDocs and GetDoc are advertised rather than left to be discovered through
+        SearchTools because they answer a different kind of question from the rest of the
+        catalog. Every other tool returns tenant data; these explain what CIPP does and how to
+        drive it, which is exactly what an agent needs *before* it knows which data tool to
+        reach for. A model that has to already suspect the docs exist in order to find them
+        will simply guess at CIPP's behaviour instead.
         The connector URL's query filters (?tags=, ?tools=, ?first=) scope the catalog visible to
         SearchTools/GetToolInfo/ExecTool; the five core tools themselves are always advertised.
         Passthrough schemas are projected live from the catalog so they track openapi.json.
@@ -80,6 +89,33 @@ function Get-CippMcpToolList {
                 required   = @('name')
             }
             annotations = [ordered]@{ title = 'ExecTool'; readOnlyHint = $true }
+        })
+
+    $Tools.Add([ordered]@{
+            name        = 'SearchDocs'
+            description = 'Search the CIPP documentation (docs.cipp.app) by keywords or a plain-language question. Use this to find out how a CIPP feature works, how to configure something, or what a screen does - it answers "how do I" and "what is", where the other tools return tenant data. Results are individual sections with an excerpt and a link that deep-links to the matching heading. Pass path to scope to one area, or to look up the documentation for a CIPP screen by its route (e.g. "/identity/administration/users").'
+            inputSchema = [ordered]@{
+                type       = 'object'
+                properties = [ordered]@{
+                    query = @{ type = 'string'; description = 'Keywords or a question, e.g. "how do I set up GDAP" or "conditional access templates".' }
+                    path  = @{ type = 'string'; description = 'Optional. Restrict to a documentation subtree ("user-documentation/identity") or a CIPP route ("/identity/administration/users").' }
+                    limit = @{ type = 'integer'; description = 'Maximum results (default 8, max 25).' }
+                }
+            }
+            annotations = [ordered]@{ title = 'SearchDocs'; readOnlyHint = $true }
+        })
+
+    $Tools.Add([ordered]@{
+            name        = 'GetDoc'
+            description = 'Fetch one CIPP documentation page in full, when a SearchDocs excerpt is not enough. Takes the "path" from a SearchDocs result, a published docs.cipp.app slug, or the CIPP route the page documents.'
+            inputSchema = [ordered]@{
+                type       = 'object'
+                properties = [ordered]@{
+                    path = @{ type = 'string'; description = 'The page to fetch, as returned in a SearchDocs result''s "path".' }
+                }
+                required   = @('path')
+            }
+            annotations = [ordered]@{ title = 'GetDoc'; readOnlyHint = $true }
         })
 
     Write-Information "[MCP] tools/list -> $($Tools.Count) core tools (catalog=$FilteredCount)"

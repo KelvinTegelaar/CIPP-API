@@ -44,10 +44,11 @@ function Get-CIPPOneDriveUsageReport {
             throw 'No OneDrive site listing data found in reporting database. Sync OneDriveUsage cache first.'
         }
 
+        # No usage rows is a valid cached result, not a missing cache: getOneDriveUsageAccountDetail
+        # returns an empty set for tenants Microsoft has no usage report for yet. The site listing
+        # is the backbone of this payload and the usage merge below is a left join, so an empty
+        # usage set yields the same rows-with-null-usage the live path returns.
         $UsageItems = @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveUsage' | Where-Object { $_.RowKey -ne 'OneDriveUsage-Count' })
-        if (-not $UsageItems) {
-            throw 'No OneDrive usage data found in reporting database. Sync OneDriveUsage cache first.'
-        }
 
         $LatestSiteTimestamp = ($SiteItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
         $LatestUsageTimestamp = ($UsageItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
@@ -75,8 +76,11 @@ function Get-CIPPOneDriveUsageReport {
             $SiteUsage = $null
             [void]$UsageBySiteId.TryGetValue([string]$Site.sharepointIds.siteId, [ref]$SiteUsage)
 
-            $StorageUsedInBytes = [double]($SiteUsage.storageUsedInBytes ?? 0)
-            $StorageAllocatedInBytes = [double]($SiteUsage.storageAllocatedInBytes ?? 0)
+            # A drive with no usage row has UNKNOWN storage, not zero storage. Coercing the null
+            # to 0 made those rows render an authoritative-looking '0' that is indistinguishable
+            # from a genuinely empty drive.
+            $StorageUsedInGigabytes = if ($null -ne $SiteUsage.storageUsedInBytes) { [math]::round([double]$SiteUsage.storageUsedInBytes / 1GB, 2) } else { $null }
+            $StorageAllocatedInGigabytes = if ($null -ne $SiteUsage.storageAllocatedInBytes) { [math]::round([double]$SiteUsage.storageAllocatedInBytes / 1GB, 2) } else { $null }
 
             $ReportItem = [PSCustomObject]@{
                 siteId                      = $Site.sharepointIds.siteId
@@ -88,8 +92,8 @@ function Get-CIPPOneDriveUsageReport {
                 ownerPrincipalName          = $SiteUsage.ownerPrincipalName
                 lastActivityDate            = $SiteUsage.lastActivityDate
                 fileCount                   = $SiteUsage.fileCount
-                storageUsedInGigabytes      = [math]::round($StorageUsedInBytes / 1GB, 2)
-                storageAllocatedInGigabytes = [math]::round($StorageAllocatedInBytes / 1GB, 2)
+                storageUsedInGigabytes      = $StorageUsedInGigabytes
+                storageAllocatedInGigabytes = $StorageAllocatedInGigabytes
                 storageUsedInBytes          = $SiteUsage.storageUsedInBytes
                 storageAllocatedInBytes     = $SiteUsage.storageAllocatedInBytes
                 rootWebTemplate             = $SiteUsage.rootWebTemplate

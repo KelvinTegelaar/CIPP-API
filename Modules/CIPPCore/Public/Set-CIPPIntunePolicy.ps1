@@ -28,6 +28,9 @@ function Set-CIPPIntunePolicy {
     }
 
     try {
+        if ([string]::IsNullOrWhiteSpace($RawJSON)) {
+            throw "The template contains no policy JSON (RAWJson is empty). The stored template row is corrupt, or a same-named duplicate row shadowed the one selected. Delete the broken copy of this template and recreate it."
+        }
         switch ($TemplateType) {
             'AppProtection' {
                 $PlatformType = 'deviceAppManagement'
@@ -144,6 +147,10 @@ function Set-CIPPIntunePolicy {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'deviceConfigurations'
                 $PolicyFile = $RawJSON | ConvertFrom-Json
+                if ([string]::IsNullOrWhiteSpace($DisplayName)) { $DisplayName = $PolicyFile.displayName ?? $PolicyFile.name }
+                if ([string]::IsNullOrWhiteSpace($DisplayName)) {
+                    throw "This device configuration template has no name - the template's Displayname column and the payload's displayName are both empty. Recreate the template."
+                }
                 $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value "$Description" -Force
                 $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $DisplayName -Force
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
@@ -172,6 +179,9 @@ function Set-CIPPIntunePolicy {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'configurationPolicies'
                 $DisplayName = Get-CIPPIntunePolicyName -TemplateType 'Catalog' -RawJSON $RawJSON -DisplayName $DisplayName
+                if ([string]::IsNullOrWhiteSpace($DisplayName)) {
+                    throw "This Settings Catalog template has no name - the payload's 'name' and the template's Displayname column are both empty. The stored template row is corrupt (often a duplicate created by a re-import); delete and recreate it."
+                }
                 if ($ReusableSettings) {
                     Write-Verbose "Catalog: ReusableSettings count $($ReusableSettings.Count)"
                     Write-Verbose ('Catalog: ReusableSettings detail ' + ($ReusableSettings | ConvertTo-Json -Depth 5 -Compress))

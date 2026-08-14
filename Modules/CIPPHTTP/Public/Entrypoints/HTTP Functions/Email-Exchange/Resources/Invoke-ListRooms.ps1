@@ -153,7 +153,7 @@ function Invoke-ListRooms {
                         mailNickname                  = $Room.Alias
                         accountDisabled               = $Room.AccountDisabled
                         hiddenFromAddressListsEnabled = $Room.HiddenFromAddressListsEnabled
-                        isDirSynced                   = $RoomMailbox.IsDirSynced
+                        isDirSynced                   = $Room.IsDirSynced
 
                         # Room Booking Settings
                         bookingType                   = $PlaceDetails.BookingType

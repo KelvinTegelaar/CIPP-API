@@ -99,4 +99,38 @@ Describe 'Get-CIPPIntuneAssignmentTarget' {
             }
         }
     }
+
+    Context 'Device Preparation profiles' {
+        # Device Preparation deployments start when an assigned user signs in during OOBE, so the
+        # assignment surface is user groups only - the broad virtual targets leave the profile
+        # without an effective assignment even when Graph accepts the assign call.
+
+        It 'expresses the users half of AllDevicesAndUsers as a group assignment on the All Users virtual group' {
+            $Result = Get-CIPPIntuneAssignmentTarget -AssignTo 'AllDevicesAndUsers' -PolicyType 'DevicePrepProfile'
+
+            @($Result.Targets).Count | Should -Be 1
+            $Result.Targets[0].'@odata.type' | Should -Be '#microsoft.graph.groupAssignmentTarget'
+            $Result.Targets[0].groupId | Should -Be $script:AllUsersGroupId
+            $Result.Unsupported | Should -BeNullOrEmpty
+            $Result.Dropped | Should -Be @('All Devices')
+        }
+
+        It 'reports All Devices as unsupported rather than writing a target that never triggers' {
+            $Result = Get-CIPPIntuneAssignmentTarget -AssignTo 'AllDevices' -PolicyType 'DevicePrepProfile'
+
+            $Result.Targets | Should -BeNullOrEmpty
+            $Result.Unsupported | Should -BeLike '*cannot be assigned to All Devices*'
+        }
+
+        It 'names the virtual group so it is not reported as a bare GUID' {
+            $Result = Get-CIPPIntuneAssignmentTarget -AssignTo 'AllDevicesAndUsers' -PolicyType 'DevicePrepProfile'
+
+            $Result.GroupNames[$script:AllUsersGroupId] | Should -Be 'All Users'
+        }
+
+        It 'is not treated as MAM' {
+            (Get-CIPPIntuneAssignmentTarget -AssignTo 'allLicensedUsers' -PolicyType 'DevicePrepProfile').IsMam |
+                Should -BeFalse
+        }
+    }
 }

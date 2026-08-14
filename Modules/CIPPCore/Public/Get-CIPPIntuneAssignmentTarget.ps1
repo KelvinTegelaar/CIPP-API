@@ -18,6 +18,12 @@ function Get-CIPPIntuneAssignmentTarget {
         "Add all users" writes. A MAM policy protects a user's apps and has no device audience at
         all, so All Devices has no equivalent and is reported as unsupported rather than guessed at.
 
+        Device Preparation profiles (Autopilot device preparation) have the same shape for a
+        different reason: the deployment starts when an assigned user signs in during OOBE, so the
+        assignment surface is user groups only - the portal picker offers the same well-known All
+        Users virtual group and no All Devices equivalent. The broad virtual targets are not what
+        the portal writes for them and leave the profile without an effective assignment.
+
         'customGroup' and 'On' produce no broad target: the caller resolves group names itself.
 
     .PARAMETER AssignTo
@@ -50,7 +56,8 @@ function Get-CIPPIntuneAssignmentTarget {
         [string]$PolicyType
     )
 
-    # Intune's well-known virtual group for "all users", the only way to express it on a MAM policy.
+    # Intune's well-known virtual group for "all users", the only way to express it on a policy
+    # type whose assignment surface is groups only (MAM, Device Preparation).
     $MamAllUsersGroupId = 'acacacac-9df4-4c7d-9d50-4ef0226f57a9'
 
     $MamPolicyTypes = @(
@@ -63,7 +70,14 @@ function Get-CIPPIntuneAssignmentTarget {
     )
     $IsMam = $MamPolicyTypes -contains $PolicyType
 
-    $AllUsersTarget = if ($IsMam) {
+    # Policy types whose assignment surface is user groups only. Device Preparation deployments
+    # trigger on the enrolling user, so a device audience cannot be expressed for them at all.
+    $UserGroupOnlyTypes = @(
+        'DevicePrepProfile'
+    )
+    $IsUserGroupOnly = $IsMam -or ($UserGroupOnlyTypes -contains $PolicyType)
+
+    $AllUsersTarget = if ($IsUserGroupOnly) {
         @{ '@odata.type' = '#microsoft.graph.groupAssignmentTarget'; groupId = $MamAllUsersGroupId }
     } else {
         @{ '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget' }
@@ -81,12 +95,14 @@ function Get-CIPPIntuneAssignmentTarget {
         'AllDevices' {
             if ($IsMam) {
                 $Unsupported = "'$PolicyType' policies protect a user's apps and have no device audience, so they cannot be assigned to All Devices. Assign to all users or to a group instead."
+            } elseif ($IsUserGroupOnly) {
+                $Unsupported = "'$PolicyType' deployments start when an assigned user signs in, so they cannot be assigned to All Devices. Assign to all users instead."
             } else {
                 $Targets.Add($AllDevicesTarget)
             }
         }
         'AllDevicesAndUsers' {
-            if ($IsMam) {
+            if ($IsUserGroupOnly) {
                 # The users half is still expressible, so honour it rather than failing the whole
                 # assignment over a target this policy type has no concept of.
                 $Dropped.Add('All Devices')
