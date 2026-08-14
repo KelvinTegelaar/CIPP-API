@@ -124,7 +124,7 @@ function Test-CIPPAccess {
                                 appId   = $Request.Headers.'x-ms-client-principal-name'
                                 appRole = $CustomRoles
                             }
-                            'permissions'     = $Permissions
+                            'permissions'     = @($Permissions)
                         } | ConvertTo-Json -Depth 5)
                 })
         }
@@ -222,7 +222,7 @@ function Test-CIPPAccess {
             # Include SSO migration status for admins with AppSettings permissions
             $MeResponse = @{
                 'clientPrincipal' = $User
-                'permissions'     = $Permissions
+                'permissions'     = @($Permissions)
             }
 
             # Hosted payment status checks — shown to all users (no permission gating)
