@@ -104,8 +104,11 @@ function Invoke-ListSites {
                 ownerPrincipalName          = $SiteUsage.ownerPrincipalName
                 lastActivityDate            = $SiteUsage.lastActivityDate
                 fileCount                   = $SiteUsage.fileCount
-                storageUsedInGigabytes      = [math]::round($SiteUsage.storageUsedInBytes / 1GB, 2)
-                storageAllocatedInGigabytes = [math]::round($SiteUsage.storageAllocatedInBytes / 1GB, 2)
+                # Null, not 0, when the usage report has no row for this site: '0' reads as an
+                # authoritative "this site is empty" and is indistinguishable from a real empty
+                # site, which is exactly the confusion an absent usage report should not create.
+                storageUsedInGigabytes      = if ($null -ne $SiteUsage.storageUsedInBytes) { [math]::round([double]$SiteUsage.storageUsedInBytes / 1GB, 2) } else { $null }
+                storageAllocatedInGigabytes = if ($null -ne $SiteUsage.storageAllocatedInBytes) { [math]::round([double]$SiteUsage.storageAllocatedInBytes / 1GB, 2) } else { $null }
                 storageUsedInBytes          = $SiteUsage.storageUsedInBytes
                 storageAllocatedInBytes     = $SiteUsage.storageAllocatedInBytes
                 rootWebTemplate             = $SiteUsage.rootWebTemplate
