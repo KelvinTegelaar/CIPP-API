@@ -48,6 +48,14 @@ function Start-CIPPDBTestsRun {
         $AllTenantsList = if ($TenantFilter -eq 'allTenants') {
             $DbCounts = Get-CIPPDbItem -CountsOnly -TenantFilter 'allTenants'
             $TenantsWithData = $DbCounts | Where-Object { (($_.DataCount ?? $_.Count) ?? 0) -gt 0 } | Select-Object -ExpandProperty PartitionKey -Unique
+            $ActiveTenants = [System.Collections.Generic.HashSet[string]]::new(
+                [string[]]@((Get-Tenants).defaultDomainName | Where-Object { $_ }),
+                [System.StringComparer]::OrdinalIgnoreCase)
+            $SkippedCount = @($TenantsWithData | Where-Object { -not $ActiveTenants.Contains($_) }).Count
+            $TenantsWithData = @($TenantsWithData | Where-Object { $ActiveTenants.Contains($_) })
+            if ($SkippedCount -gt 0) {
+                Write-Information "Skipped $SkippedCount tenant(s) with cached data that are excluded or no longer managed"
+            }
             Write-Information "Found $($TenantsWithData.Count) tenants with data in database"
             $TenantsWithData
         } else {
