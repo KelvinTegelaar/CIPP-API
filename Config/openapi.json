@@ -620,6 +620,12 @@
                   "DisplayName": {
                     "type": "string"
                   },
+                  "GroupIds": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
                   "selectedTenants": {
                     "$ref": "#/components/schemas/LabelValue"
                   }
@@ -13575,6 +13581,77 @@
           }
         ],
         "x-cipp-role": "Endpoint.Application.ReadWrite"
+      }
+    },
+    "/api/ExecAssignAutopilotProfile": {
+      "post": {
+        "summary": "ExecAssignAutopilotProfile",
+        "operationId": "ExecAssignAutopilotProfile",
+        "tags": [
+          "Endpoint > Autopilot"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "AssignTo": {
+                    "type": "string"
+                  },
+                  "GroupIds": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
+                  "ProfileId": {
+                    "type": "string"
+                  },
+                  "ProfileName": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "AssignTo",
+                  "ProfileId",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Autopilot.ReadWrite"
       }
     },
     "/api/ExecAssignmentFilter": {
