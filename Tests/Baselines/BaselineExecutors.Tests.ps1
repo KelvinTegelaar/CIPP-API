@@ -18,12 +18,18 @@ BeforeAll {
     # Parameter binding is case-insensitive, so one casing per name covers every call site.
     function New-GraphPostRequest { param($tenantid, $uri, $Type, $Body, $AsApp, $ContentType, $AddedHeaders) }
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, $SkipValueExtraction) }
+    function New-GraphBulkRequest { param($tenantid, $scope, $asapp, $Requests, $Version, $Headers, $NoAuthCheck, $NoPaginateIds) }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, [switch]$Compliance) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
+    function Set-CIPPDBCacheUsers { param($TenantFilter) }
 
     . (Join-Path $Baselines 'Invoke-CIPPBaselineGraphRequest.ps1')
     . (Join-Path $Baselines 'Invoke-CIPPBaselineExoRequest.ps1')
     . (Join-Path $Baselines 'Invoke-CIPPBaselineDeviceRegistrationPolicy.ps1')
+    . (Join-Path $Baselines 'Invoke-CIPPBaselineGraphBulkSweep.ps1')
+
+    # $batch answers one response per request, keyed by the id the caller supplied.
+    function New-BulkSuccess { param($Requests) @($Requests | ForEach-Object { [PSCustomObject]@{ id = $_.id; status = 204 } }) }
 
     $script:Tenant = 'contoso.onmicrosoft.com'
 
@@ -185,5 +191,105 @@ Describe 'Invoke-CIPPBaselineDeviceRegistrationPolicy' {
         $Spec = @{ set = @{} } | ConvertTo-Spec
         { Invoke-CIPPBaselineDeviceRegistrationPolicy -Remediate $Spec -TenantFilter $script:Tenant -Current $null } | Should -Throw '*nothing configured*'
         Should -Invoke New-GraphPostRequest -Times 0
+    }
+}
+
+Describe 'Invoke-CIPPBaselineGraphBulkSweep' {
+    BeforeEach {
+        Mock New-GraphBulkRequest { New-BulkSuccess -Requests $Requests }
+        Mock Write-LogMessage {}
+        Mock Set-CIPPDBCacheUsers {}
+    }
+
+    It 'sends one request per offender, with the id spliced into the url' {
+        $Current = @{ targets = @(@{ id = 'a-1' }, @{ id = 'b-2' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ method = 'PATCH'; uri = 'users/%id%'; body = @{ accountEnabled = $false } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter {
+            @($Requests).Count -eq 2 -and
+            @($Requests)[0].url -eq '/users/a-1' -and @($Requests)[1].url -eq '/users/b-2' -and
+            @($Requests)[0].body.accountEnabled -eq $false
+        }
+    }
+
+    It 'keeps a per-object token its JSON type' {
+        # PasswordExpireDisabled carries a per-domain notification window. Sent as the string
+        # "14" Graph rejects the body, so the exact-token rule has to survive per-object
+        # expansion the same way it does in the engine's render.
+        $Current = @{ targets = @(@{ id = 'contoso.com'; passwordNotificationWindowInDays = 14 }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ method = 'PATCH'; uri = 'domains/%id%'; body = @{ passwordValidityPeriodInDays = 2147483647; passwordNotificationWindowInDays = '%passwordNotificationWindowInDays%' } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter {
+            @($Requests)[0].body.passwordNotificationWindowInDays -is [int] -or @($Requests)[0].body.passwordNotificationWindowInDays -is [long]
+        }
+    }
+
+    It 'runs each write group against its own offender set' {
+        # StaleEntraDevices disables one set and deletes another in the same pass.
+        $Current = @{
+            devicesToDisable = @(@{ id = 'd-1' })
+            devicesToDelete  = @(@{ id = 'd-2' }, @{ id = 'd-3' })
+        } | ConvertTo-Spec
+        $Spec = @{ writes = @(
+                @{ from = 'devicesToDisable'; method = 'PATCH'; uri = 'devices/%id%'; body = @{ accountEnabled = $false } },
+                @{ from = 'devicesToDelete'; method = 'DELETE'; uri = 'devices/%id%' }
+            ) } | ConvertTo-Spec
+        Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { @($Requests).Count -eq 1 -and @($Requests)[0].method -eq 'PATCH' }
+        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { @($Requests).Count -eq 2 -and @($Requests)[0].method -eq 'DELETE' }
+    }
+
+    It 'omits the body entirely for a DELETE' {
+        $Current = @{ targets = @(@{ id = 'app-1' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ method = 'DELETE'; uri = 'applications/%id%' }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { -not @($Requests)[0].ContainsKey('body') }
+    }
+
+    It 'does nothing when there is nothing to sweep' {
+        $Current = @{ targets = @() } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ method = 'PATCH'; uri = 'users/%id%'; body = @{ accountEnabled = $false } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphBulkRequest -Times 0
+    }
+
+    It 'throws when the prepare hook never produced the named set' {
+        # An authoring typo. Silently sweeping nothing would report Remediated forever.
+        $Current = @{ targets = @(@{ id = 'a-1' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ from = 'typo'; method = 'PATCH'; uri = 'users/%id%'; body = @{ a = 1 } }) } | ConvertTo-Spec
+        { Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current } | Should -Throw '*no *typo* set*'
+    }
+
+    It 'survives a partial failure and reports it' {
+        Mock New-GraphBulkRequest {
+            @(
+                [PSCustomObject]@{ id = '0'; status = 204 }
+                [PSCustomObject]@{ id = '1'; status = 403; body = [PSCustomObject]@{ error = [PSCustomObject]@{ message = 'Insufficient privileges' } } }
+            )
+        }
+        $Current = @{ targets = @(@{ id = 'a-1' }, @{ id = 'b-2' }) } | ConvertTo-Spec
+        $Spec = @{ refreshCache = @('Users'); writes = @(@{ method = 'PATCH'; uri = 'users/%id%'; body = @{ accountEnabled = $false } }) } | ConvertTo-Spec
+        { Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current } | Should -Not -Throw
+        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $Sev -eq 'Warning' -and $message -like '*1 of 2 writes failed*' }
+        Should -Invoke Set-CIPPDBCacheUsers -Times 1
+    }
+
+    It 'throws when every write failed' {
+        # A permissions or endpoint problem. Swallowing it reports Remediated forever while
+        # nothing on the tenant ever changes.
+        Mock New-GraphBulkRequest {
+            @($Requests | ForEach-Object { [PSCustomObject]@{ id = $_.id; status = 403; body = [PSCustomObject]@{ error = [PSCustomObject]@{ message = 'Insufficient privileges' } } } })
+        }
+        $Current = @{ targets = @(@{ id = 'a-1' }, @{ id = 'b-2' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ method = 'PATCH'; uri = 'users/%id%'; body = @{ accountEnabled = $false } }) } | ConvertTo-Spec
+        { Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current } | Should -Throw '*all 2 writes failed*'
+    }
+
+    It 'refreshes the named caches after a successful sweep' {
+        # Objects just fixed must not read back as drift on the next run.
+        $Current = @{ targets = @(@{ id = 'a-1' }) } | ConvertTo-Spec
+        $Spec = @{ refreshCache = @('Users'); writes = @(@{ method = 'PATCH'; uri = 'users/%id%'; body = @{ accountEnabled = $false } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke Set-CIPPDBCacheUsers -Times 1 -ParameterFilter { $TenantFilter -eq $script:Tenant }
     }
 }

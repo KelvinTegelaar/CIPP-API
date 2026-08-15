@@ -1,0 +1,60 @@
+{
+  "name": "DisableGuests",
+  "label": "Disable Guest accounts that have not logged on for a number of days",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "SMB1001 (2.8)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Blocks login for guest users that have not logged in for a number of days. Guests still pending invitation acceptance are included. Accounts an administrator re-enabled in the last 7 days are left alone.",
+  "executiveText": "Automatically disables external guest accounts that haven't been used for a number of days, reducing security risks from dormant accounts while maintaining access for active external collaborators. This helps maintain a clean user directory and reduces potential attack vectors.",
+  "docsDescription": "Blocks login for guest users that have not logged in for a number of days, and for guests that never accepted their invitation.",
+  "impactColour": "warning",
+  "addedDate": "2022-10-20",
+  "powershellEquivalent": "Graph API",
+  "appliesToTest": [
+    "SMB1001_2_8",
+    "ZTNA21858"
+  ],
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "days": {
+      "type": "number",
+      "label": "Days of inactivity",
+      "required": true,
+      "default": 90
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Guests"
+  },
+  "prepare": "Get-CIPPBaselineDisableGuestsState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "Guests",
+      "Users"
+    ],
+    "writes": [
+      {
+        "method": "PATCH",
+        "uri": "users/%id%",
+        "body": {
+          "accountEnabled": false
+        }
+      }
+    ]
+  }
+}
