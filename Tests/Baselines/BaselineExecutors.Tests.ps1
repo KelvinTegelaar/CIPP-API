@@ -341,3 +341,80 @@ Describe 'Number variable rendering' {
         $Expected.label | Should -BeOfType ([string])
     }
 }
+
+Describe 'Invoke-CIPPBaselineExoBulkSweep' {
+    BeforeAll {
+        . (Join-Path $Baselines 'Invoke-CIPPBaselineExoBulkSweep.ps1')
+        function New-ExoBulkRequest { param($tenantid, $cmdletArray, $useSystemMailbox, $Anchor, $NoAuthCheck, $Select, $ReturnWithCommand, [switch]$Compliance, [switch]$AsApp) }
+        function Set-CIPPDBCacheMailboxes { param($TenantFilter, $Types) }
+    }
+    BeforeEach {
+        Mock New-ExoBulkRequest { @($cmdletArray | ForEach-Object { [PSCustomObject]@{ Success = $true; OperationGuid = $_.OperationGuid } }) }
+        Mock Set-CIPPDBCacheMailboxes {}
+        Mock Write-LogMessage {}
+    }
+
+    It 'builds one cmdlet per offender with the identity spliced in' {
+        $Current = @{ targets = @(@{ id = 'a@contoso.com' }, @{ id = 'b@contoso.com' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ cmdlet = 'Set-Mailbox'; params = @{ Identity = '%id%'; MessageCopyForSentAsEnabled = $true } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-ExoBulkRequest -Times 1 -ParameterFilter {
+            @($cmdletArray).Count -eq 2 -and
+            @($cmdletArray)[0].CmdletInput.CmdletName -eq 'Set-Mailbox' -and
+            @($cmdletArray)[0].CmdletInput.Parameters['Identity'] -eq 'a@contoso.com' -and
+            @($cmdletArray)[0].CmdletInput.Parameters['MessageCopyForSentAsEnabled'] -eq $true
+        }
+    }
+
+    It 'stamps each cmdlet with an OperationGuid so failures are attributable' {
+        # Without it New-ExoBulkRequest returns errors with no way to say WHICH mailbox failed.
+        $Current = @{ targets = @(@{ id = 'a@contoso.com' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ cmdlet = 'Set-Mailbox'; params = @{ Identity = '%id%' } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-ExoBulkRequest -Times 1 -ParameterFilter { @($cmdletArray)[0].OperationGuid -eq 'a@contoso.com' }
+    }
+
+    It 'does nothing when there is nothing to sweep' {
+        $Current = @{ targets = @() } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ cmdlet = 'Set-Mailbox'; params = @{ Identity = '%id%' } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-ExoBulkRequest -Times 0
+    }
+
+    It 'throws when the prepare hook never produced the named set' {
+        $Current = @{ targets = @(@{ id = 'a' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ from = 'typo'; cmdlet = 'Set-Mailbox'; params = @{ Identity = '%id%' } }) } | ConvertTo-Spec
+        { Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current } | Should -Throw '*no *typo* set*'
+    }
+
+    It 'survives a partial failure and still refreshes the cache' {
+        Mock New-ExoBulkRequest {
+            @(
+                [PSCustomObject]@{ Success = $true; OperationGuid = 'a@contoso.com' }
+                [PSCustomObject]@{ error = 'Mailbox not found'; target = 'b@contoso.com'; OperationGuid = 'b@contoso.com' }
+            )
+        }
+        $Current = @{ targets = @(@{ id = 'a@contoso.com' }, @{ id = 'b@contoso.com' }) } | ConvertTo-Spec
+        $Spec = @{ refreshCache = @('Mailboxes'); writes = @(@{ cmdlet = 'Set-Mailbox'; params = @{ Identity = '%id%' } }) } | ConvertTo-Spec
+        { Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current } | Should -Not -Throw
+        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $Sev -eq 'Warning' -and $message -like '*1 of 2 mailbox writes failed*' }
+        Should -Invoke Set-CIPPDBCacheMailboxes -Times 1
+    }
+
+    It 'throws when every write failed' {
+        Mock New-ExoBulkRequest { @($cmdletArray | ForEach-Object { [PSCustomObject]@{ error = 'Access denied'; OperationGuid = $_.OperationGuid } }) }
+        $Current = @{ targets = @(@{ id = 'a' }, @{ id = 'b' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ cmdlet = 'Set-Mailbox'; params = @{ Identity = '%id%' } }) } | ConvertTo-Spec
+        { Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current } | Should -Throw '*all 2 writes failed*'
+    }
+
+    It 'passes collector arguments on the refresh, so the umbrella collector stays cheap' {
+        # Mailboxes defaults to Types 'All', which fans out permission and calendar batches
+        # across every mailbox - never acceptable as a post-sweep refresh.
+        $Current = @{ targets = @(@{ id = 'a' }) } | ConvertTo-Spec
+        $Spec = @{ refreshCache = @('Mailboxes'); refreshCacheArgs = @{ Mailboxes = @{ Types = 'None' } }
+            writes = @(@{ cmdlet = 'Set-Mailbox'; params = @{ Identity = '%id%' } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke Set-CIPPDBCacheMailboxes -Times 1 -ParameterFilter { $Types -eq 'None' }
+    }
+}
