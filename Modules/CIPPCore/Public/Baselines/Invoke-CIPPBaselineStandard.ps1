@@ -7,33 +7,7 @@ function Invoke-CIPPBaselineStandard {
         Licensing is handled upstream: Start-CIPPBaselineOrchestrator strips unlicensed pairs
         before anything runs. Work items arrive through the durable pipeline as Hashtables -
         everything item-derived is normalized before use. Flow:
-        1. manual definitions track operator completion on the resolved row (reopen on the
-           configured recurrence); custom definitions delegate to their own
-           Invoke-CIPPBaseline<StandardName> script.
-        2. Read the current value from the CIPPDb cache (cacheType -> optional array
-           dot-path descend/flatten -> filter[] (properties may be dot-paths) -> object
-           dot-path). On a cache miss the engine triggers the central collector for that
-           cacheType and re-reads once; if there is still nothing, NOTHING is written - the
-           row stays 'No Data' and retries naturally on the next run. read.defaults supplies
-           the documented service default for a property the API omits until it is
-           explicitly set, so 'never configured' is not read as drift.
-        3. Render the expected template from the configured variable values, project the
-           current value to the expected keys and compare with Compare-CIPPIntuneObject
-           (subset). Differences on accepted property paths are tolerated. A variable the
-           definition marks `required` but the baseline never filled parks the row with an
-           Error instead: the raw %token% is not a value to compare or deploy.
-        4. One Status per row: Compliant / Drift / Accepted / Partially Accepted /
-           Denied - Remediate Pending / Denied - Delete Pending / Skipped - No License.
-           Accepted holds until its unix expiry (optionally remediating on lapse); a row
-           whose drift is fully covered by accepted property paths also scores Accepted,
-           and partially covered drift scores Partially Accepted. Denied - Remediate
-           Pending forces remediation regardless of the configured posture. Writes only
-           happen when needed: drift, -Force (manual runs), or "checkBeforeRun": false
-           definitions - and never while accepted paths cover live drift, because a write
-           deploys the whole expected object.
-        5. Persist the resolved row + a history row via Set-CIPPBaselineResult.
-        Modes: run (all steps), compare (never writes), oneoff (remediation forced on).
-    .FUNCTIONALITY
+     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
@@ -440,56 +414,49 @@ function Invoke-CIPPBaselineStandard {
                 }
             }
         }
-
-        # checkBeforeRun=false marks standards whose pre-check cannot prove the write is
-        # unnecessary (e.g. a CA template compare only sees name/state) - they write whenever
-        # remediation applies, cache or not. A missing cache does NOT return early: the
-        # engine fails OPEN - when the current state cannot be read, an enforced standard
-        # still applies its expected state, and only a compare/report-only run skips.
         $CheckBeforeRun = $Definition.checkBeforeRun -ne $false
 
-        # 3. Project to the expected keys (subset compare) and diff. A key the current object
-        # lacks stays present as $null so the compare flags the presence mismatch - EXCEPT
-        # where read.defaults documents the service default for a property the API omits
-        # until it is explicitly set (Exchange returns a null OnlineMeetingsByDefaultEnabled
-        # on a tenant that never touched it, and null there means enabled). Those fill in
-        # before the compare, so a tenant already in the expected state does not read as
-        # drift and get written to on every run. Only the properties a definition names are
-        # filled, and only when the API really returned nothing.
+
         $ReadDefaults = $Definition.read.defaults
         $Differences = @()
         $PreFilterDifferences = @()
+        $ProjectNode = $null
+        $ProjectNode = {
+            param($ExpectedNode, $CurrentNode)
+            $Node = [PSCustomObject]@{}
+            foreach ($Property in $ExpectedNode.PSObject.Properties) {
+                $Value = if ($null -ne $CurrentNode) { $CurrentNode.$($Property.Name) } else { $null }
+                # $anyOf sets are leaf declarations, not shapes to descend into.
+                if ($Property.Value -is [System.Management.Automation.PSCustomObject] -and
+                    -not $Property.Value.PSObject.Properties['$anyOf'] -and
+                    $Value -is [System.Management.Automation.PSCustomObject]) {
+                    $Value = & $ProjectNode $Property.Value $Value
+                }
+                $Node | Add-Member -NotePropertyName $Property.Name -NotePropertyValue $Value
+            }
+            $Node
+        }
         if ($null -ne $Current) {
             $Projected = [PSCustomObject]@{}
             foreach ($Property in $Expected.PSObject.Properties.Name) {
                 $Value = $Current.$Property
+                $ExpectedLeaf = $Expected.$Property
+                if (-not $Definition.prepare -and
+                    $ExpectedLeaf -is [System.Management.Automation.PSCustomObject] -and
+                    -not $ExpectedLeaf.PSObject.Properties['$anyOf'] -and
+                    $Value -is [System.Management.Automation.PSCustomObject]) {
+                    $Value = & $ProjectNode $ExpectedLeaf $Value
+                }
                 if ($null -eq $Value -and $null -ne $ReadDefaults -and $ReadDefaults.PSObject.Properties[$Property]) {
                     $Value = $ReadDefaults.$Property
                 }
                 $Projected | Add-Member -NotePropertyName $Property -NotePropertyValue $Value
             }
             $Result.CurrentValue = $Projected
-            # The compare copy of expected resolves $anyOf against the CURRENT value: a
-            # member of the set compares equal, a non-member diffs against the canonical.
             $CompareExpected = & $ResolveAnyOf $ExpectedTemplate $Current $true
-            # Compare-CIPPIntuneObject emits $null (not an empty set) when nothing differs.
-            # A prepare hook may request a CompareType (e.g. 'Catalog' flattens settings
-            # catalog policies to per-setting rows, 'AppProtection' widens the excludes).
             $CompareTypes = @($Prepared.CompareType | Where-Object { $_ })
             $Differences = @(Compare-CIPPIntuneObject -ReferenceObject $CompareExpected -DifferenceObject $Projected -CompareType $CompareTypes | Where-Object { $_ })
 
-            # Hard compares: the shared compare treats false/0/null/''/[] as interchangeable
-            # empties, which would let 'not configured' satisfy an explicit false/0
-            # expectation. The shared function stays untouched (CA/Intune depend on its
-            # semantics) - this only ADDS the diffs the engine's stricter reading requires:
-            # an expected boolean or number against an empty current value is drift.
-            # Definition-controlled via `hardCompare` (default ON; the CA/Intune template
-            # definitions set false - their prepare pipelines carry their own extensive
-            # normalization and the lenient empties-equivalence is load-bearing there).
-            # Two boundaries when enabled: properties the compare deliberately excludes
-            # (read-only server state like qualityUpdatesWillBeRolledBack) are never
-            # hard-gapped - same list, one source; and flatten-based Catalog compares
-            # skip the walker entirely (their paths don't align with the raw tree).
             $HardCompareEnabled = $Definition.hardCompare -ne $false
             $HardGapExclusions = @(Get-CIPPIntuneCompareExclusions -AppProtection:($CompareTypes -contains 'AppProtection'))
             $AddHardGaps = $null
@@ -583,8 +550,8 @@ function Invoke-CIPPBaselineStandard {
                 foreach ($DeletedKey in $DeletedKeys) { $AcceptedPaths.PSObject.Properties.Remove($DeletedKey) }
                 $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name | Where-Object { $_ })
                 $DenyDeleteKeys = @($AcceptedPaths.PSObject.Properties | Where-Object { $_.Name -and $_.Value.verdict -eq 'denyDelete' } | ForEach-Object { $_.Name })
-                 if ($Prior) { $Prior | Add-Member -NotePropertyName 'AcceptedPaths' -NotePropertyValue (ConvertTo-Json -Compress -Depth 20 -InputObject $AcceptedPaths) -Force }
-                 $DropDeleted = {
+                if ($Prior) { $Prior | Add-Member -NotePropertyName 'AcceptedPaths' -NotePropertyValue (ConvertTo-Json -Compress -Depth 20 -InputObject $AcceptedPaths) -Force }
+                $DropDeleted = {
                     param($Entries)
                     @($Entries | Where-Object {
                             $Property = $_.Property
@@ -598,7 +565,7 @@ function Invoke-CIPPBaselineStandard {
                 $Result.Remediated = $true
                 $Compliant = ($Differences.Count -eq 0)
                 $PathAccepted = $PreFilterDifferences.Count -gt $Differences.Count
-                   if ($DenyDeleteKeys.Count -eq 0 -and $PriorStatus -eq 'Denied - Delete Pending') { $PriorStatus = 'Drift' }
+                if ($DenyDeleteKeys.Count -eq 0 -and $PriorStatus -eq 'Denied - Delete Pending') { $PriorStatus = 'Drift' }
             }
         }
 
