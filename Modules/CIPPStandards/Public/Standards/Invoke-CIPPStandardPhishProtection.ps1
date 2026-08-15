@@ -75,13 +75,32 @@ function Invoke-CIPPStandardPhishProtection {
 
         try {
             if (!$currentBody) {
-                $AddedHeaders = @{'Accept-Language' = 0 }
-                $defaultBrandingBody = '{"usernameHintText":null,"signInPageText":null,"backgroundColor":null,"customPrivacyAndCookiesText":null,"customCannotAccessYourAccountText":null,"customForgotMyPasswordText":null,"customTermsOfUseText":null,"loginPageLayoutConfiguration":{"layoutTemplateType":"default","isFooterShown":true,"isHeaderShown":false},"loginPageTextVisibilitySettings":{"hideAccountResetCredentials":false,"hideTermsOfUse":true,"hidePrivacyAndCookies":true},"contentCustomization":{"conditionalAccess":[],"attributeCollection":[]}}'
+                $DefaultLocalizationExists = $false
                 try {
-                    New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/" -ContentType 'application/json' -asApp $true -Type POST -Body $defaultBrandingBody -AddedHeaders $AddedHeaders
+                    $Localizations = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations" -tenantid $tenant -AsApp $true
+                    $DefaultLocalizationExists = [bool]($Localizations | Where-Object { $_.id -eq '0' })
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create default branding localization. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not check for the default branding localization. Creation will be attempted. Error: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
+                }
+
+                if (-not $DefaultLocalizationExists) {
+                    $AddedHeaders = @{'Accept-Language' = 0 }
+                    $defaultBrandingBody = '{"usernameHintText":null,"signInPageText":null,"backgroundColor":null,"customPrivacyAndCookiesText":null,"customCannotAccessYourAccountText":null,"customForgotMyPasswordText":null,"customTermsOfUseText":null,"loginPageLayoutConfiguration":{"layoutTemplateType":"default","isFooterShown":true,"isHeaderShown":false},"loginPageTextVisibilitySettings":{"hideAccountResetCredentials":false,"hideTermsOfUse":true,"hidePrivacyAndCookies":true},"contentCustomization":{"conditionalAccess":[],"attributeCollection":[]}}'
+                    try {
+                        New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/" -ContentType 'application/json' -AsApp $true -Type POST -Body $defaultBrandingBody -AddedHeaders $AddedHeaders
+                    } catch {
+                        $ErrorMessage = Get-CippException -Exception $_
+                        $GraphError = $null
+                        try { $GraphError = $ErrorMessage.RawError | ConvertFrom-Json -ErrorAction Stop } catch {}
+                        $IsDefaultLocalizationConflict = ($GraphError.error.code -eq 'Request_BadRequest') -and [bool]($GraphError.error.details | Where-Object { $_.code -eq 'ObjectConflict' -and $_.target -eq 'id' })
+
+                        if ($IsDefaultLocalizationConflict) {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Default branding localization already exists; continuing with the existing localization.' -sev Info
+                        } else {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create default branding localization. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                        }
+                    }
                 }
             }
             if ($currentBody -like "*$CSS*") {
