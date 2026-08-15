@@ -51,12 +51,12 @@ function Set-CIPPDBCacheTeamsResourceAccounts {
             $SkipToken = $Page.skipToken
         } while ($SkipToken)
 
-        if ($ResourceAccounts.Count -gt 0) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'TeamsResourceAccounts' -Data @($ResourceAccounts) -AddCount
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($ResourceAccounts.Count) Teams resource accounts" -sev Debug
-        } else {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No Teams resource accounts found' -sev Debug
-        }
+        # Written even when the tenant has none: the '<Type>-Count' row is the only signal
+        # that separates 'collected, genuinely empty' from 'never collected'. Guarding this
+        # on Count -gt 0 left a tenant with no auto attendants or call queues permanently
+        # indistinguishable from an uncollected one, so the standard could never resolve.
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'TeamsResourceAccounts' -Data @($ResourceAccounts) -AddCount
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($ResourceAccounts.Count) Teams resource accounts" -sev Debug
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

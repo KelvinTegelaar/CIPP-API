@@ -16,7 +16,13 @@
     "Microsoft",
     "CIPP"
   ],
-  "requiredCapabilities": [],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
   "secureScoreImpact": 0,
   "compare": "subset",
   "variables": {},
