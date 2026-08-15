@@ -418,3 +418,73 @@ Describe 'Invoke-CIPPBaselineExoBulkSweep' {
         Should -Invoke Set-CIPPDBCacheMailboxes -Times 1 -ParameterFilter { $Types -eq 'None' }
     }
 }
+
+Describe 'Invoke-CIPPBaselineQuarantineRequestAlert' {
+    # The 'Allow extra addresses' switch decides whether the write preserves recipients it did
+    # not add. Getting this wrong silently deletes somebody's notification address.
+    BeforeAll {
+        . (Join-Path $Baselines 'Invoke-CIPPBaselineQuarantineRequestAlert.ps1')
+        $script:AlertName = 'CIPP User requested to release a quarantined message'
+    }
+    BeforeEach {
+        Mock New-ExoRequest { @([PSCustomObject]@{ Name = $script:AlertName; NotifyUser = @('soc@contoso.com', 'dpo@contoso.com') }) } -ParameterFilter { $cmdlet -eq 'Get-ProtectionAlert' }
+        Mock New-ExoRequest {} -ParameterFilter { $cmdlet -ne 'Get-ProtectionAlert' }
+    }
+
+    It 'keeps recipients it did not add when extras are allowed' {
+        $Spec = @{ notifyUser = 'soc@contoso.com'; allowExtraAddresses = $true } | ConvertTo-Spec
+        Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter {
+            $cmdlet -eq 'Set-ProtectionAlert' -and
+            @($cmdParams['NotifyUser']).Count -eq 2 -and
+            @($cmdParams['NotifyUser']) -contains 'dpo@contoso.com'
+        }
+    }
+
+    It 'adds the configured address when it is missing, without dropping the others' {
+        Mock New-ExoRequest { @([PSCustomObject]@{ Name = $script:AlertName; NotifyUser = @('dpo@contoso.com') }) } -ParameterFilter { $cmdlet -eq 'Get-ProtectionAlert' }
+        $Spec = @{ notifyUser = 'soc@contoso.com'; allowExtraAddresses = $true } | ConvertTo-Spec
+        Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter {
+            $cmdlet -eq 'Set-ProtectionAlert' -and
+            @($cmdParams['NotifyUser']) -contains 'soc@contoso.com' -and
+            @($cmdParams['NotifyUser']) -contains 'dpo@contoso.com'
+        }
+    }
+
+    It 'does not duplicate the configured address when it is already present' {
+        $Spec = @{ notifyUser = 'soc@contoso.com'; allowExtraAddresses = $true } | ConvertTo-Spec
+        Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter {
+            $cmdlet -eq 'Set-ProtectionAlert' -and
+            @(@($cmdParams['NotifyUser']) | Where-Object { $_ -eq 'soc@contoso.com' }).Count -eq 1
+        }
+    }
+
+    It 'enforces the configured address as the only recipient when extras are not allowed' {
+        $Spec = @{ notifyUser = 'soc@contoso.com'; allowExtraAddresses = $false } | ConvertTo-Spec
+        Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter {
+            $cmdlet -eq 'Set-ProtectionAlert' -and
+            @($cmdParams['NotifyUser']).Count -eq 1 -and
+            @($cmdParams['NotifyUser'])[0] -eq 'soc@contoso.com'
+        }
+    }
+
+    It 'creates the alert when it does not exist yet' {
+        Mock New-ExoRequest { @() } -ParameterFilter { $cmdlet -eq 'Get-ProtectionAlert' }
+        $Spec = @{ notifyUser = 'soc@contoso.com'; allowExtraAddresses = $true } | ConvertTo-Spec
+        Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter {
+            $cmdlet -eq 'New-ProtectionAlert' -and $cmdParams['ThreatType'] -eq 'Activity' -and $cmdParams['Name'] -eq $script:AlertName
+        }
+    }
+
+    It 'refuses to write if the existing alert cannot be read' {
+        # Merging into a list we failed to read would delete whatever was on it.
+        Mock New-ExoRequest { throw 'compliance endpoint unavailable' } -ParameterFilter { $cmdlet -eq 'Get-ProtectionAlert' }
+        $Spec = @{ notifyUser = 'soc@contoso.com'; allowExtraAddresses = $true } | ConvertTo-Spec
+        { Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null } | Should -Throw '*could not read the existing alert*'
+        Should -Invoke New-ExoRequest -Times 0 -ParameterFilter { $cmdlet -eq 'Set-ProtectionAlert' }
+    }
+}

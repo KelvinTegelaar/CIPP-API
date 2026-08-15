@@ -4,7 +4,7 @@
   "cat": "Defender Standards",
   "tag": [],
   "impact": "Low Impact",
-  "helpText": "Sets a e-mail address to alert when a User requests to release a quarantined message.",
+  "helpText": "Sets a e-mail address to alert when a User requests to release a quarantined message. With \"Allow extra addresses\" on, additional recipients are accepted and preserved; with it off, the configured address is enforced as the only recipient.",
   "executiveText": "Notifies IT administrators when employees request to release emails that were quarantined for security reasons, enabling oversight of potentially dangerous messages. This helps ensure that legitimate emails are released while maintaining security controls over suspicious content.",
   "docsDescription": "Sets a e-mail address to alert when a User requests to release a quarantined message. This is useful for monitoring and ensuring that the correct messages are released.",
   "impactColour": "info",
@@ -25,12 +25,14 @@
       "type": "textField",
       "label": "E-mail to receive the alert",
       "required": true
+    },
+    "AllowExtraAddresses": {
+      "type": "switch",
+      "label": "Allow extra addresses",
+      "helperText": "Leave on to accept additional recipients someone added to the alert, and to keep them when the standard writes. Turn off to enforce the configured address as the only recipient.",
+      "default": true,
+      "recommended": true
     }
-  },
-  "expected": {
-    "NotifyUser": [
-      "%NotifyUser%"
-    ]
   },
   "read": {
     "cacheType": "ExoProtectionAlert",
@@ -42,34 +44,12 @@
     ]
   },
   "remediate": {
-    "executor": "ExoRequest",
-    "cmdlets": [
-      {
-        "cmdlet": "New-ProtectionAlert",
-        "compliance": true,
-        "continueOnError": true,
-        "params": {
-          "Name": "CIPP User requested to release a quarantined message",
-          "ThreatType": "Activity",
-          "Category": "ThreatManagement",
-          "Operation": "QuarantineRequestReleaseMessage",
-          "Severity": "Informational",
-          "AggregationType": "None",
-          "NotifyUser": "%NotifyUser%"
-        }
-      },
-      {
-        "cmdlet": "Set-ProtectionAlert",
-        "compliance": true,
-        "params": {
-          "Identity": "CIPP User requested to release a quarantined message",
-          "Category": "ThreatManagement",
-          "Operation": "QuarantineRequestReleaseMessage",
-          "Severity": "Informational",
-          "AggregationType": "None",
-          "NotifyUser": "%NotifyUser%"
-        }
-      }
-    ]
+    "executor": "QuarantineRequestAlert",
+    "notifyUser": "%NotifyUser%",
+    "allowExtraAddresses": "%AllowExtraAddresses%"
+  },
+  "prepare": "Get-CIPPBaselineQuarantineRequestAlertState",
+  "expected": {
+    "NotifyUserPresent": true
   }
 }

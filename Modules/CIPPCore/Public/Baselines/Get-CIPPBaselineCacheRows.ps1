@@ -17,6 +17,12 @@ function Get-CIPPBaselineCacheRows {
 
         Pass CollectorArgs for umbrella collectors whose default is their heaviest option, the
         same way a definition declares read.collectorArgs.
+
+        CollectorType covers the types that have no collector NAMED after them because an
+        umbrella collector writes them - CalendarPermissions, MailboxPermissions and
+        MailboxRules are all produced by Set-CIPPDBCacheMailboxes under a -Types switch.
+        Without it the convention lookup finds nothing and the caller sees a permanently
+        empty set.
     .FUNCTIONALITY
         Internal
     #>
@@ -26,15 +32,17 @@ function Get-CIPPBaselineCacheRows {
         [string]$TenantFilter,
         [Parameter(Mandatory = $true)]
         [string]$Type,
+        [string]$CollectorType,
         [hashtable]$CollectorArgs = @{}
     )
 
     $Rows = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type | Where-Object { $_ })
     if ($Rows.Count -gt 0) { return $Rows }
 
-    $Collector = Get-Command -Name "Set-CIPPDBCache$Type" -ErrorAction SilentlyContinue
+    $CollectorFor = if ([string]::IsNullOrWhiteSpace($CollectorType)) { $Type } else { $CollectorType }
+    $Collector = Get-Command -Name "Set-CIPPDBCache$CollectorFor" -ErrorAction SilentlyContinue
     if (-not $Collector) {
-        Write-Information "Baselines: no collector exists for cache type $Type on $TenantFilter."
+        Write-Information "Baselines: no collector exists for cache type $CollectorFor on $TenantFilter."
         return @()
     }
 

@@ -265,3 +265,45 @@ Describe 'Empty-but-collected caches' {
         (Get-CIPPBaselineTeamsDisableResourceAccountsState -Item $null -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
     }
 }
+
+Describe 'Get-CIPPBaselineQuarantineRequestAlertState' {
+    # The classic standard graded this with -contains: correct as long as the configured
+    # address is ON the notify list. Recipients an operator added by hand are left alone.
+    # An exact array compare would strip them, which is a behaviour change this must not make.
+    BeforeAll {
+        . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
+        . (Join-Path $Baselines 'Get-CIPPBaselineQuarantineRequestAlertState.ps1')
+        function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
+        $script:AlertName = 'CIPP User requested to release a quarantined message'
+        $script:Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ NotifyUser = 'soc@contoso.com' } }
+    }
+    BeforeEach { Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'ExoProtectionAlert-Count'; DataCount = 1 } } }
+
+    It 'is compliant when the configured address is the only recipient' {
+        Mock New-CIPPDbRequest { @(@{ Name = $script:AlertName; NotifyUser = @('soc@contoso.com') } | ConvertTo-Cached) }
+        (Get-CIPPBaselineQuarantineRequestAlertState -Item $script:Item -TenantFilter $script:Tenant).Current.NotifyUserPresent | Should -BeTrue
+    }
+
+    It 'tolerates extra recipients rather than reporting drift on them' {
+        Mock New-CIPPDbRequest { @(@{ Name = $script:AlertName; NotifyUser = @('soc@contoso.com', 'dpo@contoso.com') } | ConvertTo-Cached) }
+        (Get-CIPPBaselineQuarantineRequestAlertState -Item $script:Item -TenantFilter $script:Tenant).Current.NotifyUserPresent | Should -BeTrue
+    }
+
+    It 'reports drift when the configured address is absent' {
+        Mock New-CIPPDbRequest { @(@{ Name = $script:AlertName; NotifyUser = @('dpo@contoso.com') } | ConvertTo-Cached) }
+        (Get-CIPPBaselineQuarantineRequestAlertState -Item $script:Item -TenantFilter $script:Tenant).Current.NotifyUserPresent | Should -BeFalse
+    }
+
+    It 'treats a missing alert as drift so remediation creates it' {
+        Mock New-CIPPDbRequest { @(@{ Name = 'some other alert'; NotifyUser = @('x@y.com') } | ConvertTo-Cached) }
+        $Prepared = Get-CIPPBaselineQuarantineRequestAlertState -Item $script:Item -TenantFilter $script:Tenant
+        $Prepared.Current | Should -Not -BeNullOrEmpty
+        $Prepared.Current.NotifyUserPresent | Should -BeFalse
+    }
+
+    It 'reports unknown only when the alert cache has never been collected' {
+        Mock New-CIPPDbRequest { @() }
+        Mock Get-CIPPDbItem { $null }
+        (Get-CIPPBaselineQuarantineRequestAlertState -Item $script:Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
+}

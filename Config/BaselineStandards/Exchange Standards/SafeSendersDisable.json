@@ -1,0 +1,49 @@
+{
+  "name": "SafeSendersDisable",
+  "label": "Remove Safe Senders to prevent SPF bypass",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Loops through all users and removes the Safe Senders list. This is to prevent SPF bypass attacks, as the Safe Senders list is not checked by SPF. This is a remediate only standard: the per-mailbox Safe Senders list is not readable at scale, so the standard always reports compliant and applies the change on every run.",
+  "executiveText": "Removes user-defined safe sender lists to prevent security bypasses where malicious emails could avoid spam filtering. This ensures all emails go through proper security screening, even if users have previously marked senders as 'safe', improving overall email security.",
+  "docsDescription": "Loops through all users and removes the Safe Senders list. This is to prevent SPF bypass attacks, as the Safe Senders list is not checked by SPF. Remediate only - there is no readable state to compare, so the row always reports compliant and the sweep runs on every pass.",
+  "impactColour": "warning",
+  "addedDate": "2023-10-26",
+  "powershellEquivalent": "Set-MailboxJunkEmailConfiguration",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "state": "This is a remediate only standard. This means we cannot read the status, and always resolve it for all items"
+  },
+  "checkBeforeRun": false,
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineSafeSendersDisableState",
+  "remediate": {
+    "executor": "ExoBulkSweep",
+    "writes": [
+      {
+        "cmdlet": "Set-MailboxJunkEmailConfiguration",
+        "params": {
+          "Identity": "%id%",
+          "TrustedSendersAndDomains": null
+        }
+      }
+    ]
+  }
+}
