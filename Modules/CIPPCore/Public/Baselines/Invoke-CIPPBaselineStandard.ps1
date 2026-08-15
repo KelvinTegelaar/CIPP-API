@@ -116,12 +116,12 @@ function Invoke-CIPPBaselineStandard {
 
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Started `"$Label`" ($Mode) - Run $RunId" -Sev 'Info'
 
-        # 1a. Custom standards own their whole flow in their per-standard script.
-        if ($Definition.custom -eq $true) {
-            $CustomFunction = Get-Command -Name $Definition.customFunction -ErrorAction SilentlyContinue
-            if (-not $CustomFunction) { throw "Custom function $($Definition.customFunction) is not available." }
-            return (& $Definition.customFunction -Item $Item -Mode $Mode -TriggeredBy $TriggeredBy -Force:$Force -RunId $RunId)
-        }
+        # There is ONE flow. A standard whose read or write cannot be expressed
+        # declaratively replaces THAT PART ONLY - a prepare hook for a bespoke read, a
+        # named executor for a bespoke write - and the engine still owns compare, hard
+        # gaps, accepted paths, triage, conflict, deletion and persistence. Nothing
+        # short-circuits past this point: a standard that owned its whole flow was a fork
+        # of the logic below, and forks silently stop tracking it.
 
         # Prior resolved row: the deviation lifecycle and manual completion live on it.
         $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
@@ -342,8 +342,10 @@ function Invoke-CIPPBaselineStandard {
             }
             $Value
         }
-        # Pre-check gate, for TEMPLATE standards only (prepare hook = CA/Intune): their
-        # verdicts drive policy deploys and their domains change under external hands.
+        # Pre-check gate, for TEMPLATE standards only - keyed on read.requiredCaches,
+        # which only they declare (a prepare hook alone no longer implies it, now that
+        # prepare is the general escape hatch for any bespoke read): their verdicts drive
+        # policy deploys and their domains change under external hands.
         # Wait-CIPPBaselineCacheReady verifies the cache is complete (all required
         # family caches collected), recent (3h), and consistent with live state (CA
         # live-count probe) - and enforces SINGLE-FLIGHT collection: one job per
@@ -352,7 +354,9 @@ function Invoke-CIPPBaselineStandard {
         # Everything else tolerates normal CIPPDb cadence staleness.
         $JustRefreshed = $false
         $CacheCollector = Get-Command -Name "Set-CIPPDBCache$($Definition.read.cacheType)" -ErrorAction SilentlyContinue
-        if ($CacheCollector -and $Definition.prepare) {
+        # The Where-Object is load-bearing: @($null).Count is 1, so an unfiltered @() test
+        # is true for every definition that simply omits the property.
+        if ($CacheCollector -and @($Definition.read.requiredCaches | Where-Object { $_ }).Count -gt 0) {
             $JustRefreshed = Wait-CIPPBaselineCacheReady -TenantFilter $TenantFilter -Definition $Definition -RunId $RunId
         }
 
@@ -624,13 +628,19 @@ function Invoke-CIPPBaselineStandard {
             $ExpectedJson = ConvertTo-Json -Compress -Depth 100 -InputObject $Expected
             try {
                 $Rendered = & $Render $Definition.remediate $Item.Variables
+                # Every executor takes the same three arguments. -Current is the read
+                # result (declarative or prepared): a sweep writes to the offender set the
+                # read computed, and an object-scoped write needs the id it found. Most
+                # executors ignore it.
                 switch ($Definition.remediate.executor) {
-                    'ExoRequest' { Invoke-CIPPBaselineExoRequest -Remediate $Rendered -TenantFilter $TenantFilter }
-                    'GraphRequest' { Invoke-CIPPBaselineGraphRequest -Remediate $Rendered -TenantFilter $TenantFilter }
-                    'TeamsRequest' { Invoke-CIPPBaselineTeamsRequest -Remediate $Rendered -TenantFilter $TenantFilter }
-                    'SPOTenant' { Invoke-CIPPBaselineSPOTenant -Remediate $Rendered -TenantFilter $TenantFilter }
-                    'CATemplate' { Invoke-CIPPBaselineCATemplate -Remediate $Rendered -TenantFilter $TenantFilter }
-                    'IntuneTemplate' { Invoke-CIPPBaselineIntuneTemplate -Remediate $Rendered -TenantFilter $TenantFilter }
+                    'ExoRequest' { Invoke-CIPPBaselineExoRequest -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current }
+                    'GraphRequest' { Invoke-CIPPBaselineGraphRequest -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current }
+                    'TeamsRequest' { Invoke-CIPPBaselineTeamsRequest -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current }
+                    'SPOTenant' { Invoke-CIPPBaselineSPOTenant -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current }
+                    'CATemplate' { Invoke-CIPPBaselineCATemplate -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current }
+                    'IntuneTemplate' { Invoke-CIPPBaselineIntuneTemplate -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current }
+                    'ActivityBasedTimeout' { Invoke-CIPPBaselineActivityBasedTimeout -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current }
+                    'DisableBasicAuthSMTP' { Invoke-CIPPBaselineDisableBasicAuthSMTP -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current }
                     default { throw "Unknown remediate executor '$($Definition.remediate.executor)' on $($Definition.name)." }
                 }
             } catch {

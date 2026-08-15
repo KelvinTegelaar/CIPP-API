@@ -46,6 +46,9 @@
   "read": {
     "cacheType": "ExoTransportConfig"
   },
-  "custom": true,
-  "customFunction": "Invoke-CIPPBaselineDisableBasicAuthSMTP"
+  "prepare": "Get-CIPPBaselineDisableBasicAuthSMTPState",
+  "remediate": {
+    "executor": "DisableBasicAuthSMTP",
+    "disabled": "%disabled%"
+  }
 }

@@ -61,6 +61,9 @@
   "read": {
     "cacheType": "ActivityBasedTimeoutPolicy"
   },
-  "custom": true,
-  "customFunction": "Invoke-CIPPBaselineActivityBasedTimeout"
+  "prepare": "Get-CIPPBaselineActivityBasedTimeoutState",
+  "remediate": {
+    "executor": "ActivityBasedTimeout",
+    "timeout": "%timeout%"
+  }
 }
