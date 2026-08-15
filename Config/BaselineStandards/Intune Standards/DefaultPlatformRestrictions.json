@@ -1,0 +1,110 @@
+{
+  "name": "DefaultPlatformRestrictions",
+  "label": "Set Default Platform Restrictions",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Sets the default enrollment platform restrictions, controlling which device platforms may enroll and whether personally-owned devices of each platform are allowed.",
+  "executiveText": "Controls which kinds of device can enrol into management, and whether employees may enrol personal devices. This keeps unmanaged or unsupported platforms off corporate resources.",
+  "docsDescription": "Sets the default device enrollment platform restrictions for Android, Android for Work, iOS, macOS and Windows.",
+  "impactColour": "warning",
+  "addedDate": "2024-07-15",
+  "powershellEquivalent": "Graph API",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "platformAndroidForWorkBlocked": {
+      "type": "switch",
+      "label": "Block Android (work profile) platform",
+      "default": false
+    },
+    "personalAndroidForWorkBlocked": {
+      "type": "switch",
+      "label": "Block personally owned Android (work profile)",
+      "default": false
+    },
+    "platformAndroidBlocked": {
+      "type": "switch",
+      "label": "Block Android (device administrator) platform",
+      "default": false
+    },
+    "personalAndroidBlocked": {
+      "type": "switch",
+      "label": "Block personally owned Android (device administrator)",
+      "default": false
+    },
+    "platformiOSBlocked": {
+      "type": "switch",
+      "label": "Block iOS platform",
+      "default": false
+    },
+    "personaliOSBlocked": {
+      "type": "switch",
+      "label": "Block personally owned iOS",
+      "default": false
+    },
+    "platformMacOSBlocked": {
+      "type": "switch",
+      "label": "Block macOS platform",
+      "default": false
+    },
+    "personalMacOSBlocked": {
+      "type": "switch",
+      "label": "Block personally owned macOS",
+      "default": false
+    },
+    "platformWindowsBlocked": {
+      "type": "switch",
+      "label": "Block Windows platform",
+      "default": false
+    },
+    "personalWindowsBlocked": {
+      "type": "switch",
+      "label": "Block personally owned Windows",
+      "default": false
+    }
+  },
+  "read": {
+    "cacheType": "DeviceEnrollmentConfigurations"
+  },
+  "prepare": "Get-CIPPBaselineDefaultPlatformRestrictionsState",
+  "remediate": {
+    "executor": "DeviceEnrollmentConfiguration",
+    "body": {
+      "@odata.type": "#microsoft.graph.deviceEnrollmentPlatformRestrictionsConfiguration",
+      "androidForWorkRestriction": {
+        "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
+        "platformBlocked": "%platformAndroidForWorkBlocked%",
+        "personalDeviceEnrollmentBlocked": "%personalAndroidForWorkBlocked%"
+      },
+      "androidRestriction": {
+        "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
+        "platformBlocked": "%platformAndroidBlocked%",
+        "personalDeviceEnrollmentBlocked": "%personalAndroidBlocked%"
+      },
+      "iosRestriction": {
+        "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
+        "platformBlocked": "%platformiOSBlocked%",
+        "personalDeviceEnrollmentBlocked": "%personaliOSBlocked%"
+      },
+      "macOSRestriction": {
+        "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
+        "platformBlocked": "%platformMacOSBlocked%",
+        "personalDeviceEnrollmentBlocked": "%personalMacOSBlocked%"
+      },
+      "windowsRestriction": {
+        "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
+        "platformBlocked": "%platformWindowsBlocked%",
+        "personalDeviceEnrollmentBlocked": "%personalWindowsBlocked%"
+      }
+    }
+  }
+}
