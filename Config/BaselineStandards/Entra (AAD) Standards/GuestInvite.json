@@ -11,6 +11,16 @@
   "impact": "Medium Impact",
   "helpText": "This setting controls who can invite guests to your directory to collaborate on resources secured by your company, such as SharePoint sites or Azure resources.",
   "executiveText": "Controls who within the organization can invite external partners and vendors to access company resources, ensuring proper oversight of external access while enabling necessary business collaboration. This helps maintain security while supporting partnership and vendor relationships.",
+  "impactColour": "warning",
+  "addedDate": "2024-11-12",
+  "powershellEquivalent": "Graph API",
+  "appliesToTest": [
+    "CIS_5_1_6_3",
+    "EIDSCAAP04",
+    "EIDSCAAP07",
+    "SMB1001_2_8",
+    "ZTNA21791"
+  ],
   "recommendedBy": [],
   "requiredCapabilities": [],
   "secureScoreImpact": 0,
@@ -52,6 +62,7 @@
     "requests": [
       {
         "method": "PATCH",
+        "asApp": false,
         "uri": "policies/authorizationPolicy/authorizationPolicy",
         "body": {
           "allowInvitesFrom": "%allowInvitesFrom%"

@@ -8,6 +8,14 @@
   "impact": "Low Impact",
   "helpText": "Controls whether administrators are allowed to use Self-Service Password Reset through the Microsoft Entra authorization policy.",
   "executiveText": "Controls whether tenant administrators can reset their own passwords through Self-Service Password Reset. Disabling this capability forces privileged accounts through more controlled recovery processes and reduces the risk of self-service recovery being misused on administrative identities.",
+  "docsDescription": "Configures the allowedToUseSSPR property on the Microsoft Entra authorization policy. Microsoft documents this property as controlling whether administrators of the tenant can use Self-Service Password Reset. Use this standard to explicitly enable or disable administrator SSPR based on your security policy.",
+  "impactColour": "info",
+  "addedDate": "2026-04-21",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthorizationPolicy",
+  "appliesToTest": [
+    "EIDSCAAP01",
+    "ZTNA21842"
+  ],
   "recommendedBy": [
     "CIPP"
   ],
@@ -33,6 +41,7 @@
     "requests": [
       {
         "method": "PATCH",
+        "asApp": false,
         "uri": "policies/authorizationPolicy/authorizationPolicy",
         "body": {
           "allowedToUseSSPR": "%allowSSPR%"

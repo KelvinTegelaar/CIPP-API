@@ -6,8 +6,12 @@
     "IntegratedApps"
   ],
   "impact": "Medium Impact",
-  "helpText": "Sets the default OAuth consent level so users can consent to applications that have low risks. This standard conflicts with the \"Require admin consent for applications\" standard; only one of the two should be assigned per tenant.",
+  "helpText": "Sets the default oauth consent level so users can consent to applications that have low risks. This standard conflicts with the \"Require admin consent for applications\" standard; only one of the two should be assigned per tenant.",
   "executiveText": "Allows employees to approve low-risk applications without administrative intervention, balancing security with productivity. This provides a middle ground between complete restriction and open access, enabling business agility while maintaining protection against high-risk applications.",
+  "docsDescription": "Allows users to consent to applications with low assigned risk. This standard conflicts with the \"Require admin consent for applications (Prevent OAuth phishing)\" (OauthConsent) standard. Enabling both on the same tenant causes a remediation conflict, so only assign one.",
+  "impactColour": "warning",
+  "addedDate": "2022-08-16",
+  "powershellEquivalent": "Update-MgPolicyAuthorizationPolicy",
   "recommendedBy": [],
   "requiredCapabilities": [],
   "secureScoreImpact": 0,
@@ -26,6 +30,7 @@
     "requests": [
       {
         "method": "PATCH",
+        "asApp": false,
         "uri": "policies/authorizationPolicy/authorizationPolicy",
         "body": {
           "permissionGrantPolicyIdsAssignedToDefaultUserRole": [
@@ -35,6 +40,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "offline_access",
@@ -44,6 +50,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "openid",
@@ -53,6 +60,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "User.Read",
@@ -62,6 +70,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "profile",
@@ -71,6 +80,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "email",

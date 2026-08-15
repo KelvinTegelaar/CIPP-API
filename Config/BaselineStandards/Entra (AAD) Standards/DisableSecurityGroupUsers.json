@@ -11,6 +11,14 @@
   "impact": "Medium Impact",
   "helpText": "Completely disables the creation of security groups by users. This also breaks the ability to manage groups themselves, or create Teams",
   "executiveText": "Restricts the creation of security groups to IT administrators only, preventing employees from creating unauthorized access groups that could bypass security controls. This ensures proper governance of access permissions and maintains centralized control over who can access what resources.",
+  "impactColour": "warning",
+  "addedDate": "2022-07-17",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthorizationPolicy",
+  "appliesToTest": [
+    "CIS_5_1_3_1",
+    "SMB1001_2_8",
+    "ZTNA21868"
+  ],
   "recommendedBy": [],
   "requiredCapabilities": [],
   "secureScoreImpact": 0,
@@ -35,6 +43,7 @@
     "requests": [
       {
         "method": "PATCH",
+        "asApp": false,
         "uri": "policies/authorizationPolicy/authorizationPolicy",
         "body": {
           "defaultUserRolePermissions": {

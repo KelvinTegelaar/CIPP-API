@@ -376,11 +376,31 @@ function Get-CIPPBaselineAlignment {
         $Summary.tenantId = $TenantFilter
         $Summary.displayName = ($Rows | Select-Object -First 1).tenantName ?? $TenantFilter
 
+        # This tenant's trend: the daily rollups Set-CIPPBaselineTrendPoint writes (last
+        # 90 days), with today's point always replaced by the LIVE score - same shape as
+        # the fleet trend so the same chart renders it.
+        $Today = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
+        $Trend = [System.Collections.Generic.List[object]]::new()
+        try {
+            $TrendTable = Get-CippTable -tablename 'BaselineTrend'
+            $Cutoff = (Get-Date).ToUniversalTime().AddDays(-90).ToString('yyyy-MM-dd')
+            $TrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter "PartitionKey eq 'tenant_$SafeTenant' and RowKey ge '$Cutoff' and RowKey lt '$Today'") | Sort-Object -Property RowKey
+            foreach ($Point in $TrendRows) {
+                $Trend.Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
+            }
+        } catch {
+            Write-Information "Baseline tenant trend read skipped: $($_.Exception.Message)"
+        }
+        if ($Rows.Count -gt 0) {
+            $Trend.Add([PSCustomObject]@{ date = $Today; aligned = $Summary.alignedPercentage; verified = $Summary.verifiedPercentage })
+        }
+
         return [PSCustomObject]@{
             summary       = [PSCustomObject]$Summary
             rows          = @($Rows)
             stageStates   = @($StageStates)
             deviationFeed = @($Feed | Sort-Object -Property timestamp -Descending)
+            trend         = @($Trend)
         }
     }
 
@@ -388,9 +408,32 @@ function Get-CIPPBaselineAlignment {
         $Entities = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey ne ''"
         $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions -ResolveTemplateName $ResolveTemplateName })
 
+        # Per-standard trends in ONE range scan over the 'standard_*' partitions (keys
+        # sanitize '#' to '~'), attached to each standard so the offcanvas charts without
+        # another call. Today's point is always the LIVE score, appended per group below.
+        $Today = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
+        $StandardTrends = @{}
+        try {
+            $TrendTable = Get-CippTable -tablename 'BaselineTrend'
+            $Cutoff = (Get-Date).ToUniversalTime().AddDays(-90).ToString('yyyy-MM-dd')
+            $StandardTrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter ("PartitionKey ge 'standard_' and PartitionKey lt 'standard{0}' and RowKey ge '{1}' and RowKey lt '{2}'" -f [char]0x60, $Cutoff, $Today))
+            foreach ($Point in ($StandardTrendRows | Sort-Object -Property RowKey)) {
+                $StandardKey = "$($Point.PartitionKey)".Substring(9) -replace '~', '#'
+                if (-not $StandardTrends.ContainsKey($StandardKey)) {
+                    $StandardTrends[$StandardKey] = [System.Collections.Generic.List[object]]::new()
+                }
+                $StandardTrends[$StandardKey].Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
+            }
+        } catch {
+            Write-Information "Baseline standard trend read skipped: $($_.Exception.Message)"
+        }
+
         $Standards = foreach ($Group in ($Rows | Group-Object -Property standardName)) {
             $First = $Group.Group | Select-Object -First 1
             $Scores = & $ScoreRows $Group.Group
+            $TrendPoints = [System.Collections.Generic.List[object]]::new()
+            foreach ($Point in @($StandardTrends[$Group.Name] ?? @())) { $TrendPoints.Add($Point) }
+            $TrendPoints.Add([PSCustomObject]@{ date = $Today; aligned = $Scores.alignedPercentage; verified = $Scores.verifiedPercentage })
             [PSCustomObject]([ordered]@{
                     standardName      = $Group.Name
                     standardLabel     = $First.standardLabel
@@ -399,6 +442,7 @@ function Get-CIPPBaselineAlignment {
                     secureScoreImpact = $First.secureScoreImpact
                     totalTenants      = $Scores.total
                     rows              = @($Group.Group)
+                    trend             = @($TrendPoints)
                 } + $Scores)
         }
 

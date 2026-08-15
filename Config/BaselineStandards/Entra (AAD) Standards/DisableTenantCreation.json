@@ -10,6 +10,16 @@
   "impact": "Low Impact",
   "helpText": "Restricts creation of M365 tenants to the Global Administrator or Tenant Creator roles.",
   "executiveText": "Prevents regular employees from creating new Microsoft 365 organizations, ensuring all new tenants are properly managed and controlled by IT administrators. This prevents unauthorized shadow IT environments and maintains centralized governance over Microsoft 365 resources.",
+  "docsDescription": "Users by default are allowed to create M365 tenants. This disables that so only admins can create new M365 tenants.",
+  "impactColour": "info",
+  "addedDate": "2022-11-29",
+  "powershellEquivalent": "Update-MgPolicyAuthorizationPolicy",
+  "appliesToTest": [
+    "CIS_5_1_2_3",
+    "SMB1001_2_8",
+    "ZTNA21772",
+    "ZTNA21787"
+  ],
   "recommendedBy": [
     "CIS",
     "CIPP"
@@ -37,6 +47,7 @@
     "requests": [
       {
         "method": "PATCH",
+        "asApp": false,
         "uri": "policies/authorizationPolicy/authorizationPolicy",
         "body": {
           "defaultUserRolePermissions": {
