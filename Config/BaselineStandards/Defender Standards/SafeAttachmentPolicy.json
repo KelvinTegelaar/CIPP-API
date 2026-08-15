@@ -1,0 +1,131 @@
+{
+  "name": "SafeAttachmentPolicy",
+  "label": "Default Safe Attachment Policy",
+  "cat": "Defender Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.1.4)",
+    "mdo_safedocuments",
+    "mdo_commonattachmentsfilter",
+    "mdo_safeattachmentpolicy",
+    "NIST CSF 2.0 (DE.CM-09)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "This creates a Safe Attachment policy. An existing policy carrying a legacy CIPP or Microsoft default name is adopted and updated rather than duplicated.",
+  "executiveText": "Scans email attachments in a secure environment before delivery, blocking malicious files that traditional filters miss. This protects employees from malware and ransomware delivered through email attachments.",
+  "docsDescription": "Creates or updates the Safe Attachment policy and the rule that scopes it to every accepted domain.",
+  "impactColour": "info",
+  "addedDate": "2024-03-25",
+  "powershellEquivalent": "Set-SafeAttachmentPolicy or New-SafeAttachmentPolicy",
+  "appliesToTest": [
+    "CIS_2_1_4",
+    "ORCA158",
+    "ORCA189",
+    "ORCA227"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    [
+      "EXCHANGE_S_STANDARD",
+      "EXCHANGE_S_ENTERPRISE",
+      "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_ENTERPRISE_GOV",
+      "EXCHANGE_LITE"
+    ],
+    [
+      "ATP_ENTERPRISE",
+      "ATP_ENTERPRISE_GOV",
+      "THREAT_INTELLIGENCE",
+      "THREAT_INTELLIGENCE_GOV"
+    ]
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "name": {
+      "type": "textField",
+      "label": "Policy Name",
+      "required": true,
+      "default": "CIPP Default Safe Attachment Policy"
+    },
+    "SafeAttachmentAction": {
+      "type": "select",
+      "multiple": false,
+      "label": "Safe Attachment Action",
+      "required": true,
+      "options": [
+        {
+          "label": "Allow",
+          "value": "Allow"
+        },
+        {
+          "label": "Block",
+          "value": "Block"
+        },
+        {
+          "label": "DynamicDelivery",
+          "value": "DynamicDelivery"
+        }
+      ],
+      "default": "Block"
+    },
+    "QuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "creatable": true,
+      "label": "QuarantineTag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "AdminOnlyAccessPolicy"
+    },
+    "Redirect": {
+      "type": "switch",
+      "label": "Redirect",
+      "default": false
+    },
+    "RedirectAddress": {
+      "type": "textField",
+      "label": "Redirect Address",
+      "omitWhenBlank": true,
+      "default": "",
+      "condition": {
+        "field": "standards.SafeAttachmentPolicy.Redirect",
+        "compareType": "is",
+        "compareValue": true
+      }
+    }
+  },
+  "read": {
+    "cacheType": "ExoSafeAttachmentPolicies"
+  },
+  "prepare": "Get-CIPPBaselineSafeAttachmentPolicyState",
+  "remediate": {
+    "executor": "ExoPolicyRule",
+    "policyCmdlet": "SafeAttachmentPolicy",
+    "ruleCmdlet": "SafeAttachmentRule",
+    "policyParams": {
+      "Enable": true,
+      "Action": "%SafeAttachmentAction%",
+      "QuarantineTag": "%QuarantineTag%",
+      "Redirect": "%Redirect%",
+      "RedirectAddress": "%RedirectAddress%"
+    },
+    "ruleParams": {
+      "Priority": 0
+    }
+  }
+}

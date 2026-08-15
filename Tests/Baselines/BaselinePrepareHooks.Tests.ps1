@@ -307,3 +307,63 @@ Describe 'Get-CIPPBaselineQuarantineRequestAlertState' {
         (Get-CIPPBaselineQuarantineRequestAlertState -Item $script:Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
     }
 }
+
+Describe 'Get-CIPPBaselineSafeAttachmentPolicyState' {
+    # Legacy name adoption is the part that bites: if the hook does not adopt the name the
+    # tenant already carries, remediation creates a SECOND policy instead of updating the one
+    # that exists, and both then fight over the same rule.
+    BeforeAll {
+        . (Join-Path $Baselines 'Get-CIPPBaselineSafeAttachmentPolicyState.ps1')
+        $script:Domains = @([PSCustomObject]@{ Name = 'contoso.com' }, [PSCustomObject]@{ Name = 'contoso.mail.onmicrosoft.com' })
+        function New-Item2 { param($Name, $Policy) [PSCustomObject]@{ Name = $Name; SafeAttachmentPolicy = $Policy; Priority = 0; RecipientDomainIs = @('contoso.com', 'contoso.mail.onmicrosoft.com') } }
+        $script:Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{
+                name = 'CIPP Default Safe Attachment Policy'; SafeAttachmentAction = 'Block'
+                QuarantineTag = 'AdminOnlyAccessPolicy'; Redirect = $false } }
+    }
+    BeforeEach {
+        Mock Get-CIPPBaselineCacheRows {
+            switch ($Type) {
+                'ExoSafeAttachmentPolicies' { $script:Policies }
+                'ExoSafeAttachmentRules' { $script:Rules }
+                'ExoAcceptedDomains' { $script:Domains }
+            }
+        }
+        $script:Policies = @([PSCustomObject]@{ Name = 'CIPP Default Safe Attachment Policy'; Enable = $true; Action = 'Block'; QuarantineTag = 'AdminOnlyAccessPolicy'; Redirect = $false })
+        $script:Rules = @(New-Item2 -Name 'CIPP Default Safe Attachment Policy Rule' -Policy 'CIPP Default Safe Attachment Policy')
+    }
+
+    It 'adopts a legacy Microsoft default name instead of creating a second policy' {
+        $script:Policies = @([PSCustomObject]@{ Name = 'Default Safe Attachment Policy'; Enable = $true; Action = 'Block'; QuarantineTag = 'AdminOnlyAccessPolicy'; Redirect = $false })
+        $script:Rules = @()
+        $Prepared = Get-CIPPBaselineSafeAttachmentPolicyState -Item $script:Item -TenantFilter $script:Tenant
+        $Prepared.Current.policyName | Should -Be 'Default Safe Attachment Policy'
+        $Prepared.Current.policyExists | Should -BeTrue
+    }
+
+    It 'uses the configured name when the tenant has no policy at all' {
+        $script:Policies = @([PSCustomObject]@{ Name = 'Something unrelated' })
+        $script:Rules = @()
+        $Prepared = Get-CIPPBaselineSafeAttachmentPolicyState -Item $script:Item -TenantFilter $script:Tenant
+        $Prepared.Current.policyName | Should -Be 'CIPP Default Safe Attachment Policy'
+        $Prepared.Current.policyExists | Should -BeFalse
+    }
+
+    It 'is compliant when policy and rule both match' {
+        $Prepared = Get-CIPPBaselineSafeAttachmentPolicyState -Item $script:Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'reports drift when only the RULE is wrong' {
+        # The whole reason the rule joins the compare: the classic remediated it independently,
+        # and a compare that ignored it would never trigger the write.
+        $script:Rules = @(New-Item2 -Name 'CIPP Default Safe Attachment Policy Rule' -Policy 'CIPP Default Safe Attachment Policy')
+        $script:Rules[0].RecipientDomainIs = @('contoso.com')
+        $Prepared = Get-CIPPBaselineSafeAttachmentPolicyState -Item $script:Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'does not grade RedirectAddress when none is configured' {
+        $Prepared = Get-CIPPBaselineSafeAttachmentPolicyState -Item $script:Item -TenantFilter $script:Tenant
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'redirectAddress'
+    }
+}

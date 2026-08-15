@@ -1,0 +1,282 @@
+{
+  "name": "AntiPhishPolicy",
+  "label": "Default Anti-Phishing Policy",
+  "cat": "Defender Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.1.7)",
+    "mdo_antiphishingpolicy",
+    "NIST CSF 2.0 (DE.CM-09)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "This creates an Anti-Phishing policy. On tenants without Defender for Office 365 only the settings that exist there are graded; impersonation and mailbox-intelligence protection are skipped.",
+  "executiveText": "Detects attempts to impersonate staff and partner domains, and warns employees about unusual or first-contact senders. This is the main defence against business email compromise.",
+  "docsDescription": "Creates or updates the Anti-Phishing policy and the rule that scopes it to every accepted domain. The graded property set depends on tenant licensing.",
+  "impactColour": "info",
+  "addedDate": "2024-03-25",
+  "powershellEquivalent": "Set-AntiPhishPolicy or New-AntiPhishPolicy",
+  "appliesToTest": [
+    "CIS_2_1_7"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "name": {
+      "type": "textField",
+      "label": "Policy Name",
+      "required": true,
+      "default": "CIPP Default Anti-Phishing Policy"
+    },
+    "PhishThresholdLevel": {
+      "type": "select",
+      "multiple": false,
+      "label": "Phishing Threshold Level",
+      "required": true,
+      "options": [
+        {
+          "label": "1",
+          "value": "1"
+        },
+        {
+          "label": "2",
+          "value": "2"
+        },
+        {
+          "label": "3",
+          "value": "3"
+        },
+        {
+          "label": "4",
+          "value": "4"
+        }
+      ],
+      "default": "3"
+    },
+    "EnableFirstContactSafetyTips": {
+      "type": "switch",
+      "label": "First contact safety tips",
+      "default": true
+    },
+    "EnableSimilarUsersSafetyTips": {
+      "type": "switch",
+      "label": "Similar users safety tips",
+      "default": true
+    },
+    "EnableSimilarDomainsSafetyTips": {
+      "type": "switch",
+      "label": "Similar domains safety tips",
+      "default": true
+    },
+    "EnableUnusualCharactersSafetyTips": {
+      "type": "switch",
+      "label": "Unusual characters safety tips",
+      "default": true
+    },
+    "AuthenticationFailAction": {
+      "type": "select",
+      "multiple": false,
+      "label": "Authentication fail action",
+      "required": true,
+      "options": [
+        {
+          "label": "MoveToJmf",
+          "value": "MoveToJmf"
+        },
+        {
+          "label": "Quarantine",
+          "value": "Quarantine"
+        }
+      ],
+      "default": "MoveToJmf"
+    },
+    "SpoofQuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "label": "Spoof quarantine tag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "DefaultFullAccessPolicy"
+    },
+    "MailboxIntelligenceProtectionAction": {
+      "type": "select",
+      "multiple": false,
+      "label": "Mailbox intelligence protection action",
+      "required": true,
+      "options": [
+        {
+          "label": "NoAction",
+          "value": "NoAction"
+        },
+        {
+          "label": "MoveToJmf",
+          "value": "MoveToJmf"
+        },
+        {
+          "label": "Delete",
+          "value": "Delete"
+        },
+        {
+          "label": "Quarantine",
+          "value": "Quarantine"
+        }
+      ],
+      "default": "Quarantine"
+    },
+    "MailboxIntelligenceQuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "label": "Mailbox intelligence quarantine tag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "DefaultFullAccessPolicy"
+    },
+    "TargetedUserProtectionAction": {
+      "type": "select",
+      "multiple": false,
+      "label": "Targeted user protection action",
+      "required": true,
+      "options": [
+        {
+          "label": "NoAction",
+          "value": "NoAction"
+        },
+        {
+          "label": "MoveToJmf",
+          "value": "MoveToJmf"
+        },
+        {
+          "label": "Delete",
+          "value": "Delete"
+        },
+        {
+          "label": "Quarantine",
+          "value": "Quarantine"
+        }
+      ],
+      "default": "Quarantine"
+    },
+    "TargetedUserQuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "label": "Targeted user quarantine tag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "DefaultFullAccessPolicy"
+    },
+    "TargetedDomainProtectionAction": {
+      "type": "select",
+      "multiple": false,
+      "label": "Targeted domain protection action",
+      "required": true,
+      "options": [
+        {
+          "label": "NoAction",
+          "value": "NoAction"
+        },
+        {
+          "label": "MoveToJmf",
+          "value": "MoveToJmf"
+        },
+        {
+          "label": "Delete",
+          "value": "Delete"
+        },
+        {
+          "label": "Quarantine",
+          "value": "Quarantine"
+        }
+      ],
+      "default": "Quarantine"
+    },
+    "TargetedDomainQuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "label": "Targeted domain quarantine tag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "DefaultFullAccessPolicy"
+    }
+  },
+  "read": {
+    "cacheType": "ExoAntiPhishPolicies"
+  },
+  "prepare": "Get-CIPPBaselineAntiPhishPolicyState",
+  "remediate": {
+    "executor": "ExoPolicyRule",
+    "policyCmdlet": "AntiPhishPolicy",
+    "ruleCmdlet": "AntiPhishRule",
+    "policyParams": {
+      "Enabled": true,
+      "EnableSpoofIntelligence": true,
+      "EnableUnauthenticatedSender": true,
+      "EnableViaTag": true,
+      "EnableFirstContactSafetyTips": "%EnableFirstContactSafetyTips%",
+      "AuthenticationFailAction": "%AuthenticationFailAction%",
+      "SpoofQuarantineTag": "%SpoofQuarantineTag%"
+    },
+    "ruleParams": {
+      "Priority": 0
+    }
+  }
+}

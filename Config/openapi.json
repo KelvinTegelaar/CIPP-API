@@ -33316,6 +33316,207 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecSiteBrowserActions": {
+      "post": {
+        "summary": "ExecSiteBrowserActions",
+        "operationId": "ExecSiteBrowserActions",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Mutating / operational actions for the SharePoint site browser (non-permissions).\nBody.Action selects the operation. SiteUrl + tenantFilter are always required.\nVersion cleanup: StartVersionCleanup, GetVersionCleanupStatus.\nSite admin properties (incl. version policy): GetSiteProperties.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "BatchDeleteMode": {
+                    "$ref": "#/components/schemas/LabelValueNumber"
+                  },
+                  "DeleteOlderThanDays": {
+                    "type": "string"
+                  },
+                  "MajorVersionLimit": {
+                    "type": "string"
+                  },
+                  "MajorWithMinorVersionsLimit": {
+                    "type": "string"
+                  },
+                  "SiteId": {
+                    "type": "string"
+                  },
+                  "SiteUrl": {
+                    "type": "string"
+                  },
+                  "SyncListPolicy": {
+                    "type": "boolean"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "Action",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.ReadWrite"
+      }
+    },
+    "/api/ExecSiteBrowserPermissions": {
+      "post": {
+        "summary": "ExecSiteBrowserPermissions",
+        "operationId": "ExecSiteBrowserPermissions",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Mutating actions for the SharePoint site browser permissions dialog.\nBody.Action selects the operation. SiteUrl + tenantFilter are always required.\nListId scopes library actions; omit it for the site root web.\nSharing links / Graph drive permissions are out of scope.\nGraph site permissions (Sites.Selected app grants): RemoveGraphSitePermission.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "ClearSubscopes": {
+                    "type": "boolean"
+                  },
+                  "CopyRoleAssignments": {
+                    "type": "string"
+                  },
+                  "GroupId": {
+                    "type": "string"
+                  },
+                  "GroupName": {
+                    "type": "string"
+                  },
+                  "Groups": {
+                    "type": "string"
+                  },
+                  "LibraryName": {
+                    "type": "string"
+                  },
+                  "ListId": {
+                    "type": "string"
+                  },
+                  "PermissionId": {
+                    "type": "string"
+                  },
+                  "PermissionLevel": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "PrincipalId": {
+                    "type": "string"
+                  },
+                  "PrincipalName": {
+                    "type": "string",
+                    "description": "Allow a single login/UPN from a selected admin row."
+                  },
+                  "RoleDefinitionId": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "SiteId": {
+                    "type": "string"
+                  },
+                  "SiteUrl": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Title": {
+                    "type": "string"
+                  },
+                  "userPrincipalName": {
+                    "type": "string",
+                    "description": "Allow a single login/UPN from a selected admin row."
+                  },
+                  "Users": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "Action",
+                  "GroupId",
+                  "ListId",
+                  "PermissionId",
+                  "PrincipalId",
+                  "SiteId",
+                  "SiteUrl",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.ReadWrite",
+        "x-cipp-reads-via": [
+          "Resolve-BrowserPermissionRoleDefId"
+        ]
+      }
+    },
     "/api/ExecSnoozeAlert": {
       "post": {
         "summary": "ExecSnoozeAlert",
@@ -53210,6 +53411,134 @@
           },
           "500": {
             "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.Read"
+      }
+    },
+    "/api/ListSiteBrowser": {
+      "get": {
+        "summary": "ListSiteBrowser",
+        "operationId": "ListSiteBrowser",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "SharePoint site browser listing (sites only — not OneDrive).\nRoot: Get-CIPPSPOAdminListData (SPO.Tenant/RenderAdminListData, Active sites catalog) —\nStorageUsed / NumOfFiles / TemplateName in one paged call.\nGraph getAllSites joins only for Graph site.id (drill-in).\nWith SiteId/SiteUrl: root document/page libraries (Graph lists + SPO StorageMetrics).",
+        "parameters": [
+          {
+            "name": "SiteId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SiteUrl",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.Read"
+      }
+    },
+    "/api/ListSiteBrowserPermissions": {
+      "get": {
+        "summary": "ListSiteBrowserPermissions",
+        "operationId": "ListSiteBrowserPermissions",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Extensive permission inventory for a SharePoint site or library for the site browser.\nCollects SPO site admins, associated Owners/Members/Visitors (with members), all site\ngroups (with members), web/library role assignments, and Graph site permissions\n(Sites.Selected / app-only grants). Partial failures are returned in Errors so the UI\ncan still show what was collected. SiteUrl is required; ListId targets a library.\nSharing links / Graph drive permissions are intentionally out of scope (handled elsewhere).",
+        "parameters": [
+          {
+            "name": "ListId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SiteId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SiteUrl",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
           }
         },
         "security": [
