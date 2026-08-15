@@ -50,9 +50,19 @@ function Invoke-CIPPBaselineStandard {
         }
         foreach ($Variable in (($Variables ?? [PSCustomObject]@{}).PSObject.Properties)) {
             $Token = '%{0}%' -f $Variable.Name
-            $EncodedValue = ConvertTo-Json -Compress -Depth 100 -InputObject $Variable.Value
+            $Value = $Variable.Value
+            # A number field is saved as a STRING ("30", not 30) - the frontend posts what the
+            # input holds. Splicing that into an exact "%var%" token yields a JSON string, and
+            # the compare is type-strict: expected "50" never equals a cached 50, so the
+            # standard reports drift forever and remediation writes the string back. Coerce on
+            # the DECLARED type so already-saved baselines are fixed too, not just new ones.
+            if ("$(($Definition.variables ?? [PSCustomObject]@{}).($Variable.Name).type)" -eq 'number' -and
+                $Value -is [string] -and "$Value" -match '^-?\d+(\.\d+)?$') {
+                $Value = if ("$Value" -match '^-?\d+$') { [int64]"$Value" } else { [double]"$Value" }
+            }
+            $EncodedValue = ConvertTo-Json -Compress -Depth 100 -InputObject $Value
             $Json = $Json.Replace(('"{0}"' -f $Token), $EncodedValue)
-            $Json = $Json.Replace($Token, "$($Variable.Value)")
+            $Json = $Json.Replace($Token, "$Value")
         }
         $Json = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Json -EscapeForJson
         $Json | ConvertFrom-Json

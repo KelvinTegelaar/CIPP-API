@@ -293,3 +293,51 @@ Describe 'Invoke-CIPPBaselineGraphBulkSweep' {
         Should -Invoke Set-CIPPDBCacheUsers -Times 1 -ParameterFilter { $TenantFilter -eq $script:Tenant }
     }
 }
+
+Describe 'Number variable rendering' {
+    # Live evidence: a saved baseline stores number fields as strings -
+    # {"deviceAgeThreshold":"30","deviceDeleteThreshold":"7"} - while switches store real
+    # booleans. Spliced raw, "50" never equals a cached 50 under the type-strict compare, so
+    # the standard drifts forever and remediation writes a string into a numeric property.
+    BeforeAll {
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
+
+        # The engine's render, reduced to the substitution it performs.
+        function Invoke-EngineRender {
+            param($Definition, $Template, $Variables)
+            $Json = ConvertTo-Json -Compress -Depth 100 -InputObject $Template
+            foreach ($Variable in $Variables.PSObject.Properties) {
+                $Token = '%{0}%' -f $Variable.Name
+                $Value = $Variable.Value
+                if ("$(($Definition.variables ?? [PSCustomObject]@{}).($Variable.Name).type)" -eq 'number' -and
+                    $Value -is [string] -and "$Value" -match '^-?\d+(\.\d+)?$') {
+                    $Value = if ("$Value" -match '^-?\d+$') { [int64]"$Value" } else { [double]"$Value" }
+                }
+                $Json = $Json.Replace(('"{0}"' -f $Token), (ConvertTo-Json -Compress -Depth 100 -InputObject $Value))
+                $Json = $Json.Replace($Token, "$Value")
+            }
+            $Json | ConvertFrom-Json
+        }
+        $script:Definition = @{ variables = @{ max = @{ type = 'number' }; label = @{ type = 'textField' } } } | ConvertTo-Spec
+    }
+
+    It 'renders a string-saved number as a number, so it matches the cached value' {
+        $Expected = Invoke-EngineRender -Definition $script:Definition -Template (@{ userDeviceQuota = '%max%' } | ConvertTo-Spec) -Variables ([PSCustomObject]@{ max = '50' })
+        $Current = '{"userDeviceQuota":50}' | ConvertFrom-Json
+        @(Compare-CIPPIntuneObject -ReferenceObject $Expected -DifferenceObject $Current | Where-Object { $_ }).Count | Should -Be 0
+    }
+
+    It 'still reports real drift on a different number' {
+        $Expected = Invoke-EngineRender -Definition $script:Definition -Template (@{ userDeviceQuota = '%max%' } | ConvertTo-Spec) -Variables ([PSCustomObject]@{ max = '20' })
+        $Current = '{"userDeviceQuota":50}' | ConvertFrom-Json
+        @(Compare-CIPPIntuneObject -ReferenceObject $Expected -DifferenceObject $Current | Where-Object { $_ }).Count | Should -Be 1
+    }
+
+    It 'leaves a non-number variable as the string it is' {
+        # Coercing on value shape rather than declared type would turn a textField holding
+        # "30" into a number and break string compares.
+        $Expected = Invoke-EngineRender -Definition $script:Definition -Template (@{ label = '%label%' } | ConvertTo-Spec) -Variables ([PSCustomObject]@{ label = '30' })
+        $Expected.label | Should -BeOfType ([string])
+    }
+}
