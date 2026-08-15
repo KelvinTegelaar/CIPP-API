@@ -16327,7 +16327,8 @@
                     "type": "boolean"
                   },
                   "FullName": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Pretty-printed, not compressed: repo files are hand-edited on GitHub."
                   },
                   "GUID": {
                     "type": "string",
@@ -16337,7 +16338,8 @@
                     "type": "string"
                   },
                   "Message": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Pretty-printed, not compressed: repo files are hand-edited on GitHub."
                   },
                   "Path": {
                     "type": "string"

@@ -202,10 +202,14 @@ function Get-CIPPBaseline {
                 }
             }
 
-            # Explicit rollout state rows for this baseline.
+            # Explicit rollout state rows for this baseline. 'Exported Template' is the
+            # community-export assignment placeholder - it shows in the editor's tenant
+            # selector so the operator knows to re-assign, but it is never a runnable
+            # tenant: no state, no work items, no resolved rows.
             $StateRows = Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeGuid'"
             $TenantStates = [System.Collections.Generic.List[object]]::new()
             foreach ($State in $StateRows) {
+                if ("$($State.RowKey)" -eq 'Exported Template') { continue }
                 $TenantStates.Add((& $NewState $State.RowKey ([int]($State.currentStage ?? 1)) $State.enteredStageAt))
             }
 
@@ -220,7 +224,7 @@ function Get-CIPPBaseline {
                     $Assignment.scopeId
                 }
             }
-            $AssignedDomains = @($AssignedDomains | Where-Object { $_ -and $ExcludedTenants -notcontains $_ } | Select-Object -Unique)
+            $AssignedDomains = @($AssignedDomains | Where-Object { $_ -and $_ -ne 'Exported Template' -and $ExcludedTenants -notcontains $_ } | Select-Object -Unique)
             foreach ($Domain in $AssignedDomains) {
                 if ($TenantStates.tenantFilter -notcontains $Domain) {
                     $TenantStates.Add((& $NewState $Domain 1 $RolloutRow.updatedAt))
