@@ -85,7 +85,8 @@ function Compare-CIPPIntuneObject {
                 'includeDevices',
                 'excludeDevices',
                 'includeGuestOrExternalUserTypes',
-                'excludeGuestOrExternalUserTypes'
+                'excludeGuestOrExternalUserTypes',
+                'NotifyUser'
             )
 
             foreach ($pattern in $unorderedSetPatterns) {

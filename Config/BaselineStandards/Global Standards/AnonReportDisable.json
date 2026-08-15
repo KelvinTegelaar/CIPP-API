@@ -1,0 +1,38 @@
+{
+  "name": "AnonReportDisable",
+  "label": "Enable Usernames instead of pseudo anonymised names in reports",
+  "cat": "Global Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Shows usernames instead of pseudo anonymised names in reports. This standard is required for reporting to work correctly.",
+  "executiveText": "Configures Microsoft 365 reports to display actual usernames instead of anonymized identifiers, enabling IT administrators to effectively troubleshoot issues and generate meaningful usage reports. This improves operational efficiency and system management capabilities.",
+  "docsDescription": "Microsoft announced some APIs and reports no longer return names, to comply with compliance and legal requirements in specific countries. This proves an issue for a lot of MSPs because those reports are often helpful for engineers. This standard applies a setting that shows usernames in those API calls / reports.",
+  "impactColour": "info",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Update-MgBetaAdminReportSetting -BodyParameter @{displayConcealedNames = $true}",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "displayConcealedNames": false
+  },
+  "read": {
+    "cacheType": "AdminReportSettings"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "admin/reportSettings",
+        "body": {
+          "displayConcealedNames": false
+        }
+      }
+    ]
+  }
+}

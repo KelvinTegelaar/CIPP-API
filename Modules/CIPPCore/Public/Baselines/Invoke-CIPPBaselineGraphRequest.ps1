@@ -21,11 +21,16 @@ function Invoke-CIPPBaselineGraphRequest {
 
     foreach ($Step in @($Remediate.requests)) {
         if (-not $Step) { continue }
+        $Method = $Step.method ?? 'PATCH'
+        if ($Method -eq 'PATCH' -and @(($Step.body ?? [PSCustomObject]@{}).PSObject.Properties).Count -eq 0) {
+            Write-Information "Baselines: PATCH $($Step.uri) on $TenantFilter skipped - nothing configured to write."
+            continue
+        }
         try {
-            $null = New-GraphPostRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/$($Step.uri)" -type ($Step.method ?? 'PATCH') -body (ConvertTo-Json -Compress -Depth 100 -InputObject $Step.body) -AsApp ([bool]($Step.asApp ?? $true))
+            $null = New-GraphPostRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/$($Step.uri)" -type $Method -body (ConvertTo-Json -Compress -Depth 100 -InputObject $Step.body) -AsApp ([bool]($Step.asApp ?? $true))
         } catch {
             if ($Step.continueOnError -eq $true) {
-                Write-Information "Baselines: $($Step.method) $($Step.uri) on $TenantFilter continued past: $($_.Exception.Message)"
+                Write-Information "Baselines: $Method $($Step.uri) on $TenantFilter continued past: $($_.Exception.Message)"
             } else { throw }
         }
     }

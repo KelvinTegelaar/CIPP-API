@@ -1,0 +1,87 @@
+{
+  "name": "SharePointMassDeletionAlert",
+  "label": "SharePoint Mass Deletion Alert",
+  "cat": "Defender Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets a e-mail address to alert when a User deletes more than 20 SharePoint files within 60 minutes. NB: Requires a Office 365 E5 subscription, Office 365 E3 with Threat Intelligence or Office 365 EquivioAnalytics add-on.",
+  "executiveText": "Alerts administrators when employees delete large numbers of SharePoint files in a short time period, helping detect potential data destruction attacks, ransomware, or accidental mass deletions. This early warning system enables rapid response to protect critical business documents and data.",
+  "docsDescription": "Sets a e-mail address to alert when a User deletes more than 20 SharePoint files within 60 minutes. This is useful for monitoring and ensuring that the correct SharePoint files are deleted. NB: Requires a Office 365 E5 subscription, Office 365 E3 with Threat Intelligence or Office 365 EquivioAnalytics add-on.",
+  "impactColour": "info",
+  "addedDate": "2025-04-07",
+  "powershellEquivalent": "New-ProtectionAlert and Set-ProtectionAlert",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "RMS_S_PREMIUM2"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "Threshold": {
+      "type": "number",
+      "label": "Max files to delete within the time frame",
+      "default": 20
+    },
+    "TimeWindow": {
+      "type": "number",
+      "label": "Time frame in minutes",
+      "default": 60
+    },
+    "NotifyUser": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "required": true,
+      "label": "E-mail to receive the alert"
+    }
+  },
+  "expected": {
+    "Threshold": "%Threshold%",
+    "TimeWindow": "%TimeWindow%",
+    "NotifyUser": "%NotifyUser%"
+  },
+  "read": {
+    "cacheType": "ExoProtectionAlert",
+    "filter": [
+      {
+        "property": "Name",
+        "value": "CIPP SharePoint mass deletion of files by a user"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "New-ProtectionAlert",
+        "compliance": true,
+        "continueOnError": true,
+        "params": {
+          "Name": "CIPP SharePoint mass deletion of files by a user",
+          "ThreatType": "Activity",
+          "Category": "DataGovernance",
+          "Operation": "FileDeleted",
+          "Severity": "High",
+          "AggregationType": "1",
+          "Threshold": "%Threshold%",
+          "TimeWindow": "%TimeWindow%",
+          "NotifyUser": "%NotifyUser%"
+        }
+      },
+      {
+        "cmdlet": "Set-ProtectionAlert",
+        "compliance": true,
+        "params": {
+          "Identity": "CIPP SharePoint mass deletion of files by a user",
+          "Category": "DataGovernance",
+          "Operation": "FileDeleted",
+          "Severity": "High",
+          "AggregationType": "1",
+          "Threshold": "%Threshold%",
+          "TimeWindow": "%TimeWindow%",
+          "NotifyUser": "%NotifyUser%"
+        }
+      }
+    ]
+  }
+}

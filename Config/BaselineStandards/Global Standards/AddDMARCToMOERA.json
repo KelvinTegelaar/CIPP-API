@@ -1,0 +1,44 @@
+{
+  "name": "AddDMARCToMOERA",
+  "label": "Enables DMARC on MOERA (onmicrosoft.com) domains",
+  "cat": "Global Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.1.10)",
+    "Security",
+    "PhishingProtection",
+    "SMB1001 (2.12)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "** Remediation is not available ** Note: requires 'Domain Name Administrator' GDAP role. This should be enabled even if the MOERA (onmicrosoft.com) domains is not used for sending. Enabling this prevents email spoofing. The default value is 'v=DMARC1; p=reject;' recommended because the domain is only used within M365 and reporting is not needed. Omitting pct tag default to 100%",
+  "executiveText": "Implements advanced email security for Microsoft's default domain names (onmicrosoft.com) to prevent criminals from impersonating your organization. This blocks fraudulent emails that could damage your company's reputation and protects partners and customers from phishing attacks using your domain names.",
+  "docsDescription": "** Remediation is not available ** Note: requires 'Domain Name Administrator' GDAP role. Adds a DMARC record to MOERA (onmicrosoft.com) domains. This should be enabled even if the MOERA (onmicrosoft.com) domains is not used for sending. Enabling this prevents email spoofing. The default record is 'v=DMARC1; p=reject;' recommended because the domain is only used within M365 and reporting is not needed. Omitting pct tag default to 100%",
+  "impactColour": "info",
+  "addedDate": "2025-06-16",
+  "powershellEquivalent": "Portal only",
+  "appliesToTest": [
+    "CIS_2_1_10",
+    "SMB1001_2_12"
+  ],
+  "recommendedBy": [
+    "CIS",
+    "Microsoft"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "RecordValue": {
+      "type": "textField",
+      "label": "DMARC record value",
+      "default": "v=DMARC1; p=reject;",
+      "recommended": "v=DMARC1; p=reject;"
+    }
+  },
+  "expected": {
+    "hasDmarc": true,
+    "record": "%RecordValue%"
+  },
+  "read": {
+    "cacheType": "MoeraDmarc"
+  }
+}
