@@ -6,8 +6,15 @@
     "CIS M365 7.0.0 (2.1.6)"
   ],
   "impact": "Low Impact",
-  "helpText": "Sets the e-mail address to which outbound spam alerts are sent.",
+  "helpText": "Set the Outbound Spam Alert e-mail address",
   "executiveText": "Makes sure IT is notified by e-mail whenever an internal mailbox starts sending outbound spam, so a compromised account is caught early.",
+  "docsDescription": "Sets the e-mail address to which outbound spam alerts are sent.",
+  "impactColour": "info",
+  "addedDate": "2023-05-03",
+  "powershellEquivalent": "Set-HostedOutboundSpamFilterPolicy",
+  "appliesToTest": [
+    "CIS_2_1_6"
+  ],
   "recommendedBy": [
     "CIS"
   ],
@@ -30,7 +37,7 @@
     "OutboundSpamContact": {
       "type": "textField",
       "label": "Outbound spam contact",
-      "default": ""
+      "required": true
     }
   },
   "expected": {

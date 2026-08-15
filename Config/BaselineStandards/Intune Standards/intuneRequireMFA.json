@@ -1,0 +1,36 @@
+{
+  "name": "intuneRequireMFA",
+  "label": "Require Multi-factor Authentication to register or join devices with Microsoft Entra",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.",
+  "executiveText": "Requires employees to use multi-factor authentication when registering devices for corporate access, adding an extra security layer to prevent unauthorized device enrollment. This helps ensure only legitimate users can connect their devices to company systems.",
+  "docsDescription": "Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.",
+  "impactColour": "warning",
+  "addedDate": "2023-10-23",
+  "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
+  "appliesToTest": [
+    "ZTNA21782",
+    "ZTNA21796",
+    "ZTNA21872"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "multiFactorAuthConfiguration": "required"
+  },
+  "read": {
+    "cacheType": "DeviceRegistrationPolicy"
+  },
+  "prepare": "Get-CIPPBaselineDeviceRegistrationPolicyState",
+  "remediate": {
+    "executor": "DeviceRegistrationPolicy",
+    "set": {
+      "multiFactorAuthConfiguration": "required"
+    }
+  }
+}
