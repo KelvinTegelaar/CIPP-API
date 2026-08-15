@@ -19,7 +19,7 @@ function Set-CIPPDBCacheDevices {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Azure AD devices' -sev Debug
 
-        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/devices?$top=999&$select=id,displayName,operatingSystem,operatingSystemVersion,trustType,accountEnabled,approximateLastSignInDateTime' -tenantid $TenantFilter -Stream |
+        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/devices?$top=999&$select=id,displayName,operatingSystem,operatingSystemVersion,trustType,accountEnabled,approximateLastSignInDateTime,onPremisesSyncEnabled,isManaged,isCompliant,physicalIds,enrollmentProfileName,managementType,profileType' -tenantid $TenantFilter -Stream |
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Devices' -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Azure AD devices successfully' -sev Debug

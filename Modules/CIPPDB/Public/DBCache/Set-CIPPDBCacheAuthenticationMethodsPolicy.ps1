@@ -24,6 +24,22 @@ function Set-CIPPDBCacheAuthenticationMethodsPolicy {
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached authentication methods policy successfully' -sev Debug
 
+        # The fido2 entry embedded in the policy above carries defaultPasskeyProfile (structural
+        # property) but NOT passkeyProfiles: in the Graph beta metadata passkeyProfiles is a
+        # navigation property, so it is only serialized on a direct GET of the fido2 configuration.
+        # FIDO2PasskeyProfiles needs both, so fetch and cache the fido2 configuration directly,
+        # app-only to match how that standard reads it.
+        try {
+            $Fido2Configuration = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/fido2' -tenantid $TenantFilter -AsApp $true
+            if ($Fido2Configuration) {
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Fido2Configuration' -Data @($Fido2Configuration) -AddCount
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached FIDO2 authentication method configuration successfully' -sev Debug
+            }
+            $Fido2Configuration = $null
+        } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache FIDO2 authentication method configuration: $($_.Exception.Message)" -sev Warning
+        }
+
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache authentication methods policy: $($_.Exception.Message)" -sev Error
     }

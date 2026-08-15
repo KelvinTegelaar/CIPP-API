@@ -408,5 +408,245 @@
     "type": "DefenderCVEs",
     "friendlyName": "Defender CVEs",
     "description": "All Defender CVEs for Devices"
+  },
+  {
+    "type": "AdminReportSettings",
+    "friendlyName": "Admin Report Settings",
+    "description": "Microsoft 365 admin report settings including display of concealed names in reports"
+  },
+  {
+    "type": "SharePointAdminSettings",
+    "friendlyName": "SharePoint Admin Settings",
+    "description": "SharePoint tenant admin settings including sharing capability, site creation, sync, timezone and excluded file extensions"
+  },
+  {
+    "type": "PeopleInsights",
+    "friendlyName": "People Insights Settings",
+    "description": "Organization-level people insights (Viva Insights) settings"
+  },
+  {
+    "type": "Pronouns",
+    "friendlyName": "Pronouns Settings",
+    "description": "Tenant pronouns feature settings for user profiles"
+  },
+  {
+    "type": "NamePronunciation",
+    "friendlyName": "Name Pronunciation Settings",
+    "description": "Tenant name pronunciation feature settings for user profiles"
+  },
+  {
+    "type": "PhotoUpdateSettings",
+    "friendlyName": "Photo Update Settings",
+    "description": "Profile photo update settings including allowed roles and source"
+  },
+  {
+    "type": "OrganizationBranding",
+    "friendlyName": "Organization Branding",
+    "description": "Organization branding localizations including sign-in page text, username hints and login page layout"
+  },
+  {
+    "type": "HomeRealmDiscoveryPolicy",
+    "friendlyName": "Home Realm Discovery Policies",
+    "description": "Home realm discovery policies with normalized alternate ID login (email as alternate login ID) state"
+  },
+  {
+    "type": "MobileDeviceManagementPolicies",
+    "friendlyName": "Mobile Device Management Policies",
+    "description": "Intune MDM application policy including user scope, enrollment URLs, MDM enrollment during registration and included groups"
+  },
+  {
+    "type": "CopilotAdminSettings",
+    "friendlyName": "Copilot Admin Settings",
+    "description": "Microsoft 365 Copilot admin limited mode settings for Teams meetings"
+  },
+  {
+    "type": "CopilotPolicySettings",
+    "friendlyName": "Copilot Policy Settings",
+    "description": "Microsoft 365 Copilot tenant policy settings including chat pinning, open file access, image generation, web search and admin center Copilot"
+  },
+  {
+    "type": "SecureScoreControlProfiles",
+    "friendlyName": "Secure Score Control Profiles",
+    "description": "Microsoft Secure Score control profiles with control metadata and remediation details"
+  },
+  {
+    "type": "FormsSettings",
+    "friendlyName": "Forms Settings",
+    "description": "Microsoft Forms tenant settings including external sharing and collaboration options"
+  },
+  {
+    "type": "PermissionGrantPolicies",
+    "friendlyName": "Permission Grant Policies",
+    "description": "Permission grant policies with their includes/excludes condition sets for OAuth app consent"
+  },
+  {
+    "type": "AutopilotDeploymentProfiles",
+    "friendlyName": "Autopilot Deployment Profiles",
+    "description": "Windows Autopilot deployment profiles with assignments"
+  },
+  {
+    "type": "DeviceEnrollmentConfigurations",
+    "friendlyName": "Device Enrollment Configurations",
+    "description": "All Intune device enrollment configurations with full settings payloads"
+  },
+  {
+    "type": "IntuneDeviceEnrollmentConfigurations",
+    "friendlyName": "Intune Device Enrollment Configurations",
+    "description": "Device enrollment configurations with assignments (legacy IntunePolicies cache type)"
+  },
+  {
+    "type": "IntuneDeviceManagementSettings",
+    "friendlyName": "Intune Device Management Settings",
+    "description": "Tenant-wide Intune device management settings (secureByDefault, compliance check-in threshold)"
+  },
+  {
+    "type": "IntuneDataProcessorOnboarding",
+    "friendlyName": "Windows Data Processor Onboarding",
+    "description": "Windows diagnostic data processor service onboarding state"
+  },
+  {
+    "type": "IntuneBrandingProfile",
+    "friendlyName": "Intune Branding Profiles",
+    "description": "Intune Company Portal branding profiles"
+  },
+  {
+    "type": "ManagedDeviceCleanupRules",
+    "friendlyName": "Managed Device Cleanup Rules",
+    "description": "Intune managed device cleanup rules (device retirement days)"
+  },
+  {
+    "type": "IntuneMobileAppsAll",
+    "friendlyName": "All Intune Mobile Apps",
+    "description": "Unfiltered mobile apps list (id, displayName, odata type) for presence checks"
+  },
+  {
+    "type": "ExoHostedConnectionFilterPolicy",
+    "friendlyName": "Exchange Hosted Connection Filter Policies",
+    "description": "Exchange Online anti-spam connection filter policies (safe list, IP allow/block lists)"
+  },
+  {
+    "type": "ExoExternalInOutlook",
+    "friendlyName": "Exchange External Sender Identification",
+    "description": "Exchange Online external sender identification (ExternalInOutlook) configuration"
+  },
+  {
+    "type": "ExoTeamsProtectionPolicy",
+    "friendlyName": "Teams Protection Policies",
+    "description": "Microsoft Teams protection policies including Zero-hour auto purge (ZAP) settings"
+  },
+  {
+    "type": "ExoOutboundConnector",
+    "friendlyName": "Exchange Outbound Connectors",
+    "description": "Exchange Online outbound connectors"
+  },
+  {
+    "type": "ExoRoleAssignmentPolicy",
+    "friendlyName": "Exchange Role Assignment Policies",
+    "description": "Exchange Online role assignment policies including assigned roles and default policy flag"
+  },
+  {
+    "type": "ExoHostedContentFilterRule",
+    "friendlyName": "Exchange Hosted Content Filter Rules",
+    "description": "Exchange Online anti-spam (hosted content filter) rules including state, priority and recipient domains"
+  },
+  {
+    "type": "ReportSubmissionRule",
+    "friendlyName": "Exchange Report Submission Rules",
+    "description": "Exchange Online user-reported message submission rules"
+  },
+  {
+    "type": "ExoOMEConfiguration",
+    "friendlyName": "Exchange OME Configurations",
+    "description": "Exchange Online Message Encryption (OME) branding configurations"
+  },
+  {
+    "type": "ExoMailboxPlans",
+    "friendlyName": "Exchange Mailbox Plans",
+    "description": "Mailbox plans with recipient limits and send/receive sizes normalized to MB"
+  },
+  {
+    "type": "ExoRetentionPolicyTags",
+    "friendlyName": "Exchange Retention Policy Tags",
+    "description": "Retention policy tags with retention action, age limit and derived day count"
+  },
+  {
+    "type": "ExoRetentionPolicies",
+    "friendlyName": "Exchange Retention Policies",
+    "description": "Retention policies including linked retention policy tags"
+  },
+  {
+    "type": "ExoDynamicDistributionGroup",
+    "friendlyName": "Dynamic Distribution Groups",
+    "description": "Exchange Online dynamic distribution groups with recipient filters"
+  },
+  {
+    "type": "ExoMailContacts",
+    "friendlyName": "Mail Contacts",
+    "description": "Mail contacts merged with extended directory contact properties"
+  },
+  {
+    "type": "ExoTenantAllowBlockListSpoofItems",
+    "friendlyName": "Tenant Allow/Block List Spoof Items",
+    "description": "Spoofed sender allow/block entries from the Tenant Allow/Block List"
+  },
+  {
+    "type": "ExoPhishSimOverridePolicy",
+    "friendlyName": "Phishing Simulation Override Policy",
+    "description": "Third-party phishing simulation override policy"
+  },
+  {
+    "type": "ExoPhishSimOverrideRule",
+    "friendlyName": "Phishing Simulation Override Rule",
+    "description": "Phishing simulation override rule with sender IP ranges and domains"
+  },
+  {
+    "type": "ExoPhishSimUrlAllowItems",
+    "friendlyName": "Phishing Simulation URL Allow Items",
+    "description": "Advanced delivery URL allow entries for phishing simulations"
+  },
+  {
+    "type": "ComplianceRetentionPolicies",
+    "friendlyName": "Retention Compliance Policies",
+    "description": "Microsoft Purview retention compliance policies from the compliance portal"
+  },
+  {
+    "type": "ComplianceRetentionRules",
+    "friendlyName": "Retention Compliance Rules",
+    "description": "Microsoft Purview retention compliance rules from the compliance portal"
+  },
+  {
+    "type": "ExoDlpSensitiveInfoTypes",
+    "friendlyName": "Sensitive Information Type Rule Packages",
+    "description": "Microsoft Purview Sensitive Information Type rule packages including the classification rule XML"
+  },
+  {
+    "type": "ExoLabels",
+    "friendlyName": "Compliance Sensitivity Labels",
+    "description": "Microsoft Purview sensitivity labels from the Security & Compliance endpoint"
+  },
+  {
+    "type": "DlpComplianceRules",
+    "friendlyName": "DLP Compliance Rules",
+    "description": "Data Loss Prevention compliance rules from the Purview compliance portal"
+  },
+  {
+    "type": "TeamsResourceAccounts",
+    "friendlyName": "Teams Resource Accounts",
+    "description": "Teams Auto Attendant and Call Queue resource accounts from Teams.PlatformService"
+  },
+  {
+    "type": "Fido2Configuration",
+    "friendlyName": "FIDO2 Authentication Method Configuration",
+    "description": "FIDO2 passkey authentication method configuration including passkey profiles"
+  },
+  {
+    "type": "MoeraDmarc",
+    "friendlyName": "MOERA Domain DMARC",
+    "description": "Live DNS DMARC state for onmicrosoft.com (MOERA) domains"
+  },
+  {
+    "type": "SelfServicePurchaseProducts",
+    "friendlyName": "Self-Service Purchase Products",
+    "description": "AllowSelfServicePurchase product policies and trial autoclaim policy"
   }
 ]
