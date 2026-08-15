@@ -225,3 +225,43 @@ Describe 'Get-CIPPBaselineCacheRows row fidelity' {
         $Rows[1].id | Should -Be 'b'
     }
 }
+
+Describe 'Empty-but-collected caches' {
+    # Zero rows means two different things. A hook that cannot tell them apart parks the row
+    # at No Data forever on a tenant that legitimately has nothing - the same permanent-No-Data
+    # failure as the missing second cache, just triggered by an empty one.
+    BeforeAll {
+        . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
+        . (Join-Path $Baselines 'Get-CIPPBaselineTeamsDisableResourceAccountsState.ps1')
+        . (Join-Path $Baselines 'Get-CIPPBaselineStaleEntraDevicesState.ps1')
+        function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
+    }
+    BeforeEach { Mock New-CIPPDbRequest { @() } }
+
+    It 'scores a tenant with no Teams resource accounts compliant once the type is collected' {
+        Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'TeamsResourceAccounts-Count'; DataCount = 0 } }
+        $Current = (Get-CIPPBaselineTeamsDisableResourceAccountsState -Item $null -TenantFilter $script:Tenant).Current
+        $Current | Should -Not -BeNullOrEmpty
+        @($Current.offenders).Count | Should -Be 0
+    }
+
+    It 'still reports unknown when the type has never been collected' {
+        Mock Get-CIPPDbItem { $null }
+        (Get-CIPPBaselineTeamsDisableResourceAccountsState -Item $null -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
+
+    It 'scores a tenant with no devices compliant once the type is collected' {
+        Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'Devices-Count'; DataCount = 0 } }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ deviceAgeThreshold = 90; deviceDeleteThreshold = 0 } }
+        $Current = (Get-CIPPBaselineStaleEntraDevicesState -Item $Item -TenantFilter $script:Tenant).Current
+        $Current | Should -Not -BeNullOrEmpty
+        @($Current.devicesToDisable).Count | Should -Be 0
+        @($Current.devicesToDelete).Count | Should -Be 0
+    }
+
+    It 'treats a failed metadata lookup as not collected, never as compliant' {
+        # Claiming compliance we cannot prove is the one outcome worse than No Data.
+        Mock Get-CIPPDbItem { throw 'storage unavailable' }
+        (Get-CIPPBaselineTeamsDisableResourceAccountsState -Item $null -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
+}

@@ -21,7 +21,15 @@ function Get-CIPPBaselineTeamsDisableResourceAccountsState {
     )
 
     $Accounts = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'TeamsResourceAccounts' | Where-Object { $_ })
-    if ($Accounts.Count -eq 0) { return @{ Current = $null } }
+    if ($Accounts.Count -eq 0) {
+        # Plenty of tenants run no auto attendants or call queues at all. Once the type has
+        # been collected, empty is the answer - nothing to disable, so compliant. Before that
+        # it is unknown, and the engine collects and retries.
+        if (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'TeamsResourceAccounts') {
+            return @{ Current = [PSCustomObject]@{ offenders = @(); targets = @() } }
+        }
+        return @{ Current = $null }
+    }
 
     # Users is the SECOND cache - see Get-CIPPBaselineCacheRows.
     $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users')

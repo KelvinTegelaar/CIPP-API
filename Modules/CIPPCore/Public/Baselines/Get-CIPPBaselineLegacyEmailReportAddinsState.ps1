@@ -18,7 +18,14 @@ function Get-CIPPBaselineLegacyEmailReportAddinsState {
     )
 
     $Apps = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Apps' | Where-Object { $_ })
-    if ($Apps.Count -eq 0) { return @{ Current = $null } }
+    if ($Apps.Count -eq 0) {
+        # No app registrations at all means neither legacy add-in is installed, which is the
+        # compliant state - but only once the type has actually been collected.
+        if (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Apps') {
+            return @{ Current = [PSCustomObject]@{ offenders = @(); targets = @() } }
+        }
+        return @{ Current = $null }
+    }
 
     $Legacy = @{
         '3f32746a-0586-4c54-b8ce-d3b611c5b6c8' = 'Report Phishing'

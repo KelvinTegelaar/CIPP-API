@@ -31,7 +31,14 @@ function Get-CIPPBaselineStaleEntraDevicesState {
     if ($DeleteDelta -lt 0) { $DeleteDelta = 0 }
 
     $Devices = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Devices' | Where-Object { $_ -and $_.approximateLastSignInDateTime })
-    if ($Devices.Count -eq 0) { return @{ Current = $null } }
+    if ($Devices.Count -eq 0) {
+        # A tenant with no registered devices - or none that ever signed in - has nothing
+        # stale to clean up. Once the type has been collected that is compliant, not unknown.
+        if (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Devices') {
+            return @{ Current = [PSCustomObject]@{ offenders = @(); devicesToDisable = @(); devicesToDelete = @() } }
+        }
+        return @{ Current = $null }
+    }
 
     $DisableDate = (Get-Date).AddDays(-$DisableThreshold)
     $DeleteDate = (Get-Date).AddDays(-($DisableThreshold + $DeleteDelta))
