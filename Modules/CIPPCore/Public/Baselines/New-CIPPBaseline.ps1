@@ -125,7 +125,8 @@ function New-CIPPBaseline {
                     scopeName        = "$($Scope.scopeName)"
                     stage            = $StageNumber
                     expectedValue    = (ConvertTo-Json -Compress -Depth 100 -InputObject $Variables)
-                    remediateEnabled = [bool]$(if ($Config -is [string]) { $true } else { $Config.remediateEnabled ?? $true })
+                    # A missing flag must never fail open into auto-remediation.
+                    remediateEnabled = [bool]$(if ($Config -is [string]) { $false } else { $Config.remediateEnabled ?? $false })
                     alertEnabled     = [bool]$(if ($Config -is [string]) { $true } else { $Config.alertEnabled ?? $true })
                     alertOnRemediate = [bool]$(if ($Config -is [string]) { $false } else { $Config.alertOnRemediate ?? $false })
                     rolloutId        = "$RolloutId"
