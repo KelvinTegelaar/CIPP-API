@@ -86,6 +86,52 @@ Describe 'Baseline definition catalog' {
         $Broken | Should -BeNullOrEmpty
     }
 
+    It 'never lets a cache miss trigger an umbrella collector at its full fan-out' {
+        # Collect-on-miss invokes Set-CIPPDBCache<Type> with whatever the definition declares.
+        # These collectors take their heaviest option by DEFAULT when handed a bare
+        # -TenantFilter: Set-CIPPDBCacheMailboxes defaults to Types 'All', which queues mailbox
+        # permission, calendar permission and rules batches across every mailbox in the tenant.
+        # A standard reading two fields off a mailbox row must never set that off, and nothing
+        # in the definition hints at it - hence this test.
+        $Umbrella = @{ Mailboxes = 'Types' }
+        $Broken = @($script:Definitions | Where-Object { $Umbrella.ContainsKey("$($_.Definition.read.cacheType)")
+            } | Where-Object {
+                $Argument = $Umbrella["$($_.Definition.read.cacheType)"]
+                [string]::IsNullOrWhiteSpace("$($_.Definition.read.collectorArgs.$Argument)")
+            } | ForEach-Object { "$($_.Name) reads $($_.Definition.read.cacheType) without read.collectorArgs" })
+        $Broken | Should -BeNullOrEmpty
+    }
+
+    It 'never reads a second cache type without collect-on-miss' {
+        # The engine collects on a miss for read.cacheType and nothing else. A prepare hook
+        # that reads a SECOND type with a bare New-CIPPDbRequest returns a null Current on any
+        # tenant that never collected it, the engine collects the primary type instead, the
+        # hook returns null again, and the row parks at No Data permanently - logged against
+        # the wrong cache name. Second types must go through Get-CIPPBaselineCacheRows.
+        $Broken = @($script:Definitions | Where-Object { $_.Definition.prepare } | ForEach-Object {
+                $Name = $_.Name
+                # requiredCaches is the other guarantee: Wait-CIPPBaselineCacheReady refuses to
+                # run a template standard until every entry has been collected at least once,
+                # so those types need no collect-on-miss of their own.
+                $Declared = @("$($_.Definition.read.cacheType)") + @($_.Definition.read.requiredCaches | Where-Object { $_ })
+                $Path = Join-Path $script:RepoRoot "Modules/CIPPCore/Public/Baselines/$($_.Definition.prepare).ps1"
+                if (-not (Test-Path $Path)) { return }
+                $Ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$null, [ref]$null)
+                $Ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] }, $true) | ForEach-Object {
+                    if ("$($_.GetCommandName())" -ne 'New-CIPPDbRequest') { return }
+                    $Elements = @($_.CommandElements)
+                    for ($i = 0; $i -lt $Elements.Count - 1; $i++) {
+                        if ($Elements[$i] -is [System.Management.Automation.Language.CommandParameterAst] -and
+                            $Elements[$i].ParameterName -eq 'Type') {
+                            $Read = "$($Elements[$i + 1].Value)"
+                            if ($Read -and $Declared -notcontains $Read) { "$Name reads '$Read' directly but declares $($Declared -join ', ')" }
+                        }
+                    }
+                }
+            })
+        $Broken | Should -BeNullOrEmpty
+    }
+
     It 'gives every non-package, non-manual definition something to compare' {
         $Broken = @($script:Definitions | Where-Object {
                 -not $_.Definition.package -and -not $_.Definition.manual -and

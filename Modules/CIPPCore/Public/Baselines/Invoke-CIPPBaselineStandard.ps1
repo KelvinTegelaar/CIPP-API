@@ -305,6 +305,10 @@ function Invoke-CIPPBaselineStandard {
         # true for every definition that simply omits the property.
         $JustRefreshed = $false
         $CacheCollector = Get-Command -Name "Set-CIPPDBCache$($Definition.read.cacheType)" -ErrorAction SilentlyContinue
+        $CollectorArgs = @{ TenantFilter = $TenantFilter }
+        foreach ($Argument in ($Definition.read.collectorArgs ?? [PSCustomObject]@{}).PSObject.Properties) {
+            $CollectorArgs[$Argument.Name] = $Argument.Value
+        }
         if ($CacheCollector -and @($Definition.read.requiredCaches | Where-Object { $_ }).Count -gt 0) {
             $JustRefreshed = Wait-CIPPBaselineCacheReady -TenantFilter $TenantFilter -Definition $Definition -RunId $RunId
         }
@@ -316,7 +320,7 @@ function Invoke-CIPPBaselineStandard {
             $Prepared = & $Definition.prepare -Item $Item -TenantFilter $TenantFilter
             if ($null -eq $Prepared.Current -and $CacheCollector -and -not $JustRefreshed) {
                 try {
-                    $null = & $CacheCollector -TenantFilter $TenantFilter
+                    $null = & $CacheCollector @CollectorArgs
                     $Prepared = & $Definition.prepare -Item $Item -TenantFilter $TenantFilter
                 } catch {
                     Write-Information "Baselines: cache collection for $($Definition.read.cacheType) on $TenantFilter failed: $($_.Exception.Message)"
@@ -350,7 +354,7 @@ function Invoke-CIPPBaselineStandard {
             $Current = & $ReadCurrent
             if ($null -eq $Current -and $CacheCollector -and -not $JustRefreshed) {
                 try {
-                    $null = & $CacheCollector -TenantFilter $TenantFilter
+                    $null = & $CacheCollector @CollectorArgs
                     $Current = & $ReadCurrent
                 } catch {
                     Write-Information "Baselines: cache collection for $($Definition.read.cacheType) on $TenantFilter failed: $($_.Exception.Message)"

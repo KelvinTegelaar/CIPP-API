@@ -34,16 +34,7 @@ function Get-CIPPBaselineDisableBasicAuthSMTPState {
 
     $ExpectedDisabled = "$($Item.Variables.disabled)" -in @('True', 'true', '1')
 
-    $Overrides = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoCASMailboxSmtpAuth' | Where-Object { $_ })
-    if ($Overrides.Count -eq 0) {
-        $Collector = Get-Command -Name 'Set-CIPPDBCacheExoCASMailboxSmtpAuth' -ErrorAction SilentlyContinue
-        if ($Collector) {
-            try { $null = & $Collector -TenantFilter $TenantFilter } catch {
-                Write-Information "Baselines: SMTP AUTH override cache collection on $TenantFilter failed: $($_.Exception.Message)"
-            }
-            $Overrides = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoCASMailboxSmtpAuth' | Where-Object { $_ })
-        }
-    }
+    $Overrides = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ExoCASMailboxSmtpAuth')
     $EnabledUsers = @($Overrides | ForEach-Object { "$($_.PrimarySmtpAddress ?? $_.Identity)" } | Where-Object { $_ } | Sort-Object)
 
     $Expected = [PSCustomObject]@{ SmtpClientAuthenticationDisabled = $ExpectedDisabled }

@@ -34,7 +34,10 @@
     "offenders": []
   },
   "read": {
-    "cacheType": "Mailboxes"
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
   },
   "prepare": "Get-CIPPBaselineDisableResourceMailboxState",
   "remediate": {

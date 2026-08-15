@@ -26,6 +26,7 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
+    . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
     . (Join-Path $Baselines 'Get-CIPPBaselineDeviceRegistrationPolicyState.ps1')
     . (Join-Path $Baselines 'Get-CIPPBaselineDisableBasicAuthSMTPState.ps1')
     . (Join-Path $Baselines 'Get-CIPPBaselineActivityBasedTimeoutState.ps1')
@@ -162,5 +163,65 @@ Describe 'Get-CIPPBaselineActivityBasedTimeoutState' {
     It 'reports a null Current when nothing is cached' {
         Mock New-CIPPDbRequest { @() }
         (Get-CIPPBaselineActivityBasedTimeoutState -Item $null -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Get-CIPPBaselineCacheRows' {
+    # The fix for DisableSharedMailbox always reporting No Data. The engine collects on a miss
+    # for read.cacheType only, so a hook joining a second type has to collect that one itself
+    # or the standard never recovers on a tenant that has not collected it.
+    BeforeAll {
+        function Set-CIPPDBCacheProbeType { param($TenantFilter, $Extra) }
+    }
+    BeforeEach { $script:Collected = 0 }
+
+    It 'returns rows without collecting when the cache is already populated' {
+        Mock New-CIPPDbRequest { @([PSCustomObject]@{ id = 'x' }) }
+        Mock Set-CIPPDBCacheProbeType { $script:Collected++ }
+        $Rows = @(Get-CIPPBaselineCacheRows -TenantFilter $script:Tenant -Type 'ProbeType')
+        $Rows.Count | Should -Be 1
+        Should -Invoke Set-CIPPDBCacheProbeType -Times 0
+    }
+
+    It 'collects once and re-reads when the cache is empty' {
+        $script:Populated = $false
+        Mock New-CIPPDbRequest { if ($script:Populated) { @([PSCustomObject]@{ id = 'x' }) } else { @() } }
+        Mock Set-CIPPDBCacheProbeType { $script:Populated = $true }
+        $Rows = @(Get-CIPPBaselineCacheRows -TenantFilter $script:Tenant -Type 'ProbeType')
+        Should -Invoke Set-CIPPDBCacheProbeType -Times 1
+        $Rows.Count | Should -Be 1
+    }
+
+    It 'passes collector arguments through, so an umbrella collector is not run at full fan-out' {
+        Mock New-CIPPDbRequest { @() }
+        Mock Set-CIPPDBCacheProbeType {}
+        $null = Get-CIPPBaselineCacheRows -TenantFilter $script:Tenant -Type 'ProbeType' -CollectorArgs @{ Extra = 'None' }
+        Should -Invoke Set-CIPPDBCacheProbeType -Times 1 -ParameterFilter { $Extra -eq 'None' }
+    }
+
+    It 'returns empty rather than throwing when the type has no collector' {
+        Mock New-CIPPDbRequest { @() }
+        $Rows = @(Get-CIPPBaselineCacheRows -TenantFilter $script:Tenant -Type 'TypeWithNoCollector')
+        $Rows.Count | Should -Be 0
+    }
+
+    It 'returns empty rather than throwing when collection fails' {
+        Mock New-CIPPDbRequest { @() }
+        Mock Set-CIPPDBCacheProbeType { throw 'Graph said no' }
+        $Rows = @(Get-CIPPBaselineCacheRows -TenantFilter $script:Tenant -Type 'ProbeType')
+        $Rows.Count | Should -Be 0
+    }
+}
+
+Describe 'Get-CIPPBaselineCacheRows row fidelity' {
+    # Returning the array with a unary comma made every populated cache read as ONE row: a
+    # tenant with three users produced a single array object, the join found no candidates,
+    # and the standard scored Compliant with an empty offender list. Silently wrong, which is
+    # worse than the No Data it replaced.
+    It 'returns every row, not a single wrapped array' {
+        Mock New-CIPPDbRequest { @([PSCustomObject]@{ id = 'a' }, [PSCustomObject]@{ id = 'b' }, [PSCustomObject]@{ id = 'c' }) }
+        $Rows = @(Get-CIPPBaselineCacheRows -TenantFilter $script:Tenant -Type 'ProbeType')
+        $Rows.Count | Should -Be 3
+        $Rows[1].id | Should -Be 'b'
     }
 }

@@ -31,7 +31,10 @@
     "offenders": []
   },
   "read": {
-    "cacheType": "Mailboxes"
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
   },
   "prepare": "Get-CIPPBaselineDisableSharedMailboxState",
   "remediate": {
