@@ -764,7 +764,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite",
+        "x-cipp-role": "Tenant.Baselines.ReadWrite",
         "x-cipp-reads-via": [
           "New-CIPPBaseline"
         ]
@@ -14386,7 +14386,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.Baselines.ReadWrite"
       }
     },
     "/api/ExecBaselineRun": {
@@ -14461,7 +14461,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.BaselinesRun.ReadWrite"
       }
     },
     "/api/ExecBaselineStage": {
@@ -14525,7 +14525,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.Baselines.ReadWrite"
       }
     },
     "/api/ExecBECCheck": {
@@ -34607,7 +34607,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.BaselinesDeviations.ReadWrite"
       }
     },
     "/api/ExecUpdateDriftDeviation": {
@@ -37997,7 +37997,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.Read"
+        "x-cipp-role": "Tenant.Baselines.Read"
       }
     },
     "/api/ListBaselines": {
@@ -38064,7 +38064,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.Read"
+        "x-cipp-role": "Tenant.Baselines.Read"
       }
     },
     "/api/ListBaselineStandards": {
@@ -38105,7 +38105,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.Read"
+        "x-cipp-role": "Tenant.Baselines.Read"
       }
     },
     "/api/ListBasicAuth": {
@@ -59047,7 +59047,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.Baselines.ReadWrite"
       }
     },
     "/api/RemoveBPATemplate": {

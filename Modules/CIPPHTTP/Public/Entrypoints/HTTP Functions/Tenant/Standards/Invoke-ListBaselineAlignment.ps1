@@ -3,7 +3,7 @@ function Invoke-ListBaselineAlignment {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.Read
+        Tenant.Baselines.Read
     .DESCRIPTION
         Baseline alignment data. With ?tenantFilter= returns the tenant payload (summary,
         resolved rows with history, stage states, deviation feed); with

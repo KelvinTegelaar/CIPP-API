@@ -3,7 +3,7 @@ function Invoke-ListBaselineStandards {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.Read
+        Tenant.Baselines.Read
     .DESCRIPTION
         Lists the Baseline definition catalog: the standards available to add to a baseline,
         including their configurable variables and metadata.

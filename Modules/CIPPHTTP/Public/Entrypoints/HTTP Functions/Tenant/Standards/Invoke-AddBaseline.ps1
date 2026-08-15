@@ -3,7 +3,7 @@ function Invoke-AddBaseline {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.ReadWrite
+        Tenant.Baselines.ReadWrite
     .DESCRIPTION
         Creates or updates a baseline. There is no baseline blob: the Baselines
         delta rows (design doc §4.1) are the editable source of truth for every standard's

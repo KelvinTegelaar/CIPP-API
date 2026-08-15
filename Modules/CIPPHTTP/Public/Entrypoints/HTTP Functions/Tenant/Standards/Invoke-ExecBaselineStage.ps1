@@ -3,7 +3,7 @@ function Invoke-ExecBaselineStage {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.ReadWrite
+        Tenant.Baselines.ReadWrite
     .DESCRIPTION
         Advances a tenant to the next stage of a baseline (manual stage approval). The tenant
         receives all standards from the new stage on the next engine run.

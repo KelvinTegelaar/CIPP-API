@@ -3,7 +3,7 @@ function Invoke-ExecUpdateBaselineDeviation {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.ReadWrite
+        Tenant.BaselinesDeviations.ReadWrite
     .DESCRIPTION
         Triage for baseline drift on a resolved (tenant, standard) row:
         Accept (reason required, optional expiry, optional remediate-on-expire),
