@@ -17806,6 +17806,17 @@
                   "NewRoleName": {
                     "type": "string"
                   },
+                  "PermissionRules": {
+                    "type": "object",
+                    "properties": {
+                      "Exclude": {
+                        "type": "string"
+                      },
+                      "Include": {
+                        "type": "string"
+                      }
+                    }
+                  },
                   "Permissions": {
                     "type": "string"
                   },

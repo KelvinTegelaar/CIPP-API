@@ -46,10 +46,43 @@ function Invoke-ExecCustomRole {
                 }
 
                 if ($Request.Body.RoleName -notin $DefaultRoles.PSObject.Properties.Name) {
+                    # PermissionRules ({Include, Exclude} -like globs) is the canonical
+                    # format; older clients that only send the flat map get concrete-string
+                    # rules synthesized from it. Invalid patterns are dropped, not saved.
+                    $PermissionRules = $null
+                    if ($Request.Body.PermissionRules) {
+                        $PatternRegex = '^[A-Za-z0-9*]+(\.[A-Za-z0-9*]+){0,2}$'
+                        $Include = [System.Collections.Generic.List[string]]::new()
+                        $Exclude = [System.Collections.Generic.List[string]]::new()
+                        foreach ($Pattern in @($Request.Body.PermissionRules.Include)) {
+                            if ($Pattern -is [string] -and $Pattern -match $PatternRegex) {
+                                if ($Include -notcontains $Pattern) { $Include.Add($Pattern) }
+                            } elseif ($Pattern) {
+                                $Results.Add("Ignored invalid include pattern '$Pattern'")
+                            }
+                        }
+                        foreach ($Pattern in @($Request.Body.PermissionRules.Exclude)) {
+                            if ($Pattern -is [string] -and $Pattern -match $PatternRegex) {
+                                if ($Exclude -notcontains $Pattern) { $Exclude.Add($Pattern) }
+                            } elseif ($Pattern) {
+                                $Results.Add("Ignored invalid exclude pattern '$Pattern'")
+                            }
+                        }
+                        if ($Include.Count -gt 0) {
+                            $PermissionRules = [PSCustomObject]@{
+                                Include = @($Include)
+                                Exclude = @($Exclude)
+                            }
+                        }
+                    }
+                    if (!$PermissionRules) {
+                        $PermissionRules = ConvertTo-CippPermissionRules -Permissions $Request.Body.Permissions
+                    }
                     $Role = @{
                         'PartitionKey'     = 'CustomRoles'
                         'RowKey'           = "$($Request.Body.RoleName.ToLower())"
                         'Permissions'      = "$($Request.Body.Permissions | ConvertTo-Json -Compress)"
+                        'PermissionRules'  = "$($PermissionRules | ConvertTo-Json -Compress -Depth 5)"
                         'AllowedTenants'   = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
                         'BlockedTenants'   = "$($Request.Body.BlockedTenants | ConvertTo-Json -Compress)"
                         'BlockedEndpoints' = "$($Request.Body.BlockedEndpoints | ConvertTo-Json -Compress)"
@@ -127,6 +160,7 @@ function Invoke-ExecCustomRole {
                     'PartitionKey'     = 'CustomRoles'
                     'RowKey'           = "$($Request.Body.NewRoleName.ToLower())"
                     'Permissions'      = $ExistingRole.Permissions
+                    'PermissionRules'  = "$($ExistingRole.PermissionRules)"
                     'AllowedTenants'   = $ExistingRole.AllowedTenants
                     'BlockedTenants'   = $ExistingRole.BlockedTenants
                     'BlockedEndpoints' = $ExistingRole.BlockedEndpoints
@@ -185,11 +219,39 @@ function Invoke-ExecCustomRole {
                     }
                 )
             } else {
+                # One-time migration: rows saved before the rules format gain concrete-string
+                # rules (behavior-preserving, Include = explicit values). Runs here because
+                # this superadmin-only list action is hit whenever roles are managed.
+                foreach ($Role in $Body) {
+                    if ($Role.PSObject.Properties.Name -notcontains 'PermissionRules' -or [string]::IsNullOrWhiteSpace($Role.PermissionRules)) {
+                        try {
+                            $RulesJson = ConvertTo-CippPermissionRules -Permissions $Role.Permissions | ConvertTo-Json -Compress -Depth 5
+                            if ($Role.PSObject.Properties.Name -contains 'PermissionRules') {
+                                $Role.PermissionRules = $RulesJson
+                            } else {
+                                $Role | Add-Member -NotePropertyName PermissionRules -NotePropertyValue $RulesJson
+                            }
+                            Add-CIPPAzDataTableEntity @Table -Entity $Role -Force | Out-Null
+                            Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Migrated custom role $($Role.RowKey) to permission rules format" -Sev 'Info'
+                        } catch {
+                            Write-Warning "Failed to migrate custom role $($Role.RowKey) to permission rules: $($_.Exception.Message)"
+                        }
+                    }
+                }
                 $CustomRoles = foreach ($Role in $Body) {
                     try {
                         $Role.Permissions = $Role.Permissions | ConvertFrom-Json
                     } catch {
                         $Role.Permissions = @()
+                    }
+                    if ($Role.PermissionRules) {
+                        try {
+                            $Role.PermissionRules = $Role.PermissionRules | ConvertFrom-Json
+                        } catch {
+                            $Role.PermissionRules = $null
+                        }
+                    } else {
+                        $Role | Add-Member -NotePropertyName PermissionRules -NotePropertyValue $null -Force
                     }
                     if ($Role.AllowedTenants) {
                         try {
