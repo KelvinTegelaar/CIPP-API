@@ -21,6 +21,7 @@
     "caTemplatePackage": {
       "type": "autoComplete",
       "label": "Select a package of Conditional Access Templates",
+      "required": true,
       "api": {
         "url": "/api/ListCATemplates?mode=Tag",
         "labelField": "label",

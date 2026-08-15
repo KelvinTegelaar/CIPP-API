@@ -27,6 +27,7 @@
     "intuneTemplatePackage": {
       "type": "autoComplete",
       "label": "Select a package of Intune Templates",
+      "required": true,
       "api": {
         "url": "/api/ListIntuneTemplates?mode=Tag",
         "labelField": "label",

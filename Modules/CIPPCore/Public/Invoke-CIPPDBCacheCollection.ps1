@@ -55,6 +55,7 @@ function Invoke-CIPPDBCacheCollection {
             'AdminConsentRequestPolicy'
             'AuthorizationPolicy'
             'AuthenticationMethodsPolicy'
+            'SecurityDefaults'
             'DeviceSettings'
             'DirectoryRecommendations'
             'CrossTenantAccessPolicy'

@@ -325,6 +325,11 @@
     "description": "Azure AD Conditional Access policies"
   },
   {
+    "type": "SecurityDefaults",
+    "friendlyName": "Security Defaults",
+    "description": "Identity security defaults enforcement policy"
+  },
+  {
     "type": "RiskyUsers",
     "friendlyName": "Risky Users",
     "description": "Users flagged as risky by Identity Protection"

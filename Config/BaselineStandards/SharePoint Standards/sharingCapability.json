@@ -11,6 +11,15 @@
   "impact": "High Impact",
   "helpText": "Sets the default sharing level for OneDrive and SharePoint. This is a tenant wide setting and overrules any settings set on the site level",
   "executiveText": "Defines the organization's default policy for sharing files and folders in SharePoint and OneDrive, balancing collaboration needs with security requirements. This fundamental setting determines whether employees can share with external users, anonymous links, or only internal colleagues.",
+  "impactColour": "danger",
+  "addedDate": "2022-06-15",
+  "powershellEquivalent": "Update-MgBetaAdminSharePointSetting",
+  "appliesToTest": [
+    "CIS_7_2_3",
+    "CIS_7_2_4",
+    "ZTNA21803",
+    "ZTNA21804"
+  ],
   "recommendedBy": [
     "CIS",
     "CIPP"
@@ -29,6 +38,8 @@
     "sharingCapability": {
       "type": "autoComplete",
       "label": "Select Sharing Level",
+      "required": true,
+      "recommended": 1,
       "options": [
         {
           "label": "Users can share only with people in the organization. No external sharing is allowed.",

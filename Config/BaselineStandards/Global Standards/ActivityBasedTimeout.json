@@ -3,11 +3,22 @@
   "label": "Enable Activity based Timeout",
   "cat": "Global Standards",
   "tag": [
-    "CIS M365 7.0.0 (1.3.2)"
+    "CIS M365 7.0.0 (1.3.2)",
+    "spo_idle_session_timeout",
+    "NIST CSF 2.0 (PR.AA-03)"
   ],
-  "impact": "Low Impact",
-  "helpText": "Signs users out of Microsoft 365 web sessions after a period of inactivity.",
-  "executiveText": "Automatically signs out idle sessions on shared or unattended devices.",
+  "impact": "Medium Impact",
+  "helpText": "Enables and sets Idle session timeout for Microsoft 365 to 1 hour. This policy affects most M365 web apps",
+  "executiveText": "Automatically logs out inactive users from Microsoft 365 applications after a specified time period to prevent unauthorized access to company data on unattended devices. This security measure protects against data breaches when employees leave workstations unlocked.",
+  "impactColour": "warning",
+  "addedDate": "2022-04-13",
+  "powershellEquivalent": "Portal or Graph API",
+  "appliesToTest": [
+    "CIS_1_3_2",
+    "ZTNA21813",
+    "ZTNA21814",
+    "ZTNA21815"
+  ],
   "recommendedBy": [
     "CIS"
   ],
@@ -20,20 +31,24 @@
       "label": "Idle session timeout",
       "options": [
         {
-          "label": "1 hour",
+          "label": "1 Hour",
           "value": "01:00:00"
         },
         {
-          "label": "2 hours",
-          "value": "02:00:00"
+          "label": "3 Hours",
+          "value": "03:00:00"
         },
         {
-          "label": "4 hours",
-          "value": "04:00:00"
-        },
-        {
-          "label": "6 hours",
+          "label": "6 Hours",
           "value": "06:00:00"
+        },
+        {
+          "label": "12 Hours",
+          "value": "12:00:00"
+        },
+        {
+          "label": "24 Hours",
+          "value": "1.00:00:00"
         }
       ],
       "default": "01:00:00",

@@ -3,12 +3,26 @@
   "label": "Conditional Access Template",
   "cat": "Templates",
   "tag": [
-    "CIS M365 7.0.0 (5.2.2)",
-    "HighImpact"
+    "CIS M365 7.0.0 (5.2.2.1)",
+    "CIS M365 7.0.0 (5.2.2.2)",
+    "CIS M365 7.0.0 (5.2.2.3)",
+    "CIS M365 7.0.0 (5.2.2.4)",
+    "CIS M365 7.0.0 (5.2.2.5)",
+    "CIS M365 7.0.0 (5.2.2.6)",
+    "CIS M365 7.0.0 (5.2.2.7)",
+    "CIS M365 7.0.0 (5.2.2.8)",
+    "CIS M365 7.0.0 (5.2.2.9)",
+    "CIS M365 7.0.0 (5.2.2.10)",
+    "CIS M365 7.0.0 (5.2.2.11)",
+    "CIS M365 7.0.0 (5.2.2.12)",
+    "SMB1001 (2.5)",
+    "SMB1001 (2.6)",
+    "SMB1001 (2.8)",
+    "SMB1001 (2.9)"
   ],
   "impact": "High Impact",
-  "helpText": "Deploys and drift-checks a Conditional Access policy from a CA template. Deploy in report-only first, then enforce via a later stage.",
-  "executiveText": "Manages the sign-in rules that protect accounts - for example requiring a second factor or blocking legacy sign-in methods. The single most effective control against account takeover.",
+  "helpText": "Manage conditional access policies for better security.",
+  "executiveText": "Deploys standardized conditional access policies that automatically enforce security requirements based on user location, device compliance, and risk factors. These templates ensure consistent security controls across the organization while enabling secure access to business resources.",
   "recommendedBy": [
     "CIS",
     "Microsoft",
@@ -27,6 +41,7 @@
     "caTemplate": {
       "type": "autoComplete",
       "label": "Select Conditional Access Template",
+      "required": true,
       "api": {
         "url": "/api/ListCATemplates",
         "labelField": "displayName",
@@ -79,7 +94,11 @@
   },
   "read": {
     "cacheType": "ConditionalAccessPolicies",
-    "requiredCaches": ["ConditionalAccessPolicies", "NamedLocations", "AuthenticationStrengths"],
+    "requiredCaches": [
+      "ConditionalAccessPolicies",
+      "NamedLocations",
+      "AuthenticationStrengths"
+    ],
     "liveCount": {
       "uri": "identity/conditionalAccess/policies",
       "cacheType": "ConditionalAccessPolicies"
@@ -92,5 +111,41 @@
     "state": "%state%",
     "disableSD": "%disableSD%",
     "createGroups": "%createGroups%"
+  },
+  "addedDate": "2023-12-30",
+  "appliesToTest": [
+    "CIS_5_2_2_1",
+    "CIS_5_2_2_10",
+    "CIS_5_2_2_11",
+    "CIS_5_2_2_12",
+    "CIS_5_2_2_2",
+    "CIS_5_2_2_3",
+    "CIS_5_2_2_4",
+    "CIS_5_2_2_5",
+    "CIS_5_2_2_6",
+    "CIS_5_2_2_7",
+    "CIS_5_2_2_8",
+    "CIS_5_2_2_9",
+    "SMB1001_2_5",
+    "SMB1001_2_6",
+    "SMB1001_2_8",
+    "SMB1001_2_9",
+    "ZTNA21783",
+    "ZTNA21786",
+    "ZTNA21806",
+    "ZTNA21808",
+    "ZTNA21824",
+    "ZTNA21825",
+    "ZTNA21828",
+    "ZTNA21830",
+    "ZTNA21883",
+    "ZTNA21892",
+    "ZTNA21941",
+    "ZTNA24827"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
   }
 }

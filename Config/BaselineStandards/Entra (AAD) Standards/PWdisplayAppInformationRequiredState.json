@@ -1,0 +1,79 @@
+{
+  "name": "PWdisplayAppInformationRequiredState",
+  "label": "Enable Passwordless with Location information and Number Matching",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.2.3.1)",
+    "EIDSCA.AM03",
+    "EIDSCA.AM04",
+    "EIDSCA.AM06",
+    "EIDSCA.AM07",
+    "EIDSCA.AM09",
+    "EIDSCA.AM10",
+    "NIST CSF 2.0 (PR.AA-03)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Enables the MS authenticator app to display information about the app that is requesting authentication. This displays the application name.",
+  "executiveText": "Enhances authentication security by requiring users to match numbers and showing detailed information about login requests, including application names and location data. This helps employees verify legitimate login attempts and prevents unauthorized access through more secure authentication methods.",
+  "docsDescription": "Allows users to use Passwordless with Number Matching and adds location information from the last request",
+  "impactColour": "info",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
+  "appliesToTest": [
+    "CIS_5_2_3_1",
+    "EIDSCAAM01",
+    "EIDSCAAM03",
+    "EIDSCAAM04",
+    "EIDSCAAM06",
+    "EIDSCAAM07",
+    "EIDSCAAM09",
+    "EIDSCAAM10"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "state": "enabled",
+    "featureSettings": {
+      "displayAppInformationRequiredState": {
+        "state": "enabled"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "MicrosoftAuthenticator"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator",
+        "body": {
+          "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethodConfiguration",
+          "state": "enabled",
+          "featureSettings": {
+            "displayAppInformationRequiredState": {
+              "state": "enabled",
+              "includeTarget": {
+                "targetType": "group",
+                "id": "all_users"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

@@ -3,18 +3,31 @@
   "label": "Disable SMTP Basic Authentication",
   "cat": "Exchange Standards",
   "tag": [
-    "CIS M365 7.0.0 (6.5.4)"
+    "CIS M365 7.0.0 (6.5.4)",
+    "NIST CSF 2.0 (PR.IR-01)"
   ],
   "impact": "Medium Impact",
-  "helpText": "Disables SMTP AUTH tenant-wide. Legacy devices that submit mail with basic authentication will stop working.",
-  "executiveText": "Blocks an outdated email sign-in method that bypasses MFA. Old scanners or printers may need reconfiguration.",
+  "helpText": "Disables SMTP AUTH organization-wide, impacting POP and IMAP clients that rely on SMTP for sending emails. Default for new tenants. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)",
+  "executiveText": "Disables outdated email authentication methods that are vulnerable to security attacks, forcing applications and devices to use modern, more secure authentication protocols. This reduces the risk of email-based security breaches and credential theft.",
+  "docsDescription": "Disables tenant-wide SMTP basic authentication, including for all explicitly enabled users, impacting POP and IMAP clients that rely on SMTP for sending emails. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission).",
+  "impactColour": "warning",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Set-TransportConfig -SmtpClientAuthenticationDisabled $true",
+  "appliesToTest": [
+    "CISAMSEXO51",
+    "CIS_6_5_4",
+    "ZTNA21799"
+  ],
   "recommendedBy": [
     "CIS",
-    "Microsoft"
+    "CIPP"
   ],
   "requiredCapabilities": [
     "EXCHANGE_S_STANDARD",
-    "EXCHANGE_S_ENTERPRISE"
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
   ],
   "secureScoreImpact": 10,
   "compare": "subset",
@@ -27,20 +40,12 @@
     }
   },
   "expected": {
-    "SmtpClientAuthenticationDisabled": "%disabled%"
+    "SmtpClientAuthenticationDisabled": "%disabled%",
+    "UsersWithSmtpAuthEnabled": []
   },
   "read": {
     "cacheType": "ExoTransportConfig"
   },
-  "remediate": {
-    "executor": "ExoRequest",
-    "cmdlets": [
-      {
-        "cmdlet": "Set-TransportConfig",
-        "params": {
-          "SmtpClientAuthenticationDisabled": "%disabled%"
-        }
-      }
-    ]
-  }
+  "custom": true,
+  "customFunction": "Invoke-CIPPBaselineDisableBasicAuthSMTP"
 }

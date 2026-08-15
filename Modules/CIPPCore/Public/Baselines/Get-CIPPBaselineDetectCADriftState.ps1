@@ -17,19 +17,27 @@ function Get-CIPPBaselineDetectCADriftState {
     param($Item, $TenantFilter)
 
     $ManagedNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    # The template store is read ONCE and indexed under every key a config may reference:
+    # RowKey, the GUID column, and the payload displayName - the legacy reference form that
+    # both the CA prepare and the CATemplate executor still honour. Resolving fewer keys here
+    # than the deploy path does would leave a policy a baseline actively manages outside the
+    # managed set, flag it as unmanaged, and let a deny-delete verdict delete it out from
+    # under that baseline on the next run.
     $TemplatesTable = Get-CippTable -tablename 'templates'
+    $TemplateNames = @{}
+    foreach ($TemplateRow in @(try { Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'CATemplate'" } catch { @() })) {
+        $TemplateName = "$(try { ($TemplateRow.JSON | ConvertFrom-Json -Depth 100).displayName } catch { $null })"
+        if (-not $TemplateName) { continue }
+        foreach ($Key in @("$($TemplateRow.RowKey)", "$($TemplateRow.GUID)", $TemplateName)) {
+            if ($Key -and -not $TemplateNames.ContainsKey($Key)) { $TemplateNames[$Key] = $TemplateName }
+        }
+    }
     $WorkItems = @(try { Get-CIPPBaselineWorkItems -TenantFilter $TenantFilter } catch { @() })
     $Unwrap = { param($Value) if ($Value -is [System.Management.Automation.PSCustomObject] -and $null -ne $Value.value) { $Value.value } else { $Value } }
     foreach ($WorkItem in ($WorkItems | Where-Object { $_.BaseName -eq 'ConditionalAccessTemplate' })) {
         $TemplateRef = "$(& $Unwrap $WorkItem.Variables.caTemplate)"
         if (-not $TemplateRef) { continue }
-        $SafeRef = ConvertTo-CIPPODataFilterValue -Value $TemplateRef
-        $TemplateRow = Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'CATemplate' and RowKey eq '$SafeRef'" | Select-Object -First 1
-        if (-not $TemplateRow) {
-            $TemplateRow = Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'CATemplate' and GUID eq '$SafeRef'" | Select-Object -First 1
-        }
-        if (-not $TemplateRow) { continue }
-        $TemplateName = "$(try { ($TemplateRow.JSON | ConvertFrom-Json -Depth 100).displayName } catch { $null })"
+        $TemplateName = $TemplateNames[$TemplateRef]
         if (-not $TemplateName) { continue }
         $Resolved = $(try { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $TemplateName } catch { $TemplateName })
         $null = $ManagedNames.Add("$Resolved")

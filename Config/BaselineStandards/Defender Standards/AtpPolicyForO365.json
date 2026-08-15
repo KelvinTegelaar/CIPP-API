@@ -9,16 +9,32 @@
   "impact": "Low Impact",
   "helpText": "This creates a Atp policy that enables Defender for Office 365 for SharePoint, OneDrive and Microsoft Teams.",
   "executiveText": "Extends Defender for Office 365 malware protection to files stored in SharePoint, OneDrive and Microsoft Teams, and enables Safe Documents so files are verified before users can open them.",
+  "impactColour": "info",
+  "addedDate": "2024-03-25",
+  "powershellEquivalent": "Set-AtpPolicyForO365",
+  "appliesToTest": [
+    "CIS_2_1_5",
+    "ORCA225"
+  ],
   "recommendedBy": [
     "CIS"
   ],
   "requiredCapabilities": [
-    "SHAREPOINTWAC",
-    "SHAREPOINTSTANDARD",
-    "SHAREPOINTENTERPRISE",
-    "SHAREPOINTENTERPRISE_EDU",
-    "ONEDRIVE_BASIC",
-    "ONEDRIVE_ENTERPRISE"
+    [
+      "SHAREPOINTWAC",
+      "SHAREPOINTSTANDARD",
+      "SHAREPOINTENTERPRISE",
+      "SHAREPOINTENTERPRISE_EDU",
+      "SHAREPOINTENTERPRISE_GOV",
+      "ONEDRIVE_BASIC",
+      "ONEDRIVE_ENTERPRISE"
+    ],
+    [
+      "ATP_ENTERPRISE",
+      "ATP_ENTERPRISE_GOV",
+      "THREAT_INTELLIGENCE",
+      "THREAT_INTELLIGENCE_GOV"
+    ]
   ],
   "secureScoreImpact": 0,
   "compare": "subset",

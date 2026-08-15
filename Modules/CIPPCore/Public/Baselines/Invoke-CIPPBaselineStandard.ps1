@@ -14,10 +14,14 @@ function Invoke-CIPPBaselineStandard {
            dot-path descend/flatten -> filter[] (properties may be dot-paths) -> object
            dot-path). On a cache miss the engine triggers the central collector for that
            cacheType and re-reads once; if there is still nothing, NOTHING is written - the
-           row stays 'No Data' and retries naturally on the next run.
+           row stays 'No Data' and retries naturally on the next run. read.defaults supplies
+           the documented service default for a property the API omits until it is
+           explicitly set, so 'never configured' is not read as drift.
         3. Render the expected template from the configured variable values, project the
            current value to the expected keys and compare with Compare-CIPPIntuneObject
-           (subset). Differences on accepted property paths are tolerated.
+           (subset). Differences on accepted property paths are tolerated. A variable the
+           definition marks `required` but the baseline never filled parks the row with an
+           Error instead: the raw %token% is not a value to compare or deploy.
         4. One Status per row: Compliant / Drift / Accepted / Partially Accepted /
            Denied - Remediate Pending / Denied - Delete Pending / Skipped - No License.
            Accepted holds until its unix expiry (optionally remediating on lapse); a row
@@ -54,6 +58,19 @@ function Invoke-CIPPBaselineStandard {
         if ($null -eq $Template) { return $null }
         if ($Variables -is [System.Collections.IDictionary]) { $Variables = [PSCustomObject]$Variables }
         $Json = ConvertTo-Json -Compress -Depth 100 -InputObject $Template
+        # A variable declared omitWhenBlank that is left blank (or never configured)
+        # removes its key entirely - 'keep the tenant's current value': the setting is
+        # neither graded nor written. Pruned on the serialized template before
+        # substitution, so expected AND remediate specs stay consistent (keys whose
+        # value is exactly the "%var%" token).
+        foreach ($Declared in (($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties)) {
+            if ($Declared.Value.omitWhenBlank -ne $true) { continue }
+            if (-not [string]::IsNullOrEmpty("$(($Variables ?? [PSCustomObject]@{}).($Declared.Name))")) { continue }
+            $Escaped = [regex]::Escape(('%{0}%' -f $Declared.Name))
+            $Json = [regex]::Replace($Json, ('"[^"]*":"{0}",' -f $Escaped), '')
+            $Json = [regex]::Replace($Json, (',"[^"]*":"{0}"' -f $Escaped), '')
+            $Json = [regex]::Replace($Json, ('"[^"]*":"{0}"' -f $Escaped), '')
+        }
         foreach ($Variable in (($Variables ?? [PSCustomObject]@{}).PSObject.Properties)) {
             $Token = '%{0}%' -f $Variable.Name
             $EncodedValue = ConvertTo-Json -Compress -Depth 100 -InputObject $Variable.Value
@@ -78,10 +95,29 @@ function Invoke-CIPPBaselineStandard {
         # capabilities cache is per tenant with a 24h TTL, so at most one Graph call per
         # tenant per day. A oneoff is an explicit operator ask and bypasses the gate - the
         # cache may not know about a license bought after the last sync.
+        # A flat requiredCapabilities list is any-of. A nested array is a GROUP that must
+        # also match: every group needs at least one licensed capability (AND of any-of
+        # groups) - AtpPolicyForO365 needs a SharePoint plan AND a Defender for Office 365
+        # plan, exactly like the classic standard's two license gates.
         $Required = @($Definition.requiredCapabilities)
         if ($Required.Count -gt 0 -and $Mode -ne 'oneoff') {
             $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
-            if (@($Required | Where-Object { $Capabilities.$_ -eq $true }).Count -eq 0) {
+            # Built as a List: an if-expression's pipeline output unwraps one array
+            # level, which silently turned every capability into its own AND-group.
+            $Groups = [System.Collections.Generic.List[object]]::new()
+            if (@($Required | Where-Object { $_ -is [System.Array] }).Count -gt 0) {
+                foreach ($Entry in $Required) { $Groups.Add(@($Entry)) }
+            } else {
+                $Groups.Add(@($Required))
+            }
+            $Licensed = $true
+            foreach ($Group in $Groups) {
+                if (@(@($Group) | Where-Object { $Capabilities.$_ -eq $true }).Count -eq 0) {
+                    $Licensed = $false
+                    break
+                }
+            }
+            if (-not $Licensed) {
                 $Skipped = [PSCustomObject]@{
                     Item                = $Item
                     Mode                = $Mode
@@ -238,6 +274,30 @@ function Invoke-CIPPBaselineStandard {
             return $Result
         }
 
+        # 1b00. Unconfigured REQUIRED variable: the baseline was saved without a value the
+        # definition cannot substitute for, so the render leaves the raw "%var%" token in the
+        # spec. That token is not a value - comparing it is permanent drift, and remediating
+        # it sends the literal string to the API (CSOM/Graph/EXO accept a garbage string for
+        # a typed setting). Nothing is compared and nothing is written; the row keeps
+        # whatever it last knew and the operator gets a named error, the way the classic
+        # standards validated their input and aborted. Only variables the definition marks
+        # `required` are gated: a blank optional field (an empty exclude group, no
+        # documentation link) is a legitimate configuration, and omitWhenBlank fields have
+        # their key pruned rather than left behind.
+        $ConfiguredVariables = $Item.Variables ?? [PSCustomObject]@{}
+        $Unresolved = @(($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties | Where-Object {
+                $_.Value.required -eq $true -and
+                [string]::IsNullOrEmpty("$($ConfiguredVariables.$($_.Name))")
+            } | ForEach-Object { $_.Name })
+        if ($Unresolved.Count -gt 0) {
+            $Missing = $Unresolved -join ', '
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "`"$Label`" is missing a value for $Missing - nothing is compared or changed until the baseline configures it. - Run $RunId" -Sev 'Error'
+            $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Item.Standard -Mode $Mode -TriggeredBy $TriggeredBy -Outcome 'Error' -Detail "Not configured: no value for $Missing - the standard was skipped instead of comparing or writing the raw variable name." -RunId $RunId
+            $Result.Outcome = 'Error'
+            $Result.Status = $PriorStatus ?? 'No Data'
+            return $Result
+        }
+
         # 1b. Manual tasks: state lives on the resolved row; the operator completes them.
         if ($Definition.manual) {
             $Manual = & $Render $Definition.manual $Item.Variables
@@ -389,13 +449,24 @@ function Invoke-CIPPBaselineStandard {
         $CheckBeforeRun = $Definition.checkBeforeRun -ne $false
 
         # 3. Project to the expected keys (subset compare) and diff. A key the current object
-        # lacks stays present as $null so the compare flags the presence mismatch.
+        # lacks stays present as $null so the compare flags the presence mismatch - EXCEPT
+        # where read.defaults documents the service default for a property the API omits
+        # until it is explicitly set (Exchange returns a null OnlineMeetingsByDefaultEnabled
+        # on a tenant that never touched it, and null there means enabled). Those fill in
+        # before the compare, so a tenant already in the expected state does not read as
+        # drift and get written to on every run. Only the properties a definition names are
+        # filled, and only when the API really returned nothing.
+        $ReadDefaults = $Definition.read.defaults
         $Differences = @()
         $PreFilterDifferences = @()
         if ($null -ne $Current) {
             $Projected = [PSCustomObject]@{}
             foreach ($Property in $Expected.PSObject.Properties.Name) {
-                $Projected | Add-Member -NotePropertyName $Property -NotePropertyValue $Current.$Property
+                $Value = $Current.$Property
+                if ($null -eq $Value -and $null -ne $ReadDefaults -and $ReadDefaults.PSObject.Properties[$Property]) {
+                    $Value = $ReadDefaults.$Property
+                }
+                $Projected | Add-Member -NotePropertyName $Property -NotePropertyValue $Value
             }
             $Result.CurrentValue = $Projected
             # The compare copy of expected resolves $anyOf against the CURRENT value: a

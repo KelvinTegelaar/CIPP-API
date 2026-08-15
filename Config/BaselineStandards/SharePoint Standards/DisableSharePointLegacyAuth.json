@@ -11,6 +11,15 @@
   "impact": "Medium Impact",
   "helpText": "Disables the ability to authenticate with SharePoint using legacy authentication methods. Any applications that use legacy authentication will need to be updated to use modern authentication.",
   "executiveText": "Disables outdated authentication methods for SharePoint access, forcing applications and users to use modern, more secure authentication protocols. This significantly improves security by eliminating vulnerable authentication pathways while requiring updates to older applications.",
+  "docsDescription": "Disables the ability for users and applications to access SharePoint via legacy basic authentication. This will likely not have any user impact, but will block systems/applications depending on basic auth or the SharePointOnlineCredentials class.",
+  "impactColour": "warning",
+  "addedDate": "2024-02-05",
+  "powershellEquivalent": "Set-SPOTenant -LegacyAuthProtocolsEnabled $false",
+  "appliesToTest": [
+    "CIS_7_2_1",
+    "ZTNA21776",
+    "ZTNA21797"
+  ],
   "recommendedBy": [
     "CIS",
     "CIPP"
@@ -20,6 +29,7 @@
     "SHAREPOINTSTANDARD",
     "SHAREPOINTENTERPRISE",
     "SHAREPOINTENTERPRISE_EDU",
+    "SHAREPOINTENTERPRISE_GOV",
     "ONEDRIVE_BASIC",
     "ONEDRIVE_ENTERPRISE"
   ],

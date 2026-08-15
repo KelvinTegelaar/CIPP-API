@@ -67,8 +67,16 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
         }
         # Fail open: a missing cache never returns early - an enforced standard still
         # applies its expected state (POSTing a new org-default policy when none exists).
-        # The governed value sits in a JSON string inside the policy's definition array.
-        $CurrentTimeout = $(try { (@($Policy.definition)[0] | ConvertFrom-Json).ActivityBasedTimeoutPolicy.WebSessionIdleTimeout } catch { $null })
+        # The governed value sits in a JSON string inside the policy's definition array;
+        # the portal/Graph schema nests it under ApplicationPolicies (ApplicationId
+        # 'default'). Policies written by an early engine build put WebSessionIdleTimeout
+        # directly on the root - read both so those do not report permanent drift.
+        $CurrentTimeout = $(try {
+                $AbtDefinition = (@($Policy.definition)[0] | ConvertFrom-Json).ActivityBasedTimeoutPolicy
+                $DefaultApplicationPolicy = @($AbtDefinition.ApplicationPolicies) | Where-Object { $_.ApplicationId -eq 'default' } | Select-Object -First 1
+                if (-not $DefaultApplicationPolicy) { $DefaultApplicationPolicy = @($AbtDefinition.ApplicationPolicies) | Select-Object -First 1 }
+                $DefaultApplicationPolicy.WebSessionIdleTimeout ?? $AbtDefinition.WebSessionIdleTimeout
+            } catch { $null })
         if ($null -ne $Policy) {
             $Result.CurrentValue = [PSCustomObject]@{ timeout = $CurrentTimeout }
         }
@@ -92,8 +100,13 @@ function Invoke-CIPPBaselineActivityBasedTimeout {
         $WriteNeeded = (-not $Compliant) -or $Force.IsPresent
 
         if ($Mode -ne 'compare' -and $RemediationAllowed -and $WriteNeeded) {
+            # The documented definition schema: ApplicationPolicies[] with the org-wide
+            # entry keyed ApplicationId 'default' - the shape the portal writes and reads.
             $PolicyDefinition = ConvertTo-Json -Compress -Depth 10 -InputObject ([PSCustomObject]@{
-                    ActivityBasedTimeoutPolicy = [PSCustomObject]@{ Version = 1; WebSessionIdleTimeout = $ExpectedTimeout }
+                    ActivityBasedTimeoutPolicy = [PSCustomObject]@{
+                        Version             = 1
+                        ApplicationPolicies = @([PSCustomObject]@{ ApplicationId = 'default'; WebSessionIdleTimeout = $ExpectedTimeout })
+                    }
                 })
             $Body = ConvertTo-Json -Compress -Depth 10 -InputObject ([PSCustomObject]@{
                     definition            = @($PolicyDefinition)
