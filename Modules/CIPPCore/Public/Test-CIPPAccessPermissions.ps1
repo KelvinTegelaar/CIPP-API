@@ -169,14 +169,18 @@ function Test-CIPPAccessPermissions {
         $CPVRefreshList = [System.Collections.Generic.List[object]]::new()
         $CPVSuccess = $true
         foreach ($Tenant in $TenantList) {
-            $LastRefresh = ($CpvRefresh | Where-Object { $_.RowKey -eq $Tenant.customerId }).Timestamp.DateTime
-            if ($LastRefresh -lt $LastUpdate) {
+            $CpvRow = $CpvRefresh | Where-Object { $_.RowKey -eq $Tenant.customerId }
+            $LastRefresh = $CpvRow.Timestamp.DateTime
+            # Timestamp is rewritten even on failed runs, so freshness alone hides a broken tenant.
+            if ($LastRefresh -lt $LastUpdate -or $CpvRow.LastStatus -eq 'Failed') {
                 $CPVSuccess = $false
                 $CPVRefreshList.Add([PSCustomObject]@{
                         CustomerId        = $Tenant.customerId
                         DisplayName       = $Tenant.displayName
                         DefaultDomainName = $Tenant.DefaultDomainName
                         LastRefresh       = $LastRefresh
+                        LastStatus        = $CpvRow.LastStatus
+                        LastError         = $CpvRow.LastError
                     })
             }
         }

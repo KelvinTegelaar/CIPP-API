@@ -238,7 +238,31 @@ function Get-CippSamPermissions {
         }
     }
 
-    $Timestamp = $SamManifestFile.LastWriteTime.ToUniversalTime()
+    # When the permission set last changed. Content hash, not mtime: git doesn't store mtimes,
+    # so every checkout/build restamped the manifest and re-queued the whole estate for CPV.
+    $ManifestContent = (Get-Content -Path $SamManifestFile.FullName -Raw) + (Get-Content -Path $AdditionalPermissionsFile.FullName -Raw)
+    $ManifestHash = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($ManifestContent)))
+    $HashRow = Get-CippAzDataTableEntity @Table -Filter "PartitionKey eq 'CIPP-SAM' and RowKey eq 'ManifestHash'"
+
+    if ($HashRow.Hash -eq $ManifestHash -and $HashRow.FirstSeenUtc) {
+        $Timestamp = ([datetime]::Parse($HashRow.FirstSeenUtc)).ToUniversalTime()
+    } else {
+        # New permission set - advance the timestamp once and record it.
+        $Timestamp = [datetime]::UtcNow
+        try {
+            $null = Add-CIPPAzDataTableEntity @Table -Force -Entity @{
+                PartitionKey = 'CIPP-SAM'
+                RowKey       = 'ManifestHash'
+                Hash         = $ManifestHash
+                FirstSeenUtc = $Timestamp.ToString('o')
+            }
+        } catch {
+            # Unpersisted, every call would look like first sight; mtime is at least stable.
+            Write-Information "Could not persist the SAM manifest hash: $($_.Exception.Message)"
+            $Timestamp = $SamManifestFile.LastWriteTime.ToUniversalTime()
+        }
+    }
+
     if ($SavedRow.Timestamp) {
         $SavedTimestamp = $SavedRow.Timestamp.DateTime.ToUniversalTime()
         if ($SavedTimestamp -gt $Timestamp) {
