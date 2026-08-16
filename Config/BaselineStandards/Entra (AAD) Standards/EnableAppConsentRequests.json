@@ -1,0 +1,54 @@
+{
+  "name": "EnableAppConsentRequests",
+  "label": "Enable App Consent Admin Requests",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.3.4)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Enables the admin consent workflow so users can request admin approval for applications instead of being blocked outright. The selected reviewer role receives the requests.",
+  "executiveText": "Lets employees request administrator review when an application needs permissions they cannot grant themselves, routing risky consent decisions to IT instead of blocking work or encouraging shadow consent.",
+  "docsDescription": "Grades whether the admin consent request policy is enabled and whether the reviewer count matches the configured roles. Remediation enables the workflow with 30-day requests and reviewer notifications, and MERGES the configured role's reviewers into the existing list - reviewers added by hand are preserved. No role selected defaults to Global Administrator.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Update-MgPolicyAdminConsentRequestPolicy",
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "ReviewerRoles": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "App Consent Reviewer Role",
+      "omitWhenBlank": true,
+      "api": {
+        "url": "/api/ListGraphRequest",
+        "data": {
+          "Endpoint": "roleManagement/directory/roleDefinitions",
+          "$select": "id,displayName",
+          "$top": 999
+        },
+        "dataKey": "Results",
+        "labelField": "displayName",
+        "valueField": "id",
+        "queryKey": "ListEntraRoleDefinitions"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "AdminConsentRequestPolicy"
+  },
+  "prepare": "Get-CIPPBaselineEnableAppConsentRequestsState",
+  "remediate": {
+    "executor": "EnableAppConsentRequests",
+    "reviewerRoles": "%ReviewerRoles%"
+  }
+}

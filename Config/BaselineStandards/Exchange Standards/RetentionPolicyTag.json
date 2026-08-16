@@ -1,0 +1,47 @@
+{
+  "name": "RetentionPolicyTag",
+  "label": "Retention Policy Tag for Deleted Items",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Creates the CIPP Deleted Items retention tag, permanently deleting items after the configured number of days, and links it into the Default MRM Policy.",
+  "executiveText": "Automatically purges deleted email after the configured window, reducing data exposure and storage growth while keeping mailbox behaviour consistent across the fleet.",
+  "docsDescription": "Grades six facts about the fixed CIPP Deleted Items tag: existence, retention enabled, PermanentlyDelete action, the configured age limit, the DeletedItems type, and its link into the Default MRM Policy. The link write resends the full existing link list - other tags are never unlinked.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-RetentionPolicyTag or Set-RetentionPolicyTag",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "AgeLimitForRetention": {
+      "type": "number",
+      "required": true,
+      "label": "Retention Days"
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "ExoRetentionPolicyTags",
+      "ExoRetentionPolicies"
+    ],
+    "cacheType": "ExoRetentionPolicyTags"
+  },
+  "prepare": "Get-CIPPBaselineRetentionPolicyTagState",
+  "remediate": {
+    "executor": "RetentionPolicyTag",
+    "ageLimitForRetention": "%AgeLimitForRetention%"
+  }
+}
