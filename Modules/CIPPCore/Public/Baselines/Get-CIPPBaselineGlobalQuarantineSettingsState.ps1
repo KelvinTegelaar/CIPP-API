@@ -51,10 +51,16 @@ function Get-CIPPBaselineGlobalQuarantineSettingsState {
     $Current | Add-Member -NotePropertyName 'organizationBrandingEnabled' -NotePropertyValue ([bool]$Policy.OrganizationBrandingEnabled)
 
     # Carried for the executor: the write fans texts across these languages, and the
-    # Microsoft default policy cannot be modified - it must be replaced by name.
+    # Microsoft default policy cannot be modified - it must be replaced by name. The
+    # CURRENT per-language arrays ride along because Exchange requires all three arrays
+    # on every write with counts equal to the language count - an unconfigured field must
+    # resend the tenant's existing values, not omit the array or null it.
     $Languages = @($Policy.MultiLanguageSetting)
     if ($Languages.Count -eq 0) { $Languages = @('Default') }
     $Current | Add-Member -NotePropertyName 'languages' -NotePropertyValue @($Languages)
+    $Current | Add-Member -NotePropertyName 'currentSenderNames' -NotePropertyValue @($Policy.MultiLanguageSenderName)
+    $Current | Add-Member -NotePropertyName 'currentSubjects' -NotePropertyValue @($Policy.ESNCustomSubject)
+    $Current | Add-Member -NotePropertyName 'currentDisclaimers' -NotePropertyValue @($Policy.MultiLanguageCustomDisclaimer)
     $Current | Add-Member -NotePropertyName 'policyName' -NotePropertyValue "$($Policy.Name)"
     $Current | Add-Member -NotePropertyName 'policyIdentity' -NotePropertyValue "$($Policy.Identity)"
 

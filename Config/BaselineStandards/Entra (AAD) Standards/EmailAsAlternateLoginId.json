@@ -1,0 +1,37 @@
+{
+  "name": "EmailAsAlternateLoginId",
+  "label": "Email as an Alternate Login ID",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Explicitly enables or disables signing in with a verified email address as an alternate to the UPN.",
+  "executiveText": "Controls whether employees can sign in with their email address when it differs from their account name - an explicit setting keeps sign-in behaviour deliberate rather than inheriting Microsoft defaults that can change.",
+  "docsDescription": "Grades the org-default home realm discovery policy: it must exist, explicitly carry the AlternateIdLogin setting, and match the configured direction. Remediation patches the existing policy or creates the org default.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Update-MgPolicyHomeRealmDiscoveryPolicy",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "Enabled": {
+      "label": "Enable Email as Alternate Login ID",
+      "type": "switch",
+      "default": false
+    }
+  },
+  "read": {
+    "cacheType": "HomeRealmDiscoveryPolicy"
+  },
+  "prepare": "Get-CIPPBaselineEmailAsAlternateLoginIdState",
+  "remediate": {
+    "executor": "EmailAsAlternateLoginId",
+    "enabled": "%Enabled%"
+  }
+}

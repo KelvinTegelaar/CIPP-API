@@ -4,11 +4,15 @@ function Invoke-CIPPBaselineGlobalQuarantineSettings {
         GlobalQuarantineSettings executor: writes the global quarantine notification
         branding.
     .DESCRIPTION
-        The per-language texts fan out across exactly the languages the tenant has
-        configured - one copy per language, the classic's write. The Microsoft default
-        policy (DefaultGlobalPolicy) cannot be modified, so meeting it means CREATING the
-        custom DefaultGlobalTag; anything else is Set- in place. Only configured fields are
-        written, mirroring the compare.
+        Exchange requires ALL THREE per-language arrays on every write, with counts equal
+        to the language count - so a configured text fans across every tenant language, and
+        an UNCONFIGURED field resends the tenant's current values (padded with the first
+        value when the language list grew). Omitting an array fails the whole write with
+        'counts must be equal'; nulling it - the classic's behaviour for unset fields -
+        would clear real branding.
+
+        The Microsoft default policy (DefaultGlobalPolicy) cannot be modified, so meeting
+        it means CREATING the custom DefaultGlobalTag; anything else is Set- in place.
     .FUNCTIONALITY
         Internal
     #>
@@ -22,10 +26,22 @@ function Invoke-CIPPBaselineGlobalQuarantineSettings {
     $Languages = @($Current.languages)
     if ($Languages.Count -eq 0) { $Languages = @('Default') }
 
-    $Params = @{ MultiLanguageSetting = $Languages }
-    if (-not [string]::IsNullOrWhiteSpace("$($Remediate.senderName)")) { $Params['MultiLanguageSenderName'] = @($Languages | ForEach-Object { "$($Remediate.senderName)" }) }
-    if (-not [string]::IsNullOrWhiteSpace("$($Remediate.customSubject)")) { $Params['ESNCustomSubject'] = @($Languages | ForEach-Object { "$($Remediate.customSubject)" }) }
-    if (-not [string]::IsNullOrWhiteSpace("$($Remediate.customDisclaimer)")) { $Params['MultiLanguageCustomDisclaimer'] = @($Languages | ForEach-Object { "$($Remediate.customDisclaimer)" }) }
+    $BuildArray = {
+        param($Configured, $Existing)
+        if (-not [string]::IsNullOrWhiteSpace("$Configured")) { return @($Languages | ForEach-Object { "$Configured" }) }
+        $Values = @($Existing)
+        if ($Values.Count -eq $Languages.Count) { return $Values }
+        # Language list changed since the values were written - pad with the first value
+        # (or blanks) so the counts Exchange insists on line up.
+        $Fill = if ($Values.Count -gt 0) { "$($Values[0])" } else { '' }
+        return @(1..$Languages.Count | ForEach-Object { $Fill })
+    }
+    $Params = @{
+        MultiLanguageSetting          = $Languages
+        MultiLanguageSenderName       = & $BuildArray $Remediate.senderName $Current.currentSenderNames
+        ESNCustomSubject              = & $BuildArray $Remediate.customSubject $Current.currentSubjects
+        MultiLanguageCustomDisclaimer = & $BuildArray $Remediate.customDisclaimer $Current.currentDisclaimers
+    }
     if (-not [string]::IsNullOrWhiteSpace("$($Remediate.fromAddress)")) { $Params['EndUserSpamNotificationCustomFromAddress'] = "$($Remediate.fromAddress)" }
     $Params['OrganizationBrandingEnabled'] = [bool]($Remediate.organizationBrandingEnabled -eq $true)
 
