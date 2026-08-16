@@ -16,6 +16,11 @@ function Invoke-CIPPBaselineStandard {
             remediate.executor 'Foo' -> Invoke-CIPPBaselineFoo
             delete.executor    'Foo' -> Invoke-CIPPBaselineDeleteFoo
             prepare                  -> the Get-CIPPBaseline*State function it names
+
+        -GradeOnly is the post-remediation cache verification: read and compare only,
+        returning { Compliant, CurrentValue, Diff } while persisting NOTHING - no history
+        events, no alignment writes, no alerts, no remediation. Only meaningful right after
+        a remediation on the same item, where conflict/unconfigured/manual cannot occur.
     .FUNCTIONALITY
         Internal
     #>
@@ -25,6 +30,7 @@ function Invoke-CIPPBaselineStandard {
         [ValidateSet('run', 'compare', 'oneoff')]$Mode = 'run',
         $TriggeredBy = 'schedule',
         [switch]$Force,
+        [switch]$GradeOnly,
         $RunId
     )
     if (-not $RunId) { $RunId = [string](New-Guid).Guid }
@@ -117,7 +123,9 @@ function Invoke-CIPPBaselineStandard {
             }
         }
 
-        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Started `"$Label`" ($Mode) - Run $RunId" -Sev 'Info'
+        if (-not $GradeOnly) {
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Started `"$Label`" ($Mode) - Run $RunId" -Sev 'Info'
+        }
 
         $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
@@ -160,7 +168,7 @@ function Invoke-CIPPBaselineStandard {
         $PriorRows = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and StandardName eq '$SafeStandard'")
         $CanonicalRowKey = $Item.Standard -replace '#', '~'
         $StaleRows = @($PriorRows | Where-Object { $_.RowKey -ne $CanonicalRowKey })
-        if ($StaleRows.Count -gt 0) {
+        if ($StaleRows.Count -gt 0 -and -not $GradeOnly) {
             try { Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $StaleRows } catch { Write-Information "Baselines: stale resolved-row cleanup for $($Item.Standard) on $TenantFilter failed: $($_.Exception.Message)" }
         }
         $Prior = $PriorRows | Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending | Select-Object -First 1
@@ -220,6 +228,7 @@ function Invoke-CIPPBaselineStandard {
         # Two baselines configure this identity at the same level with different settings, so
         # even the expected value is ambiguous: nothing is compared, nothing is written.
         if ($Item.Conflicted -eq $true) {
+            if ($GradeOnly) { return $null }
             $Result.ExpectedValue = $null
             $Result.Outcome = 'Conflict'
             $Result.Status = 'Conflict'
@@ -239,6 +248,7 @@ function Invoke-CIPPBaselineStandard {
                 [string]::IsNullOrEmpty("$($ConfiguredVariables.$($_.Name))")
             } | ForEach-Object { $_.Name })
         if ($Unresolved.Count -gt 0) {
+            if ($GradeOnly) { return $null }
             $Missing = $Unresolved -join ', '
             Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "`"$Label`" is missing a value for $Missing - nothing is compared or changed until the baseline configures it. - Run $RunId" -Sev 'Error'
             $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Item.Standard -Mode $Mode -TriggeredBy $TriggeredBy -Outcome 'Error' -Detail "Not configured: no value for $Missing - the standard was skipped instead of comparing or writing the raw variable name." -RunId $RunId
@@ -249,6 +259,7 @@ function Invoke-CIPPBaselineStandard {
 
         # Manual tasks: state lives on the resolved row; the operator completes them.
         if ($Definition.manual) {
+            if ($GradeOnly) { return $null }
             $Manual = & $Render $Definition.manual $Item.Variables
             $Result.Manual = $Manual
             $Completed = [bool]($(try { $Prior.CurrentValue | ConvertFrom-Json } catch { $null })?.completed)
@@ -475,6 +486,16 @@ function Invoke-CIPPBaselineStandard {
         $Compliant = ($null -ne $Current) -and ($Differences.Count -eq 0)
         $PathAccepted = $PreFilterDifferences.Count -gt $Differences.Count
 
+        # GradeOnly stops here: the verdict is the product, nothing is persisted, nothing
+        # is remediated. An empty read grades non-compliant so the caller retries honestly.
+        if ($GradeOnly) {
+            return [PSCustomObject]@{
+                Compliant    = [bool]$Compliant
+                CurrentValue = $Result.CurrentValue
+                Diff         = @($Differences)
+            }
+        }
+
         if ($Mode -ne 'compare' -and $Definition.delete -and $DenyDeleteKeys.Count -gt 0 -and $null -ne $Current) {
             $DeletedKeys = [System.Collections.Generic.List[string]]::new()
             foreach ($DenyKey in $DenyDeleteKeys) {
@@ -619,6 +640,8 @@ function Invoke-CIPPBaselineStandard {
         return $Result
     } catch {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Baseline run failed for $($Item.Standard) on ${TenantFilter}: $($_.Exception.Message)" -Sev 'Error'
+        # A failed verification must never overwrite the optimistic post-remediation row.
+        if ($GradeOnly) { return $null }
         if ($Result) {
             $Result.Outcome = 'Error'
             try { Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId } catch { Write-Information "Set-CIPPBaselineResult failed: $($_.Exception.Message)" }

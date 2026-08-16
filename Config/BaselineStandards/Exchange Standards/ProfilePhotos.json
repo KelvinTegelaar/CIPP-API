@@ -1,0 +1,58 @@
+{
+  "name": "ProfilePhotos",
+  "label": "Allow users to change their profile photos",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables or disables users changing their own profile photos, across both the Graph photo policy and the default OWA mailbox policy.",
+  "executiveText": "Standardizes whether staff manage their own directory photos or IT controls them for consistency and appropriateness.",
+  "docsDescription": "Grades both surfaces - the Graph photo update settings (disabled means only Global and User admins may change photos) and the default OWA mailbox policy's SetPhotoEnabled - because either alone leaves users a side door. Remediation writes both.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Set-OwaMailboxPolicy and Graph photoUpdateSettings",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "label": "Profile photo changes",
+      "type": "autoComplete",
+      "creatable": false,
+      "required": true,
+      "options": [
+        {
+          "value": "enabled",
+          "label": "Enabled (users may change)"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled (admins only)"
+        }
+      ]
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "PhotoUpdateSettings",
+      "OwaMailboxPolicy"
+    ],
+    "cacheType": "PhotoUpdateSettings"
+  },
+  "prepare": "Get-CIPPBaselineProfilePhotosState",
+  "remediate": {
+    "executor": "ProfilePhotos",
+    "state": "%state%"
+  }
+}

@@ -25,15 +25,40 @@ function Push-CIPPBaselineStandard {
                 # pre-remediation cache: fixed drift re-detects as still broken. One
                 # standard means at most a couple of caches, so refresh them inline and
                 # return no impact records for PostExec to repeat.
-                foreach ($CacheType in @($Result.CacheType | Where-Object { $_ })) {
-                    $Collector = "Set-CIPPDBCache$CacheType"
-                    try {
-                        if (Get-Command -Name $Collector -ErrorAction SilentlyContinue) {
-                            $null = & $Collector -TenantFilter $Item.Item.TenantFilter
+                $RefreshCaches = {
+                    foreach ($CacheType in @($Result.CacheType | Where-Object { $_ })) {
+                        $Collector = "Set-CIPPDBCache$CacheType"
+                        try {
+                            if (Get-Command -Name $Collector -ErrorAction SilentlyContinue) {
+                                $null = & $Collector -TenantFilter $Item.Item.TenantFilter
+                            }
+                        } catch {
+                            Write-Information "Baselines: inline cache refresh $CacheType for $($Item.Item.TenantFilter) failed: $($_.Exception.Message)"
                         }
-                    } catch {
-                        Write-Information "Baselines: inline cache refresh $CacheType for $($Item.Item.TenantFilter) failed: $($_.Exception.Message)"
                     }
+                }
+                & $RefreshCaches
+                # Lag-prone Graph surfaces (organization, admin/sharepoint/settings) can
+                # hand that refresh PRE-write state, and a present-but-stale cache never
+                # re-collects - collection only fires on a miss, so the fixed drift would
+                # re-detect until the next scheduled collection. Verify the refreshed
+                # cache actually grades clean; if not, give propagation a moment and
+                # collect ONCE more. Still drifted after that is worth a warning, not a
+                # loop: either the write truly failed or the API lags beyond reason, and
+                # the scheduled collection remains the backstop.
+                try {
+                    $Verify = @{ Item = $Item.Item; Mode = 'oneoff'; TriggeredBy = ($Item.TriggeredBy ?? 'schedule'); RunId = $Item.RunId }
+                    $Verdict = Invoke-CIPPBaselineStandard @Verify -GradeOnly
+                    if ($Verdict -and -not $Verdict.Compliant) {
+                        Start-Sleep -Seconds 10
+                        & $RefreshCaches
+                        $Verdict = Invoke-CIPPBaselineStandard @Verify -GradeOnly
+                        if ($Verdict -and -not $Verdict.Compliant) {
+                            Write-LogMessage -API 'Baselines' -tenant $Item.Item.TenantFilter -message "The refreshed cache still grades `"$($Item.Item.Standard)`" as drifted after remediation - either the write did not take effect or the API is lagging beyond the retry window; the next compare may re-report drift until the scheduled collection." -Sev 'Warning'
+                        }
+                    }
+                } catch {
+                    Write-Information "Baselines: post-remediation cache verification for $($Item.Item.Standard) failed: $($_.Exception.Message)"
                 }
                 return
             }
