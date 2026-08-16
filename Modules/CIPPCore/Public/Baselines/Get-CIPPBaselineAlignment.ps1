@@ -76,7 +76,7 @@ function Get-CIPPBaselineAlignment {
                     $Suffix = $(try {
                             $Effective = @($Resolved.Inheritance | ConvertFrom-Json) | Where-Object { $_.effective } | Select-Object -First 1
                             $Value = $Effective.value.$($ResolvedDefinition.instanceIdentity)
-                            if ($Value -is [System.Management.Automation.PSCustomObject]) { $Value.value } else { $Value }
+                            $Value.value ?? $Value
                         } catch { $null })
                 }
                 if ($Suffix) {
@@ -252,7 +252,7 @@ function Get-CIPPBaselineAlignment {
                         $Config.variables.taskName
                     } elseif ($Definition.instanceIdentity) {
                         $IdentityValue = $Config.variables.$($Definition.instanceIdentity)
-                        if ($IdentityValue -is [System.Management.Automation.PSCustomObject]) { $IdentityValue = $IdentityValue.value }
+                        $IdentityValue = $IdentityValue.value ?? $IdentityValue
                         $Partition = "$($Definition.identity.partition ?? $Definition.remediate.executor)"
                         $NameField = "$($Definition.identity.nameField ?? 'displayName')"
                         (& $ResolveTemplateName $Partition "$IdentityValue" $NameField) ?? $IdentityValue

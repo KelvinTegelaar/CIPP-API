@@ -91,6 +91,26 @@ Describe 'Invoke-CIPPBaselineStandard -GradeOnly' {
     }
 }
 
+Describe 'Convert-CIPPBaselineResolvedEntity identity labels' {
+    BeforeAll {
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Convert-CIPPBaselineResolvedEntity.ps1')
+        $script:InstanceDefs = @([PSCustomObject]@{ name = 'CATemplate'; label = 'Conditional Access Template'; instanceIdentity = 'caTemplate'; remediate = [PSCustomObject]@{ executor = 'CATemplate' } })
+    }
+
+    It 'unwraps an option-object identity from the inheritance instead of stringifying it' {
+        # The stored inheritance carries the picker's {label, value} object; the label
+        # suffix must be the value, never '@{label=...; value=...}'.
+        $Entity = [PSCustomObject]@{
+            PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'CATemplate~abc'; StandardName = 'CATemplate#abc'
+            ExpectedValue = $null; Inheritance = (@(@{ effective = $true; value = @{ caTemplate = @{ label = 'CA003-Policy'; value = 'guid-1' } } }) | ConvertTo-Json -Depth 10)
+            Status = 'Drift'
+        }
+        $Row = Convert-CIPPBaselineResolvedEntity -Entity $Entity -Definitions $script:InstanceDefs
+        $Row.standardLabel | Should -Be 'Conditional Access Template - guid-1'
+        $Row.standardLabel | Should -Not -Match '@\{'
+    }
+}
+
 Describe 'Push-CIPPBaselineStandard oneoff verification' {
     BeforeEach {
         $script:GradeCalls = 0

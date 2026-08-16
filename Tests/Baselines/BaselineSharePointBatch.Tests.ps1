@@ -256,6 +256,16 @@ Describe 'Get-CIPPBaselineSecureScoreRemediationState' {
         $Prepared.Current.driftedControls[0].State | Should -Be 'ignored'
     }
 
+    It 'the Reviewed list grades against the reviewed state - the fourth list the classic carried' {
+        Mock New-CIPPDbRequest { @(@{ id = 'AdminMFAV2'; controlStateUpdates = @(@{ state = 'Reviewed'; updatedDateTime = '2025-01-01T00:00:00Z' }) } | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ Reviewed = @([PSCustomObject]@{ value = 'AdminMFAV2' }) } }
+        $Prepared = Get-CIPPBaselineSecureScoreRemediationState -Item $Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+        Mock New-CIPPDbRequest { @(@{ id = 'AdminMFAV2'; controlStateUpdates = @() } | ConvertTo-Cached) }
+        $Prepared2 = Get-CIPPBaselineSecureScoreRemediationState -Item $Item -TenantFilter $script:Tenant
+        $Prepared2.Current.driftedControls[0].State | Should -Be 'reviewed'
+    }
+
     It 'never grades controls outside the configured lists' {
         Mock New-CIPPDbRequest { @(@{ id = 'SomeOtherControl'; controlStateUpdates = @(@{ state = 'thirdParty'; updatedDateTime = '2025-01-01T00:00:00Z' }) } | ConvertTo-Cached) }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ Ignored = @('AdminMFAV2') } }

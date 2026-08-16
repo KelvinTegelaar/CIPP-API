@@ -35,6 +35,14 @@ function Invoke-CIPPBaselineStandard {
     )
     if (-not $RunId) { $RunId = [string](New-Guid).Guid }
 
+    # Work items arrive through the durable pipeline as Hashtables, and hooks unwrap
+    # option objects with PSCustomObject checks - an OrderedHashtable slips past every
+    # one and stringifies into 'System.Management.Automation.OrderedHashtable'. One JSON
+    # round-trip at the boundary makes every nested variable a PSCustomObject.
+    if ($null -ne $Item.Variables -and $Item.Variables -isnot [System.Management.Automation.PSCustomObject]) {
+        $Item.Variables = ConvertTo-Json -Depth 100 -InputObject $Item.Variables | ConvertFrom-Json
+    }
+
     $TenantFilter = $Item.TenantFilter
     $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
 

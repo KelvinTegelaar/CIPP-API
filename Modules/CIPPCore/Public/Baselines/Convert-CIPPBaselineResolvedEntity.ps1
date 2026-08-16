@@ -40,7 +40,9 @@ function Convert-CIPPBaselineResolvedEntity {
         $FromVariables = if ($Entity.Inheritance) {
             $Effective = @(& $ParseJson $Entity.Inheritance) | Where-Object { $_.effective } | Select-Object -First 1
             $Value = $Effective.value.$($Definition.instanceIdentity)
-            if ($Value -is [System.Management.Automation.PSCustomObject]) { $Value.value } else { $Value }
+            # .value ?? works on option objects AND hashtable-shaped rows alike; plain
+            # strings have no .value and fall through.
+            $Value.value ?? $Value
         }
         $ExpectedParsed.displayName ?? $ExpectedParsed.name ?? $FromVariables
     }

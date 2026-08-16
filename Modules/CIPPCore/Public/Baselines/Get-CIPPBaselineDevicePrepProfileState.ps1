@@ -29,7 +29,8 @@ function Get-CIPPBaselineDevicePrepProfileState {
     }
 
     $V = $Item.Variables
-    $ProfileName = "$($V.ProfileName)"
+    # The identity may arrive as an option object ({label, value}) from some save paths.
+    $ProfileName = "$($V.ProfileName.value ?? $V.ProfileName)"
     if ([string]::IsNullOrWhiteSpace($ProfileName)) { return @{ Current = $null } }
     $Policy = @($Policies | Where-Object { "$($_.name)" -eq $ProfileName }) | Select-Object -First 1
 

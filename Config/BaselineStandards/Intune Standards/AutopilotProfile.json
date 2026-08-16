@@ -45,7 +45,12 @@
       "type": "autoComplete",
       "creatable": true,
       "label": "Language tag (e.g. os-default, en-US)",
-      "omitWhenBlank": true
+      "omitWhenBlank": true,
+      "api": {
+        "url": "/languageList.json",
+        "labelField": "languageTag",
+        "valueField": "tag"
+      }
     },
     "CollectHash": {
       "type": "switch",

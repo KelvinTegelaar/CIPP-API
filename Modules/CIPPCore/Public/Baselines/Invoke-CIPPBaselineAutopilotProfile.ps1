@@ -23,7 +23,7 @@ function Invoke-CIPPBaselineAutopilotProfile {
 
     $Parameters = @{
         TenantFilter       = $TenantFilter
-        DisplayName        = "$($Remediate.displayName)"
+        DisplayName        = "$($Remediate.displayName.value ?? $Remediate.displayName)"
         Description        = "$($Remediate.description)"
         UserType           = $UserType
         DeploymentMode     = $DeploymentMode

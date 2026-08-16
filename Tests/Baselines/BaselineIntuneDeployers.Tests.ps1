@@ -221,6 +221,21 @@ Describe 'Get-CIPPBaselineAutopilotProfileState' {
         }
     }
 
+    It 'an option-object DisplayName ({label, value}) unwraps instead of stringifying into the title' {
+        # Legacy saves stored the identity as an option object; interpolating it raw
+        # deployed profiles literally named '@{label=...}'.
+        $script:LocaleProfile = $script:ApProfile.Clone()
+        $script:LocaleProfile.displayName = 'CIPP Autopilot'
+        Mock New-CIPPDbRequest { @($script:LocaleProfile | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DisplayName = [PSCustomObject]@{ label = 'CIPP Autopilot'; value = 'CIPP Autopilot' }; Description = 'd'; SelfDeployingMode = $true; CollectHash = $true; HidePrivacy = $true; HideTerms = $true; AutoKeyboard = $true } }
+        $Prepared = Get-CIPPBaselineAutopilotProfileState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.displayName | Should -Be 'CIPP Autopilot'
+        $Prepared.Current.profileExists | Should -BeTrue
+        Mock Set-CIPPDefaultAPDeploymentProfile { }
+        Invoke-CIPPBaselineAutopilotProfile -Remediate ([PSCustomObject]@{ displayName = [PSCustomObject]@{ label = 'CIPP Autopilot'; value = 'CIPP Autopilot' } }) -TenantFilter $script:Tenant -Current $null
+        Should -Invoke Set-CIPPDefaultAPDeploymentProfile -Times 1 -Exactly -ParameterFilter { $DisplayName -eq 'CIPP Autopilot' }
+    }
+
     It 'a REAL locale still grades exactly - the equivalence never blesses en-US against os-default' {
         $ProfileCopy = $script:ApProfile.Clone(); $ProfileCopy.locale = 'en-US'
         $script:LocaleProfile = $ProfileCopy

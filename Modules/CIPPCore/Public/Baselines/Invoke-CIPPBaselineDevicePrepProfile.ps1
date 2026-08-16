@@ -19,7 +19,7 @@ function Invoke-CIPPBaselineDevicePrepProfile {
         $Current
     )
 
-    $ProfileName = "$($Remediate.profileName)"
+    $ProfileName = "$($Remediate.profileName.value ?? $Remediate.profileName)"
     if ([string]::IsNullOrWhiteSpace($ProfileName)) { return }
 
     $DeploymentMode = '0' # Device Prep only supports self-deploying mode

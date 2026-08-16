@@ -87,7 +87,7 @@ function Get-CIPPBaseline {
         $Identity = $IdentityDefinitions[(($InstanceKey) -split '#')[0]]
         if ($Identity -and $Variables.PSObject.Properties[$Identity.Variable]) {
             $RawId = $Variables.$($Identity.Variable)
-            if ($RawId -is [System.Management.Automation.PSCustomObject]) { $RawId = $RawId.value }
+            $RawId = $RawId.value ?? $RawId
             if ($RawId) {
                 $Label = (& $ResolveTemplateName $Identity.Partition "$RawId" $Identity.NameField) ?? "$RawId"
                 $Variables.$($Identity.Variable) = [PSCustomObject]@{ label = $Label; value = "$RawId" }
