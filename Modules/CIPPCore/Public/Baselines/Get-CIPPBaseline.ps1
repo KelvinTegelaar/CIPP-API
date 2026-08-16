@@ -37,28 +37,38 @@ function Get-CIPPBaseline {
 
     # Identity-carrying standards (CA/Intune templates) store the raw template id in
     # their variables; the editor's pickers and instance titles need the template's
-    # display name. Resolve lazily from the template store (partition = the remediate
-    # executor name) and hand the variable back as a {label, value} option object -
-    # the editor consumes it verbatim and unwraps back to the raw id on save.
+    # display name. Resolve lazily from the template store and hand the variable back
+    # as a {label, value} option object - the editor consumes it verbatim and unwraps
+    # back to the raw id on save. The definition's optional identity block names the
+    # partition and name field; the defaults (partition = the remediate executor name,
+    # name field = displayName) are what CA and Intune templates use, but the wider
+    # template families store rows under partitions that do NOT match their executor
+    # ('TransportTemplate', 'ExConnectorTemplate', ...) and name them 'name'/'Name'.
     $IdentityDefinitions = @{}
     if ($ResolveIdentityLabels) {
         foreach ($Definition in @(Get-CIPPBaselineDefinition)) {
             if ($Definition.instanceIdentity) {
-                $IdentityDefinitions[$Definition.name] = @{ Variable = $Definition.instanceIdentity; Partition = "$($Definition.remediate.executor)" }
+                $IdentityDefinitions[$Definition.name] = @{
+                    Variable  = $Definition.instanceIdentity
+                    Partition = "$($Definition.identity.partition ?? $Definition.remediate.executor)"
+                    NameField = "$($Definition.identity.nameField ?? 'displayName')"
+                }
             }
         }
     }
     $TemplateNameMaps = @{}
     $ResolveTemplateName = {
-        param($Partition, $Id)
+        param($Partition, $Id, $NameField)
         if (-not $Partition -or -not $Id) { return $null }
-        if (-not $TemplateNameMaps.ContainsKey($Partition)) {
+        if ([string]::IsNullOrWhiteSpace($NameField)) { $NameField = 'displayName' }
+        $MapKey = "$Partition|$NameField"
+        if (-not $TemplateNameMaps.ContainsKey($MapKey)) {
             $Map = @{}
             try {
                 $TemplatesTable = Get-CippTable -tablename 'templates'
                 $SafePartition = ConvertTo-CIPPODataFilterValue -Value $Partition
                 foreach ($TemplateRow in @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$SafePartition'")) {
-                    $TemplateName = $(try { ($TemplateRow.JSON | ConvertFrom-Json).displayName } catch { $null })
+                    $TemplateName = $(try { ($TemplateRow.JSON | ConvertFrom-Json).$NameField } catch { $null })
                     if ($TemplateName) {
                         $Map["$($TemplateRow.RowKey)"] = $TemplateName
                         if ($TemplateRow.GUID) { $Map["$($TemplateRow.GUID)"] = $TemplateName }
@@ -67,9 +77,9 @@ function Get-CIPPBaseline {
             } catch {
                 Write-Information "Get-CIPPBaseline: template name lookup for $Partition failed: $($_.Exception.Message)"
             }
-            $TemplateNameMaps[$Partition] = $Map
+            $TemplateNameMaps[$MapKey] = $Map
         }
-        $TemplateNameMaps[$Partition]["$Id"]
+        $TemplateNameMaps[$MapKey]["$Id"]
     }
     $EnrichIdentityVariable = {
         param($InstanceKey, $Variables)
@@ -79,7 +89,7 @@ function Get-CIPPBaseline {
             $RawId = $Variables.$($Identity.Variable)
             if ($RawId -is [System.Management.Automation.PSCustomObject]) { $RawId = $RawId.value }
             if ($RawId) {
-                $Label = (& $ResolveTemplateName $Identity.Partition "$RawId") ?? "$RawId"
+                $Label = (& $ResolveTemplateName $Identity.Partition "$RawId" $Identity.NameField) ?? "$RawId"
                 $Variables.$($Identity.Variable) = [PSCustomObject]@{ label = $Label; value = "$RawId" }
             }
         }

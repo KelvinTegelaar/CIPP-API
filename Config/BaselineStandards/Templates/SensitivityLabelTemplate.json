@@ -1,0 +1,50 @@
+{
+  "name": "SensitivityLabelTemplate",
+  "label": "Sensitivity Label Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploy Microsoft Purview sensitivity labels from CIPP templates. Existing labels and label policies are overwritten in place.",
+  "executiveText": "Deploys sensitivity labels for classification and protection of files, emails, and Microsoft 365 group content. Ensures consistent classification taxonomy and encryption settings across tenants.",
+  "docsDescription": "Deploy Microsoft Purview sensitivity labels from CIPP templates. If a label or label policy with the same name already exists, it is updated in place; otherwise it is created. The standard grades whether each selected label exists by name - it does not diff label settings - and rewrites every selected label on each remediation run, matching the classic standard.",
+  "impactColour": "warning",
+  "addedDate": "2026-05-10",
+  "powershellEquivalent": "Set-Label or New-Label",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "checkBeforeRun": false,
+  "multiple": true,
+  "instanceIdentity": "sensitivityLabelTemplate",
+  "identity": {
+    "partition": "SensitivityLabelTemplate",
+    "nameField": "name"
+  },
+  "variables": {
+    "sensitivityLabelTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Sensitivity Label Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListSensitivityLabelTemplates",
+        "labelField": "name",
+        "valueField": "GUID",
+        "queryKey": "ListSensitivityLabelTemplates"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "ExoLabels"
+  },
+  "prepare": "Get-CIPPBaselineSensitivityLabelTemplateState",
+  "remediate": {
+    "executor": "SensitivityLabelTemplate"
+  }
+}

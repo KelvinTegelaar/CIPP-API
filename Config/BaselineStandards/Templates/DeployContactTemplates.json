@@ -1,0 +1,55 @@
+{
+  "name": "DeployContactTemplates",
+  "label": "Mail Contact Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Deploy mail contacts from CIPP templates. An existing contact with the same display name is brought in line with the template.",
+  "executiveText": "Deploys standardized external mail contacts - support desks, billing addresses, partner contacts - so the same directory entries exist in every tenant.",
+  "docsDescription": "Deploy a mail contact from a CIPP template. The standard grades whether the contact exists by display name and diffs the template's specified fields - email, names, address and phone details - against the tenant; fields the template leaves empty are never graded or written. Remediation creates the contact or updates only what the template specifies.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-MailContact, Set-MailContact or Set-Contact",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "contactTemplate",
+  "identity": {
+    "partition": "ContactTemplate",
+    "nameField": "displayName"
+  },
+  "variables": {
+    "contactTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Mail Contact Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListContactTemplates",
+        "labelField": "name",
+        "valueField": "GUID",
+        "queryKey": "ListContactTemplates"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "ExoMailContacts"
+  },
+  "prepare": "Get-CIPPBaselineDeployContactTemplatesState",
+  "remediate": {
+    "executor": "DeployContactTemplates"
+  }
+}

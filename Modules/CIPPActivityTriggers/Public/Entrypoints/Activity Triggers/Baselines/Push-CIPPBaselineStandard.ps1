@@ -18,10 +18,15 @@ function Push-CIPPBaselineStandard {
         Set-CippBaselineRunContext -RunId $Item.RunId
         $Result = Invoke-CIPPBaselineStandard -Item $Item.Item -Mode ($Item.Mode ?? 'run') -TriggeredBy ($Item.TriggeredBy ?? 'schedule') -Force:([bool]$Item.Force) -RunId $Item.RunId
         if ($Result.Remediated -and $Result.CacheType) {
-            return [PSCustomObject]@{
-                TenantFilter = "$($Item.Item.TenantFilter)"
-                CacheType    = "$($Result.CacheType)"
+            # One record per declared cache - the refresh dedupes across standards, so a
+            # run that remediates ten Exchange standards still collects each type once.
+            foreach ($CacheType in @($Result.CacheType | Where-Object { $_ })) {
+                [PSCustomObject]@{
+                    TenantFilter = "$($Item.Item.TenantFilter)"
+                    CacheType    = "$CacheType"
+                }
             }
+            return
         }
     } catch {
         Write-LogMessage -API 'Baselines' -tenant $Item.Item.TenantFilter -message "Baseline activity failed for $($Item.Item.Standard): $($_.Exception.Message)" -Sev 'Error'

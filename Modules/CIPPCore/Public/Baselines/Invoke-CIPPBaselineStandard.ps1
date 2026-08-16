@@ -209,7 +209,12 @@ function Invoke-CIPPBaselineStandard {
             Manual              = $null
             Inheritance         = @($Tiers)
             AlertEvent          = $null
-            CacheType           = $Definition.read.cacheType
+            # ALL declared read caches, not just the primary: a standard whose executor
+            # writes to a secondary cache's object (an outbound connector under an inbound
+            # read.cacheType, a dynamic distro under Groups) would otherwise leave that
+            # cache stale after remediation, and the stale cache re-detects the fixed
+            # drift FOREVER - collect-on-miss never fires on collected-and-empty.
+            CacheType           = @(@($Definition.read.requiredCaches) + @($Definition.read.cacheType) | Where-Object { $_ } | Sort-Object -Unique)
         }
 
         # Two baselines configure this identity at the same level with different settings, so

@@ -100,11 +100,16 @@ function Start-CIPPOrchestrator {
             throw
         }
 
-        Write-Information "Craft: Queuing orchestrator '$OrchestratorName' ($TaskCount tasks$(if ($PostExecFunctionName) { ", PostExec: $PostExecFunctionName" }))"
+        # The queue claims strictly by priority bucket (P00 first), so this decides who runs
+        # when the limiter is saturated. Callers that matter more than the default (baseline
+        # runs racing a fleet-wide test sweep) say so on the InputObject; everything else
+        # keeps the historical 4.
+        $Priority = [int]($InputObject.Priority ?? 4)
+        Write-Information "Craft: Queuing orchestrator '$OrchestratorName' ($TaskCount tasks, P$Priority$(if ($PostExecFunctionName) { ", PostExec: $PostExecFunctionName" }))"
         [Craft.Services.OrchestratorBridge]::QueueOrchestrationFromFile(
             $OrchestratorName,
             $BatchPath,
-            4,
+            $Priority,
             $PostExecFunctionName,
             $PostExecParametersJson,
             $InputObject.Reference

@@ -152,6 +152,39 @@ Describe 'Baseline definition catalog' {
             })
         $Broken | Should -BeNullOrEmpty
     }
+
+    It 'gives every multi-instance standard an identity, and every identity a real variable' {
+        # Without instanceIdentity (or manual's taskName) N instances of a standard are N
+        # indistinguishable rows in every view. And an instanceIdentity naming a variable
+        # that does not exist silently titles every instance with a blank.
+        $Broken = @($script:Definitions | Where-Object { $_.Definition.multiple -eq $true } | Where-Object {
+                -not $_.Definition.manual -and (
+                    -not $_.Definition.instanceIdentity -or
+                    -not ($_.Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties["$($_.Definition.instanceIdentity)"]
+                )
+            } | ForEach-Object { $_.Name })
+        $Broken | Should -BeNullOrEmpty
+    }
+
+    It 'declares a single-select picker for every instance identity variable' {
+        # instanceIdentity carries ONE value per instance - a multi-select picker there
+        # stringifies to 'System.Object[]' in every label and defeats the instance model.
+        $Broken = @($script:Definitions | Where-Object { $_.Definition.instanceIdentity } | Where-Object {
+                ($_.Definition.variables ?? [PSCustomObject]@{}).($_.Definition.instanceIdentity).multiple -eq $true
+            } | ForEach-Object { $_.Name })
+        $Broken | Should -BeNullOrEmpty
+    }
+
+    It 'pairs every identity block with an instanceIdentity and a partition' {
+        # The identity block tells the label resolvers (and the export bundler) where the
+        # referenced template lives. Half a declaration is worse than none: a partition-less
+        # block silently falls back to the executor-name convention it exists to override.
+        $Broken = @($script:Definitions | Where-Object { $_.Definition.identity } | Where-Object {
+                -not $_.Definition.instanceIdentity -or
+                [string]::IsNullOrWhiteSpace("$($_.Definition.identity.partition)")
+            } | ForEach-Object { $_.Name })
+        $Broken | Should -BeNullOrEmpty
+    }
 }
 
 Describe 'Baseline executor contract' {
