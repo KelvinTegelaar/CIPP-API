@@ -53,8 +53,7 @@ function Get-CIPPBaselineAutopilotProfileState {
         displayName                   = "$($Profile.displayName)"
         description                   = "$($Profile.description)"
         deviceNameTemplate            = "$($Profile.deviceNameTemplate)"
-        # Empty-matches-empty, as the classic compared locale.
-        locale                        = $(if ([string]::IsNullOrWhiteSpace("$($Profile.locale)") -and [string]::IsNullOrWhiteSpace($Locale)) { $Locale } else { "$($Profile.locale)" })
+        locale                        = $(if ($Locale -in @('', 'os-default') -and "$($Profile.locale)" -in @('', 'os-default')) { $Locale } else { "$($Profile.locale)" })
         preprovisioningAllowed        = [bool]$Profile.preprovisioningAllowed
         hardwareHashExtractionEnabled = [bool]$Profile.hardwareHashExtractionEnabled
         deviceUsageType               = "$($Profile.outOfBoxExperienceSetting.deviceUsageType)"

@@ -207,6 +207,29 @@ Describe 'Get-CIPPBaselineAutopilotProfileState' {
         $Prepared = Get-CIPPBaselineAutopilotProfileState -Item $Item -TenantFilter $script:Tenant
         $Prepared.Current.locale | Should -Be $Prepared.Expected.locale
     }
+
+    It 'locale grades '''' and ''os-default'' as the SAME posture in every combination - Graph flips between them by write path' {
+        # Create normalizes '' to 'os-default'; update stores the literal ''. Grading them
+        # apart flip-flops forever, so OS-default intent tolerates both representations.
+        foreach ($Pair in @(@('', 'os-default'), @('os-default', ''), @('', ''), @('os-default', 'os-default'))) {
+            $ProfileCopy = $script:ApProfile.Clone(); $ProfileCopy.locale = $Pair[1]
+            Mock New-CIPPDbRequest { @($script:LocaleProfile | ConvertTo-Cached) }
+            $script:LocaleProfile = $ProfileCopy
+            $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DisplayName = 'CIPP Autopilot'; Description = 'd'; Languages = $Pair[0]; SelfDeployingMode = $true; CollectHash = $true; HidePrivacy = $true; HideTerms = $true; AutoKeyboard = $true } }
+            $Prepared = Get-CIPPBaselineAutopilotProfileState -Item $Item -TenantFilter $script:Tenant
+            $Prepared.Current.locale | Should -Be $Prepared.Expected.locale -Because "configured '$($Pair[0])' vs stored '$($Pair[1])'"
+        }
+    }
+
+    It 'a REAL locale still grades exactly - the equivalence never blesses en-US against os-default' {
+        $ProfileCopy = $script:ApProfile.Clone(); $ProfileCopy.locale = 'en-US'
+        $script:LocaleProfile = $ProfileCopy
+        Mock New-CIPPDbRequest { @($script:LocaleProfile | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DisplayName = 'CIPP Autopilot'; Description = 'd'; Languages = 'os-default'; SelfDeployingMode = $true; CollectHash = $true; HidePrivacy = $true; HideTerms = $true; AutoKeyboard = $true } }
+        $Prepared = Get-CIPPBaselineAutopilotProfileState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.locale | Should -Be 'en-US'
+        $Prepared.Expected.locale | Should -Be 'os-default'
+    }
 }
 
 Describe 'Get-CIPPBaselineDevicePrepProfileState' {

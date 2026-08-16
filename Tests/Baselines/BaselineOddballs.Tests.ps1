@@ -209,6 +209,54 @@ Describe 'Get-CIPPBaselineRestrictThirdPartyStorageServicesState' {
     }
 }
 
+Describe 'Get-CIPPBaselineDlpCompliancePolicyTemplateState' {
+    BeforeAll {
+        function Compare-CIPPDlpCompliancePolicy { param($TenantFilter, $Template) }
+        function Set-CIPPDlpCompliancePolicy { param($TenantFilter, $Template, $APIName) }
+        function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineDlpCompliancePolicyTemplateState.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineDlpCompliancePolicyTemplate.ps1')
+        $script:DlpItem = [PSCustomObject]@{ Variables = [PSCustomObject]@{ dlpCompliancePolicyTemplate = [PSCustomObject]@{ value = 'dlp-guid-1' } } }
+    }
+    BeforeEach {
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ JSON = '{"Name":"Finance DLP","RuleParams":[{"Name":"Rule1"}]}' } }
+    }
+
+    It 'InSync grades compliant with an empty non-compliant list' {
+        Mock Compare-CIPPDlpCompliancePolicy { [PSCustomObject]@{ Name = 'Finance DLP'; State = 'InSync'; Differences = @() } }
+        $Prepared = Get-CIPPBaselineDlpCompliancePolicyTemplateState -Item $script:DlpItem -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'Drift grades non-compliant with the compact Scope/Field projection and carries the template' {
+        Mock Compare-CIPPDlpCompliancePolicy { [PSCustomObject]@{ Name = 'Finance DLP'; State = 'Drift'; Differences = @(
+                    [PSCustomObject]@{ Scope = 'Policy'; Field = 'Mode'; Expected = 'Enable'; Current = 'TestWithoutNotifications' }
+                ) } }
+        $Prepared = Get-CIPPBaselineDlpCompliancePolicyTemplateState -Item $script:DlpItem -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+        @($Prepared.Current.nonCompliantDlpPolicies)[0].Fields | Should -Be @('Policy/Mode')
+        @($Prepared.Current.remediableTemplates).Count | Should -Be 1
+    }
+
+    It 'PendingDeletion is non-compliant but NOT remediable - the deploy would just fail' {
+        Mock Compare-CIPPDlpCompliancePolicy { [PSCustomObject]@{ Name = 'Finance DLP'; State = 'PendingDeletion'; Differences = @() } }
+        $Prepared = Get-CIPPBaselineDlpCompliancePolicyTemplateState -Item $script:DlpItem -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+        @($Prepared.Current.remediableTemplates).Count | Should -Be 0
+        Mock Set-CIPPDlpCompliancePolicy { 'should never run' }
+        Invoke-CIPPBaselineDlpCompliancePolicyTemplate -Remediate ([PSCustomObject]@{}) -TenantFilter $script:Tenant -Current $Prepared.Current
+        Should -Invoke Set-CIPPDlpCompliancePolicy -Times 0 -Exactly
+    }
+
+    It 'the executor throws on the helper''s failure strings and succeeds otherwise' {
+        Mock Set-CIPPDlpCompliancePolicy { 'Could not deploy Finance DLP: bad rule' }
+        $Current = [PSCustomObject]@{ remediableTemplates = @([PSCustomObject]@{ Name = 'Finance DLP' }) }
+        { Invoke-CIPPBaselineDlpCompliancePolicyTemplate -Remediate ([PSCustomObject]@{}) -TenantFilter $script:Tenant -Current $Current } | Should -Throw
+        Mock Set-CIPPDlpCompliancePolicy { 'Deployed policy Finance DLP with 1 rule(s)' }
+        { Invoke-CIPPBaselineDlpCompliancePolicyTemplate -Remediate ([PSCustomObject]@{}) -TenantFilter $script:Tenant -Current $Current } | Should -Not -Throw
+    }
+}
+
 Describe 'Get-CIPPBaselineIntuneAppTemplateDeployState' {
     BeforeAll {
         $script:AppTemplate = @{ JSON = (@{ Displayname = 'Baseline Apps'; Apps = @(
