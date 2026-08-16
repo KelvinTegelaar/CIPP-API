@@ -1,0 +1,38 @@
+{
+  "name": "RestrictThirdPartyStorageServices",
+  "label": "Restrict third-party storage services in Microsoft 365 on the web",
+  "cat": "Global Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Restricts third-party storage services in Microsoft 365 on the web by managing the Microsoft 365 on the web service principal. This disables integrations with services like Dropbox, Google Drive, and Box.",
+  "executiveText": "Prevents employees from using external cloud storage services within Microsoft 365, keeping company data inside controlled corporate systems.",
+  "docsDescription": "Grades one fact from the ServicePrincipals cache: the Microsoft 365 on the web service principal (appId c1f33bc0-bdb4-4248-ba9b-096807ddb43e) exists AND is disabled; a missing principal grades unrestricted, the platform default. Remediation PATCHes the appId-addressed upsert endpoint with Prefer: create-if-missing - the plain path does not resolve this principal, and the upsert creates-then-disables it where it never existed.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-MgServicePrincipal and Update-MgServicePrincipal",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "SHAREPOINTENTERPRISE_GOV",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "read": {
+    "cacheType": "ServicePrincipals"
+  },
+  "prepare": "Get-CIPPBaselineRestrictThirdPartyStorageServicesState",
+  "remediate": {
+    "executor": "RestrictThirdPartyStorageServices"
+  }
+}

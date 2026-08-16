@@ -1,0 +1,51 @@
+{
+  "name": "IntuneAppTemplateDeploy",
+  "label": "Deploy Intune Application Template",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploys selected Intune application templates to the tenant. Supports WinGet/Store apps, Office apps, Chocolatey apps, Win32 script apps, and MSP apps.",
+  "executiveText": "Automatically deploys approved Intune applications across all managed tenants, ensuring consistent software availability.",
+  "docsDescription": "Resolves each configured App Template to its per-app list and grades an empty missing-apps set against the IntuneMobileApps cache; Office is tracked by @odata.type because Graph renames it. Remediation QUEUES each missing app through New-CIPPIntuneAppDeployment - deployment is asynchronous, so the first compare afterwards may briefly still report the apps missing until the uploads land.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph API - /deviceAppManagement/mobileApps",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "templateIds": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": false,
+      "label": "Select Application Templates",
+      "required": true,
+      "api": {
+        "url": "/api/ListAppTemplates",
+        "labelField": "Displayname",
+        "valueField": "GUID",
+        "queryKey": "StdIntuneAppTemplateList"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "IntuneMobileApps"
+  },
+  "prepare": "Get-CIPPBaselineIntuneAppTemplateDeployState",
+  "remediate": {
+    "executor": "IntuneAppTemplateDeploy",
+    "templateIds": "%templateIds%"
+  }
+}
