@@ -1,0 +1,155 @@
+{
+  "name": "DefenderCompliancePolicy",
+  "label": "Defender for Endpoint - Intune Compliance Connector",
+  "cat": "Defender Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Configures the Microsoft Defender for Endpoint connector with Intune, enabling compliance evaluation for mobile and desktop platforms and controlling partner-data blocking per platform.",
+  "executiveText": "Establishes the link between Microsoft Defender for Endpoint and Intune so device risk data feeds compliance policies - a foundational Zero Trust control.",
+  "docsDescription": "Reads the MDE mobile threat defense connector live (one small singleton, no cache) and grades every platform toggle. Two classic rules hold: connecting Windows forces the Windows partner-data block on (Microsoft enforces it), and the MDE attach flag always grades true. Remediation enables the connector first, then writes the FULL settings object.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph API - deviceManagement/mobileThreatDefenseConnectors",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "ConnectAndroid": {
+      "type": "switch",
+      "label": "Connect Android devices to MDE",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "ConnectAndroidCompliance": {
+      "type": "switch",
+      "label": "Connect Android 6.0.0+ (App-based MAM)",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "androidDeviceBlockedOnMissingPartnerData": {
+      "type": "switch",
+      "label": "Block Android if partner data unavailable",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "grantMobileThreatDefensePartnerRole": {
+      "type": "switch",
+      "label": "Grant MTD role to MDE on enrolled Android COBO/COPE devices",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "ConnectIos": {
+      "type": "switch",
+      "label": "Connect iOS/iPadOS devices to MDE",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "ConnectIosCompliance": {
+      "type": "switch",
+      "label": "Connect iOS/iPadOS devices for app protection policy evaluation (MAM)",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "appSync": {
+      "type": "switch",
+      "label": "Enable App Sync for iOS/iPadOS devices",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "allowPartnerToCollectIosPersonalApplicationMetadata": {
+      "type": "switch",
+      "label": "Send full application inventory on personally-owned iOS/iPadOS devices",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "iosDeviceBlockedOnMissingPartnerData": {
+      "type": "switch",
+      "label": "Block iOS if partner data unavailable",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "allowPartnerToCollectIosCertificateMetadata": {
+      "type": "switch",
+      "label": "Enable Certificate Sync for iOS/iPadOS devices",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "allowPartnerToCollectIosPersonalCertificateMetadata": {
+      "type": "switch",
+      "label": "Send full certificate inventory on personally-owned iOS/iPadOS devices",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "ConnectMac": {
+      "type": "switch",
+      "label": "Connect macOS devices to MDE",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "macDeviceBlockedOnMissingPartnerData": {
+      "type": "switch",
+      "label": "Block macOS if partner data unavailable",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "ConnectWindows": {
+      "type": "switch",
+      "label": "Connect Windows 10.0.15063+ to MDE (forces the Windows partner-data block on)",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "windowsMobileApplicationManagementEnabled": {
+      "type": "switch",
+      "label": "Connect Windows (MAM)",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "windowsDeviceBlockedOnMissingPartnerData": {
+      "type": "switch",
+      "label": "Block Windows if partner data unavailable",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "BlockunsupportedOS": {
+      "type": "switch",
+      "label": "Block unsupported OS versions",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "AllowMEMEnforceCompliance": {
+      "type": "switch",
+      "label": "Allow MEM enforcement of compliance",
+      "omitWhenBlank": true,
+      "default": false
+    }
+  },
+  "read": {},
+  "prepare": "Get-CIPPBaselineDefenderCompliancePolicyState",
+  "remediate": {
+    "executor": "DefenderCompliancePolicy",
+    "connectAndroid": "%ConnectAndroid%",
+    "connectAndroidCompliance": "%ConnectAndroidCompliance%",
+    "androidDeviceBlockedOnMissingPartnerData": "%androidDeviceBlockedOnMissingPartnerData%",
+    "grantMobileThreatDefensePartnerRole": "%grantMobileThreatDefensePartnerRole%",
+    "connectIos": "%ConnectIos%",
+    "connectIosCompliance": "%ConnectIosCompliance%",
+    "appSync": "%appSync%",
+    "allowPartnerToCollectIosPersonalApplicationMetadata": "%allowPartnerToCollectIosPersonalApplicationMetadata%",
+    "iosDeviceBlockedOnMissingPartnerData": "%iosDeviceBlockedOnMissingPartnerData%",
+    "allowPartnerToCollectIosCertificateMetadata": "%allowPartnerToCollectIosCertificateMetadata%",
+    "allowPartnerToCollectIosPersonalCertificateMetadata": "%allowPartnerToCollectIosPersonalCertificateMetadata%",
+    "connectMac": "%ConnectMac%",
+    "macDeviceBlockedOnMissingPartnerData": "%macDeviceBlockedOnMissingPartnerData%",
+    "connectWindows": "%ConnectWindows%",
+    "windowsMobileApplicationManagementEnabled": "%windowsMobileApplicationManagementEnabled%",
+    "windowsDeviceBlockedOnMissingPartnerData": "%windowsDeviceBlockedOnMissingPartnerData%",
+    "blockUnsupportedOS": "%BlockunsupportedOS%",
+    "allowMEMEnforceCompliance": "%AllowMEMEnforceCompliance%"
+  }
+}

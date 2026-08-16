@@ -1,0 +1,210 @@
+{
+  "name": "DefenderASRPolicy",
+  "label": "Defender Attack Surface Reduction Rules",
+  "cat": "Defender Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Deploys and enforces Microsoft Defender Attack Surface Reduction (ASR) rules via Intune. Controls 20 individual ASR rules that protect against common attack vectors.",
+  "executiveText": "Blocks the techniques malware abuses most - obfuscated scripts, Office macro exploitation, credential theft, ransomware behaviour - across every managed device.",
+  "docsDescription": "Grades the fixed-name 'ASR Default rules' policy: the mode plus each rule's presence in the rules group, exactly the classic's semantics - a rule present counts as enabled, a rule the baseline turns off must be absent. Remediation deletes and recreates through Set-CIPPDefenderASRPolicy.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "Mode": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "ASR Rules Mode",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "block",
+          "label": "Block"
+        },
+        {
+          "value": "audit",
+          "label": "Audit"
+        },
+        {
+          "value": "warn",
+          "label": "Warn"
+        }
+      ]
+    },
+    "BlockObfuscatedScripts": {
+      "type": "switch",
+      "label": "Block execution of obfuscated scripts",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockAdobeChild": {
+      "type": "switch",
+      "label": "Block Adobe Reader from creating child processes",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockWin32Macro": {
+      "type": "switch",
+      "label": "Block Win32 API calls from Office macros",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockCredentialStealing": {
+      "type": "switch",
+      "label": "Block credential stealing from LSASS",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockPSExec": {
+      "type": "switch",
+      "label": "Block process creations from PSExec and WMI",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "WMIPersistence": {
+      "type": "switch",
+      "label": "Block persistence through WMI event subscription",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockSystemTools": {
+      "type": "switch",
+      "label": "Block use of copied or impersonated system tools",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockOfficeExes": {
+      "type": "switch",
+      "label": "Block Office apps from creating executable content",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockOfficeApps": {
+      "type": "switch",
+      "label": "Block Office apps from injecting code into other processes",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockSafeMode": {
+      "type": "switch",
+      "label": "Block rebooting machine in safe mode",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "BlockYoungExe": {
+      "type": "switch",
+      "label": "Block executables that do not meet prevalence/age/trusted list criteria",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "blockJSVB": {
+      "type": "switch",
+      "label": "Block JavaScript or VBScript from launching downloads",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockWebshellForServers": {
+      "type": "switch",
+      "label": "Block webshell creation for servers",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "blockOfficeComChild": {
+      "type": "switch",
+      "label": "Block Office Communication app child processes",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "blockOfficeChild": {
+      "type": "switch",
+      "label": "Block all Office apps from creating child processes",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockUntrustedUSB": {
+      "type": "switch",
+      "label": "Block untrusted/unsigned processes from USB",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "EnableRansomwareVac": {
+      "type": "switch",
+      "label": "Use advanced protection against ransomware",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockExesMail": {
+      "type": "switch",
+      "label": "Block executable content from email client and webmail",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "BlockUnsignedDrivers": {
+      "type": "switch",
+      "label": "Block abuse of exploited vulnerable signed drivers",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AssignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Policy Assignment",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "Do not assign"
+        },
+        {
+          "value": "allLicensedUsers",
+          "label": "All users"
+        },
+        {
+          "value": "AllDevices",
+          "label": "All devices"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "All users and devices"
+        }
+      ]
+    }
+  },
+  "read": {
+    "cacheType": "IntuneConfigurationPolicies"
+  },
+  "prepare": "Get-CIPPBaselineDefenderASRPolicyState",
+  "remediate": {
+    "executor": "DefenderASRPolicy",
+    "mode": "%Mode%",
+    "blockObfuscatedScripts": "%BlockObfuscatedScripts%",
+    "blockAdobeChild": "%BlockAdobeChild%",
+    "blockWin32Macro": "%BlockWin32Macro%",
+    "blockCredentialStealing": "%BlockCredentialStealing%",
+    "blockPSExec": "%BlockPSExec%",
+    "wmiPersistence": "%WMIPersistence%",
+    "blockSystemTools": "%BlockSystemTools%",
+    "blockOfficeExes": "%BlockOfficeExes%",
+    "blockOfficeApps": "%BlockOfficeApps%",
+    "blockSafeMode": "%BlockSafeMode%",
+    "blockYoungExe": "%BlockYoungExe%",
+    "blockJSVB": "%blockJSVB%",
+    "blockWebshellForServers": "%BlockWebshellForServers%",
+    "blockOfficeComChild": "%blockOfficeComChild%",
+    "blockOfficeChild": "%blockOfficeChild%",
+    "blockUntrustedUSB": "%BlockUntrustedUSB%",
+    "enableRansomwareVac": "%EnableRansomwareVac%",
+    "blockExesMail": "%BlockExesMail%",
+    "blockUnsignedDrivers": "%BlockUnsignedDrivers%",
+    "assignTo": "%AssignTo%"
+  }
+}

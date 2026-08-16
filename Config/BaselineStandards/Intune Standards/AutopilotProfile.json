@@ -1,0 +1,127 @@
+{
+  "name": "AutopilotProfile",
+  "label": "Enable Autopilot Profile",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Assigns the appropriate Autopilot profile to streamline device deployment, including unique name templates, language options, and local admin privileges.",
+  "executiveText": "Standardizes how new devices are provisioned, so every laptop arrives configured the same way with no manual setup.",
+  "docsDescription": "One instance per profile display name. Grades the classic's exact field set from the cached Autopilot profiles; self-deploying mode forces White Glove off and skips the user type, and an empty language matches an empty locale. Remediation deploys through Set-CIPPDefaultAPDeploymentProfile.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph API - deviceManagement/windowsAutopilotDeploymentProfiles",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "DisplayName": {
+      "type": "textField",
+      "label": "Profile Display Name",
+      "required": true
+    },
+    "Description": {
+      "type": "textField",
+      "label": "Profile Description",
+      "omitWhenBlank": true
+    },
+    "DeviceNameTemplate": {
+      "type": "textField",
+      "label": "Unique Device Name Template",
+      "omitWhenBlank": true
+    },
+    "Languages": {
+      "type": "autoComplete",
+      "creatable": true,
+      "label": "Language tag (e.g. os-default, en-US)",
+      "omitWhenBlank": true
+    },
+    "CollectHash": {
+      "type": "switch",
+      "label": "Convert all targeted devices to Autopilot",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AssignToAllDevices": {
+      "type": "switch",
+      "label": "Assign to all devices",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "SelfDeployingMode": {
+      "type": "switch",
+      "label": "Enable Self-deploying Mode",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "HideTerms": {
+      "type": "switch",
+      "label": "Hide Terms and Conditions",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "HidePrivacy": {
+      "type": "switch",
+      "label": "Hide Privacy Settings",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "HideChangeAccount": {
+      "type": "switch",
+      "label": "Hide Change Account Options",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "NotLocalAdmin": {
+      "type": "switch",
+      "label": "Setup user as a standard user (not local admin)",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AllowWhiteGlove": {
+      "type": "switch",
+      "label": "Allow White Glove OOBE",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AutoKeyboard": {
+      "type": "switch",
+      "label": "Automatically configure keyboard",
+      "omitWhenBlank": true,
+      "default": true
+    }
+  },
+  "read": {
+    "cacheType": "IntuneWindowsAutopilotDeploymentProfiles"
+  },
+  "prepare": "Get-CIPPBaselineAutopilotProfileState",
+  "remediate": {
+    "executor": "AutopilotProfile",
+    "displayName": "%DisplayName%",
+    "description": "%Description%",
+    "deviceNameTemplate": "%DeviceNameTemplate%",
+    "languages": "%Languages%",
+    "collectHash": "%CollectHash%",
+    "assignToAllDevices": "%AssignToAllDevices%",
+    "selfDeployingMode": "%SelfDeployingMode%",
+    "hideTerms": "%HideTerms%",
+    "hidePrivacy": "%HidePrivacy%",
+    "hideChangeAccount": "%HideChangeAccount%",
+    "notLocalAdmin": "%NotLocalAdmin%",
+    "allowWhiteGlove": "%AllowWhiteGlove%",
+    "autoKeyboard": "%AutoKeyboard%"
+  },
+  "multiple": true,
+  "instanceIdentity": "DisplayName"
+}

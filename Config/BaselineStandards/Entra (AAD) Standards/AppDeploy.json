@@ -1,0 +1,68 @@
+{
+  "name": "AppDeploy",
+  "label": "Deploy Application",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Deploys selected applications to the tenant, from App Approval templates or by copying permissions from a source application.",
+  "executiveText": "Automatically deploys approved business applications across every managed tenant, keeping access and permissions consistent.",
+  "docsDescription": "Grades an empty missing-apps list against the ServicePrincipals cache. Copy mode checks configured app ids; template mode resolves each App Approval template to its type-specific identity (display name for manifests, gallery template id, or app id). Remediation deploys per template type, copying or consenting permissions as the classic did.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Portal or Graph API",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "mode": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "App Approval Mode",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "template",
+          "label": "Template"
+        },
+        {
+          "value": "copy",
+          "label": "Copy Permissions"
+        }
+      ]
+    },
+    "templateIds": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": false,
+      "label": "Select Applications (App Approval Templates)",
+      "omitWhenBlank": true,
+      "api": {
+        "url": "/api/ListAppApprovalTemplates",
+        "labelField": "TemplateName",
+        "valueField": "TemplateId",
+        "queryKey": "StdAppApprovalTemplateList"
+      }
+    },
+    "appids": {
+      "type": "textField",
+      "label": "Application IDs, comma separated (Copy Permissions mode)",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "ServicePrincipals"
+  },
+  "prepare": "Get-CIPPBaselineAppDeployState",
+  "remediate": {
+    "executor": "AppDeploy",
+    "mode": "%mode%",
+    "templateIds": "%templateIds%",
+    "appids": "%appids%"
+  }
+}
