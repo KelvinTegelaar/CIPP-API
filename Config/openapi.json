@@ -35429,7 +35429,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Compares the caller's reported CIPP version against the latest published release and reports whether the frontend or the API is out of date.",
+        "description": "Compares the caller's reported CIPP version against the latest published release and reports whether the frontend or the API is out of date, alongside the hosting shape (hosting type, App Service SKU, runtime stack) and the recorded version-update history.",
         "parameters": [
           {
             "name": "LocalVersion",
@@ -35447,7 +35447,27 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "LocalCIPPAPIVersion": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "LocalCIPPVersion": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "OutOfDateCIPP": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "OutOfDateCIPPAPI": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "RemoteCIPPAPIVersion": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "RemoteCIPPVersion": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
                 }
               }
             }
