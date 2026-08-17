@@ -21,6 +21,10 @@ function Get-CIPPSPOAdminListData {
     .PARAMETER ViewXml
     Raw ViewXml. When set, structured ViewXml parameters are ignored.
 
+    .PARAMETER ListName
+    Optional RenderAdminListData listName (sibling of parameters). Omit for the Active sites default.
+    Unlicensed OneDrive management uses DO_NOT_DELETE_SPLIST_TENANTADMIN_ALL_SITES_AGGREGATED_SITECOLLECTIONS.
+
     .PARAMETER AdminUrl
     Optional SharePoint admin URL; resolved via Get-SharePointAdminLink when omitted.
 
@@ -78,6 +82,8 @@ function Get-CIPPSPOAdminListData {
 
         [Parameter(ParameterSetName = 'Structured')]
         [string]$ExtraWhereXml,
+
+        [string]$ListName,
 
         [string]$AdminUrl,
 
@@ -138,6 +144,9 @@ function Get-CIPPSPOAdminListData {
             $Parameters['Paging'] = $Paging
         }
         $BodyObj = @{ parameters = $Parameters }
+        if (-not [string]::IsNullOrWhiteSpace($ListName)) {
+            $BodyObj['listName'] = $ListName
+        }
 
         $Page = New-GraphPOSTRequest -scope "$AdminUrl/.default" -tenantid $TenantFilter -uri "$AdminUrl/_api/SPO.Tenant/RenderAdminListData" -type 'POST' -body (ConvertTo-Json -Depth 8 -Compress -InputObject $BodyObj) -contentType 'application/json' -AddedHeaders @{ Accept = 'application/json;odata=verbose' } -AsApp $true -UseCertificate
 
