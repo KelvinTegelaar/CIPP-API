@@ -50,12 +50,23 @@ Function Invoke-ExecExtensionTest {
                 }
             }
             'PWPush' {
+                if ($Configuration.PWPush.Enabled -ne $true) {
+                    $Results = [pscustomobject]@{'Results' = 'PWPush is not enabled. Enable the integration and save the configuration, then test again.' }
+                    break
+                }
                 $Payload = 'This is a test from CIPP'
-                $PasswordLink = New-PwPushLink -Payload $Payload
+                # ThrowOnError: the silent $false fallback exists for the password flows; the
+                # test's whole job is to show why a push fails, so let the real exception through.
+                try {
+                    $PasswordLink = New-PwPushLink -Payload $Payload -ThrowOnError
+                } catch {
+                    $Results = [pscustomobject]@{'Results' = "PWPush is enabled but creating a test push failed: $($_.Exception.Message)" }
+                    break
+                }
                 if ($PasswordLink) {
                     $Results = [pscustomobject]@{Results = @(@{'resultText' = 'Successfully generated PWPush, hit the Copy to Clipboard button to retrieve the test.'; 'copyField' = $PasswordLink; 'state' = 'success' }) }
                 } else {
-                    $Results = [pscustomobject]@{'Results' = 'PWPush is not enabled' }
+                    $Results = [pscustomobject]@{'Results' = 'PWPush did not return a link. Check the CIPP logbook (API: PwPush) for details.' }
                 }
             }
             'Hudu' {
