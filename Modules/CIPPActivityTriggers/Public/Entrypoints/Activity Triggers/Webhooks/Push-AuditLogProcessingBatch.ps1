@@ -44,15 +44,32 @@ function Push-AuditLogProcessingBatch {
                 $Rows = @($TenantGroup.Group)
                 $RowIds = @($Rows.RowKey)
 
-                # Claim these rows so subsequent timer runs skip them (UpsertMerge preserves JSON and other fields)
-                # The entity Timestamp is updated automatically on write and used for stale detection.
-                foreach ($Row in $Rows) {
-                    $ClaimEntity = [PSCustomObject]@{
-                        PartitionKey   = $Row.PartitionKey
-                        RowKey         = $Row.RowKey
-                        CippProcessing = $true
+                # Claim these rows so subsequent timer runs skip them; the entity Timestamp is
+                # refreshed on write and used for stale detection. Claim by updating, never
+                # upserting: an upsert on a row a concurrent batch just deleted recreates it as
+                # an unparseable shell that re-enters every claim cycle. One deleted row fails
+                # its whole stamp chunk, so the fallback re-stamps row-by-row and lets the
+                # missing rows go.
+                $StampSize = 100
+                for ($Offset = 0; $Offset -lt $Rows.Count; $Offset += $StampSize) {
+                    $Stamps = @($Rows[$Offset..([Math]::Min($Offset + $StampSize - 1, $Rows.Count - 1))] | ForEach-Object {
+                            [PSCustomObject]@{
+                                PartitionKey   = $_.PartitionKey
+                                RowKey         = $_.RowKey
+                                CippProcessing = $true
+                            }
+                        })
+                    try {
+                        Update-CIPPAzDataTableEntity @WebhookCacheTable -Entity $Stamps
+                    } catch {
+                        foreach ($Stamp in $Stamps) {
+                            try {
+                                Update-CIPPAzDataTableEntity @WebhookCacheTable -Entity $Stamp
+                            } catch {
+                                Write-Information "AuditLogProcessingBatch: row $($Stamp.RowKey) for $TenantFilter vanished before it could be claimed; skipping"
+                            }
+                        }
                     }
-                    Add-CIPPAzDataTableEntity @WebhookCacheTable -Entity $ClaimEntity -OperationType UpsertMerge
                 }
 
                 $TotalRows += $RowIds.Count

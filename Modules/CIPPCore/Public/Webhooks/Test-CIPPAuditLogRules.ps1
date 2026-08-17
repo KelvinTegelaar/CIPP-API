@@ -4,8 +4,21 @@ function Test-CIPPAuditLogRules {
         [Parameter(Mandatory = $true)]
         $TenantFilter,
         [Parameter(Mandatory = $true)]
-        $Rows
+        $Rows,
+        # Partition holding these rows in CacheWebhooks. V2 keys the cache per search
+        # (tenant|searchId); every row in one call comes from a single search, so one key covers
+        # the batch. Defaults to the tenant, leaving older callers unaffected.
+        [string]$CachePartitionKey,
+        # Remove processed rows with the plain delete instead of the part-aware one, on the
+        # caller's guarantee that it sweeps the whole cache partition afterwards.
+        # Remove-CIPPAzDataTableEntity also deletes the -partN rows of entities that were split for
+        # size, and that guarantee costs ~2.7x per row - measured at 37% of this stage, the single
+        # largest slice of it. A V2 caller owns one partition per search, so it can clear anything
+        # left behind in one keys-only pass and does not need it paid per record. Off by default:
+        # a caller that does not sweep must keep the part-aware delete or it orphans part rows.
+        [switch]$CallerSweepsCachePartition
     )
+    if (-not $CachePartitionKey) { $CachePartitionKey = $TenantFilter }
 
     try {
         # Pre-compiled regex patterns for GUID matching (performance optimization)
@@ -37,83 +50,102 @@ function Test-CIPPAuditLogRules {
                 [string]$PropertyPrefix = ''
             )
 
-            $DataObject.PSObject.Properties | ForEach-Object {
-                $propValue = $_.Value
+            # foreach over a snapshot, not ForEach-Object over the live collection. This runs twice
+            # per record over every property, so the per-item cost of the pipeline dominated: it was
+            # the largest slice of the processing stage after the cache deletes. The snapshot is
+            # also what makes mutating $DataObject inside the loop safe.
+            foreach ($Property in @($DataObject.PSObject.Properties)) {
+                $PropValue = $Property.Value
 
-                # Quick type check - skip if not string or empty
-                if ([string]::IsNullOrEmpty($propValue) -or $propValue -isnot [string]) {
-                    return
+                # Type first: [string]::IsNullOrEmpty on a non-string forces a conversion just to
+                # throw the result away.
+                if ($PropValue -isnot [string] -or $PropValue.Length -eq 0) {
+                    continue
                 }
 
-                # Check for partner UPN format 1: user_<objectid>@<tenant>.onmicrosoft.com
-                $match = $script:PartnerUpnRegex.Match($propValue)
-                if ($match.Success) {
-                    $hexId = $match.Groups[1].Value
-                    $tenantDomain = $match.Groups[2].Value
-                    if ($hexId.Length -eq 32) {
-                        # Convert hex string to GUID format
-                        $guid = "$($hexId.Substring(0,8))-$($hexId.Substring(8,4))-$($hexId.Substring(12,4))-$($hexId.Substring(16,4))-$($hexId.Substring(20,12))"
-                        Write-Information "Found partner UPN format: $propValue with GUID: $guid and tenant: $tenantDomain"
+                # Which of the three patterns can possibly match is decided before the regex engine
+                # starts, rather than by running all three on every value:
+                #   * StandardGuidRegex is anchored, so it only ever matches a string of exactly 36
+                #     characters - and no value of that length can hold either partner format.
+                #   * Both partner patterns contain a mandatory literal ('user_', 'tenant:'), and an
+                #     ordinal Contains is far cheaper than entering the regex engine to find out.
+                # Every skip below is a value the original would have run three regexes over and
+                # matched none of.
+                if ($PropValue.Length -eq 36) {
+                    if (-not $script:StandardGuidRegex.IsMatch($PropValue)) { continue }
+                    $Guid = $PropValue
 
-                        # O(1) hashtable lookup instead of O(n) loop
-                        if ($PartnerUserLookup.ContainsKey($guid)) {
-                            $PartnerUser = $PartnerUserLookup[$guid]
-                            $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $PartnerUser.userPrincipalName -Force -ErrorAction SilentlyContinue
-                            Write-Information "Mapped Partner User UPN: $($PartnerUser.userPrincipalName) to $PropertyPrefix$($_.Name)"
-                            return
+                    # O(1) hashtable lookups in priority order
+                    if ($UserLookup.ContainsKey($Guid)) {
+                        $User = $UserLookup[$Guid]
+                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($Property.Name)" -NotePropertyValue $User.userPrincipalName -Force -ErrorAction SilentlyContinue
+                        Write-Information "Mapped User: $($User.userPrincipalName) to $PropertyPrefix$($Property.Name)"
+                        continue
+                    }
+
+                    if ($GroupLookup.ContainsKey($Guid)) {
+                        $Group = $GroupLookup[$Guid]
+                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($Property.Name)" -NotePropertyValue $Group -Force -ErrorAction SilentlyContinue
+                        Write-Information "Mapped Group: $($Group.displayName) to $PropertyPrefix$($Property.Name)"
+                        continue
+                    }
+
+                    if ($DeviceLookup.ContainsKey($Guid)) {
+                        $Device = $DeviceLookup[$Guid]
+                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($Property.Name)" -NotePropertyValue $Device -Force -ErrorAction SilentlyContinue
+                        Write-Information "Mapped Device: $($Device.displayName) to $PropertyPrefix$($Property.Name)"
+                        continue
+                    }
+
+                    # ServicePrincipal indexed by both id and appId
+                    if ($ServicePrincipalLookup.ContainsKey($Guid)) {
+                        $ServicePrincipal = $ServicePrincipalLookup[$Guid]
+                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($Property.Name)" -NotePropertyValue $ServicePrincipal -Force -ErrorAction SilentlyContinue
+                        Write-Information "Mapped Service Principal: $($ServicePrincipal.displayName) to $PropertyPrefix$($Property.Name)"
+                        continue
+                    }
+
+                    continue
+                }
+
+                # Partner UPN format: user_<objectid>@<tenant>.onmicrosoft.com
+                if ($PropValue.Contains('user_')) {
+                    $Match = $script:PartnerUpnRegex.Match($PropValue)
+                    if ($Match.Success) {
+                        $HexId = $Match.Groups[1].Value
+                        $TenantDomain = $Match.Groups[2].Value
+                        if ($HexId.Length -eq 32) {
+                            # Convert hex string to GUID format
+                            $Guid = "$($HexId.Substring(0,8))-$($HexId.Substring(8,4))-$($HexId.Substring(12,4))-$($HexId.Substring(16,4))-$($HexId.Substring(20,12))"
+                            Write-Information "Found partner UPN format: $PropValue with GUID: $Guid and tenant: $TenantDomain"
+
+                            # O(1) hashtable lookup instead of O(n) loop
+                            if ($PartnerUserLookup.ContainsKey($Guid)) {
+                                $PartnerUser = $PartnerUserLookup[$Guid]
+                                $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($Property.Name)" -NotePropertyValue $PartnerUser.userPrincipalName -Force -ErrorAction SilentlyContinue
+                                Write-Information "Mapped Partner User UPN: $($PartnerUser.userPrincipalName) to $PropertyPrefix$($Property.Name)"
+                                continue
+                            }
                         }
                     }
                 }
 
-                # Check for partner exchange format: TenantName.onmicrosoft.com\tenant: <tenant-guid>, object: <object-guid>
-                $match = $script:PartnerExchangeRegex.Match($propValue)
-                if ($match.Success) {
-                    $customerTenantDomain = $match.Groups[1].Value
-                    $partnerTenantGuid = $match.Groups[2].Value
-                    $objectGuid = $match.Groups[3].Value
-                    Write-Information "Found partner exchange format: customer tenant $customerTenantDomain, partner tenant $partnerTenantGuid, object $objectGuid"
+                # Partner exchange format: TenantName.onmicrosoft.com\tenant: <tenant-guid>, object: <object-guid>
+                if ($PropValue.Contains('tenant:')) {
+                    $Match = $script:PartnerExchangeRegex.Match($PropValue)
+                    if ($Match.Success) {
+                        $CustomerTenantDomain = $Match.Groups[1].Value
+                        $PartnerTenantGuid = $Match.Groups[2].Value
+                        $ObjectGuid = $Match.Groups[3].Value
+                        Write-Information "Found partner exchange format: customer tenant $CustomerTenantDomain, partner tenant $PartnerTenantGuid, object $ObjectGuid"
 
-                    # O(1) hashtable lookup
-                    if ($PartnerUserLookup.ContainsKey($objectGuid)) {
-                        $PartnerUser = $PartnerUserLookup[$objectGuid]
-                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $PartnerUser.userPrincipalName -Force -ErrorAction SilentlyContinue
-                        Write-Information "Mapped Partner User UPN: $($PartnerUser.userPrincipalName) to $PropertyPrefix$($_.Name)"
-                        return
-                    }
-                }
-
-                # Check for standard GUID format
-                if ($script:StandardGuidRegex.IsMatch($propValue)) {
-                    $guid = $propValue
-
-                    # O(1) hashtable lookups in priority order
-                    if ($UserLookup.ContainsKey($guid)) {
-                        $User = $UserLookup[$guid]
-                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $User.userPrincipalName -Force -ErrorAction SilentlyContinue
-                        Write-Information "Mapped User: $($User.userPrincipalName) to $PropertyPrefix$($_.Name)"
-                        return
-                    }
-
-                    if ($GroupLookup.ContainsKey($guid)) {
-                        $Group = $GroupLookup[$guid]
-                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $Group -Force -ErrorAction SilentlyContinue
-                        Write-Information "Mapped Group: $($Group.displayName) to $PropertyPrefix$($_.Name)"
-                        return
-                    }
-
-                    if ($DeviceLookup.ContainsKey($guid)) {
-                        $Device = $DeviceLookup[$guid]
-                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $Device -Force -ErrorAction SilentlyContinue
-                        Write-Information "Mapped Device: $($Device.displayName) to $PropertyPrefix$($_.Name)"
-                        return
-                    }
-
-                    # ServicePrincipal indexed by both id and appId
-                    if ($ServicePrincipalLookup.ContainsKey($guid)) {
-                        $ServicePrincipal = $ServicePrincipalLookup[$guid]
-                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $ServicePrincipal -Force -ErrorAction SilentlyContinue
-                        Write-Information "Mapped Service Principal: $($ServicePrincipal.displayName) to $PropertyPrefix$($_.Name)"
-                        return
+                        # O(1) hashtable lookup
+                        if ($PartnerUserLookup.ContainsKey($ObjectGuid)) {
+                            $PartnerUser = $PartnerUserLookup[$ObjectGuid]
+                            $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($Property.Name)" -NotePropertyValue $PartnerUser.userPrincipalName -Force -ErrorAction SilentlyContinue
+                            Write-Information "Mapped Partner User UPN: $($PartnerUser.userPrincipalName) to $PropertyPrefix$($Property.Name)"
+                            continue
+                        }
                     }
                 }
             }
@@ -138,41 +170,125 @@ function Test-CIPPAuditLogRules {
             'Consent:Set'
         )
 
+        # Properties the record loop assigns to later. They have to exist first: assigning to an
+        # absent property on a PSCustomObject throws. Built once and read by Add-Member per record.
+        # HasLocationData is in here too, so emitting the record is a plain assignment rather than a
+        # second Select-Object projection over the whole property bag.
+        $RecordPlaceholders = @{
+            CIPPAction             = $null
+            CIPPClause             = $null
+            CIPPGeoLocation        = $null
+            CIPPBadRepIP           = $null
+            CIPPHostedIP           = $null
+            CIPPIPDetected         = $null
+            CIPPLocationInfo       = $null
+            CIPPExtendedProperties = $null
+            CIPPDeviceProperties   = $null
+            CIPPParameters         = $null
+            CIPPModifiedProperties = $null
+            AuditRecord            = $null
+            HasLocationData        = $null
+        }
+
         $TrustedIPTable = Get-CIPPTable -TableName 'trustedIps'
         $ConfigTable = Get-CIPPTable -TableName 'WebhookRules'
-        $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
-        $Configuration = foreach ($ConfigEntry in $ConfigEntries) {
-            if ([string]::IsNullOrEmpty($ConfigEntry.Tenants)) {
-                continue
-            }
-            $Tenants = $ConfigEntry.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue
-            if ($null -eq $Tenants) {
-                continue
-            }
-            # Expand tenant groups to get actual tenant list
-            $ExpandedTenants = Expand-CIPPTenantGroups -TenantFilter $Tenants
-            # Check if the TenantFilter matches any tenant in the expanded list or AllTenants
-            if ($ExpandedTenants.value -contains $TenantFilter -or $ExpandedTenants.value -contains 'AllTenants') {
-                # Expand tenant groups in exclusions the same way as inclusions
-                $ExcludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue
-                if ($ExcludedTenants) {
-                    $ExcludedTenants = @(Expand-CIPPTenantGroups -TenantFilter $ExcludedTenants)
+
+        # Per-tenant, in-process memo of the resolved rule set. Rebuilding it reads the whole
+        # WebhookRules table and calls Expand-CIPPTenantGroups for every entry that survives, which
+        # measured 179 ms on every invocation - and the engine is invoked once per slice, so a
+        # tenant with a large backlog paid it over and over for an answer that had not changed.
+        #
+        # The cost is a bounded staleness in when a rule edit takes effect. Two minutes is well
+        # inside the latency the pipeline already has: the ingestion timer runs every 15 minutes and
+        # the search window trails real time by longer than that, so this does not become the reason
+        # an alert is late.
+        $ConfigTtl = [TimeSpan]::FromMinutes(2)
+        if ($null -eq $script:AuditRuleConfigCache) {
+            $script:AuditRuleConfigCache = @{}
+        }
+        $Now = [datetime]::UtcNow
+        $ConfigCached = $script:AuditRuleConfigCache[$TenantFilter]
+
+        if ($ConfigCached -and $ConfigCached.Expires -gt $Now) {
+            $Configuration = $ConfigCached.Configuration
+            Write-Information "Using cached rule configuration for $TenantFilter"
+        } else {
+            # Drop expired entries on a miss. Misses happen about once per TTL per tenant, so this
+            # is cheap, and it keeps the cache to tenants actually being processed rather than every
+            # tenant this worker has ever seen.
+            foreach ($Key in @($script:AuditRuleConfigCache.Keys)) {
+                if ($script:AuditRuleConfigCache[$Key].Expires -le $Now) {
+                    $script:AuditRuleConfigCache.Remove($Key)
                 }
-                [pscustomobject]@{
-                    Tenants       = $Tenants
-                    Excluded      = $ExcludedTenants
-                    Conditions    = $ConfigEntry.Conditions
-                    Actions       = $ConfigEntry.Actions
-                    LogType       = $ConfigEntry.Type
-                    AlertComment  = $ConfigEntry.AlertComment
-                    CustomSubject = $ConfigEntry.CustomSubject
-                }
+            }
+
+            $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
+            $Configuration = @(foreach ($ConfigEntry in $ConfigEntries) {
+                    if ([string]::IsNullOrEmpty($ConfigEntry.Tenants)) {
+                        continue
+                    }
+                    $Tenants = $ConfigEntry.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    if ($null -eq $Tenants) {
+                        continue
+                    }
+                    # Expand tenant groups to get actual tenant list
+                    $ExpandedTenants = Expand-CIPPTenantGroups -TenantFilter $Tenants
+                    # Check if the TenantFilter matches any tenant in the expanded list or AllTenants
+                    if ($ExpandedTenants.value -contains $TenantFilter -or $ExpandedTenants.value -contains 'AllTenants') {
+                        # Expand tenant groups in exclusions the same way as inclusions
+                        $ExcludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        if ($ExcludedTenants) {
+                            $ExcludedTenants = @(Expand-CIPPTenantGroups -TenantFilter $ExcludedTenants)
+                        }
+                        [pscustomobject]@{
+                            Tenants       = $Tenants
+                            Excluded      = $ExcludedTenants
+                            Conditions    = $ConfigEntry.Conditions
+                            Actions       = $ConfigEntry.Actions
+                            LogType       = $ConfigEntry.Type
+                            AlertComment  = $ConfigEntry.AlertComment
+                            CustomSubject = $ConfigEntry.CustomSubject
+                        }
+                    }
+                })
+
+            $script:AuditRuleConfigCache[$TenantFilter] = [PSCustomObject]@{
+                Expires       = $Now.Add($ConfigTtl)
+                Configuration = $Configuration
             }
         }
 
         $Table = Get-CIPPTable -tablename 'cacheauditloglookups'
         $1dayago = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        $Lookups = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$TenantFilter' and Timestamp gt datetime'$1dayago'"
+
+        # In-process memo of the directory hash tables, on top of the cacheauditloglookups table
+        # that already holds them for a day. The table read is cheap; rebuilding the four hash
+        # tables from the cached JSON blobs on every call is not - measured at 95 ms per
+        # invocation. The engine runs once per 500-record slice, so a tenant with several windows
+        # in a cycle paid it repeatedly for identical data, and that multiplies by tenant count.
+        # Five minutes, well inside the table cache's own one-day life, so this only ever shortens
+        # how long a rebuilt set is reused - it cannot serve data the table layer would not.
+        $LookupsWarm = $false
+        if ($null -eq $script:AuditRuleLookupCache) {
+            $script:AuditRuleLookupCache = @{}
+        }
+        $LookupNow = [datetime]::UtcNow
+        $LookupEntry = $script:AuditRuleLookupCache[$TenantFilter]
+        if ($LookupEntry -and $LookupEntry.Expires -gt $LookupNow) {
+            $UserLookup = $LookupEntry.UserLookup
+            $GroupLookup = $LookupEntry.GroupLookup
+            $DeviceLookup = $LookupEntry.DeviceLookup
+            $ServicePrincipalLookup = $LookupEntry.ServicePrincipalLookup
+            $LookupsWarm = $true
+            $Lookups = $null
+        } else {
+            foreach ($CachedTenant in @($script:AuditRuleLookupCache.Keys)) {
+                if ($script:AuditRuleLookupCache[$CachedTenant].Expires -le $LookupNow) {
+                    $script:AuditRuleLookupCache.Remove($CachedTenant)
+                }
+            }
+            $Lookups = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$TenantFilter' and Timestamp gt datetime'$1dayago'"
+        }
 
         # Check if cached data needs refresh (wrong format or corrupted)
         $NeedsRefresh = $false
@@ -197,14 +313,22 @@ function Test-CIPPAuditLogRules {
             }
         }
 
-        if (!$Lookups -or $NeedsRefresh) {
-            # Try CippReportingDB first (pre-populated by timer, same pattern as Add-CIPPApplicationPermission)
+        if ($LookupsWarm) {
+            # Already restored from the in-process memo above; neither rebuild path applies. This
+            # arm exists so the memo can short-circuit without re-indenting the two branches below.
+            Write-Information "Using cached directory hashtable lookups for tenant $TenantFilter"
+        } elseif (!$Lookups -or $NeedsRefresh) {
+            # Try CippReportingDB first (pre-populated by timer, same pattern as Add-CIPPApplicationPermission).
+            # Get-CIPPTestData rather than New-CIPPDbRequest: the shared in-process cache lets
+            # concurrent batches reuse one copy of the directory data, and -Fields parses only
+            # what the mapping reads - unprojected per-batch loads OOM'd the container on
+            # large tenants.
             Write-Information "Checking CippReportingDB for directory data for tenant $TenantFilter"
             try {
-                $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users') | Select-Object id, displayName, userPrincipalName, accountEnabled
-                $Groups = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups') | Select-Object id, displayName, mailEnabled, securityEnabled
-                $Devices = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Devices') | Select-Object id, displayName, deviceId
-                $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals') | Select-Object id, appId, displayName, appDisplayName, accountEnabled, servicePrincipalType, tags
+                $Users = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type 'Users' -Fields 'id', 'displayName', 'userPrincipalName', 'accountEnabled')
+                $Groups = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type 'Groups' -Fields 'id', 'displayName', 'mailEnabled', 'securityEnabled')
+                $Devices = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type 'Devices' -Fields 'id', 'displayName', 'deviceId')
+                $ServicePrincipals = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Fields 'id', 'appId', 'displayName', 'appDisplayName', 'accountEnabled', 'servicePrincipalType', 'tags')
                 Write-Information "Loaded from CippReportingDB: $($Users.Count) users, $($Groups.Count) groups, $($Devices.Count) devices, $($ServicePrincipals.Count) service principals"
             } catch {
                 Write-Information "CippReportingDB query failed for ${TenantFilter}: $($_.Exception.Message)"
@@ -386,9 +510,39 @@ function Test-CIPPAuditLogRules {
             }
         }
 
+        # Store whichever branch built them, so the next slice for this tenant skips the rebuild.
+        if (-not $LookupsWarm) {
+            $script:AuditRuleLookupCache[$TenantFilter] = [PSCustomObject]@{
+                Expires                = $LookupNow.AddMinutes(5)
+                UserLookup             = $UserLookup
+                GroupLookup            = $GroupLookup
+                DeviceLookup           = $DeviceLookup
+                ServicePrincipalLookup = $ServicePrincipalLookup
+            }
+        }
+
         # Partner users - cache in cacheauditloglookups (PartitionKey '_partner') to avoid a fresh Graph fetch every invocation
-        $PartnerUsersCache = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '_partner' and RowKey eq 'users' and Timestamp gt datetime'$1dayago'"
-        if ($PartnerUsersCache -and $PartnerUsersCache.Format -eq 'hashtable') {
+        # Process-wide, not per tenant: this row is keyed '_partner' and is the same answer for
+        # every tenant this worker handles, so a per-tenant memo would still re-read it once per
+        # tenant. It was read on every invocation.
+        if ($null -eq $script:PartnerUserMemo -or $script:PartnerUserMemo.Expires -le [datetime]::UtcNow) {
+            $script:PartnerUserMemo = [PSCustomObject]@{
+                Expires = [datetime]::UtcNow.AddMinutes(5)
+                Lookup  = $null
+            }
+            $PartnerUsersCache = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '_partner' and RowKey eq 'users' and Timestamp gt datetime'$1dayago'"
+        } elseif ($null -ne $script:PartnerUserMemo.Lookup) {
+            $PartnerUserLookup = $script:PartnerUserMemo.Lookup
+            $PartnerUsersCache = $null
+        } else {
+            # Memo exists but holds nothing yet - the previous pass fell through to the Graph
+            # refresh below. Re-read rather than assume, so a concurrent refresh is picked up.
+            $PartnerUsersCache = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '_partner' and RowKey eq 'users' and Timestamp gt datetime'$1dayago'"
+        }
+
+        if ($null -ne $PartnerUserLookup -and $null -eq $PartnerUsersCache) {
+            Write-Information "Partner user hashtable served from memo: $($PartnerUserLookup.Count) partner users"
+        } elseif ($PartnerUsersCache -and $PartnerUsersCache.Format -eq 'hashtable') {
             Write-Information 'Loading partner user hashtable from cache'
             $PartnerUserLookup = ($PartnerUsersCache.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
         } else {
@@ -407,6 +561,7 @@ function Test-CIPPAuditLogRules {
             } -Force
             $PartnerUsers = $null
         }
+        $script:PartnerUserMemo.Lookup = $PartnerUserLookup
         Write-Information "Partner user hashtable: $($PartnerUserLookup.Count) partner users"
 
         Write-Warning '## Audit Log Configuration ##'
@@ -425,10 +580,23 @@ function Test-CIPPAuditLogRules {
             throw $_
         }
 
+        # Exclusions and trusted IPs join the same per-tenant memo as the rule set and the directory
+        # lookups. Both were read on every invocation - once per 500-record slice, per tenant - for
+        # data that changes when an operator edits a list, not between slices of one batch.
         $AuditLogUserExclusions = Get-CIPPTable -TableName 'AuditLogUserExclusions'
-        $ExcludedUsers = Get-CIPPAzDataTableEntity @AuditLogUserExclusions -Filter "PartitionKey eq '$TenantFilter'"
-
-        if ($LogCount -gt 0) {
+        if ($null -eq $script:AuditRuleListCache) { $script:AuditRuleListCache = @{} }
+        $ListNow = [datetime]::UtcNow
+        $ListEntry = $script:AuditRuleListCache[$TenantFilter]
+        if ($ListEntry -and $ListEntry.Expires -gt $ListNow) {
+            $ExcludedUsers = $ListEntry.ExcludedUsers
+            $TrustedIPLookup = $ListEntry.TrustedIPLookup
+        } else {
+            foreach ($CachedTenant in @($script:AuditRuleListCache.Keys)) {
+                if ($script:AuditRuleListCache[$CachedTenant].Expires -le $ListNow) {
+                    $script:AuditRuleListCache.Remove($CachedTenant)
+                }
+            }
+            $ExcludedUsers = Get-CIPPAzDataTableEntity @AuditLogUserExclusions -Filter "PartitionKey eq '$TenantFilter'"
             $TrustedIPEntries = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and state eq 'Trusted'"
             $TrustedIPLookup = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
             foreach ($TrustedEntry in $TrustedIPEntries) {
@@ -436,6 +604,14 @@ function Test-CIPPAuditLogRules {
                     $null = $TrustedIPLookup.Add([string]$TrustedEntry.RowKey)
                 }
             }
+            $script:AuditRuleListCache[$TenantFilter] = [PSCustomObject]@{
+                Expires         = $ListNow.AddMinutes(2)
+                ExcludedUsers   = $ExcludedUsers
+                TrustedIPLookup = $TrustedIPLookup
+            }
+        }
+
+        if ($LogCount -gt 0) {
 
             $GeoPrefetchIPs = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
             foreach ($AuditRecord in $SearchResults) {
@@ -460,14 +636,36 @@ function Test-CIPPAuditLogRules {
             # so the run always converges instead of looping on the same rows - and a batch
             # takes minutes, so that window is real. Per-record calls cost ~13x more, since
             # AzBobbyTables wraps each one in its own $batch transaction.
-            $DeleteFlushSize = 25
+            # 100 is the table service's per-transaction maximum, so it is the largest flush still
+            # costing one round trip - 4x fewer than at 25, for a crash-replay window of 100
+            # records rather than 25.
+            $DeleteFlushSize = 100
             $PendingDeletes = [System.Collections.Generic.List[object]]::new()
 
             $ProcessedData = foreach ($AuditRecord in $SearchResults) {
-                $RecordStartTime = Get-Date
-                Write-Information "Processing RowKey $($AuditRecord.id) - $($TenantFilter)."
                 $RootProperties = $AuditRecord
-                $Data = $AuditRecord.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
+                # A copy plus one Add-Member, not a Select-Object projection: the projection
+                # re-derives the whole property set per record, measured at 148 us / 61 KB against
+                # 51 us / 32 KB for the copy. No -Force, which matches what
+                # `Select-Object *, Dup -ErrorAction SilentlyContinue` did - a record already
+                # carrying one of these names keeps its own value rather than being nulled.
+                #
+                # ExtendedProperties / DeviceProperties / parameters are dropped here rather than
+                # excluded from the emitted object at the bottom of the loop. They are flattened
+                # onto CIPP* copies below, which now read them from the source record, so carrying
+                # them through only to strip them again was pure copying - and dropping them here
+                # also shortens both GUID-mapping passes over this object.
+                #
+                # Guarded, because a record with no auditData must still land in the per-record
+                # catch below the way it did before, not throw out of the whole batch.
+                $Data = $null
+                if ($null -ne $AuditRecord.auditData) {
+                    $Data = $AuditRecord.auditData.PSObject.Copy()
+                    $Data.PSObject.Properties.Remove('ExtendedProperties')
+                    $Data.PSObject.Properties.Remove('DeviceProperties')
+                    $Data.PSObject.Properties.Remove('parameters')
+                    $Data | Add-Member -NotePropertyMembers $RecordPlaceholders -ErrorAction SilentlyContinue
+                }
                 try {
                     # Attempt to locate GUIDs in $Data and match them with their corresponding user, group, device, or service principal using O(1) hashtable lookups
                     # Write-Information 'Checking Data for GUIDs to map to users, groups, devices, or service principals'
@@ -479,49 +677,55 @@ function Test-CIPPAuditLogRules {
 
                     # Flattened onto $Data so rules can match the property names directly. One
                     # Add-Member per sub-object: per-property calls rebuild the property bag each time.
-                    if ($Data.ExtendedProperties) {
-                        $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json -Compress -Depth 10)
-                        $Flattened = @{}
-                        foreach ($Prop in $Data.ExtendedProperties) {
+                    # One accumulated hash table and a single Add-Member, rather than one per
+                    # sub-object. Each Add-Member extends the property bag, and four per record
+                    # measured at 198 us / 132 KB against 125 us / 87 KB for one. Collision
+                    # behaviour is unchanged: later sub-objects overwrote earlier keys through
+                    # -Force before, and overwrite the same keys in the hash table now.
+                    # ConvertTo-Json takes -InputObject rather than a pipeline, which skips setting
+                    # up a pipeline per call for no change in output.
+                    # The first three read from $Source, not $Data - they are deliberately no longer
+                    # copied onto $Data. ModifiedProperties stays on $Data and is read from there.
+                    $Source = $AuditRecord.auditData
+                    $Flattened = @{}
+                    if ($Source.ExtendedProperties) {
+                        $Data.CIPPExtendedProperties = (ConvertTo-Json -InputObject $Source.ExtendedProperties -Compress -Depth 10)
+                        foreach ($Prop in $Source.ExtendedProperties) {
                             # Must be a real loop: `continue` inside ForEach-Object unwinds to the
                             # enclosing foreach and drops the whole record.
                             if ($Prop.Value -in $ExtendedPropertiesIgnoreList) { continue }
                             if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
                             $Flattened[$Prop.Name] = $Prop.Value
                         }
-                        if ($Flattened.Count -gt 0) { $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue }
                     }
-                    if ($Data.DeviceProperties) {
-                        $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json -Compress -Depth 10)
-                        $Flattened = @{}
-                        foreach ($Prop in $Data.DeviceProperties) {
+                    if ($Source.DeviceProperties) {
+                        $Data.CIPPDeviceProperties = (ConvertTo-Json -InputObject $Source.DeviceProperties -Compress -Depth 10)
+                        foreach ($Prop in $Source.DeviceProperties) {
                             if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
                             $Flattened[$Prop.Name] = $Prop.Value
                         }
-                        if ($Flattened.Count -gt 0) { $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue }
                     }
-                    if ($Data.parameters) {
-                        $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json -Compress -Depth 10)
-                        $Flattened = @{}
-                        foreach ($Prop in $Data.parameters) {
+                    if ($Source.parameters) {
+                        $Data.CIPPParameters = (ConvertTo-Json -InputObject $Source.parameters -Compress -Depth 10)
+                        foreach ($Prop in $Source.parameters) {
                             if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
                             $Flattened[$Prop.Name] = $Prop.Value
                         }
-                        if ($Flattened.Count -gt 0) { $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue }
                     }
                     if ($Data.ModifiedProperties) {
-                        $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json -Compress -Depth 10)
+                        $Data.CIPPModifiedProperties = (ConvertTo-Json -InputObject $Data.ModifiedProperties -Compress -Depth 10)
                         try {
-                            $Flattened = @{}
                             foreach ($Prop in $Data.ModifiedProperties) {
                                 if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
                                 $Flattened["$($Prop.Name)"] = "$($Prop.NewValue)"
                                 $Flattened["Previous_Value_$($Prop.Name)"] = "$($Prop.OldValue)"
                             }
-                            if ($Flattened.Count -gt 0) { $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue }
                         } catch {
                             Write-Information "Error flattening ModifiedProperties for $($AuditRecord.id): $($_.Exception.Message)"
                         }
+                    }
+                    if ($Flattened.Count -gt 0) {
+                        $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue
                     }
 
 
@@ -547,7 +751,7 @@ function Test-CIPPAuditLogRules {
                                     $Data.CIPPBadRepIP = $Loc.Proxy
                                     $Data.CIPPHostedIP = $Loc.Hosting
                                     $Data.CIPPIPDetected = [string]$Data.clientip
-                                    $Data.CIPPLocationInfo = ($Loc | ConvertTo-Json -Compress -Depth 10)
+                                    $Data.CIPPLocationInfo = (ConvertTo-Json -InputObject $Loc -Compress -Depth 10)
                                     $HasLocationData = $true
                                 } else {
                                     $Data.CIPPGeoLocation = 'Unknown'
@@ -560,32 +764,46 @@ function Test-CIPPAuditLogRules {
                             }
                         }
                     }
-                    $Data.AuditRecord = [string]($RootProperties | ConvertTo-Json -Compress -Depth 10)
-                    $Data | Select-Object *,
-                    @{n = 'HasLocationData'; exp = { $HasLocationData } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
+                    $Data.AuditRecord = [string](ConvertTo-Json -InputObject $RootProperties -Compress -Depth 10)
+                    # Two plain assignments and emit. This step used to be a second Select-Object
+                    # over the whole property bag - a calculated property for HasLocationData plus
+                    # -ExcludeProperty for three properties that are no longer copied onto $Data in
+                    # the first place. Measured at 77 us / 54 KB for the projection against
+                    # 16 us / 14 KB here.
+                    $Data.HasLocationData = $HasLocationData
+                    $Data
                 } catch {
                     #write-warning "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
                     Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
                 }
 
                 $PendingDeletes.Add([PSCustomObject]@{
-                        PartitionKey = $TenantFilter
+                        PartitionKey = $CachePartitionKey
                         RowKey       = [string]$AuditRecord.id
                     })
                 if ($PendingDeletes.Count -ge $DeleteFlushSize) {
                     try {
-                        $null = Remove-CIPPAzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
+                        if ($CallerSweepsCachePartition) {
+                            $null = Remove-AzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
+                        } else {
+                            $null = Remove-CIPPAzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
+                        }
                     } catch {
                         Write-Information "Error removing $($PendingDeletes.Count) processed row(s) from cache: $($_.Exception.Message)"
                     }
                     $PendingDeletes.Clear()
                 }
-                $RecordEndTime = Get-Date
-                $RecordSeconds = ($RecordEndTime - $RecordStartTime).TotalSeconds
-                Write-Warning "Task took $RecordSeconds seconds for RowKey $($AuditRecord.id)"
+                # No per-record timing warning here. It cost two Get-Date calls, a string
+                # interpolation and a warning-stream write for every record - and at production
+                # volumes it emits one log line per audit record, which is noise that has to be
+                # paid for and then stored. Per-stage timings come from the benchmark harness.
             }
 
-            if ($PendingDeletes.Count -gt 0) {
+            # Trailing partial batch. When the caller sweeps its own partition it already reads that
+            # partition and deletes whatever is left, which is precisely this remainder - so paying
+            # for a separate round trip here would delete the same rows a moment earlier and no more.
+            # Without a sweep the tail has to go now, or those rows sit in the cache forever.
+            if ($PendingDeletes.Count -gt 0 -and -not $CallerSweepsCachePartition) {
                 try {
                     $null = Remove-CIPPAzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
                 } catch {
@@ -706,51 +924,105 @@ function Test-CIPPAuditLogRules {
             $CippConfigTable = Get-CippTable -tablename Config
             $CippConfig = Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
             $CIPPURL = 'https://{0}' -f $CippConfig.Value
-            foreach ($AuditLog in $DataToProcess) {
-                Write-Information "Processing $($AuditLog.operation)"
-                $Webhook = @{
-                    Data         = $AuditLog
-                    CIPPURL      = [string]$CIPPURL
-                    TenantFilter = $TenantFilter
-                    AlertComment = $AuditLog.CIPPAlertComment
-                }
+            # Audit-log rows are batched rather than written one per alert. Every row shares the
+            # tenant partition key, so they go in one transaction: measured at 3.26 ms/row written
+            # singly against 0.57 ms/row at 100 per batch, and this is the single largest cost in
+            # the stage once rules actually fire.
+            #
+            # Flushed on count OR accumulated size. The size guard is not decorative - each row
+            # carries the whole serialised alert, including the shaped record and the raw audit
+            # record, which measured 3 KB for a plain event and 19 KB for one with 20 modified
+            # properties. A transaction is capped at 4 MB, so a fixed count of 100 would start
+            # failing whole batches on a tenant with verbose ModifiedProperties.
+            $AlertFlushCount = 100
+            $AlertFlushBytes = 3MB
+            $PendingAlertRows = [System.Collections.Generic.List[object]]::new()
+            $PendingAlertBytes = 0
+            $AuditLogTable = Get-CIPPTable -TableName 'AuditLogs'
+
+            $FlushAlertRows = {
+                if ($PendingAlertRows.Count -eq 0) { return }
                 try {
-                    Invoke-CippWebhookProcessing @Webhook
+                    Add-CIPPAzDataTableEntity @AuditLogTable -Entity $PendingAlertRows.ToArray() -Force
                 } catch {
-                    Write-Warning "Error sending final step of auditlog processing: $($_.Exception.Message)"
-                    Write-Information $_.InvocationInfo.PositionMessage
+                    # Not fatal: the alerts themselves have already been dispatched, and the claim
+                    # rows still prevent a retry from sending them again. What is lost is the stored
+                    # copy, which shows in the UI as a row stuck at 'Processing'.
+                    Write-Warning "Could not store $($PendingAlertRows.Count) audit log row(s): $($_.Exception.Message)"
                 }
+                $PendingAlertRows.Clear()
+            }
+
+            try {
+                foreach ($AuditLog in $DataToProcess) {
+                    Write-Information "Processing $($AuditLog.operation)"
+                    $Webhook = @{
+                        Data                   = $AuditLog
+                        CIPPURL                = [string]$CIPPURL
+                        TenantFilter           = $TenantFilter
+                        AlertComment           = $AuditLog.CIPPAlertComment
+                        PendingAuditLogWrites  = $PendingAlertRows
+                    }
+                    try {
+                        Invoke-CippWebhookProcessing @Webhook
+                    } catch {
+                        Write-Warning "Error sending final step of auditlog processing: $($_.Exception.Message)"
+                        Write-Information $_.InvocationInfo.PositionMessage
+                    }
+                    if ($PendingAlertRows.Count -gt 0) {
+                        $PendingAlertBytes = 0
+                        foreach ($Row in $PendingAlertRows) { $PendingAlertBytes += $Row.Data.Length }
+                        if ($PendingAlertRows.Count -ge $AlertFlushCount -or $PendingAlertBytes -ge $AlertFlushBytes) {
+                            & $FlushAlertRows
+                        }
+                    }
+                }
+            } finally {
+                # In a finally so an exception mid-loop still stores the rows for alerts that did
+                # go out; only a hard process kill loses them.
+                & $FlushAlertRows
             }
         }
 
-        try {
-            $RowIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Rows.id | Where-Object { $_ }))
-            if ($RowIds.Count -gt 0) {
+        # Belt-and-braces pass: re-resolve this chunk's ids to physical rows and delete anything the
+        # per-record flush missed - in practice the parts of split records, since the flush deletes
+        # by logical id only.
+        #
+        # Skipped when the caller sweeps its own partition, because it is not free: each slice of 50
+        # ids becomes a 100-predicate "RowKey eq X or OriginalEntityId eq X" filter, and an OR-list
+        # cannot be served from the Azure Table index - it scans the partition. That is ten scans per
+        # call to find, normally, nothing at all. The caller's single keys-only partition pass
+        # catches the same orphans for one point query.
+        if (-not $CallerSweepsCachePartition) {
+            try {
+                $RowIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Rows.id | Where-Object { $_ }))
+                if ($RowIds.Count -gt 0) {
                 # Only the rows being deleted, not a partition scan - this runs once per chunk.
                 # Raw cmdlet and OriginalEntityId: the wrapper reports a split record's logical
                 # RowKey, so deleting that left X-part1 / X-part2 orphaned.
-                $IdList = @($RowIds)
-                $FilterBatch = 50
-                $RowsToRemove = [System.Collections.Generic.List[object]]::new()
+                    $IdList = @($RowIds)
+                    $FilterBatch = 50
+                    $RowsToRemove = [System.Collections.Generic.List[object]]::new()
 
-                for ($Start = 0; $Start -lt $IdList.Count; $Start += $FilterBatch) {
-                    $Slice = @($IdList[$Start..([Math]::Min($Start + $FilterBatch - 1, $IdList.Count - 1))])
-                    $Predicate = ($Slice | ForEach-Object { "RowKey eq '$_' or OriginalEntityId eq '$_'" }) -join ' or '
-                    $Found = @(Get-AzDataTableEntity @CacheWebhooksTable `
-                            -Filter "PartitionKey eq '$TenantFilter' and ($Predicate)" `
-                            -Property 'PartitionKey', 'RowKey')
-                    foreach ($Row in $Found) {
-                        $RowsToRemove.Add([PSCustomObject]@{ PartitionKey = $Row.PartitionKey; RowKey = $Row.RowKey })
+                    for ($Start = 0; $Start -lt $IdList.Count; $Start += $FilterBatch) {
+                        $Slice = @($IdList[$Start..([Math]::Min($Start + $FilterBatch - 1, $IdList.Count - 1))])
+                        $Predicate = ($Slice | ForEach-Object { "RowKey eq '$_' or OriginalEntityId eq '$_'" }) -join ' or '
+                        $Found = @(Get-AzDataTableEntity @CacheWebhooksTable `
+                                -Filter "PartitionKey eq '$CachePartitionKey' and ($Predicate)" `
+                                -Property 'PartitionKey', 'RowKey')
+                        foreach ($Row in $Found) {
+                            $RowsToRemove.Add([PSCustomObject]@{ PartitionKey = $Row.PartitionKey; RowKey = $Row.RowKey })
+                        }
+                    }
+
+                    if ($RowsToRemove.Count -gt 0) {
+                        Remove-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $RowsToRemove -Force
+                        Write-Information "Removed $($RowsToRemove.Count) processed rows from cache"
                     }
                 }
-
-                if ($RowsToRemove.Count -gt 0) {
-                    Remove-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $RowsToRemove -Force
-                    Write-Information "Removed $($RowsToRemove.Count) processed rows from cache"
-                }
+            } catch {
+                Write-Information "Error removing rows from cache: $($_.Exception.Message)"
             }
-        } catch {
-            Write-Information "Error removing rows from cache: $($_.Exception.Message)"
         }
 
     } catch {

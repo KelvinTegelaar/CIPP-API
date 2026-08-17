@@ -15,13 +15,15 @@ BeforeAll {
     function Get-AzDataTableEntity { param($TableName, $Context, $Filter, $Property, $First) }
     function Add-CIPPAzDataTableEntity { param($TableName, $Context, $Entity, [switch]$Force, $OperationType) }
     function Remove-CIPPAzDataTableEntity { param($TableName, $Context, $Entity, [switch]$Force) }
+    # The plain delete, taken when the caller guarantees it sweeps the cache partition itself.
+    function Remove-AzDataTableEntity { param($TableName, $Context, $Entity, [switch]$Force) }
     function Expand-CIPPTenantGroups { param($TenantFilter) }
     function Test-CIPPConditionFilter { param($Condition) }
     function Invoke-CippWebhookProcessing { param($Data, $CIPPURL, $TenantFilter, $AlertComment) }
     function Get-CIPPGeoIPLocationBatch { param($IPs) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
-    function New-CIPPDbRequest { param($TenantFilter, $Type, $Endpoint) }
+    function Get-CIPPTestData { param($TenantFilter, $Type, $Fields, [switch]$NoProjection) }
     function New-GraphBulkRequest { param($Requests, $AsApp, $TenantId) }
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, [switch]$Stream, $ComplexFilter, $NoPagination) }
     function Add-CIPPApplicationPermission { param($RequiredResourceAccess, $ApplicationId, $TenantFilter) }
@@ -69,6 +71,14 @@ BeforeAll {
 Describe 'Test-CIPPAuditLogRules record shaping' {
 
     BeforeEach {
+        # Both memos are per tenant and outlive a single call by design. Every test here uses the
+        # same tenant, so without a reset the second test onwards would run against the first
+        # test's rules and directory data and never touch its own mocked reads.
+        $script:AuditRuleConfigCache = @{}
+        $script:AuditRuleLookupCache = @{}
+        $script:AuditRuleListCache = @{}
+        $script:PartnerUserMemo = $null
+
         Mock -CommandName Get-CIPPTable -MockWith {
             param($TableName)
             @{ TableName = $TableName }
@@ -139,7 +149,19 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             foreach ($e in @($Entity)) { $script:RemovedRows.Add($e) }
         }
 
-        Mock -CommandName Expand-CIPPTenantGroups -MockWith { [pscustomobject]@{ value = @('AllTenants') } }
+        $script:PlainRemovedRows = [System.Collections.Generic.List[object]]::new()
+        Mock -CommandName Remove-AzDataTableEntity -MockWith {
+            param($TableName, $Context, $Entity, [switch]$Force)
+            foreach ($e in @($Entity)) { $script:PlainRemovedRows.Add($e) }
+        }
+
+        # Counted rather than asserted with -Times, so the memo tests compare against however many
+        # rule entries the fixture happens to have instead of hard-coding one.
+        $script:ExpandCalls = 0
+        Mock -CommandName Expand-CIPPTenantGroups -MockWith {
+            $script:ExpandCalls++
+            [pscustomobject]@{ value = @('AllTenants') }
+        }
         # Always-true predicate; rule matching is not what these tests cover.
         Mock -CommandName Test-CIPPConditionFilter -MockWith { '$_.Operation -eq ''Set-Mailbox''' }
         Mock -CommandName Invoke-CippWebhookProcessing -MockWith { }
@@ -148,7 +170,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         # would win and silently capture nothing.
         Mock -CommandName Get-CIPPGeoIPLocationBatch -MockWith { @{} }
         Mock -CommandName Write-LogMessage -MockWith { }
-        Mock -CommandName New-CIPPDbRequest -MockWith { @() }
+        Mock -CommandName Get-CIPPTestData -MockWith { @() }
         Mock -CommandName New-GraphBulkRequest -MockWith { @() }
         Mock -CommandName New-GraphGetRequest -MockWith { @() }
     }
@@ -262,6 +284,145 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         }
     }
 
+    Context 'rule configuration memo' {
+        # Resolving the rule set reads the whole WebhookRules table and expands tenant groups for
+        # every surviving entry - 179 ms per invocation, paid once per slice, for an answer that
+        # does not change between slices.
+
+        It 'resolves the rule set once across repeated calls for a tenant' {
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $AfterFirst = $script:ExpandCalls
+            $AfterFirst | Should -BeGreaterThan 0
+
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-2')
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-3')
+            $script:ExpandCalls | Should -Be $AfterFirst
+        }
+
+        It 'resolves separately for a different tenant' {
+            # The rule set is filtered by tenant, so one tenant's answer must never be served to
+            # another - that would evaluate these records against a different customer's rules.
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $AfterFirst = $script:ExpandCalls
+            $null = Test-CIPPAuditLogRules -TenantFilter 'fabrikam.com' -Rows @(New-AuditRow -Id 'rec-2')
+            $script:ExpandCalls | Should -BeGreaterThan $AfterFirst
+        }
+
+        It 'rebuilds once the entry has expired' {
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $AfterFirst = $script:ExpandCalls
+            $script:AuditRuleConfigCache['contoso.com'].Expires = [datetime]::UtcNow.AddMinutes(-1)
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-2')
+            $script:ExpandCalls | Should -BeGreaterThan $AfterFirst
+        }
+
+        It 'drops expired entries rather than growing per tenant seen' {
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $script:AuditRuleConfigCache['contoso.com'].Expires = [datetime]::UtcNow.AddMinutes(-1)
+            $null = Test-CIPPAuditLogRules -TenantFilter 'fabrikam.com' -Rows @(New-AuditRow -Id 'rec-2')
+            $script:AuditRuleConfigCache.Keys | Should -Not -Contain 'contoso.com'
+            $script:AuditRuleConfigCache.Keys | Should -Contain 'fabrikam.com'
+        }
+    }
+
+    Context 'directory lookup memo' {
+        # The four directory hash tables are rebuilt from cached JSON blobs on every call - 95 ms
+        # per invocation, and the engine runs once per 500-record slice.
+
+        It 'rebuilds the hashtables once across repeated calls for a tenant' {
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $script:AuditRuleLookupCache.Keys | Should -Contain 'contoso.com'
+
+            # A second call must not re-read the lookups table for this tenant.
+            $script:LookupReads = 0
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Filter, $Property, $First)
+                if ($Filter -like "*PartitionKey eq 'contoso.com'*" -and $Filter -like '*Timestamp gt*') { $script:LookupReads++ }
+                @()
+            }
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-2')
+            $script:LookupReads | Should -Be 0
+        }
+
+        It 'keeps each tenant''s directory data separate' {
+            # Serving one tenant's user/group/device map to another would resolve GUIDs to the
+            # wrong people and put their names into another customer's alerts.
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $null = Test-CIPPAuditLogRules -TenantFilter 'fabrikam.com' -Rows @(New-AuditRow -Id 'rec-2')
+            $script:AuditRuleLookupCache.Keys | Should -Contain 'contoso.com'
+            $script:AuditRuleLookupCache.Keys | Should -Contain 'fabrikam.com'
+        }
+
+        It 'rebuilds once the entry has expired' {
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $script:AuditRuleLookupCache['contoso.com'].Expires = [datetime]::UtcNow.AddMinutes(-1)
+
+            $script:LookupReads = 0
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Filter, $Property, $First)
+                if ($Filter -like "*PartitionKey eq 'contoso.com'*" -and $Filter -like '*Timestamp gt*') { $script:LookupReads++ }
+                @()
+            }
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-2')
+            $script:LookupReads | Should -BeGreaterThan 0
+        }
+    }
+
+    Context 'cache cleanup when the caller sweeps the partition' {
+        # V2 owns one cache partition per search and clears it after processing, so the engine is
+        # told it may take the cheap route. Both halves of that are pinned: the plain delete for
+        # processed rows, and skipping the id-resolution pass entirely.
+
+        It 'uses the plain delete, not the part-aware one' {
+            # Remove-CIPPAzDataTableEntity also removes the -partN rows of split entities and costs
+            # ~2.7x per row for it. The caller's sweep covers those instead. 150 rows so a full
+            # 100-row batch actually flushes.
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' `
+                -Rows @(1..150 | ForEach-Object { New-AuditRow -Id "rec-$_" }) `
+                -CachePartitionKey 'contoso.com|search-1' -CallerSweepsCachePartition
+            Should -Invoke Remove-AzDataTableEntity -Times 1 -Exactly
+            Should -Invoke Remove-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+
+        It 'skips the OR-list resolution pass' {
+            # That pass builds "RowKey eq X or OriginalEntityId eq X" 50 ids at a time. An OR-list
+            # cannot use the table index, so each slice scans the partition - ten scans per call to
+            # find rows the flush has already deleted.
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1') `
+                -CachePartitionKey 'contoso.com|search-1' -CallerSweepsCachePartition
+            Should -Invoke Get-AzDataTableEntity -Times 0 -Exactly
+        }
+
+        It 'deletes each full batch as it fills' {
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' `
+                -Rows @(1..150 | ForEach-Object { New-AuditRow -Id "rec-$_" }) `
+                -CachePartitionKey 'contoso.com|search-1' -CallerSweepsCachePartition
+            @($script:PlainRemovedRows).Count | Should -Be 100
+            @($script:PlainRemovedRows).RowKey | Should -Contain 'rec-1'
+            @($script:PlainRemovedRows).PartitionKey | Should -Contain 'contoso.com|search-1'
+        }
+
+        It 'leaves the trailing partial batch to the sweep' {
+            # The remainder below the flush size is deliberately not deleted here. The caller reads
+            # its partition and removes whatever is left, so flushing the tail separately would be
+            # a round trip to delete rows the sweep is about to delete anyway. Without a sweep
+            # (the V1 path) the tail is still flushed - covered below.
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1') `
+                -CachePartitionKey 'contoso.com|search-1' -CallerSweepsCachePartition
+            Should -Invoke Remove-AzDataTableEntity -Times 0 -Exactly
+            Should -Invoke Remove-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+
+        It 'leaves the part-aware path in place for callers that do not sweep' {
+            # V1 shares one partition per tenant and never sweeps, so it must keep paying for the
+            # part-row guarantee. Twice, not once: the per-record flush and the id-resolution pass
+            # both delete, and both stay on the part-aware cmdlet.
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            Should -Invoke Remove-AzDataTableEntity -Times 0 -Exactly
+            Should -Invoke Remove-CIPPAzDataTableEntity -Times 2 -Exactly
+        }
+    }
+
     Context 'cache cleanup after processing' {
 
         It 'reads only key columns, not the JSON payloads' {
@@ -321,16 +482,16 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             # The reason deletes are not deferred to the end: if a record kills the worker,
             # everything already flushed is gone from the cache, so the retry starts further
             # in and the run converges instead of looping on the same rows forever.
-            $rows = @(1..60 | ForEach-Object { New-AuditRow -Id "rec-$_" })
+            $rows = @(1..250 | ForEach-Object { New-AuditRow -Id "rec-$_" })
             $script:PhysicalCacheRows = @(
-                1..60 | ForEach-Object { [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = "rec-$_"; OriginalEntityId = $null } }
+                1..250 | ForEach-Object { [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = "rec-$_"; OriginalEntityId = $null } }
             )
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $rows
 
-            # 60 records at a flush size of 25: two mid-loop flushes, a remainder flush,
-            # and the sweep - not 60 individual calls.
+            # 250 records at a flush size of 100 (the table service's per-transaction maximum):
+            # two mid-loop flushes, a remainder flush, and the sweep - not 250 individual calls.
             Should -Invoke Remove-CIPPAzDataTableEntity -Times 4 -Exactly
-            @($script:RemovedRows).RowKey.Count | Should -Be 120  # 60 flushed + 60 swept
+            @($script:RemovedRows).RowKey.Count | Should -Be 500  # 250 flushed + 250 swept
         }
 
         It 'never removes a cached row belonging to another record' {

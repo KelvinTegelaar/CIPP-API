@@ -27,18 +27,26 @@ function Start-AuditLogIngestionV2 {
         $Ledger = Get-CippTable -TableName 'AuditLogCoverage'
         $Now = (Get-Date).ToUniversalTime()
 
-        # --- Download tenants: searches awaiting download (State = Created, due) ---
+        # One projected pass over the ledger, split into both work sets. State is not a key, so
+        # this is a table scan whatever the predicate; what's controllable is paying it once
+        # instead of once per state, and reading three columns instead of whole rows.
+        # AuditLogCoverage is one row per window (not per record) and pruned at 7 days, so it
+        # stays bounded. A partition query per in-scope tenant would trade this for N round trips.
         $DownloadTenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($Row in @(Get-CIPPAzDataTableEntity @Ledger -Filter "State eq 'Created'" -Property @('PartitionKey', 'RowKey', 'NextAttemptUtc'))) {
-            if ($Row.NextAttemptUtc -and ([datetimeoffset]$Row.NextAttemptUtc).UtcDateTime -gt $Now) { continue }
-            if ($Row.PartitionKey) { [void]$DownloadTenants.Add([string]$Row.PartitionKey) }
-        }
-
-        # --- Process-only tenants: rows pending in the webhook cache (downloaded, not yet processed) ---
-        $CacheTable = Get-CippTable -TableName 'CacheWebhooks'
         $CacheTenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($Row in @(Get-CIPPAzDataTableEntity @CacheTable -Property @('PartitionKey', 'RowKey'))) {
-            if ($Row.PartitionKey) { [void]$CacheTenants.Add([string]$Row.PartitionKey) }
+
+        $Active = @(Get-CIPPAzDataTableEntity @Ledger `
+                -Filter "State eq 'Created' or State eq 'Downloaded' or State eq 'Processing'" `
+                -Property @('PartitionKey', 'State', 'NextAttemptUtc'))
+
+        foreach ($Row in $Active) {
+            if (-not $Row.PartitionKey) { continue }
+            if ($Row.State -eq 'Created') {
+                if ($Row.NextAttemptUtc -and ([datetimeoffset]$Row.NextAttemptUtc).UtcDateTime -gt $Now) { continue }
+                [void]$DownloadTenants.Add([string]$Row.PartitionKey)
+            } else {
+                [void]$CacheTenants.Add([string]$Row.PartitionKey)
+            }
         }
 
         if ($DownloadTenants.Count -eq 0 -and $CacheTenants.Count -eq 0) {
