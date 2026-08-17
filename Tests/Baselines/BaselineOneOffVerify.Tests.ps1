@@ -264,6 +264,50 @@ Describe 'Invoke-CIPPBaselineEnableFIDO2 passkey profile normalization' {
             @(($body | ConvertFrom-Json).passkeyProfiles)[1].keyRestrictions.enforcementType -eq 'allow'
         }
     }
+
+    It 'aligns the top-level attestation flag with a default profile that DISABLES attestation - Graph rejects disagreement' {
+        Mock New-GraphGetRequest { [PSCustomObject]@{
+                state = 'disabled'; isAttestationEnforced = $false; isSelfServiceRegistrationAllowed = $true
+                defaultPasskeyProfile = 'p-default'
+                passkeyProfiles = @(
+                    [PSCustomObject]@{ id = 'p-default'; name = 'Default'; attestationEnforcement = 'disabled'; keyRestrictions = [PSCustomObject]@{ isEnforced = $false; enforcementType = 'allow'; aaGuids = @() } }
+                )
+            } }
+        Mock New-GraphPostRequest { }
+        Invoke-CIPPBaselineEnableFIDO2 -Remediate ([PSCustomObject]@{}) -TenantFilter 'contoso.onmicrosoft.com' -Current $null
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            ($body | ConvertFrom-Json).state -eq 'enabled' -and
+            ($body | ConvertFrom-Json).isAttestationEnforced -eq $false
+        }
+    }
+
+    It 'aligns with the DEFAULT profile, not the first one in the list' {
+        Mock New-GraphGetRequest { [PSCustomObject]@{
+                state = 'disabled'; isAttestationEnforced = $false; isSelfServiceRegistrationAllowed = $true
+                defaultPasskeyProfile = 'p-2'
+                passkeyProfiles = @(
+                    [PSCustomObject]@{ id = 'p-1'; attestationEnforcement = 'disabled'; keyRestrictions = [PSCustomObject]@{ isEnforced = $false; enforcementType = 'allow'; aaGuids = @() } }
+                    [PSCustomObject]@{ id = 'p-2'; attestationEnforcement = 'enforced'; keyRestrictions = [PSCustomObject]@{ isEnforced = $false; enforcementType = 'allow'; aaGuids = @() } }
+                )
+            } }
+        Mock New-GraphPostRequest { }
+        Invoke-CIPPBaselineEnableFIDO2 -Remediate ([PSCustomObject]@{}) -TenantFilter 'contoso.onmicrosoft.com' -Current $null
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            ($body | ConvertFrom-Json).isAttestationEnforced -eq $true
+        }
+    }
+
+    It 'keeps the classic write on a profile-less tenant: attestation enforced' {
+        Mock New-GraphGetRequest { [PSCustomObject]@{
+                state = 'disabled'; isAttestationEnforced = $false; isSelfServiceRegistrationAllowed = $false
+                passkeyProfiles = @()
+            } }
+        Mock New-GraphPostRequest { }
+        Invoke-CIPPBaselineEnableFIDO2 -Remediate ([PSCustomObject]@{}) -TenantFilter 'contoso.onmicrosoft.com' -Current $null
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            ($body | ConvertFrom-Json).isAttestationEnforced -eq $true
+        }
+    }
 }
 
 Describe 'Get-CIPPBaselineDetectCADriftState SharePoint side-effect policies' {

@@ -45,9 +45,23 @@ function Set-CIPPAuthenticationPolicy {
         # FIDO2
         'FIDO2' {
             if ($State -eq 'enabled') {
-                # Honor passed values; otherwise default to enforced/allowed to preserve previous enable behavior
-                $CurrentInfo.isAttestationEnforced = if ($PSBoundParameters.ContainsKey('FIDO2AttestationEnforced')) { $FIDO2AttestationEnforced } else { $true }
+                # Honor passed values; otherwise default to enforced/allowed to preserve previous enable behavior.
+                # With passkey profiles present attestation is governed per-profile, and Graph rejects a
+                # top-level flag that disagrees with the DEFAULT profile ("Attestation enforcement cannot
+                # be enabled when it is disabled in default passkey profile") - align instead of forcing.
+                $PasskeyProfiles = @($CurrentInfo.passkeyProfiles | Where-Object { $_ })
+                $CurrentInfo.isAttestationEnforced = if ($PSBoundParameters.ContainsKey('FIDO2AttestationEnforced')) { $FIDO2AttestationEnforced }
+                elseif ($PasskeyProfiles.Count -gt 0) {
+                    $DefaultProfile = @($PasskeyProfiles | Where-Object { "$($_.id)" -eq "$($CurrentInfo.defaultPasskeyProfile)" }) | Select-Object -First 1
+                    "$(($DefaultProfile ?? $PasskeyProfiles[0]).attestationEnforcement)" -ne 'disabled'
+                } else { $true }
                 $CurrentInfo.isSelfServiceRegistrationAllowed = if ($PSBoundParameters.ContainsKey('FIDO2SelfServiceRegistration')) { $FIDO2SelfServiceRegistration } else { $true }
+                # Graph validates the whole config on write and requires keyRestrictions on every profile.
+                foreach ($PasskeyProfile in $PasskeyProfiles) {
+                    if (-not $PasskeyProfile.keyRestrictions) {
+                        $PasskeyProfile | Add-Member -NotePropertyName 'keyRestrictions' -NotePropertyValue ([PSCustomObject]@{ isEnforced = $false; enforcementType = 'block'; aaGuids = @() }) -Force
+                    }
+                }
                 $OptionalLogMessage = "with attestation enforced set to $($CurrentInfo.isAttestationEnforced) and self-service registration set to $($CurrentInfo.isSelfServiceRegistrationAllowed)"
             }
         }

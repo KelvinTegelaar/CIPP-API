@@ -261,3 +261,42 @@ Describe 'Get-CIPPBaselinePhishingSimulationsState' {
         }
     }
 }
+
+Describe 'Get-CIPPBaselineSpamFilterPolicyState block-list write params' {
+    BeforeAll {
+        . (Join-Path (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines') 'Get-CIPPBaselineSpamFilterPolicyState.ps1')
+        $script:SpamPolicy = @{ Name = 'CIPP Default Spam Filter Policy'; EnableRegionBlockList = $true; EnableLanguageBlockList = $false }
+        $script:SpamRule = @{ Name = 'CIPP Default Spam Filter Policy'; State = 'Enabled'; Priority = 0; HostedContentFilterPolicy = 'CIPP Default Spam Filter Policy'; RecipientDomainIs = @('contoso.com') }
+    }
+    BeforeEach {
+        Mock New-CIPPDbRequest {
+            switch ($Type) {
+                'ExoHostedContentFilterPolicy' { @($script:SpamPolicy | ConvertTo-Cached) }
+                'ExoHostedContentFilterRule' { @($script:SpamRule | ConvertTo-Cached) }
+                'ExoAcceptedDomains' { @(@{ Name = 'contoso.com' } | ConvertTo-Cached) }
+            }
+        }
+    }
+
+    It 'forces the block-list switches OFF in the write when disabled - omitting them left a tenant-side On in place forever' {
+        # The classic explicitly wrote EnableRegionBlockList=$false when disabled; the
+        # rendered spec omitted it, so grade said Off while the tenant stayed On (proven
+        # live: enableRegionBlockList exp=false got=true after a clean remediation).
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ EnableRegionBlockList = $false } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.extraPolicyParams.PSObject.Properties.Name | Should -Contain 'EnableRegionBlockList'
+        $Prepared.Current.extraPolicyParams.PSObject.Properties.Name | Should -Contain 'EnableLanguageBlockList'
+        $Prepared.Current.extraPolicyParams.EnableRegionBlockList | Should -BeFalse
+        $Prepared.Current.extraPolicyParams.EnableLanguageBlockList | Should -BeFalse
+        $Prepared.Current.extraPolicyParams.PSObject.Properties.Name | Should -Not -Contain 'RegionBlockList'
+        $Prepared.Expected.enableRegionBlockList | Should -BeFalse
+    }
+
+    It 'writes the switch AND the normalized list when enabled with entries, exactly as graded' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ EnableRegionBlockList = $true; RegionBlockList = @('ru', 'kp') } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.extraPolicyParams.EnableRegionBlockList | Should -BeTrue
+        @($Prepared.Current.extraPolicyParams.RegionBlockList) | Should -BeExactly @('KP', 'RU')
+        $Prepared.Expected.enableRegionBlockList | Should -BeTrue
+    }
+}

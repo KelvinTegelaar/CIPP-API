@@ -164,16 +164,32 @@ function Get-CIPPBaselineSpamFilterPolicyState {
     # DERIVED write params the static remediate spec cannot express (On/Off strings from
     # switches). Same derivation as the graded Expected above, so grade and write can
     # never disagree - these were graded but never written, drifting forever.
-    $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]@{
-            IncreaseScoreWithImageLinks    = (& $OnOff $V.IncreaseScoreWithImageLinks)
-            IncreaseScoreWithBizOrInfoUrls = (& $OnOff $V.IncreaseScoreWithBizOrInfoUrls)
-            MarkAsSpamFramesInHtml         = (& $OnOff $V.MarkAsSpamFramesInHtml)
-            MarkAsSpamObjectTagsInHtml     = (& $OnOff $V.MarkAsSpamObjectTagsInHtml)
-            MarkAsSpamEmbedTagsInHtml      = (& $OnOff $V.MarkAsSpamEmbedTagsInHtml)
-            MarkAsSpamFormTagsInHtml       = (& $OnOff $V.MarkAsSpamFormTagsInHtml)
-            MarkAsSpamWebBugsInHtml        = (& $OnOff $V.MarkAsSpamWebBugsInHtml)
-            MarkAsSpamSensitiveWordList    = (& $OnOff $V.MarkAsSpamSensitiveWordList)
-        })
+    $ExtraPolicyParams = [ordered]@{
+        IncreaseScoreWithImageLinks    = (& $OnOff $V.IncreaseScoreWithImageLinks)
+        IncreaseScoreWithBizOrInfoUrls = (& $OnOff $V.IncreaseScoreWithBizOrInfoUrls)
+        MarkAsSpamFramesInHtml         = (& $OnOff $V.MarkAsSpamFramesInHtml)
+        MarkAsSpamObjectTagsInHtml     = (& $OnOff $V.MarkAsSpamObjectTagsInHtml)
+        MarkAsSpamEmbedTagsInHtml      = (& $OnOff $V.MarkAsSpamEmbedTagsInHtml)
+        MarkAsSpamFormTagsInHtml       = (& $OnOff $V.MarkAsSpamFormTagsInHtml)
+        MarkAsSpamWebBugsInHtml        = (& $OnOff $V.MarkAsSpamWebBugsInHtml)
+        MarkAsSpamSensitiveWordList    = (& $OnOff $V.MarkAsSpamSensitiveWordList)
+    }
+    # The block-list switches follow the classic exactly: enabled with entries writes the
+    # switch AND the list, anything else FORCES the switch off - omitting it left a
+    # tenant-side 'on' in place forever while the grade expected 'off' (proven live).
+    if ($V.EnableLanguageBlockList -eq $true -and @(& $SplitList $V.LanguageBlockList 'lower').Count -gt 0) {
+        $ExtraPolicyParams['EnableLanguageBlockList'] = $true
+        $ExtraPolicyParams['LanguageBlockList'] = @(& $SplitList $V.LanguageBlockList 'lower')
+    } else {
+        $ExtraPolicyParams['EnableLanguageBlockList'] = $false
+    }
+    if ($V.EnableRegionBlockList -eq $true -and @(& $SplitList $V.RegionBlockList 'upper').Count -gt 0) {
+        $ExtraPolicyParams['EnableRegionBlockList'] = $true
+        $ExtraPolicyParams['RegionBlockList'] = @(& $SplitList $V.RegionBlockList 'upper')
+    } else {
+        $ExtraPolicyParams['EnableRegionBlockList'] = $false
+    }
+    $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]$ExtraPolicyParams)
 
     @{ Expected = $Expected; Current = $Current }
 }

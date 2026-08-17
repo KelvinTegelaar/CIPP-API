@@ -107,6 +107,40 @@ Describe 'Get-CIPPBaselineAuthenticationMethodsState' {
         Invoke-CIPPBaselineAuthenticationMethods -Remediate $null -TenantFilter $script:Tenant -Current $Current
         Should -Invoke Set-CIPPAuthenticationPolicy -Times 1 -Exactly -ParameterFilter { $AuthenticationMethodId -eq 'SMS' -and $Enabled -eq $false }
     }
+
+    It 'grades blank TAP lifetimes as the defaults, never 0 - Graph refuses lifetimes under 10' {
+        # '' survives ?? - blank TAP fields graded AND wrote 0, which Graph rejected live
+        # ("Accesspass minimum lifetime should be greater or equal to 10").
+        $TapPolicy = @{ authenticationMethodConfigurations = @(
+                @{ id = 'TemporaryAccessPass'; state = 'enabled'; isUsableOnce = $true; defaultLifetimeInMinutes = 60; minimumLifetimeInMinutes = 60; maximumLifetimeInMinutes = 480; defaultLength = 8; includeTargets = @(@{ id = 'all_users'; targetType = 'group' }) }
+            ) }
+        Mock New-CIPPDbRequest { @($TapPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ TAPEnabled = $true; TAPDefaultLifetime = ''; TAPMinLifetime = ''; TAPMaxLifetime = ''; TAPDefaultLength = '' } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.methodsOutOfPolicy).Count | Should -Be 0
+    }
+
+    It 'carries the default TAP lifetimes in the remediation set when the state drifts with blank config' {
+        $TapPolicy = @{ authenticationMethodConfigurations = @(
+                @{ id = 'TemporaryAccessPass'; state = 'disabled'; isUsableOnce = $true; defaultLifetimeInMinutes = 60; minimumLifetimeInMinutes = 60; maximumLifetimeInMinutes = 480; defaultLength = 8; includeTargets = @(@{ id = 'all_users'; targetType = 'group' }) }
+            ) }
+        Mock New-CIPPDbRequest { @($TapPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ TAPEnabled = $true; TAPMinLifetime = '' } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.methodsOutOfPolicy | Should -Match 'state'
+        $Prepared.Current.remediationSets[0].Params.TAPMinimumLifetime | Should -Be 60
+        $Prepared.Current.remediationSets[0].Params.TAPDefaultLength | Should -Be 8
+    }
+
+    It 'grades blank QRCodePin settings as the defaults, never 0' {
+        $QrPolicy = @{ authenticationMethodConfigurations = @(
+                @{ id = 'QRCodePin'; state = 'enabled'; standardQRCodeLifetimeInDays = 365; pinLength = 8; includeTargets = @(@{ id = 'all_users'; targetType = 'group' }) }
+            ) }
+        Mock New-CIPPDbRequest { @($QrPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ QRCodePinEnabled = $true; QRCodeLifetimeInDays = ''; QRCodePinLength = '' } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.methodsOutOfPolicy).Count | Should -Be 0
+    }
 }
 
 Describe 'Get-CIPPBaselineFIDO2PasskeyProfilesState' {

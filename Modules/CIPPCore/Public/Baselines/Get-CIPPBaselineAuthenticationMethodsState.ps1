@@ -119,11 +119,16 @@ function Get-CIPPBaselineAuthenticationMethodsState {
             }
             'TemporaryAccessPass' {
                 if ($Method.Enabled) {
-                    $UsableOnce = [System.Convert]::ToBoolean("$($V.TAPUsableOnce.value ?? $V.TAPUsableOnce ?? 'true')")
-                    $DefaultLifetime = [int]"$($V.TAPDefaultLifetime ?? 60)"
-                    $MinLifetime = [int]"$($V.TAPMinLifetime ?? 60)"
-                    $MaxLifetime = [int]"$($V.TAPMaxLifetime ?? 480)"
-                    $DefaultLength = [int]"$($V.TAPDefaultLength ?? 8)"
+                    # '' survives ?? - a blank lifetime graded AND wrote 0, which Graph
+                    # rejects ("Accesspass minimum lifetime should be greater or equal to
+                    # 10", proven live). Blank means the default, not zero.
+                    $IntOrDefault = { param($Value, $Default) $Raw = "$($Value.value ?? $Value)"; if ([string]::IsNullOrWhiteSpace($Raw)) { [int]$Default } else { [int]$Raw } }
+                    $UsableOnceRaw = "$($V.TAPUsableOnce.value ?? $V.TAPUsableOnce)"
+                    $UsableOnce = [System.Convert]::ToBoolean("$(if ([string]::IsNullOrWhiteSpace($UsableOnceRaw)) { 'true' } else { $UsableOnceRaw })")
+                    $DefaultLifetime = & $IntOrDefault $V.TAPDefaultLifetime 60
+                    $MinLifetime = & $IntOrDefault $V.TAPMinLifetime 60
+                    $MaxLifetime = & $IntOrDefault $V.TAPMaxLifetime 480
+                    $DefaultLength = & $IntOrDefault $V.TAPDefaultLength 8
                     if ([System.Convert]::ToBoolean("$($Config.isUsableOnce)") -ne $UsableOnce) { $Drifts.Add("$($Method.Label): isUsableOnce should be '$UsableOnce'") }
                     if ([int]"$($Config.defaultLifetimeInMinutes)" -ne $DefaultLifetime) { $Drifts.Add("$($Method.Label): defaultLifetimeInMinutes '$($Config.defaultLifetimeInMinutes)' should be '$DefaultLifetime'") }
                     if ([int]"$($Config.minimumLifetimeInMinutes)" -ne $MinLifetime) { $Drifts.Add("$($Method.Label): minimumLifetimeInMinutes '$($Config.minimumLifetimeInMinutes)' should be '$MinLifetime'") }
@@ -138,8 +143,11 @@ function Get-CIPPBaselineAuthenticationMethodsState {
             }
             'QRCodePin' {
                 if ($Method.Enabled) {
-                    $Lifetime = [int]"$($V.QRCodeLifetimeInDays ?? 365)"
-                    $PinLength = [int]"$($V.QRCodePinLength ?? 8)"
+                    # Same '' trap as TAP: blank grades/writes 0 and the helper's
+                    # ValidateRange refuses it before Graph even sees the write.
+                    $IntOrDefault = { param($Value, $Default) $Raw = "$($Value.value ?? $Value)"; if ([string]::IsNullOrWhiteSpace($Raw)) { [int]$Default } else { [int]$Raw } }
+                    $Lifetime = & $IntOrDefault $V.QRCodeLifetimeInDays 365
+                    $PinLength = & $IntOrDefault $V.QRCodePinLength 8
                     if ([int]"$($Config.standardQRCodeLifetimeInDays)" -ne $Lifetime) { $Drifts.Add("$($Method.Label): standardQRCodeLifetimeInDays should be '$Lifetime'") }
                     if ([int]"$($Config.pinLength)" -ne $PinLength) { $Drifts.Add("$($Method.Label): pinLength should be '$PinLength'") }
                     $Params['QRCodeLifetimeInDays'] = $Lifetime
