@@ -91,6 +91,85 @@ Describe 'Invoke-CIPPBaselineStandard -GradeOnly' {
     }
 }
 
+Describe 'Invoke-CIPPBaselineStandard render option-unwrap' {
+    BeforeEach {
+        Mock Get-CIPPAzDataTableEntity { @() }
+        Mock Set-CIPPBaselineResult { }
+        Mock Add-CIPPBaselineHistoryEvent { }
+        Mock Send-CIPPBaselineAlert { }
+        Mock Write-LogMessage { }
+    }
+
+    It 'unwraps option objects and option arrays before splicing them into the spec' {
+        # A declarative standard with picker variables: the saved values are wrappers
+        # ({label, value}); the render must splice the VALUES, or the write ships
+        # '@{label=...}' strings (single) or raw objects (arrays) to the API.
+        Mock Get-CIPPBaselineDefinition { [PSCustomObject]@{
+                name = 'RenderStd'; label = 'Render Standard'; requiredCapabilities = @(); variables = [PSCustomObject]@{}
+                read = [PSCustomObject]@{ cacheType = 'TestCache' }
+                expected = [PSCustomObject]@{ picked = '%MyPick%'; recipients = '%MyList%' }
+            } }
+        Mock New-CIPPDbRequest { [PSCustomObject]@{ picked = 'one'; recipients = @('a@x.com', 'b@x.com') } }
+        $Item = @{
+            TenantFilter = $script:Tenant; Standard = 'RenderStd'; BaseName = 'RenderStd'
+            Variables = [PSCustomObject]@{
+                MyPick = [PSCustomObject]@{ label = 'Option One'; value = 'one' }
+                MyList = @([PSCustomObject]@{ label = 'A'; value = 'a@x.com' }, [PSCustomObject]@{ label = 'B'; value = 'b@x.com' })
+            }
+            Tiers = @(); AlertEnabled = $false
+        }
+        $Result = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare'
+        $Result.ExpectedValue.picked | Should -Be 'one'
+        @($Result.ExpectedValue.recipients) | Should -Be @('a@x.com', 'b@x.com')
+        $Result.Compliant | Should -BeTrue
+    }
+
+    It 'prepare hooks receive UNWRAPPED variables - direct interpolation gets the value, not the wrapper' {
+        # Hooks read $Item.Variables directly (no render pass); a hook interpolating a
+        # picker variable raw graded '@{label=...}' against every object and made the
+        # whole tenant an offender.
+        function Get-CIPPBaselineHookProbeState { param($Item, $TenantFilter)
+            $script:HookSawVariable = $Item.Variables.MyPick
+            @{ Expected = [PSCustomObject]@{ ok = $true }; Current = [PSCustomObject]@{ ok = $true } }
+        }
+        Mock Get-CIPPBaselineDefinition { [PSCustomObject]@{
+                name = 'HookProbe'; label = 'Hook Probe'; requiredCapabilities = @(); variables = [PSCustomObject]@{}
+                read = [PSCustomObject]@{ cacheType = 'TestCache' }
+                prepare = 'Get-CIPPBaselineHookProbeState'
+            } }
+        $script:HookSawVariable = $null
+        $Item = @{
+            TenantFilter = $script:Tenant; Standard = 'HookProbe'; BaseName = 'HookProbe'
+            Variables = @{ MyPick = [ordered]@{ label = 'Option One'; value = 'one' } }   # hashtable-shaped, as the durable pipeline delivers
+            Tiers = @(); AlertEnabled = $false
+        }
+        $null = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare'
+        $script:HookSawVariable | Should -Be 'one'
+    }
+}
+
+Describe 'Invoke-CIPPBaselineGraphBulkSweep batch ids' {
+    BeforeAll {
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineGraphBulkSweep.ps1')
+        function New-GraphBulkRequest { param($tenantid, $Requests, $scope, $asapp, $Version) }
+    }
+
+    It 'every batch request carries a non-empty sequential id - Graph rejects empty ids outright' {
+        # "$($Index++)" emits NOTHING in PowerShell, which shipped every request with an
+        # empty id and failed every sweep with 'Id property cannot be empty'.
+        $script:CapturedRequests = $null
+        Mock New-GraphBulkRequest {
+            $script:CapturedRequests = @($Requests)
+            @($Requests | ForEach-Object { [PSCustomObject]@{ id = $_.id; status = 204 } })
+        }
+        $Remediate = [PSCustomObject]@{ writes = @([PSCustomObject]@{ method = 'PATCH'; uri = 'users/%id%'; body = [PSCustomObject]@{ accountEnabled = $false } }) }
+        $Current = [PSCustomObject]@{ targets = @([PSCustomObject]@{ id = 'user-1' }, [PSCustomObject]@{ id = 'user-2' }) }
+        Invoke-CIPPBaselineGraphBulkSweep -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current
+        @($script:CapturedRequests | ForEach-Object { "$($_.id)" }) | Should -Be @('0', '1')
+        @($script:CapturedRequests)[1].url | Should -Be '/users/user-2'
+    }
+}
+
 Describe 'Convert-CIPPBaselineResolvedEntity identity labels' {
     BeforeAll {
         . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Convert-CIPPBaselineResolvedEntity.ps1')

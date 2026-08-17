@@ -42,6 +42,18 @@ function Invoke-CIPPBaselineStandard {
     if ($null -ne $Item.Variables -and $Item.Variables -isnot [System.Management.Automation.PSCustomObject]) {
         $Item.Variables = ConvertTo-Json -Depth 100 -InputObject $Item.Variables | ConvertFrom-Json
     }
+    # And unwrap the pickers' option WRAPPERS ({label, value}) - single values and array
+    # elements - so hooks that interpolate a variable directly get the intended value,
+    # never '@{label=...; value=...}'. Plain values have no .value and pass through.
+    if ($Item.Variables -is [System.Management.Automation.PSCustomObject]) {
+        foreach ($VariableProperty in $Item.Variables.PSObject.Properties) {
+            $VariableProperty.Value = if ($VariableProperty.Value -is [array]) {
+                @($VariableProperty.Value | ForEach-Object { $_.value ?? $_ })
+            } else {
+                $VariableProperty.Value.value ?? $VariableProperty.Value
+            }
+        }
+    }
 
     $TenantFilter = $Item.TenantFilter
     $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
@@ -65,6 +77,14 @@ function Invoke-CIPPBaselineStandard {
         foreach ($Variable in (($Variables ?? [PSCustomObject]@{}).PSObject.Properties)) {
             $Token = '%{0}%' -f $Variable.Name
             $Value = $Variable.Value
+            # The UI's pickers save option WRAPPERS ({label, value}), single or as array
+            # elements. Splicing a wrapper into a write sends the object (or its
+            # stringified '@{label=...}') to the API instead of the intended value.
+            if ($Value -is [array]) {
+                $Value = @($Value | ForEach-Object { $_.value ?? $_ })
+            } else {
+                $Value = $Value.value ?? $Value
+            }
             # A number field is saved as a STRING ("30", not 30) - the frontend posts what the
             # input holds. Splicing that into an exact "%var%" token yields a JSON string, and
             # the compare is type-strict: expected "50" never equals a cached 50, so the

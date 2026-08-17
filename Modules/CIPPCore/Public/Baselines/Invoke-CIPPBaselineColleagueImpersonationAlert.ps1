@@ -52,11 +52,14 @@ function Invoke-CIPPBaselineColleagueImpersonationAlert {
             ApplyHtmlDisclaimerLocation       = 'Prepend'
             ApplyHtmlDisclaimerFallbackAction = 'Wrap'
             ApplyHtmlDisclaimerText           = $RuleHtml
-            ExceptIfSenderDomainIs            = @($ExemptDomains)
             HeaderMatchesMessageHeader        = 'From'
             HeaderMatchesPatterns             = @($RuleState.Names)
             Comments                          = "CIPP managed rule ($($RuleState.Range)) - Letters $($RuleState.Range)"
         }
+        # Both exception lists only when non-empty: Exchange rejects an empty
+        # ExceptIfSenderDomainIs outright, which broke every onmicrosoft-only tenant
+        # (their sole accepted domain is filtered off the auto-exemption list).
+        if ($ExemptDomains.Count -gt 0) { $CmdParams['ExceptIfSenderDomainIs'] = @($ExemptDomains) }
         if ($ExemptSenders.Count -gt 0) { $CmdParams['ExceptIfFromAddressContainsWords'] = @($ExemptSenders) }
 
         try {

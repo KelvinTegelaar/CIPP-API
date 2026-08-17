@@ -77,10 +77,14 @@ function Invoke-CIPPBaselineGraphBulkSweep {
         $Index = 0
         $Requests = foreach ($Object in $Objects) {
             $Request = @{
-                id     = "$($Index++)"
+                # NOT "$($Index++)": an increment inside a subexpression emits NOTHING in
+                # PowerShell, which shipped every batch request with an empty id - Graph
+                # rejects the whole batch with 'Id property cannot be empty'.
+                id     = "$Index"
                 method = ($Write.method ?? 'PATCH')
                 url    = "/$((& $Expand $Write.uri $Object) -replace '^/')"
             }
+            $Index++
             if ($Write.PSObject.Properties.Name -contains 'body' -and $null -ne $Write.body) {
                 $Request['body'] = & $Expand $Write.body $Object
                 $Request['headers'] = @{ 'Content-Type' = 'application/json' }
