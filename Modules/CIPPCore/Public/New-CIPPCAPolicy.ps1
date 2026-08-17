@@ -99,6 +99,14 @@ function New-CIPPCAPolicy {
         return $UserIds
     }
 
+    # Custom variables must be resolved before the dependency lookups below. The only other
+    # substitution point is the Graph request layer (New-GraphPOSTRequest), which runs after the
+    # named-location / auth-strength / auth-context name matching - leaving those comparing raw
+    # %tokens% against real display names, so a location that exists is never matched: a duplicate
+    # is created on every deploy and the policy body keeps the token, which Graph then rejects
+    # (1040: NamedLocation with id <displayName> does not exist in the directory).
+    $RawJSON = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $RawJSON -EscapeForJson
+
     $displayName = ($RawJSON | ConvertFrom-Json).displayName
 
     $JSONobj = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty ID, GUID, *time*

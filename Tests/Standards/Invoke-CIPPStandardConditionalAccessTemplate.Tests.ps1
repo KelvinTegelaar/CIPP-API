@@ -25,6 +25,7 @@ BeforeAll {
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $Tenant2, $message, $sev, $headers) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $Tenant, [bool]$LicenseAvailable = $true) }
     function Get-NormalizedError { [CmdletBinding()] param($Message) $Message }
+    function Get-CIPPTextReplacement { [CmdletBinding()] param($TenantFilter, $Text, [switch]$EscapeForJson) $Text }
 
     . $StandardPath
 
