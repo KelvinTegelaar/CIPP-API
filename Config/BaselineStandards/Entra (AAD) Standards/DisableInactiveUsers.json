@@ -35,6 +35,13 @@
           "message": "Minimum value is 30"
         }
       }
+    },
+    "excludedUsers": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Excluded accounts (UPNs never disabled - breakglass, service accounts)"
     }
   },
   "expected": {

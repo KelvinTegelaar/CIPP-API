@@ -53,6 +53,13 @@ function Get-CIPPBaselineDisableInactiveUsersState {
         $Inactive = @($Inactive | Where-Object { $Reactivated -notcontains $_.id })
     }
 
+    # Operator-excluded accounts (breakglass, service accounts) are never offenders -
+    # disabling a breakglass account through an inactivity sweep is how lockouts happen.
+    $ExcludedUsers = @(@($Item.Variables.excludedUsers) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
+    if ($ExcludedUsers.Count -gt 0) {
+        $Inactive = @($Inactive | Where-Object { "$($_.userPrincipalName)" -notin $ExcludedUsers })
+    }
+
     @{
         Current = [PSCustomObject]@{
             offenders = @($Inactive.userPrincipalName | Sort-Object)

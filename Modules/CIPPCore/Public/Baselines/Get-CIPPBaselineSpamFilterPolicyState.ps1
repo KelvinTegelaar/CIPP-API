@@ -161,6 +161,19 @@ function Get-CIPPBaselineSpamFilterPolicyState {
     $Current | Add-Member -NotePropertyName 'ruleLinkedPolicy' -NotePropertyValue "$($Rule.HostedContentFilterPolicy)"
     $Current | Add-Member -NotePropertyName 'acceptedDomains' -NotePropertyValue @($AcceptedDomains)
     $Current | Add-Member -NotePropertyName 'skipRule' -NotePropertyValue $IsDefaultPolicy
+    # DERIVED write params the static remediate spec cannot express (On/Off strings from
+    # switches). Same derivation as the graded Expected above, so grade and write can
+    # never disagree - these were graded but never written, drifting forever.
+    $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]@{
+            IncreaseScoreWithImageLinks    = (& $OnOff $V.IncreaseScoreWithImageLinks)
+            IncreaseScoreWithBizOrInfoUrls = (& $OnOff $V.IncreaseScoreWithBizOrInfoUrls)
+            MarkAsSpamFramesInHtml         = (& $OnOff $V.MarkAsSpamFramesInHtml)
+            MarkAsSpamObjectTagsInHtml     = (& $OnOff $V.MarkAsSpamObjectTagsInHtml)
+            MarkAsSpamEmbedTagsInHtml      = (& $OnOff $V.MarkAsSpamEmbedTagsInHtml)
+            MarkAsSpamFormTagsInHtml       = (& $OnOff $V.MarkAsSpamFormTagsInHtml)
+            MarkAsSpamWebBugsInHtml        = (& $OnOff $V.MarkAsSpamWebBugsInHtml)
+            MarkAsSpamSensitiveWordList    = (& $OnOff $V.MarkAsSpamSensitiveWordList)
+        })
 
     @{ Expected = $Expected; Current = $Current }
 }

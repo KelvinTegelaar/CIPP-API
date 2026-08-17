@@ -56,7 +56,10 @@ function Get-CIPPBaselineTeamsFederationConfigurationState {
     if ($State.BlockedDomains) {
         $CurrentBlockedDomains = @($State.BlockedDomains | ForEach-Object { if ($_ -is [string]) { $_ } elseif ($_.Domain) { "$($_.Domain)" } else { "$_" } }) | Sort-Object
     }
-    $CurrentAllowed = if ($CurrentAllowedDomains.Count -eq 0) { 'AllowAllKnownDomains' } else { @($CurrentAllowedDomains) }
+    # The comma is load-bearing: an if-expression's pipeline output unwraps one array
+    # level, which turned a single allowed domain into a SCALAR - graded against the
+    # expected ARRAY, identical text drifted forever.
+    $CurrentAllowed = if ($CurrentAllowedDomains.Count -eq 0) { 'AllowAllKnownDomains' } else { , @($CurrentAllowedDomains) }
 
     # BlockAllExternal only grades the federation switch - the classic ignored both lists there.
     if ($DomainControl -eq 'BlockAllExternal') {

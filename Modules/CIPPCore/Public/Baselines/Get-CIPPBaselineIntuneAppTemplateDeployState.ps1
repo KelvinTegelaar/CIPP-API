@@ -42,6 +42,13 @@ function Get-CIPPBaselineIntuneAppTemplateDeployState {
             $Config = if ($RawConfig -is [string]) { $RawConfig | ConvertFrom-CippAppConfig } else { $RawConfig }
             $AppType = [string]$AppTypes[$i]
             $DisplayName = [string]($Config.ApplicationName ?? $Config.displayName ?? $AppNames[$i])
+            if ([string]::IsNullOrWhiteSpace($DisplayName)) {
+                # A nameless app cannot be created in Intune and cannot be matched against
+                # deployed apps - broken template data, skipped with a log instead of an
+                # unnameable missing-app row and a doomed deploy.
+                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "App template '$($TemplateData.Displayname)' contains an app with no name (type $AppType) - skipped. Fix the template." -Sev 'Warning'
+                continue
+            }
             $IsDeployed = if ($AppType -eq 'officeApp') { $OfficeDeployed } else { $DisplayName -in $CurrentAppNames }
             if (-not $IsDeployed) {
                 $MissingApps.Add([PSCustomObject]@{

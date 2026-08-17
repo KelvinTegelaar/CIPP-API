@@ -167,6 +167,16 @@ Describe 'Get-CIPPBaselineTeamsFederationConfigurationState' {
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
     }
 
+    It 'a SINGLE allowed domain still grades as an ARRAY - the if-expression unwrap made it a scalar' {
+        # One domain drifted forever with visually identical want/got: expected array vs
+        # current scalar after the assignment unwrapped the one-element pipeline.
+        Mock New-CIPPDbRequest { @(@{ AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false; AllowFederatedUsers = $true; AllowedDomains = @{ AllowedDomain = @(@{ Domain = 'googe.com' }) }; BlockedDomains = @() } | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DomainControl = 'AllowSpecificExternal'; DomainList = 'googe.com'; AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false } }
+        $Prepared = Get-CIPPBaselineTeamsFederationConfigurationState -Item $Item -TenantFilter $script:Tenant
+        ($Prepared.Current.allowedDomains -is [array]) | Should -BeTrue
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
     It 'ignores both domain lists in BlockAllExternal mode, like the classic' {
         Mock New-CIPPDbRequest { @(@{ AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false; AllowFederatedUsers = $false; AllowedDomains = @{ AllowedDomain = @('stale.com') }; BlockedDomains = @('old.com') } | ConvertTo-Cached) }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DomainControl = 'BlockAllExternal'; AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false } }

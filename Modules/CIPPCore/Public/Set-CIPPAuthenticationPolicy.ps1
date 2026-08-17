@@ -74,12 +74,15 @@ function Set-CIPPAuthenticationPolicy {
                     $CurrentInfo.featureSettings.companionAppAllowedState.state = $MicrosoftAuthenticatorCompanionApp
                     $AuthChanges.Add("companion app set to $MicrosoftAuthenticatorCompanionApp")
                 }
-                # numberMatchingRequiredState is permanently enabled by Microsoft and can no longer be toggled
-                $CurrentInfo.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
                 if ($AuthChanges.Count -gt 0) {
                     $OptionalLogMessage = "with $($AuthChanges -join ', ')"
                 }
             }
+            # numberMatchingRequiredState is permanently enabled by Microsoft and can no
+            # longer be toggled - Graph rejects ANY write that echoes it back. This must
+            # strip on BOTH paths: it previously only ran on enable, so every DISABLE
+            # echoed the deprecated field and failed.
+            $CurrentInfo.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
         }
 
         # SMS

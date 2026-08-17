@@ -50,9 +50,15 @@ function Push-CIPPBaselineStandard {
                     $Verify = @{ Item = $Item.Item; Mode = 'oneoff'; TriggeredBy = ($Item.TriggeredBy ?? 'schedule'); RunId = $Item.RunId }
                     $Verdict = Invoke-CIPPBaselineStandard @Verify -GradeOnly
                     if ($Verdict -and -not $Verdict.Compliant) {
-                        Start-Sleep -Seconds 10
-                        & $RefreshCaches
-                        $Verdict = Invoke-CIPPBaselineStandard @Verify -GradeOnly
+                        # Two growing backoffs: EXO and Graph reads routinely lag writes
+                        # beyond 10s on production tenants, and a cache captured mid-lag
+                        # stays poisoned until the scheduled collection.
+                        foreach ($BackoffSeconds in @(10, 30)) {
+                            Start-Sleep -Seconds $BackoffSeconds
+                            & $RefreshCaches
+                            $Verdict = Invoke-CIPPBaselineStandard @Verify -GradeOnly
+                            if (-not ($Verdict -and -not $Verdict.Compliant)) { break }
+                        }
                         if ($Verdict -and -not $Verdict.Compliant) {
                             Write-LogMessage -API 'Baselines' -tenant $Item.Item.TenantFilter -message "The refreshed cache still grades `"$($Item.Item.Standard)`" as drifted after remediation - either the write did not take effect or the API is lagging beyond the retry window; the next compare may re-report drift until the scheduled collection." -Sev 'Warning'
                         }

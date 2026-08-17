@@ -45,6 +45,14 @@ function Invoke-CIPPBaselineExoPolicyRule {
     if ([string]::IsNullOrWhiteSpace($PolicyName)) { throw 'ExoPolicyRule: the prepare hook resolved no policy name.' }
 
     $PolicyParams = & $ToHashtable $Remediate.policyParams
+    # The prepare hook may carry DERIVED policy parameters a static spec cannot express -
+    # On/Off strings computed from switches, defaults for unset variables. Hook values are
+    # authoritative (they overwrite same-named spec params): grade and write then share
+    # one derivation and can never disagree, which is what left graded-but-never-written
+    # properties drifting forever.
+    foreach ($Extra in ($Current.extraPolicyParams ?? [PSCustomObject]@{}).PSObject.Properties) {
+        $PolicyParams[$Extra.Name] = $Extra.Value
+    }
     if ($Current.policyExists -eq $true) {
         $PolicyParams['Identity'] = $PolicyName
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-$($Remediate.policyCmdlet)" -cmdParams $PolicyParams -UseSystemMailbox $true

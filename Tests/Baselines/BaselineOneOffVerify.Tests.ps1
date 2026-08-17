@@ -190,6 +190,113 @@ Describe 'Convert-CIPPBaselineResolvedEntity identity labels' {
     }
 }
 
+Describe 'Get-CIPPBaselineDisableInactiveUsersState exclusions' {
+    BeforeAll {
+        function Get-CIPPBaselineCacheRows { param($TenantFilter, $Type, $CollectorType, $CollectorArgs) }
+        function Test-CIPPBaselineCacheCollected { param($TenantFilter, $Type) $true }
+        function New-GraphGetRequest { param($uri, $tenantid, $AsApp, $scope) }
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineDisableInactiveUsersState.ps1')
+    }
+
+    It 'excluded accounts are never offenders - a breakglass account must not be sweep-disabled' {
+        $Old = (Get-Date).AddDays(-400).ToUniversalTime().ToString('o')
+        Mock New-CIPPDbRequest { @(
+                [PSCustomObject]@{ id = 'u1'; userPrincipalName = 'breakglass@contoso.com'; userType = 'Member'; accountEnabled = $true; onPremisesSyncEnabled = $false; createdDateTime = $Old; signInActivity = [PSCustomObject]@{ lastSuccessfulSignInDateTime = $Old } }
+                [PSCustomObject]@{ id = 'u2'; userPrincipalName = 'stale@contoso.com'; userType = 'Member'; accountEnabled = $true; onPremisesSyncEnabled = $false; createdDateTime = $Old; signInActivity = [PSCustomObject]@{ lastSuccessfulSignInDateTime = $Old } }
+            ) }
+        Mock New-GraphGetRequest { @() }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ days = 180; excludedUsers = @([PSCustomObject]@{ value = 'breakglass@contoso.com' }) } }
+        $Prepared = Get-CIPPBaselineDisableInactiveUsersState -Item $Item -TenantFilter 'contoso.onmicrosoft.com'
+        @($Prepared.Current.offenders) | Should -Be @('stale@contoso.com')
+        @($Prepared.Current.targets | ForEach-Object { $_.id }) | Should -Be @('u2')
+    }
+}
+
+Describe 'Invoke-CIPPBaselineExoPolicyRule extraPolicyParams' {
+    BeforeAll {
+        function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $useSystemMailbox) }
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineExoPolicyRule.ps1')
+    }
+
+    It 'merges hook-derived policy params over the rendered spec - grade and write share one derivation' {
+        Mock New-ExoRequest { }
+        $Remediate = [PSCustomObject]@{
+            policyCmdlet = 'HostedContentFilterPolicy'; ruleCmdlet = 'HostedContentFilterRule'
+            policyParams = [PSCustomObject]@{ SpamAction = 'Quarantine'; BulkThreshold = 7 }
+            ruleParams   = [PSCustomObject]@{ Priority = 0 }
+        }
+        $Current = [PSCustomObject]@{
+            policyName = 'CIPP Spam Policy'; policyExists = $true; ruleName = 'CIPP Spam Policy'; ruleExists = $true
+            ruleLinkedPolicy = 'CIPP Spam Policy'; acceptedDomains = @('contoso.com'); skipRule = $false
+            extraPolicyParams = [PSCustomObject]@{ MarkAsSpamFramesInHtml = 'On'; BulkThreshold = 9 }
+        }
+        Invoke-CIPPBaselineExoPolicyRule -Remediate $Remediate -TenantFilter 'contoso.onmicrosoft.com' -Current $Current
+        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
+            $cmdlet -eq 'Set-HostedContentFilterPolicy' -and
+            $cmdParams.MarkAsSpamFramesInHtml -eq 'On' -and
+            $cmdParams.BulkThreshold -eq 9 -and
+            $cmdParams.SpamAction -eq 'Quarantine'
+        }
+    }
+}
+
+Describe 'Invoke-CIPPBaselineEnableFIDO2 passkey profile normalization' {
+    BeforeAll {
+        function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
+        function New-GraphPostRequest { param($uri, $tenantid, $type, $body, $AsApp, $ContentType) }
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineEnableFIDO2.ps1')
+    }
+
+    It 'gives profiles missing keyRestrictions the neutral shape before the PATCH - Graph validates the whole config' {
+        Mock New-GraphGetRequest { [PSCustomObject]@{
+                state = 'disabled'; isAttestationEnforced = $false; isSelfServiceRegistrationAllowed = $false
+                passkeyProfiles = @(
+                    [PSCustomObject]@{ displayName = 'Legacy'; },
+                    [PSCustomObject]@{ displayName = 'Modern'; keyRestrictions = [PSCustomObject]@{ isEnforced = $true; enforcementType = 'allow'; aaGuids = @('g1') } }
+                )
+            } }
+        Mock New-GraphPostRequest { }
+        Invoke-CIPPBaselineEnableFIDO2 -Remediate ([PSCustomObject]@{}) -TenantFilter 'contoso.onmicrosoft.com' -Current $null
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            $type -eq 'PATCH' -and $AsApp -eq $true -and
+            ($body | ConvertFrom-Json).state -eq 'enabled' -and
+            @(($body | ConvertFrom-Json).passkeyProfiles)[0].keyRestrictions.isEnforced -eq $false -and
+            @(($body | ConvertFrom-Json).passkeyProfiles)[1].keyRestrictions.enforcementType -eq 'allow'
+        }
+    }
+}
+
+Describe 'Get-CIPPBaselineDetectCADriftState SharePoint side-effect policies' {
+    BeforeAll {
+        function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
+        function Get-CIPPBaselineWorkItems { param($TenantFilter) }
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineDetectCADriftState.ps1')
+    }
+    BeforeEach {
+        Mock Get-CIPPAzDataTableEntity { @() }
+        Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'X-Count'; DataCount = 2 } }
+        Mock New-CIPPDbRequest { @(
+                [PSCustomObject]@{ displayName = '[SharePoint admin center]Use app-enforced Restrictions for browser access - 2026/08/17'; state = 'enabled'; id = 'sp-1' }
+                [PSCustomObject]@{ displayName = 'Rogue Admin Policy'; state = 'enabled'; id = 'rogue-1' }
+            ) }
+    }
+
+    It 'does not flag [SharePoint admin center] policies when an unmanaged-device access standard applies' {
+        # unmanagedSync/OWAAttachmentRestrictions turn on app-enforced restrictions, and
+        # SharePoint auto-creates these CA policies - a managed side-effect, not drift.
+        Mock Get-CIPPBaselineWorkItems { @([PSCustomObject]@{ BaseName = 'unmanagedSync'; Variables = [PSCustomObject]@{} }) }
+        $Prepared = Get-CIPPBaselineDetectCADriftState -Item ([PSCustomObject]@{ Variables = [PSCustomObject]@{} }) -TenantFilter 'contoso.onmicrosoft.com'
+        @($Prepared.Current.PSObject.Properties.Name) | Should -Not -Contain '[SharePoint admin center]Use app-enforced Restrictions for browser access - 2026/08/17'
+        @($Prepared.Current.PSObject.Properties.Name) | Should -Contain 'Rogue Admin Policy'
+    }
+
+    It 'still flags [SharePoint admin center] policies when NO access standard applies - then somebody clicked the portal' {
+        Mock Get-CIPPBaselineWorkItems { @() }
+        $Prepared = Get-CIPPBaselineDetectCADriftState -Item ([PSCustomObject]@{ Variables = [PSCustomObject]@{} }) -TenantFilter 'contoso.onmicrosoft.com'
+        @($Prepared.Current.PSObject.Properties.Name) | Should -Contain '[SharePoint admin center]Use app-enforced Restrictions for browser access - 2026/08/17'
+    }
+}
+
 Describe 'Push-CIPPBaselineStandard oneoff verification' {
     BeforeEach {
         $script:GradeCalls = 0
@@ -229,14 +336,15 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $Sev -eq 'Warning' }
     }
 
-    It 'still stale after the retry: warns and STOPS - one retry, never a loop' {
+    It 'still stale after BOTH retries: warns and STOPS - two growing backoffs, never a loop' {
         Mock Invoke-CIPPBaselineStandard {
             if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $false } }
             [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
         }
         Push-CIPPBaselineStandard -Item $script:PushItem
-        Should -Invoke Set-CIPPDBCacheTestCache -Times 2 -Exactly
-        $script:GradeCalls | Should -Be 2
+        Should -Invoke Set-CIPPDBCacheTestCache -Times 3 -Exactly
+        $script:GradeCalls | Should -Be 3
+        Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 30 }
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Warning' -and $message -like '*still grades*' }
     }
 

@@ -300,6 +300,19 @@ Describe 'Get-CIPPBaselineIntuneAppTemplateDeployState' {
         @($Prepared.Current.missingAppObjects)[0].AppType | Should -Be 'StoreApp'
     }
 
+    It 'a NAMELESS template app is skipped with a warning instead of an unnameable missing-app row' {
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ JSON = (@{ Displayname = 'Broken'; Apps = @(
+                        @{ appType = 'chocolateyApp'; appName = ''; config = @{ AssignTo = 'AllDevices' } }
+                        @{ appType = 'StoreApp'; appName = '7zip'; config = @{ ApplicationName = '7-Zip' } }
+                    ) } | ConvertTo-Json -Depth 10) } }
+        Mock New-CIPPDbRequest { @((@{ displayName = 'nothing'; '@odata.type' = '#microsoft.graph.win32LobApp' } | ConvertTo-Cached)) }
+        Mock Write-LogMessage { }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ templateIds = @('t-broken') } }
+        $Prepared = Get-CIPPBaselineIntuneAppTemplateDeployState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.missingApps) | Should -Be @('7-Zip')
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $message -like '*no name*' }
+    }
+
     It 'the executor maps template types to queue types and continues past per-app failures' {
         Mock New-CIPPIntuneAppDeployment { if ($AppConfig.Applicationname -eq 'BadApp') { throw 'upload refused' } }
         $Current = [PSCustomObject]@{ missingAppObjects = @(

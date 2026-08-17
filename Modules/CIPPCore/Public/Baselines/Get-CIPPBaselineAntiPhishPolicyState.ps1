@@ -121,6 +121,25 @@ function Get-CIPPBaselineAntiPhishPolicyState {
     $Current | Add-Member -NotePropertyName 'ruleLinkedPolicy' -NotePropertyValue "$($Rule.AntiPhishPolicy)"
     $Current | Add-Member -NotePropertyName 'acceptedDomains' -NotePropertyValue @($AcceptedDomains)
     $Current | Add-Member -NotePropertyName 'mdoLicensed' -NotePropertyValue $MDOLicensed
+    # DERIVED write params the static remediate spec cannot express. Same derivations as
+    # the graded Expected above, so grade and write can never disagree - these fifteen
+    # were graded but never written, drifting forever. Blank optional actions/tags are
+    # omitted: sending an empty enum errors, and the operator has not expressed intent.
+    $ExtraPolicyParams = [ordered]@{
+        EnableMailboxIntelligence           = $true
+        EnableMailboxIntelligenceProtection = $true
+        EnableTargetedDomainsProtection     = $true
+        EnableTargetedUserProtection        = $true
+        EnableOrganizationDomainsProtection = $true
+        EnableSimilarUsersSafetyTips        = [bool]($V.EnableSimilarUsersSafetyTips -eq $true)
+        EnableSimilarDomainsSafetyTips      = [bool]($V.EnableSimilarDomainsSafetyTips -eq $true)
+        EnableUnusualCharactersSafetyTips   = [bool]($V.EnableUnusualCharactersSafetyTips -eq $true)
+    }
+    if (-not [string]::IsNullOrWhiteSpace("$($V.PhishThresholdLevel)")) { $ExtraPolicyParams['PhishThresholdLevel'] = [int]"$($V.PhishThresholdLevel)" }
+    foreach ($ActionParam in @('MailboxIntelligenceProtectionAction', 'MailboxIntelligenceQuarantineTag', 'TargetedUserProtectionAction', 'TargetedUserQuarantineTag', 'TargetedDomainProtectionAction', 'TargetedDomainQuarantineTag')) {
+        if (-not [string]::IsNullOrWhiteSpace("$($V.$ActionParam)")) { $ExtraPolicyParams[$ActionParam] = "$($V.$ActionParam)" }
+    }
+    $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]$ExtraPolicyParams)
 
     @{ Expected = $Expected; Current = $Current }
 }

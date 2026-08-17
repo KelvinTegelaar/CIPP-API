@@ -27,6 +27,12 @@ function Get-CIPPBaselineDefenderExclusionPolicyState {
     $ExpectedExtensions = @(("$($V.excludedExtensions)" -replace ' ', '') -split ',' | Where-Object { $_ } | Sort-Object)
     $ExpectedPaths = @("$($V.excludedPaths)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object)
     $ExpectedProcesses = @("$($V.excludedProcesses)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object)
+    # Nothing configured means nothing to enforce: a settings catalog policy with zero
+    # exclusions never materializes, so grading policyExists against an all-empty config
+    # demanded a policy the write cannot produce.
+    if ($ExpectedExtensions.Count -eq 0 -and $ExpectedPaths.Count -eq 0 -and $ExpectedProcesses.Count -eq 0) {
+        return @{ Current = $null }
+    }
 
     $CurrentExtensions = @()
     $CurrentPaths = @()

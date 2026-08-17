@@ -149,6 +149,12 @@ Describe 'Get-CIPPBaselineDefenderExclusionPolicyState' {
         (Get-Verdict -Expected $Prepared2.Expected -Current $Prepared2.Current).Count | Should -BeGreaterThan 0
     }
 
+    It 'ALL-EMPTY collections report No Data - a zero-exclusion policy never materializes' {
+        Mock New-CIPPDbRequest { @() }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ excludedExtensions = ''; excludedPaths = ''; excludedProcesses = '' } }
+        (Get-CIPPBaselineDefenderExclusionPolicyState -Item $Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
+
     It 'sends ONLY the configured collections to the helper' {
         Mock New-GraphPostRequest { }
         Mock Set-CIPPDefenderExclusionPolicy { 'ok' }

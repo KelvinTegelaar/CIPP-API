@@ -1,6 +1,7 @@
 # Backlog batch 2: the Exchange cluster. Tests pin the normalization and grading decisions
 # that fail silently - wrong-shaped duration compares, per-language contains semantics,
 # additive-vs-strict list ownership, and the link write that must never unlink other tags.
+# Also hosts the TeamsFederation single-domain array-shape regression.
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))

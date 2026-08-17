@@ -43,6 +43,15 @@ function Get-CIPPBaselineDetectCADriftState {
         $null = $ManagedNames.Add("$Resolved")
     }
 
+    # SharePoint CREATES '[SharePoint admin center]...' CA policies itself when the
+    # unmanaged-device access standards turn on app-enforced restrictions (SPO/OWA
+    # ConditionalAccessPolicy). Those policies match no template by definition - they are a
+    # managed SIDE-EFFECT, not admin drift, whenever one of those standards applies to
+    # this tenant. Without a creating standard they stay flagged: then somebody clicked
+    # the admin center by hand.
+    $SharePointAccessStandards = @('unmanagedSync', 'OWAAttachmentRestrictions')
+    $SharePointAccessManaged = @($WorkItems | Where-Object { $_.BaseName -in $SharePointAccessStandards }).Count -gt 0
+
     $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -CountsOnly } catch { $null })
     if ($null -eq $CacheMeta) {
         # Never collected: the engine's collector-on-miss / No Data semantics take over.
@@ -56,6 +65,7 @@ function Get-CIPPBaselineDetectCADriftState {
         $PolicyName = "$($Policy.displayName)"
         if (-not $PolicyName) { continue }
         if ($ManagedNames.Contains($PolicyName)) { continue }
+        if ($SharePointAccessManaged -and $PolicyName.StartsWith('[SharePoint admin center]')) { continue }
         $Expected | Add-Member -NotePropertyName $PolicyName -NotePropertyValue $null -Force
         $Current | Add-Member -NotePropertyName $PolicyName -NotePropertyValue ([PSCustomObject]@{
                 state  = "$($Policy.state)"

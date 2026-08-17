@@ -17,6 +17,23 @@
   "impact": "Low Impact",
   "helpText": "Enables the FIDO2 authenticationMethod for the tenant",
   "executiveText": "Enables support for hardware security keys (like YubiKey) that provide the highest level of authentication security. These physical devices prevent phishing attacks and credential theft, offering superior protection for high-value accounts and sensitive business operations.",
+  "docsDescription": "Enables FIDO2 capabilities for the tenant. This allows users to use FIDO2 keys like a Yubikey for authentication.",
+  "impactColour": "info",
+  "addedDate": "2022-12-08",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
+  "appliesToTest": [
+    "EIDSCAAF01",
+    "EIDSCAAF02",
+    "EIDSCAAF03",
+    "EIDSCAAF04",
+    "EIDSCAAF05",
+    "EIDSCAAF06",
+    "SMB1001_2_5",
+    "SMB1001_2_6",
+    "SMB1001_2_9",
+    "ZTNA21838",
+    "ZTNA21839"
+  ],
   "recommendedBy": [
     "CIPP"
   ],
@@ -38,18 +55,6 @@
     ]
   },
   "remediate": {
-    "executor": "GraphRequest",
-    "requests": [
-      {
-        "method": "PATCH",
-        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/Fido2",
-        "body": {
-          "@odata.type": "#microsoft.graph.fido2AuthenticationMethodConfiguration",
-          "state": "enabled",
-          "isAttestationEnforced": true,
-          "isSelfServiceRegistrationAllowed": true
-        }
-      }
-    ]
+    "executor": "EnableFIDO2"
   }
 }
