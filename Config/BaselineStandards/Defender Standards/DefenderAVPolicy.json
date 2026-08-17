@@ -6,7 +6,7 @@
   "impact": "High Impact",
   "helpText": "Deploys and enforces a Microsoft Defender Antivirus configuration policy via Intune. Controls scanning behaviour, real-time protection, cloud protection, network protection, signature updates, CPU priority, and threat remediation actions.",
   "executiveText": "Ensures every company device runs a consistent, hardened antivirus configuration, protecting against malware while balancing performance.",
-  "docsDescription": "Grades the fixed-name 'Default AV Policy' settings catalog policy field by field from the cached settingInstance tree. The four threat remediation actions grade only when configured. Remediation deletes the drifted policy and recreates it through the Set-CIPPDefenderAVPolicy helper - settings catalog policies replace whole, never patch.",
+  "docsDescription": "Grades the fixed-name 'Default AV Policy' settings catalog policy field by field from the cached settingInstance tree. The four threat remediation actions and the four choice settings (network protection, cloud block level, on-access protection, sample consent) grade only when configured, because the recreate omits blank ones; blank integer fields grade the write-side defaults (50/8/0). Remediation deletes the drifted policy and recreates it through the Set-CIPPDefenderAVPolicy helper - settings catalog policies replace whole, never patch.",
   "impactColour": "error",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",

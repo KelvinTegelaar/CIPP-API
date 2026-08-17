@@ -85,6 +85,34 @@ Describe 'Get-CIPPBaselineDefenderAVPolicyState' {
         $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'remediationSevere'
     }
 
+    It 'grades blank integers as the write-side defaults - the recreate writes 50/8, never 0' {
+        Mock New-CIPPDbRequest { @($script:AvPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ScanArchives = $true; AvgCPULoadFactor = ''; SignatureUpdateInterval = ''; CloudExtendedTimeout = '' } }
+        $Prepared = Get-CIPPBaselineDefenderAVPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.avgCPULoadFactor | Should -Be 50
+        $Prepared.Expected.signatureUpdateInterval | Should -Be 8
+        $Prepared.Expected.cloudExtendedTimeout | Should -Be 0
+    }
+
+    It 'grades a choice setting ONLY when configured - the recreate omits blank ones' {
+        Mock New-CIPPDbRequest { @($script:AvPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ScanArchives = $true; EnableNetworkProtection = ''; SubmitSamplesConsent = $null } }
+        $Prepared = Get-CIPPBaselineDefenderAVPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'enableNetworkProtection'
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'cloudBlockLevel'
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'submitSamplesConsent'
+    }
+
+    It 'grades a configured choice setting against the policy, absent setting as empty' {
+        Mock New-CIPPDbRequest { @($script:AvPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ EnableNetworkProtection = '0'; CloudBlockLevel = [PSCustomObject]@{ value = '2' } } }
+        $Prepared = Get-CIPPBaselineDefenderAVPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.enableNetworkProtection | Should -Be '0'
+        $Prepared.Current.enableNetworkProtection | Should -Be ''
+        $Prepared.Expected.cloudBlockLevel | Should -Be '2'
+        $Prepared.Current.cloudBlockLevel | Should -Be '2'
+    }
+
     It 'deletes the drifted policy before the helper recreates it' {
         Mock New-GraphPostRequest { }
         Mock Set-CIPPDefenderAVPolicy { 'ok' }

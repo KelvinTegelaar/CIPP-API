@@ -101,13 +101,12 @@ function Get-CIPPBaselineDefenderAVPolicyState {
         lowCPU                   = [bool]$V.LowCPU
         meteredConnectionUpdates = [bool]$V.MeteredConnectionUpdates
         disableLocalAdminMerge   = [bool]$V.DisableLocalAdminMerge
-        enableNetworkProtection  = (& $Pick $V.EnableNetworkProtection '0')
-        cloudBlockLevel          = (& $Pick $V.CloudBlockLevel '0')
-        allowOnAccessProtection  = (& $Pick $V.AllowOnAccessProtection '1')
-        submitSamplesConsent     = (& $Pick $V.SubmitSamplesConsent '1')
-        avgCPULoadFactor         = [int]"$($V.AvgCPULoadFactor ?? 50)"
-        signatureUpdateInterval  = [int]"$($V.SignatureUpdateInterval ?? 8)"
-        cloudExtendedTimeout     = [int]"$($V.CloudExtendedTimeout ?? 0)"
+        # Blank integers grade the executor's write-side defaults: '' survives ?? so a
+        # plain null-coalesce would grade 0 while the recreate writes 50/8, drift no
+        # remediation could ever clear.
+        avgCPULoadFactor         = $(if ([string]::IsNullOrWhiteSpace("$($V.AvgCPULoadFactor)")) { 50 } else { [int]"$($V.AvgCPULoadFactor)" })
+        signatureUpdateInterval  = $(if ([string]::IsNullOrWhiteSpace("$($V.SignatureUpdateInterval)")) { 8 } else { [int]"$($V.SignatureUpdateInterval)" })
+        cloudExtendedTimeout     = $(if ([string]::IsNullOrWhiteSpace("$($V.CloudExtendedTimeout)")) { 0 } else { [int]"$($V.CloudExtendedTimeout)" })
     }
     $Current = [ordered]@{
         policyExists             = ($null -ne $Policy)
@@ -128,13 +127,19 @@ function Get-CIPPBaselineDefenderAVPolicyState {
         lowCPU                   = [bool]$Parsed.lowCPU
         meteredConnectionUpdates = [bool]$Parsed.meteredConnectionUpdates
         disableLocalAdminMerge   = [bool]$Parsed.disableLocalAdminMerge
-        enableNetworkProtection  = [string]($Parsed.enableNetworkProtection ?? '')
-        cloudBlockLevel          = [string]($Parsed.cloudBlockLevel ?? '')
-        allowOnAccessProtection  = [string]($Parsed.allowOnAccessProtection ?? '')
-        submitSamplesConsent     = [string]($Parsed.submitSamplesConsent ?? '')
         avgCPULoadFactor         = [int]($Parsed.avgCPULoadFactor ?? 0)
         signatureUpdateInterval  = [int]($Parsed.signatureUpdateInterval ?? 0)
         cloudExtendedTimeout     = [int]($Parsed.cloudExtendedTimeout ?? 0)
+    }
+    # The four choice settings only write when the baseline configures them - the
+    # recreate omits blank ones entirely, so grading a default against a policy that
+    # legitimately lacks the setting would be drift no write can ever clear.
+    foreach ($Pair in @(@('enableNetworkProtection', 'EnableNetworkProtection'), @('cloudBlockLevel', 'CloudBlockLevel'), @('allowOnAccessProtection', 'AllowOnAccessProtection'), @('submitSamplesConsent', 'SubmitSamplesConsent'))) {
+        $Configured = & $Pick $V.($Pair[1]) ''
+        if (-not [string]::IsNullOrEmpty($Configured)) {
+            $Expected[$Pair[0]] = $Configured
+            $Current[$Pair[0]] = [string]($Parsed.($Pair[0]) ?? '')
+        }
     }
     # The classic compared the four remediation actions only when configured.
     foreach ($Pair in @(@('remediationLow', 'RemediationLow'), @('remediationModerate', 'RemediationModerate'), @('remediationHigh', 'RemediationHigh'), @('remediationSevere', 'RemediationSevere'))) {

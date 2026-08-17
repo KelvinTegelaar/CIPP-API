@@ -133,7 +133,40 @@ function Compare-CIPPIntuneObject {
                 return
             }
 
-            if ($Object1.GetType() -ne $Object2.GetType()) {
+            # A JSON round-trip collapses a single-element collection to its scalar and widens
+            # int to long: wrapper and width differences are not value differences, and the
+            # type gate below would report them with identical-looking values on both sides.
+            # A multi-element collection against a scalar stays a real difference.
+            $Object1IsList = $Object1 -isnot [string] -and ($Object1 -is [Array] -or $Object1 -is [System.Collections.IList])
+            $Object2IsList = $Object2 -isnot [string] -and ($Object2 -is [Array] -or $Object2 -is [System.Collections.IList])
+            if ($Object1IsList -xor $Object2IsList) {
+                $ListSide = if ($Object1IsList) { $Object1 } else { $Object2 }
+                if (@($ListSide).Count -eq 1) {
+                    Compare-ObjectsRecursively -Object1 @($Object1)[0] -Object2 @($Object2)[0] -PropertyPath $PropertyPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                } else {
+                    $result.Add([PSCustomObject]@{
+                            Property      = $PropertyPath
+                            ExpectedValue = (@($Object1) -join ', ')
+                            ReceivedValue = (@($Object2) -join ', ')
+                        })
+                }
+                return
+            }
+            $NumericTypes = @([int], [long], [double], [decimal], [int16], [byte], [single])
+            $Object1IsNumber = @($NumericTypes | Where-Object { $Object1 -is $_ }).Count -gt 0
+            $Object2IsNumber = @($NumericTypes | Where-Object { $Object2 -is $_ }).Count -gt 0
+            if ($Object1IsNumber -and $Object2IsNumber) {
+                if ($Object1 -ne $Object2) {
+                    $result.Add([PSCustomObject]@{
+                            Property      = $PropertyPath
+                            ExpectedValue = $Object1
+                            ReceivedValue = $Object2
+                        })
+                }
+                return
+            }
+
+            if (-not ($Object1IsList -and $Object2IsList) -and $Object1.GetType() -ne $Object2.GetType()) {
                 $result.Add([PSCustomObject]@{
                         Property      = $PropertyPath
                         ExpectedValue = $Object1

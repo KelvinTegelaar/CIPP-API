@@ -361,3 +361,66 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         $script:GradeCalls | Should -Be 0
     }
 }
+
+Describe 'Compare-CIPPIntuneObject type tolerance' {
+    # The alignment cache stores values through a JSON round-trip, which collapses a
+    # single-element array to its scalar and widens int to long. The comparator's type
+    # gate reported those as drift with IDENTICAL display values on both sides
+    # (SharePointMassDeletionAlert NotifyUser on prod). Wrapper and width differences
+    # are not value differences; real mismatches still report.
+
+    It 'treats a single-element array and its equal scalar as compliant' {
+        $Ref = [PSCustomObject]@{ NotifyUser = @('bla@bla.com') }
+        $Dif = [PSCustomObject]@{ NotifyUser = 'bla@bla.com' }
+        @(Compare-CIPPIntuneObject -ReferenceObject $Ref -DifferenceObject $Dif | Where-Object { $_ }) | Should -BeNullOrEmpty
+    }
+
+    It 'treats a scalar expected against a single-element array current as compliant' {
+        $Ref = [PSCustomObject]@{ NotifyUser = 'bla@bla.com' }
+        $Dif = [PSCustomObject]@{ NotifyUser = @('bla@bla.com') }
+        @(Compare-CIPPIntuneObject -ReferenceObject $Ref -DifferenceObject $Dif | Where-Object { $_ }) | Should -BeNullOrEmpty
+    }
+
+    It 'still reports a single-element array against a DIFFERENT scalar' {
+        $Ref = [PSCustomObject]@{ NotifyUser = @('a@b.com') }
+        $Dif = [PSCustomObject]@{ NotifyUser = 'c@d.com' }
+        $Diff = @(Compare-CIPPIntuneObject -ReferenceObject $Ref -DifferenceObject $Dif | Where-Object { $_ })
+        $Diff.Count | Should -Be 1
+        $Diff[0].Property | Should -Be 'NotifyUser'
+    }
+
+    It 'reports a multi-element array against a scalar as a real difference' {
+        $Ref = [PSCustomObject]@{ NotifyUser = @('a@b.com', 'c@d.com') }
+        $Dif = [PSCustomObject]@{ NotifyUser = 'a@b.com' }
+        $Diff = @(Compare-CIPPIntuneObject -ReferenceObject $Ref -DifferenceObject $Dif | Where-Object { $_ })
+        $Diff.Count | Should -Be 1
+        $Diff[0].ExpectedValue | Should -Be 'a@b.com, c@d.com'
+    }
+
+    It 'treats int and long of the same value as compliant' {
+        $Ref = [PSCustomObject]@{ timeWindow = [int]60 }
+        $Dif = [PSCustomObject]@{ timeWindow = [long]60 }
+        @(Compare-CIPPIntuneObject -ReferenceObject $Ref -DifferenceObject $Dif | Where-Object { $_ }) | Should -BeNullOrEmpty
+    }
+
+    It 'still reports differing numbers across integer widths' {
+        $Ref = [PSCustomObject]@{ timeWindow = [int]60 }
+        $Dif = [PSCustomObject]@{ timeWindow = [long]90 }
+        $Diff = @(Compare-CIPPIntuneObject -ReferenceObject $Ref -DifferenceObject $Dif | Where-Object { $_ })
+        $Diff.Count | Should -Be 1
+    }
+
+    It 'still reports a genuine type mismatch' {
+        $Ref = [PSCustomObject]@{ enabled = 'true' }
+        $Dif = [PSCustomObject]@{ enabled = $true }
+        $Diff = @(Compare-CIPPIntuneObject -ReferenceObject $Ref -DifferenceObject $Dif | Where-Object { $_ })
+        $Diff.Count | Should -Be 1
+    }
+
+    It 'still reports a number against a numeric STRING - only number-vs-number coerces' {
+        $Ref = [PSCustomObject]@{ timeWindow = [int]60 }
+        $Dif = [PSCustomObject]@{ timeWindow = '60' }
+        $Diff = @(Compare-CIPPIntuneObject -ReferenceObject $Ref -DifferenceObject $Dif | Where-Object { $_ })
+        $Diff.Count | Should -Be 1
+    }
+}
