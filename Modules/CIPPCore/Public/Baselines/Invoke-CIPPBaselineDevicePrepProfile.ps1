@@ -26,8 +26,8 @@ function Invoke-CIPPBaselineDevicePrepProfile {
     $DeploymentType = [string]($Remediate.deploymentType.value ?? $Remediate.deploymentType ?? '0')
     $JoinType = [string]($Remediate.joinType.value ?? $Remediate.joinType ?? '0')
     $AccountType = [string]($Remediate.accountType.value ?? $Remediate.accountType ?? '0')
-    $Timeout = [int]"$($Remediate.timeout ?? 60)"
-    $CustomErrorMessage = "$($Remediate.customErrorMessage ?? "Contact your organization$([char]0x2019)s support person for help.")"
+    $Timeout = if ([string]::IsNullOrWhiteSpace("$($Remediate.timeout)")) { 60 } else { [int]"$($Remediate.timeout)" }
+    $CustomErrorMessage = if ([string]::IsNullOrWhiteSpace("$($Remediate.customErrorMessage)")) { "Contact your organization$([char]0x2019)s support person for help." } else { "$($Remediate.customErrorMessage)" }
     $AllowSkip = $(if ($Remediate.allowSkip -eq $true) { '1' } else { '0' })
     $AllowDiagnostics = $(if ($Remediate.allowDiagnostics -eq $true) { '1' } else { '0' })
     $AssignTo = [string]($Remediate.assignTo.value ?? $Remediate.assignTo ?? 'none')

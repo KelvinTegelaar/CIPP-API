@@ -262,6 +262,17 @@ Describe 'Get-CIPPBaselineDevicePrepProfileState' {
             ) }
     }
 
+    It 'EMPTY-STRING timeout and error message grade as the defaults the executor writes' {
+        # '' survives ?? (only null falls through) and [int]'' is 0 - which graded
+        # timeout 0 / message '' against the 60 / default text the executor deploys.
+        Mock New-CIPPDbRequest { @($script:DppPolicy | ConvertTo-Cached) }
+        Mock Compare-CIPPIntuneAssignments { [PSCustomObject]@{ Unknown = $true } }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ProfileName = 'CIPP Device Prep'; Timeout = ''; CustomErrorMessage = ''; AssignTo = 'none' } }
+        $Prepared = Get-CIPPBaselineDevicePrepProfileState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.timeout | Should -Be 60
+        $Prepared.Expected.customErrorMessage | Should -Match 'support person'
+    }
+
     It 'an UNKNOWN assignment lookup leaves the dimension out of the grade entirely' {
         Mock New-CIPPDbRequest { @($script:DppPolicy | ConvertTo-Cached) }
         Mock Compare-CIPPIntuneAssignments { [PSCustomObject]@{ Unknown = $true; Matched = $false } }

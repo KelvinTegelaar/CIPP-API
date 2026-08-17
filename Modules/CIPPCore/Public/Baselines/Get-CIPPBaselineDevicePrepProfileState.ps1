@@ -37,8 +37,10 @@ function Get-CIPPBaselineDevicePrepProfileState {
     $DeploymentType = [string]($V.DeploymentType.value ?? $V.DeploymentType ?? '0')
     $JoinType = [string]($V.JoinType.value ?? $V.JoinType ?? '0')
     $AccountType = [string]($V.AccountType.value ?? $V.AccountType ?? '0')
-    $Timeout = [int]"$($V.Timeout ?? 60)"
-    $CustomErrorMessage = "$($V.CustomErrorMessage ?? "Contact your organization$([char]0x2019)s support person for help.")"
+    # Empty string means unset, exactly like a pruned remediate key: '' ?? falls through
+    # and [int]'' is 0, which graded timeout 0 against the 60 the executor writes.
+    $Timeout = if ([string]::IsNullOrWhiteSpace("$($V.Timeout)")) { 60 } else { [int]"$($V.Timeout)" }
+    $CustomErrorMessage = if ([string]::IsNullOrWhiteSpace("$($V.CustomErrorMessage)")) { "Contact your organization$([char]0x2019)s support person for help." } else { "$($V.CustomErrorMessage)" }
     $AllowSkip = $(if ($V.AllowSkip -eq $true) { '1' } else { '0' })
     $AllowDiagnostics = $(if ($V.AllowDiagnostics -eq $true) { '1' } else { '0' })
     $AssignTo = [string]($V.AssignTo.value ?? $V.AssignTo ?? 'none')
