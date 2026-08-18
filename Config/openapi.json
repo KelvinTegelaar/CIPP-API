@@ -26720,6 +26720,9 @@
                     "type": "boolean",
                     "description": "All customer tenant specific actions ALWAYS have to be completed before this action!"
                   },
+                  "RemoveQuarantineAlert": {
+                    "type": "boolean"
+                  },
                   "TenantFilter": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
@@ -34584,6 +34587,92 @@
         "x-cipp-role": "CIPP.SuperAdmin.ReadWrite"
       }
     },
+    "/api/ExecToggleAlert": {
+      "post": {
+        "summary": "ExecToggleAlert",
+        "operationId": "ExecToggleAlert",
+        "tags": [
+          "Tenant > Administration > Alerts"
+        ],
+        "description": "Enables or disables an alert rule without deleting it. Works for both audit log alerts and scheduled alert tasks.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Disabled": {
+                    "type": "string"
+                  },
+                  "EventType": {
+                    "type": "string",
+                    "description": "Interact with the query or body of the request"
+                  },
+                  "ID": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Disabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "EventType",
+            "in": "query",
+            "description": "Interact with the query or body of the request",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Alert.ReadWrite"
+      }
+    },
     "/api/ExecTokenExchange": {
       "post": {
         "summary": "ExecTokenExchange",
@@ -36092,6 +36181,9 @@
                         "x-cipp-field-source": "frontend"
                       },
                       "Conditions": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Enabled": {
                         "x-cipp-field-source": "frontend"
                       },
                       "EventType": {
