@@ -59,6 +59,26 @@ function Push-ExecGenerateReportBuilderReport {
             throw 'No blocks provided and no template found'
         }
 
+        # Licence assignments come out of the users cache as objects carrying skuId GUIDs; a
+        # report reader wants product names. Any cell shaped like a licence assignment (an object,
+        # or array of objects, with a skuId property) is rendered as the display names instead.
+        $SkuConversionTable = $null
+        if ($ParsedBlocks | Where-Object { $_.type -eq 'database' -and $_.dbType }) {
+            $SkuConversionTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
+        }
+        $ResolveCellValue = {
+            param($Value)
+            $Items = @($Value)
+            if ($Items.Count -eq 0 -or $null -eq $Items[0] -or -not $Items[0].PSObject.Properties['skuId']) {
+                return $Value
+            }
+            $Names = foreach ($Assignment in $Items) {
+                $Resolved = Convert-SKUname -SkuID $Assignment.skuId -ConvertTable $SkuConversionTable
+                if ($Resolved -is [string] -and $Resolved) { $Resolved } else { $Assignment.skuId }
+            }
+            return ($Names -join ', ')
+        }
+
         # For test blocks that are NOT static, fetch fresh test results
         $TestResults = $null
         $HasLiveTests = $ParsedBlocks | Where-Object { $_.type -eq 'test' -and $_.static -ne $true }
@@ -102,7 +122,7 @@ function Push-ExecGenerateReportBuilderReport {
                                     $Obj = [ordered]@{}
                                     foreach ($Header in $SelectedHeaders) {
                                         $Val = $Row.$Header
-                                        $Obj[$Header] = if ($null -ne $Val) { $Val } else { '' }
+                                        $Obj[$Header] = if ($null -ne $Val) { & $ResolveCellValue $Val } else { '' }
                                     }
                                     [PSCustomObject]$Obj
                                 })
@@ -202,7 +222,7 @@ function Push-ExecGenerateReportBuilderReport {
                                     $Obj = [ordered]@{}
                                     foreach ($Header in $SelectedHeaders) {
                                         $Val = $Row.$Header
-                                        $Obj[$Header] = if ($null -ne $Val) { $Val } else { '' }
+                                        $Obj[$Header] = if ($null -ne $Val) { & $ResolveCellValue $Val } else { '' }
                                     }
                                     [PSCustomObject]$Obj
                                 })

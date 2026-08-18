@@ -44,15 +44,16 @@ function Invoke-CippTestGenericTest002 {
 
         $Result = [System.Text.StringBuilder]::new("**Total Licensed Users:** $($UserLicenseMap.Count)`n`n")
 
-        $null = $Result.Append("| User | Licenses |`n")
-        $null = $Result.Append("|------|----------|`n")
+        $null = $Result.Append("| User | Email | Licenses |`n")
+        $null = $Result.Append("|------|-------|----------|`n")
 
         $SortedUsers = $UserLicenseMap.GetEnumerator() | Sort-Object { $_.Value.DisplayName }
         $DisplayCount = 0
         foreach ($Entry in $SortedUsers) {
             $DisplayName = ConvertTo-CippMarkdownCell -Value $Entry.Value.DisplayName
+            $Email = ConvertTo-CippMarkdownCell -Value $Entry.Key
             $LicList = ($Entry.Value.Licenses | Sort-Object) -join ', '
-            $null = $Result.Append("| $DisplayName | $LicList |`n")
+            $null = $Result.Append("| $DisplayName | $Email | $LicList |`n")
             $DisplayCount++
             if ($DisplayCount -ge 500) { break }
         }
