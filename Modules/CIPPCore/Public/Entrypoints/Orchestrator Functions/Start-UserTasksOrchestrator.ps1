@@ -251,6 +251,10 @@ function Start-UserTasksOrchestrator {
                     OrchestratorName = "UserTaskOrchestrator_$TenantName"
                     Batch            = $BatchWithQueue
                     SkipLog          = $true
+                    # User band: scheduled/run-now tasks must not queue behind P4 background fan-outs.
+                    # Explicit because the starter jobs that invoke this function expose no ambient
+                    # priority to inherit. Child orchestrations (e.g. OffboardingUser_*) inherit this.
+                    Priority         = 2
                 }
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Single-Tenant Tasks Orchestrator')) {
@@ -300,6 +304,8 @@ function Start-UserTasksOrchestrator {
                     OrchestratorName = "UserTaskOrchestrator_$($ParentTask.Name)"
                     Batch            = @($AllBatchItems)
                     SkipLog          = $true
+                    # User band - see the single-tenant orchestrator above.
+                    Priority         = 2
                     PostExecution    = @{
                         FunctionName = 'ScheduledTaskPostExecution'
                         Parameters   = @{

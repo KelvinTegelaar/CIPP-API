@@ -101,10 +101,31 @@ function Start-CIPPOrchestrator {
         }
 
         # The queue claims strictly by priority bucket (P00 first), so this decides who runs
-        # when the limiter is saturated. Callers that matter more than the default (baseline
-        # runs racing a fleet-wide test sweep) say so on the InputObject; everything else
-        # keeps the historical 4.
-        $Priority = [int]($InputObject.Priority ?? 4)
+        # when the limiter is saturated. Resolution order:
+        #   1. Explicit Priority on the InputObject (range-guarded: the store clamps into 0-99
+        #      buckets, so a stray negative would silently land in the critical P00 bucket).
+        #   2. The enclosing run's priority (ambient, set by Craft for orchestrator activities and
+        #      post-exec jobs) — a child run belongs to its parent's band, so a baseline run's
+        #      follow-up no longer drops back to the default.
+        #   3. P2 for HTTP-triggered orchestrations — user-initiated work must not queue behind
+        #      background fan-outs.
+        #   4. The historical default 4 (timers and other background starters).
+        $Priority = $InputObject.Priority
+        if ($null -ne $Priority) {
+            $Priority = [int]$Priority
+            if ($Priority -lt 0 -or $Priority -gt 99) { $Priority = $null }
+        }
+        if ($null -eq $Priority) {
+            # $global:CraftOperationContext is stamped per invocation by the Craft worker — the
+            # pipeline thread never sees OperationContext.Current directly, and on an older Craft
+            # runtime the variable simply does not exist, so every read here degrades to $null.
+            $OpContext = $global:CraftOperationContext
+            $Priority = if ($null -ne $OpContext) { $OpContext.PSObject.Properties['Priority'].Value }
+            if ($null -eq $Priority) {
+                $Priority = if ($null -ne $OpContext -and $OpContext.Category -eq 'HTTP') { 2 } else { 4 }
+            }
+            $Priority = [int]$Priority
+        }
         Write-Information "Craft: Queuing orchestrator '$OrchestratorName' ($TaskCount tasks, P$Priority$(if ($PostExecFunctionName) { ", PostExec: $PostExecFunctionName" }))"
         [Craft.Services.OrchestratorBridge]::QueueOrchestrationFromFile(
             $OrchestratorName,
