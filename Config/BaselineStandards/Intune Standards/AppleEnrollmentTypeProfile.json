@@ -1,0 +1,104 @@
+{
+  "name": "AppleEnrollmentTypeProfile",
+  "label": "Deploy Apple Enrollment Type Profile",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Creates and manages an Apple user-initiated enrollment type profile (such as iOS/iPadOS web based device enrollment) and keeps it assigned to the configured groups. The tenant needs an Apple MDM push certificate for the enrollment itself to function.",
+  "executiveText": "Ensures every tenant offers the same enrollment experience for Apple devices, such as web based enrollment for personal iPhones and iPads, without engineers configuring each tenant by hand.",
+  "docsDescription": "One instance per profile display name. Grades the enrollment type, description and available enrollment type options from the cached Apple user-initiated enrollment profiles plus - separately - the group assignment through Compare-CIPPIntuneAssignments. Remediation repairs a wrong assignment in place, patches drifted settings, and only sets the priority when the profile is first created.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-18",
+  "powershellEquivalent": "Graph API - deviceManagement/appleUserInitiatedEnrollmentProfiles",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "DisplayName": {
+      "type": "textField",
+      "label": "Profile Display Name",
+      "required": true
+    },
+    "Description": {
+      "type": "textField",
+      "label": "Profile Description",
+      "omitWhenBlank": true
+    },
+    "EnrollmentType": {
+      "type": "autoComplete",
+      "creatable": false,
+      "multiple": false,
+      "label": "Enrollment Type",
+      "required": true,
+      "options": [
+        {
+          "value": "webDeviceEnrollment",
+          "label": "Web based device enrollment"
+        },
+        {
+          "value": "accountDrivenUserEnrollment",
+          "label": "Account driven user enrollment"
+        },
+        {
+          "value": "device",
+          "label": "Device enrollment with Company Portal"
+        }
+      ],
+      "default": "webDeviceEnrollment"
+    },
+    "Priority": {
+      "type": "number",
+      "label": "Priority (applied when the profile is created)",
+      "omitWhenBlank": true
+    },
+    "AssignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "multiple": false,
+      "label": "Profile Assignment",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "Do not assign"
+        },
+        {
+          "value": "customGroup",
+          "label": "Assign to Custom Group"
+        }
+      ]
+    },
+    "customGroup": {
+      "type": "textField",
+      "label": "Custom group name(s). Comma separated, wildcards allowed.",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "IntuneAppleUserInitiatedEnrollmentProfiles"
+  },
+  "prepare": "Get-CIPPBaselineAppleEnrollmentTypeProfileState",
+  "remediate": {
+    "executor": "AppleEnrollmentTypeProfile",
+    "displayName": "%DisplayName%",
+    "description": "%Description%",
+    "enrollmentType": "%EnrollmentType%",
+    "priority": "%Priority%",
+    "assignTo": "%AssignTo%",
+    "customGroup": "%customGroup%"
+  },
+  "multiple": true,
+  "instanceIdentity": "DisplayName"
+}
