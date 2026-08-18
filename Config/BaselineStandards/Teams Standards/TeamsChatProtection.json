@@ -6,6 +6,10 @@
   "impact": "Low Impact",
   "helpText": "Configures Teams chat protection settings including weaponizable file protection and malicious URL protection.",
   "executiveText": "Enables automated security protections in Microsoft Teams to block dangerous files and warn users about malicious links in chat messages. This helps protect employees from file-based attacks and phishing attempts. These safeguards work seamlessly in the background, providing essential protection without disrupting normal business communication.",
+  "docsDescription": "Configures Teams messaging safety features to protect users from weaponizable files and malicious URLs in chats and channels. Weaponizable File Protection automatically blocks messages containing potentially dangerous file types (like .exe, .dll, .bat, etc.). Malicious URL Protection scans URLs in messages and displays warnings when potentially harmful links are detected. These protections work across internal and external collaboration scenarios.",
+  "impactColour": "info",
+  "addedDate": "2025-10-02",
+  "powershellEquivalent": "Set-CsTeamsMessagingConfiguration -FileTypeCheck 'Enabled' -UrlReputationCheck 'Enabled' -ReportIncorrectSecurityDetections 'Enabled'",
   "recommendedBy": [
     "CIPP"
   ],

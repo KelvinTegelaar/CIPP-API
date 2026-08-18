@@ -6,6 +6,10 @@
   "impact": "Low Impact",
   "helpText": "Allow guest users access to teams.",
   "executiveText": "Determines whether external partners, vendors, and collaborators can be invited to participate in Teams conversations and meetings. This fundamental setting enables external collaboration while requiring careful management to balance openness with security and information protection.",
+  "docsDescription": "Allow guest users access to teams. Guest users are users who are not part of your organization but have been invited to collaborate with your organization in Teams. This setting allows you to control whether guest users can access Teams.",
+  "impactColour": "info",
+  "addedDate": "2025-06-03",
+  "powershellEquivalent": "Set-CsTeamsClientConfiguration -AllowGuestUser $true",
   "recommendedBy": [],
   "requiredCapabilities": [
     "MCOSTANDARD",

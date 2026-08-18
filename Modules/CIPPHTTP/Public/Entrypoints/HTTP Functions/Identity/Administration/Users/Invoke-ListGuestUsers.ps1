@@ -1,0 +1,101 @@
+function Invoke-ListGuestUsers {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Identity.User.Read
+    .SYNOPSIS
+        List guest users with lifecycle status
+    .DESCRIPTION
+        Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity from the Graph beta API.
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
+    # The tenant to list guest users for
+    $TenantFilter = $Request.Query.tenantFilter
+    # Days without any sign-in before an enabled guest is considered stale. Defaults to 90.
+    $StaleDays = $Request.Query.staleDays ? [int]$Request.Query.staleDays : 90
+
+    try {
+        # signInActivity can only be requested on tenants with an Entra ID P1 license - Graph
+        # rejects the whole query on unlicensed tenants, so fall back to listing without
+        # sign-in data there and compute status from the invitation state alone.
+        $SignInLogsCapable = Test-CIPPStandardLicense -StandardName 'GuestLifecycle' -TenantFilter $TenantFilter -Preset Entra -SkipLog
+
+        $SelectFields = @(
+            'id', 'displayName', 'mail', 'userPrincipalName', 'createdDateTime',
+            'accountEnabled', 'externalUserState', 'externalUserStateChangeDateTime'
+        )
+        if ($SignInLogsCapable) { $SelectFields += 'signInActivity' }
+        # Graph caps the page size lower when signInActivity is selected
+        $Top = $SignInLogsCapable ? 500 : 999
+        $Uri = "https://graph.microsoft.com/beta/users?`$filter=userType eq 'Guest'&`$select=$($SelectFields -join ',')&`$count=true&`$top=$Top"
+        $GuestUsers = New-GraphGetRequest -uri $Uri -tenantid $TenantFilter -ComplexFilter
+
+        $Now = Get-Date
+        $GraphRequest = foreach ($Guest in $GuestUsers) {
+            # Last sign-in is the most recent of the three signInActivity fields.
+            # lastSuccessfulSignInDateTime can run ahead of the other two, so leaving it
+            # out would report recently-active guests as stale.
+            $LastSignIn = $null
+            $Candidates = @(
+                $Guest.signInActivity.lastSignInDateTime
+                $Guest.signInActivity.lastNonInteractiveSignInDateTime
+                $Guest.signInActivity.lastSuccessfulSignInDateTime
+            )
+            foreach ($Candidate in $Candidates) {
+                if ($Candidate -and (-not $LastSignIn -or [datetime]$Candidate -gt [datetime]$LastSignIn)) {
+                    $LastSignIn = $Candidate
+                }
+            }
+            $DaysSinceSignIn = $LastSignIn ? [math]::Round(($Now - [datetime]$LastSignIn).TotalDays) : $null
+
+            $Status = if ($Guest.accountEnabled -eq $false) {
+                'Disabled'
+            } elseif ($Guest.externalUserState -eq 'PendingAcceptance') {
+                'Pending Acceptance'
+            } elseif (-not $SignInLogsCapable) {
+                'Unknown'
+            } elseif (-not $LastSignIn) {
+                'Never Signed In'
+            } elseif ($DaysSinceSignIn -ge $StaleDays) {
+                'Stale'
+            } else {
+                'Active'
+            }
+
+            [PSCustomObject]@{
+                id                               = $Guest.id
+                displayName                      = $Guest.displayName
+                mail                             = $Guest.mail
+                userPrincipalName                = $Guest.userPrincipalName
+                sourceDomain                     = $Guest.mail ? ($Guest.mail -split '@')[1] : $null
+                status                           = $Status
+                accountEnabled                   = $Guest.accountEnabled
+                externalUserState                = $Guest.externalUserState
+                externalUserStateChangeDateTime  = $Guest.externalUserStateChangeDateTime
+                createdDateTime                  = $Guest.createdDateTime
+                lastSignInDateTime               = $LastSignIn
+                lastInteractiveSignInDateTime    = $Guest.signInActivity.lastSignInDateTime
+                lastNonInteractiveSignInDateTime = $Guest.signInActivity.lastNonInteractiveSignInDateTime
+                lastSuccessfulSignInDateTime     = $Guest.signInActivity.lastSuccessfulSignInDateTime
+                daysSinceSignIn                  = $DaysSinceSignIn
+            }
+        }
+        $StatusCode = [System.Net.HttpStatusCode]::OK
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to list guest users: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [System.Net.HttpStatusCode]::InternalServerError
+        $GraphRequest = @{ Error = $ErrorMessage.NormalizedError }
+    }
+
+    return ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = @($GraphRequest)
+        })
+}

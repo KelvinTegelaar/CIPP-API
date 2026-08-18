@@ -1,0 +1,19 @@
+{
+  "source": "Microsoft Graph CSDL ($metadata)",
+  "description": "Vendored so the OpenAPI generator and the runtime schema lookup can describe Graph responses without a network call. Refresh with build/tools/vendor-graph-metadata.ps1.",
+  "retrieved": "2026-08-06",
+  "versions": {
+    "v1.0": {
+      "uri": "https://graph.microsoft.com/v1.0/$metadata",
+      "file": "v1.0.xml",
+      "bytes": 2931764,
+      "sha256": "9d84e4510aa8d6bc95f14ae0bde05ea01c967fcd29478269b58e7cfdd2bdc16a"
+    },
+    "beta": {
+      "uri": "https://graph.microsoft.com/beta/$metadata",
+      "file": "beta.xml",
+      "bytes": 7298756,
+      "sha256": "ca3048596553b16c06004d1dacfae221de85b8e58878d7228feb15a7aeda2ebe"
+    }
+  }
+}

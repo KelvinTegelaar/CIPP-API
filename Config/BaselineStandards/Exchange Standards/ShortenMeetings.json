@@ -6,6 +6,9 @@
   "impact": "Medium Impact",
   "helpText": "Sets the shorten meetings settings on a tenant level. This will shorten meetings by the selected amount of minutes. Valid values are 0 to 29. Short meetings are under 60 minutes, long meetings are over 60 minutes.",
   "executiveText": "Automatically shortens calendar meetings by a specified number of minutes to provide buffer time between meetings, reducing back-to-back scheduling stress and allowing employees time to transition between meetings. This improves work-life balance and meeting effectiveness.",
+  "impactColour": "warning",
+  "addedDate": "2024-05-27",
+  "powershellEquivalent": "Set-OrganizationConfig -ShortenEventScopeDefault -DefaultMinutesToReduceShortEventsBy -DefaultMinutesToReduceLongEventsBy",
   "recommendedBy": [],
   "requiredCapabilities": [
     "EXCHANGE_S_STANDARD",
@@ -21,9 +24,18 @@
       "type": "autoComplete",
       "label": "Shorten meetings mode",
       "options": [
-        { "label": "Disabled/None", "value": "None" },
-        { "label": "End early", "value": "EndEarly" },
-        { "label": "Start late", "value": "StartLate" }
+        {
+          "label": "Disabled/None",
+          "value": "None"
+        },
+        {
+          "label": "End early",
+          "value": "EndEarly"
+        },
+        {
+          "label": "Start late",
+          "value": "StartLate"
+        }
       ],
       "default": "EndEarly"
     },

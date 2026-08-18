@@ -9,6 +9,14 @@
   "impact": "Low Impact",
   "helpText": "Disables the ability for users to open files in Outlook on the Web, from other providers such as Box, Dropbox, Facebook, Google Drive, OneDrive Personal, etc.",
   "executiveText": "Prevents employees from accessing personal cloud storage services like Dropbox or Google Drive through Outlook on the web, reducing data security risks and ensuring company information stays within approved corporate systems. This helps maintain data governance and prevents accidental data leaks.",
+  "docsDescription": "Disables additional storage providers in OWA. This is to prevent users from using personal storage providers like Dropbox, Google Drive, etc. Usually this has little user impact.",
+  "impactColour": "info",
+  "addedDate": "2024-01-17",
+  "powershellEquivalent": "Get-OwaMailboxPolicy | Set-OwaMailboxPolicy -AdditionalStorageProvidersEnabled $False",
+  "appliesToTest": [
+    "CIS_6_5_3",
+    "ZTNA21817"
+  ],
   "recommendedBy": [
     "CIS"
   ],

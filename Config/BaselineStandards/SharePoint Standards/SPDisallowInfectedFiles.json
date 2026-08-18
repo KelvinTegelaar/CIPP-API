@@ -10,6 +10,13 @@
   "impact": "Low Impact",
   "helpText": "Ensure Office 365 SharePoint infected files are disallowed for download",
   "executiveText": "Prevents employees from downloading files that have been identified as containing malware or viruses from SharePoint and OneDrive. This security measure protects against malware distribution through file sharing while maintaining access to clean, safe documents.",
+  "impactColour": "info",
+  "addedDate": "2024-07-09",
+  "powershellEquivalent": "Set-SPOTenant -DisallowInfectedFileDownload $true",
+  "appliesToTest": [
+    "CIS_7_3_1",
+    "ZTNA21817"
+  ],
   "recommendedBy": [
     "CIS",
     "CIPP"

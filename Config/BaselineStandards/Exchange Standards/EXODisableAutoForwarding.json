@@ -10,8 +10,15 @@
     "NIST CSF 2.0 (PR.DS-02)"
   ],
   "impact": "High Impact",
-  "helpText": "Disables the ability for users to automatically forward e-mails to external recipients. This is to prevent data exfiltration. Please check if there are any legitimate use cases for this feature before implementing, like forwarding invoices and such.",
+  "helpText": "Disables the ability for users to automatically forward e-mails to external recipients.",
   "executiveText": "Prevents employees from automatically forwarding company emails to external addresses, protecting against data leaks and unauthorized information sharing. This security measure helps maintain control over sensitive business communications while preventing both accidental and intentional data exfiltration.",
+  "docsDescription": "Disables the ability for users to automatically forward e-mails to external recipients. This is to prevent data exfiltration. Please check if there are any legitimate use cases for this feature before implementing, like forwarding invoices and such.",
+  "impactColour": "danger",
+  "addedDate": "2024-07-26",
+  "powershellEquivalent": "Set-HostedOutboundSpamFilterPolicy -AutoForwardingMode 'Off'",
+  "appliesToTest": [
+    "CIS_6_2_1"
+  ],
   "recommendedBy": [
     "CIS",
     "CIPP"

@@ -46035,6 +46035,113 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListGuestUsers": {
+      "get": {
+        "summary": "List guest users with lifecycle status",
+        "operationId": "ListGuestUsers",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity from the Graph beta API.",
+        "parameters": [
+          {
+            "name": "staleDays",
+            "in": "query",
+            "description": "Days without any sign-in before an enabled guest is considered stale. Defaults to 90.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
+                    "properties": {
+                      "accountEnabled": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "createdDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "daysSinceSignIn": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "externalUserState": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "externalUserStateChangeDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "lastInteractiveSignInDateTime": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "lastNonInteractiveSignInDateTime": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "lastSignInDateTime": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "lastSuccessfulSignInDateTime": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "mail": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "sourceDomain": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "status": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "userPrincipalName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
+      }
+    },
     "/api/ListHaloClients": {
       "get": {
         "summary": "ListHaloClients",

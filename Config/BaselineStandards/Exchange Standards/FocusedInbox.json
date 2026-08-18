@@ -4,8 +4,12 @@
   "cat": "Exchange Standards",
   "tag": [],
   "impact": "Low Impact",
-  "helpText": "Sets the default Focused Inbox state for the tenant. This can be overridden by the user in their Outlook settings.",
+  "helpText": "Sets the default Focused Inbox state for the tenant. This can be overridden by the user.",
   "executiveText": "Configures the default setting for Outlook's Focused Inbox feature, which automatically sorts important emails into a focused view while placing less important emails in a separate section. This can improve employee productivity by reducing email clutter, though users can adjust this setting individually.",
+  "docsDescription": "Sets the default Focused Inbox state for the tenant. This can be overridden by the user in their Outlook settings. For more information, see [Microsoft's documentation.](https://support.microsoft.com/en-us/office/focused-inbox-for-outlook-f445ad7f-02f4-4294-a82e-71d8964e3978)",
+  "impactColour": "info",
+  "addedDate": "2024-04-26",
+  "powershellEquivalent": "Set-OrganizationConfig -FocusedInboxOn $true or $false",
   "recommendedBy": [],
   "requiredCapabilities": [
     "EXCHANGE_S_STANDARD",

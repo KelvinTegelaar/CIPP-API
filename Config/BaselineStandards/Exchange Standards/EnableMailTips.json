@@ -9,6 +9,12 @@
   "impact": "Low Impact",
   "helpText": "Enables all MailTips in Outlook. MailTips are the notifications Outlook and Outlook on the web shows when an email you create, meets some requirements",
   "executiveText": "Enables helpful notifications in Outlook that warn users about potential email issues, such as sending to large groups, external recipients, or invalid addresses. This reduces email mistakes and improves communication efficiency by providing real-time guidance to employees.",
+  "impactColour": "info",
+  "addedDate": "2024-01-14",
+  "powershellEquivalent": "Set-OrganizationConfig",
+  "appliesToTest": [
+    "CIS_6_5_2"
+  ],
   "recommendedBy": [
     "CIS",
     "CIPP"

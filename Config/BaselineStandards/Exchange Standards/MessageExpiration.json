@@ -6,6 +6,10 @@
   "impact": "Low Impact",
   "helpText": "Sets the transport message configuration to timeout a message at 12 hours.",
   "executiveText": "Expires undeliverable messages in the mail queue after 12 hours instead of the default 24, so senders are notified of failed deliveries faster and can act sooner.",
+  "docsDescription": "Expires messages in the transport queue after 12 hours. Makes the NDR for failed messages show up faster for users. Default is 24 hours.",
+  "impactColour": "info",
+  "addedDate": "2024-02-23",
+  "powershellEquivalent": "Set-TransportConfig -MessageExpirationTimeout 12.00:00:00",
   "recommendedBy": [],
   "requiredCapabilities": [
     "EXCHANGE_S_STANDARD",

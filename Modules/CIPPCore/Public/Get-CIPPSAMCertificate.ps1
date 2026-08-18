@@ -63,21 +63,23 @@ function Get-CIPPSAMCertificate {
     }
 
     $PfxBytes = [Convert]::FromBase64String($PfxBase64)
-    try {
-        # Ephemeral avoids writing key files to disk on the Linux consumption plan
-        $Certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
-            $PfxBytes,
-            [string]::Empty,
-            [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::EphemeralKeySet
-        )
-    } catch {
-        # EphemeralKeySet is not supported on all platforms (e.g. macOS local dev)
-        $Certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
-            $PfxBytes,
-            [string]::Empty,
-            [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable
-        )
+    # Pick key storage flags based on the runtime platform — no try/catch needed.
+    #   Linux / macOS  → EphemeralKeySet   (memory-only, no disk I/O)
+    #   Windows        → MachineKeySet     (machine store, no user-profile dependency)
+    # EphemeralKeySet is ideal everywhere but is not supported on macOS .NET and older
+    # Windows runtimes. MachineKeySet is the safest Windows choice because Azure
+    # Functions consumption workers often run without a loaded user profile, which makes
+    # the per-user key store (Exportable) inaccessible ("cannot find the file").
+    $KeyFlags = if ($IsLinux -or $IsMacOS) {
+        [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::EphemeralKeySet
+    } else {
+        [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::MachineKeySet
     }
+    $Certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
+        $PfxBytes,
+        [string]::Empty,
+        $KeyFlags
+    )
 
     $Result = [PSCustomObject]@{
         Certificate = $Certificate

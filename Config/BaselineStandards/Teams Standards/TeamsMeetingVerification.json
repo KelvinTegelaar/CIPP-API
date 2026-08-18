@@ -6,6 +6,10 @@
   "impact": "Low Impact",
   "helpText": "Configures CAPTCHA verification for external users joining Teams meetings. This helps prevent unauthorized AI notetakers and bots from joining meetings.",
   "executiveText": "Requires external meeting participants to complete verification challenges before joining Teams meetings, preventing automated bots and unauthorized AI systems from accessing confidential discussions. This security measure protects against meeting infiltration while maintaining legitimate external collaboration.",
+  "docsDescription": "Configures CAPTCHA verification for external users joining Teams meetings. This security feature requires external participants to complete a CAPTCHA challenge before joining, which helps prevent unauthorized AI notetakers, bots, and other automated systems from accessing meetings.",
+  "impactColour": "info",
+  "addedDate": "2025-06-14",
+  "powershellEquivalent": "Set-CsTeamsMeetingPolicy -CaptchaVerificationForMeetingJoin",
   "recommendedBy": [
     "CIPP"
   ],

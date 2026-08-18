@@ -6,8 +6,15 @@
     "CIS M365 7.0.0 (2.1.15)"
   ],
   "impact": "Low Impact",
-  "helpText": "Configures the outbound spam recipient limits (external per hour, internal per hour, per day) and the action to take when a limit is reached. The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one.",
+  "helpText": "Configures the outbound spam recipient limits (external per hour, internal per hour, per day) and the action to take when a limit is reached. The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one. ",
   "executiveText": "Sets limits on how many emails employees can send per hour and per day to prevent spam and protect the organization's email reputation. When limits are exceeded, the system can alert administrators or temporarily block the user, helping detect compromised accounts or prevent abuse.",
+  "docsDescription": "Configures the Exchange Online outbound spam recipient limits for external per hour, internal per hour, and per day, along with the action to take (e.g., BlockUser, Alert) when these limits are exceeded. This helps prevent abuse and manage email flow. Microsoft's recommendations can be found [here.](https://learn.microsoft.com/en-us/defender-office-365/recommended-settings-for-eop-and-office365#eop-outbound-spam-policy-settings) The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one.",
+  "impactColour": "info",
+  "addedDate": "2025-05-13",
+  "powershellEquivalent": "Set-HostedOutboundSpamFilterPolicy",
+  "appliesToTest": [
+    "CIS_2_1_15"
+  ],
   "recommendedBy": [
     "CIPP",
     "CIS"

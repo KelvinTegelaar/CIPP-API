@@ -8,6 +8,13 @@
   "impact": "Medium Impact",
   "helpText": "Sets the properties of the Global messaging policy.",
   "executiveText": "Defines what messaging capabilities employees have in Teams, including the ability to edit or delete messages, create custom emojis, and report inappropriate content. These policies help maintain professional communication standards while enabling necessary collaboration features.",
+  "docsDescription": "Sets the properties of the Global messaging policy. Messaging policies control which chat and channel messaging features are available to users in Teams.",
+  "impactColour": "warning",
+  "addedDate": "2025-01-10",
+  "powershellEquivalent": "Set-CsTeamsMessagingPolicy",
+  "appliesToTest": [
+    "CIS_8_6_1"
+  ],
   "recommendedBy": [],
   "requiredCapabilities": [
     "MCOSTANDARD",

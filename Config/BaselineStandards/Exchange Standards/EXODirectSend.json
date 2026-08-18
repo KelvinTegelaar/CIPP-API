@@ -8,6 +8,13 @@
   "impact": "Medium Impact",
   "helpText": "Sets the state of Direct Send in Exchange Online. Direct Send allows applications to send emails directly to Exchange Online mailboxes as the tenants domains, without requiring authentication.",
   "executiveText": "Controls whether business applications and devices (like printers or scanners) can send emails through the company's email system without authentication. While this enables convenient features like scan-to-email, it may pose security risks and should be carefully managed.",
+  "docsDescription": "Controls whether applications can use Direct Send to send emails directly to Exchange Online mailboxes as the tenants domains, without requiring authentication. A detailed explanation from Microsoft can be found [here.](https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365)",
+  "impactColour": "warning",
+  "addedDate": "2025-05-28",
+  "powershellEquivalent": "Set-OrganizationConfig -RejectDirectSend $true/$false",
+  "appliesToTest": [
+    "CIS_6_5_5"
+  ],
   "recommendedBy": [],
   "requiredCapabilities": [],
   "secureScoreImpact": 0,

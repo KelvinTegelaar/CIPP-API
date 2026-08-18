@@ -6,6 +6,10 @@
   "impact": "Low Impact",
   "helpText": "Configures the two-click confirmation requirement for viewing encrypted/protected emails in OWA and new Outlook. When enabled, users must click \"View message\" before accessing protected content, providing an additional layer of privacy protection.",
   "executiveText": "Requires employees to click twice before viewing encrypted or sensitive emails, preventing accidental exposure of confidential information when screens might be visible to others. This privacy protection helps prevent shoulder surfing and ensures employees are intentional about viewing sensitive content.",
+  "docsDescription": "Configures the TwoClickMailPreviewEnabled setting in Exchange Online organization configuration. This security feature requires users to click \"View message\" before accessing encrypted or protected emails in Outlook on the web (OWA) and new Outlook for Windows. This provides additional privacy protection by preventing protected content from automatically displaying, giving users time to ensure their screen is not visible to others before viewing sensitive content. The feature helps protect against shoulder surfing and accidental disclosure of confidential information.",
+  "impactColour": "info",
+  "addedDate": "2025-06-13",
+  "powershellEquivalent": "Set-OrganizationConfig -TwoClickMailPreviewEnabled $true | $false",
   "recommendedBy": [],
   "requiredCapabilities": [
     "EXCHANGE_S_STANDARD",

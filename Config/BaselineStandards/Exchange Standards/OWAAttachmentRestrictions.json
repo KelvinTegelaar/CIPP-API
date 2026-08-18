@@ -9,6 +9,10 @@
   "impact": "Medium Impact",
   "helpText": "Restricts how users on unmanaged devices can interact with email attachments in Outlook on the web and new Outlook for Windows. Prevents downloading attachments or blocks viewing them entirely.",
   "executiveText": "Restricts access to email attachments on personal or unmanaged devices while allowing full functionality on corporate-managed devices. This security measure prevents data theft through email attachments while maintaining productivity for employees using approved company devices.",
+  "docsDescription": "This standard configures the OWA mailbox policy to restrict access to email attachments on unmanaged devices. Users can be prevented from downloading attachments (but can view/edit via Office Online) or blocked from seeing attachments entirely. This helps prevent data exfiltration through email attachments on devices not managed by the organization.",
+  "impactColour": "warning",
+  "addedDate": "2025-08-22",
+  "powershellEquivalent": "Set-OwaMailboxPolicy -Identity \"OwaMailboxPolicy-Default\" -ConditionalAccessPolicy ReadOnlyPlusAttachmentsBlocked",
   "recommendedBy": [
     "Microsoft Zero Trust",
     "CIPP"

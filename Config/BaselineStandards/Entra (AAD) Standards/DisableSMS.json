@@ -3,13 +3,28 @@
   "label": "Disables SMS as an MFA method",
   "cat": "Entra (AAD) Standards",
   "tag": [
-    "CIS M365 5.0 (2.3.5)",
+    "CIS M365 7.0.0 (5.2.3.5)",
     "EIDSCA.AS04",
-    "NIST CSF 2.0 (PR.AA-03)"
+    "NIST CSF 2.0 (PR.AA-03)",
+    "SMB1001 (2.5)",
+    "SMB1001 (2.6)",
+    "SMB1001 (2.9)"
   ],
   "impact": "High Impact",
   "helpText": "This blocks users from using SMS as an MFA method. If a user only has SMS as a MFA method, they will be unable to log in.",
   "executiveText": "Disables SMS text messages as a multi-factor authentication method due to security vulnerabilities like SIM swapping attacks. This forces users to adopt more secure authentication methods like authenticator apps or hardware tokens, significantly improving account security.",
+  "docsDescription": "Disables SMS as an MFA method for the tenant. If a user only has SMS as a MFA method, they will be unable to sign in.",
+  "impactColour": "danger",
+  "addedDate": "2023-12-18",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
+  "appliesToTest": [
+    "CIS_5_2_3_5",
+    "EIDSCAAS04",
+    "SMB1001_2_5",
+    "SMB1001_2_5_L4",
+    "SMB1001_2_6",
+    "SMB1001_2_9"
+  ],
   "recommendedBy": [
     "CIPP"
   ],

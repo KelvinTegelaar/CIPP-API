@@ -6,6 +6,10 @@
   "impact": "Low Impact",
   "helpText": "Disables Transport Neutral Encapsulation Format (TNEF)/winmail.dat for the tenant. TNEF can cause issues if the recipient is not using a client supporting TNEF.",
   "executiveText": "Prevents the creation of winmail.dat attachments that can cause compatibility issues when sending emails to external recipients using non-Outlook email clients. This improves email compatibility and reduces support issues with external partners and customers.",
+  "docsDescription": "Disables Transport Neutral Encapsulation Format (TNEF)/winmail.dat for the tenant. TNEF can cause issues if the recipient is not using a client supporting TNEF. Cannot be overridden by the user. For more information, see [Microsoft's documentation.](https://learn.microsoft.com/en-us/exchange/mail-flow/content-conversion/tnef-conversion?view=exchserver-2019)",
+  "impactColour": "info",
+  "addedDate": "2024-04-26",
+  "powershellEquivalent": "Set-RemoteDomain -Identity 'Default' -TNEFEnabled $false",
   "recommendedBy": [
     "CIPP"
   ],

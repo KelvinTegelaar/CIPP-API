@@ -9,6 +9,14 @@
   "impact": "Low Impact",
   "helpText": "Allows you to use any software OAuth token generator",
   "executiveText": "Allows employees to use third-party authentication apps and password managers to generate secure login codes, providing flexibility in authentication methods while maintaining security standards. This accommodates diverse user preferences and existing security tools.",
+  "docsDescription": "Enables OTP Software OAuth tokens for the tenant. This allows users to use OTP codes generated via software, like a password manager to be used as an authentication method.",
+  "impactColour": "info",
+  "addedDate": "2022-12-18",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
+  "appliesToTest": [
+    "EIDSCAAT01",
+    "EIDSCAAT02"
+  ],
   "recommendedBy": [],
   "requiredCapabilities": [],
   "secureScoreImpact": 0,

@@ -9,6 +9,14 @@
   "impact": "Medium Impact",
   "helpText": "Ensure re-authentication with verification code is restricted",
   "executiveText": "Requires external users to periodically re-verify their identity through email verification codes when accessing SharePoint resources, adding an extra security layer for external collaboration. This helps ensure continued legitimacy of external access over time.",
+  "impactColour": "warning",
+  "addedDate": "2024-07-09",
+  "powershellEquivalent": "Set-SPOTenant -EmailAttestationRequired $true -EmailAttestationReAuthDays 15",
+  "appliesToTest": [
+    "CIS_7_2_10",
+    "ZTNA21803",
+    "ZTNA21804"
+  ],
   "recommendedBy": [
     "CIS",
     "CIPP"

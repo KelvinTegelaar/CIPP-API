@@ -10,6 +10,14 @@
   "impact": "Low Impact",
   "helpText": "Enables the Unified Audit Log for tracking and auditing activities. Also runs Enable-OrganizationCustomization if necessary.",
   "executiveText": "Activates comprehensive activity logging across Microsoft 365 services to track user actions, system changes, and security events. This provides essential audit trails for compliance requirements, security investigations, and regulatory reporting.",
+  "impactColour": "info",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Enable-OrganizationCustomization",
+  "appliesToTest": [
+    "CISAMSEXO171",
+    "CISAMSEXO173",
+    "CIS_3_1_1"
+  ],
   "recommendedBy": [
     "CIS",
     "CIPP"

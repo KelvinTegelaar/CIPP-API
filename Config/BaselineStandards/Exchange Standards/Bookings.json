@@ -8,6 +8,13 @@
   "impact": "Medium Impact",
   "helpText": "Sets the state of Bookings on the tenant. Bookings is a scheduling tool that allows users to book appointments with others both internal and external.",
   "executiveText": "Controls whether employees can use Microsoft Bookings to create online appointment scheduling pages for internal and external clients. This feature can improve customer service and streamline appointment management, but may need to be controlled for security or business process reasons.",
+  "docsDescription": "",
+  "impactColour": "warning",
+  "addedDate": "2024-05-31",
+  "powershellEquivalent": "Set-OrganizationConfig -BookingsEnabled",
+  "appliesToTest": [
+    "CIS_1_3_9"
+  ],
   "recommendedBy": [],
   "requiredCapabilities": [
     "EXCHANGE_S_STANDARD",

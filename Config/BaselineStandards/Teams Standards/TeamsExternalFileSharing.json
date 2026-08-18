@@ -8,6 +8,12 @@
   "impact": "Low Impact",
   "helpText": "Ensure external file sharing in Teams is enabled for only approved cloud storage services.",
   "executiveText": "Controls which external cloud storage services (like Google Drive, Dropbox, Box) employees can access through Teams, ensuring file sharing occurs only through approved and secure platforms. This helps maintain data governance while supporting necessary business integrations.",
+  "impactColour": "info",
+  "addedDate": "2024-07-28",
+  "powershellEquivalent": "Set-CsTeamsClientConfiguration -AllowGoogleDrive $false -AllowShareFile $false -AllowBox $false -AllowDropBox $false -AllowEgnyte $false",
+  "appliesToTest": [
+    "CIS_8_1_1"
+  ],
   "recommendedBy": [
     "CIS"
   ],

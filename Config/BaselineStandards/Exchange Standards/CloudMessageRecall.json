@@ -4,8 +4,12 @@
   "cat": "Exchange Standards",
   "tag": [],
   "impact": "Low Impact",
-  "helpText": "Sets the Cloud Message Recall state for the tenant. This allows users to recall messages from the cloud. By default this is enabled.",
+  "helpText": "Sets the Cloud Message Recall state for the tenant. This allows users to recall messages from the cloud.",
   "executiveText": "Enables employees to recall or retract emails they've sent, helping prevent embarrassing mistakes or accidental data sharing. This feature can reduce the impact of human errors in email communication and provides a safety net for sensitive information accidentally sent to wrong recipients.",
+  "docsDescription": "Sets the default state for Cloud Message Recall for the tenant. By default this is enabled. You can read more about the feature [here.](https://techcommunity.microsoft.com/t5/exchange-team-blog/cloud-based-message-recall-in-exchange-online/ba-p/3744714)",
+  "impactColour": "info",
+  "addedDate": "2024-05-31",
+  "powershellEquivalent": "Set-OrganizationConfig -MessageRecallEnabled",
   "recommendedBy": [],
   "requiredCapabilities": [
     "EXCHANGE_S_STANDARD",

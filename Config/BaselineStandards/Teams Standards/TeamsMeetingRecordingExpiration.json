@@ -6,6 +6,10 @@
   "impact": "Medium Impact",
   "helpText": "Sets the default number of days after which Teams meeting recordings automatically expire. Valid values are -1 (Never Expire) or between 1 and 99999. The default value is 120 days.",
   "executiveText": "Automatically removes old Teams meeting recordings after a specified period to manage storage costs and comply with data retention policies. This helps organizations balance the need to preserve important meeting content with storage efficiency and regulatory compliance requirements.",
+  "docsDescription": "Allows administrators to configure a default expiration period (in days) for Teams meeting recordings. Recordings older than this period will be automatically moved to the recycle bin. This setting helps manage storage consumption and enforce data retention policies.",
+  "impactColour": "warning",
+  "addedDate": "2025-04-17",
+  "powershellEquivalent": "Set-CsTeamsMeetingPolicy -Identity Global -MeetingRecordingExpirationDays <days>",
   "recommendedBy": [],
   "requiredCapabilities": [
     "MCOSTANDARD",
