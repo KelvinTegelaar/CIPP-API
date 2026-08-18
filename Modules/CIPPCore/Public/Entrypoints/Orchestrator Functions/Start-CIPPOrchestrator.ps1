@@ -108,19 +108,16 @@ function Start-CIPPOrchestrator {
 
         # The queue claims strictly by priority bucket (P00 first), so this decides who runs
         # when the limiter is saturated. Resolution order:
-        #   1. Explicit Priority on the InputObject (range-guarded: the store clamps into 0-99
-        #      buckets, so a stray negative would silently land in the critical P00 bucket).
+        #   1. Explicit Priority on the InputObject, when it is a valid bucket (out-of-range values
+        #      take the fallback: the store clamps into 0-99 buckets, so a stray negative would
+        #      otherwise silently land in the critical P00 bucket).
         #   2. The enclosing run's priority (from the stamped context) — a child run belongs to
         #      its parent's band, so a baseline run's follow-up no longer drops back to the default.
         #   3. P2 for HTTP-triggered orchestrations — user-initiated work must not queue behind
         #      background fan-outs.
         #   4. The historical default 4 (timers and other background starters).
-        $Priority = $InputObject.Priority
-        if ($null -ne $Priority) {
-            $Priority = [int]$Priority
-            if ($Priority -lt 0 -or $Priority -gt 99) { $Priority = $null }
-        }
-        if ($null -eq $Priority) {
+        $Priority = if ($null -ne $InputObject.Priority) { [int]$InputObject.Priority }
+        if ($null -eq $Priority -or $Priority -lt 0 -or $Priority -gt 99) {
             $Priority = if ($null -ne $OpContext) { $OpContext.PSObject.Properties['Priority'].Value }
             if ($null -eq $Priority) {
                 $Priority = if ($null -ne $OpContext -and $OpContext.Category -eq 'HTTP') { 2 } else { 4 }
