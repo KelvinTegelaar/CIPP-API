@@ -17644,12 +17644,7 @@
                         }
                       },
                       "tenantFilter": {
-                        "type": "object",
-                        "properties": {
-                          "label": {
-                            "type": "string"
-                          }
-                        }
+                        "$ref": "#/components/schemas/LabelValue"
                       }
                     }
                   },
@@ -20540,6 +20535,7 @@
           {
             "name": "AddMapping",
             "in": "query",
+            "description": "AnyTenant: mapping writes wipe and rewrite whole partitions and re-register per-tenant sync tasks, so they require an unrestricted tenant scope",
             "required": false,
             "schema": {
               "type": "string",
@@ -20556,6 +20552,7 @@
           {
             "name": "AutoMapping",
             "in": "query",
+            "description": "AnyTenant: mapping writes wipe and rewrite whole partitions and re-register per-tenant sync tasks, so they require an unrestricted tenant scope",
             "required": false,
             "schema": {
               "type": "string",
@@ -42772,7 +42769,8 @@
                     "type": "string"
                   },
                   "partnerLookup": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "AnyTenant: enforce tenant scope here; Get-Tenants is narrowed to the caller's allowed tenants"
                   },
                   "tenantFilter": {
                     "type": "string"
