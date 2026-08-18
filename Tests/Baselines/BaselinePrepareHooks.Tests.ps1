@@ -306,6 +306,25 @@ Describe 'Get-CIPPBaselineQuarantineRequestAlertState' {
         Mock Get-CIPPDbItem { $null }
         (Get-CIPPBaselineQuarantineRequestAlertState -Item $script:Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
     }
+
+    It 'grades the removed state on presence alone: present is drift, absent is compliant' {
+        $Removed = [PSCustomObject]@{ Variables = [PSCustomObject]@{ NotifyUser = 'soc@contoso.com'; State = 'removed' } }
+        Mock New-CIPPDbRequest { @(@{ Name = $script:AlertName; NotifyUser = @('soc@contoso.com') } | ConvertTo-Cached) }
+        $Prepared = Get-CIPPBaselineQuarantineRequestAlertState -Item $Removed -TenantFilter $script:Tenant
+        $Prepared.Expected.AlertPresent | Should -BeFalse
+        $Prepared.Current.AlertPresent | Should -BeTrue
+
+        Mock New-CIPPDbRequest { @(@{ Name = 'some other alert'; NotifyUser = @('x@y.com') } | ConvertTo-Cached) }
+        (Get-CIPPBaselineQuarantineRequestAlertState -Item $Removed -TenantFilter $script:Tenant).Current.AlertPresent | Should -BeFalse
+    }
+
+    It 'still reports unknown in the removed state when the alert cache has never been collected' {
+        # An uncollected cache proves nothing about absence, so it must not grade as compliant.
+        $Removed = [PSCustomObject]@{ Variables = [PSCustomObject]@{ State = 'removed' } }
+        Mock New-CIPPDbRequest { @() }
+        Mock Get-CIPPDbItem { $null }
+        (Get-CIPPBaselineQuarantineRequestAlertState -Item $Removed -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
 }
 
 Describe 'Get-CIPPBaselineSafeAttachmentPolicyState' {

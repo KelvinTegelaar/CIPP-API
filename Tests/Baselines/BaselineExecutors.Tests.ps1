@@ -487,4 +487,28 @@ Describe 'Invoke-CIPPBaselineQuarantineRequestAlert' {
         { Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null } | Should -Throw '*could not read the existing alert*'
         Should -Invoke New-ExoRequest -Times 0 -ParameterFilter { $cmdlet -eq 'Set-ProtectionAlert' }
     }
+
+    It 'removes the alert when the state is removed, without demanding a notify address' {
+        # The spec deliberately has no notifyUser: removal must not trip the enabled-mode guard.
+        $Spec = @{ state = 'removed' } | ConvertTo-Spec
+        Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter {
+            $cmdlet -eq 'Remove-ProtectionAlert' -and $cmdParams['Identity'] -eq $script:AlertName
+        }
+        Should -Invoke New-ExoRequest -Times 0 -ParameterFilter { $cmdlet -in @('Set-ProtectionAlert', 'New-ProtectionAlert') }
+    }
+
+    It 'leaves the tenant alone when the state is removed and the alert is already gone' {
+        Mock New-ExoRequest { @() } -ParameterFilter { $cmdlet -eq 'Get-ProtectionAlert' }
+        $Spec = @{ state = 'removed'; notifyUser = 'soc@contoso.com' } | ConvertTo-Spec
+        Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-ExoRequest -Times 0 -ParameterFilter { $cmdlet -eq 'Remove-ProtectionAlert' }
+    }
+
+    It 'refuses to remove blind if the existing alert cannot be read' {
+        Mock New-ExoRequest { throw 'compliance endpoint unavailable' } -ParameterFilter { $cmdlet -eq 'Get-ProtectionAlert' }
+        $Spec = @{ state = 'removed' } | ConvertTo-Spec
+        { Invoke-CIPPBaselineQuarantineRequestAlert -Remediate $Spec -TenantFilter $script:Tenant -Current $null } | Should -Throw '*could not read the existing alert*'
+        Should -Invoke New-ExoRequest -Times 0 -ParameterFilter { $cmdlet -eq 'Remove-ProtectionAlert' }
+    }
 }

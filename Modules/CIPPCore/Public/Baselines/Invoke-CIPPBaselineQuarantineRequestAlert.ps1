@@ -35,8 +35,9 @@ function Invoke-CIPPBaselineQuarantineRequestAlert {
     )
 
     $PolicyName = 'CIPP User requested to release a quarantined message'
+    $RemoveAlert = "$($Remediate.state)" -eq 'removed'
     $Configured = "$($Remediate.notifyUser)"
-    if ([string]::IsNullOrWhiteSpace($Configured)) { throw 'QuarantineRequestAlert: no notify address configured to write.' }
+    if (-not $RemoveAlert -and [string]::IsNullOrWhiteSpace($Configured)) { throw 'QuarantineRequestAlert: no notify address configured to write.' }
     $AllowExtra = [bool]($Remediate.allowExtraAddresses -eq $true)
 
     $Existing = $null
@@ -44,7 +45,14 @@ function Invoke-CIPPBaselineQuarantineRequestAlert {
         $Existing = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ProtectionAlert' -Compliance |
                 Where-Object { $_.Name -eq $PolicyName }) | Select-Object -First 1
     } catch {
-        throw "QuarantineRequestAlert: could not read the existing alert to merge into: $($_.Exception.Message)"
+        throw "QuarantineRequestAlert: could not read the existing alert: $($_.Exception.Message)"
+    }
+
+    if ($RemoveAlert) {
+        if ($Existing) {
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-ProtectionAlert' -Compliance -cmdParams @{ Identity = $PolicyName } -useSystemMailbox $true
+        }
+        return
     }
 
     $Recipients = [System.Collections.Generic.List[string]]::new()
