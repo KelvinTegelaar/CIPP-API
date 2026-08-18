@@ -127,8 +127,12 @@ function Get-CIPPTestResultsTenants {
         Write-Warning "Get-CIPPTestResultsTenants: failed to load tenant list: $($_.Exception.Message)"
     }
 
+    # Presence of the parameter is what marks the caller as restricted, not the list having
+    # entries: a restricted caller whose scope resolved to zero tenants passes @(), which is
+    # falsy, and a truthiness check would hand that caller the unrestricted path. An empty
+    # HashSet stays truthy at the filter below, so zero allowed ids reads zero partitions.
     $AllowedSet = $null
-    if ($AllowedTenantIds) {
+    if ($PSBoundParameters.ContainsKey('AllowedTenantIds')) {
         $AllowedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         foreach ($Allowed in $AllowedTenantIds) { if ($Allowed) { [void]$AllowedSet.Add([string]$Allowed) } }
     }

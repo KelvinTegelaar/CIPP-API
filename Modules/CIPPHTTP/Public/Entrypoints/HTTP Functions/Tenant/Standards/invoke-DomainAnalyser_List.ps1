@@ -21,8 +21,12 @@ Function Invoke-DomainAnalyser_List {
     }
 
     try {
+        # AnyTenant skips the framework's per-tenant check, so scoping is enforced here: narrow the
+        # rows to the caller's allowed tenants before extracting results. Rows carry the tenant as
+        # TenantGUID (customerId) and TenantId (defaultDomainName), matching Get-CIPPDomainAnalyser.
+        $DomainRows = Get-CIPPAzDataTableEntity @DomainTable | Select-CippAllowedTenantData -TenantProperty 'TenantGUID', 'TenantId'
         # Extract json from table results
-        $Results = foreach ($DomainAnalyserResult in (Get-CIPPAzDataTableEntity @DomainTable).DomainAnalyser) {
+        $Results = foreach ($DomainAnalyserResult in $DomainRows.DomainAnalyser) {
             try {
                 if (![string]::IsNullOrEmpty($DomainAnalyserResult)) {
                     $Object = $DomainAnalyserResult | ConvertFrom-Json -ErrorAction SilentlyContinue

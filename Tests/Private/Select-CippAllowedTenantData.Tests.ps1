@@ -90,10 +90,36 @@ Describe 'Select-CippAllowedTenantData' {
             Should -Invoke -CommandName Get-Tenants -Times 0 -Exactly
         }
 
-        It 'treats an empty scope array as unrestricted' {
+        It 'does not treat an explicit empty scope as unrestricted' {
+            Mock -CommandName Get-Tenants -MockWith { throw 'Get-Tenants must not be called when the scope is empty' }
             $script:CippAllowedTenantsStorage.Value = @()
             $Result = $script:MixedRows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
-            @($Result).Count | Should -Be 3
+            @($Result).Count | Should -Be 0
+        }
+    }
+
+    Context 'Restricted caller with zero effective tenants (explicit empty scope)' {
+        BeforeEach {
+            # An empty scope is a restricted caller entitled to nothing - it must deny without
+            # falling back to Get-Tenants, whose unfiltered list would defeat the point.
+            Mock -CommandName Get-Tenants -MockWith { throw 'Get-Tenants must not be called when the scope is empty' }
+            $script:CippAllowedTenantsStorage.Value = @()
+        }
+
+        It 'returns no rows from a non-empty cache input' {
+            $Result = $script:MixedRows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
+            @($Result).Count | Should -Be 0
+        }
+
+        It 'treats a scope of only blank ids as deny-all, not unrestricted' {
+            $script:CippAllowedTenantsStorage.Value = @($null, '')
+            $Result = $script:MixedRows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
+            @($Result).Count | Should -Be 0
+        }
+
+        It 'drops partner/system CIPP rows even with -AllowPartner' {
+            $Rows = @([pscustomobject]@{ Tenant = 'CIPP'; Data = 'system' })
+            (@($Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant' -AllowPartner)).Count | Should -Be 0
         }
     }
 }

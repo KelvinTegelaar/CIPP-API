@@ -141,12 +141,16 @@ function New-CippCoreRequest {
                     })
             }
             $swTenants = [System.Diagnostics.Stopwatch]::StartNew()
-            $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+            # The @() wrap is load-bearing: a scope-only call can return an empty list (a
+            # restricted caller entitled to nothing), and a bare assignment unwraps that to
+            # $null - the sentinel consumers read as 'unrestricted'. The wrap keeps the empty
+            # list an empty list so the storage below stores a restricted scope, not a free pass.
+            $AllowedTenants = @(Test-CippAccess -Request $Request -TenantList)
             $swTenants.Stop()
             $HttpTimings['AllowedTenants'] = $swTenants.Elapsed.TotalMilliseconds
 
             $swGroups = [System.Diagnostics.Stopwatch]::StartNew()
-            $AllowedGroups = Test-CippAccess -Request $Request -GroupList
+            $AllowedGroups = @(Test-CippAccess -Request $Request -GroupList)
             $swGroups.Stop()
             $HttpTimings['AllowedGroups'] = $swGroups.Elapsed.TotalMilliseconds
 
