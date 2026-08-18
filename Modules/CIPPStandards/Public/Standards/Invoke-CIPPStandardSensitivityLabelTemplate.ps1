@@ -23,7 +23,7 @@ function Invoke-CIPPStandardSensitivityLabelTemplate {
         EXECUTIVETEXT
             Deploys sensitivity labels for classification and protection of files, emails, and Microsoft 365 group content. Ensures consistent classification taxonomy and encryption settings across tenants.
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":true,"creatable":false,"name":"sensitivityLabelTemplate","label":"Select Sensitivity Label Templates","api":{"url":"/api/ListSensitivityLabelTemplates","labelField":"name","valueField":"GUID","queryKey":"ListSensitivityLabelTemplates"}}
+            {"type":"autoComplete","multiple":true,"creatable":false,"name":"sensitivityLabelTemplate","label":"Select Sensitivity Label Templates","api":{"url":"/api/ListSensitivityLabelTemplates","labelField":"DisplayName","altLabelField":"Name","valueField":"GUID","queryKey":"ListSensitivityLabelTemplates"}}
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

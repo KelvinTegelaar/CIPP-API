@@ -24,7 +24,7 @@
   "instanceIdentity": "sensitivityLabelTemplate",
   "identity": {
     "partition": "SensitivityLabelTemplate",
-    "nameField": "name"
+    "nameField": "DisplayName"
   },
   "variables": {
     "sensitivityLabelTemplate": {
@@ -34,7 +34,8 @@
       "required": true,
       "api": {
         "url": "/api/ListSensitivityLabelTemplates",
-        "labelField": "name",
+        "labelField": "DisplayName",
+        "altLabelField": "Name",
         "valueField": "GUID",
         "queryKey": "ListSensitivityLabelTemplates"
       }

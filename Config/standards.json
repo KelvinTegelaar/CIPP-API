@@ -6957,7 +6957,8 @@
         "label": "Select Sensitivity Label Templates",
         "api": {
           "url": "/api/ListSensitivityLabelTemplates",
-          "labelField": "name",
+          "labelField": "DisplayName",
+          "altLabelField": "Name",
           "valueField": "GUID",
           "queryKey": "ListSensitivityLabelTemplates"
         }
