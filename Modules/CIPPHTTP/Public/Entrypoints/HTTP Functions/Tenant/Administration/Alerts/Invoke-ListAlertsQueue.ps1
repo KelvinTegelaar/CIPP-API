@@ -36,6 +36,7 @@ function Invoke-ListAlertsQueue {
             RepeatsEvery    = 'When received'
             AlertComment    = $Task.AlertComment
             CustomSubject   = $Task.CustomSubject
+            Enabled         = $Task.Disabled -ne $true
             RawAlert        = @{
                 Conditions    = @($Conditions)
                 Actions       = @($($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue))
@@ -163,6 +164,7 @@ function Invoke-ListAlertsQueue {
             AlertComment    = $Task.AlertComment
             RawAlert        = $Task
             ScriptName      = $ScriptName
+            Enabled         = $Task.Disabled -ne $true
         }
 
         if ($AllowedTenants -notcontains 'AllTenants') {

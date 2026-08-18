@@ -516,4 +516,50 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             Should -Invoke Invoke-CippWebhookProcessing -Times 0
         }
     }
+
+    Context 'a disabled rule' {
+        BeforeEach {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Filter, $Property, $First)
+                switch ($TableName) {
+                    'WebhookRules' {
+                        [pscustomobject]@{
+                            PartitionKey    = 'WebhookRules'
+                            RowKey          = 'rule-1'
+                            Tenants         = (@('AllTenants') | ConvertTo-Json -Compress)
+                            excludedTenants = $null
+                            Conditions      = (@(
+                                    @{
+                                        Property = @{ label = 'Operation' }
+                                        Operator = @{ label = 'eq' }
+                                        Input    = @{ value = 'Set-Mailbox' }
+                                    }
+                                ) | ConvertTo-Json -Compress -Depth 5)
+                            Actions         = (@('generatemail') | ConvertTo-Json -Compress)
+                            Type            = 'Audit'
+                            AlertComment    = 'test comment'
+                            CustomSubject   = ''
+                            Disabled        = $true
+                        }
+                    }
+                    'cacheauditloglookups' {
+                        @(
+                            New-LookupRow 'users'
+                            New-LookupRow 'groups'
+                            New-LookupRow 'devices'
+                            New-LookupRow 'servicePrincipals'
+                        )
+                    }
+                    'Config' { [pscustomobject]@{ Value = 'cipp.contoso.com' } }
+                    default { @() }
+                }
+            }
+        }
+
+        It 'is skipped even when its conditions would match' {
+            $result = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)
+            $result.MatchedLogs | Should -Be 0
+            Should -Invoke Invoke-CippWebhookProcessing -Times 0
+        }
+    }
 }

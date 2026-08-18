@@ -32,7 +32,8 @@ function Start-UserTasksOrchestrator {
         # Pending = orchestrator claimed but executor not yet started, Running = actively executing
         # Pick up: Planned, Failed-Planned, stuck Pending (>1hr - orphaned claim), or stuck Running/Processing (>4hr for large AllTenants tasks)
         $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$1HourAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
-        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        # Disabled is filtered client side: an OData comparison excludes rows that lack the property, which is every task created before the flag existed
+        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Disabled -ne $true }
     }
 
     $Batch = [System.Collections.Generic.List[object]]::new()

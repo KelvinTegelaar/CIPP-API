@@ -224,6 +224,9 @@ function Test-CIPPAuditLogRules {
 
             $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
             $Configuration = @(foreach ($ConfigEntry in $ConfigEntries) {
+                    if ($ConfigEntry.Disabled -eq $true) {
+                        continue
+                    }
                     if ([string]::IsNullOrEmpty($ConfigEntry.Tenants)) {
                         continue
                     }

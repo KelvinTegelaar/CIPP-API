@@ -49,6 +49,13 @@ function Invoke-AddAlert {
             CustomSubject   = [string]$Request.Body.CustomSubject
         }
         $WebhookTable = Get-CippTable -TableName 'WebhookRules'
+        if ($Request.Body.RowKey) {
+            # Editing replaces the entity, so carry the disabled state over to keep a disabled alert disabled
+            $ExistingAlert = Get-CIPPAzDataTableEntity @WebhookTable -Filter "RowKey eq '$RowKey'" -Property RowKey, Disabled
+            if ($ExistingAlert.Disabled -eq $true) {
+                $CompleteObject.Disabled = $true
+            }
+        }
         Add-CIPPAzDataTableEntity @WebhookTable -Entity $CompleteObject -Force
         $Results = "Added Audit Log Alert for $($Tenants.count) tenants. It may take up to four hours before Microsoft starts delivering these alerts."
         Write-LogMessage -API 'AddAlert' -message $Results -sev Info -LogData $CompleteObject -headers $Request.Headers
