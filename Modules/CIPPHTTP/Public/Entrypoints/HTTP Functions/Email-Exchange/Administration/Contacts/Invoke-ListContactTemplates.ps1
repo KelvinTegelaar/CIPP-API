@@ -14,7 +14,7 @@ function Invoke-ListContactTemplates {
 
 
     $Table = Get-CippTable -tablename 'templates'
-    $Templates = Get-ChildItem 'Config\*.ContactTemplate.json' | ForEach-Object {
+    $Templates = Get-ChildItem (Join-Path $env:CIPPRootPath 'Config\*.ContactTemplate.json') | ForEach-Object {
         $Entity = @{
             JSON         = "$(Get-Content $_)"
             RowKey       = "$($_.name)"

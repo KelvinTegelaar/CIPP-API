@@ -15,7 +15,7 @@ function Invoke-AddExConnector {
 
     $ConnectorType = ($Request.Body.PowerShellCommand | ConvertFrom-Json).cippConnectorType
     $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, cippConnectorType, SenderRewritingEnabled
-    if ($RequestParams.comment) { $RequestParams.comment = Get-CIPPTextReplacement -Text $RequestParams.comment -TenantFilter $Tenant } else { $RequestParams | Add-Member -NotePropertyValue 'no comment' -NotePropertyName comment -Force }
+    if (-not $RequestParams.comment) { $RequestParams | Add-Member -NotePropertyValue 'no comment' -NotePropertyName comment -Force }
     $Tenants = ($Request.Body.selectedTenants).value
 
     $AllowedTenants = Test-CippAccess -Request $Request -TenantList
@@ -28,7 +28,12 @@ function Invoke-AddExConnector {
 
     $Result = foreach ($TenantFilter in $Tenants) {
         try {
-            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "New-$($ConnectorType)connector" -cmdParams $RequestParams
+            # Copy per tenant so one tenant's resolved %variable% values never feed the next tenant's replacement.
+            $CmdParams = $RequestParams | Select-Object -Property *
+            if ($CmdParams.comment -match '%') {
+                $CmdParams.comment = Get-CIPPTextReplacement -Text $CmdParams.comment -TenantFilter $TenantFilter
+            }
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "New-$($ConnectorType)connector" -cmdParams $CmdParams
             "Successfully created Connector for $TenantFilter."
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully created Connector for $TenantFilter." -sev 'Info'
         } catch {
