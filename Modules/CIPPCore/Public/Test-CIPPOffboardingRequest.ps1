@@ -71,7 +71,7 @@ function Test-CIPPOffboardingRequest {
         'ClearImmutableId', 'ResetPass', 'RemoveMFADevices', 'RemoveTeamsPhoneDID', 'DeleteUser',
         'DisableOneDriveSharing', 'disableForwarding'
     )
-    $CollectionActions = @('AccessNoAutomap', 'AccessAutomap', 'OnedriveAccess')
+    $CollectionActions = @('AccessNoAutomap', 'AccessAutomap', 'AccessSendAs', 'AccessSendOnBehalf', 'OnedriveAccess')
 
     $HasAction = $false
     foreach ($Key in $BooleanActions) {

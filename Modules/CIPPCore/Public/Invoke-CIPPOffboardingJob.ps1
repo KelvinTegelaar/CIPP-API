@@ -203,6 +203,30 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Condition  = { $Options.AccessSendAs.Count -gt 0 }
+                Cmdlet     = 'Set-CIPPMailboxAccess'
+                Parameters = @{
+                    tenantFilter    = $TenantFilter
+                    userid          = $Username
+                    AccessUser      = $Options.AccessSendAs
+                    PermissionLevel = 'SendAs'
+                    APIName         = $APIName
+                    Headers         = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.AccessSendOnBehalf.Count -gt 0 }
+                Cmdlet     = 'Set-CIPPMailboxAccess'
+                Parameters = @{
+                    tenantFilter    = $TenantFilter
+                    userid          = $Username
+                    AccessUser      = $Options.AccessSendOnBehalf
+                    PermissionLevel = 'SendOnBehalf'
+                    APIName         = $APIName
+                    Headers         = $Headers
+                }
+            }
+            @{
                 Condition  = { $Options.removePermissions -eq $true }
                 Cmdlet     = 'Remove-CIPPMailboxPermissions'
                 Parameters = @{
