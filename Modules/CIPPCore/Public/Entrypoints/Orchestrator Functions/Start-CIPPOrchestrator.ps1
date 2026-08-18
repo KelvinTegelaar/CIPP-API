@@ -116,10 +116,10 @@ function Start-CIPPOrchestrator {
             if ($Priority -lt 0 -or $Priority -gt 99) { $Priority = $null }
         }
         if ($null -eq $Priority) {
-            # $global:CraftOperationContext is stamped per invocation by the Craft worker — the
-            # pipeline thread never sees OperationContext.Current directly, and on an older Craft
-            # runtime the variable simply does not exist, so every read here degrades to $null.
-            $OpContext = $global:CraftOperationContext
+            # $CraftOperationContext is stamped into the global scope per invocation by the Craft
+            # worker — the pipeline thread never sees OperationContext.Current directly, and on an
+            # older Craft runtime the variable simply does not exist, so this read degrades to $null.
+            $OpContext = Get-Variable -Name 'CraftOperationContext' -Scope Global -ValueOnly -ErrorAction SilentlyContinue
             $Priority = if ($null -ne $OpContext) { $OpContext.PSObject.Properties['Priority'].Value }
             if ($null -eq $Priority) {
                 $Priority = if ($null -ne $OpContext -and $OpContext.Category -eq 'HTTP') { 2 } else { 4 }

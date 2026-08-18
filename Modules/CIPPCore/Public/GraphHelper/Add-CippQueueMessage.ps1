@@ -40,8 +40,9 @@ function Add-CippQueueMessage {
     try {
         if ($env:CIPPNG -eq 'true') {
             if ($null -eq $Priority) {
-                # Stamped per invocation by the Craft worker; absent on older Craft runtimes.
-                $OpContext = $global:CraftOperationContext
+                # Stamped into the global scope per invocation by the Craft worker; absent on older
+                # Craft runtimes, so this read degrades to $null and the default band applies.
+                $OpContext = Get-Variable -Name 'CraftOperationContext' -Scope Global -ValueOnly -ErrorAction SilentlyContinue
                 $Priority = if ($null -ne $OpContext -and $OpContext.Category -eq 'HTTP') { 2 } else { 5 }
             }
             $ParametersJson = $Parameters | ConvertTo-Json -Depth 10 -Compress
