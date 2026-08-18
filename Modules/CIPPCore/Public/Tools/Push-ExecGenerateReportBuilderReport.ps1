@@ -60,23 +60,32 @@ function Push-ExecGenerateReportBuilderReport {
         }
 
         # Licence assignments come out of the users cache as objects carrying skuId GUIDs; a
-        # report reader wants product names. Any cell shaped like a licence assignment (an object,
-        # or array of objects, with a skuId property) is rendered as the display names instead.
-        $SkuConversionTable = $null
+        # report reader wants product names. The tenant's LicenseOverview cache already carries
+        # the display name per SKU with the ExcludedLicenses table applied, so cells shaped like
+        # licence assignments render through it: known SKUs become their product name and
+        # excluded SKUs drop out, matching every other licence view in CIPP. Without overview
+        # data the cell is left untouched rather than guessed at.
+        $LicenseNamesBySkuId = @{}
         if ($ParsedBlocks | Where-Object { $_.type -eq 'database' -and $_.dbType }) {
-            $SkuConversionTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
+            try {
+                foreach ($License in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'LicenseOverview' -Fields 'License', 'skuId')) {
+                    if ($License.skuId) { $LicenseNamesBySkuId[([string]$License.skuId).ToLowerInvariant()] = [string]$License.License }
+                }
+            } catch {
+                Write-LogMessage -API 'ReportBuilder' -tenant $TenantFilter -message "Could not load the licence overview cache; licence columns will show raw SKU ids: $($_.Exception.Message)" -Sev 'Warning'
+            }
         }
         $ResolveCellValue = {
             param($Value)
             $Items = @($Value)
-            if ($Items.Count -eq 0 -or $null -eq $Items[0] -or -not $Items[0].PSObject.Properties['skuId']) {
+            if ($LicenseNamesBySkuId.Count -eq 0 -or $Items.Count -eq 0 -or $null -eq $Items[0] -or -not $Items[0].PSObject.Properties['skuId']) {
                 return $Value
             }
             $Names = foreach ($Assignment in $Items) {
-                $Resolved = Convert-SKUname -SkuID $Assignment.skuId -ConvertTable $SkuConversionTable
-                if ($Resolved -is [string] -and $Resolved) { $Resolved } else { $Assignment.skuId }
+                $Name = $LicenseNamesBySkuId[([string]$Assignment.skuId).ToLowerInvariant()]
+                if ($Name) { $Name }
             }
-            return ($Names -join ', ')
+            return (@($Names) -join ', ')
         }
 
         # For test blocks that are NOT static, fetch fresh test results
