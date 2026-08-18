@@ -6,9 +6,9 @@
     "CIS M365 7.0.0 (5.3.4)"
   ],
   "impact": "Low Impact",
-  "helpText": "Enables the admin consent workflow so users can request admin approval for applications instead of being blocked outright. The selected reviewer role receives the requests.",
+  "helpText": "Enables the admin consent workflow so users can request admin approval for applications instead of being blocked outright. The selected reviewer role receives the requests, and specific users (matched by display name) can be added as reviewers alongside it.",
   "executiveText": "Lets employees request administrator review when an application needs permissions they cannot grant themselves, routing risky consent decisions to IT instead of blocking work or encouraging shadow consent.",
-  "docsDescription": "Grades whether the admin consent request policy is enabled and whether the reviewer count matches the configured roles. Remediation enables the workflow with 30-day requests and reviewer notifications, and MERGES the configured role's reviewers into the existing list - reviewers added by hand are preserved. No role selected defaults to Global Administrator.",
+  "docsDescription": "Grades whether the admin consent request policy is enabled and whether the configured roles and users are present among the reviewers. Reviewer users are matched by display name, so a central MSP support account that exists as a guest in each tenant can receive per-request notifications regardless of how the guest was created. Remediation enables the workflow with 30-day requests and reviewer notifications, and MERGES the configured reviewers into the existing list - reviewers added by hand are preserved. No role selected defaults to Global Administrator.",
   "impactColour": "info",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Update-MgPolicyAdminConsentRequestPolicy",
@@ -41,6 +41,13 @@
         "valueField": "id",
         "queryKey": "ListEntraRoleDefinitions"
       }
+    },
+    "ReviewerUsers": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Additional reviewer users (display names of existing users or guests)"
     }
   },
   "read": {
@@ -49,6 +56,7 @@
   "prepare": "Get-CIPPBaselineEnableAppConsentRequestsState",
   "remediate": {
     "executor": "EnableAppConsentRequests",
-    "reviewerRoles": "%ReviewerRoles%"
+    "reviewerRoles": "%ReviewerRoles%",
+    "reviewerUsers": "%ReviewerUsers%"
   }
 }

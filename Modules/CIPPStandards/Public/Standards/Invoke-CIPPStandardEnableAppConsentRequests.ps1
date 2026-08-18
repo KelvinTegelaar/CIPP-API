@@ -7,13 +7,13 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
     .SYNOPSIS
         (Label) Enable App consent admin requests
     .DESCRIPTION
-        (Helptext) Enables App consent admin requests for the tenant via the GA role. Does not overwrite existing reviewer settings
-        (DocsDescription) Enables the ability for users to request admin consent for applications. Should be used in conjunction with the "Require admin consent for applications" standards
+        (Helptext) Enables App consent admin requests for the tenant via the GA role. Optionally adds specific users (matched by display name) as reviewers. Does not overwrite existing reviewer settings
+        (DocsDescription) Enables the ability for users to request admin consent for applications. Reviewers can be directory roles and/or specific users matched by display name, e.g. a central MSP support account that exists as a guest in each tenant, so each consent request generates a notification to a monitored mailbox. Should be used in conjunction with the "Require admin consent for applications" standards
     .NOTES
         CAT
             Entra (AAD) Standards
         TAG
-            "CIS M365 5.0 (1.5.2)"
+            "CIS M365 7.0.0 (5.1.5.2)"
             "CISA (MS.AAD.9.1v1)"
             "EIDSCA.CP04"
             "EIDSCA.CR01"
@@ -22,15 +22,20 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
             "EIDSCA.CR04"
             "Essential 8 (1507)"
             "NIST CSF 2.0 (PR.AA-05)"
-            "ZTNA21869"
+        APPLIESTOTEST
+            "CIS_5_1_5_2"
+            "EIDSCACP04"
             "EIDSCACR01"
             "EIDSCACR02"
             "EIDSCACR03"
             "EIDSCACR04"
+            "ZTNA21809"
+            "ZTNA21869"
         EXECUTIVETEXT
             Establishes a formal approval process where employees can request access to business applications that require administrative review. This balances security with productivity by allowing controlled access to necessary tools while preventing unauthorized application installations.
         ADDEDCOMPONENT
             {"type":"AdminRolesMultiSelect","label":"App Consent Reviewer Roles","name":"standards.EnableAppConsentRequests.ReviewerRoles"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Optional: reviewer users (display names of existing users or guests)","name":"standards.EnableAppConsentRequests.ReviewerUsers"}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -40,7 +45,7 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
-            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+            Run the tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
@@ -75,29 +80,53 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
                 $RoleNames = '(Default) Global Administrator'
             }
 
-            $NewReviewers = foreach ($Role in $RolesToAdd) {
-                @{
-                    query     = "/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$Role'"
-                    queryType = 'MicrosoftGraph'
-                    queryRoot = 'null'
+            # Users from standards table, matched on display name so the reviewer account
+            # can be created any way (invited guest, B2B, manual) regardless of which mail
+            # attribute ended up populated
+            $ReviewerUserNames = @(($Settings.ReviewerUsers.value ?? $Settings.ReviewerUsers) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+            $ReviewerUsers = [System.Collections.Generic.List[object]]::new()
+            foreach ($Name in $ReviewerUserNames) {
+                $UserFilter = [System.Uri]::EscapeDataString("displayName eq '$($Name -replace "'", "''")'")
+                $MatchedUsers = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName&`$filter=$UserFilter" -tenantid $Tenant)
+                if ($MatchedUsers.Count -eq 0) {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "EnableAppConsentRequests: No user found with display name '$Name', not added as reviewer" -sev Warning
+                    continue
                 }
+                foreach ($User in $MatchedUsers) { $ReviewerUsers.Add($User) }
             }
 
-            # Add existing reviewers
+            $NewReviewers = [System.Collections.Generic.List[object]]::new()
+            foreach ($Role in $RolesToAdd) {
+                $NewReviewers.Add(@{
+                        query     = "/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$Role'"
+                        queryType = 'MicrosoftGraph'
+                        queryRoot = 'null'
+                    })
+            }
+            foreach ($User in $ReviewerUsers) {
+                $NewReviewers.Add(@{
+                        query     = "/users/$($User.id)"
+                        queryType = 'MicrosoftGraph'
+                        queryRoot = 'null'
+                    })
+            }
+
+            # Add existing reviewers, skipping any that the configured roles/users already cover
+            $IdsToAdd = @($RolesToAdd) + @($ReviewerUsers | ForEach-Object { $_.id })
             $Reviewers = [System.Collections.Generic.List[object]]::new()
             foreach ($Reviewer in $CurrentInfo.reviewers) {
-                $RoleFound = $false
-                foreach ($Role in $RolesToAdd) {
-                    if ($Reviewer.query -match $Role -or $Reviewers.query -contains $Reviewer.query) {
-                        $RoleFound = $true
+                $Found = $false
+                foreach ($Id in $IdsToAdd) {
+                    if ($Reviewer.query -match $Id -or $Reviewers.query -contains $Reviewer.query) {
+                        $Found = $true
                     }
                 }
-                if (!$RoleFound) {
+                if (!$Found) {
                     $Reviewers.add($Reviewer)
                 }
             }
 
-            # Add new reviewer roles
+            # Add new reviewer roles and users
             foreach ($NewReviewer in $NewReviewers) {
                 $Reviewers.add($NewReviewer)
             }
@@ -107,7 +136,8 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
             $body = (ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo)
 
             New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -Type put -Body $body -ContentType 'application/json'
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled App consent admin requests for the following roles: $RoleNames" -sev Info
+            $UserLogSuffix = if ($ReviewerUsers.Count -gt 0) { " and the following users: $(@($ReviewerUsers | ForEach-Object { $_.displayName }) -join ', ')" } else { '' }
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled App consent admin requests for the following roles: $RoleNames$UserLogSuffix" -sev Info
 
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -129,6 +159,7 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         if (!$RolesToAdd -or $RolesToAdd.Count -eq 0) {
             $RolesToAdd = @('62e90394-69f5-4237-9190-012177145e10')
         }
+        $ReviewerUserNames = @(($Settings.ReviewerUsers.value ?? $Settings.ReviewerUsers) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 
         $CurrentValue = [PSCustomObject]@{
             EnableAppConsentRequests = [bool]$CurrentInfo.isEnabled
@@ -136,7 +167,7 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         }
         $ExpectedValue = [PSCustomObject]@{
             EnableAppConsentRequests = $true
-            ReviewerCount            = $RolesToAdd.Count
+            ReviewerCount            = $RolesToAdd.Count + $ReviewerUserNames.Count
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableAppConsentRequests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant

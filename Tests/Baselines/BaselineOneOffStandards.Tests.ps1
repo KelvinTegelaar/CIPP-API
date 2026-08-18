@@ -145,6 +145,56 @@ Describe 'Get-CIPPBaselineEnableAppConsentRequestsState' {
             $type -eq 'PUT' -and $body -match 'keepme@contoso.com' -and $body -match '62e90394-69f5-4237-9190-012177145e10' -and $body -match '"isEnabled":\s*true'
         }
     }
+
+    It 'grades configured reviewer users by display name, not mail' {
+        # displayName is the match key on purpose: a guest's mail can land in mail,
+        # otherMails or nowhere depending on how the account was created.
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'Users') {
+                @(@{ id = '11111111-aaaa-bbbb-cccc-222222222222'; displayName = 'MSP Support'; userPrincipalName = 'support_msp.com#EXT#@contoso.onmicrosoft.com' } | ConvertTo-Cached)
+            } else {
+                @(@{ isEnabled = $true; reviewers = @(
+                            @{ query = "/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'" },
+                            @{ query = '/users/11111111-aaaa-bbbb-cccc-222222222222' }
+                        ) } | ConvertTo-Cached)
+            }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ReviewerUsers = @([PSCustomObject]@{ label = 'MSP Support'; value = 'MSP Support' }) } }
+        $Prepared = Get-CIPPBaselineEnableAppConsentRequestsState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.missingReviewerUsers).Count | Should -Be 0
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'reports drift when the configured user is absent from the reviewers or does not exist' {
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'Users') {
+                @(@{ id = '11111111-aaaa-bbbb-cccc-222222222222'; displayName = 'MSP Support'; userPrincipalName = 'support_msp.com#EXT#@contoso.onmicrosoft.com' } | ConvertTo-Cached)
+            } else {
+                @(@{ isEnabled = $true; reviewers = @() } | ConvertTo-Cached)
+            }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ReviewerUsers = @('MSP Support', 'Ghost Account') } }
+        $Prepared = Get-CIPPBaselineEnableAppConsentRequestsState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.missingReviewerUsers | Should -Contain 'MSP Support'
+        # A name that resolves to no user at all is missing too - the reviewer account
+        # the operator expects does not exist in the tenant.
+        $Prepared.Current.missingReviewerUsers | Should -Contain 'Ghost Account'
+    }
+
+    It 'resolves reviewer users by display name and does not duplicate one already present' {
+        Mock New-GraphGetRequest {
+            if ($uri -match '/users\?') {
+                @(@{ id = '33333333-dddd-eeee-ffff-444444444444'; displayName = 'MSP Support' } | ConvertTo-Cached)
+            } else {
+                @{ isEnabled = $false; notifyReviewers = $false; remindersEnabled = $false; requestDurationInDays = 0; reviewers = @(@{ query = '/users/33333333-dddd-eeee-ffff-444444444444'; queryType = 'MicrosoftGraph'; queryRoot = 'null' }) } | ConvertTo-Cached
+            }
+        }
+        Mock New-GraphPostRequest { }
+        Invoke-CIPPBaselineEnableAppConsentRequests -Remediate ([PSCustomObject]@{ reviewerRoles = @(); reviewerUsers = @('MSP Support') }) -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            $type -eq 'PUT' -and ([regex]::Matches($body, '33333333-dddd-eeee-ffff-444444444444')).Count -eq 1 -and $body -match '62e90394-69f5-4237-9190-012177145e10'
+        }
+    }
 }
 
 Describe 'Get-CIPPBaselineTeamsFederationConfigurationState' {
