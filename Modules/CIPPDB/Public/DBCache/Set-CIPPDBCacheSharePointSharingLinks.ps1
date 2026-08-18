@@ -1,4 +1,4 @@
-function Set-CIPPDBCacheSharePointSharingLinks {
+﻿function Set-CIPPDBCacheSharePointSharingLinks {
     <#
     .SYNOPSIS
         Fans out SharePoint & OneDrive sharing link collection, one resumable activity per site.
@@ -73,25 +73,19 @@ function Set-CIPPDBCacheSharePointSharingLinks {
         # A forced full sync gets the same sweep for the same reason.
         $FullSweep = [bool]$ForceFullSync -or (@(Get-CIPPSharingLinksDriveState -TenantFilter $TenantFilter).Count -eq 0)
 
-        # Scan state lives in CippSharingLinksState, partitioned per tenant:
-        #   RowKey 'scan'            - this row: scan identity, pending/total site counters,
-        #                              failed-site list, FullSweep flag. One scan per tenant at
-        #                              a time; writing it supersedes any scan still in flight.
-        #   RowKey 'chk-{siteId}'    - an in-progress site's resume position (written by the
-        #                              site activity after every persisted page).
-        #   RowKey 'done-{siteId}'   - a site's completion marker for the current scan; its
-        #                              insert-only write is what makes counting a site idempotent
-        #                              when a retry mechanism dispatches a task more than once.
-        #   RowKey 'delta-{driveId}' - per-drive delta token + scan bookkeeping (written by the
-        #                              site activity, read via Get-CIPPSharingLinksDriveState).
+        # Scan state lives in CippSharingLinksState, partitioned per tenant. Completion is
+        # tracked purely with insert-only marker rows (see the site/drive activity for the row
+        # vocabulary) - deliberately no pending counter and no failed-site list on this row:
+        # concurrent counter decrements lost ETag races, and the failed-site JSON overflowed the
+        # 64KB table property cap at ~315 SharePoint composite site ids, both of which left
+        # scans permanently uncompletable.
         $StateTable = Get-CippTable -tablename 'CippSharingLinksState'
 
-        # Completion markers are per scan: clear the previous scan's before any site of this one
-        # can finish, or every site would look like a duplicate and the counter would never move.
-        # Stale checkpoints are ScanId-gated by the reader, but sweep them too so table state
-        # always reflects at most one scan.
+        # Markers are per scan: clear the previous scan's before any site of this one can
+        # finish, or every site would look like a duplicate. Stale rows are ScanId-gated by
+        # their readers, but sweep them too so table state always reflects at most one scan.
         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
-        foreach ($Prefix in @('done-', 'chk-')) {
+        foreach ($Prefix in @('done-', 'ddone-', 'drives-', 'chk-', 'final')) {
             $Stale = @(Get-CIPPAzDataTableEntity @StateTable -Filter ("PartitionKey eq '{0}' and RowKey ge '{1}' and RowKey lt '{1}~'" -f $SafeTenant, $Prefix) -Property @('PartitionKey', 'RowKey', 'ETag'))
             if ($Stale.Count -gt 0) { $null = Remove-CIPPAzDataTableEntity @StateTable -Entity $Stale -Force }
         }
@@ -100,9 +94,7 @@ function Set-CIPPDBCacheSharePointSharingLinks {
             PartitionKey = $TenantFilter
             RowKey       = 'scan'
             ScanId       = $ScanId
-            PendingSites = [int]$Sites.Count
             TotalSites   = [int]$Sites.Count
-            FailedSites  = '[]'
             FullSweep    = [bool]$FullSweep
             StartedUtc   = [string]([DateTimeOffset]::UtcNow.ToString('o'))
         } -Force
@@ -117,7 +109,6 @@ function Set-CIPPDBCacheSharePointSharingLinks {
                 IsPersonalSite  = [bool]$Site.isPersonalSite
                 InternalDomains = @($InternalDomains)
                 ScanId          = $ScanId
-                Slice           = 1
                 ForceFull       = [bool]$ForceFullSync
                 QueueId         = $QueueId
                 QueueName       = "Sharing Links - $($Site.webUrl)"
