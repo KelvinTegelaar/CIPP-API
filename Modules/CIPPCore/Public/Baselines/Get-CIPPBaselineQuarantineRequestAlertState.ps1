@@ -1,7 +1,7 @@
 function Get-CIPPBaselineQuarantineRequestAlertState {
     <#
     .SYNOPSIS
-        Prepare hook for QuarantineRequestAlert, in either of its two modes.
+        Prepare hook for QuarantineRequestAlert, in any of its three modes.
     .DESCRIPTION
         The 'Allow extra addresses' switch decides what correct means, so it decides the shape
         of the comparison too:
@@ -12,9 +12,13 @@ function Get-CIPPBaselineQuarantineRequestAlertState {
           off - the notify list must be exactly the configured address. Graded as the list
                 itself, so the drift row names the recipients that should not be there.
 
+        The 'Removed' state inverts the whole standard: the desired state is that the alert
+        does not exist, so presence is the drift and absence is compliant. The notify settings
+        play no part in that grading.
+
         Absence of the alert is DRIFT, not No Data: the classic standard treated a missing
         alert as incorrect and remediation creates it. Only an ExoProtectionAlert cache that
-        has never been collected is genuinely unknown.
+        has never been collected is genuinely unknown - in every mode, including Removed.
     .FUNCTIONALITY
         Internal
     #>
@@ -34,6 +38,14 @@ function Get-CIPPBaselineQuarantineRequestAlertState {
     }
 
     $Alert = @($Alerts | Where-Object { $_.Name -eq $PolicyName }) | Select-Object -First 1
+
+    if ("$($Item.Variables.State)" -eq 'removed') {
+        return @{
+            Expected = [PSCustomObject]@{ AlertPresent = $false }
+            Current  = [PSCustomObject]@{ AlertPresent = [bool]$Alert }
+        }
+    }
+
     $Recipients = @(@($Alert.NotifyUser) | Where-Object { $_ })
 
     if ($AllowExtra) {

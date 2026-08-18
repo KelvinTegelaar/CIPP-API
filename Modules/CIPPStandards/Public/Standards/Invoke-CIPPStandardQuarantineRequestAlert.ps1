@@ -7,8 +7,8 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
     .SYNOPSIS
         (Label) Quarantine Release Request Alert
     .DESCRIPTION
-        (Helptext) Sets a e-mail address to alert when a User requests to release a quarantined message.
-        (DocsDescription) Sets a e-mail address to alert when a User requests to release a quarantined message. This is useful for monitoring and ensuring that the correct messages are released.
+        (Helptext) Sets a e-mail address to alert when a User requests to release a quarantined message. Set the alert state to Removed to delete the alert rule CIPP created from the tenant.
+        (DocsDescription) Sets a e-mail address to alert when a User requests to release a quarantined message. This is useful for monitoring and ensuring that the correct messages are released. Setting the alert state to Removed deletes the alert rule CIPP created from the tenant, for when the alert is no longer wanted.
     .NOTES
         CAT
             Defender Standards
@@ -16,13 +16,14 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         EXECUTIVETEXT
             Notifies IT administrators when employees request to release emails that were quarantined for security reasons, enabling oversight of potentially dangerous messages. This helps ensure that legitimate emails are released while maintaining security controls over suspicious content.
         ADDEDCOMPONENT
-            {"type":"textField","name":"standards.QuarantineRequestAlert.NotifyUser","label":"E-mail to receive the alert"}
+            {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"label":"Alert state (blank or Enabled creates the alert, Removed deletes it)","name":"standards.QuarantineRequestAlert.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Removed","value":"removed"}]}
+            {"type":"textField","name":"standards.QuarantineRequestAlert.NotifyUser","label":"E-mail to receive the alert","condition":{"field":"standards.QuarantineRequestAlert.state","compareType":"isNot","compareValue":{"label":"Removed","value":"removed"}}}
         IMPACT
             Low Impact
         ADDEDDATE
             2024-07-15
         POWERSHELLEQUIVALENT
-            New-ProtectionAlert and Set-ProtectionAlert
+            New-ProtectionAlert, Set-ProtectionAlert and Remove-ProtectionAlert
         RECOMMENDEDBY
         REQUIREDCAPABILITIES
             "EXCHANGE_S_STANDARD"
@@ -44,6 +45,16 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
     } #we're done.
     $PolicyName = 'CIPP User requested to release a quarantined message'
 
+    # Templates saved before the state selector existed carry no state value: treat those as
+    # enabled, the only behaviour that existed at the time.
+    $State = $Settings.state.value ?? $Settings.state
+    if ([string]::IsNullOrWhiteSpace($State)) { $State = 'enabled' }
+
+    if ($State -ne 'removed' -and [string]::IsNullOrWhiteSpace($Settings.NotifyUser) -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'QuarantineRequestAlert: NotifyUser is required when the alert state is Enabled' -sev Error
+        return
+    }
+
     try {
         $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance | Where-Object { $_.Name -eq $PolicyName }
     } catch {
@@ -52,11 +63,27 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         return
     }
 
-    $StateIsCorrect = ($CurrentState.NotifyUser -contains $Settings.NotifyUser)
+    $StateIsCorrect = if ($State -eq 'removed') {
+        !$CurrentState
+    } else {
+        ($CurrentState.NotifyUser -contains $Settings.NotifyUser)
+    }
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is already configured correctly.' -sev Info
+            if ($State -eq 'removed') {
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is already removed.' -sev Info
+            } else {
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is already configured correctly.' -sev Info
+            }
+        } elseif ($State -eq 'removed') {
+            try {
+                New-ExoRequest -TenantId $Tenant -cmdlet 'Remove-ProtectionAlert' -Compliance -cmdParams @{ Identity = $PolicyName } -UseSystemMailbox $true
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully removed Quarantine Request Alert' -sev Info
+            } catch {
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to remove Quarantine Request Alert. Error: $ErrorMessage" -sev Error
+            }
         } else {
             $cmdParams = @{
                 'NotifyUser'      = $Settings.NotifyUser
@@ -92,9 +119,13 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is enabled' -sev Info
+            if ($State -eq 'removed') {
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is not present' -sev Info
+            } else {
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is enabled' -sev Info
+            }
         } else {
-            $Message = 'Quarantine Request Alert is not enabled.'
+            $Message = if ($State -eq 'removed') { 'Quarantine Request Alert is still present but should be removed.' } else { 'Quarantine Request Alert is not enabled.' }
             Write-StandardsAlert -message $Message -object $CurrentState -tenant $Tenant -standardName 'QuarantineRequestAlert' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message $Message -sev Info
         }
@@ -104,10 +135,10 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         Add-CIPPBPAField -FieldName 'QuarantineRequestAlert' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
-            NotifyUser = @($CurrentState.NotifyUser)
+            NotifyUser = @($CurrentState.NotifyUser | Where-Object { $_ })
         }
         $ExpectedValue = @{
-            NotifyUser = @($Settings.NotifyUser)
+            NotifyUser = if ($State -eq 'removed') { @() } else { @($Settings.NotifyUser) }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.QuarantineRequestAlert' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
