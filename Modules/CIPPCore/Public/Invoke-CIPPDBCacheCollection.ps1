@@ -83,6 +83,7 @@ function Invoke-CIPPDBCacheCollection {
             'CopilotPolicySettings'
             'SelfServicePurchaseProducts'
             'MoeraDmarc'
+            'DomainAnalyser'
         )
         ExchangeConfig     = @(
             'ExoAntiPhishPolicies'
