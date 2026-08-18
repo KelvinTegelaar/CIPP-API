@@ -13,6 +13,15 @@ function Invoke-AddNamedLocation {
     $Tenants = $request.body.selectedTenants.value
     Write-Host ($Request.body | ConvertTo-Json)
     if ($Tenants -eq 'AllTenants') { $Tenants = (Get-Tenants).defaultDomainName }
+
+    # AnyTenant: narrow to the caller's allowed tenants (same as Invoke-AddTransportRule)
+    $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+    if ($AllowedTenants -ne 'AllTenants') {
+        $AllTenants = Get-Tenants -IncludeErrors
+        $AllowedTenantList = $AllTenants | Where-Object { $_.customerId -in $AllowedTenants }
+        $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
+    }
+
     $results = foreach ($Tenant in $tenants) {
         try {
             $ObjBody = if ($Request.body.Type -eq 'IPLocation') {

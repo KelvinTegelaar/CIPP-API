@@ -14,6 +14,15 @@ function Invoke-ExecRunTenantGroupRule {
 
     $GroupId = $Request.Body.groupId ?? $Request.Query.groupId
 
+    # Same gate as Invoke-ExecTenantGroup: group management requires unrestricted group scope
+    $AllowedGroups = Test-CippAccess -Request $Request -GroupList
+    if ($AllowedGroups -notcontains 'AllGroups') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = 'You do not have permission to manage tenant groups.' }
+            })
+    }
+
     try {
         $GroupTable = Get-CippTable -tablename 'TenantGroups'
         $Group = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$GroupId'"

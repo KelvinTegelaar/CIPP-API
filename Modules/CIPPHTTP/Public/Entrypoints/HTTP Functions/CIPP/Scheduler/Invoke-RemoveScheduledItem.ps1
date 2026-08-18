@@ -20,6 +20,20 @@ function Invoke-RemoveScheduledItem {
     }
     try {
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'
+
+        # AnyTenant: restricted callers may only remove tasks for tenants in scope
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants') {
+            $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value $RowKey -Type String
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$SafeRowKey'"
+            if (-not $Existing.Tenant -or -not (Get-Tenants -TenantFilter $Existing.Tenant)) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::Forbidden
+                        Body       = @{ Results = 'Access to this scheduled task is not allowed' }
+                    })
+            }
+        }
+
         Remove-CIPPAzDataTableEntity -Force @Table -Entity $task
 
         $DetailTable = Get-CIPPTable -TableName 'ScheduledTaskDetails'

@@ -33,6 +33,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($TableName, $Filter, $Property) }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $sev, $LogData) }
+    function Test-CIPPAccess { param($Request, [switch]$TenantList, [switch]$GroupList) }
 
     . $FunctionPath
 
@@ -77,6 +78,7 @@ Describe 'Invoke-ListCVEManagement' {
         Mock -CommandName Get-Tenants -MockWith {
             [pscustomobject]@{ customerId = 'tenant-guid'; defaultDomainName = 'contoso.onmicrosoft.com' }
         }
+        Mock -CommandName Test-CIPPAccess -MockWith { @('AllTenants') }
     }
 
     Context 'live branch response shape' {
@@ -203,6 +205,30 @@ Describe 'Invoke-ListCVEManagement' {
             Should -Invoke Get-DefenderCVEs -Times 1 -Exactly -ParameterFilter {
                 $TenantFilter -eq 'fabrikam.onmicrosoft.com'
             }
+        }
+    }
+
+    Context 'tenant scope enforcement (AnyTenant)' {
+        It 'refuses the live path for a tenant the restricted caller cannot resolve' {
+            Mock -CommandName Test-CIPPAccess -MockWith { @('tenant-guid') }
+            # Scope-narrowed Get-Tenants: the requested tenant resolves to nothing.
+            Mock -CommandName Get-Tenants -MockWith { }
+            Mock -CommandName Get-DefenderCVEs -MockWith { New-CveRow }
+
+            $Response = Invoke-ListCVEManagement -Request (New-CveRequest -TenantFilter 'other.onmicrosoft.com') -TriggerMetadata $null
+
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::InternalServerError)
+            Should -Invoke Get-DefenderCVEs -Times 0 -Exactly
+        }
+
+        It 'serves the live path when the restricted caller is scoped to the tenant' {
+            Mock -CommandName Test-CIPPAccess -MockWith { @('tenant-guid') }
+            Mock -CommandName Get-DefenderCVEs -MockWith { New-CveRow }
+
+            $Response = Invoke-ListCVEManagement -Request (New-CveRequest) -TriggerMetadata $null
+
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+            Should -Invoke Get-DefenderCVEs -Times 1 -Exactly
         }
     }
 

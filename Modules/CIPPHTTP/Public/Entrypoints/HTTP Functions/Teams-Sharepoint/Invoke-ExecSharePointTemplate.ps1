@@ -143,6 +143,12 @@ function Invoke-ExecSharePointTemplate {
                     throw 'A tenant is required to deploy this template.'
                 }
 
+                # AnyTenant: deployment provisions sites in this tenant; enforce scope
+                $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+                if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $TenantFilter)) {
+                    throw 'Access to this tenant is not allowed'
+                }
+
                 # Pre-create a status row so the frontend can poll live progress from queue time.
                 $JobId = New-CIPPAsyncDeployment -Names @($TenantFilter) -StepTitles @(@($TemplateData.siteTemplates) | ForEach-Object { $_.displayName }) -Source 'SharePointTemplate'
 

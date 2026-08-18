@@ -57,6 +57,18 @@ Function Invoke-ExecExtensionMapping {
     }
   }
 
+  # AnyTenant: mapping writes wipe and rewrite whole partitions and re-register per-tenant
+  # sync tasks, so they require an unrestricted tenant scope
+  if ($Request.Query.AddMapping -or $Request.Query.AutoMapping) {
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    if ($AllowedTenants -notcontains 'AllTenants') {
+      return ([HttpResponseContext]@{
+          StatusCode = [HttpStatusCode]::Forbidden
+          Body       = 'Editing extension mappings requires unrestricted tenant access'
+        })
+    }
+  }
+
   try {
     if ($Request.Query.AddMapping) {
       switch ($Request.Query.AddMapping) {

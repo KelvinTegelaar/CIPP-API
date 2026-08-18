@@ -65,6 +65,15 @@ function Invoke-ListDomainHealth {
                 $DomainTable = Get-CIPPTable -Table 'Domains'
                 $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
                 $DomainInfo = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
+
+                # AnyTenant: the Domains row is per-tenant data; hide it from out-of-scope callers.
+                # The DNS checks themselves are public data and stay open.
+                $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+                $Restricted = $AllowedTenants -notcontains 'AllTenants'
+                if ($Restricted) {
+                    $DomainInfo = $DomainInfo | Select-CippAllowedTenantData -TenantProperty 'TenantGUID', 'TenantId'
+                }
+
                 switch ($Request.Query.Action) {
                     'ListDomainInfo' {
                         $Body = $DomainInfo
@@ -98,7 +107,8 @@ function Invoke-ListDomainHealth {
                         if ($Request.Query.Selector) {
                             $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
 
-                            if ('admin' -in $UserRoles -or 'editor' -in $UserRoles) {
+                            # Restricted callers may only persist selectors onto an in-scope row
+                            if (('admin' -in $UserRoles -or 'editor' -in $UserRoles) -and (-not $Restricted -or $DomainInfo)) {
                                 $DkimSelectors = [string]($DkimQuery.Selectors | ConvertTo-Json -Compress)
                                 if ($DomainInfo) {
                                     $DomainInfo.DkimSelectors = $DkimSelectors

@@ -17,6 +17,15 @@ Function Invoke-AddSpamFilter {
     $RequestPriority = $Request.Body.Priority
 
     $Tenants = ($Request.body.selectedTenants).value
+
+    # AnyTenant: narrow to the caller's allowed tenants (same as Invoke-AddTransportRule)
+    $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+    if ($AllowedTenants -ne 'AllTenants') {
+        $AllTenants = Get-Tenants -IncludeErrors
+        $AllowedTenantList = $AllTenants | Where-Object { $_.customerId -in $AllowedTenants }
+        $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
+    }
+
     $Result = foreach ($TenantFilter in $tenants) {
         try {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-HostedContentFilterPolicy' -cmdParams $RequestParams

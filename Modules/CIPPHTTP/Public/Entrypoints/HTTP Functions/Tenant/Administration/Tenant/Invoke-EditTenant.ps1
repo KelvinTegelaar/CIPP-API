@@ -20,6 +20,14 @@ function Invoke-EditTenant {
     $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
     $Existing = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$customerId'"
     $Tenant = Get-Tenants -TenantFilter $customerId
+    # AnyTenant: Get-Tenants is narrowed to the caller's allowed tenants; no match means
+    # unknown or out-of-scope, either way nothing may be written
+    if (-not $Tenant) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = "Tenant '$customerId' not found or access denied" }
+            })
+    }
     $TenantTable = Get-CippTable -TableName 'Tenants'
     $GroupMembersTable = Get-CippTable -TableName 'TenantGroupMembers'
 

@@ -29,6 +29,15 @@ function Invoke-EditTenantOffboardingDefaults {
         return
     }
 
+    # AnyTenant: enforce tenant scope here; Get-Tenants is narrowed to the caller's allowed tenants
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $customerId)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ state = 'error'; resultText = 'Access to this tenant is not allowed' }
+            })
+    }
+
     $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
 
     try {

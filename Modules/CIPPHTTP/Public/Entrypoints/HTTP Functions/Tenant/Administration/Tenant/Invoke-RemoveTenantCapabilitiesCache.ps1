@@ -25,6 +25,15 @@ function Invoke-RemoveTenantCapabilitiesCache {
     }
 
     try {
+        # AnyTenant: enforce tenant scope here; Get-Tenants is narrowed to the caller's allowed tenants
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $DefaultDomainName)) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = [pscustomobject]@{'Results' = 'Access to this tenant is not allowed' }
+                })
+        }
+
         # Get the CacheCapabilities table
         $Table = Get-CippTable -tablename 'CacheCapabilities'
 
