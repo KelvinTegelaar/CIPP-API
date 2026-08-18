@@ -1,0 +1,60 @@
+function Get-CIPPGuestUsersReport {
+    <#
+    .SYNOPSIS
+        Reads cached guest users from the CIPP Reporting database
+
+    .DESCRIPTION
+        Returns the raw cached guest user objects for a tenant (or all tenants), with
+        CacheTimestamp added, ready for the guest lifecycle classification in
+        Invoke-ListGuestUsers.
+
+    .PARAMETER TenantFilter
+        The tenant to read cached guest users for, or 'AllTenants' for all tenants
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$TenantFilter
+    )
+
+    if ($TenantFilter -eq 'AllTenants') {
+        $AnyItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'Guests'
+        $Tenants = @($AnyItems | Where-Object { $_.RowKey -notlike '*-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
+        $TenantList = Get-Tenants -IncludeErrors
+        $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+
+        $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
+        foreach ($Tenant in $Tenants) {
+            try {
+                $TenantResults = Get-CIPPGuestUsersReport -TenantFilter $Tenant
+                foreach ($Result in $TenantResults) {
+                    $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
+                    $AllResults.Add($Result)
+                }
+            } catch {
+                Write-LogMessage -API 'GuestUsersReport' -tenant $Tenant -message "Failed to get guest users report: $($_.Exception.Message)" -sev Warning
+            }
+        }
+        return $AllResults
+    }
+
+    $Items = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Guests' | Where-Object { $_.RowKey -notlike '*-Count' }
+    if (-not $Items) {
+        throw "No guest user data found in reporting database for $TenantFilter. Sync the report data first."
+    }
+
+    $CacheTimestamp = ($Items | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
+
+    $Results = [System.Collections.Generic.List[PSCustomObject]]::new()
+    foreach ($Item in $Items) {
+        try {
+            $Guest = $Item.Data | ConvertFrom-Json -Depth 10 -ErrorAction Stop
+            $Guest | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+            $Results.Add($Guest)
+        } catch {
+            Write-LogMessage -API 'GuestUsersReport' -tenant $TenantFilter -message "Failed to parse guest user item: $($_.Exception.Message)" -sev Warning
+        }
+    }
+
+    return ($Results | Sort-Object displayName)
+}

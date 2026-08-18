@@ -46111,7 +46111,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity from the Graph beta API.",
+        "description": "Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity. Supports UseReportDB=true to serve cached data from the reporting database; AllTenants always uses the cache.",
         "parameters": [
           {
             "name": "staleDays",
@@ -46124,6 +46124,15 @@
           },
           {
             "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve from the reporting database cache instead of live Graph. AllTenants always uses the cache.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -46182,6 +46191,9 @@
                       },
                       "sourceDomain": {
                         "x-cipp-field-source": "backend,frontend"
+                      },
+                      "sponsors": {
+                        "x-cipp-field-source": "backend"
                       },
                       "status": {
                         "x-cipp-field-source": "backend,frontend"

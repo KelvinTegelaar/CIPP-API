@@ -1,6 +1,7 @@
 # Pester tests for Invoke-ListGuestUsers
 # Validates lifecycle status classification, the sign-in date selection, the staleDays
-# override, and the fallback for tenants without an Entra ID P1 license.
+# override, the fallback for tenants without an Entra ID P1 license, and the
+# reporting-database cache branch.
 
 BeforeAll {
     # Resolve by name under Modules/ so the test survives the function moving between modules.
@@ -19,16 +20,19 @@ BeforeAll {
     function Get-CippException { param($Exception) @{ NormalizedError = $Exception } }
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $RequiredCapabilities, $Preset, [switch]$SkipLog) }
     function New-GraphGetRequest { param($uri, $tenantid, [switch]$ComplexFilter) }
+    function Get-CIPPGuestUsersReport { param($TenantFilter) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
 
     function New-GuestRequest {
         param([hashtable]$Query = @{})
+        $Merged = @{ tenantFilter = 'contoso.onmicrosoft.com' }
+        foreach ($Key in $Query.Keys) { $Merged[$Key] = $Query[$Key] }
         [pscustomobject]@{
             Params  = @{ CIPPEndpoint = 'ListGuestUsers' }
             Headers = @{ Authorization = 'token' }
-            Query   = [pscustomobject](@{ tenantFilter = 'contoso.onmicrosoft.com' } + $Query)
+            Query   = [pscustomobject]$Merged
         }
     }
 }
@@ -182,5 +186,95 @@ Describe 'Invoke-ListGuestUsers' {
         $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::InternalServerError)
         $response.Body[0].Error | Should -Match 'Graph exploded'
         Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $Sev -eq 'Error' }
+    }
+
+    It 'serves classified rows from the report cache when UseReportDB is true' {
+        Mock -CommandName New-GraphGetRequest -MockWith { throw 'live Graph should not be called' }
+        Mock -CommandName Get-CIPPGuestUsersReport -MockWith {
+            @(
+                # Capable tenant, recent sign-in - Active, with sponsors joined for display
+                [pscustomobject]@{
+                    id = 'g-active'; displayName = 'Active Guest'; mail = 'active@partner.com'
+                    userPrincipalName = 'active_partner.com#EXT#@contoso.onmicrosoft.com'
+                    createdDateTime = (Get-Date).AddDays(-400).ToString('o'); accountEnabled = $true
+                    externalUserState = 'Accepted'; externalUserStateChangeDateTime = $null
+                    signInActivity = [pscustomobject]@{
+                        lastSignInDateTime               = (Get-Date).AddDays(-4).ToString('o')
+                        lastNonInteractiveSignInDateTime = $null
+                        lastSuccessfulSignInDateTime     = $null
+                    }
+                    signInLogsCapable = $true
+                    sponsors = @(
+                        [pscustomobject]@{ displayName = 'Sponsor One' }
+                        [pscustomobject]@{ userPrincipalName = 'two@partner.com' }
+                    )
+                    CacheTimestamp = '2026-08-18T10:00:00Z'
+                }
+                # Capable tenant, no sign-in data - genuinely never signed in
+                [pscustomobject]@{
+                    id = 'g-never'; displayName = 'Never Guest'; mail = 'never@partner.com'
+                    userPrincipalName = 'never_partner.com#EXT#@contoso.onmicrosoft.com'
+                    createdDateTime = (Get-Date).AddDays(-200).ToString('o'); accountEnabled = $true
+                    externalUserState = 'Accepted'; externalUserStateChangeDateTime = $null
+                    signInActivity = $null; signInLogsCapable = $true; sponsors = $null
+                    CacheTimestamp = '2026-08-18T10:00:00Z'
+                }
+                # Not capable at cache time - sign-in state cannot be known
+                [pscustomobject]@{
+                    id = 'g-unknown'; displayName = 'Unknown Guest'; mail = 'u@partner.com'
+                    userPrincipalName = 'u_partner.com#EXT#@contoso.onmicrosoft.com'
+                    createdDateTime = (Get-Date).AddDays(-200).ToString('o'); accountEnabled = $true
+                    externalUserState = 'Accepted'; externalUserStateChangeDateTime = $null
+                    signInActivity = $null; signInLogsCapable = $false; sponsors = $null
+                    CacheTimestamp = '2026-08-18T10:00:00Z'
+                }
+                # Legacy cache row without the capability stamp - never guess sign-in state
+                [pscustomobject]@{
+                    id = 'g-legacy'; displayName = 'Legacy Guest'; mail = 'l@partner.com'
+                    userPrincipalName = 'l_partner.com#EXT#@contoso.onmicrosoft.com'
+                    createdDateTime = (Get-Date).AddDays(-200).ToString('o'); accountEnabled = $true
+                    externalUserState = 'Accepted'; externalUserStateChangeDateTime = $null
+                }
+            )
+        }
+
+        $response = Invoke-ListGuestUsers -Request (New-GuestRequest -Query @{ UseReportDB = 'true' }) -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $ByStatus = @{}
+        foreach ($Row in $response.Body) { $ByStatus[$Row.id] = $Row }
+        $ByStatus['g-active'].status | Should -Be 'Active'
+        $ByStatus['g-active'].sponsors | Should -Be 'Sponsor One, two@partner.com'
+        $ByStatus['g-active'].CacheTimestamp | Should -Be '2026-08-18T10:00:00Z'
+        $ByStatus['g-never'].status | Should -Be 'Never Signed In'
+        $ByStatus['g-unknown'].status | Should -Be 'Unknown'
+        $ByStatus['g-legacy'].status | Should -Be 'Unknown'
+
+        Should -Invoke Get-CIPPGuestUsersReport -Times 1 -ParameterFilter { $TenantFilter -eq 'contoso.onmicrosoft.com' }
+        Should -Invoke New-GraphGetRequest -Times 0
+    }
+
+    It 'always uses the report cache for AllTenants and passes Tenant through' {
+        Mock -CommandName New-GraphGetRequest -MockWith { throw 'live Graph should not be called' }
+        Mock -CommandName Get-CIPPGuestUsersReport -MockWith {
+            @(
+                [pscustomobject]@{
+                    id = 'g-1'; displayName = 'Guest'; mail = 'g@partner.com'
+                    userPrincipalName = 'g_partner.com#EXT#@contoso.onmicrosoft.com'
+                    createdDateTime = (Get-Date).AddDays(-10).ToString('o'); accountEnabled = $true
+                    externalUserState = 'PendingAcceptance'; externalUserStateChangeDateTime = $null
+                    signInLogsCapable = $true
+                    CacheTimestamp = '2026-08-18T10:00:00Z'; Tenant = 'contoso.onmicrosoft.com'
+                }
+            )
+        }
+
+        $response = Invoke-ListGuestUsers -Request (New-GuestRequest -Query @{ tenantFilter = 'AllTenants' }) -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $response.Body[0].status | Should -Be 'Pending Acceptance'
+        $response.Body[0].Tenant | Should -Be 'contoso.onmicrosoft.com'
+        Should -Invoke Get-CIPPGuestUsersReport -Times 1 -ParameterFilter { $TenantFilter -eq 'AllTenants' }
+        Should -Invoke New-GraphGetRequest -Times 0
     }
 }
