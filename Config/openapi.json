@@ -27938,6 +27938,69 @@
         "x-cipp-role": "Exchange.SpamFilter.ReadWrite"
       }
     },
+    "/api/ExecRefreshMyAccess": {
+      "get": {
+        "summary": "Re-check the caller's Entra group membership and refresh their CIPP roles",
+        "operationId": "ExecRefreshMyAccess",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Clears the caller's cached role resolution and re-checks Entra group membership, so a\njust-activated PIM group grants its mapped CIPP role without waiting out the role cache.\nOnly ever refreshes the calling user's own access.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Role": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "429": {
+            "description": "Throttled by the upstream Microsoft API"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Public",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecRegistrationCampaign": {
       "post": {
         "summary": "ExecRegistrationCampaign",

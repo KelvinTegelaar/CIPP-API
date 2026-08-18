@@ -26,6 +26,10 @@ function Invoke-ExecCustomRole {
         throw "Role name $($Request.Body.RoleName) cannot be used"
     }
 
+    # Set when an action changes which Entra group maps to a role - that invalidates every
+    # user's cached role resolution, not just the scope rules.
+    $AccessGroupChanged = $false
+
     switch ($Action) {
         'AddUpdate' {
             try {
@@ -113,6 +117,7 @@ function Invoke-ExecCustomRole {
                     }
                 }
                 if ($Request.Body.EntraGroup) {
+                    $ExistingRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "PartitionKey eq 'AccessRoleGroups' and RowKey eq '$($Request.Body.RoleName.ToLower())'"
                     $RoleGroup = @{
                         'PartitionKey' = 'AccessRoleGroups'
                         'RowKey'       = "$($Request.Body.RoleName.ToLower())"
@@ -120,12 +125,16 @@ function Invoke-ExecCustomRole {
                         'GroupName'    = $Request.Body.EntraGroup.label
                     }
                     Add-CIPPAzDataTableEntity @AccessRoleGroupTable -Entity $RoleGroup -Force | Out-Null
+                    if (!$ExistingRoleGroup -or $ExistingRoleGroup.GroupId -ne $Request.Body.EntraGroup.value) {
+                        $AccessGroupChanged = $true
+                    }
                     $Results.Add("Security group '$($Request.Body.EntraGroup.label)' assigned to the '$($Request.Body.RoleName)' role.")
                     Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Security group '$($Request.Body.EntraGroup.label)' assigned to the '$($Request.Body.RoleName)' role." -Sev 'Info'
                 } else {
                     $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "RowKey eq '$($Request.Body.RoleName)'"
                     if ($AccessRoleGroup) {
                         Remove-CIPPAzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
+                        $AccessGroupChanged = $true
                         $Results.Add("Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role.")
                         Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role." -Sev 'Info'
                     }
@@ -191,6 +200,7 @@ function Invoke-ExecCustomRole {
             $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "PartitionKey eq 'AccessRoleGroups' and RowKey eq '$($Request.Body.RoleName)'"
             if ($AccessRoleGroup) {
                 Remove-CIPPAzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
+                $AccessGroupChanged = $true
             }
             $AccessIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "PartitionKey eq 'AccessIPRanges' and RowKey eq '$($Request.Body.RoleName)'"
             if ($AccessIPRange) {
@@ -335,6 +345,15 @@ function Invoke-ExecCustomRole {
     # stamp so the change lands within seconds rather than waiting out the rule cache TTL.
     if ($Action -in @('AddUpdate', 'Clone', 'Delete')) {
         Clear-CippAccessScopeCache
+    }
+
+    # A group mapping change alters which roles a user resolves to, not just what those roles can
+    # see. Drop the cached per-user resolutions and refresh the allowedUsers projection CRAFT
+    # authenticates against, so the change applies now instead of when the caches age out.
+    if ($AccessGroupChanged) {
+        Clear-CippAccessUserCache
+        try { Start-UserSyncTimer } catch {}
+        try { [Craft.Services.AuthBridge]::InvalidateUsers() } catch {}
     }
 
     return ([HttpResponseContext]@{
