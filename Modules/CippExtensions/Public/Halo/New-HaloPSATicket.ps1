@@ -148,6 +148,22 @@ function New-HaloPSATicket {
       Write-LogMessage -message "HaloPSA.DefaultPriority value '$Priority' is not a valid integer - omitting priority_id from ticket payload" -API 'HaloPSATicket' -sev Warning
     }
   }
+  # Halo records tickets created over the API as 'Manual' unless the payload carries a source, so
+  # MSPs who want CIPP's tickets identifiable create their own source in Halo and select it here.
+  # Blank keeps the previous behaviour exactly - no source is sent and Halo applies its default.
+  $RequestSource = $Configuration.RequestSource.value ?? $Configuration.RequestSource
+  if ($null -ne $RequestSource -and "$RequestSource".Trim() -ne '') {
+    # Halo source ids include 0 (Email) and negatives (built-in integrations, e.g. -9 Ninja RMM),
+    # so presence has to be tested before parsing. The '-gt 0' guard the priority block uses would
+    # drop both, and '-as [int]' can't be the guard either - it turns $null and '' into 0, which
+    # would silently stamp Email on every install that left this blank.
+    $SourceInt = 0
+    if ([int]::TryParse("$RequestSource", [ref]$SourceInt)) {
+      $object | Add-Member -MemberType NoteProperty -Name 'source' -Value $SourceInt -Force
+    } else {
+      Write-LogMessage -message "HaloPSA.RequestSource value '$RequestSource' is not a valid integer - omitting source from ticket payload" -API 'HaloPSATicket' -sev Warning
+    }
+  }
   #use the token to create a new ticket in HaloPSA
   $body = ConvertTo-Json -Compress -Depth 10 -InputObject @($Object)
 

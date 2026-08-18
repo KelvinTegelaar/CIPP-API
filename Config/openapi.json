@@ -20571,6 +20571,7 @@
               "enum": [
                 "HaloPSA",
                 "HaloPSAFields",
+                "HaloPSARequestSources",
                 "Hudu",
                 "HuduFields",
                 "NinjaOne",
