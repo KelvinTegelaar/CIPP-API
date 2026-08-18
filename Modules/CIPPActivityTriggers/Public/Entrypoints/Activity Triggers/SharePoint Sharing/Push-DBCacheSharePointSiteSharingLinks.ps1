@@ -281,6 +281,16 @@ function Push-DBCacheSharePointSiteSharingLinks {
             try {
                 $Drives = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/$SiteId/drives?`$select=id,name,driveType,webUrl" -tenantid $TenantFilter -asapp $true)
             } catch {
+                if ($_.Exception.Message -match 'Access to this site has been blocked') {
+                    # A NoAccess-locked site (typically an offboarded user's OneDrive) blocks ALL
+                    # content access, sharing-link redemption included - its links are dead while
+                    # the lock stands. Complete un-failed WITHOUT scanning: finalisation then
+                    # prunes the site's stale rows, and an unlock later triggers a fresh full
+                    # scan that re-adds them.
+                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: skipping locked site '$SiteUrl' - access is blocked, so its sharing links are inactive" -sev Info
+                    Complete-Site
+                    return @()
+                }
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: could not list drives for '$SiteUrl': $($_.Exception.Message)" -sev Warning
                 Complete-Site -Failed
                 return @()
@@ -515,10 +525,16 @@ function Push-DBCacheSharePointSiteSharingLinks {
                     Set-DriveState -DeltaLink $DeltaLink -FullScan
                 }
             } catch {
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: failed scanning drive '$($Drive.name)' on '$SiteUrl': $($_.Exception.Message)" -sev Warning
-                # A current LastScanId with an empty token both protects this drive's cached
-                # rows from pruning and forces the next scan to run full.
-                Set-DriveState -DeltaLink ''
+                if ($_.Exception.Message -match 'Access to this site has been blocked') {
+                    # Site locked mid-scan: links are inactive, so leave the drive state stale
+                    # for finalisation to prune rather than protecting this drive's rows.
+                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: drive '$($Drive.name)' on '$SiteUrl' is locked; leaving its rows for pruning" -sev Info
+                } else {
+                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: failed scanning drive '$($Drive.name)' on '$SiteUrl': $($_.Exception.Message)" -sev Warning
+                    # A current LastScanId with an empty token both protects this drive's cached
+                    # rows from pruning and forces the next scan to run full.
+                    Set-DriveState -DeltaLink ''
+                }
             }
             Remove-DriveCheckpoint
             Complete-Drive
@@ -559,6 +575,14 @@ function Push-DBCacheSharePointSiteSharingLinks {
                     $Uri = $FullDeltaUri
                     $ExistingRowsByItem = $null
                     continue
+                }
+                if ($ErrorMessage -match 'Access to this site has been blocked') {
+                    # Site locked mid-scan: links are inactive, so leave the drive state stale
+                    # for finalisation to prune rather than protecting this drive's rows.
+                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: drive '$($Drive.name)' on '$SiteUrl' is locked; leaving its rows for pruning" -sev Info
+                    Remove-DriveCheckpoint
+                    Complete-Drive
+                    return @()
                 }
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: failed scanning drive '$($Drive.name)' on '$SiteUrl': $ErrorMessage" -sev Warning
                 $DriveFailed = $true

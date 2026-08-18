@@ -283,7 +283,7 @@ Describe 'Per-drive sharing-links scan' {
         It 'completes the site as failed when the drive listing is refused' {
             $ScanId = 'scan-dispatch-2'
             Initialize-TestScan -ScanId $ScanId -TotalSites 2
-            $script:GraphGetHandler = { param($Uri) throw 'Access to this site has been blocked.' }
+            $script:GraphGetHandler = { param($Uri) throw 'The request has been throttled' }
 
             Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId)
 
@@ -291,6 +291,20 @@ Describe 'Per-drive sharing-links scan' {
             [string]$Marker.Failed | Should -Be 'True'
             # Not the last site, so no finalisation.
             Get-CacheRowKeys | Should -Not -Contain 'SharePointSharingLinks-Count'
+        }
+
+        It 'skips a locked site un-failed so finalisation prunes its dead links' {
+            $ScanId = 'scan-dispatch-3'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 2
+            $script:GraphGetHandler = { param($Uri) throw 'Access to this site has been blocked. Please contact the administrator to resolve this problem.' }
+
+            Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId)
+
+            # Completed un-failed and nothing dispatched: the site's stale drive rows are left
+            # unprotected, which is what lets finalisation prune its now-inactive links.
+            $Marker = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -eq 'done-contoso.sharepoint.com,site1,web1' }
+            [string]$Marker.Failed | Should -Be 'False'
+            $script:Orchestrations.Count | Should -Be 0
         }
     }
 
