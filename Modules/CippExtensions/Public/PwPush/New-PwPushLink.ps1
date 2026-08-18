@@ -37,16 +37,17 @@ function New-PwPushLink {
         # Proceed with creating the PwPush link
         try {
             Set-PwPushConfig -Configuration $Configuration -FullConfiguration $ParsedConfig
-            $PushParams = @{
-                Payload = $Payload
+            $PasswordValues = @{
+                kind    = 'text'
+                payload = [string]$Payload
             }
-            # New-Push validates ExpireAfterDays as 1-90 and ExpireAfterViews as 1-100 at bind
-            # time; an out-of-range saved value would throw here and downgrade every caller to
-            # plain text passwords, so drop the setting and warn instead.
+            # The API accepts 1-90 days and 1-100 views; an out-of-range saved value would fail
+            # the whole push and downgrade every caller to plain text passwords, so drop the
+            # setting and warn instead.
             $ExpireAfterDays = $Configuration.ExpireAfterDays -as [int]
             if ($ExpireAfterDays) {
                 if ($ExpireAfterDays -ge 1 -and $ExpireAfterDays -le 90) {
-                    $PushParams.ExpireAfterDays = $ExpireAfterDays
+                    $PasswordValues.expire_after_days = $ExpireAfterDays
                 } else {
                     Write-LogMessage -API PwPush -Message "Ignoring ExpireAfterDays '$($Configuration.ExpireAfterDays)': PWPush accepts 1 to 90 days" -Sev 'Warning'
                 }
@@ -54,25 +55,41 @@ function New-PwPushLink {
             $ExpireAfterViews = $Configuration.ExpireAfterViews -as [int]
             if ($ExpireAfterViews) {
                 if ($ExpireAfterViews -ge 1 -and $ExpireAfterViews -le 100) {
-                    $PushParams.ExpireAfterViews = $ExpireAfterViews
+                    $PasswordValues.expire_after_views = $ExpireAfterViews
                 } else {
                     Write-LogMessage -API PwPush -Message "Ignoring ExpireAfterViews '$($Configuration.ExpireAfterViews)': PWPush accepts 1 to 100 views" -Sev 'Warning'
                 }
             }
-            if ($Configuration.DeletableByViewer) { $PushParams.DeletableByViewer = $Configuration.DeletableByViewer }
-            # New-Push rejects an account id at bind time when no Authorization header is set, so
-            # a stale or placeholder selection saved with bearer auth off must not be passed on.
+            if ($Configuration.DeletableByViewer) { $PasswordValues.deletable_by_viewer = $true }
+            if (![string]::IsNullOrEmpty($Configuration.DefaultPassphrase)) { $PasswordValues.passphrase = $Configuration.DefaultPassphrase }
+            $PushBody = @{ password = $PasswordValues }
+            # An account id is only valid on an authenticated session, so a stale or placeholder
+            # selection saved while bearer auth is off must not be passed on.
             if ($Configuration.UseBearerAuth -eq $true -and -not [string]::IsNullOrEmpty($Configuration.AccountId.value)) {
-                $PushParams.AccountId = $Configuration.AccountId.value
+                $PushBody.account_id = $Configuration.AccountId.value
             }
-            if (![string]::IsNullOrEmpty($Configuration.DefaultPassphrase)) { $PushParams.Passphrase = $Configuration.DefaultPassphrase }
 
             if ($PSCmdlet.ShouldProcess('Create a new PwPush link')) {
-                $Link = New-Push @PushParams
-                if ($Configuration.RetrievalStep) {
-                    return $Link.LinkRetrievalStep -replace '/r/r', '/r'
+                # POST through the module's internal API helper so its auth headers, user agent
+                # and base URL are reused, but skip New-Push: its PasswordPush class types
+                # account_id as [int] while pwpush.com now issues string ids ('acct_...'), so
+                # the response conversion throws away the link on every authenticated push.
+                $Response = & (Get-Module PassPushPosh) {
+                    param($Body)
+                    Invoke-PasswordPusherAPI -Endpoint 'p.json' -Method Post -Body $Body -ErrorAction Stop
+                } $PushBody
+                $Link = if (![string]::IsNullOrEmpty($Response.json_url)) {
+                    $Response.json_url -replace '\.json$', ''
+                } elseif (![string]::IsNullOrEmpty($Response.html_url)) {
+                    $Response.html_url -replace '/r$', ''
+                } else {
+                    # Deliberately not including the response: it echoes the pushed payload
+                    throw 'PWPush API response did not contain a link'
                 }
-                return $Link.Link
+                if ($Configuration.RetrievalStep) {
+                    return "$Link/r" -replace '/r/r$', '/r'
+                }
+                return $Link
             }
         } catch {
             $LogData = [PSCustomObject]@{
