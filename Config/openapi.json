@@ -23064,6 +23064,77 @@
         "x-cipp-role": "Security.Incident.Read"
       }
     },
+    "/api/ExecIRMConfiguration": {
+      "post": {
+        "summary": "ExecIRMConfiguration",
+        "operationId": "ExecIRMConfiguration",
+        "tags": [
+          "Email-Exchange > Tools"
+        ],
+        "description": "Enables or disables Microsoft Purview Message Encryption for a tenant by setting AzureRMSLicensingEnabled, or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "enum": [
+                      "Set",
+                      "Test"
+                    ]
+                  },
+                  "AzureRMSLicensingEnabled": {
+                    "type": "string"
+                  },
+                  "Recipient": {
+                    "type": "string"
+                  },
+                  "Sender": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.ReadWrite"
+      }
+    },
     "/api/ExecJITAdmin": {
       "post": {
         "summary": "ExecJITAdmin",
@@ -47050,6 +47121,81 @@
         ],
         "x-cipp-role": "CIPP.Core.Read",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListIRMConfiguration": {
+      "get": {
+        "summary": "ListIRMConfiguration",
+        "operationId": "ListIRMConfiguration",
+        "tags": [
+          "Email-Exchange > Tools"
+        ],
+        "description": "Lists the Information Rights Management (IRM) configuration for a tenant. Used to check whether Microsoft Purview Message Encryption is active and whether an on-premises AD RMS deployment still has to be migrated to Azure RMS first.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "AdRmsDetected": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "AzureRMSLicensingEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ExternalLicensingEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "InternalLicensingEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "JournalReportDecryptionEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "LicensingLocation": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "MessageEncryptionEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "SimplifiedClientAccessEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "TransportDecryptionSetting": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.Read"
       }
     },
     "/api/ListJITAdmin": {
