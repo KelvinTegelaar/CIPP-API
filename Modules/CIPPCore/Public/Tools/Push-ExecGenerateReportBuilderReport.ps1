@@ -76,7 +76,14 @@ function Push-ExecGenerateReportBuilderReport {
             }
         }
         $ResolveCellValue = {
-            param($Value)
+            param($Value, $Header, $Row)
+            # Windows 365 Cloud PCs never report BitLocker (isEncrypted stays false) although
+            # their disks are platform-encrypted by Azure - rendered as a distinct state so the
+            # device is not flagged as an encryption risk. Mirrored by the report builder's
+            # client-side preview (formatDatabaseContent).
+            if ($Header -eq 'isEncrypted' -and $Value -ne $true -and $Row -and (Test-CIPPCloudPCDevice -Device $Row)) {
+                return 'Encrypted (platform-managed)'
+            }
             $Items = @($Value)
             if ($LicenseNamesBySkuId.Count -eq 0 -or $Items.Count -eq 0 -or $null -eq $Items[0] -or -not $Items[0].PSObject.Properties['skuId']) {
                 return $Value
@@ -131,7 +138,7 @@ function Push-ExecGenerateReportBuilderReport {
                                     $Obj = [ordered]@{}
                                     foreach ($Header in $SelectedHeaders) {
                                         $Val = $Row.$Header
-                                        $Obj[$Header] = if ($null -ne $Val) { & $ResolveCellValue $Val } else { '' }
+                                        $Obj[$Header] = if ($null -ne $Val) { & $ResolveCellValue $Val $Header $Row } else { '' }
                                     }
                                     [PSCustomObject]$Obj
                                 })
@@ -231,7 +238,7 @@ function Push-ExecGenerateReportBuilderReport {
                                     $Obj = [ordered]@{}
                                     foreach ($Header in $SelectedHeaders) {
                                         $Val = $Row.$Header
-                                        $Obj[$Header] = if ($null -ne $Val) { & $ResolveCellValue $Val } else { '' }
+                                        $Obj[$Header] = if ($null -ne $Val) { & $ResolveCellValue $Val $Header $Row } else { '' }
                                     }
                                     [PSCustomObject]$Obj
                                 })

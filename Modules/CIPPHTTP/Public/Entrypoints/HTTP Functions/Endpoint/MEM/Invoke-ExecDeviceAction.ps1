@@ -38,6 +38,21 @@ function Invoke-ExecDeviceAction {
                 Write-Host "ActionBody: $ActionBody"
                 break
             }
+            'wipe' {
+                # Graph rejects/ignores unknown wipe parameters and an empty macOsUnlockCode,
+                # so forward only the supported ones instead of the raw request body
+                $WipeBody = @{}
+                foreach ($Param in @('keepUserData', 'keepEnrollmentData', 'useProtectedWipe', 'persistEsimDataPlan')) {
+                    if ($null -ne $Request.Body.$Param) {
+                        $WipeBody[$Param] = [System.Convert]::ToBoolean("$($Request.Body.$Param)")
+                    }
+                }
+                if (-not [string]::IsNullOrWhiteSpace($Request.Body.macOsUnlockCode)) {
+                    $WipeBody.macOsUnlockCode = "$($Request.Body.macOsUnlockCode)"
+                }
+                $ActionBody = $WipeBody | ConvertTo-Json -Compress
+                break
+            }
             'createDeviceLogCollectionRequest' {
                 $ActionBody = @{
                     templateType = @{
