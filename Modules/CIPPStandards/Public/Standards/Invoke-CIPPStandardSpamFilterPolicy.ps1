@@ -93,21 +93,32 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         return
     }
 
-    # Only match against legacy/default names when no custom name is provided. When a custom name is
-    # set, deploy it as a new policy instead of reusing an existing default-named one. 'Default' is
-    # Microsoft's built-in inbound anti-spam policy ("Anti-spam inbound policy" in the portal); it
-    # cannot be renamed and has no associated rule.
-    if ($PolicyName -eq $DefaultPolicyName) {
-        $PolicyList = @($PolicyName, 'Default Spam Filter Policy', 'Default')
-        $ExistingPolicy = $AllSpamFilterPolicies | Where-Object -Property Name -In $PolicyList | Select-Object -First 1
-        if ($null -ne $ExistingPolicy.Name) {
-            # Use existing policy name if found
-            $PolicyName = $ExistingPolicy.Name
+    # Resolve which policy this standard manages. An exact name match always wins, so a tenant that
+    # already has a CIPP-created policy keeps using it. Otherwise, when the configured name is one of the
+    # aliases for Microsoft's built-in inbound anti-spam policy, adopt that built-in policy instead of
+    # creating a duplicate: Get-HostedContentFilterPolicy returns it named 'Default', while the Defender
+    # portal labels it "Anti-spam inbound policy" and older CIPP builds used "Default Spam Filter Policy".
+    # Customers targeting the built-in policy commonly enter any of these (the same rename workaround that
+    # works for the other Default* Defender standards, where the cmdlet name and portal name match). Any
+    # other value is a genuinely custom policy and is created as new.
+    $DefaultPolicyNames = @($DefaultPolicyName, 'Default Spam Filter Policy', 'Default', 'Anti-spam inbound policy')
+    $ExistingPolicy = $AllSpamFilterPolicies | Where-Object -Property Name -EQ $PolicyName | Select-Object -First 1
+    if ($null -eq $ExistingPolicy -and $PolicyName -in $DefaultPolicyNames) {
+        # No policy is literally named e.g. "Anti-spam inbound policy" - that is only the portal label.
+        # Fall back to the built-in default policy, identified by its IsDefault flag (or its 'Default'
+        # name if the flag is unavailable).
+        $ExistingPolicy = $AllSpamFilterPolicies | Where-Object { $_.IsDefault -eq $true } | Select-Object -First 1
+        if ($null -eq $ExistingPolicy) {
+            $ExistingPolicy = $AllSpamFilterPolicies | Where-Object -Property Name -EQ 'Default' | Select-Object -First 1
         }
+    }
+    if ($null -ne $ExistingPolicy.Name) {
+        # Adopt the existing policy's real name so state comparison and remediation target it.
+        $PolicyName = $ExistingPolicy.Name
     }
 
     # The built-in default policy cannot have a HostedContentFilterRule, so rule remediation is skipped for it.
-    $IsDefaultPolicy = $PolicyName -eq 'Default'
+    $IsDefaultPolicy = ($ExistingPolicy.IsDefault -eq $true) -or ($PolicyName -eq 'Default')
 
     $CurrentState = $AllSpamFilterPolicies | Where-Object -Property Name -EQ $PolicyName
 

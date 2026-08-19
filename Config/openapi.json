@@ -18563,7 +18563,8 @@
                     "enum": [
                       "createDeviceLogCollectionRequest",
                       "setDeviceName",
-                      "users"
+                      "users",
+                      "wipe"
                     ],
                     "description": "Interact with Body parameters or the body of the request."
                   },
@@ -18576,6 +18577,9 @@
                       "type": "string"
                     },
                     "description": "limit to 15 characters"
+                  },
+                  "macOsUnlockCode": {
+                    "type": "string"
                   },
                   "tenantFilter": {
                     "type": "string"
