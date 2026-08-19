@@ -162,6 +162,55 @@ function Test-CIPPAccessPermissions {
         $ApplicationToken = Get-GraphToken -returnRefresh $true -SkipCache $true -AsApp $true
         $ApplicationTokenDetails = Read-JwtAccessDetails -Token $ApplicationToken.access_token -erroraction SilentlyContinue | Select-Object
 
+        # CIPP auto-rotates the SAM app secret within 30 days of expiry (Start-UpdateTokensTimer).
+        # Only warn when the credential stored in Key Vault (or DevSecrets) is inside that window -5 days. This should not happen. But sometimes it does.
+        $RotationThresholdDays = 25
+        $RotationCutoffUtc = (Get-Date).ToUniversalTime().AddDays($RotationThresholdDays)
+        $NowUtc = (Get-Date).ToUniversalTime()
+        $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
+
+        try {
+            $KvApplicationSecret = $null
+            if ($env:MSI_SECRET) {
+                $KV = Get-CippKeyVaultName
+                $KvApplicationSecret = Get-CippKeyVaultSecret -VaultName $KV -Name 'ApplicationSecret' -AsPlainText
+                if ($env:ApplicationSecret -and $KvApplicationSecret -and $env:ApplicationSecret -ne $KvApplicationSecret) {
+                    $ErrorMessages.Add('Your application secret in memory does not match Key Vault, wait 30 minutes for the function app to update.') | Out-Null
+                    $Success = $false
+                }
+            } elseif ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+                $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
+                $DevSecret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
+                $KvApplicationSecret = $DevSecret.ApplicationSecret
+            } else {
+                $KvApplicationSecret = $env:ApplicationSecret
+            }
+
+            if ($env:ApplicationID -and $KvApplicationSecret -and $KvApplicationSecret -notmatch $PlaceholderPattern) {
+                $AppRegistration = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($env:ApplicationID)')?`$select=passwordCredentials" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
+                $PasswordCredentials = @($AppRegistration.passwordCredentials)
+
+                # Graph hint is the first three characters of the secret value.
+                $StoredCredential = $PasswordCredentials | Where-Object {
+                    $_.hint -and $KvApplicationSecret.StartsWith($_.hint, [System.StringComparison]::OrdinalIgnoreCase)
+                } | Select-Object -First 1
+
+                if ($StoredCredential) {
+                    $SecretExpiryUtc = [DateTime]::SpecifyKind([DateTime]$StoredCredential.endDateTime, [DateTimeKind]::Utc)
+                    if ($SecretExpiryUtc -lt $NowUtc) {
+                        $ErrorMessages.Add("The application secret stored in Key Vault expired on $($SecretExpiryUtc.ToString('yyyy-MM-dd')).") | Out-Null
+                        $Success = $false
+                    } elseif ($SecretExpiryUtc -lt $RotationCutoffUtc) {
+                        $DaysRemaining = [Math]::Ceiling(($SecretExpiryUtc - $NowUtc).TotalDays)
+                        $ErrorMessages.Add("The application secret stored in Key Vault expires in $DaysRemaining days ($($SecretExpiryUtc.ToString('yyyy-MM-dd'))).") | Out-Null
+                        $Success = $false
+                    }
+                }
+            }
+        } catch {
+            $Messages.Add('Could not verify the application secret stored in Key Vault.') | Out-Null
+        }
+
         $LastUpdate = [DateTime]::SpecifyKind($GraphPermissions.Timestamp.ToString('yyyy-MM-ddTHH:mm:ssZ'), [DateTimeKind]::Utc)
         $CpvTable = Get-CippTable -tablename 'cpvtenants'
         $CpvRefresh = Get-CippAzDataTableEntity @CpvTable -Filter "PartitionKey eq 'Tenant'"
