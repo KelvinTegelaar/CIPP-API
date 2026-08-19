@@ -101,6 +101,48 @@ Describe 'Get-CIPPRolePermissions' {
         (Get-CIPPRolePermissions -RoleName 'frozen').Permissions | Should -Be @('Identity.User.Read')
     }
 
+    It 'grants the real .Read when a role includes a .ReadWrite the universe never declares' {
+        # Some objects only ever ship a .Read endpoint (e.g. Endpoint.Device), yet the role
+        # builder still offers a .ReadWrite toggle. A role granted that phantom .ReadWrite must
+        # still receive the .Read the endpoints actually check, or it loses all access.
+        Mock Get-CippHttpPermissions { @('Endpoint.Device.Read', 'Identity.User.Read', 'Identity.User.ReadWrite') }
+        Mock Get-CIPPAzDataTableEntity {
+            [PSCustomObject]@{
+                RowKey          = 'devicewriter'
+                Permissions     = '{}'
+                PermissionRules = '{"Include":["Endpoint.Device.ReadWrite"],"Exclude":[]}'
+            }
+        }
+
+        (Get-CIPPRolePermissions -RoleName 'devicewriter').Permissions | Should -Be @('Endpoint.Device.Read')
+    }
+
+    It 'does not let a .Read include grant the .ReadWrite variant' {
+        # The implication is one-way. Read must never widen to ReadWrite.
+        Mock Get-CIPPAzDataTableEntity {
+            [PSCustomObject]@{
+                RowKey          = 'readeronly'
+                Permissions     = '{}'
+                PermissionRules = '{"Include":["Identity.User.Read"],"Exclude":[]}'
+            }
+        }
+
+        (Get-CIPPRolePermissions -RoleName 'readeronly').Permissions | Should -Be @('Identity.User.Read')
+    }
+
+    It 'lets an explicit exclude on the .Read win over an implied ReadWrite grant' {
+        Mock Get-CippHttpPermissions { @('Endpoint.Device.Read', 'Identity.User.Read') }
+        Mock Get-CIPPAzDataTableEntity {
+            [PSCustomObject]@{
+                RowKey          = 'excluded'
+                Permissions     = '{}'
+                PermissionRules = '{"Include":["*.ReadWrite"],"Exclude":["Endpoint.Device.Read"]}'
+            }
+        }
+
+        (Get-CIPPRolePermissions -RoleName 'excluded').Permissions | Should -Be @('Identity.User.Read')
+    }
+
     Context 'legacy rows without PermissionRules' {
         BeforeEach {
             Mock Get-CIPPAzDataTableEntity {
@@ -111,10 +153,11 @@ Describe 'Get-CIPPRolePermissions' {
             }
         }
 
-        It 'synthesizes rules in memory and returns the same set the old code path produced' {
+        It 'synthesizes rules in memory, filters to the universe, and surfaces the implied .Read' {
             $Result = Get-CIPPRolePermissions -RoleName 'legacy'
-            # Old path: stored values filtered to the valid universe, None entries inert.
-            $Result.Permissions | Sort-Object | Should -Be @('CIPP.Core.Read', 'Identity.User.ReadWrite')
+            # Stored values filtered to the valid universe (Removed.Endpoint.Read dropped, None
+            # inert), plus the Identity.User.Read implied by the stored Identity.User.ReadWrite.
+            $Result.Permissions | Sort-Object | Should -Be @('CIPP.Core.Read', 'Identity.User.Read', 'Identity.User.ReadWrite')
             $Result.PermissionRules.Include | Should -Contain 'Identity.User.ReadWrite'
             $Result.PermissionRules.Include | Should -Not -Contain 'Identity.Device.None'
         }

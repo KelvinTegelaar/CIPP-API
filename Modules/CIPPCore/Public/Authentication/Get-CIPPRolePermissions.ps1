@@ -43,8 +43,20 @@ function Get-CIPPRolePermissions {
                 $Expanded = [System.Collections.Generic.List[string]]::new()
                 foreach ($Permission in $Universe) {
                     $Allowed = $false
+                    # ReadWrite implies Read: a rule that grants X.ReadWrite also grants the
+                    # corresponding X.Read. Some objects only ever declare a .Read endpoint
+                    # (e.g. Endpoint.Device), so a role granted the .ReadWrite variant would
+                    # otherwise match nothing in the universe and silently lose all access.
+                    $ReadCounterpart = if ($Permission -match '\.Read$') {
+                        $Permission -replace '\.Read$', '.ReadWrite'
+                    } else {
+                        $null
+                    }
                     foreach ($Include in $Rules.Include) {
-                        if ($Permission -like $Include) { $Allowed = $true; break }
+                        if ($Permission -like $Include -or ($ReadCounterpart -and $ReadCounterpart -like $Include)) {
+                            $Allowed = $true
+                            break
+                        }
                     }
                     if ($Allowed) {
                         foreach ($Exclude in $Rules.Exclude) {
