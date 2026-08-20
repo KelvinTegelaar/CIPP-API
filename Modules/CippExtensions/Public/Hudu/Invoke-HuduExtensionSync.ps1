@@ -228,7 +228,7 @@ function Invoke-HuduExtensionSync {
         if ($Configuration.IncludeComplianceLink) {
             $Links.Add(@{
                     Title = 'Compliance Portal'
-                    URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
+                    URL   = 'https://purview.microsoft.com/home?tid={0}' -f $Tenant.customerId
                     Icon  = 'fas fa-caret-up'
                 })
         }
