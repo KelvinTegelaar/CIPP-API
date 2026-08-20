@@ -338,34 +338,69 @@ function Invoke-EditGroup {
     }
 
     if ($GroupType -in @( 'Distribution List', 'Mail-Enabled Security') -and ($AddOwners -or $RemoveOwners)) {
-        $CurrentOwners = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-DistributionGroup' -cmdParams @{ Identity = $GroupId } -UseSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
+        $CurrentOwnersRaw = @(
+            New-ExoRequest -tenantid $TenantId -cmdlet 'Get-DistributionGroup' -cmdParams @{ Identity = $GroupId } -UseSystemMailbox $true |
+                Select-Object -ExpandProperty ManagedBy
+        )
+        $CurrentResolved = @(Resolve-CIPPDirectoryId -Identity $CurrentOwnersRaw -TenantFilter $TenantId)
+
+        $RemoveIds = @()
+        if ($RemoveOwners) {
+            $RemoveIds = @(
+                Resolve-CIPPDirectoryId -Identity @($RemoveOwners.value) -TenantFilter $TenantId |
+                    Where-Object { $_.Resolved -and $_.Id } |
+                    ForEach-Object { $_.Id }
+            )
+        }
+        $AddResolved = @()
+        if ($AddOwners) {
+            $AddResolved = @(Resolve-CIPPDirectoryId -Identity @($AddOwners.value) -TenantFilter $TenantId)
+        }
 
         # Every owner change here is carried by the one Set-DistributionGroup call below, so they
         # share an OperationGuid: the ManagedBy rewrite either applies in full or not at all, and
         # reporting per-owner outcomes that disagree with each other would be a lie.
         $OwnersGuid = [Guid]::NewGuid().ToString()
         $NewManagedBy = [System.Collections.Generic.List[string]]::new()
-        foreach ($CurrentOwner in $CurrentOwners) {
-            if ($RemoveOwners -and $RemoveOwners.value -contains $CurrentOwner) {
-                $OwnerToRemove = $RemoveOwners | Where-Object { $_.value -eq $CurrentOwner }
-                $ExoLogs.Add(@{
-                        message       = "Removed owner $($OwnerToRemove.label) from $($GroupName) group"
-                        target        = $GroupId
-                        OperationGuid = $OwnersGuid
-                    })
-                continue
+        $RemoveIdSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$RemoveIds, [StringComparer]::OrdinalIgnoreCase)
+
+        foreach ($Entry in $CurrentResolved) {
+            if ($Entry.Resolved -and $Entry.Id) {
+                if ($RemoveIdSet.Contains($Entry.Id)) {
+                    $OwnerToRemove = $RemoveOwners | Where-Object {
+                        $_.value -eq $Entry.Id -or $_.value -eq $Entry.Input -or $_.addedFields.userPrincipalName -eq $Entry.UserPrincipalName
+                    } | Select-Object -First 1
+                    $ExoLogs.Add(@{
+                            message       = "Removed owner $($OwnerToRemove.label ?? $Entry.UserPrincipalName ?? $Entry.Id) from $($GroupName) group"
+                            target        = $GroupId
+                            OperationGuid = $OwnersGuid
+                        })
+                    continue
+                }
+                $NewManagedBy.Add($Entry.Id)
+            } else {
+                # Keep unresolved ManagedBy entries so a failed lookup cannot strip an owner.
+                if ($RemoveOwners -and ($RemoveOwners.value -contains $Entry.Input)) {
+                    $OwnerToRemove = $RemoveOwners | Where-Object { $_.value -eq $Entry.Input } | Select-Object -First 1
+                    $ExoLogs.Add(@{
+                            message       = "Removed owner $($OwnerToRemove.label) from $($GroupName) group"
+                            target        = $GroupId
+                            OperationGuid = $OwnersGuid
+                        })
+                    continue
+                }
+                $NewManagedBy.Add($Entry.Input)
             }
-            $NewManagedBy.Add($CurrentOwner)
         }
-        if ($AddOwners) {
-            foreach ($NewOwner in $AddOwners) {
-                $NewManagedBy.Add($NewOwner.value)
-                $ExoLogs.Add(@{
-                        message       = "Added owner $($NewOwner.label) to $($GroupName) group"
-                        target        = $GroupId
-                        OperationGuid = $OwnersGuid
-                    })
-            }
+        foreach ($NewOwner in $AddResolved) {
+            if (-not $NewOwner.Resolved -or -not $NewOwner.Id) { continue }
+            $NewManagedBy.Add($NewOwner.Id)
+            $OwnerLabel = ($AddOwners | Where-Object { $_.value -eq $NewOwner.Input -or $_.value -eq $NewOwner.Id } | Select-Object -First 1).label
+            $ExoLogs.Add(@{
+                    message       = "Added owner $($OwnerLabel ?? $NewOwner.UserPrincipalName ?? $NewOwner.Id) to $($GroupName) group"
+                    target        = $GroupId
+                    OperationGuid = $OwnersGuid
+                })
         }
 
         $NewManagedBy = $NewManagedBy | Sort-Object -Unique

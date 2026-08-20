@@ -8589,9 +8589,6 @@
                             }
                           }
                         },
-                        "label": {
-                          "type": "string"
-                        },
                         "value": {
                           "type": "string"
                         }
@@ -8712,7 +8709,8 @@
                           "type": "array",
                           "items": {
                             "type": "string"
-                          }
+                          },
+                          "description": "Keep unresolved ManagedBy entries so a failed lookup cannot strip an owner."
                         }
                       }
                     }
@@ -22376,6 +22374,80 @@
           }
         ],
         "x-cipp-role": "CIPP.Core.Read"
+      }
+    },
+    "/api/ExecGroupMembers": {
+      "post": {
+        "summary": "ExecGroupMembers",
+        "operationId": "ExecGroupMembers",
+        "tags": [
+          "Identity > Administration > Groups"
+        ],
+        "description": "Manages group membership (members and owners) via a switch-style action parameter.\nAccepts one or more directory object IDs, UPNs, or mail addresses (users, groups, etc.).\nAutomatically resolves the group type from Graph to route through the correct API (Graph or Exchange).\n\nSupported actions: addMember, removeMember, addOwner, removeOwner",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "addMember",
+                      "addOwner",
+                      "removeMember",
+                      "removeOwner"
+                    ]
+                  },
+                  "groupId": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "users": {
+                    "type": "string",
+                    "description": "Accept a single string or an array of strings (IDs, UPNs, or mail)"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Group.ReadWrite"
       }
     },
     "/api/ExecGroupsDelete": {
