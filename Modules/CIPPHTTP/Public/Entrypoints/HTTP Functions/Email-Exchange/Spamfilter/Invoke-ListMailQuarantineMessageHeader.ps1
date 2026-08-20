@@ -1,11 +1,11 @@
-function Invoke-ListMailQuarantineMessage {
+function Invoke-ListMailQuarantineMessageHeader {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Exchange.SpamFilter.Read
     .DESCRIPTION
-        Exports and retrieves the raw EML content of a specific quarantined email message by its Identity.
+        Retrieves the message headers of a specific quarantined email message by its Identity.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -14,13 +14,10 @@ function Invoke-ListMailQuarantineMessage {
     $Identity = $Request.Query.Identity
 
     try {
-        $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Export-QuarantineMessage' -cmdParams @{ 'Identity' = $Identity }
-        $EmlBase64 = $GraphRequest.Eml
-        $EmlContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($EmlBase64))
+        $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessageHeader' -cmdParams @{ 'Identity' = $Identity }
         $Body = @{
-            'Identity'  = $Identity
-            'Message'   = $EmlContent
-            'EmlBase64' = $EmlBase64
+            'Identity' = $Identity
+            'Header'   = [string]($GraphRequest.Header ?? $GraphRequest)
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

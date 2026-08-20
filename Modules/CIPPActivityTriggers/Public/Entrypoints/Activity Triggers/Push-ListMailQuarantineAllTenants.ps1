@@ -11,15 +11,28 @@
     Write-Host "PowerShell queue trigger function processed work item: $($Tenant.defaultDomainName)"
 
     try {
-        $Page = 1
         $PageSize = 1000
         $quarantineMessages = [System.Collections.Generic.List[object]]::new()
-        do {
-            $Results = New-ExoRequest -tenantid $domainName -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = $PageSize; Page = $Page } | Select-Object -ExcludeProperty *data.type*
-            if ($Results) { $quarantineMessages.AddRange(@($Results)) }
-            $Page++
-        } while (@($Results).Count -eq $PageSize)
+        # Email is available everywhere; SharePointOnline/Teams quarantine requires Defender for Office 365,
+        # so fetch each entity type separately and tolerate per-type failures on unlicensed tenants.
+        # EXO REST silently ignores -EntityType SharePointOnline; the documented filter for Safe Attachments
+        # files is -QuarantineTypes SPOMalware. Email/Teams work fine via -EntityType.
+        foreach ($EntityType in @('Email', 'SharePointOnline', 'Teams')) {
+            $EntityTypeParams = if ($EntityType -eq 'SharePointOnline') { @{ QuarantineTypes = 'SPOMalware' } } else { @{ EntityType = $EntityType } }
+            try {
+                $Page = 1
+                do {
+                    $Results = New-ExoRequest -tenantid $domainName -cmdlet 'Get-QuarantineMessage' -cmdParams (@{ PageSize = $PageSize; Page = $Page } + $EntityTypeParams) | Select-Object -ExcludeProperty *data.type*
+                    if ($Results) { $quarantineMessages.AddRange(@($Results)) }
+                    $Page++
+                } while (@($Results).Count -eq $PageSize)
+            } catch {
+                if ($EntityType -eq 'Email') { throw }
+                Write-Host "Could not get $EntityType quarantine messages for $domainName : $($_.Exception.Message)"
+            }
+        }
         foreach ($message in $quarantineMessages) {
+            Add-CIPPQuarantineMessageProperties -Message $message -Tenant $domainName -CustomerId $Tenant.customerId
             $messageData = @{
                 QuarantineMessage = [string]($message | ConvertTo-Json -Depth 10 -Compress)
                 RowKey            = [string](New-Guid).Guid

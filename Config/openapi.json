@@ -24265,6 +24265,157 @@
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
+    "/api/ExecMailQuarantineSubmit": {
+      "post": {
+        "summary": "ExecMailQuarantineSubmit",
+        "operationId": "ExecMailQuarantineSubmit",
+        "tags": [
+          "Email-Exchange > Spamfilter"
+        ],
+        "description": "Submits a quarantined email message to Microsoft for review (threat submission) via the Graph API.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "Identity": {
+                    "type": "string"
+                  },
+                  "RecipientAddress": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "Identity",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                  "properties": {
+                    "adminReview": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "attackSimulationInfo": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "category": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "clientSource": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "contentType": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "createdBy": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "createdDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "id": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "internetMessageId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "originalCategory": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "receivedDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "recipientEmailAddress": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "result": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "Results": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "sender": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "senderIP": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "source": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "status": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "subject": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "tenantAllowOrBlockListAction": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "tenantId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.SpamFilter.ReadWrite"
+      }
+    },
     "/api/ExecMailTest": {
       "get": {
         "summary": "ExecMailTest",
@@ -27999,6 +28150,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -48632,6 +48786,15 @@
         "description": "Lists quarantined email messages in Exchange Online Protection for a tenant.",
         "parameters": [
           {
+            "name": "EntityType",
+            "in": "query",
+            "description": "Entity type: Email (default), SharePointOnline (files) or Teams (Teams messages)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "manualPagination",
             "in": "query",
             "required": false,
@@ -48667,13 +48830,16 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
+                      "Expires": {
+                        "x-cipp-field-source": "frontend"
+                      },
                       "Metadata": {
                         "x-cipp-field-source": "backend"
                       },
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
                       },
-                      "PolicyName": {
+                      "PolicyType": {
                         "x-cipp-field-source": "frontend"
                       },
                       "QuarantineMessage": {
@@ -48684,6 +48850,9 @@
                         "x-cipp-field-source": "frontend"
                       },
                       "RecipientAddress": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ReleasedUser": {
                         "x-cipp-field-source": "frontend"
                       },
                       "ReleaseStatus": {
@@ -48742,6 +48911,178 @@
           "Email-Exchange > Spamfilter"
         ],
         "description": "Exports and retrieves the raw EML content of a specific quarantined email message by its Identity.",
+        "parameters": [
+          {
+            "name": "Identity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.SpamFilter.Read"
+      }
+    },
+    "/api/ListMailQuarantineMessageDetails": {
+      "get": {
+        "summary": "ListMailQuarantineMessageDetails",
+        "operationId": "ListMailQuarantineMessageDetails",
+        "tags": [
+          "Email-Exchange > Spamfilter"
+        ],
+        "description": "Retrieves Defender analyzed email details (threats, delivery, authentication, URLs, attachments)\nfor a quarantined message via the Graph beta security/collaboration/analyzedEmails API.\nFalls back to parsing the message headers (Authentication-Results and X-Forefront-Antispam-Report)\nfor tenants without Defender for Office 365 Plan 2.",
+        "parameters": [
+          {
+            "name": "Identity",
+            "in": "query",
+            "description": "Only the quarantine Identity is trusted from the caller. NetworkMessageId, RecipientAddress and ReceivedTime are derived server-side from the quarantine message itself (see below) so this endpoint cannot be used to pull Defender analyzedEmail data for arbitrary, non-quarantined messages in the tenant.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
+                    "properties": {
+                      "authenticationDetails": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "bulkComplaintLevel": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "compositeAuthentication": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "directionality": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "displayName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "dkim": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "dmarc": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "internetMessageId": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "ipv4": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "language": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "location": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "recipientEmailAddress": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "returnPath": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "senderDetail": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "senderPolicyFramework": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "spamConfidenceLevel": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "threatTypes": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph,backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.SpamFilter.Read"
+      }
+    },
+    "/api/ListMailQuarantineMessageHeader": {
+      "get": {
+        "summary": "ListMailQuarantineMessageHeader",
+        "operationId": "ListMailQuarantineMessageHeader",
+        "tags": [
+          "Email-Exchange > Spamfilter"
+        ],
+        "description": "Retrieves the message headers of a specific quarantined email message by its Identity.",
         "parameters": [
           {
             "name": "Identity",
