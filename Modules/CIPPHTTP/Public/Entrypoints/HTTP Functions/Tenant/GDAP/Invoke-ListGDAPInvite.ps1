@@ -24,7 +24,9 @@ function Invoke-ListGDAPInvite {
         }
         $Hostname = Get-CIPPHostname -Headers $Request.Headers -PreferCustomDomain
         if ($Hostname) {
-            $InviteRow.OnboardingUrl = "https://$Hostname/tenant/gdap-management/onboarding/start?id=$($InviteRow.RowKey)"
+            $Url = "https://$Hostname/tenant/gdap-management/onboarding/start?id=$($InviteRow.RowKey)"
+            # Null OnboardingUrl was stripped on write, so the property may not exist on the entity.
+            $InviteRow | Add-Member -NotePropertyName OnboardingUrl -NotePropertyValue $Url -Force
         }
         return $InviteRow
     }
