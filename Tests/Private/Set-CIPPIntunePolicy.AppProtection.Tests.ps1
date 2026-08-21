@@ -9,7 +9,7 @@ BeforeAll {
 
     # Stubs mirror the real signatures so signature drift fails loudly here.
     function New-GraphGETRequest { [CmdletBinding()] param($uri, $tenantid, $AsApp, $ComplexFilter) }
-    function New-GraphPOSTRequest { [CmdletBinding()] param($uri, $tenantid, $type, $body) }
+    function New-GraphPOSTRequest { [CmdletBinding()] param($uri, $tenantid, $type, $body, $AddedHeaders) }
     function Write-LogMessage { [CmdletBinding()] param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $Sev2, $LogData) }
     function Get-CippException { [CmdletBinding()] param($Exception) }
     function Get-CIPPTextReplacement { [CmdletBinding()] param([string]$TenantFilter, $Text, [switch]$EscapeForJson) }
