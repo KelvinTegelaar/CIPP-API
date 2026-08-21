@@ -293,6 +293,36 @@ function Set-CIPPIntunePolicy {
                     Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Added policy $($DisplayName) via template" -Sev Info
                 }
             }
+            'hardwareConfigurations' {
+                $PlatformType = 'deviceManagement'
+                $TemplateTypeURL = 'hardwareConfigurations'
+                $PolicyFile = $RawJSON | ConvertFrom-Json
+                if ([string]::IsNullOrWhiteSpace($DisplayName)) { $DisplayName = $PolicyFile.displayName }
+                if ([string]::IsNullOrWhiteSpace($DisplayName)) {
+                    throw "This BIOS configuration template has no name - the template's Displayname column and the payload's displayName are both empty. Recreate the template."
+                }
+                $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value "$Description" -Force
+                $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $DisplayName -Force
+                # version is incremented by Intune on every edit and rejected on the way in.
+                $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty id, version, createdDateTime, lastModifiedDateTime, '@odata.context'
+                $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 100 -Compress
+                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
+                $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance
+                if ($FuzzyResult) {
+                    $PostType = 'edited'
+                    $ExistingID = $FuzzyResult.Policy
+                    if ($FuzzyResult.MatchType -eq 'fuzzy') {
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Fuzzy matched policy '$($FuzzyResult.OriginalName)' for template '$DisplayName' (distance=$($FuzzyResult.Distance))" -Sev Info
+                    }
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $TenantFilter -type PATCH -body $RawJSON -AddedHeaders $ApprovalHeaders
+                    $CreateRequest = $FuzzyResult.Policy
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev Info
+                } else {
+                    $PostType = 'added'
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter -type POST -body $RawJSON -AddedHeaders $ApprovalHeaders
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Added policy $($DisplayName) via template" -Sev Info
+                }
+            }
             'windowsQualityUpdateProfiles' {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'windowsQualityUpdateProfiles'

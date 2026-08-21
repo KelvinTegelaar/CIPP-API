@@ -65,6 +65,7 @@ function New-CIPPBackupTask {
                     'https://graph.microsoft.com/beta/deviceManagement/windowsFeatureUpdateProfiles'
                     'https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdatePolicies'
                     'https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles'
+                    'https://graph.microsoft.com/beta/deviceManagement/hardwareConfigurations'
                 )
 
                 foreach ($url in $GraphURLS) {

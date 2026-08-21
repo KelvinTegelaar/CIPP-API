@@ -164,6 +164,7 @@ function New-CIPPTemplateRun {
                         'deviceManagement/windowsFeatureUpdateProfiles'
                         'deviceManagement/windowsQualityUpdatePolicies'
                         'deviceManagement/windowsQualityUpdateProfiles'
+                        'deviceManagement/hardwareConfigurations'
                     )
 
                     $Requests = [System.Collections.Generic.List[PSCustomObject]]::new()

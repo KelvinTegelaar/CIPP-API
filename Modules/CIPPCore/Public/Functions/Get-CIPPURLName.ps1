@@ -85,6 +85,14 @@ function Get-CIPPURLName {
             'deviceManagement/groupPolicyConfigurations'
         }
 
+        # Hardware (BIOS) Configurations
+        '*hardwareConfigurations' {
+            'deviceManagement/hardwareConfigurations'
+        }
+        '*hardwareConfiguration' {
+            'deviceManagement/hardwareConfigurations'
+        }
+
         # Conditional Access Policies
         '*conditionalAccessPolicy' {
             'identity/conditionalAccess/policies'

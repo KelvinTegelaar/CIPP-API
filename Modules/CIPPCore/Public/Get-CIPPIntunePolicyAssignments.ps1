@@ -7,7 +7,7 @@ function Get-CIPPIntunePolicyAssignments {
     .PARAMETER TemplateType
         The template type (Device, Catalog, Admin, deviceCompliancePolicies, AppProtection,
         windowsDriverUpdateProfiles, windowsFeatureUpdateProfiles, windowsQualityUpdatePolicies,
-        windowsQualityUpdateProfiles).
+        windowsQualityUpdateProfiles, hardwareConfigurations).
     .PARAMETER TenantFilter
         The tenant to query.
     .PARAMETER ExistingPolicy
@@ -65,6 +65,10 @@ function Get-CIPPIntunePolicyAssignments {
         'windowsQualityUpdateProfiles' {
             $PlatformType = 'deviceManagement'
             $TypeUrl = 'windowsQualityUpdateProfiles'
+        }
+        'hardwareConfigurations' {
+            $PlatformType = 'deviceManagement'
+            $TypeUrl = 'hardwareConfigurations'
         }
         default { return $null }
     }

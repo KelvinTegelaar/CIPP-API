@@ -1391,6 +1391,67 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/AddCorporateDeviceIdentifier": {
+      "post": {
+        "summary": "AddCorporateDeviceIdentifier",
+        "operationId": "AddCorporateDeviceIdentifier",
+        "tags": [
+          "Endpoint > Autopilot"
+        ],
+        "description": "Uploads corporate device identifiers (manufacturer, model and serial number) for Windows Autopilot device preparation via the Graph importedDeviceIdentities API",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "devicePrepData": {
+                    "type": "string"
+                  },
+                  "overwriteExisting": {
+                    "type": "boolean"
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Autopilot.ReadWrite"
+      }
+    },
     "/api/AddCustomScript": {
       "post": {
         "summary": "AddCustomScript",
@@ -29543,6 +29604,77 @@
         "x-cipp-role": "Identity.User.ReadWrite"
       }
     },
+    "/api/ExecRequirePasswordChange": {
+      "post": {
+        "summary": "ExecRequirePasswordChange",
+        "operationId": "ExecRequirePasswordChange",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Requires password change at next sign-in without resetting the password.\nSets passwordProfile.forceChangePasswordNextSignIn via Graph. Not supported for directory-synced users.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
     "/api/ExecResetMFA": {
       "post": {
         "summary": "ExecResetMFA",
@@ -30692,6 +30824,79 @@
         ],
         "x-cipp-role": "CIPP.AppSettings.ReadWrite",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ExecScheduleAuditExclusionVacation": {
+      "post": {
+        "summary": "Schedule a location alert exclusion for a vacation period",
+        "operationId": "ExecScheduleAuditExclusionVacation",
+        "tags": [
+          "Tenant > Administration > Alerts"
+        ],
+        "description": "Adds the selected users to the audit log location alert exclusion list at the start date and removes them again at the end date, so location-based alerts do not fire while they travel. Works on its own and does not require a Conditional Access policy.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endDate": {
+                    "type": "string",
+                    "description": "Unix timestamp for when the exclusion is removed"
+                  },
+                  "postExecution": {
+                    "type": "string"
+                  },
+                  "reference": {
+                    "type": "string"
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "description": "Unix timestamp for when the exclusion is added"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Users": {
+                    "type": "string",
+                    "description": "The users going on vacation"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Alert.ReadWrite"
       }
     },
     "/api/ExecScheduleForwardingVacation": {

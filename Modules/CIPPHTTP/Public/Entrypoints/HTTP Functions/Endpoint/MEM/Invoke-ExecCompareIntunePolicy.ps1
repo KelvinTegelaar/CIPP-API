@@ -23,6 +23,7 @@ function Invoke-ExecCompareIntunePolicy {
         'WindowsFeatureUpdateProfiles' = 'windowsFeatureUpdateProfiles'
         'windowsQualityUpdatePolicies' = 'windowsQualityUpdatePolicies'
         'windowsQualityUpdateProfiles' = 'windowsQualityUpdateProfiles'
+        'hardwareConfigurations'       = 'hardwareConfigurations'
         'Intents'                      = 'Intents'
         'ManagedAppPolicies'           = 'AppProtection'
     }

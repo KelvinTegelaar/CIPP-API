@@ -56,6 +56,7 @@ function Get-CIPPBaselineDetectIntuneDriftState {
         @{ Caches = @('IntuneWindowsFeatureUpdateProfiles'); Label = 'Feature Update'; NameProperty = 'displayName'; Resource = 'deviceManagement/windowsFeatureUpdateProfiles' }
         @{ Caches = @('IntuneWindowsQualityUpdatePolicies'); Label = 'Quality Update'; NameProperty = 'displayName'; Resource = 'deviceManagement/windowsQualityUpdatePolicies' }
         @{ Caches = @('IntuneWindowsQualityUpdateProfiles'); Label = 'Quality Update Profile'; NameProperty = 'displayName'; Resource = 'deviceManagement/windowsQualityUpdateProfiles' }
+        @{ Caches = @('IntuneHardwareConfigurations'); Label = 'BIOS Configuration'; NameProperty = 'displayName'; Resource = 'deviceManagement/hardwareConfigurations' }
     )
 
     $AnyCollected = $false

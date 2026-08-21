@@ -133,7 +133,8 @@
       "IntuneWindowsDriverUpdateProfiles",
       "IntuneWindowsFeatureUpdateProfiles",
       "IntuneWindowsQualityUpdatePolicies",
-      "IntuneWindowsQualityUpdateProfiles"
+      "IntuneWindowsQualityUpdateProfiles",
+      "IntuneHardwareConfigurations"
     ]
   },
   "prepare": "Get-CIPPBaselineIntuneTemplateState",

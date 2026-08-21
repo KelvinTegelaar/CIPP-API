@@ -56,7 +56,7 @@ Describe 'Invoke-ListIntunePolicy family parity' {
         }
     }
 
-    It 'uses the canonical eleven families for live mode' {
+    It 'uses the canonical twelve families for live mode' {
         $Request = [PSCustomObject]@{
             Query = [PSCustomObject]@{
                 TenantFilter = 'contoso.onmicrosoft.com'
@@ -66,7 +66,7 @@ Describe 'Invoke-ListIntunePolicy family parity' {
         $Response = Invoke-ListIntunePolicy -Request $Request -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be 200
-        $Response.Body | Should -HaveCount 11
+        $Response.Body | Should -HaveCount 12
         $Response.Body.URLName | Sort-Object | Should -Be ((Get-CIPPIntunePolicyListDefinitions).Id | Sort-Object)
         $Response.Body.PolicyAssignment | Select-Object -Unique | Should -Be 'Group One'
     }
@@ -82,7 +82,7 @@ Describe 'Invoke-ListIntunePolicy family parity' {
         $Response = Invoke-ListIntunePolicy -Request $Request -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be 200
-        $Response.Body | Should -HaveCount 10
+        $Response.Body | Should -HaveCount 11
         $Response.Body.URLName | Should -Not -Contain 'Intents'
         $Response.Body.URLName | Should -Contain 'ConfigurationPolicies'
     }
