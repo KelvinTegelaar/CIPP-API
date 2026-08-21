@@ -1,0 +1,188 @@
+{
+  "name": "CopilotSettings",
+  "label": "Configure Microsoft 365 Copilot policy settings",
+  "cat": "Copilot (M365) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Configures Microsoft 365 Copilot tenant policy settings: Copilot Chat pinning, blocking Copilot access to open content, Designer image generation, web search, and admin-center Copilot. Each setting can be left unconfigured, enabled, or disabled. These settings are managed through the Copilot policy service (Cloud Policy / Intune) and are applied at the tenant level.",
+  "executiveText": "Provides centralized governance of Microsoft 365 Copilot capabilities across the organization. Administrators can control whether Copilot Chat is pinned for users, whether Copilot can access open files, and whether features such as image generation and web search are available, helping balance employee productivity with data governance and compliance requirements.",
+  "docsDescription": "Manages Microsoft 365 Copilot admin policy settings via the `/copilot/admin/policySettings` Microsoft Graph API (beta). Each of the five supported settings can be independently set or left unmanaged using the \"Do not configure\" option - an unconfigured setting is neither graded nor written. NOTE: this API currently requires delegated authentication and supports only tenant-level policies; settings scoped to group-level policies return an error and are skipped. Values are strings whose meaning is per-setting, not uniform: web search is three-state (\"0\" enabled everywhere, \"1\" disabled everywhere, \"2\" disabled in Copilot Work mode only) and Designer image generation is inverted (\"1\" disables it, \"0\" enables it). Graph treats these as opaque strings and validates nothing, so do not assume 1=on/0=off for a setting you have not verified against a Copilot-licensed tenant.",
+  "impactColour": "warning",
+  "addedDate": "2026-06-09",
+  "powershellEquivalent": "Graph API: PATCH /beta/copilot/admin/policySettings/{id}",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "copilotChatPinning": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Pin Microsoft 365 Copilot Chat",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not configure",
+          "value": ""
+        },
+        {
+          "label": "Enabled",
+          "value": "1"
+        },
+        {
+          "label": "Disabled",
+          "value": "0"
+        }
+      ],
+      "default": ""
+    },
+    "blockAccessToOpenFiles": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Copilot Access to Open Content",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not configure",
+          "value": ""
+        },
+        {
+          "label": "Block open content",
+          "value": "1"
+        },
+        {
+          "label": "Allow open content",
+          "value": "0"
+        }
+      ],
+      "default": ""
+    },
+    "imageGeneration": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Designer Image Generation",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not configure",
+          "value": ""
+        },
+        {
+          "label": "Disabled",
+          "value": "1"
+        },
+        {
+          "label": "Enabled",
+          "value": "0"
+        }
+      ],
+      "default": ""
+    },
+    "allowWebSearch": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Web Search in Copilot",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not configure",
+          "value": ""
+        },
+        {
+          "label": "Enabled in Microsoft 365 Copilot and Microsoft 365 Copilot Chat",
+          "value": "0"
+        },
+        {
+          "label": "Disabled in Microsoft 365 Copilot and Microsoft 365 Copilot Chat",
+          "value": "1"
+        },
+        {
+          "label": "Disabled in Microsoft 365 Copilot Work mode, Enabled in Microsoft 365 Copilot Chat",
+          "value": "2"
+        }
+      ],
+      "default": ""
+    },
+    "allowInAdminCenters": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Admin Copilot in Microsoft 365 Admin Center",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not configure",
+          "value": ""
+        },
+        {
+          "label": "Enabled",
+          "value": "1"
+        },
+        {
+          "label": "Disabled",
+          "value": "0"
+        }
+      ],
+      "default": ""
+    }
+  },
+  "expected": {
+    "copilotChatPinning": "%copilotChatPinning%",
+    "blockAccessToOpenFiles": "%blockAccessToOpenFiles%",
+    "imageGeneration": "%imageGeneration%",
+    "allowWebSearch": "%allowWebSearch%",
+    "allowInAdminCenters": "%allowInAdminCenters%"
+  },
+  "read": {
+    "cacheType": "CopilotPolicySettings"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "copilot/admin/policySettings/microsoft.copilot.copilotchatpinning",
+        "asApp": false,
+        "body": {
+          "value": "%copilotChatPinning%"
+        }
+      },
+      {
+        "method": "PATCH",
+        "uri": "copilot/admin/policySettings/microsoft.copilot.blockaccesstoopenfiles",
+        "asApp": false,
+        "body": {
+          "value": "%blockAccessToOpenFiles%"
+        }
+      },
+      {
+        "method": "PATCH",
+        "uri": "copilot/admin/policySettings/microsoft.copilot.imagegeneration",
+        "asApp": false,
+        "body": {
+          "value": "%imageGeneration%"
+        }
+      },
+      {
+        "method": "PATCH",
+        "uri": "copilot/admin/policySettings/microsoft.copilot.allowwebsearch",
+        "asApp": false,
+        "body": {
+          "value": "%allowWebSearch%"
+        }
+      },
+      {
+        "method": "PATCH",
+        "uri": "copilot/admin/policySettings/microsoft.copilot.allowinadmincenters",
+        "asApp": false,
+        "body": {
+          "value": "%allowInAdminCenters%"
+        }
+      }
+    ]
+  }
+}

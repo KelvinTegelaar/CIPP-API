@@ -13,6 +13,17 @@ function Invoke-ListDirectoryObjects {
     $AsApp = $Request.Body.asApp
     $Ids = $Request.Body.ids
 
+    # AnyTenant: enforce tenant scope here; Get-Tenants is narrowed to the caller's allowed tenants
+    if (-not $Request.Body.partnerLookup) {
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $TenantFilter)) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [System.Net.HttpStatusCode]::Forbidden
+                    Body       = 'Access to this tenant is not allowed'
+                })
+        }
+    }
+
     $BaseUri = 'https://graph.microsoft.com/beta/directoryObjects/getByIds'
     if ($Request.Body.'$select') {
         $Uri = '{0}?$select={1}' -f $BaseUri, $Request.Body.'$select'

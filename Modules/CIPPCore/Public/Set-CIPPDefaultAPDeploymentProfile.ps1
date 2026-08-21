@@ -11,6 +11,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         $DeploymentMode,
         $HideChangeAccount = $true,
         $AssignTo,
+        $GroupIds,
         $HidePrivacy,
         $HideTerms,
         $AutoKeyboard,
@@ -102,6 +103,34 @@ function Set-CIPPDefaultAPDeploymentProfile {
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to assign Autopilot profile $($DisplayName) to $($AssignTo): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+            }
+        } elseif (@($GroupIds) -and @($GroupIds).Count -gt 0) {
+            try {
+                $Assigned = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter
+                $ExistingGroupIds = @($Assigned |
+                        Where-Object { $_.target.'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget' } |
+                        ForEach-Object { $_.target.groupId })
+                $CreatedGroupIds = [System.Collections.Generic.List[string]]::new()
+                foreach ($GroupId in @($GroupIds)) {
+                    if (-not $GroupId -or $ExistingGroupIds -contains $GroupId) { continue }
+                    $GroupAssignBody = @{
+                        target = @{
+                            '@odata.type' = '#microsoft.graph.groupAssignmentTarget'
+                            groupId       = $GroupId
+                        }
+                    } | ConvertTo-Json -Depth 5 -Compress
+                    if ($PSCmdlet.ShouldProcess($GroupId, "Assign Autopilot profile $DisplayName to group")) {
+                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter -type POST -body $GroupAssignBody
+                        $CreatedGroupIds.Add($GroupId)
+                    }
+                }
+                if (@($CreatedGroupIds).Count -gt 0) {
+                    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Assigned autopilot profile $($DisplayName) to group(s): $($CreatedGroupIds -join ', ')" -Sev 'Info'
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to assign Autopilot profile $($DisplayName) to groups: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                throw
             }
         }
         "Successfully $($Type)ed profile for $($TenantFilter)"

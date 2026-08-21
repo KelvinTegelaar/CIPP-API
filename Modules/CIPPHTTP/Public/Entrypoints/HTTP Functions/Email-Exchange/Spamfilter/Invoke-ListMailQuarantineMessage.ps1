@@ -18,8 +18,9 @@ function Invoke-ListMailQuarantineMessage {
         $EmlBase64 = $GraphRequest.Eml
         $EmlContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($EmlBase64))
         $Body = @{
-            'Identity' = $Identity
-            'Message'  = $EmlContent
+            'Identity'  = $Identity
+            'Message'   = $EmlContent
+            'EmlBase64' = $EmlBase64
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

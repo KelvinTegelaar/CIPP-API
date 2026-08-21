@@ -45,9 +45,18 @@ function Push-StoreSharePointSharingLinks {
         $Scan = Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeTenant' and RowKey eq 'scan'"
         $ScanMatches = $Scan -and [string]$Scan.ScanId -eq $ScanId
 
+        # Failed sites come from the completion markers, never from a list on the scan row: a
+        # marker row per site has no aggregate size cap, where the old JSON property overflowed
+        # the 64KB column limit at ~315 SharePoint composite site ids. The marker key holds the
+        # sanitised site id, which is what the drive-state rows' SiteId sanitises to as well.
         $FailedSites = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        if ($ScanMatches -and $Scan.FailedSites) {
-            try { foreach ($Failed in @($Scan.FailedSites | ConvertFrom-Json -ErrorAction Stop)) { [void]$FailedSites.Add([string]$Failed) } } catch {}
+        if ($ScanMatches) {
+            $DoneMarkers = @(Get-CIPPAzDataTableEntity @StateTable -Filter ("PartitionKey eq '{0}' and RowKey ge 'done-' and RowKey lt 'done-~'" -f $SafeTenant) -Property @('PartitionKey', 'RowKey', 'ScanId', 'Failed'))
+            foreach ($Marker in $DoneMarkers) {
+                if ([string]$Marker.ScanId -ne $ScanId) { continue }
+                if ([string]$Marker.Failed -ne 'True') { continue }
+                [void]$FailedSites.Add(([string]$Marker.RowKey).Substring('done-'.Length))
+            }
         }
 
         # Prune drives this scan never saw: deleted drives and deleted sites. Failed sites keep
@@ -58,7 +67,10 @@ function Push-StoreSharePointSharingLinks {
             foreach ($DriveState in @(Get-CIPPSharingLinksDriveState -TenantFilter $TenantFilter)) {
                 if (-not $DriveState) { continue }
                 if ([string]$DriveState.LastScanId -eq $ScanId) { continue }
-                if ($FailedSites.Contains([string]$DriveState.SiteId)) { continue }
+                # Marker keys carry the sanitised site id; sanitise this row's SiteId the same
+                # way before membership testing.
+                $DriveSiteKey = [string]$DriveState.SiteId
+                if ($DriveSiteKey -and $FailedSites.Contains((ConvertTo-CIPPSharingLinksKeySegment -Value $DriveSiteKey))) { continue }
                 $DriveKeySegment = ConvertTo-CIPPSharingLinksKeySegment -Value "$($DriveState.DriveId)"
                 $PrunedRows += Remove-CIPPSharingLinksRowsByPrefix -TenantFilter $TenantFilter -Prefix "$CacheType-${DriveKeySegment}_"
                 Remove-CIPPAzDataTableEntity @StateTable -Entity $DriveState -Force

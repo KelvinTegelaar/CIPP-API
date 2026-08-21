@@ -1,0 +1,70 @@
+{
+  "name": "DefenderEDRPolicy",
+  "label": "Defender EDR Configuration",
+  "cat": "Defender Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Deploys and enforces a Microsoft Defender for Endpoint EDR configuration policy via Intune. Controls auto-configuration from the MDE connector and sample sharing.",
+  "executiveText": "Ensures consistent Endpoint Detection and Response onboarding across managed Windows devices, so security teams see every endpoint.",
+  "docsDescription": "Grades the fixed-name 'EDR Configuration' policy: sample sharing and whether the configuration type is auto-from-connector. Remediation deletes and recreates through Set-CIPPDefenderEDRPolicy.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "Config": {
+      "type": "switch",
+      "label": "Auto-configure from MDE connector",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "SampleSharing": {
+      "type": "switch",
+      "label": "Enable sample sharing",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AssignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Policy Assignment",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "Do not assign"
+        },
+        {
+          "value": "allLicensedUsers",
+          "label": "All users"
+        },
+        {
+          "value": "AllDevices",
+          "label": "All devices"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "All users and devices"
+        }
+      ]
+    }
+  },
+  "read": {
+    "cacheType": "IntuneConfigurationPolicies"
+  },
+  "prepare": "Get-CIPPBaselineDefenderEDRPolicyState",
+  "remediate": {
+    "executor": "DefenderEDRPolicy",
+    "config": "%Config%",
+    "sampleSharing": "%SampleSharing%",
+    "assignTo": "%AssignTo%"
+  }
+}

@@ -23,6 +23,21 @@ function Invoke-ExecRemoveSnooze {
         }
 
         $SnoozeTable = Get-CIPPTable -tablename 'AlertSnooze'
+
+        # AnyTenant: restricted callers may only remove snoozes for tenants in scope
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants') {
+            $SafePartitionKey = ConvertTo-CIPPODataFilterValue -Value $PartitionKey -Type String
+            $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value $RowKey -Type String
+            $Existing = Get-CIPPAzDataTableEntity @SnoozeTable -Filter "PartitionKey eq '$SafePartitionKey' and RowKey eq '$SafeRowKey'"
+            if (-not $Existing.Tenant -or -not (Get-Tenants -TenantFilter $Existing.Tenant)) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::Forbidden
+                        Body       = @{ Results = 'Access to this snooze is not allowed' }
+                    })
+            }
+        }
+
         Remove-CIPPAzDataTableEntity @SnoozeTable -Entity @{
             PartitionKey = $PartitionKey
             RowKey       = $RowKey

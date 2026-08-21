@@ -38,7 +38,7 @@ Function Invoke-ExecHaloPSATestTicket {
             $Description = @"
 <p>This is a <strong>test ticket</strong> created by CIPP at $Timestamp to verify end-to-end HaloPSA delivery.</p>
 <p>Target client: <strong>$ClientName</strong> (id <code>$ClientId</code>).</p>
-<p>It is raised the same way CIPP raises alert tickets, so the configured Ticket Type and Default Priority should both apply.</p>
+<p>It is raised the same way CIPP raises alert tickets, so the configured Ticket Type, Request Source and Default Priority should all apply.</p>
 <p>It is safe to close this ticket.</p>
 "@
 

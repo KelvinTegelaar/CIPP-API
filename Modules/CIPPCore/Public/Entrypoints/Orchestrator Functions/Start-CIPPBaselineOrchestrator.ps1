@@ -117,6 +117,10 @@ function Start-CIPPBaselineOrchestrator {
         Batch            = @($Batch)
         OrchestratorName = "BaselineRun_$Mode"
         SkipLog          = $false
+        # Right under the audit log pipeline (P2) and ahead of the default 4: a drift
+        # check racing a fleet-wide report sweep must not sit behind it for hours, and
+        # remediation doubly so.
+        Priority         = 3
         # After every check has run, refresh ONLY the caches remediations wrote to -
         # otherwise the next run re-reads stale data and re-detects fixed drift.
         PostExecution    = @{

@@ -59,6 +59,8 @@ function Test-CippApiClientRoleGrant {
                 $CallerRoles = @('cipp-api')
             }
         } else {
+            # Get-CIPPAccessRole applies role impersonation, so an impersonated superadmin
+            # is subset-checked as the impersonated role, like a real user holding it.
             $CallerRoles = @(Get-CIPPAccessRole -Request $Request)
         }
     } catch {

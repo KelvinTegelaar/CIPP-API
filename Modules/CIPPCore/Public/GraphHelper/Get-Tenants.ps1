@@ -277,8 +277,11 @@ function Get-Tenants {
         }
     }
 
-    # Limit tenant list to allowed tenants if set in script scope from New-CippCoreRequest
-    if ($script:CippAllowedTenantsStorage -and $script:CippAllowedTenantsStorage.Value) {
+    # Limit tenant list to allowed tenants if set in script scope from New-CippCoreRequest.
+    # $null means unrestricted; any non-null scope filters, so a restricted caller whose scope
+    # resolved to zero tenants gets an empty list back rather than every tenant (an empty array
+    # is falsy, so a plain truthiness check would silently skip the narrowing).
+    if ($script:CippAllowedTenantsStorage -and $null -ne $script:CippAllowedTenantsStorage.Value) {
         $IncludedTenantsCache = $IncludedTenantsCache | Where-Object { $script:CippAllowedTenantsStorage.Value -contains $_.customerId }
     }
 

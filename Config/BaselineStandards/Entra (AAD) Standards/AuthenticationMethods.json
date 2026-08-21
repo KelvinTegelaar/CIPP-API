@@ -1,0 +1,274 @@
+{
+  "name": "AuthenticationMethods",
+  "label": "Configure Authentication Methods",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Manages the enabled state, group targeting and per-method settings of every authentication method the baseline configures. Methods left unconfigured are never touched.",
+  "executiveText": "Standardizes which sign-in methods are available and to whom - enabling phishing-resistant methods and retiring weak ones consistently across the fleet.",
+  "docsDescription": "Grades each configured method: enabled state, include targeting (a named group or all users), and method-specific settings - Microsoft Authenticator feature states, Temporary Access Pass lifetimes, QR code settings, Email OTP external access and exclusions. The graded value is one list naming every drift. Remediation writes only the drifted methods through the shared authentication policy helper.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Set-CIPPAuthenticationPolicy",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "MicrosoftAuthenticatorEnabled": {
+      "label": "Microsoft Authenticator: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "MicrosoftAuthenticatorGroup": {
+      "label": "Microsoft Authenticator: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "FIDO2Enabled": {
+      "label": "FIDO2 Security Keys: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "FIDO2Group": {
+      "label": "FIDO2 Security Keys: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "TAPEnabled": {
+      "label": "Temporary Access Pass: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "TAPGroup": {
+      "label": "Temporary Access Pass: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "SoftwareOathEnabled": {
+      "label": "Software OATH Tokens: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "SoftwareOathGroup": {
+      "label": "Software OATH Tokens: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "HardwareOathEnabled": {
+      "label": "Hardware OATH Tokens: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "HardwareOathGroup": {
+      "label": "Hardware OATH Tokens: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "SMSEnabled": {
+      "label": "SMS: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "SMSGroup": {
+      "label": "SMS: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "VoiceEnabled": {
+      "label": "Voice Call: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "VoiceGroup": {
+      "label": "Voice Call: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "EmailEnabled": {
+      "label": "Email OTP: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "EmailGroup": {
+      "label": "Email OTP: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "x509CertificateEnabled": {
+      "label": "Certificate-Based Authentication: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "x509CertificateGroup": {
+      "label": "Certificate-Based Authentication: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "QRCodePinEnabled": {
+      "label": "QR Code Pin: manage this method",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "QRCodePinGroup": {
+      "label": "QR Code Pin: target group (blank = all users)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "EmailExcludeGroup": {
+      "label": "Email OTP: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "MicrosoftAuthenticatorSoftwareOath": {
+      "label": "Authenticator: allow software OATH",
+      "omitWhenBlank": true,
+      "type": "switch"
+    },
+    "MicrosoftAuthenticatorDisplayAppInfo": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "default",
+          "label": "Default"
+        },
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "label": "Authenticator: DisplayAppInfo"
+    },
+    "MicrosoftAuthenticatorDisplayLocation": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "default",
+          "label": "Default"
+        },
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "label": "Authenticator: DisplayLocation"
+    },
+    "MicrosoftAuthenticatorCompanionApp": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "default",
+          "label": "Default"
+        },
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "label": "Authenticator: CompanionApp"
+    },
+    "TAPDefaultLifetime": {
+      "label": "TAP: default lifetime (minutes)",
+      "omitWhenBlank": true,
+      "type": "number"
+    },
+    "TAPMinLifetime": {
+      "label": "TAP: minimum lifetime (minutes)",
+      "omitWhenBlank": true,
+      "type": "number"
+    },
+    "TAPMaxLifetime": {
+      "label": "TAP: maximum lifetime (minutes)",
+      "omitWhenBlank": true,
+      "type": "number"
+    },
+    "TAPDefaultLength": {
+      "label": "TAP: default length",
+      "omitWhenBlank": true,
+      "type": "number"
+    },
+    "QRCodeLifetimeInDays": {
+      "label": "QR: lifetime (days)",
+      "omitWhenBlank": true,
+      "type": "number"
+    },
+    "QRCodePinLength": {
+      "label": "QR: pin length",
+      "omitWhenBlank": true,
+      "type": "number"
+    },
+    "TAPUsableOnce": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "true",
+          "label": "Yes (one-time use)"
+        },
+        {
+          "value": "false",
+          "label": "No (reusable)"
+        }
+      ],
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "label": "TAP: usable once"
+    },
+    "EmailAllowExternalIdToUseEmailOtp": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "default",
+          "label": "Default"
+        },
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "label": "Email OTP for external users"
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "AuthenticationMethodsPolicy",
+      "Groups"
+    ],
+    "cacheType": "AuthenticationMethodsPolicy"
+  },
+  "prepare": "Get-CIPPBaselineAuthenticationMethodsState",
+  "remediate": {
+    "executor": "AuthenticationMethods"
+  }
+}

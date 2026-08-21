@@ -94,6 +94,11 @@ function Invoke-CIPPCATemplateBatch {
         $TemplateValue = $t.Settings.TemplateList.value
         $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$TemplateValue'"
         $JSON = (Get-CippAzDataTableEntity @Table -Filter $Filter).JSON
+        # Resolve custom variables once at load: the compare helper, the dependency
+        # reconciliation objects and the deploy RawJSON must all see the same resolved
+        # values, or the DependencyMap ends up keyed by raw %tokens% that the (resolved)
+        # policies can never look up.
+        if ($JSON) { $JSON = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $JSON -EscapeForJson }
         if (-not $JSON) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Conditional Access template '$($t.Settings.TemplateList.label)' ($TemplateValue) could not be loaded from the template store - skipping." -Sev 'Error'
             Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$TemplateValue" -FieldValue "Template '$($t.Settings.TemplateList.label)' could not be loaded from the template store." -Tenant $Tenant

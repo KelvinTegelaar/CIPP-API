@@ -1,0 +1,74 @@
+{
+  "name": "MailboxRecipientLimits",
+  "label": "Set Mailbox Recipient Limits",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the maximum number of recipients that can be specified in the To, Cc, and Bcc fields of a message for all mailboxes in the tenant. Mailboxes whose plan caps recipients below the configured value are reported separately - they cannot be written to.",
+  "executiveText": "Controls how many recipients employees can include in a single email, helping prevent spam distribution and managing email server load. This security measure protects against both accidental mass mailings and potential abuse while ensuring legitimate business communications can still reach necessary recipients.",
+  "docsDescription": "This standard configures the recipient limits for all mailboxes in the tenant. The recipient limit determines the maximum number of recipients that can be specified in the To, Cc, and Bcc fields of a message.",
+  "impactColour": "info",
+  "addedDate": "2025-05-28",
+  "powershellEquivalent": "Set-Mailbox -RecipientLimits",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "RecipientLimit": {
+      "type": "number",
+      "label": "Recipient Limit",
+      "required": true,
+      "default": 500,
+      "validators": {
+        "min": {
+          "value": 1,
+          "message": "Minimum value is 1"
+        },
+        "max": {
+          "value": 1000,
+          "message": "Maximum value is 1000"
+        }
+      }
+    }
+  },
+  "expected": {
+    "offenders": [],
+    "planIssues": []
+  },
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineMailboxRecipientLimitsState",
+  "remediate": {
+    "executor": "ExoBulkSweep",
+    "refreshCache": [
+      "Mailboxes"
+    ],
+    "refreshCacheArgs": {
+      "Mailboxes": {
+        "Types": "None"
+      }
+    },
+    "writes": [
+      {
+        "cmdlet": "Set-Mailbox",
+        "params": {
+          "Identity": "%id%",
+          "RecipientLimits": "%RecipientLimit%"
+        }
+      }
+    ]
+  }
+}

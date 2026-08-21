@@ -1,0 +1,77 @@
+{
+  "name": "SpoofWarn",
+  "label": "Enable or disable 'external' warning in Outlook",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (6.2.3)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Adds or removes indicators to e-mail messages received from external senders in Outlook. Works on all Outlook clients/OWA",
+  "executiveText": "Displays visual warnings in Outlook when emails come from external senders, helping employees identify potentially suspicious messages and reducing the risk of phishing attacks. This security feature makes it easier for staff to distinguish between internal and external communications.",
+  "docsDescription": "Adds or removes indicators to e-mail messages received from external senders in Outlook. You can read more about this feature on [Microsoft's Exchange Team Blog.](https://techcommunity.microsoft.com/t5/exchange-team-blog/native-external-sender-callouts-on-email-in-outlook/ba-p/2250098)",
+  "impactColour": "info",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Set-ExternalInOutlook –Enabled $true or $false",
+  "appliesToTest": [
+    "CISAMSEXO71",
+    "CIS_6_2_3",
+    "ORCA111",
+    "ORCA240"
+  ],
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "externalWarningEnabled": {
+      "type": "switch",
+      "label": "Show the 'external' sender warning in Outlook",
+      "default": true,
+      "recommended": true
+    },
+    "allowListAdd": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "required": false,
+      "label": "Enter allowed senders(domain.com, *.domain.com or test@domain.com)",
+      "default": []
+    }
+  },
+  "expected": {
+    "Enabled": "%externalWarningEnabled%"
+  },
+  "read": {
+    "cacheType": "ExoExternalInOutlook"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-ExternalInOutlook",
+        "params": {
+          "Enabled": "%externalWarningEnabled%"
+        }
+      },
+      {
+        "cmdlet": "Set-ExternalInOutlook",
+        "params": {
+          "AllowList": {
+            "@odata.type": "#Exchange.GenericHashTable",
+            "Add": "%allowListAdd%"
+          }
+        },
+        "continueOnError": true
+      }
+    ]
+  }
+}

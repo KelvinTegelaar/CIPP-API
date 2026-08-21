@@ -3,7 +3,7 @@ function Invoke-ListBaselines {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.Read
+        Tenant.Baselines.Read
     .DESCRIPTION
         Lists baselines with their stages, per-stage rollout occupancy, and
         per-tenant stage states.

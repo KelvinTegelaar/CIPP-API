@@ -1,0 +1,62 @@
+{
+  "name": "SPOVersionControl",
+  "label": "SharePoint Version Control Policy",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Sets the tenant file version policy: intelligent auto-trim, or explicit version limits and expiry. Optionally pushes the policy to all existing sites.",
+  "executiveText": "Controls how many file versions SharePoint keeps, containing storage growth while preserving the recovery history the organization actually needs.",
+  "docsDescription": "Auto-trim on grades the trim flag alone; off grades the flag plus the major version limit and expiry days. Expiry accepts only 0 or 30-36500 days - values in the gap report No Data rather than a value the tenant would refuse. Remediation writes through the SPO SetFileVersionPolicy method and can fan the policy out to every existing site.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Set-SPOTenant file version policy",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "EnableAutoTrim": {
+      "type": "switch",
+      "label": "Use intelligent auto-trim",
+      "default": true
+    },
+    "MajorVersionLimit": {
+      "type": "number",
+      "label": "Major version limit (manual mode)",
+      "omitWhenBlank": true
+    },
+    "ExpireVersionsAfterDays": {
+      "type": "number",
+      "label": "Expire versions after days (0 = never, else 30-36500)",
+      "omitWhenBlank": true
+    },
+    "ApplyToExistingSites": {
+      "type": "switch",
+      "label": "Apply to all existing sites and libraries",
+      "default": false
+    }
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "prepare": "Get-CIPPBaselineSPOVersionControlState",
+  "remediate": {
+    "executor": "SPOVersionControl",
+    "enableAutoTrim": "%EnableAutoTrim%",
+    "majorVersionLimit": "%MajorVersionLimit%",
+    "expireVersionsAfterDays": "%ExpireVersionsAfterDays%",
+    "applyToExistingSites": "%ApplyToExistingSites%"
+  }
+}

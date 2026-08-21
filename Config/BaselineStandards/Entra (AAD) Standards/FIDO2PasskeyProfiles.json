@@ -1,0 +1,105 @@
+{
+  "name": "FIDO2PasskeyProfiles",
+  "label": "Configure FIDO2 Passkey Profiles",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Configures the default passkey profile: allowed passkey types, attestation enforcement, and optional AAGUID key restrictions. Other profiles are never touched.",
+  "executiveText": "Controls which passkey authenticators the organization accepts - device-bound versus synced, and optionally an explicit allow or block list of authenticator models.",
+  "docsDescription": "Grades the default passkey profile's passkey types, attestation enforcement, key restriction enforcement, restriction type and sorted AAGUID set. Remediation rewrites the default profile in place, resending every other profile untouched. Attestation must be disabled to allow synced passkeys.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH authenticationMethodConfigurations/Fido2",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "PasskeyTypes": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "deviceBound",
+          "label": "Device-bound only"
+        },
+        {
+          "value": "synced",
+          "label": "Synced only"
+        },
+        {
+          "value": "deviceBound,synced",
+          "label": "Both device-bound and synced"
+        }
+      ],
+      "required": true,
+      "type": "autoComplete",
+      "label": "Allowed Passkey Types"
+    },
+    "AttestationEnforcement": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "disabled",
+          "label": "Disabled (required for synced passkeys)"
+        },
+        {
+          "value": "registrationOnly",
+          "label": "Registration only"
+        }
+      ],
+      "required": true,
+      "type": "autoComplete",
+      "label": "Attestation Enforcement"
+    },
+    "EnforceKeyRestrictions": {
+      "label": "Enforce AAGUID Key Restrictions",
+      "type": "switch",
+      "default": false
+    },
+    "EnforcementType": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "allow",
+          "label": "Allow listed AAGUIDs only"
+        },
+        {
+          "value": "block",
+          "label": "Block listed AAGUIDs"
+        }
+      ],
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "label": "Key Restriction Type"
+    },
+    "AAGUIDs": {
+      "label": "AAGUIDs (comma-separated)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "AuthenticationMethodsPolicy",
+      "Fido2Configuration"
+    ],
+    "cacheType": "AuthenticationMethodsPolicy"
+  },
+  "prepare": "Get-CIPPBaselineFIDO2PasskeyProfilesState",
+  "remediate": {
+    "executor": "FIDO2PasskeyProfiles",
+    "passkeyTypes": "%PasskeyTypes%",
+    "attestationEnforcement": "%AttestationEnforcement%",
+    "enforceKeyRestrictions": "%EnforceKeyRestrictions%",
+    "enforcementType": "%EnforcementType%",
+    "aaGuids": "%AAGUIDs%"
+  }
+}

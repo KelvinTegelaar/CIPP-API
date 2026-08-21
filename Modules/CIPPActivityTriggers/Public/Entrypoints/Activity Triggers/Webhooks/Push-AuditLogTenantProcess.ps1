@@ -9,11 +9,32 @@ function Push-AuditLogTenantProcess {
         # Get the CacheWebhooks table
         $CacheWebhooksTable = Get-CippTable -TableName 'CacheWebhooks'
         # we do it this way because the rows can grow extremely large, if we get them all it might just hang for minutes at a time.
+        $Poison = [System.Collections.Generic.List[object]]::new()
         $Rows = foreach ($RowId in $RowIds) {
             $CacheEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$RowId'"
             if ($CacheEntity) {
-                $AuditData = $CacheEntity.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+                # try/catch, not -ErrorAction: ConvertFrom-Json parse failures are terminating,
+                # so without the catch one garbled row aborts the whole batch via the outer catch.
+                try {
+                    $AuditData = $CacheEntity.JSON | ConvertFrom-Json -ErrorAction Stop
+                } catch {
+                    $AuditData = $null
+                }
+                if ($null -eq $AuditData) {
+                    # A row whose JSON can never parse can never be drained; left in place it
+                    # re-enters every claim cycle forever. Delete it.
+                    Write-Information "Audit Logs: removing unparseable cache row $($CacheEntity.RowKey) ($TenantFilter)"
+                    $Poison.Add([PSCustomObject]@{ PartitionKey = [string]$CacheEntity.PartitionKey; RowKey = [string]$CacheEntity.RowKey })
+                    continue
+                }
                 $AuditData
+            }
+        }
+        if ($Poison.Count -gt 0) {
+            try {
+                $null = Remove-CIPPAzDataTableEntity -Force @CacheWebhooksTable -Entity $Poison.ToArray()
+            } catch {
+                Write-Information "Audit Logs: failed to remove $($Poison.Count) unparseable row(s) for ${TenantFilter}: $($_.Exception.Message)"
             }
         }
 

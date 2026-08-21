@@ -26,6 +26,10 @@ function Invoke-ExecCustomRole {
         throw "Role name $($Request.Body.RoleName) cannot be used"
     }
 
+    # Set when an action changes which Entra group maps to a role - that invalidates every
+    # user's cached role resolution, not just the scope rules.
+    $AccessGroupChanged = $false
+
     switch ($Action) {
         'AddUpdate' {
             try {
@@ -46,10 +50,43 @@ function Invoke-ExecCustomRole {
                 }
 
                 if ($Request.Body.RoleName -notin $DefaultRoles.PSObject.Properties.Name) {
+                    # PermissionRules ({Include, Exclude} -like globs) is the canonical
+                    # format; older clients that only send the flat map get concrete-string
+                    # rules synthesized from it. Invalid patterns are dropped, not saved.
+                    $PermissionRules = $null
+                    if ($Request.Body.PermissionRules) {
+                        $PatternRegex = '^[A-Za-z0-9*]+(\.[A-Za-z0-9*]+){0,2}$'
+                        $Include = [System.Collections.Generic.List[string]]::new()
+                        $Exclude = [System.Collections.Generic.List[string]]::new()
+                        foreach ($Pattern in @($Request.Body.PermissionRules.Include)) {
+                            if ($Pattern -is [string] -and $Pattern -match $PatternRegex) {
+                                if ($Include -notcontains $Pattern) { $Include.Add($Pattern) }
+                            } elseif ($Pattern) {
+                                $Results.Add("Ignored invalid include pattern '$Pattern'")
+                            }
+                        }
+                        foreach ($Pattern in @($Request.Body.PermissionRules.Exclude)) {
+                            if ($Pattern -is [string] -and $Pattern -match $PatternRegex) {
+                                if ($Exclude -notcontains $Pattern) { $Exclude.Add($Pattern) }
+                            } elseif ($Pattern) {
+                                $Results.Add("Ignored invalid exclude pattern '$Pattern'")
+                            }
+                        }
+                        if ($Include.Count -gt 0) {
+                            $PermissionRules = [PSCustomObject]@{
+                                Include = @($Include)
+                                Exclude = @($Exclude)
+                            }
+                        }
+                    }
+                    if (!$PermissionRules) {
+                        $PermissionRules = ConvertTo-CippPermissionRules -Permissions $Request.Body.Permissions
+                    }
                     $Role = @{
                         'PartitionKey'     = 'CustomRoles'
                         'RowKey'           = "$($Request.Body.RoleName.ToLower())"
                         'Permissions'      = "$($Request.Body.Permissions | ConvertTo-Json -Compress)"
+                        'PermissionRules'  = "$($PermissionRules | ConvertTo-Json -Compress -Depth 5)"
                         'AllowedTenants'   = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
                         'BlockedTenants'   = "$($Request.Body.BlockedTenants | ConvertTo-Json -Compress)"
                         'BlockedEndpoints' = "$($Request.Body.BlockedEndpoints | ConvertTo-Json -Compress)"
@@ -80,6 +117,7 @@ function Invoke-ExecCustomRole {
                     }
                 }
                 if ($Request.Body.EntraGroup) {
+                    $ExistingRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "PartitionKey eq 'AccessRoleGroups' and RowKey eq '$($Request.Body.RoleName.ToLower())'"
                     $RoleGroup = @{
                         'PartitionKey' = 'AccessRoleGroups'
                         'RowKey'       = "$($Request.Body.RoleName.ToLower())"
@@ -87,12 +125,16 @@ function Invoke-ExecCustomRole {
                         'GroupName'    = $Request.Body.EntraGroup.label
                     }
                     Add-CIPPAzDataTableEntity @AccessRoleGroupTable -Entity $RoleGroup -Force | Out-Null
+                    if (!$ExistingRoleGroup -or $ExistingRoleGroup.GroupId -ne $Request.Body.EntraGroup.value) {
+                        $AccessGroupChanged = $true
+                    }
                     $Results.Add("Security group '$($Request.Body.EntraGroup.label)' assigned to the '$($Request.Body.RoleName)' role.")
                     Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Security group '$($Request.Body.EntraGroup.label)' assigned to the '$($Request.Body.RoleName)' role." -Sev 'Info'
                 } else {
                     $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "RowKey eq '$($Request.Body.RoleName)'"
                     if ($AccessRoleGroup) {
                         Remove-CIPPAzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
+                        $AccessGroupChanged = $true
                         $Results.Add("Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role.")
                         Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role." -Sev 'Info'
                     }
@@ -127,6 +169,7 @@ function Invoke-ExecCustomRole {
                     'PartitionKey'     = 'CustomRoles'
                     'RowKey'           = "$($Request.Body.NewRoleName.ToLower())"
                     'Permissions'      = $ExistingRole.Permissions
+                    'PermissionRules'  = "$($ExistingRole.PermissionRules)"
                     'AllowedTenants'   = $ExistingRole.AllowedTenants
                     'BlockedTenants'   = $ExistingRole.BlockedTenants
                     'BlockedEndpoints' = $ExistingRole.BlockedEndpoints
@@ -157,6 +200,7 @@ function Invoke-ExecCustomRole {
             $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "PartitionKey eq 'AccessRoleGroups' and RowKey eq '$($Request.Body.RoleName)'"
             if ($AccessRoleGroup) {
                 Remove-CIPPAzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
+                $AccessGroupChanged = $true
             }
             $AccessIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "PartitionKey eq 'AccessIPRanges' and RowKey eq '$($Request.Body.RoleName)'"
             if ($AccessIPRange) {
@@ -185,11 +229,39 @@ function Invoke-ExecCustomRole {
                     }
                 )
             } else {
+                # One-time migration: rows saved before the rules format gain concrete-string
+                # rules (behavior-preserving, Include = explicit values). Runs here because
+                # this superadmin-only list action is hit whenever roles are managed.
+                foreach ($Role in $Body) {
+                    if ($Role.PSObject.Properties.Name -notcontains 'PermissionRules' -or [string]::IsNullOrWhiteSpace($Role.PermissionRules)) {
+                        try {
+                            $RulesJson = ConvertTo-CippPermissionRules -Permissions $Role.Permissions | ConvertTo-Json -Compress -Depth 5
+                            if ($Role.PSObject.Properties.Name -contains 'PermissionRules') {
+                                $Role.PermissionRules = $RulesJson
+                            } else {
+                                $Role | Add-Member -NotePropertyName PermissionRules -NotePropertyValue $RulesJson
+                            }
+                            Add-CIPPAzDataTableEntity @Table -Entity $Role -Force | Out-Null
+                            Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Migrated custom role $($Role.RowKey) to permission rules format" -Sev 'Info'
+                        } catch {
+                            Write-Warning "Failed to migrate custom role $($Role.RowKey) to permission rules: $($_.Exception.Message)"
+                        }
+                    }
+                }
                 $CustomRoles = foreach ($Role in $Body) {
                     try {
                         $Role.Permissions = $Role.Permissions | ConvertFrom-Json
                     } catch {
                         $Role.Permissions = @()
+                    }
+                    if ($Role.PermissionRules) {
+                        try {
+                            $Role.PermissionRules = $Role.PermissionRules | ConvertFrom-Json
+                        } catch {
+                            $Role.PermissionRules = $null
+                        }
+                    } else {
+                        $Role | Add-Member -NotePropertyName PermissionRules -NotePropertyValue $null -Force
                     }
                     if ($Role.AllowedTenants) {
                         try {
@@ -273,6 +345,15 @@ function Invoke-ExecCustomRole {
     # stamp so the change lands within seconds rather than waiting out the rule cache TTL.
     if ($Action -in @('AddUpdate', 'Clone', 'Delete')) {
         Clear-CippAccessScopeCache
+    }
+
+    # A group mapping change alters which roles a user resolves to, not just what those roles can
+    # see. Drop the cached per-user resolutions and refresh the allowedUsers projection CRAFT
+    # authenticates against, so the change applies now instead of when the caches age out.
+    if ($AccessGroupChanged) {
+        Clear-CippAccessUserCache
+        try { Start-UserSyncTimer } catch {}
+        try { [Craft.Services.AuthBridge]::InvalidateUsers() } catch {}
     }
 
     return ([HttpResponseContext]@{

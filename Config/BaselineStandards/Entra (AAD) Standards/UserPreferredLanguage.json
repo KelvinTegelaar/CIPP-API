@@ -1,0 +1,53 @@
+{
+  "name": "UserPreferredLanguage",
+  "label": "Preferred language for all users",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Sets the preferred language property for all users in the tenant. This will override the user's language settings. Directory-synced accounts are skipped - the property is mastered on premises for those.",
+  "executiveText": "Standardises the display language across every Microsoft 365 account so employees see a consistent interface, and new accounts inherit the same setting.",
+  "docsDescription": "Sets the preferred language property for all users in the tenant. This will override the user's language settings.",
+  "impactColour": "info",
+  "addedDate": "2025-02-26",
+  "powershellEquivalent": "Update-MgUser -UserId user@domain.com -BodyParameter @{preferredLanguage='en-US'}",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "preferredLanguage": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Preferred Language",
+      "required": true,
+      "api": {
+        "url": "/languageList.json",
+        "labelField": "tag",
+        "valueField": "tag"
+      }
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Users"
+  },
+  "prepare": "Get-CIPPBaselineUserPreferredLanguageState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "Users"
+    ],
+    "writes": [
+      {
+        "method": "PATCH",
+        "uri": "users/%id%",
+        "body": {
+          "preferredLanguage": "%preferredLanguage%"
+        }
+      }
+    ]
+  }
+}

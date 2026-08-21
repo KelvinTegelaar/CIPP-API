@@ -41,6 +41,7 @@
     "requests": [
       {
         "method": "PATCH",
+        "asApp": false,
         "uri": "policies/authorizationPolicy/authorizationPolicy",
         "body": {
           "allowedToUseSSPR": "%allowSSPR%"

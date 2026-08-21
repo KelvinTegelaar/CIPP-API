@@ -48,12 +48,33 @@ Function Invoke-ExecExtensionMapping {
           'Priorities'  = $Priorities
         }
       }
+      'HaloPSARequestSources' {
+        # Request sources are instance-wide rather than scoped to a ticket type, so they get their
+        # own List key instead of joining HaloPSAFields. That key is fetched once per dropdown and
+        # again on every ticket type change, and folding an unscoped lookup into it would add a
+        # Halo API call to each of those for a list that never changes.
+        $Result = @{
+          'RequestSources' = @(Get-HaloRequestSource)
+        }
+      }
       'PWPushFields' {
         $Accounts = Get-PwPushAccount
         $Result = @{
           'Accounts' = $Accounts
         }
       }
+    }
+  }
+
+  # AnyTenant: mapping writes wipe and rewrite whole partitions and re-register per-tenant
+  # sync tasks, so they require an unrestricted tenant scope
+  if ($Request.Query.AddMapping -or $Request.Query.AutoMapping) {
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    if ($AllowedTenants -notcontains 'AllTenants') {
+      return ([HttpResponseContext]@{
+          StatusCode = [HttpStatusCode]::Forbidden
+          Body       = 'Editing extension mappings requires unrestricted tenant access'
+        })
     }
   }
 

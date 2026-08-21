@@ -41,6 +41,13 @@ function Invoke-AddIntuneTemplate {
             $StatusCode = [HttpStatusCode]::OK
         } else {
             $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
+
+            # AnyTenant: template is built from a live read of this tenant; enforce scope
+            $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+            if ($AllowedTenants -notcontains 'AllTenants' -and -not ($TenantFilter -and (Get-Tenants -TenantFilter $TenantFilter))) {
+                throw 'Access to this tenant is not allowed'
+            }
+
             $URLName = $Request.Body.URLName ?? $Request.Query.URLName
             $ID = $Request.Body.ID ?? $Request.Query.ID
             $ODataType = $Request.Body.ODataType ?? $Request.Query.ODataType

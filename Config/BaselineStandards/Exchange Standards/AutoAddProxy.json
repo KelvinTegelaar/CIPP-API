@@ -1,0 +1,57 @@
+{
+  "name": "AutoAddProxy",
+  "label": "Automatically deploy proxy addresses",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Automatically adds all available domains as a proxy address.",
+  "executiveText": "Automatically creates email addresses for employees across all company domains, ensuring they can receive emails sent to any of the organization's domain names. This improves email delivery reliability and maintains consistent communication channels across different business units or brands.",
+  "docsDescription": "Automatically finds all available domain names in the tenant, and tries to add proxy addresses based on the user's UPN to each of these.",
+  "impactColour": "warning",
+  "addedDate": "2025-02-07",
+  "powershellEquivalent": "Set-Mailbox -EmailAddresses @{add=$EmailAddress}",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineAutoAddProxyState",
+  "remediate": {
+    "executor": "ExoBulkSweep",
+    "refreshCache": [
+      "Mailboxes"
+    ],
+    "refreshCacheArgs": {
+      "Mailboxes": {
+        "Types": "None"
+      }
+    },
+    "writes": [
+      {
+        "cmdlet": "Set-Mailbox",
+        "params": {
+          "Identity": "%id%",
+          "EmailAddresses": {
+            "@odata.type": "#Exchange.GenericHashTable",
+            "Add": "%alias%"
+          }
+        }
+      }
+    ]
+  }
+}

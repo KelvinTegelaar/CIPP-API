@@ -68,7 +68,11 @@ function Get-CIPPBaselineIntuneTemplateState {
         $ReusableGuid = "$($Reusable.GUID ?? $Reusable.guid ?? $Reusable.id)"
         $ReusableName = "$($Reusable.DisplayName ?? $Reusable.displayName ?? $Reusable.name ?? $Reusable.Setting.displayName)"
         if (-not $ReusableGuid -or -not $ReusableName) { continue }
-        $TenantReusable = @($(try { New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'IntuneReusableSettings' } catch { $null }) | Where-Object { $_.displayName -eq $ReusableName }) | Select-Object -First 1
+        # Collect-on-miss: IntuneReusableSettings is not in this definition's requiredCaches,
+        # so a tenant that never collected it used to yield no match, leave the TEMPLATE's
+        # foreign GUID in the payload, and report permanent false drift - with remediation
+        # deploying a policy that references a reusable setting the tenant does not have.
+        $TenantReusable = @($(try { Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'IntuneReusableSettings' } catch { $null }) | Where-Object { $_.displayName -eq $ReusableName }) | Select-Object -First 1
         if ($TenantReusable.id) { $RawJson = $RawJson.Replace($ReusableGuid, "$($TenantReusable.id)") }
     }
     $RawJson = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $RawJson -EscapeForJson

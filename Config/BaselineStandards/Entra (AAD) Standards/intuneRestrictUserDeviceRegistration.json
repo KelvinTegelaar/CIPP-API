@@ -1,0 +1,56 @@
+{
+  "name": "intuneRestrictUserDeviceRegistration",
+  "label": "Configure user restriction for Entra device registration",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Controls whether users can register devices with Entra. Tenants where Entra reports this setting as not admin-configurable (commonly because Intune is enabled) are reported but not written to.",
+  "executiveText": "Controls whether employees can register their devices for corporate access. Disabling user device registration prevents unauthorized or unmanaged devices from connecting to company resources, enhancing overall security posture.",
+  "docsDescription": "Configures whether users can register devices with Entra. When disabled, users are unable to register devices with Entra.",
+  "impactColour": "warning",
+  "addedDate": "2026-02-23",
+  "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
+  "appliesToTest": [],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowedToRegister": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Users allowed to register devices with Entra",
+      "required": true,
+      "options": [
+        {
+          "label": "No users (disable users from registering devices)",
+          "value": "#microsoft.graph.noDeviceRegistrationMembership"
+        },
+        {
+          "label": "All users",
+          "value": "#microsoft.graph.allDeviceRegistrationMembership"
+        }
+      ],
+      "default": "#microsoft.graph.noDeviceRegistrationMembership",
+      "recommended": "#microsoft.graph.noDeviceRegistrationMembership"
+    }
+  },
+  "expected": {
+    "allowedToRegister": "%allowedToRegister%"
+  },
+  "read": {
+    "cacheType": "DeviceRegistrationPolicy"
+  },
+  "prepare": "Get-CIPPBaselineDeviceRegistrationPolicyState",
+  "remediate": {
+    "executor": "DeviceRegistrationPolicy",
+    "requireAdminConfigurable": "azureADRegistration",
+    "set": {
+      "azureADRegistration.allowedToRegister": {
+        "@odata.type": "%allowedToRegister%",
+        "users": null,
+        "groups": null
+      }
+    }
+  }
+}

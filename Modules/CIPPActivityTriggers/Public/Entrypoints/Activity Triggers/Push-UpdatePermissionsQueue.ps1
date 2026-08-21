@@ -9,6 +9,12 @@ function Push-UpdatePermissionsQueue {
     $FailureMessage = $null
     $DomainRefreshRequired = $false
 
+    # Read by the finally block, so they must survive an early throw in the try.
+    $ConsentRow = $null
+    $ConsentAttempted = $false
+    $Attempts = 0
+    $ResetSP = $false
+
     try {
         if (!$Item.defaultDomainName) {
             $DomainRefreshRequired = $true
@@ -20,10 +26,31 @@ function Push-UpdatePermissionsQueue {
 
         $Tenant = Get-Tenants -TenantFilter $Item.customerId -IncludeErrors
 
-        if ((!$CPVRows -or $env:ApplicationID -notin $CPVRows.applicationId) -and $Tenant.delegatedPrivilegeStatus -ne 'directTenant') {
-            Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message 'A New tenant has been added, or a new CIPP-SAM Application is in use' -Sev 'Warning' -API 'NewTenant'
+        $ConsentRow = $CPVRows | Where-Object { $_.applicationId -eq $env:ApplicationID } | Select-Object -First 1
+
+        # The finally block writes a row even on failure, so existence alone does not prove
+        # consent. -eq 'Failed' so status-less legacy rows don't re-consent the estate on deploy.
+        $NeedsConsent = !$ConsentRow -or $ConsentRow.LastStatus -eq 'Failed'
+
+        if ($NeedsConsent -and $Tenant.delegatedPrivilegeStatus -ne 'directTenant') {
+            # Only a reset can fix an entry that exists but is wrong ('Permission entry already
+            # exists' short-circuits a plain re-consent). Escalate on a known consent error or
+            # after a failed re-consent; at most one reset per week since it briefly drops access.
+            $ConsentAttempted = $true
+            $Attempts = if ($ConsentRow.ConsentAttempts) { [int]$ConsentRow.ConsentAttempts } else { 0 }
+            $KnownConsentError = [bool]($ConsentRow -and $ConsentRow.LastError -match 'AADSTS(65001|90094|500011)|Insufficient privileges|Authorization_RequestDenied')
+            $ResetAllowed = $true
+            if ($ConsentRow.LastResetUtc) {
+                try { $ResetAllowed = ([datetime]::UtcNow - [datetime]::Parse($ConsentRow.LastResetUtc)).TotalDays -ge 7 } catch { $ResetAllowed = $true }
+            }
+            $ResetSP = [bool]($ConsentRow -and $ResetAllowed -and ($KnownConsentError -or $Attempts -ge 1))
+
+            $ConsentReason = if (!$ConsentRow) { 'A New tenant has been added, or a new CIPP-SAM Application is in use' }
+            elseif ($ResetSP) { "The last permissions run failed and re-applying consent has not fixed it (attempt $($Attempts + 1)), resetting the service principal" }
+            else { 'The last permissions run failed, re-applying CPV consent' }
+            Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message $ConsentReason -Sev 'Warning' -API 'NewTenant'
             Write-Information 'Adding CPV permissions'
-            Set-CIPPCPVConsent -Tenantfilter $Item.customerId
+            Set-CIPPCPVConsent -Tenantfilter $Item.customerId -ResetSP $ResetSP
             $DomainRefreshRequired = $true
         }
         Write-Information 'Updating permissions'
@@ -83,6 +110,19 @@ function Push-UpdatePermissionsQueue {
             if ($FailureMessage) {
                 $GraphRequest.LastError = "$FailureMessage"
             }
+
+            # Failed re-consent counter drives the reset escalation; cleared on success.
+            if ($Status -eq 'Success') {
+                $GraphRequest.ConsentAttempts = '0'
+            } elseif ($ConsentAttempted) {
+                $GraphRequest.ConsentAttempts = "$($Attempts + 1)"
+            } elseif ($ConsentRow.ConsentAttempts) {
+                $GraphRequest.ConsentAttempts = "$($ConsentRow.ConsentAttempts)"
+            }
+            # The row is replaced, not merged - carry these forward or the weekly limit re-arms.
+            if ($ResetSP) { $GraphRequest.LastResetUtc = ([datetime]::UtcNow.ToString('o')) }
+            elseif ($ConsentRow.LastResetUtc) { $GraphRequest.LastResetUtc = "$($ConsentRow.LastResetUtc)" }
+
             Add-CIPPAzDataTableEntity @CpvTable -Entity $GraphRequest -Force
         } catch {
             Write-Information "Failed to persist cpvtenants row for $($Item.displayName): $($_.Exception.Message)"

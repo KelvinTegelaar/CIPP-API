@@ -5,10 +5,20 @@ function Get-CippAuditLogPlannedWindows {
     .DESCRIPTION
         Pure helper for the V2 audit-log pipeline. Windows are 35 minutes long on a 30-minute stride,
         so consecutive windows overlap by 5 minutes (covers boundary stragglers; alerting dedups by
-        record id). Window ENDS sit on the 30-minute grid minus the settle (i.e. :25 / :55), which is
+        record id). Window ENDS sit on the 30-minute grid minus the settle (i.e. :10 / :40), which is
         exactly `floor_to_30min(now) - settle`. With the planner timer firing at :00/:15/:30/:45 and a
-        5-minute settle, a fresh window becomes creatable exactly at a :00/:30 tick - no tick delay -
+        20-minute settle, a fresh window becomes creatable exactly at a :00/:30 tick - no tick delay -
         and the :15/:45 ticks naturally have no new window (they do retries + download/process).
+
+        The settle is what decides how long Microsoft has to publish an event before the window
+        covering it is searched. An event landing at the very end of a window gets exactly `settle`
+        minutes of grace; at 5 that was tight enough that routinely-delayed records were missed by
+        this path and only picked up hours later by the 12-hour reconciliation windows. At 20 the
+        grace is four times longer, at the cost of ~15 minutes of extra detection latency across the
+        board - a window that used to be searched at :00 is now searched at :30.
+
+        The settle must stay BELOW the stride. At 30 or more, `floor_to_30min(now) - settle` stops
+        producing a fresh end at each :00/:30 tick and the no-tick-delay property breaks.
 
         Backfill of older gaps is bounded by -HorizonHours and capped at -MaxPerRun per call (oldest
         first). A brand-new tenant is seeded with only the newest settled window.
@@ -26,7 +36,7 @@ function Get-CippAuditLogPlannedWindows {
     param(
         [object[]]$ExistingRows,
         [datetime]$Now = (Get-Date).ToUniversalTime(),
-        [int]$SettleMinutes = 5,
+        [int]$SettleMinutes = 20,
         [int]$WindowMinutes = 35,
         [int]$StrideMinutes = 30,
         [int]$HorizonHours = 24,
@@ -35,7 +45,7 @@ function Get-CippAuditLogPlannedWindows {
 
     $Now = $Now.ToUniversalTime()
 
-    # Newest window end: floor to the 30-min grid, minus the settle (lands on :25 / :55).
+    # Newest window end: floor to the 30-min grid, minus the settle (lands on :10 / :40).
     $FloorMinute = $Now.Minute - ($Now.Minute % $StrideMinutes)
     $Floor = [datetime]::new($Now.Year, $Now.Month, $Now.Day, $Now.Hour, $FloorMinute, 0, [System.DateTimeKind]::Utc)
     $NewestEnd = $Floor.AddMinutes(-$SettleMinutes)

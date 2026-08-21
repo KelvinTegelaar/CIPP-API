@@ -31,20 +31,24 @@
       "label": "Idle session timeout",
       "options": [
         {
-          "label": "1 hour",
+          "label": "1 Hour",
           "value": "01:00:00"
         },
         {
-          "label": "2 hours",
-          "value": "02:00:00"
+          "label": "3 Hours",
+          "value": "03:00:00"
         },
         {
-          "label": "4 hours",
-          "value": "04:00:00"
-        },
-        {
-          "label": "6 hours",
+          "label": "6 Hours",
           "value": "06:00:00"
+        },
+        {
+          "label": "12 Hours",
+          "value": "12:00:00"
+        },
+        {
+          "label": "24 Hours",
+          "value": "1.00:00:00"
         }
       ],
       "default": "01:00:00",
@@ -57,6 +61,9 @@
   "read": {
     "cacheType": "ActivityBasedTimeoutPolicy"
   },
-  "custom": true,
-  "customFunction": "Invoke-CIPPBaselineActivityBasedTimeout"
+  "prepare": "Get-CIPPBaselineActivityBasedTimeoutState",
+  "remediate": {
+    "executor": "ActivityBasedTimeout",
+    "timeout": "%timeout%"
+  }
 }

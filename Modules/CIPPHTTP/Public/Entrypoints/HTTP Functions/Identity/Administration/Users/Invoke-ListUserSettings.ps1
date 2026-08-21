@@ -72,6 +72,9 @@ function Invoke-ListUserSettings {
             if (-not $Offboarding) { return $false }
             foreach ($Property in $Offboarding.PSObject.Properties) {
                 if ($Property.Value -eq $true) { return $true }
+                if ($Property.Name -eq 'OOO' -and -not (Test-CIPPHtmlIsEmpty -Html ([string]$Property.Value))) {
+                    return $true
+                }
             }
             return $false
         }

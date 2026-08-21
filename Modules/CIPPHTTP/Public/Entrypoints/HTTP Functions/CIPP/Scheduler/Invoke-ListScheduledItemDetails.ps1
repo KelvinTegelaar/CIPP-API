@@ -37,6 +37,17 @@ function Invoke-ListScheduledItemDetails {
         return
     }
 
+    # AnyTenant: restricted callers may only read tasks for tenants in scope
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    if ($AllowedTenants -notcontains 'AllTenants') {
+        if (-not $Task.Tenant -or -not (Get-Tenants -TenantFilter $Task.Tenant)) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = 'Access to this scheduled task is not allowed'
+                })
+        }
+    }
+
     # Process the task (similar to the way it's done in Invoke-ListScheduledItems)
     if ($Task.Parameters) {
         $Task.Parameters = $Task.Parameters | ConvertFrom-Json -ErrorAction SilentlyContinue

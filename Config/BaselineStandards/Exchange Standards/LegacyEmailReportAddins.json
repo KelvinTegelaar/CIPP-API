@@ -1,0 +1,40 @@
+{
+  "name": "LegacyEmailReportAddins",
+  "label": "Remove legacy Outlook Report add-ins",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Removes legacy Report Phishing and Report Message Outlook add-ins.",
+  "executiveText": "The legacy Report Phishing and Report Message Outlook add-ins are security issues with the add-in which makes them unsafe for the organization.",
+  "docsDescription": "Removes the retired Report Phishing and Report Message Outlook add-in app registrations. Compliance is the absence of both, so a tenant that never had them reports compliant rather than 'No Data'.",
+  "impactColour": "info",
+  "addedDate": "2025-08-26",
+  "powershellEquivalent": "None",
+  "recommendedBy": [
+    "Microsoft"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Apps"
+  },
+  "prepare": "Get-CIPPBaselineLegacyEmailReportAddinsState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "Apps"
+    ],
+    "writes": [
+      {
+        "method": "DELETE",
+        "asApp": false,
+        "uri": "applications/%id%"
+      }
+    ]
+  }
+}

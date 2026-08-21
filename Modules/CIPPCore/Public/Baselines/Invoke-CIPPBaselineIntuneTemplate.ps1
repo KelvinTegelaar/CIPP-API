@@ -16,7 +16,9 @@ function Invoke-CIPPBaselineIntuneTemplate {
     [CmdletBinding()]
     param(
         $Remediate,
-        $TenantFilter
+        $TenantFilter,
+        # The read result. Unused here; every executor takes the same arguments.
+        $Current
     )
 
     $TemplateRef = "$($Remediate.intuneTemplate)"

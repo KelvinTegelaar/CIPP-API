@@ -1,0 +1,54 @@
+{
+  "name": "EmptyFilterIPAllowList",
+  "label": "Ensure connection filter IP allow list is empty",
+  "cat": "Defender Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.1.12)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Ensures the connection filter IP allow list is not used. IPs on this list bypass spam, spoof, and authentication checks.",
+  "executiveText": "Ensures the Exchange Online connection filter IP allow list is empty, preventing any IP addresses from bypassing spam filtering, spoofing checks, and sender authentication. Keeping this list empty ensures all inbound email undergoes full security scanning, reducing the risk of phishing and malware delivery through trusted-but-compromised sources.",
+  "docsDescription": "IPs on the connection filter allow list bypass spam, spoof, and authentication checks. CIS recommends keeping this list empty to ensure all inbound email is properly scanned. This standard checks that the IPAllowList on the Default hosted connection filter policy is empty and can remediate by clearing it.",
+  "impactColour": "warning",
+  "addedDate": "2026-05-06",
+  "powershellEquivalent": "Set-HostedConnectionFilterPolicy -Identity Default -IPAllowList @()",
+  "appliesToTest": [
+    "CIS_2_1_12"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "expected": {
+    "IPAllowList": []
+  },
+  "read": {
+    "cacheType": "ExoHostedConnectionFilterPolicy",
+    "filter": [
+      {
+        "property": "Identity",
+        "value": "Default"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-HostedConnectionFilterPolicy",
+        "params": {
+          "Identity": "Default",
+          "IPAllowList": []
+        }
+      }
+    ]
+  }
+}

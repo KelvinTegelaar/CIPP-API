@@ -1,0 +1,53 @@
+{
+  "name": "intuneDeviceReg",
+  "label": "Set Maximum Number of Devices per user",
+  "cat": "Intune Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.1.4.2)",
+    "CISA (MS.AAD.17.1v1)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Sets the maximum number of devices that can be registered by a user. A value of 0 disables device registration by users",
+  "executiveText": "Limits how many devices each employee can register for corporate access, preventing excessive device proliferation while accommodating legitimate business needs. This helps maintain security oversight and prevents potential abuse of device registration privileges.",
+  "docsDescription": "Sets the maximum number of devices that can be registered by a user. A value of 0 disables device registration by users",
+  "impactColour": "warning",
+  "addedDate": "2023-03-27",
+  "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
+  "appliesToTest": [
+    "CIS_5_1_4_2",
+    "ZTNA21801",
+    "ZTNA21802",
+    "ZTNA21837"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "max": {
+      "type": "number",
+      "label": "Maximum devices (Enter 2147483647 for unlimited.)",
+      "required": true,
+      "default": 50
+    }
+  },
+  "expected": {
+    "userDeviceQuota": "%max%"
+  },
+  "read": {
+    "cacheType": "DeviceRegistrationPolicy"
+  },
+  "prepare": "Get-CIPPBaselineDeviceRegistrationPolicyState",
+  "remediate": {
+    "executor": "DeviceRegistrationPolicy",
+    "set": {
+      "userDeviceQuota": "%max%"
+    }
+  }
+}

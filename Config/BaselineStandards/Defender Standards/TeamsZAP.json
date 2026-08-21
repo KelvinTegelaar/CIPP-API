@@ -1,0 +1,54 @@
+{
+  "name": "TeamsZAP",
+  "label": "Ensure Zero-hour auto purge for Microsoft Teams is on",
+  "cat": "Defender Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.4.4)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Ensures Zero-hour auto purge (ZAP) is enabled for Microsoft Teams, automatically removing malicious messages after delivery.",
+  "executiveText": "Enables Zero-hour auto purge for Microsoft Teams to automatically detect and remove malicious messages after delivery. This provides an additional layer of protection against phishing and malware that may bypass initial scanning, ensuring threats are neutralised even after they reach users.",
+  "docsDescription": "Zero-hour auto purge (ZAP) for Microsoft Teams retroactively detects and neutralises malicious messages that have already been delivered in Teams chats. Enabling ZAP ensures that phishing, malware, and high confidence phishing messages are automatically purged even after initial delivery, aligning with CIS M365 7.0.0 benchmark control 2.4.4.",
+  "impactColour": "info",
+  "addedDate": "2026-05-06",
+  "powershellEquivalent": "Set-TeamsProtectionPolicy -Identity 'Teams Protection Policy' -ZapEnabled $true",
+  "appliesToTest": [
+    "CIS_2_4_4"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "expected": {
+    "ZapEnabled": true
+  },
+  "read": {
+    "cacheType": "ExoTeamsProtectionPolicy",
+    "filter": [
+      {
+        "property": "Identity",
+        "value": "Teams Protection Policy"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-TeamsProtectionPolicy",
+        "params": {
+          "Identity": "Teams Protection Policy",
+          "ZapEnabled": true
+        }
+      }
+    ]
+  }
+}

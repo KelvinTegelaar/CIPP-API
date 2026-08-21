@@ -1,0 +1,35 @@
+{
+  "name": "EnablePronouns",
+  "label": "Enable Pronouns",
+  "cat": "Global Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables the Pronouns feature for the tenant. This allows users to set their pronouns in their profile.",
+  "executiveText": "Allows employees to display their preferred pronouns in their Microsoft 365 profiles, supporting inclusive workplace practices and helping colleagues communicate respectfully. This feature enhances diversity and inclusion initiatives while fostering a more welcoming work environment.",
+  "impactColour": "info",
+  "addedDate": "2024-06-05",
+  "powershellEquivalent": "Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:$true",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "isEnabledInOrganization": true
+  },
+  "read": {
+    "cacheType": "Pronouns"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "admin/people/pronouns",
+        "body": {
+          "isEnabledInOrganization": true
+        }
+      }
+    ]
+  }
+}

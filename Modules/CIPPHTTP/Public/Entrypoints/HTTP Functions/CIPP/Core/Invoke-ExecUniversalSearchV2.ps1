@@ -18,6 +18,13 @@ function Invoke-ExecUniversalSearchV2 {
 
     if ($AllowedTenants -notcontains 'AllTenants') {
         $TenantFilter = Get-Tenants | Select-Object -ExpandProperty defaultDomainName
+        # Empty scope: a null filter would search every tenant
+        if (-not $TenantFilter) {
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @()
+            }
+        }
     } else {
         $TenantFilter = 'allTenants'
     }
@@ -34,10 +41,10 @@ function Invoke-ExecUniversalSearchV2 {
             $Results = Search-CIPPDbData -SearchTerms $SearchTerms -Types 'Apps', 'ServicePrincipals' -Limit $Limit -Properties 'id', 'appId', 'displayName', 'publisherName', 'appOwnerOrganizationId' -TenantFilter $TenantFilter
         }
         'Licenses' {
-            # SKU lookup is universal — always search across all tenants regardless of caller scope.
             # No Properties filter so service plan names / friendly names embedded in the JSON
-            # still pass the secondary verification pass.
-            $Raw = Search-CIPPDbData -SearchTerms $SearchTerms -Types 'LicenseOverview' -TenantFilter 'allTenants'
+            # still pass the secondary verification pass. Scoped like the other types: the
+            # per-SKU result embeds per-tenant names and counts.
+            $Raw = Search-CIPPDbData -SearchTerms $SearchTerms -Types 'LicenseOverview' -TenantFilter $TenantFilter
 
             $BySku = [ordered]@{}
             foreach ($Row in $Raw) {

@@ -1,0 +1,36 @@
+{
+  "name": "OauthConsent",
+  "label": "Require admin consent for applications (Prevent OAuth phishing)",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Routes user application consent through the CIPP consent policy so only allow-listed applications can be consented to without admin review.",
+  "executiveText": "Blocks the most common OAuth phishing path by requiring admin review before applications gain access to company data, while allow-listed business apps keep working frictionlessly.",
+  "docsDescription": "Grades that the default user role's permission grant policy is the CIPP consent policy and that every expected include exists - the fixed Office 365 Management delegated include plus delegated and application includes per allowed app. Includes added by hand are not graded; remediation only ever adds. All writes are delegated - the authorization policy rejects app-only tokens.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH policies/authorizationPolicy",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "AllowedApps": {
+      "label": "Allowed application IDs, comma separated (optional)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    }
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy"
+  },
+  "prepare": "Get-CIPPBaselineOauthConsentState",
+  "remediate": {
+    "executor": "OauthConsent"
+  }
+}

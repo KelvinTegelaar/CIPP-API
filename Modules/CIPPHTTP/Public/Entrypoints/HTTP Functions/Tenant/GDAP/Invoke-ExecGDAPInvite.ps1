@@ -78,10 +78,10 @@ function Invoke-ExecGDAPInvite {
 
                     if ($NewRelationshipRequest.action -eq 'lockForApproval') {
                         $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
-                        try {
-                            $Uri = ([System.Uri]$TriggerMetadata.Headers.Referer)
-                            $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, "/tenant/gdap-management/onboarding/start?id=$($NewRelationship.id)")
-                        } catch {
+                        $Hostname = Get-CIPPHostname -Headers $Headers -PreferCustomDomain
+                        if ($Hostname) {
+                            $OnboardingUrl = "https://$Hostname/tenant/gdap-management/onboarding/start?id=$($NewRelationship.id)"
+                        } else {
                             $OnboardingUrl = $null
                         }
 

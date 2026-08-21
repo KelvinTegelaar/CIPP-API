@@ -1,0 +1,68 @@
+{
+  "name": "QuarantineRequestAlert",
+  "label": "Quarantine Release Request Alert",
+  "cat": "Defender Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets a e-mail address to alert when a User requests to release a quarantined message. With \"Allow extra addresses\" on, additional recipients are accepted and preserved; with it off, the configured address is enforced as the only recipient. Set the alert state to Removed to delete the alert rule CIPP created from the tenant.",
+  "executiveText": "Notifies IT administrators when employees request to release emails that were quarantined for security reasons, enabling oversight of potentially dangerous messages. This helps ensure that legitimate emails are released while maintaining security controls over suspicious content.",
+  "docsDescription": "Sets a e-mail address to alert when a User requests to release a quarantined message. This is useful for monitoring and ensuring that the correct messages are released. Setting the alert state to Removed deletes the alert rule CIPP created from the tenant, for when the alert is no longer wanted.",
+  "impactColour": "info",
+  "addedDate": "2024-07-15",
+  "powershellEquivalent": "New-ProtectionAlert, Set-ProtectionAlert and Remove-ProtectionAlert",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "State": {
+      "type": "select",
+      "multiple": false,
+      "label": "Alert state",
+      "helperText": "Enabled creates or updates the alert. Removed deletes the alert rule CIPP created; the other settings are ignored.",
+      "options": [
+        { "label": "Enabled", "value": "enabled" },
+        { "label": "Removed (delete the alert)", "value": "removed" }
+      ],
+      "default": "enabled"
+    },
+    "NotifyUser": {
+      "type": "textField",
+      "label": "E-mail to receive the alert",
+      "helperText": "Ignored when the alert state is Removed.",
+      "required": true
+    },
+    "AllowExtraAddresses": {
+      "type": "switch",
+      "label": "Allow extra addresses",
+      "helperText": "Leave on to accept additional recipients someone added to the alert, and to keep them when the standard writes. Turn off to enforce the configured address as the only recipient.",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "read": {
+    "cacheType": "ExoProtectionAlert",
+    "filter": [
+      {
+        "property": "Name",
+        "value": "CIPP User requested to release a quarantined message"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "QuarantineRequestAlert",
+    "state": "%State%",
+    "notifyUser": "%NotifyUser%",
+    "allowExtraAddresses": "%AllowExtraAddresses%"
+  },
+  "prepare": "Get-CIPPBaselineQuarantineRequestAlertState",
+  "expected": {
+    "NotifyUserPresent": true
+  }
+}

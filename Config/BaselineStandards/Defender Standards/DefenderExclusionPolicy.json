@@ -1,0 +1,74 @@
+{
+  "name": "DefenderExclusionPolicy",
+  "label": "Defender AV Exclusion Policy",
+  "cat": "Defender Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploys and enforces a Microsoft Defender Antivirus exclusion policy via Intune for file extensions, paths, and processes.",
+  "executiveText": "Keeps Defender exclusions consistent and centrally managed, preventing performance issues and false positives without ad-hoc local exclusions.",
+  "docsDescription": "Grades the fixed-name 'Default AV Exclusion Policy': the three exclusion collections as sorted sets, so order never matters and any missing or extra entry is drift. Remediation deletes and recreates through Set-CIPPDefenderExclusionPolicy with only the configured collections.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "excludedExtensions": {
+      "type": "textField",
+      "label": "Excluded Extensions (comma-separated, e.g. txt,log,tmp)",
+      "omitWhenBlank": true
+    },
+    "excludedPaths": {
+      "type": "textField",
+      "label": "Excluded Paths (comma-separated, e.g. C:\\Temp)",
+      "omitWhenBlank": true
+    },
+    "excludedProcesses": {
+      "type": "textField",
+      "label": "Excluded Processes (comma-separated, e.g. notepad.exe)",
+      "omitWhenBlank": true
+    },
+    "AssignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Policy Assignment",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "Do not assign"
+        },
+        {
+          "value": "allLicensedUsers",
+          "label": "All users"
+        },
+        {
+          "value": "AllDevices",
+          "label": "All devices"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "All users and devices"
+        }
+      ]
+    }
+  },
+  "read": {
+    "cacheType": "IntuneConfigurationPolicies"
+  },
+  "prepare": "Get-CIPPBaselineDefenderExclusionPolicyState",
+  "remediate": {
+    "executor": "DefenderExclusionPolicy",
+    "excludedExtensions": "%excludedExtensions%",
+    "excludedPaths": "%excludedPaths%",
+    "excludedProcesses": "%excludedProcesses%",
+    "assignTo": "%AssignTo%"
+  }
+}

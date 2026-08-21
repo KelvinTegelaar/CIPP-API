@@ -1,0 +1,410 @@
+{
+  "name": "SpamFilterPolicy",
+  "label": "Default Spam Filter Policy",
+  "cat": "Defender Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.1.6)",
+    "mdo_spamfilterpolicy",
+    "NIST CSF 2.0 (DE.CM-09)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "This creates a Spam filter policy. When the adopted policy is the built-in \"Default\", Exchange owns its scoping and no rule is graded or written.",
+  "executiveText": "Sets how suspected spam, bulk mail and phishing are handled, and where those messages are quarantined. Consistent settings reduce both nuisance mail and the chance a malicious message reaches an inbox.",
+  "docsDescription": "Creates or updates the Hosted Content Filter policy and the rule that scopes it to every accepted domain.",
+  "impactColour": "info",
+  "addedDate": "2024-03-25",
+  "powershellEquivalent": "Set-HostedContentFilterPolicy or New-HostedContentFilterPolicy",
+  "appliesToTest": [
+    "CIS_2_1_6"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "name": {
+      "type": "textField",
+      "label": "Policy Name",
+      "required": true,
+      "default": "CIPP Default Spam Filter Policy"
+    },
+    "SpamAction": {
+      "type": "select",
+      "multiple": false,
+      "label": "Spam action",
+      "required": true,
+      "options": [
+        {
+          "label": "MoveToJmf",
+          "value": "MoveToJmf"
+        },
+        {
+          "label": "AddXHeader",
+          "value": "AddXHeader"
+        },
+        {
+          "label": "ModifySubject",
+          "value": "ModifySubject"
+        },
+        {
+          "label": "Redirect",
+          "value": "Redirect"
+        },
+        {
+          "label": "Delete",
+          "value": "Delete"
+        },
+        {
+          "label": "Quarantine",
+          "value": "Quarantine"
+        },
+        {
+          "label": "NoAction",
+          "value": "NoAction"
+        }
+      ],
+      "default": "MoveToJmf"
+    },
+    "SpamQuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "label": "Spam quarantine tag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "DefaultFullAccessPolicy"
+    },
+    "HighConfidenceSpamAction": {
+      "type": "select",
+      "multiple": false,
+      "label": "High confidence spam action",
+      "required": true,
+      "options": [
+        {
+          "label": "MoveToJmf",
+          "value": "MoveToJmf"
+        },
+        {
+          "label": "AddXHeader",
+          "value": "AddXHeader"
+        },
+        {
+          "label": "ModifySubject",
+          "value": "ModifySubject"
+        },
+        {
+          "label": "Redirect",
+          "value": "Redirect"
+        },
+        {
+          "label": "Delete",
+          "value": "Delete"
+        },
+        {
+          "label": "Quarantine",
+          "value": "Quarantine"
+        },
+        {
+          "label": "NoAction",
+          "value": "NoAction"
+        }
+      ],
+      "default": "Quarantine"
+    },
+    "HighConfidenceSpamQuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "label": "High confidence spam quarantine tag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "AdminOnlyAccessPolicy"
+    },
+    "BulkSpamAction": {
+      "type": "select",
+      "multiple": false,
+      "label": "Bulk spam action",
+      "required": true,
+      "options": [
+        {
+          "label": "MoveToJmf",
+          "value": "MoveToJmf"
+        },
+        {
+          "label": "AddXHeader",
+          "value": "AddXHeader"
+        },
+        {
+          "label": "ModifySubject",
+          "value": "ModifySubject"
+        },
+        {
+          "label": "Redirect",
+          "value": "Redirect"
+        },
+        {
+          "label": "Delete",
+          "value": "Delete"
+        },
+        {
+          "label": "Quarantine",
+          "value": "Quarantine"
+        },
+        {
+          "label": "NoAction",
+          "value": "NoAction"
+        }
+      ],
+      "default": "MoveToJmf"
+    },
+    "BulkQuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "label": "Bulk quarantine tag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "DefaultFullAccessPolicy"
+    },
+    "PhishSpamAction": {
+      "type": "select",
+      "multiple": false,
+      "label": "Phish action",
+      "required": true,
+      "options": [
+        {
+          "label": "MoveToJmf",
+          "value": "MoveToJmf"
+        },
+        {
+          "label": "AddXHeader",
+          "value": "AddXHeader"
+        },
+        {
+          "label": "ModifySubject",
+          "value": "ModifySubject"
+        },
+        {
+          "label": "Redirect",
+          "value": "Redirect"
+        },
+        {
+          "label": "Delete",
+          "value": "Delete"
+        },
+        {
+          "label": "Quarantine",
+          "value": "Quarantine"
+        },
+        {
+          "label": "NoAction",
+          "value": "NoAction"
+        }
+      ],
+      "default": "Quarantine"
+    },
+    "PhishQuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "label": "Phish quarantine tag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "AdminOnlyAccessPolicy"
+    },
+    "HighConfidencePhishQuarantineTag": {
+      "type": "select",
+      "multiple": false,
+      "label": "High confidence phish quarantine tag",
+      "required": true,
+      "options": [
+        {
+          "label": "AdminOnlyAccessPolicy",
+          "value": "AdminOnlyAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessPolicy",
+          "value": "DefaultFullAccessPolicy"
+        },
+        {
+          "label": "DefaultFullAccessWithNotificationPolicy",
+          "value": "DefaultFullAccessWithNotificationPolicy"
+        }
+      ],
+      "default": "AdminOnlyAccessPolicy"
+    },
+    "BulkThreshold": {
+      "type": "number",
+      "label": "Bulk threshold",
+      "required": true,
+      "default": 7
+    },
+    "IncreaseScoreWithImageLinks": {
+      "type": "switch",
+      "label": "Increase score with image links",
+      "default": false
+    },
+    "IncreaseScoreWithBizOrInfoUrls": {
+      "type": "switch",
+      "label": "Increase score with .biz or .info URLs",
+      "default": false
+    },
+    "MarkAsSpamFramesInHtml": {
+      "type": "switch",
+      "label": "Mark as spam: frames in HTML",
+      "default": false
+    },
+    "MarkAsSpamObjectTagsInHtml": {
+      "type": "switch",
+      "label": "Mark as spam: object tags in HTML",
+      "default": false
+    },
+    "MarkAsSpamEmbedTagsInHtml": {
+      "type": "switch",
+      "label": "Mark as spam: embed tags in HTML",
+      "default": false
+    },
+    "MarkAsSpamFormTagsInHtml": {
+      "type": "switch",
+      "label": "Mark as spam: form tags in HTML",
+      "default": false
+    },
+    "MarkAsSpamWebBugsInHtml": {
+      "type": "switch",
+      "label": "Mark as spam: web bugs in HTML",
+      "default": false
+    },
+    "MarkAsSpamSensitiveWordList": {
+      "type": "switch",
+      "label": "Mark as spam: sensitive word list",
+      "default": false
+    },
+    "EnableLanguageBlockList": {
+      "type": "switch",
+      "label": "Enable language block list",
+      "default": false
+    },
+    "LanguageBlockList": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Blocked languages",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "EnableRegionBlockList": {
+      "type": "switch",
+      "label": "Enable region block list",
+      "default": false
+    },
+    "RegionBlockList": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Blocked regions",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "AllowedSenderDomains": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Allowed sender domains",
+      "omitWhenBlank": true,
+      "default": ""
+    }
+  },
+  "read": {
+    "cacheType": "ExoHostedContentFilterPolicy"
+  },
+  "prepare": "Get-CIPPBaselineSpamFilterPolicyState",
+  "remediate": {
+    "executor": "ExoPolicyRule",
+    "policyCmdlet": "HostedContentFilterPolicy",
+    "ruleCmdlet": "HostedContentFilterRule",
+    "policyParams": {
+      "SpamAction": "%SpamAction%",
+      "SpamQuarantineTag": "%SpamQuarantineTag%",
+      "HighConfidenceSpamAction": "%HighConfidenceSpamAction%",
+      "HighConfidenceSpamQuarantineTag": "%HighConfidenceSpamQuarantineTag%",
+      "BulkSpamAction": "%BulkSpamAction%",
+      "BulkQuarantineTag": "%BulkQuarantineTag%",
+      "PhishSpamAction": "%PhishSpamAction%",
+      "PhishQuarantineTag": "%PhishQuarantineTag%",
+      "HighConfidencePhishAction": "Quarantine",
+      "HighConfidencePhishQuarantineTag": "%HighConfidencePhishQuarantineTag%",
+      "BulkThreshold": "%BulkThreshold%",
+      "QuarantineRetentionPeriod": 30,
+      "IncreaseScoreWithNumericIps": "Off",
+      "IncreaseScoreWithRedirectToOtherPort": "Off",
+      "MarkAsSpamEmptyMessages": "Off",
+      "MarkAsSpamJavaScriptInHtml": "Off",
+      "MarkAsSpamSpfRecordHardFail": "Off",
+      "MarkAsSpamFromAddressAuthFail": "Off",
+      "MarkAsSpamNdrBackscatter": "Off",
+      "MarkAsSpamBulkMail": "On",
+      "InlineSafetyTipsEnabled": true,
+      "PhishZapEnabled": true,
+      "SpamZapEnabled": true
+    },
+    "ruleParams": {
+      "Priority": 0
+    }
+  }
+}

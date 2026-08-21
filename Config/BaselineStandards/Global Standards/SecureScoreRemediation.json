@@ -1,0 +1,79 @@
+{
+  "name": "SecureScoreRemediation",
+  "label": "Set Secure Score control states",
+  "cat": "Global Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Marks the configured Secure Score controls as default, ignored, reviewed, or resolved by a third party.",
+  "executiveText": "Keeps the Secure Score honest across tenants by consistently marking controls that are handled elsewhere or deliberately ignored, so the score reflects real posture.",
+  "docsDescription": "Grades each configured control's EFFECTIVE state - the newest controlStateUpdates entry, or default when none exist. Controls outside the configured lists are never graded. Remediation bulk-patches the drifted controls; Defender (scid_) controls cannot be set through this endpoint and are skipped with a log line.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH security/secureScoreControlProfiles",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "Default": {
+      "label": "Controls to set back to Default",
+      "type": "autoComplete",
+      "creatable": true,
+      "omitWhenBlank": true,
+      "multiple": true,
+      "api": {
+        "url": "/secureScore.json",
+        "labelField": "title",
+        "valueField": "id"
+      }
+    },
+    "Ignored": {
+      "label": "Controls to mark Ignored",
+      "type": "autoComplete",
+      "creatable": true,
+      "omitWhenBlank": true,
+      "multiple": true,
+      "api": {
+        "url": "/secureScore.json",
+        "labelField": "title",
+        "valueField": "id"
+      }
+    },
+    "ThirdParty": {
+      "label": "Controls resolved by third party",
+      "type": "autoComplete",
+      "creatable": true,
+      "omitWhenBlank": true,
+      "multiple": true,
+      "api": {
+        "url": "/secureScore.json",
+        "labelField": "title",
+        "valueField": "id"
+      }
+    },
+    "Reviewed": {
+      "label": "Controls to mark Reviewed",
+      "type": "autoComplete",
+      "creatable": true,
+      "omitWhenBlank": true,
+      "multiple": true,
+      "api": {
+        "url": "/secureScore.json",
+        "labelField": "title",
+        "valueField": "id"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "SecureScoreControlProfiles"
+  },
+  "prepare": "Get-CIPPBaselineSecureScoreRemediationState",
+  "remediate": {
+    "executor": "SecureScoreRemediation"
+  }
+}

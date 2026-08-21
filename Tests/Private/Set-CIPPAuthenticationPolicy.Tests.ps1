@@ -72,6 +72,47 @@ Describe 'Set-CIPPAuthenticationPolicy' {
         $body.isSelfServiceRegistrationAllowed | Should -Be $true
     }
 
+    It 'aligns FIDO2 attestation with the DEFAULT passkey profile when no parameter is passed' {
+        # Graph rejects a top-level attestation flag that disagrees with the default
+        # profile ("Attestation enforcement cannot be enabled when it is disabled in
+        # default passkey profile", proven live) - the enable must align, not force.
+        $script:mockCurrentInfo = [pscustomobject]@{
+            state                            = 'disabled'
+            isAttestationEnforced            = $false
+            isSelfServiceRegistrationAllowed = $true
+            defaultPasskeyProfile            = 'p-default'
+            passkeyProfiles                  = @(
+                [pscustomobject]@{ id = 'p-other'; attestationEnforcement = 'enforced'; keyRestrictions = [pscustomobject]@{ isEnforced = $false; enforcementType = 'allow'; aaGuids = @() } }
+                [pscustomobject]@{ id = 'p-default'; attestationEnforcement = 'disabled'; keyRestrictions = [pscustomobject]@{ isEnforced = $false; enforcementType = 'allow'; aaGuids = @() } }
+            )
+        }
+
+        Set-CIPPAuthenticationPolicy -Tenant 'contoso.onmicrosoft.com' -AuthenticationMethodId 'FIDO2' -Enabled $true
+
+        $body = $script:lastBody | ConvertFrom-Json
+        $body.state | Should -Be 'enabled'
+        $body.isAttestationEnforced | Should -Be $false
+    }
+
+    It 'gives FIDO2 passkey profiles missing keyRestrictions the neutral shape - Graph validates the whole config' {
+        $script:mockCurrentInfo = [pscustomobject]@{
+            state                            = 'disabled'
+            isAttestationEnforced            = $false
+            isSelfServiceRegistrationAllowed = $true
+            defaultPasskeyProfile            = 'p-1'
+            passkeyProfiles                  = @(
+                [pscustomobject]@{ id = 'p-1'; attestationEnforcement = 'enforced' }
+            )
+        }
+
+        Set-CIPPAuthenticationPolicy -Tenant 'contoso.onmicrosoft.com' -AuthenticationMethodId 'FIDO2' -Enabled $true
+
+        $body = $script:lastBody | ConvertFrom-Json
+        $body.isAttestationEnforced | Should -Be $true
+        @($body.passkeyProfiles)[0].keyRestrictions.enforcementType | Should -Be 'block'
+        @($body.passkeyProfiles)[0].keyRestrictions.isEnforced | Should -Be $false
+    }
+
     It 'scopes the method to all users when GroupIds contains all_users' {
         $script:mockCurrentInfo = [pscustomobject]@{
             state          = 'disabled'

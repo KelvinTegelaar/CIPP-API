@@ -38,6 +38,8 @@
     "sharingCapability": {
       "type": "autoComplete",
       "label": "Select Sharing Level",
+      "required": true,
+      "recommended": 1,
       "options": [
         {
           "label": "Users can share only with people in the organization. No external sharing is allowed.",

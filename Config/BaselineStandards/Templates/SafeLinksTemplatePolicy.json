@@ -1,0 +1,64 @@
+{
+  "name": "SafeLinksTemplatePolicy",
+  "label": "SafeLinks Policy Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploy SafeLinks policies and rules from CIPP templates. Existing policies and rules are rewritten from the template on every remediation run.",
+  "executiveText": "Deploys standardized SafeLinks policies that protect users from malicious links in email, Teams and Office documents. Template-driven deployment keeps link protection settings uniform across tenants.",
+  "docsDescription": "Deploy a SafeLinks policy and its rule from a CIPP template. The standard grades whether the policy and the rule each exist by name - it does not diff their settings - and rewrites both from the template on each remediation run, matching the classic standard. The rule's enabled state is applied when the template expresses one.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-SafeLinksPolicy, Set-SafeLinksPolicy, New-SafeLinksRule or Set-SafeLinksRule",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    [
+      "EXCHANGE_S_STANDARD",
+      "EXCHANGE_S_ENTERPRISE",
+      "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_ENTERPRISE_GOV",
+      "EXCHANGE_LITE"
+    ],
+    [
+      "ATP_ENTERPRISE",
+      "ATP_ENTERPRISE_GOV",
+      "THREAT_INTELLIGENCE",
+      "THREAT_INTELLIGENCE_GOV"
+    ]
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "checkBeforeRun": false,
+  "multiple": true,
+  "instanceIdentity": "safeLinksTemplate",
+  "identity": {
+    "partition": "SafeLinksTemplate",
+    "nameField": "templateName"
+  },
+  "variables": {
+    "safeLinksTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select SafeLinks Policy Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListSafeLinksPolicyTemplates",
+        "labelField": "TemplateName",
+        "valueField": "GUID",
+        "queryKey": "ListSafeLinksPolicyTemplates"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "ExoSafeLinksPolicies"
+  },
+  "prepare": "Get-CIPPBaselineSafeLinksTemplatePolicyState",
+  "remediate": {
+    "executor": "SafeLinksTemplatePolicy"
+  }
+}

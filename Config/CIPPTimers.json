@@ -109,8 +109,8 @@
   {
     "Id": "c2ebde3f-fa35-45aa-8a6b-91c835050b79",
     "Command": "Start-DomainOrchestrator",
-    "Description": "Orchestrator to process domains",
-    "Cron": "0 30 5 * * *",
+    "Description": "Orchestrator to process domains ahead of the nightly DB cache run",
+    "Cron": "0 30 1 * * *",
     "Priority": 22,
     "TZOffset": true,
     "RunOnProcessor": true
@@ -280,7 +280,7 @@
     "Command": "Start-CIPPBaselineOrchestrator",
     "Description": "Baseline run: graduations, drift detection and remediation for all baselines",
     "Cron": "0 0 */12 * * *",
-    "Priority": 4,
+    "Priority": 3,
     "RunOnProcessor": true,
     "TZOffset": true,
     "PreferredProcessor": "standards"

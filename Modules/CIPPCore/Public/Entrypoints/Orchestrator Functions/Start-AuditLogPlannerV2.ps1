@@ -7,8 +7,8 @@ function Start-AuditLogPlannerV2 {
         Replaces the separate Start-AuditLogSearchCreationV2 and Start-AuditLogIngestionV2 timers with
         one planner so the whole pipeline ticks together:
 
-          Stage 1 (create) - Start-AuditLogSearchCreationV2: seeds owed 35-min windows (5-min settle,
-            ends on the :25/:55 grid so a fresh window is creatable exactly at :00/:30 with no tick
+          Stage 1 (create) - Start-AuditLogSearchCreationV2: seeds owed 35-min windows (20-min settle,
+            ends on the :10/:40 grid so a fresh window is creatable exactly at :00/:30 with no tick
             delay) plus 12-hour reconciliation windows, then creates the oldest <= 6 due windows per
             tenant with auto-retry disabled and manual 429 back-off.
 

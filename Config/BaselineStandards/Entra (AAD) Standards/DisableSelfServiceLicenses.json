@@ -1,0 +1,45 @@
+{
+  "name": "DisableSelfServiceLicenses",
+  "label": "Disable Self Service Licensing",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Disables self-service purchasing for every product (with optional product-id exclusions), email-based subscription signup, and optionally trial autoclaim.",
+  "executiveText": "Stops employees buying Microsoft licenses on personal cards outside procurement - keeping licensing centralized, supported and cost-controlled.",
+  "docsDescription": "Grades every self-service purchasable product against Disabled (excluded product ids stay Enabled), email-based subscription signup against off, and - when trials are disabled - the autoclaim policy. Requires the Billing Administrator GDAP role to read the product list. Remediation writes each drifted product on its own endpoint.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "MSCommerce / licensing.m365.microsoft.com policy API",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "Exclusions": {
+      "label": "Excluded product IDs, comma or semicolon separated (stay enabled)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "DisableTrials": {
+      "label": "Also disable trial autoclaim",
+      "type": "switch",
+      "default": false
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "SelfServicePurchaseProducts",
+      "AuthorizationPolicy"
+    ],
+    "cacheType": "SelfServicePurchaseProducts"
+  },
+  "prepare": "Get-CIPPBaselineDisableSelfServiceLicensesState",
+  "remediate": {
+    "executor": "DisableSelfServiceLicenses"
+  }
+}

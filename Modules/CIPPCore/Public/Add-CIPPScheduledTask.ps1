@@ -250,6 +250,14 @@ function Add-CIPPScheduledTask {
                 $entity['Tag'] = [string]$task.Tag
             }
 
+            if ($Task.RowKey) {
+                # Editing replaces the entity, so carry the disabled state over to keep a disabled task disabled
+                $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$RowKey'" -Property RowKey, Disabled
+                if ($ExistingEntity.Disabled -eq $true) {
+                    $entity['Disabled'] = $true
+                }
+            }
+
             # Always store DesiredStartTime if provided
             if ($DesiredStartTime) {
                 $entity['DesiredStartTime'] = [string]$DesiredStartTime

@@ -1,0 +1,125 @@
+{
+  "name": "Branding",
+  "label": "Set branding for the tenant",
+  "cat": "Global Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the branding for the tenant. This includes the login page, and the Office 365 portal.",
+  "executiveText": "Customizes Microsoft 365 login pages and portals with company branding, including logos, colors, and messaging. This creates a consistent corporate identity experience for employees and reinforces brand recognition while maintaining professional appearance across all Microsoft services.",
+  "docsDescription": "Sets the branding for the tenant. This includes the login page, and the Office 365 portal.",
+  "impactColour": "info",
+  "addedDate": "2024-05-13",
+  "powershellEquivalent": "Portal only",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2",
+    "OFFICE_BUSINESS"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "signInPageText": {
+      "type": "textField",
+      "label": "Sign-in page text",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "usernameHintText": {
+      "type": "textField",
+      "label": "Username hint Text",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "hideAccountResetCredentials": {
+      "type": "switch",
+      "label": "Hide self-service password reset",
+      "default": false
+    },
+    "layoutTemplateType": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Visual Template",
+      "options": [
+        {
+          "label": "Full-screen background",
+          "value": "default"
+        },
+        {
+          "label": "Partial-screen background",
+          "value": "verticalSplit"
+        }
+      ],
+      "default": "default"
+    },
+    "isHeaderShown": {
+      "type": "switch",
+      "label": "Show header",
+      "default": false
+    },
+    "isFooterShown": {
+      "type": "switch",
+      "label": "Show footer",
+      "default": false
+    }
+  },
+  "expected": {
+    "signInPageText": "%signInPageText%",
+    "usernameHintText": "%usernameHintText%",
+    "loginPageTextVisibilitySettings": {
+      "hideAccountResetCredentials": "%hideAccountResetCredentials%"
+    },
+    "loginPageLayoutConfiguration": {
+      "layoutTemplateType": "%layoutTemplateType%",
+      "isHeaderShown": "%isHeaderShown%",
+      "isFooterShown": "%isFooterShown%"
+    }
+  },
+  "read": {
+    "cacheType": "OrganizationBranding",
+    "filter": [
+      {
+        "property": "id",
+        "value": "0"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "POST",
+        "uri": "organization/%tenantid%/branding/localizations",
+        "continueOnError": true,
+        "body": {
+          "signInPageText": "%signInPageText%",
+          "usernameHintText": "%usernameHintText%",
+          "loginPageTextVisibilitySettings": {
+            "hideAccountResetCredentials": "%hideAccountResetCredentials%"
+          },
+          "loginPageLayoutConfiguration": {
+            "layoutTemplateType": "%layoutTemplateType%",
+            "isHeaderShown": "%isHeaderShown%",
+            "isFooterShown": "%isFooterShown%"
+          }
+        }
+      },
+      {
+        "method": "PATCH",
+        "uri": "organization/%tenantid%/branding/localizations/0",
+        "body": {
+          "signInPageText": "%signInPageText%",
+          "usernameHintText": "%usernameHintText%",
+          "loginPageTextVisibilitySettings": {
+            "hideAccountResetCredentials": "%hideAccountResetCredentials%"
+          },
+          "loginPageLayoutConfiguration": {
+            "layoutTemplateType": "%layoutTemplateType%",
+            "isHeaderShown": "%isHeaderShown%",
+            "isFooterShown": "%isFooterShown%"
+          }
+        }
+      }
+    ]
+  }
+}

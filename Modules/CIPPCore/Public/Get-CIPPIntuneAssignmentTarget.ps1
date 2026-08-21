@@ -72,8 +72,11 @@ function Get-CIPPIntuneAssignmentTarget {
 
     # Policy types whose assignment surface is user groups only. Device Preparation deployments
     # trigger on the enrolling user, so a device audience cannot be expressed for them at all.
+    # Apple enrollment type profiles apply to the enrolling user the same way - the portal's
+    # picker offers user groups and nothing else.
     $UserGroupOnlyTypes = @(
         'DevicePrepProfile'
+        'AppleEnrollmentTypeProfile'
     )
     $IsUserGroupOnly = $IsMam -or ($UserGroupOnlyTypes -contains $PolicyType)
 

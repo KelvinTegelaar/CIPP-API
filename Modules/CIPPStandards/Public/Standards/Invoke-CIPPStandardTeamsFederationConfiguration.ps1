@@ -17,6 +17,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
             Configures how the organization federates with external organizations for Teams communication, controlling whether employees can communicate with specific external domains or all external organizations. This setting enables secure inter-organizational collaboration while maintaining control over external communications.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsFederationConfiguration.AllowTeamsConsumer","label":"Allow users to communicate with other organizations"}
+            {"type":"switch","name":"standards.TeamsFederationConfiguration.AllowTeamsConsumerInbound","label":"Allow unmanaged Teams users to initiate contact","condition":{"field":"standards.TeamsFederationConfiguration.AllowTeamsConsumer","compareType":"is","compareValue":true}}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsFederationConfiguration.DomainControl","label":"Communication Mode","options":[{"label":"Allow all external domains","value":"AllowAllExternal"},{"label":"Block all external domains","value":"BlockAllExternal"},{"label":"Allow specific external domains","value":"AllowSpecificExternal"},{"label":"Block specific external domains","value":"BlockSpecificExternal"}]}
             {"type":"textField","name":"standards.TeamsFederationConfiguration.DomainList","label":"Domains, Comma separated","required":false,"condition":{"field":"standards.TeamsFederationConfiguration.DomainControl.value","compareType":"isOneOf","compareValue":["AllowSpecificExternal","BlockSpecificExternal"]}}
         IMPACT
@@ -60,6 +61,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
     $DomainControl = $Settings.DomainControl.value ?? $Settings.DomainControl
     # An untoggled switch is absent from the settings; default it to $false so we never send null to the ConfigApi
     $AllowTeamsConsumer = $Settings.AllowTeamsConsumer ?? $false
+    $AllowTeamsConsumerInbound = $Settings.AllowTeamsConsumerInbound ?? $false
     $AllowedDomainsAsAList = @()
     $BlockedDomains = @()
     switch ($DomainControl) {
@@ -140,6 +142,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
     $ExpectedBlockedDomains = $BlockedDomains ?? @()
 
     $StateIsCorrect = ($CurrentState.AllowTeamsConsumer -eq $AllowTeamsConsumer) -and
+    ($CurrentState.AllowTeamsConsumerInbound -eq $AllowTeamsConsumerInbound) -and
     ($CurrentState.AllowFederatedUsers -eq $AllowFederatedUsers) -and
     $AllowedDomainsMatches -and
     $BlockedDomainsMatches
@@ -150,8 +153,9 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         } else {
             $cmdParams = @{
                 Identity            = 'Global'
-                AllowTeamsConsumer  = $AllowTeamsConsumer
-                AllowFederatedUsers = $AllowFederatedUsers
+                AllowTeamsConsumer         = $AllowTeamsConsumer
+                AllowTeamsConsumerInbound = $AllowTeamsConsumerInbound
+                AllowFederatedUsers       = $AllowFederatedUsers
                 AllowedDomains      = $AllowedDomainsPayload
                 BlockedDomains      = @($BlockedDomains)
             }
@@ -210,15 +214,17 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         }
 
         $CurrentValue = @{
-            AllowTeamsConsumer  = $CurrentState.AllowTeamsConsumer
-            AllowFederatedUsers = $CurrentState.AllowFederatedUsers
+            AllowTeamsConsumer         = $CurrentState.AllowTeamsConsumer
+            AllowTeamsConsumerInbound = $CurrentState.AllowTeamsConsumerInbound
+            AllowFederatedUsers       = $CurrentState.AllowFederatedUsers
             AllowedDomains      = $CurrentAllowedDomainsForReport
             BlockedDomains      = $CurrentBlockedDomainsForReport
         }
         $ExpectedValue = @{
-            AllowTeamsConsumer  = $AllowTeamsConsumer
-            AllowFederatedUsers = $AllowFederatedUsers
-            AllowedDomains      = $ExpectedAllowedDomainsForReport
+            AllowTeamsConsumer         = $AllowTeamsConsumer
+            AllowTeamsConsumerInbound = $AllowTeamsConsumerInbound
+            AllowFederatedUsers       = $AllowFederatedUsers
+            AllowedDomains            = $ExpectedAllowedDomainsForReport
             BlockedDomains      = $ExpectedBlockedDomainsForReport
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsFederationConfiguration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant

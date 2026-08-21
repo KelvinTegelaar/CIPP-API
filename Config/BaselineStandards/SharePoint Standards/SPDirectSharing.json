@@ -1,0 +1,37 @@
+{
+  "name": "SPDirectSharing",
+  "label": "Default to Direct Sharing Links",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Sets the default SharePoint sharing link type to Direct (specific people).",
+  "executiveText": "Makes sharing default to named recipients instead of anyone-with-the-link, so files are not one forward away from public.",
+  "docsDescription": "Grades whether the tenant default sharing link type is Direct. Remediation reads the SPO tenant live for a fresh CSOM identity and sets the link type through the shared SPO helper.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Set-SPOTenant -DefaultSharingLinkType Direct",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "prepare": "Get-CIPPBaselineSPDirectSharingState",
+  "remediate": {
+    "executor": "SPDirectSharing"
+  }
+}

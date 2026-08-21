@@ -1,15 +1,22 @@
 function Push-AuditLogProcessingBatchV2 {
     <#
     .SYNOPSIS
-        QueueFunction for the per-tenant V2 processing orchestrator. Builds processing batches from a
-        single tenant's CacheWebhooks rows.
+        QueueFunction for the per-tenant V2 processing orchestrator. Emits one batch item per
+        downloaded search.
     .DESCRIPTION
-        Tenant-scoped variant of Push-AuditLogProcessingBatch. Pages the CacheWebhooks rows for the
-        tenant supplied via the QueueFunction Parameters, claims unclaimed (or stale > 2h) rows by
-        stamping CippProcessing = true, and returns 500-row batch items routed to the
-        AuditLogTenantProcessV2 activity (which runs Test-CIPPAuditLogRules and advances the ledger).
-        Scoping to one tenant avoids cross-tenant scans and claim races when many tenants process
-        concurrently. The 2h stale window lets a crashed processing run be re-claimed and retried.
+        Claims work at SEARCH granularity. Each batch item is one SearchId, which is also one
+        CacheWebhooks partition, so the consuming activity reads it with a partition query.
+
+        This replaces a per-record claim that read every CacheWebhooks row for the tenant and
+        stamped each one - measured at 17.6s of bookkeeping per 5k records before a single record
+        was examined. Claiming the AuditLogCoverage row is one write per search instead, and the
+        ledger already had a state machine for it.
+
+        A search left in Processing beyond the stale window is reclaimed so a crashed run retries.
+
+        LEGACY: rows written before per-search partitioning live under PartitionKey = <tenant> and
+        are picked up by a compatibility pass. CacheWebhooks is transient, so this stops finding
+        anything within a cycle or two and can be removed a release later.
     .FUNCTIONALITY
         Entrypoint
     #>
@@ -21,46 +28,75 @@ function Push-AuditLogProcessingBatchV2 {
         Write-Information 'AuditLogProcessingBatchV2: no tenant filter; nothing to process'
         return @()
     }
+    $StaleHours = 2
 
-    $WebhookCacheTable = Get-CippTable -TableName 'CacheWebhooks'
-    $AllBatchItems = [System.Collections.Generic.List[object]]::new()
-    $NowUtc = (Get-Date).ToUniversalTime()
-    $StaleThreshold = $NowUtc.AddHours(-2)
+    $Ledger = Get-CippTable -TableName 'AuditLogCoverage'
+    $Now = (Get-Date).ToUniversalTime()
+    $Stale = $Now.AddHours(-$StaleHours)
 
-    $Rows = @(Get-CIPPAzDataTableEntity @WebhookCacheTable -Filter "PartitionKey eq '$TenantFilter'" -Property @('PartitionKey', 'RowKey', 'ETag', 'Timestamp', 'CippProcessing'))
+    $Rows = @(Get-CIPPAzDataTableEntity @Ledger -Filter "PartitionKey eq '$TenantFilter'")
     $Claimable = @($Rows | Where-Object {
-            -not $_.CippProcessing -or ($_.Timestamp -and $_.Timestamp.UtcDateTime -lt $StaleThreshold)
+            $_.SearchId -and (
+                $_.State -eq 'Downloaded' -or
+                ($_.State -eq 'Processing' -and $_.Timestamp -and $_.Timestamp.UtcDateTime -lt $Stale)
+            )
         })
-    if ($Claimable.Count -eq 0) {
-        Write-Information "AuditLogProcessingBatchV2: no claimable rows for $TenantFilter"
+
+    $BatchItems = [System.Collections.Generic.List[object]]::new()
+
+    # Claim by updating, never upserting: a window row removed by ledger retention while this loop
+    # runs must not be resurrected as a stateless shell that re-enters every cycle.
+    foreach ($Row in $Claimable) {
+        try {
+            Update-CIPPAzDataTableEntity @Ledger -Entity ([PSCustomObject]@{
+                    PartitionKey = $TenantFilter
+                    RowKey       = $Row.RowKey
+                    State        = 'Processing'
+                })
+            $BatchItems.Add([PSCustomObject]@{
+                    TenantFilter = $TenantFilter
+                    SearchId     = [string]$Row.SearchId
+                    WindowRowKey = [string]$Row.RowKey
+                    RecordCount  = [int]$Row.RecordCount
+                    FunctionName = 'AuditLogTenantProcessV2'
+                })
+        } catch {
+            Write-Information "AuditLogProcessingBatchV2: window $($Row.RowKey) for $TenantFilter vanished before it could be claimed; skipping"
+        }
+    }
+
+    # --- Legacy: rows still sitting in the old per-tenant partition ---
+    # Only reached while an upgrade drains; costs one keys-only read of a partition that is empty
+    # on any instance that has already cycled.
+    try {
+        $CacheTable = Get-CippTable -TableName 'CacheWebhooks'
+        $LegacyRows = @(Get-CIPPAzDataTableEntity @CacheTable -Filter "PartitionKey eq '$TenantFilter'" -Property PartitionKey, RowKey)
+        if ($LegacyRows.Count -gt 0) {
+            Write-Information "AuditLogProcessingBatchV2: $($LegacyRows.Count) legacy pre-partition row(s) for $TenantFilter"
+            $LegacyIds = @($LegacyRows.RowKey)
+            for ($i = 0; $i -lt $LegacyIds.Count; $i += 500) {
+                $BatchItems.Add([PSCustomObject]@{
+                        TenantFilter = $TenantFilter
+                        LegacyRowIds = @($LegacyIds[$i..([Math]::Min($i + 499, $LegacyIds.Count - 1))])
+                        FunctionName = 'AuditLogTenantProcessV2'
+                    })
+            }
+        }
+    } catch {
+        Write-Information "AuditLogProcessingBatchV2: legacy sweep skipped for ${TenantFilter}: $($_.Exception.Message)"
+    }
+
+    if ($BatchItems.Count -eq 0) {
+        Write-Information "AuditLogProcessingBatchV2: nothing to process for $TenantFilter"
         return @()
     }
 
-    $RowIds = @($Claimable.RowKey)
-    foreach ($Row in $Claimable) {
-        Add-CIPPAzDataTableEntity @WebhookCacheTable -Entity ([PSCustomObject]@{
-                PartitionKey   = $TenantFilter
-                RowKey         = $Row.RowKey
-                CippProcessing = $true
-            }) -OperationType UpsertMerge
+    $TotalRecords = ($Claimable | Measure-Object RecordCount -Sum).Sum
+    $ProcessQueue = New-CippQueueEntry -Name "Audit Logs Process V2 - $TenantFilter" -Reference 'AuditLogsProcessV2' -TotalTasks $BatchItems.Count
+    foreach ($BatchItem in $BatchItems) {
+        $BatchItem | Add-Member -MemberType NoteProperty -Name QueueId -Value $ProcessQueue.RowKey -Force
     }
 
-    for ($i = 0; $i -lt $RowIds.Count; $i += 500) {
-        $BatchRowIds = $RowIds[$i..([Math]::Min($i + 499, $RowIds.Count - 1))]
-        $AllBatchItems.Add([PSCustomObject]@{
-                TenantFilter = $TenantFilter
-                RowIds       = $BatchRowIds
-                FunctionName = 'AuditLogTenantProcessV2'
-            })
-    }
-
-    if ($AllBatchItems.Count -gt 0) {
-        $ProcessQueue = New-CippQueueEntry -Name "Audit Logs Process V2 - $TenantFilter" -Reference 'AuditLogsProcessV2' -TotalTasks $RowIds.Count
-        foreach ($BatchItem in $AllBatchItems) {
-            $BatchItem | Add-Member -MemberType NoteProperty -Name QueueId -Value $ProcessQueue.RowKey -Force
-        }
-        Write-Information "AuditLogProcessingBatchV2: $($AllBatchItems.Count) batch item(s) across $($RowIds.Count) row(s) for $TenantFilter"
-    }
-
-    return $AllBatchItems.ToArray()
+    Write-Information "AuditLogProcessingBatchV2: $($BatchItems.Count) batch item(s), ~$TotalRecords record(s) for $TenantFilter"
+    return $BatchItems.ToArray()
 }

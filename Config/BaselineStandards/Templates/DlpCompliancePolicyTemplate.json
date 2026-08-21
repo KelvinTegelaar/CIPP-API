@@ -1,0 +1,47 @@
+{
+  "name": "DlpCompliancePolicyTemplate",
+  "label": "DLP Compliance Policy Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploy Microsoft Purview DLP compliance policies from CIPP templates. Existing policies are overwritten in place.",
+  "executiveText": "Deploys Data Loss Prevention policies from a standardized template library, ensuring consistent DLP coverage across tenants for sensitive financial, identity, and regulated content.",
+  "docsDescription": "One instance per selected template. Each template is diffed field by field against the live policy and its rules through the same normalization the deploy path uses, so a policy deployed from the template grades InSync. Missing and drifted policies are remediated in place by name; a PendingDeletion policy cannot be modified and is surfaced as non-compliant without a doomed deploy attempt.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-DlpCompliancePolicy / Set-DlpCompliancePolicy / New-DlpComplianceRule / Set-DlpComplianceRule",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "dlpCompliancePolicyTemplate",
+  "identity": {
+    "partition": "DlpCompliancePolicyTemplate",
+    "nameField": "name"
+  },
+  "variables": {
+    "dlpCompliancePolicyTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select DLP Compliance Policy Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListDlpCompliancePolicyTemplates",
+        "labelField": "name",
+        "valueField": "GUID",
+        "queryKey": "ListDlpCompliancePolicyTemplates"
+      }
+    }
+  },
+  "read": {},
+  "prepare": "Get-CIPPBaselineDlpCompliancePolicyTemplateState",
+  "remediate": {
+    "executor": "DlpCompliancePolicyTemplate"
+  }
+}

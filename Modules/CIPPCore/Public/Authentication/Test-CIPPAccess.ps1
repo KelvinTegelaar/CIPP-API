@@ -8,6 +8,12 @@ function Test-CIPPAccess {
     $AccessTimings = @{}
     $AccessTotalSw = [System.Diagnostics.Stopwatch]::StartNew()
 
+    # Request-local identity context, read by New-CippCoreRequest for its per-request
+    # access log line. Reset here so a denied call never reports the previous caller.
+    $script:CippAccessUserContext = $null
+    # Request-local impersonation marker; reset so it never leaks between requests.
+    $script:CippImpersonation = $null
+
     # Get function help
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
 
@@ -76,6 +82,11 @@ function Test-CIPPAccess {
         $Client = Get-CippApiClient -AppId $Request.Headers.'x-ms-client-principal-name'
         if ($Client) {
             Write-Information "API Access: AppName=$($Client.AppName), AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
+            # Set before the IP check so an IP-range denial is still attributed to the client
+            $script:CippAccessUserContext = [PSCustomObject]@{
+                User  = "$($Client.AppName) ($IPAddress)"
+                Roles = @($Client.Role ?? 'cipp-api')
+            }
             $IPMatched = $false
             if ($Client.IPRange -notcontains 'Any') {
                 foreach ($Range in $Client.IPRange) {
@@ -113,6 +124,10 @@ function Test-CIPPAccess {
         } else {
             $CustomRoles = @('cipp-api')
             Write-Information "API Access: AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
+            $script:CippAccessUserContext = [PSCustomObject]@{
+                User  = "AppId $($Request.Headers.'x-ms-client-principal-name') ($IPAddress)"
+                Roles = @('cipp-api')
+            }
         }
         if ($Request.Params.CIPPEndpoint -eq 'me') {
             $Permissions = Get-CippAllowedPermissions -UserRoles $CustomRoles
@@ -161,6 +176,11 @@ function Test-CIPPAccess {
         if (-not $User.userRoles) {
             throw 'Access denied: unable to resolve roles for the authenticated principal'
         }
+
+        # IP enforcement deliberately uses the REAL roles, never the impersonated one: a
+        # role's IP allowlist describes where its actual members sign in from, and
+        # simulating it locks the impersonating superadmin out of the entire UI, /me and
+        # the exit banner included.
         $AllowedIPRanges = Get-CIPPRoleIPRanges -Roles $User.userRoles
 
         if ($AllowedIPRanges -notcontains 'Any') {
@@ -188,6 +208,20 @@ function Test-CIPPAccess {
 
         $swIPCheck.Stop()
         $AccessTimings['IPRangeCheck'] = $swIPCheck.Elapsed.TotalMilliseconds
+
+        # Superadmin-only role impersonation: everything downstream (/me permissions,
+        # base/custom role checks, tenant scoping) evaluates under the impersonated role.
+        # Only the IP check above is exempt, so impersonation can never lock the UI.
+        $Impersonation = Resolve-CippImpersonation -User $User -Request $Request
+        $User = $Impersonation.User
+        if ($Impersonation.Impersonating) {
+            $script:CippImpersonation = $Impersonation
+        }
+
+        $script:CippAccessUserContext = [PSCustomObject]@{
+            User  = if ($Impersonation.Impersonating) { "$($User.userDetails) (impersonating $($Impersonation.Impersonating))" } else { $User.userDetails }
+            Roles = @($User.userRoles | Where-Object { $_ -notin @('anonymous', 'authenticated') })
+        }
 
         if ($Request.Params.CIPPEndpoint -eq 'me') {
 
@@ -223,6 +257,12 @@ function Test-CIPPAccess {
             $MeResponse = @{
                 'clientPrincipal' = $User
                 'permissions'     = @($Permissions)
+            }
+            if ($script:CippImpersonation) {
+                # The frontend banner needs these to render the exit affordance even when
+                # the impersonated role has almost no permissions.
+                $MeResponse['impersonating'] = $script:CippImpersonation.Impersonating
+                $MeResponse['realUserRoles'] = @($script:CippImpersonation.RealRoles)
             }
 
             # Hosted payment status checks — shown to all users (no permission gating)
@@ -334,7 +374,6 @@ function Test-CIPPAccess {
 
     # Check base role permissions before continuing to custom roles
     if ($null -ne $BaseRole) {
-        Write-Information "Base Role: $($BaseRole.Name)"
         $BaseRoleAllowed = $false
         foreach ($Include in $BaseRole.Value.include) {
             if ($APIRole -like $Include) {

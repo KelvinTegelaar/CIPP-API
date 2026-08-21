@@ -1,0 +1,55 @@
+{
+  "name": "DisableSharedMailbox",
+  "label": "Disable Shared Mailbox Entra accounts",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (1.2.2)",
+    "CISA (MS.AAD.10.1v1)",
+    "NIST CSF 2.0 (PR.AA-01)",
+    "SMB1001 (2.3)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Blocks login for all accounts that are marked as a shared mailbox. This is Microsoft best practice to prevent direct logons to shared mailboxes. Directory-synced accounts are excluded.",
+  "executiveText": "Prevents direct login to shared mailbox accounts (like info@company.com), ensuring they can only be accessed through authorized users accounts. This security measure eliminates the risk of shared passwords and unauthorized access while maintaining proper access control and audit trails.",
+  "docsDescription": "Shared mailboxes can be directly logged into if the password is reset, this presents a security risk as do all shared login credentials. Microsoft's recommendation is to disable the user account for shared mailboxes. It would be a good idea to review the sign-in reports to establish potential impact.",
+  "impactColour": "warning",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Get-Mailbox & Update-MgUser",
+  "appliesToTest": [
+    "CIS_1_2_2",
+    "SMB1001_2_3"
+  ],
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineDisableSharedMailboxState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "Users"
+    ],
+    "writes": [
+      {
+        "method": "PATCH",
+        "uri": "users/%id%",
+        "body": {
+          "accountEnabled": false
+        }
+      }
+    ]
+  }
+}

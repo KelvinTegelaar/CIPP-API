@@ -1,0 +1,69 @@
+{
+  "name": "SmartLockout",
+  "label": "Configure Smart Lockout",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Sets the smart lockout threshold and duration, and optionally on-premises password protection mode.",
+  "executiveText": "Tunes how quickly repeated failed sign-ins lock an account and for how long, balancing brute-force protection against helpdesk load from accidental lockouts.",
+  "docsDescription": "Grades the four lockout values on the password-rule directory setting. Remediation creates the setting with defaults when absent or patches only the lockout values, leaving the banned-password values to their own standard.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH settings (directory setting 5cf42378)",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "LockoutDurationInSeconds": {
+      "label": "Lockout Duration (seconds)",
+      "type": "number",
+      "default": 60
+    },
+    "LockoutThreshold": {
+      "label": "Lockout Threshold (failed attempts)",
+      "type": "number",
+      "default": 10
+    },
+    "EnableBannedPasswordCheckOnPremises": {
+      "label": "Enable On-Premises Password Protection",
+      "type": "switch",
+      "default": false
+    },
+    "BannedPasswordCheckOnPremisesMode": {
+      "label": "On-Premises Mode",
+      "creatable": false,
+      "type": "autoComplete",
+      "default": "Audit",
+      "options": [
+        {
+          "value": "Audit",
+          "label": "Audit"
+        },
+        {
+          "value": "Enforce",
+          "label": "Enforce"
+        }
+      ]
+    }
+  },
+  "read": {
+    "cacheType": "Settings"
+  },
+  "prepare": "Get-CIPPBaselineSmartLockoutState",
+  "remediate": {
+    "executor": "SmartLockout",
+    "lockoutDurationInSeconds": "%LockoutDurationInSeconds%",
+    "lockoutThreshold": "%LockoutThreshold%",
+    "enableBannedPasswordCheckOnPremises": "%EnableBannedPasswordCheckOnPremises%",
+    "bannedPasswordCheckOnPremisesMode": "%BannedPasswordCheckOnPremisesMode%"
+  }
+}

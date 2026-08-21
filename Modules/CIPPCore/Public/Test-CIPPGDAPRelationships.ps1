@@ -100,6 +100,40 @@ function Test-CIPPGDAPRelationships {
                 }) | Out-Null
         }
 
+        # GDAP invites/onboarding call the Partner Center API with delegated auth, so obtain a token for that
+        # audience and confirm the user_impersonation scope is in it, the same way the access permissions check
+        # inspects the Graph token. The token request itself fails with AADSTS65001 when the scope was never
+        # consented for the SAM app in the partner tenant.
+        try {
+            $PartnerCenterToken = Get-GraphToken -tenantid $env:TenantID -scope 'https://api.partnercenter.microsoft.com/.default' -returnRefresh $true -SkipCache $true
+            $PartnerCenterTokenDetails = Read-JwtAccessDetails -Token $PartnerCenterToken.access_token
+            if ($PartnerCenterTokenDetails.Scope -notcontains 'user_impersonation') {
+                $GDAPissues.add([PSCustomObject]@{
+                        Type         = 'Error'
+                        Issue        = "The Partner Center API token for the SAM application does not contain the 'user_impersonation' scope. This permission is part of the CIPP defaults, so this usually indicates a wider problem with the SAM application's permissions. Run the Permissions check and repair permissions, then refresh this check. GDAP invites and tenant onboarding will fail until this is resolved."
+                        Tenant       = '*Partner Tenant'
+                        Relationship = 'None'
+                        Link         = 'https://docs.cipp.app/setup/installation/permissions'
+                    }) | Out-Null
+            }
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            # The Partner Center consent is part of the CIPP defaults, so a missing grant rarely happens in
+            # isolation - a failure here usually points at a wider SAM application or token problem.
+            if ($ErrorMessage.NormalizedError -match 'AADSTS65001|consent') {
+                $Issue = "The Partner Center API 'user_impersonation' delegated permission is not consented for the SAM application. This permission is part of the CIPP defaults, so this usually indicates a wider problem with the SAM application's permissions. Run the Permissions check and repair permissions, then refresh this check. GDAP invites and tenant onboarding will fail until this is resolved."
+            } else {
+                $Issue = "Could not obtain a Partner Center API token: $($ErrorMessage.NormalizedError). This usually indicates a problem with the SAM application or its tokens rather than the Partner Center permission itself - run the Permissions check for details. GDAP invites and tenant onboarding will fail until this is resolved."
+            }
+            $GDAPissues.add([PSCustomObject]@{
+                    Type         = 'Error'
+                    Issue        = $Issue
+                    Tenant       = '*Partner Tenant'
+                    Relationship = 'None'
+                    Link         = 'https://docs.cipp.app/setup/installation/permissions'
+                }) | Out-Null
+        }
+
         # Validate that every stored GDAP role mapping still points at a group that exists in the partner tenant.
         # A drifted/deleted GroupId is what causes the "access container does not exist" error during onboarding.
         # Problems are added to GDAPIssues as errors (so they count toward the Errors total) and tagged with

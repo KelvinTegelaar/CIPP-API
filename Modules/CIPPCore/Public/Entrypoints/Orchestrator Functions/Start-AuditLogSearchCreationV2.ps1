@@ -7,7 +7,11 @@ function Start-AuditLogSearchCreationV2 {
     .DESCRIPTION
         Replaces Start-AuditLogSearchCreation. Tenant selection is unchanged (WebhookRules Webhookv2,
         minus excluded, minus auditing-disabled). The key differences:
-          * Windows are clock-aligned, 60 minutes, NON-overlapping (tracked in AuditLogCoverage).
+          * Windows are clock-aligned, 35 minutes on a 30-minute stride, so consecutive windows
+            OVERLAP by 5 minutes (tracked in AuditLogCoverage). The overlap is deliberate - it
+            covers records landing on a boundary - and is safe only because alerting de-duplicates
+            by record id, which it does in exactly one place: the claim-insert into AuditLogs in
+            Invoke-CippWebhookProcessing. Nothing downstream of that de-duplicates.
           * Failed creations are recorded as Planned/Retry ledger rows, so they are retried (and gaps
             backfilled) instead of being silently dropped.
           * "First check what tenants need searches created" - the timer scans the ledger once and
@@ -20,7 +24,7 @@ function Start-AuditLogSearchCreationV2 {
     try {
         # --- Tenant selection (same source as V1) ---
         $ConfigTable = Get-CippTable -TableName 'WebhookRules'
-        $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'Webhookv2'" | ForEach-Object {
+        $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'Webhookv2'" | Where-Object { $_.Disabled -ne $true } | ForEach-Object {
             $ConfigEntry = $_
             if (!$ConfigEntry.excludedTenants) {
                 $ConfigEntry | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force
@@ -51,12 +55,35 @@ function Start-AuditLogSearchCreationV2 {
             }
         }
 
+        # Hoisted into hash sets once per rule, rather than an array -contains per tenant per rule.
+        # -contains is a linear scan, so the original was tenants x rules x tenants-per-rule string
+        # comparisons every cycle - at a few hundred tenants and a handful of AllTenants rules that
+        # is millions of comparisons to answer a question that is a set membership test.
+        # AllTenants is resolved once here too, since it does not depend on the tenant being tested.
+        $RuleScopes = foreach ($ConfigEntry in $ConfigEntries) {
+            $Included = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($Name in @($ConfigEntry.ExpandedTenants)) {
+                if ($Name) { [void]$Included.Add([string]$Name) }
+            }
+            $Excluded = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($Name in @($ConfigEntry.excludedTenants.value)) {
+                if ($Name) { [void]$Excluded.Add([string]$Name) }
+            }
+            [PSCustomObject]@{
+                Included   = $Included
+                Excluded   = $Excluded
+                AllTenants = $Included.Contains('AllTenants')
+            }
+        }
+        $RuleScopes = @($RuleScopes)
+
         $InScope = foreach ($Tenant in $TenantList) {
             if ($AuditDisabledTenants.Contains($Tenant.defaultDomainName) -or $AuditDisabledTenants.Contains([string]$Tenant.customerId)) { continue }
             $Match = $false
-            foreach ($ConfigEntry in $ConfigEntries) {
-                if ($ConfigEntry.excludedTenants.value -contains $Tenant.defaultDomainName) { continue }
-                if ($ConfigEntry.ExpandedTenants -contains $Tenant.defaultDomainName -or $ConfigEntry.ExpandedTenants -contains 'AllTenants') { $Match = $true; break }
+            $DomainName = [string]$Tenant.defaultDomainName
+            foreach ($Scope in $RuleScopes) {
+                if ($Scope.Excluded.Contains($DomainName)) { continue }
+                if ($Scope.AllTenants -or $Scope.Included.Contains($DomainName)) { $Match = $true; break }
             }
             if ($Match) { $Tenant }
         }
@@ -70,7 +97,14 @@ function Start-AuditLogSearchCreationV2 {
         $Ledger = Get-CippTable -TableName 'AuditLogCoverage'
         # Cover the reconciliation horizon (48h) plus slack so the fan-out check sees existing recon rows.
         $HorizonIso = (Get-Date).AddHours(-50).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        $AllRows = Get-CIPPAzDataTableEntity @Ledger -Filter "Timestamp ge datetime'$HorizonIso'"
+        # Projected to the five columns actually consumed: PartitionKey to group by tenant, State
+        # and NextAttemptUtc for the due-retry test below, and RowKey plus WindowStart for the two
+        # window planners. Timestamp is not a key, so this is a cross-partition scan whatever the
+        # predicate - what is controllable is how much comes back over the wire. At a few hundred
+        # tenants this covers roughly 90 windows each across the 50-hour horizon, and it ran every
+        # cycle pulling every column of every one of them.
+        $AllRows = Get-CIPPAzDataTableEntity @Ledger -Filter "Timestamp ge datetime'$HorizonIso'" `
+            -Property PartitionKey, RowKey, State, NextAttemptUtc, WindowStart
         $ByTenant = @{}
         foreach ($Row in $AllRows) {
             if (-not $ByTenant.ContainsKey($Row.PartitionKey)) { $ByTenant[$Row.PartitionKey] = [System.Collections.Generic.List[object]]::new() }

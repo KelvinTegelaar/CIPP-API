@@ -207,6 +207,11 @@ function Invoke-HuduExtensionSync {
                 URL   = 'https://admin.teams.microsoft.com/?delegatedOrg={0}' -f $Tenant.defaultDomainName
                 Icon  = 'fas fa-users'
             }
+			@{
+                Title = 'SharePoint Portal'
+                URL   = 'https://admin.cloud.microsoft/Partner/beginclientsession.aspx?CTID={0}&CSDEST=SharePoint' -f $Tenant.customerId
+                Icon  = 'fas fa-sitemap'
+            }
             @{
                 Title = 'Azure Portal'
                 URL   = 'https://portal.azure.com/{0}' -f $Tenant.defaultDomainName
@@ -223,7 +228,7 @@ function Invoke-HuduExtensionSync {
         if ($Configuration.IncludeComplianceLink) {
             $Links.Add(@{
                     Title = 'Compliance Portal'
-                    URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
+                    URL   = 'https://purview.microsoft.com/home?tid={0}' -f $Tenant.customerId
                     Icon  = 'fas fa-caret-up'
                 })
         }

@@ -1,0 +1,36 @@
+{
+  "name": "DisableViva",
+  "label": "Disable daily Insight/Viva reports",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Disables the daily viva reports for all users. This standard requires the CIPP-SAM application to have the Company Administrator (Global Admin) role in the tenant. Enable this using CIPP > Advanced > Super Admin > SAM App Roles. Activate the roles with a CPV refresh.",
+  "executiveText": "Disables daily Microsoft Viva Insights reports that are automatically sent to employees, reducing email volume and allowing organizations to control when and how productivity insights are shared. This can help prevent information overload while maintaining the ability to access insights when needed.",
+  "docsDescription": "",
+  "impactColour": "info",
+  "addedDate": "2022-05-25",
+  "powershellEquivalent": "Set-UserBriefingConfig",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "isEnabledInOrganization": false
+  },
+  "read": {
+    "cacheType": "PeopleInsights"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "organization/%tenantid%/settings/peopleInsights",
+        "body": {
+          "isEnabledInOrganization": false
+        }
+      }
+    ]
+  }
+}

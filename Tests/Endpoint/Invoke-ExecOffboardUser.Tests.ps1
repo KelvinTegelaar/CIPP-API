@@ -105,6 +105,17 @@ Describe 'Invoke-ExecOffboardUser' {
             }
         }
 
+        It 'carries the Out of Office message into the job options' {
+            $Ooo = '<p>No longer at %tenantname%.</p>'
+            $Request = New-OffboardRequest -Body @{ OOO = $Ooo }
+
+            $null = Invoke-ExecOffboardUser -Request $Request
+
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter {
+                $Task.Parameters.options.OOO -eq $Ooo
+            }
+        }
+
         It 'strips the routing fields out of the options payload' {
             # user/tenantFilter/Scheduled are how the request was addressed, not things to do.
             $Request = New-OffboardRequest -Body @{ Scheduled = [pscustomobject]@{ enabled = $false } }

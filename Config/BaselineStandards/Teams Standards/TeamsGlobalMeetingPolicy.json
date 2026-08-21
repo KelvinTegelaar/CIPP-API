@@ -78,7 +78,12 @@
     "AutoAdmittedUsers": {
       "type": "autoComplete",
       "label": "Who can bypass the lobby?",
+      "omitWhenBlank": true,
       "options": [
+        {
+          "label": "Keep the tenant's current value",
+          "value": ""
+        },
         {
           "label": "Only organizers and co-organizers",
           "value": "OrganizerOnly"
@@ -100,7 +105,7 @@
           "value": "Everyone"
         }
       ],
-      "default": "EveryoneInCompanyExcludingGuests",
+      "default": "",
       "recommended": "EveryoneInCompanyExcludingGuests"
     },
     "AllowPSTNUsersToBypassLobby": {

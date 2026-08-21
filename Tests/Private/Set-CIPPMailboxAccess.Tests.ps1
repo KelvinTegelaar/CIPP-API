@@ -1,9 +1,9 @@
 # Pester tests for Set-CIPPMailboxAccess
-# Set-CIPPMailboxAccess now delegates each grant to Set-CIPPMailboxPermission (FullAccess / Add), so
-# these tests cover the per-user fan-out, extraction of frontend objects with a .value property,
-# AutoMap pass-through, and that one user's failure does not stop the rest (the delegate returns an
-# error string rather than throwing). The EXO cmdlet mapping itself is covered by
-# Set-CIPPMailboxPermission.Tests.ps1.
+# Set-CIPPMailboxAccess now delegates each grant to Set-CIPPMailboxPermission (Add, with a
+# PermissionLevel that defaults to FullAccess), so these tests cover the per-user fan-out,
+# extraction of frontend objects with a .value property, AutoMap and PermissionLevel pass-through,
+# and that one user's failure does not stop the rest (the delegate returns an error string rather
+# than throwing). The EXO cmdlet mapping itself is covered by Set-CIPPMailboxPermission.Tests.ps1.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -58,6 +58,20 @@ Describe 'Set-CIPPMailboxAccess' {
             -Automap $false -TenantFilter 'contoso.com' -AccessRights @('FullAccess')
 
         Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter { $AutoMap -eq $false }
+    }
+
+    It 'passes an explicit PermissionLevel through to the delegate' {
+        Set-CIPPMailboxAccess -userid 'shared@contoso.com' -AccessUser 'user@contoso.com' `
+            -PermissionLevel 'SendAs' -TenantFilter 'contoso.com'
+
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter {
+            $PermissionLevel -eq 'SendAs' -and $Action -eq 'Add'
+        }
+    }
+
+    It 'rejects a PermissionLevel outside FullAccess/SendAs/SendOnBehalf' {
+        { Set-CIPPMailboxAccess -userid 'shared@contoso.com' -AccessUser 'user@contoso.com' `
+                -PermissionLevel 'ReadPermission' -TenantFilter 'contoso.com' } | Should -Throw
     }
 
     It 'continues to the next user when one user returns a failure string' {

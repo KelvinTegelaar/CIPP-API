@@ -4005,6 +4005,12 @@ Microsoft Teams Premium Introductory Pricing,Microsoft_Teams_Premium,36a0f3b3-ad
 Microsoft Teams Premium Introductory Pricing,Microsoft_Teams_Premium,36a0f3b3-adb5-49ea-bf66-762134cf063a,MCO_VIRTUAL_APPT,711413d0-b36e-4cd4-93db-0a50a4ab7ea3,Microsoft Teams Premium Virtual Appointments
 Microsoft Teams Premium Introductory Pricing,Microsoft_Teams_Premium,36a0f3b3-adb5-49ea-bf66-762134cf063a,TEAMSPRO_PROTECTION,f8b44f54-18bb-46a3-9658-44ab58712968,Microsoft Teams Premium Secure
 Microsoft Teams Premium Introductory Pricing,Microsoft_Teams_Premium,36a0f3b3-adb5-49ea-bf66-762134cf063a,TEAMSPRO_WEBINAR,78b58230-ec7e-4309-913c-93a45cc4735b,Microsoft Teams Premium Webinar
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_MGMT,0504111f-feb8-4a3c-992a-70280f9a2869,Microsoft Teams Premium Intelligent
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_CUST,cc8c0802-a325-43df-8cba-995d0c6cb373,Microsoft Teams Premium Personalized
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_PROTECTION,f8b44f54-18bb-46a3-9658-44ab58712968,Microsoft Teams Premium Secure
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_VIRTUALAPPT,9104f592-f2a7-4f77-904c-ca5a5715883f,Microsoft Teams Premium Virtual Appointment
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,MCO_VIRTUAL_APPT,711413d0-b36e-4cd4-93db-0a50a4ab7ea3,Microsoft Teams Premium Virtual Appointments
+Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,QUEUES_APP,ab2d4fb5-f80a-4bf1-a11d-7f1da254041b,Queues app for Microsoft Teams
 Microsoft Teams Rooms Basic,Microsoft_Teams_Rooms_Basic,6af4b3d6-14bb-4a2a-960c-6c902aad34f3,MCOMEETADV,3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40,Microsoft 365 Audio Conferencing
 Microsoft Teams Rooms Basic,Microsoft_Teams_Rooms_Basic,6af4b3d6-14bb-4a2a-960c-6c902aad34f3,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,Microsoft Teams
 Microsoft Teams Rooms Basic,Microsoft_Teams_Rooms_Basic,6af4b3d6-14bb-4a2a-960c-6c902aad34f3,Teams_Rooms_Basic,c8529366-cffd-4415-ab8f-be0144a33ab1,Teams Rooms Basic
@@ -4026,6 +4032,7 @@ Microsoft Teams Rooms Pro,Microsoft_Teams_Rooms_Pro,4cde982a-ede4-4409-9ae6-b003
 Microsoft Teams Rooms Pro,Microsoft_Teams_Rooms_Pro,4cde982a-ede4-4409-9ae6-b003453c8ea6,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,Microsoft Teams
 Microsoft Teams Rooms Pro,Microsoft_Teams_Rooms_Pro,4cde982a-ede4-4409-9ae6-b003453c8ea6,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
 Microsoft Teams Rooms Pro,Microsoft_Teams_Rooms_Pro,4cde982a-ede4-4409-9ae6-b003453c8ea6,WHITEBOARD_PLAN3,4a51bca5-1eff-43f5-878c-177680f191af,Whiteboard (Plan 3)
+Microsoft Teams Rooms Pro,Microsoft_Teams_Rooms_Pro,4cde982a-ede4-4409-9ae6-b003453c8ea6,MICROSOFT_TEAMS_EVENTS,29c62f1c-8ffc-4304-9cb9-398a6aa1852b,Microsoft Teams Events
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Azure Active Directory Basic for Education
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,MCOMEETADV,3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40,Microsoft 365 Audio Conferencing
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,MCOEV,4828c8ec-dc2e-4779-b502-87ac9ce28ab7,Microsoft 365 Phone System
@@ -4128,6 +4135,7 @@ Microsoft Viva Suite,VIVA,61902246-d7cb-453e-85cd-53ee28eec138,VIVA_LEARNING_PRE
 Microsoft Workplace Analytics,WORKPLACE_ANALYTICS,3d957427-ecdc-4df2-aacd-01cc9d519da8,WORKPLACE_ANALYTICS,f477b0f0-3bb1-4890-940c-40fcee6ce05f,Microsoft Workplace Analytics
 Microsoft Workplace Analytics,WORKPLACE_ANALYTICS,3d957427-ecdc-4df2-aacd-01cc9d519da8,WORKPLACE_ANALYTICS_INSIGHTS_BACKEND,ff7b261f-d98b-415b-827c-42a3fdf015af,Microsoft Workplace Analytics Insights Backend
 Microsoft Workplace Analytics,WORKPLACE_ANALYTICS,3d957427-ecdc-4df2-aacd-01cc9d519da8,WORKPLACE_ANALYTICS_INSIGHTS_USER,b622badb-1b45-48d5-920f-4b27a2c0996c,Microsoft Workplace Analytics Insights User
+Microsoft Workplace Analytics,WORKPLACE_ANALYTICS,3d957427-ecdc-4df2-aacd-01cc9d519da8,SKILLS_IN_VIVA,ccaebebf-3634-4975-a0ad-3eccb697f393,Skills in Viva
 Minecraft Education Faculty,MEE_FACULTY,984df360-9a74-4647-8cf8-696749f6247a,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Minecraft Education Faculty,MEE_FACULTY,984df360-9a74-4647-8cf8-696749f6247a,MINECRAFT_EDUCATION_EDITION,4c246bbc-f513-4311-beff-eba54c353256,Minecraft Education
 Minecraft Education Student,MEE_STUDENT,533b8f26-f74b-4e9c-9c59-50fc4b393b63,MINECRAFT_EDUCATION_EDITION,4c246bbc-f513-4311-beff-eba54c353256,Minecraft Education
@@ -5665,6 +5673,7 @@ Skype for Business Online (Plan 1),MCOIMP,b8b749f8-a4ef-4887-9539-c95b1eaa5db7,M
 Skype for Business Online (Plan 2),MCOSTANDARD,d42c793f-6c78-4f43-92ca-e8f6a02b035f,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,SKYPE FOR BUSINESS ONLINE (PLAN 2)
 Skype for Business PSTN Calling Domestic Small,MCOPSTN5,d43177b5-475b-4880-92d4-d54c27b5efbd,Skype for Business PSTN Calling Domestic Small,9a0125a5-c8f8-4526-b231-49e2abe0ebce,Skype for Business PSTN Calling Domestic Small
 Skype for Business PSTN Domestic and International Calling,MCOPSTN2,d3b4fe1f-9992-4930-8acb-ca6ec609365e,MCOPSTN2,5a10155d-f5c1-411a-a8ec-e99aae125390,DOMESTIC AND INTERNATIONAL CALLING PLAN
+Skype for Business PSTN Domestic and International Calling,MCOPSTN2,d3b4fe1f-9992-4930-8acb-ca6ec609365e,MCOSMS2,d4009785-b899-4cab-97b6-d06a7c799507,DOMESTIC AND INTERNATIONAL CALLING PLAN
 Skype for Business PSTN Domestic Calling,MCOPSTN1,0dab259f-bf13-4952-b7f8-7db8f131b28d,MCOPSTN1,4ed3ff63-69d7-4fb7-b984-5aec7f605ca8,DOMESTIC CALLING PLAN
 Skype for Business PSTN Domestic Calling (120 Minutes),MCOPSTN5,54a152dc-90de-4996-93d2-bc47e670fc06,MCOPSTN5,54a152dc-90de-4996-93d2-bc47e670fc06,DOMESTIC CALLING PLAN
 Skype for Business PSTN Usage Calling Plan,MCOPSTNPP,06b48c5f-01d9-4b18-9015-03b52040f51a,MCOPSTN3,6b340437-d6f9-4dc5-8cc2-99163f7f83d6,MCOPSTN3
@@ -5838,6 +5847,7 @@ Windows 365 Enterprise 2 vCPU 8 GB 128 GB (Preview),CPC_LVL_2,461cb62c-6db7-41aa
 Windows 365 Enterprise 2 vCPU 8 GB 256 GB,CPC_E_2C_8GB_256GB,1c79494f-e170-431f-a409-428f6053fa35,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Windows 365 Enterprise 2 vCPU 8 GB 256 GB,CPC_E_2C_8GB_256GB,1c79494f-e170-431f-a409-428f6053fa35,CPC_E_2C_8GB_256GB,d3468c8c-3545-4f44-a32f-b465934d2498,Windows 365 Enterprise 2 vCPU 8 GB 256 GB
 Windows 365 Enterprise 4 vCPU 16 GB 128 GB,CPC_E_4C_16GB_128GB,d201f153-d3b2-4057-be2f-fe25c8983e6f,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
+Windows 365 Enterprise 4 vCPU 16 GB 128 GB,CPC_E_4C_16GB_128GB,d201f153-d3b2-4057-be2f-fe25c8983e6f,Windows_10_ESU_Commercial,6dc0e3c6-2e4e-463c-90a4-9989d8543841,Windows 10 ESU Commercial
 Windows 365 Enterprise 4 vCPU 16 GB 128 GB,CPC_E_4C_16GB_128GB,d201f153-d3b2-4057-be2f-fe25c8983e6f,CPC_E_4C_16GB_128GB,2de9c682-ca3f-4f2b-b360-dfc4775db133,Windows 365 Enterprise 4 vCPU 16 GB 128 GB
 Windows 365 Enterprise 4 vCPU 16 GB 256 GB,CPC_E_4C_16GB_256GB,96d2951e-cb42-4481-9d6d-cad3baac177e,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Windows 365 Enterprise 4 vCPU 16 GB 256 GB,CPC_E_4C_16GB_256GB,96d2951e-cb42-4481-9d6d-cad3baac177e,CPC_E_4C_16GB_256GB,9ecf691d-8b82-46cb-b254-cd061b2c02fb,Windows 365 Enterprise 4 vCPU 16 GB 256 GB
@@ -5856,6 +5866,7 @@ Windows 365 Shared Use 2 vCPU 4 GB 256 GB,Windows_365_S_2vCPU_4GB_256GB,8fe96593
 Windows 365 Shared Use 2 vCPU 4 GB 64 GB,Windows_365_S_2vCPU_4GB_64GB,1f9990ca-45d9-4c8d-8d04-a79241924ce1,CPC_S_2C_4GB_64GB,64981bdb-a5a6-4a22-869f-a9455366d5bc,Windows 365 Shared Use 2 vCPU 4 GB 64 GB
 Windows 365 Shared Use 2 vCPU 8 GB 128 GB,Windows_365_S_2vCPU_8GB_128GB,2d21fc84-b918-491e-ad84-e24d61ccec94,CPC_S_2C_8GB_128GB,057efbfe-a95d-4263-acb0-12b4a31fed8d,Windows 365 Shared Use 2 vCPU 8 GB 128 GB
 Windows 365 Shared Use 2 vCPU 8 GB 256 GB,Windows_365_S_2vCPU_8GB_256GB,2eaa4058-403e-4434-9da9-ea693f5d96dc,CPC_S_2C_8GB_256GB,50ef7026-6174-40ba-bff7-f0e4fcddbf65,Windows 365 Shared Use 2 vCPU 8 GB 256 GB
+Windows 365 Shared Use 4 vCPU 16 GB 128 GB,Windows_365_S_4vCPU_16GB_128GB,1bf40e76-4065-4530-ac37-f1513f362f50,WINDOWS_10_ESU_TENANT,a22efeae-e37a-47ac-9a61-1572d74202e5,Windows 10 ESU Tenant
 Windows 365 Shared Use 4 vCPU 16 GB 128 GB,Windows_365_S_4vCPU_16GB_128GB,1bf40e76-4065-4530-ac37-f1513f362f50,CPC_S_4C_16GB_128GB,dd3801e2-4aa1-4b16-a44b-243e55497584,Windows 365 Shared Use 4 vCPU 16 GB 128 GB
 Windows 365 Shared Use 4 vCPU 16 GB 256 GB,Windows_365_S_4vCPU_16GB_256GB,a9d1e0df-df6f-48df-9386-76a832119cca,CPC_S_4C_16GB_256GB,2d1d344e-d10c-41bb-953b-b3a47521dca0,Windows 365 Shared Use 4 vCPU 16 GB 256 GB
 Windows 365 Shared Use 4 vCPU 16 GB 512 GB,Windows_365_S_4vCPU_16GB_512GB,469af4da-121c-4529-8c85-9467bbebaa4b,CPC_S_4C_16GB_512GB,48b82071-99a5-4214-b493-406a637bd68d,Windows 365 Shared Use 4 vCPU 16 GB 512 GB
@@ -5990,10 +6001,3 @@ Agent 365,AGENT_365,796a6fb4-740b-4d36-bf56-9c12ca7fa069,ENTRA_ID_GOV_FOR_ASSIST
 Agent 365,AGENT_365,796a6fb4-740b-4d36-bf56-9c12ca7fa069,ENTRA_NETWORK_CONTROLS_FOR_ASSISTIVE_AGENTS,27e196a4-8b80-4930-bd65-53fd28581878,Microsoft Entra Network Controls for Assistive Agents
 Agent 365,AGENT_365,796a6fb4-740b-4d36-bf56-9c12ca7fa069,INFORMATION_PROTECTION_FOR_AGENTS,48478b49-91a1-4ded-94f0-066db80035ca,Microsoft Purview Information Protection for Agents
 Agent 365,AGENT_365,796a6fb4-740b-4d36-bf56-9c12ca7fa069,INSIDER_RISK_MANAGEMENT_FOR_AGENTS,004ddfc0-c92f-4b0a-90c5-c60646299d71,Microsoft Purview Insider Risk Management for Agents
-Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_MGMT,0504111f-feb8-4a3c-992a-70280f9a2869,Microsoft Teams Premium Intelligent
-Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_CUST,cc8c0802-a325-43df-8cba-995d0c6cb373,Microsoft Teams Premium Personalized
-Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_PROTECTION,f8b44f54-18bb-46a3-9658-44ab58712968,Microsoft Teams Premium Secure
-Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,TEAMSPRO_VIRTUALAPPT,9104f592-f2a7-4f77-904c-ca5a5715883f,Microsoft Teams Premium Virtual Appointment
-Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,MCO_VIRTUAL_APPT,711413d0-b36e-4cd4-93db-0a50a4ab7ea3,Microsoft Teams Premium Virtual Appointments
-Microsoft Teams Premium,M365_TEAMS_PREMIUM,6432c818-bcef-43b6-9290-aec052964950,QUEUES_APP,ab2d4fb5-f80a-4bf1-a11d-7f1da254041b,Queues app for Microsoft Teams
-Skype for Business PSTN Domestic and International Calling,MCOSMS2,d4009785-b899-4cab-97b6-d06a7c799507,MCOSMS2,d4009785-b899-4cab-97b6-d06a7c799507,DOMESTIC AND INTERNATIONAL CALLING PLAN

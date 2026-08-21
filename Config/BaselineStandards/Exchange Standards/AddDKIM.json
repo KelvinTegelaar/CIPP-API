@@ -1,0 +1,40 @@
+{
+  "name": "AddDKIM",
+  "label": "Enable DKIM for all domains",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables DKIM signing for every accepted domain that supports it. Service domains (onmicrosoft, signature services) are excluded.",
+  "executiveText": "Cryptographically signs outbound email for every domain so recipients can verify it genuinely came from the organization - a core defence against spoofing of the company brand.",
+  "docsDescription": "Grades which accepted domains lack enabled DKIM signing, excluding the service domains that never get DKIM through Exchange. Remediation creates missing 2048-bit configs and enables disabled ones in one bulk batch.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-DkimSigningConfig or Set-DkimSigningConfig",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "read": {
+    "requiredCaches": [
+      "ExoAcceptedDomains",
+      "ExoDkimSigningConfig"
+    ],
+    "cacheType": "ExoAcceptedDomains"
+  },
+  "prepare": "Get-CIPPBaselineAddDKIMState",
+  "remediate": {
+    "executor": "AddDKIM"
+  }
+}

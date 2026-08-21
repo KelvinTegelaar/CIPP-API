@@ -33,6 +33,7 @@ BeforeAll {
     function Get-NormalizedError { param($message) $message }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
     function Set-CIPPGroupLicense { param($GroupId, $TenantFilter, $AddLicenses, $RemoveLicenses, $Headers, $APIName) }
+    function Resolve-CIPPDirectoryId { param($Identity, $TenantFilter) }
 
     # Real helper, not a stub: matching Exchange bulk results back to operations is exactly what
     # the reporting assertions below are checking.
@@ -82,6 +83,24 @@ BeforeAll {
             addedFields = [pscustomobject]@{ userPrincipalName = $Upn }
         }
     }
+
+    # Stable id map for ManagedBy rewrite tests (EXO may return UPN or GUID; writes must be ids).
+    function New-ResolvedOwner {
+        param([string]$InputIdentity, [string]$Id, [string]$Upn)
+        [pscustomobject]@{
+            Input             = $InputIdentity
+            Id                = $Id
+            UserPrincipalName = $Upn
+            DisplayName       = $null
+            Mail              = $null
+            MailNickname      = $null
+            ODataType         = '#microsoft.graph.user'
+            Type              = 'User'
+            ExchangeIdentity  = $Upn ?? $Id
+            Label             = $Upn ?? $Id
+            Resolved          = $true
+        }
+    }
 }
 
 Describe 'Invoke-EditGroup - membership' {
@@ -92,6 +111,26 @@ Describe 'Invoke-EditGroup - membership' {
         Mock -CommandName New-ExoBulkRequest -MockWith { @() }
         Mock -CommandName New-ExoRequest -MockWith { @() }
         Mock -CommandName Set-CIPPGroupLicense -MockWith { }
+        Mock -CommandName Resolve-CIPPDirectoryId -MockWith {
+            param($Identity, $TenantFilter)
+            $Map = @{
+                'existing@contoso.com' = 'existing-guid'
+                'boss@contoso.com'     = 'boss-guid'
+                'keep@contoso.com'     = 'keep-guid'
+                'drop@contoso.com'     = 'drop-guid'
+                'existing-guid'        = 'existing-guid'
+                'boss-guid'            = 'boss-guid'
+                'keep-guid'            = 'keep-guid'
+                'drop-guid'            = 'drop-guid'
+            }
+            foreach ($raw in @($Identity)) {
+                $id = $Map[$raw] ?? $raw
+                $upn = if ($raw -match '@') { $raw } else {
+                    ($Map.GetEnumerator() | Where-Object { $_.Value -eq $id -and $_.Key -match '@' } | Select-Object -First 1).Key
+                }
+                New-ResolvedOwner -InputIdentity $raw -Id $id -Upn $upn
+            }
+        }
     }
 
     Context 'Adding members' {
@@ -296,7 +335,7 @@ Describe 'Invoke-EditGroup - membership' {
         }
 
         It 'rewrites ManagedBy wholesale when adding an owner to a distribution list' {
-            # Exchange has no owners collection to append to.
+            # Exchange has no owners collection to append to. ManagedBy is rewritten with Graph ids.
             Mock -CommandName New-ExoRequest -MockWith { [pscustomobject]@{ ManagedBy = @('existing@contoso.com') } }
             $Request = New-GroupRequest -GroupType 'Distribution List' -Body @{
                 AddOwner = @(New-Member -Upn 'boss@contoso.com' -Value 'boss@contoso.com')
@@ -307,8 +346,8 @@ Describe 'Invoke-EditGroup - membership' {
             Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter {
                 $Set = $cmdletArray | Where-Object { $_.CmdletInput.CmdletName -eq 'Set-DistributionGroup' }
                 $Set -and
-                $Set.CmdletInput.Parameters.ManagedBy -contains 'existing@contoso.com' -and
-                $Set.CmdletInput.Parameters.ManagedBy -contains 'boss@contoso.com'
+                $Set.CmdletInput.Parameters.ManagedBy -contains 'existing-guid' -and
+                $Set.CmdletInput.Parameters.ManagedBy -contains 'boss-guid'
             }
         }
 
@@ -340,7 +379,8 @@ Describe 'Invoke-EditGroup - membership' {
             Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter {
                 $Set = $cmdletArray | Where-Object { $_.CmdletInput.CmdletName -eq 'Set-DistributionGroup' }
                 $Set -and
-                $Set.CmdletInput.Parameters.ManagedBy -contains 'keep@contoso.com' -and
+                $Set.CmdletInput.Parameters.ManagedBy -contains 'keep-guid' -and
+                $Set.CmdletInput.Parameters.ManagedBy -notcontains 'drop-guid' -and
                 $Set.CmdletInput.Parameters.ManagedBy -notcontains 'drop@contoso.com'
             }
         }

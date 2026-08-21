@@ -110,7 +110,7 @@ function Test-CIPPAccessUserRole {
             $swDeriveRoles.Stop()
             $UserRoleTimings['DeriveRoles'] = $swDeriveRoles.Elapsed.TotalMilliseconds
 
-            $Roles = @($Roles) + @($User.userRoles)
+            $Roles = @(@($Roles) + @($User.userRoles) | Where-Object { $_ } | Select-Object -Unique)
 
             if ($Roles) {
                 Write-Information "Roles determined for $($User.userDetails): $($Roles -join ', ')"

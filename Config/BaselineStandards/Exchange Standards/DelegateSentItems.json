@@ -1,0 +1,62 @@
+{
+  "name": "DelegateSentItems",
+  "label": "Set mailbox Sent Items delegation (Sent items for shared mailboxes)",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Sets emails sent as and on behalf of shared mailboxes to also be stored in the shared mailbox sent items folder",
+  "executiveText": "Ensures emails sent from shared mailboxes (like info@company.com) are stored in the shared mailbox rather than the individual sender's mailbox. This maintains complete email threads in one location, improving collaboration and ensuring all team members can see the full conversation history.",
+  "docsDescription": "This makes sure that e-mails sent from shared mailboxes or delegate mailboxes, end up in the mailbox of the shared/delegate mailbox instead of the sender, allowing you to keep replies in the same mailbox as the original e-mail.",
+  "impactColour": "warning",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Set-Mailbox",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "IncludeUserMailboxes": {
+      "type": "switch",
+      "label": "Include user mailboxes",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineDelegateSentItemsState",
+  "remediate": {
+    "executor": "ExoBulkSweep",
+    "refreshCache": [
+      "Mailboxes"
+    ],
+    "refreshCacheArgs": {
+      "Mailboxes": {
+        "Types": "None"
+      }
+    },
+    "writes": [
+      {
+        "cmdlet": "Set-Mailbox",
+        "params": {
+          "Identity": "%id%",
+          "MessageCopyForSendOnBehalfEnabled": true,
+          "MessageCopyForSentAsEnabled": true
+        }
+      }
+    ]
+  }
+}

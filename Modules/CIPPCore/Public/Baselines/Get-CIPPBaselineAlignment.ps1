@@ -21,22 +21,26 @@ function Get-CIPPBaselineAlignment {
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
     $Definitions = Get-CIPPBaselineDefinition
 
-    # Lazy template-name lookup for identity-carrying standards: the template store
-    # partition matches the remediate executor name (CATemplate, IntuneTemplate).
-    # Loaded once per partition, only when a row actually needs it. Rows written before
-    # the prepare ran (Conflict, license-skip) carry the raw template id as their
-    # displayName - every labeling path resolves it to the template's real name.
+    # Lazy template-name lookup for identity-carrying standards. The definition's
+    # optional identity block names the partition and name field; the defaults
+    # (partition = the remediate executor name, name field = displayName) are the
+    # CA/Intune convention. Loaded once per partition+field, only when a row actually
+    # needs it. Rows written before the prepare ran (Conflict, license-skip) carry the
+    # raw template id as their displayName - every labeling path resolves it to the
+    # template's real name.
     $TemplateNameMaps = @{}
     $ResolveTemplateName = {
-        param($Partition, $Id)
+        param($Partition, $Id, $NameField)
         if (-not $Partition -or -not $Id) { return $null }
-        if (-not $TemplateNameMaps.ContainsKey($Partition)) {
+        if ([string]::IsNullOrWhiteSpace($NameField)) { $NameField = 'displayName' }
+        $MapKey = "$Partition|$NameField"
+        if (-not $TemplateNameMaps.ContainsKey($MapKey)) {
             $Map = @{}
             try {
                 $TemplatesTable = Get-CippTable -tablename 'templates'
                 $SafePartition = ConvertTo-CIPPODataFilterValue -Value $Partition
                 foreach ($TemplateRow in @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$SafePartition'")) {
-                    $TemplateName = $(try { ($TemplateRow.JSON | ConvertFrom-Json).displayName } catch { $null })
+                    $TemplateName = $(try { ($TemplateRow.JSON | ConvertFrom-Json).$NameField } catch { $null })
                     if ($TemplateName) {
                         $Map["$($TemplateRow.RowKey)"] = $TemplateName
                         if ($TemplateRow.GUID) { $Map["$($TemplateRow.GUID)"] = $TemplateName }
@@ -45,9 +49,9 @@ function Get-CIPPBaselineAlignment {
             } catch {
                 Write-Information "Get-CIPPBaselineAlignment: template name lookup for $Partition failed: $($_.Exception.Message)"
             }
-            $TemplateNameMaps[$Partition] = $Map
+            $TemplateNameMaps[$MapKey] = $Map
         }
-        $TemplateNameMaps[$Partition]["$Id"]
+        $TemplateNameMaps[$MapKey]["$Id"]
     }
 
     # Historic view: every recorded run event for the tenant, flattened and newest-first.
@@ -66,7 +70,20 @@ function Get-CIPPBaselineAlignment {
             $Suffix = $(try { ($Resolved.Manual | ConvertFrom-Json).taskName } catch { $null })
             if (-not $Suffix -and $ResolvedDefinition.instanceIdentity) {
                 $Suffix = $(try { ($Resolved.ExpectedValue | ConvertFrom-Json).displayName } catch { $null })
-                if ($Suffix) { $Suffix = (& $ResolveTemplateName "$($ResolvedDefinition.remediate.executor)" "$Suffix") ?? $Suffix }
+                # Presence-shaped families carry no name in Expected; the identity
+                # variable on the effective Inheritance entry is the configured id.
+                if (-not $Suffix) {
+                    $Suffix = $(try {
+                            $Effective = @($Resolved.Inheritance | ConvertFrom-Json) | Where-Object { $_.effective } | Select-Object -First 1
+                            $Value = $Effective.value.$($ResolvedDefinition.instanceIdentity)
+                            $Value.value ?? $Value
+                        } catch { $null })
+                }
+                if ($Suffix) {
+                    $Partition = "$($ResolvedDefinition.identity.partition ?? $ResolvedDefinition.remediate.executor)"
+                    $NameField = "$($ResolvedDefinition.identity.nameField ?? 'displayName')"
+                    $Suffix = (& $ResolveTemplateName $Partition "$Suffix" $NameField) ?? $Suffix
+                }
             }
             if ($Suffix) { $ManualLabels[$Resolved.StandardName] = '{0} - {1}' -f ($ResolvedDefinition.label ?? $ResolvedBase), $Suffix }
         }
@@ -229,14 +246,16 @@ function Get-CIPPBaselineAlignment {
                     $Expected = & $RenderExpected $Definition $Config.variables
                     # Multi-instance labels carry the instance identity before the first
                     # run too: the task name for manual tasks; for identity-carrying
-                    # standards the configured id resolves to the template's displayName
-                    # via the template store (partition = the remediate executor name).
+                    # standards the configured id resolves to the template's name via
+                    # the template store, at the definition's declared partition/field.
                     $SynthIdentity = if ($Definition.manual -and $Config.variables.taskName) {
                         $Config.variables.taskName
                     } elseif ($Definition.instanceIdentity) {
                         $IdentityValue = $Config.variables.$($Definition.instanceIdentity)
-                        if ($IdentityValue -is [System.Management.Automation.PSCustomObject]) { $IdentityValue = $IdentityValue.value }
-                        (& $ResolveTemplateName "$($Definition.remediate.executor)" "$IdentityValue") ?? $IdentityValue
+                        $IdentityValue = $IdentityValue.value ?? $IdentityValue
+                        $Partition = "$($Definition.identity.partition ?? $Definition.remediate.executor)"
+                        $NameField = "$($Definition.identity.nameField ?? 'displayName')"
+                        (& $ResolveTemplateName $Partition "$IdentityValue" $NameField) ?? $IdentityValue
                     }
                     $SynthLabel = if ($SynthIdentity) { '{0} - {1}' -f ($Definition.label ?? $InstanceKey), $SynthIdentity } else { $Definition.label ?? $InstanceKey }
                     $SynthesizedRows.Add([PSCustomObject]@{
@@ -376,11 +395,31 @@ function Get-CIPPBaselineAlignment {
         $Summary.tenantId = $TenantFilter
         $Summary.displayName = ($Rows | Select-Object -First 1).tenantName ?? $TenantFilter
 
+        # This tenant's trend: the daily rollups Set-CIPPBaselineTrendPoint writes (last
+        # 90 days), with today's point always replaced by the LIVE score - same shape as
+        # the fleet trend so the same chart renders it.
+        $Today = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
+        $Trend = [System.Collections.Generic.List[object]]::new()
+        try {
+            $TrendTable = Get-CippTable -tablename 'BaselineTrend'
+            $Cutoff = (Get-Date).ToUniversalTime().AddDays(-90).ToString('yyyy-MM-dd')
+            $TrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter "PartitionKey eq 'tenant_$SafeTenant' and RowKey ge '$Cutoff' and RowKey lt '$Today'") | Sort-Object -Property RowKey
+            foreach ($Point in $TrendRows) {
+                $Trend.Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
+            }
+        } catch {
+            Write-Information "Baseline tenant trend read skipped: $($_.Exception.Message)"
+        }
+        if ($Rows.Count -gt 0) {
+            $Trend.Add([PSCustomObject]@{ date = $Today; aligned = $Summary.alignedPercentage; verified = $Summary.verifiedPercentage })
+        }
+
         return [PSCustomObject]@{
             summary       = [PSCustomObject]$Summary
             rows          = @($Rows)
             stageStates   = @($StageStates)
             deviationFeed = @($Feed | Sort-Object -Property timestamp -Descending)
+            trend         = @($Trend)
         }
     }
 
@@ -388,9 +427,32 @@ function Get-CIPPBaselineAlignment {
         $Entities = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey ne ''"
         $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions -ResolveTemplateName $ResolveTemplateName })
 
+        # Per-standard trends in ONE range scan over the 'standard_*' partitions (keys
+        # sanitize '#' to '~'), attached to each standard so the offcanvas charts without
+        # another call. Today's point is always the LIVE score, appended per group below.
+        $Today = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
+        $StandardTrends = @{}
+        try {
+            $TrendTable = Get-CippTable -tablename 'BaselineTrend'
+            $Cutoff = (Get-Date).ToUniversalTime().AddDays(-90).ToString('yyyy-MM-dd')
+            $StandardTrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter ("PartitionKey ge 'standard_' and PartitionKey lt 'standard{0}' and RowKey ge '{1}' and RowKey lt '{2}'" -f [char]0x60, $Cutoff, $Today))
+            foreach ($Point in ($StandardTrendRows | Sort-Object -Property RowKey)) {
+                $StandardKey = "$($Point.PartitionKey)".Substring(9) -replace '~', '#'
+                if (-not $StandardTrends.ContainsKey($StandardKey)) {
+                    $StandardTrends[$StandardKey] = [System.Collections.Generic.List[object]]::new()
+                }
+                $StandardTrends[$StandardKey].Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
+            }
+        } catch {
+            Write-Information "Baseline standard trend read skipped: $($_.Exception.Message)"
+        }
+
         $Standards = foreach ($Group in ($Rows | Group-Object -Property standardName)) {
             $First = $Group.Group | Select-Object -First 1
             $Scores = & $ScoreRows $Group.Group
+            $TrendPoints = [System.Collections.Generic.List[object]]::new()
+            foreach ($Point in @($StandardTrends[$Group.Name] ?? @())) { $TrendPoints.Add($Point) }
+            $TrendPoints.Add([PSCustomObject]@{ date = $Today; aligned = $Scores.alignedPercentage; verified = $Scores.verifiedPercentage })
             [PSCustomObject]([ordered]@{
                     standardName      = $Group.Name
                     standardLabel     = $First.standardLabel
@@ -399,6 +461,7 @@ function Get-CIPPBaselineAlignment {
                     secureScoreImpact = $First.secureScoreImpact
                     totalTenants      = $Scores.total
                     rows              = @($Group.Group)
+                    trend             = @($TrendPoints)
                 } + $Scores)
         }
 

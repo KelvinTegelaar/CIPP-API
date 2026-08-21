@@ -21,6 +21,12 @@ function Invoke-ExecNamedLocation {
 
 
     try {
+        # AnyTenant: enforce tenant scope here; Get-Tenants is narrowed to the caller's allowed tenants
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants' -and -not ($TenantFilter -and (Get-Tenants -TenantFilter $TenantFilter))) {
+            throw 'Access to this tenant is not allowed'
+        }
+
         $Results = Set-CIPPNamedLocation -NamedLocationId $NamedLocationId -TenantFilter $TenantFilter -Change $Change -Content $Content -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {

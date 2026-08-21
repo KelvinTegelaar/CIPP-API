@@ -1,0 +1,65 @@
+{
+  "name": "sharingDomainRestriction",
+  "label": "Restrict sharing to a specific domain list",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Restricts SharePoint external sharing to an allow-list or block-list of domains, or removes the restriction.",
+  "executiveText": "Controls which external organizations files can be shared with, containing data exposure to sanctioned partners.",
+  "docsDescription": "Grades the sharing domain restriction mode and - for the list modes - the sorted domain list on the matching side. Remediation writes the mode and list in one call.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH admin/sharepoint/settings",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "Mode": {
+      "label": "Restriction Mode",
+      "type": "autoComplete",
+      "creatable": false,
+      "required": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "Off (no restriction)"
+        },
+        {
+          "value": "allowList",
+          "label": "Allow specific domains"
+        },
+        {
+          "value": "blockList",
+          "label": "Block specific domains"
+        }
+      ]
+    },
+    "Domains": {
+      "type": "textField",
+      "label": "Domains, comma separated (list modes only)",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "SharePointAdminSettings"
+  },
+  "prepare": "Get-CIPPBaselinesharingDomainRestrictionState",
+  "remediate": {
+    "executor": "sharingDomainRestriction",
+    "mode": "%Mode%",
+    "domains": "%Domains%"
+  }
+}

@@ -30,6 +30,7 @@
     "requests": [
       {
         "method": "PATCH",
+        "asApp": false,
         "uri": "policies/authorizationPolicy/authorizationPolicy",
         "body": {
           "permissionGrantPolicyIdsAssignedToDefaultUserRole": [
@@ -39,6 +40,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "offline_access",
@@ -48,6 +50,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "openid",
@@ -57,6 +60,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "User.Read",
@@ -66,6 +70,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "profile",
@@ -75,6 +80,7 @@
       },
       {
         "method": "POST",
+        "asApp": false,
         "uri": "servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications",
         "body": {
           "permissionName": "email",

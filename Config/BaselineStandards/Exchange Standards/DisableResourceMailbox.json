@@ -1,0 +1,58 @@
+{
+  "name": "DisableResourceMailbox",
+  "label": "Disable Unlicensed Resource Mailbox Entra accounts",
+  "cat": "Exchange Standards",
+  "tag": [
+    "NIST CSF 2.0 (PR.AA-01)",
+    "SMB1001 (2.3)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Blocks login for all accounts that are marked as a resource mailbox and does not have a license assigned. Accounts that are synced from on-premises AD are excluded, as account state is managed in the on-premises AD.",
+  "executiveText": "Prevents direct login to resource mailbox accounts (like conference rooms or equipment), ensuring they can only be managed through proper administrative channels. This security measure eliminates potential unauthorized access to resource scheduling systems while maintaining proper booking functionality.",
+  "docsDescription": "Resource mailboxes can be directly logged into if the password is reset, this presents a security risk as do all shared login credentials. Microsoft's recommendation is to disable the user account for resource mailboxes. Accounts that are synced from on-premises AD are excluded, as account state is managed in the on-premises AD.",
+  "impactColour": "warning",
+  "addedDate": "2025-06-01",
+  "powershellEquivalent": "Get-Mailbox & Update-MgUser",
+  "appliesToTest": [
+    "SMB1001_2_3"
+  ],
+  "recommendedBy": [
+    "Microsoft",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineDisableResourceMailboxState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "Users"
+    ],
+    "writes": [
+      {
+        "method": "PATCH",
+        "uri": "users/%id%",
+        "body": {
+          "accountEnabled": false
+        }
+      }
+    ]
+  }
+}

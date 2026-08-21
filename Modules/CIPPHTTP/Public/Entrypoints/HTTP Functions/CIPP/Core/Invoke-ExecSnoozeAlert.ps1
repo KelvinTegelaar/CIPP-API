@@ -35,6 +35,15 @@ function Invoke-ExecSnoozeAlert {
                 })
         }
 
+        # AnyTenant: enforce tenant scope here; Get-Tenants is narrowed to the caller's allowed tenants
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $TenantFilter)) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = 'Access to this tenant is not allowed' }
+                })
+        }
+
         # Compute content hash for this alert item
         $HashResult = Get-AlertContentHash -AlertItem $AlertItem
 

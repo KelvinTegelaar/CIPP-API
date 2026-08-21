@@ -23,8 +23,14 @@ function Get-CippRequestContext {
     param()
 
     $InvocationId = if ($script:CippInvocationIdStorage) { $script:CippInvocationIdStorage.Value } else { $null }
-    $AllowedTenants = if ($script:CippAllowedTenantsStorage) { $script:CippAllowedTenantsStorage.Value } else { $null }
-    $AllowedGroups = if ($script:CippAllowedGroupsStorage) { $script:CippAllowedGroupsStorage.Value } else { $null }
+
+    # The scope slots distinguish $null (unrestricted) from an empty array (restricted, entitled
+    # to nothing), so they must be copied with plain assignments: routing .Value through an
+    # if-statement-expression unwraps an empty array to $null and erases that distinction.
+    $AllowedTenants = $null
+    if ($script:CippAllowedTenantsStorage) { $AllowedTenants = $script:CippAllowedTenantsStorage.Value }
+    $AllowedGroups = $null
+    if ($script:CippAllowedGroupsStorage) { $AllowedGroups = $script:CippAllowedGroupsStorage.Value }
 
     # Count only. The keys are user principal names and the diagnostic endpoint that surfaces
     # this is gated on CIPP.Core.Read, which is not a high enough bar to hand out a list of who

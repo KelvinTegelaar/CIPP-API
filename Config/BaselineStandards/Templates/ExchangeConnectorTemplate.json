@@ -1,0 +1,60 @@
+{
+  "name": "ExchangeConnectorTemplate",
+  "label": "Exchange Connector Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploy Exchange inbound or outbound connectors from CIPP templates. An existing connector with the same name is rewritten from the template on every remediation run.",
+  "executiveText": "Deploys standardized Exchange mail flow connectors that control how email routes between the organization and partners or filtering services. Consistent connectors keep mail routing and security filtering uniform across tenants.",
+  "docsDescription": "Deploy an Exchange connector from a CIPP template. The template's direction decides the connector type. The standard grades whether the connector exists by name - it does not diff connector settings - and rewrites the full template on each remediation run, matching the classic standard.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-InboundConnector, Set-InboundConnector, New-OutboundConnector or Set-OutboundConnector",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "checkBeforeRun": false,
+  "multiple": true,
+  "instanceIdentity": "exConnectorTemplate",
+  "identity": {
+    "partition": "ExConnectorTemplate",
+    "nameField": "name"
+  },
+  "variables": {
+    "exConnectorTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Exchange Connector Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListExConnectorTemplates",
+        "labelField": "name",
+        "valueField": "GUID",
+        "queryKey": "ListExConnectorTemplates"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "ExoInboundConnector",
+    "requiredCaches": [
+      "ExoInboundConnector",
+      "ExoOutboundConnector"
+    ]
+  },
+  "prepare": "Get-CIPPBaselineExchangeConnectorTemplateState",
+  "remediate": {
+    "executor": "ExchangeConnectorTemplate"
+  }
+}

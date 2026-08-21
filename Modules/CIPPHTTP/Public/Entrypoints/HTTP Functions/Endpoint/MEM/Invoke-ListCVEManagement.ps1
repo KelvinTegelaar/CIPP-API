@@ -32,6 +32,12 @@ function Invoke-ListCVEManagement {
         try {
             Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'retrieving CVEs' -sev 'info'
 
+            # AnyTenant: the live path queries this tenant's Defender TVM; enforce scope
+            $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+            if ($AllowedTenants -notcontains 'AllTenants' -and -not ($TenantFilter -and (Get-Tenants -TenantFilter $TenantFilter))) {
+                throw 'Access to this tenant is not allowed'
+            }
+
             # Retrieve Exceptions from Exception database. These are resolved before the CVE
             # fetch so the fetch can be streamed straight into the merge below.
             $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'

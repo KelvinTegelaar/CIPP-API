@@ -36,8 +36,15 @@ function Set-PwPushConfig {
     $Module = Get-Module PassPushPosh -ListAvailable
     Write-Information "PWPush Version: $($Module.Version)"
     if ($PSCmdlet.ShouldProcess('Initialize-PassPushPosh')) {
-        Write-Information ($InitParams | ConvertTo-Json)
-        Initialize-PassPushPosh @InitParams
+        $LogParams = @{} + $InitParams
+        foreach ($Secret in 'APIKey', 'Bearer') {
+            if ($LogParams.ContainsKey($Secret)) { $LogParams[$Secret] = 'REDACTED' }
+        }
+        Write-Information ($LogParams | ConvertTo-Json)
+        # -Force: workers are long-lived and shared, and without it Initialize-PassPushPosh is a
+        # no-op after a worker's first call - the worker then keeps the auth headers and base URL
+        # from whatever configuration it saw first, so config changes and key rotations never land.
+        Initialize-PassPushPosh @InitParams -Force
     }
 
     if ($Configuration.CFEnabled -eq $true -and $FullConfiguration.CFZTNA.Enabled -eq $true) {

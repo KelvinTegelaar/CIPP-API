@@ -62,6 +62,10 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     $TemplateKey = ConvertTo-CIPPODataFilterValue -Value $Settings.TemplateList.value -Type String
     $TemplateRow = Get-CippAzDataTableEntity @Table -Filter "PartitionKey eq 'CATemplate' and (RowKey eq '$TemplateKey' or GUID eq '$TemplateKey')" | Select-Object -First 1
     $JSONObj = $TemplateRow.JSON
+    # Resolve custom variables for the report path too, not just the deploy inside
+    # New-CIPPCAPolicy - otherwise the compare diffs raw %tokens% against the deployed
+    # policy's resolved values and flags every templated field as permanent drift.
+    if ($JSONObj) { $JSONObj = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $JSONObj -EscapeForJson }
 
     try {
         #Get from DB, as we just downloaded the latest before the standard runs.

@@ -92,9 +92,18 @@ function Export-CIPPBaselineTemplate {
                 }
                 continue
             }
-            if ($Definition.instanceIdentity -and "$($Definition.remediate.executor)" -in @('IntuneTemplate', 'CATemplate')) {
+            # Bundle the referenced template body when the instance identity IS a
+            # templates-table reference: declared via the identity block, or the
+            # CA/Intune convention (partition = executor). Identity-carrying standards
+            # whose identity is a plain name (no identity block) have nothing to bundle.
+            $IdentityPartition = if ($Definition.identity.partition) {
+                "$($Definition.identity.partition)"
+            } elseif ("$($Definition.remediate.executor)" -in @('IntuneTemplate', 'CATemplate')) {
+                "$($Definition.remediate.executor)"
+            }
+            if ($Definition.instanceIdentity -and $IdentityPartition) {
                 $TemplateRef = "$(& $Unwrap $Config.variables.$($Definition.instanceIdentity))"
-                if (-not $TemplateRef -or -not (& $CollectTemplate "$($Definition.remediate.executor)" $TemplateRef)) {
+                if (-not $TemplateRef -or -not (& $CollectTemplate $IdentityPartition $TemplateRef)) {
                     Write-Information "Export-CIPPBaselineTemplate: $($Config.instance) references template '$TemplateRef' which no longer exists - skipped from the export."
                     continue
                 }

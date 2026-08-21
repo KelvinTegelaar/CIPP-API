@@ -1,0 +1,69 @@
+{
+  "name": "DisableInactiveUsers",
+  "label": "Disable Member accounts that have not logged on for a number of days",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CMMC (IA.L2-3.5.6)",
+    "NIST SP 800-171 (3.5.6)"
+  ],
+  "impact": "High Impact",
+  "helpText": "Blocks login for cloud-only member users that have not signed in for a configurable number of days (minimum 30). Hybrid (on-premises synced) users are skipped. Users without sign-in activity data are not disabled.",
+  "executiveText": "Automatically disables unused employee accounts that have not signed in for a configured number of days, reducing risk from dormant accounts and supporting CMMC / NIST inactive-identifier requirements. Hybrid directory-synced accounts are left alone so on-premises identity remains the source of truth for those users.",
+  "docsDescription": "Disables enabled Member user accounts after a defined period of inactivity (minimum 30 days), supporting CMMC IA.L2-3.5.6 / NIST SP 800-171 3.5.6. Inactivity is based on signInActivity.lastSuccessfulSignInDateTime. Users missing signInActivity entirely are skipped so incomplete Graph data cannot cause accidental disables. Hybrid-synced (onPremisesSyncEnabled) users are skipped because Entra disable often will not stick. Recently re-enabled accounts (last 7 days) are also skipped. Values below 30 days are rejected at runtime.",
+  "impactColour": "danger",
+  "addedDate": "2026-07-22",
+  "powershellEquivalent": "Get-MgUser -Property SignInActivity & Update-MgUser -AccountEnabled $false",
+  "recommendedBy": [
+    "CIPP",
+    "CMMC"
+  ],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "days": {
+      "type": "number",
+      "label": "Days of inactivity (minimum 30)",
+      "required": true,
+      "default": 180,
+      "validators": {
+        "min": {
+          "value": 30,
+          "message": "Minimum value is 30"
+        }
+      }
+    },
+    "excludedUsers": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Excluded accounts (UPNs never disabled - breakglass, service accounts)"
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Users"
+  },
+  "prepare": "Get-CIPPBaselineDisableInactiveUsersState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "Users"
+    ],
+    "writes": [
+      {
+        "method": "PATCH",
+        "uri": "users/%id%",
+        "body": {
+          "accountEnabled": false
+        }
+      }
+    ]
+  }
+}

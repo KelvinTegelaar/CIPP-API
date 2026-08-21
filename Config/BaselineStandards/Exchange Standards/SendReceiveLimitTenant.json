@@ -1,0 +1,49 @@
+{
+  "name": "SendReceiveLimitTenant",
+  "label": "Set send/receive size limits",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the maximum send and receive message sizes on every mailbox plan, which new mailboxes inherit.",
+  "executiveText": "Standardizes maximum email sizes across the organization so mail flow behaves predictably and oversized attachments are handled the same way everywhere.",
+  "docsDescription": "Grades which mailbox plans are off the configured send/receive limits - Unlimited always counts as off-limits - and remediation sets the limits on each offending plan.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Set-MailboxPlan",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "SendLimit": {
+      "default": 35,
+      "type": "number",
+      "label": "Send limit in MB (default 35)"
+    },
+    "ReceiveLimit": {
+      "default": 36,
+      "type": "number",
+      "label": "Receive limit in MB (default 36)"
+    }
+  },
+  "read": {
+    "cacheType": "ExoMailboxPlans"
+  },
+  "prepare": "Get-CIPPBaselineSendReceiveLimitTenantState",
+  "remediate": {
+    "executor": "SendReceiveLimitTenant",
+    "sendLimit": "%SendLimit%",
+    "receiveLimit": "%ReceiveLimit%"
+  }
+}

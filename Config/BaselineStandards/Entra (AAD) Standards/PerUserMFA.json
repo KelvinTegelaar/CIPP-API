@@ -1,0 +1,58 @@
+{
+  "name": "PerUserMFA",
+  "label": "Enables per user MFA for all users.",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CISA (MS.AAD.1.1v1)",
+    "CISA (MS.AAD.1.2v1)",
+    "Essential 8 (1504)",
+    "Essential 8 (1173)",
+    "Essential 8 (1401)",
+    "NIST CSF 2.0 (PR.AA-03)",
+    "SMB1001 (2.5)",
+    "SMB1001 (2.6)",
+    "SMB1001 (2.9)"
+  ],
+  "impact": "High Impact",
+  "helpText": "Enables per user MFA for all users. The directory synchronisation service account is excluded - it cannot complete MFA and enforcing it breaks sync.",
+  "executiveText": "Requires all employees to use multi-factor authentication for enhanced account security, significantly reducing the risk of unauthorized access from compromised passwords. This fundamental security measure protects against the majority of account-based attacks and is essential for maintaining strong cybersecurity posture.",
+  "docsDescription": "Enables per user MFA for all enabled member accounts.",
+  "impactColour": "danger",
+  "addedDate": "2024-06-14",
+  "powershellEquivalent": "Graph API",
+  "appliesToTest": [
+    "SMB1001_2_5",
+    "SMB1001_2_6",
+    "SMB1001_2_9",
+    "ZTNA21780",
+    "ZTNA21782",
+    "ZTNA21796"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Users"
+  },
+  "prepare": "Get-CIPPBaselinePerUserMFAState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "Users"
+    ],
+    "writes": [
+      {
+        "method": "PATCH",
+        "uri": "users/%id%/authentication/requirements",
+        "body": {
+          "perUserMFAstate": "enforced"
+        }
+      }
+    ]
+  }
+}

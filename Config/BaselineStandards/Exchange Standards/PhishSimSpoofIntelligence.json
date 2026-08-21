@@ -1,0 +1,49 @@
+{
+  "name": "PhishSimSpoofIntelligence",
+  "label": "Allow Phishing Simulations in Spoof Intelligence",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Allows the configured phishing simulation sending infrastructures through spoof intelligence. Optionally removes entries outside the configured list.",
+  "executiveText": "Lets sanctioned phishing simulation platforms deliver their test emails without being blocked as spoofing, so security awareness campaigns actually reach users.",
+  "docsDescription": "Grades which configured sending infrastructures are missing from the spoof intelligence allow list; entries added by hand are left alone unless strict ownership is enabled, in which case entries outside the configured set grade and remediate as removals. Each allowed domain is written for both Internal and External spoof types.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-TenantAllowBlockListSpoofItems",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "AllowedDomains": {
+      "type": "autoComplete",
+      "required": true,
+      "creatable": true,
+      "label": "Allowed sending infrastructures (domains)",
+      "multiple": true
+    },
+    "RemoveExtraDomains": {
+      "default": false,
+      "type": "switch",
+      "label": "Remove entries outside the configured list"
+    }
+  },
+  "read": {
+    "cacheType": "ExoTenantAllowBlockListSpoofItems"
+  },
+  "prepare": "Get-CIPPBaselinePhishSimSpoofIntelligenceState",
+  "remediate": {
+    "executor": "PhishSimSpoofIntelligence"
+  }
+}

@@ -14,6 +14,18 @@ function Invoke-ExecCustomData {
 
     Write-Information "Executing action '$Action'"
 
+    # AnyTenant: mapping writes re-register per-tenant sync tasks estate-wide, so they
+    # require an unrestricted tenant scope
+    if ($Action -in @('AddEditMapping', 'DeleteMapping')) {
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants') {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = @(@{ state = 'error'; resultText = 'Editing custom data mappings requires unrestricted tenant access' }) }
+                })
+        }
+    }
+
     switch ($Action) {
         'ListSchemaExtensions' {
             try {
@@ -358,8 +370,22 @@ function Invoke-ExecCustomData {
         }
         'ListMappings' {
             try {
+                # AnyTenant: restricted callers only see mappings for tenants in scope
+                $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+                $Restricted = $AllowedTenants -notcontains 'AllTenants'
+                if ($Restricted) {
+                    $AllowedIdentifiers = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($Tenant in (Get-Tenants -IncludeErrors)) {
+                        foreach ($Value in @($Tenant.customerId, $Tenant.defaultDomainName)) {
+                            if ($Value) { [void]$AllowedIdentifiers.Add([string]$Value) }
+                        }
+                    }
+                }
                 $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingsTable | ForEach-Object {
                     $Mapping = $_.JSON | ConvertFrom-Json -AsHashtable
+                    if ($Restricted -and -not (@($Mapping.tenantFilter.value) | Where-Object { $_ -and $AllowedIdentifiers.Contains([string]$_) })) {
+                        return
+                    }
 
                     Write-Information ($Mapping | ConvertTo-Json -Depth 5)
                     [PSCustomObject]@{

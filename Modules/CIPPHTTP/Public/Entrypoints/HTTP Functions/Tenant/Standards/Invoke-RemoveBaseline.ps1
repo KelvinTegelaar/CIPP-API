@@ -3,7 +3,7 @@ function Invoke-RemoveBaseline {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.ReadWrite
+        Tenant.Baselines.ReadWrite
     .DESCRIPTION
         Deletes a baseline with its rollout state, delta rows, and resolved rows - the
         alignment view reflects the removal immediately.

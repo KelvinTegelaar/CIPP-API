@@ -1,0 +1,217 @@
+{
+  "name": "DeployCheckChromeExtension",
+  "label": "Deploy Check by CyberDrain Browser Extension",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Deploys the Check by CyberDrain browser extension via a Win32 script app in Intune for both Chrome and Edge with configurable settings.",
+  "executiveText": "Automatically protects staff browsers against phishing with the Check extension, consistently configured and force-installed fleet-wide.",
+  "docsDescription": "Grades presence of the 'Check by CyberDrain - Browser Extension' Win32 app, the classic's check. Settings drift is handled by the EXECUTOR: the app description carries a config fingerprint and every remediation run rebuilds the scripts, redeploying only when the fingerprint changed - which is why this standard runs checkBeforeRun false.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Add-CIPPW32ScriptApplication",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "showNotifications": {
+      "type": "switch",
+      "label": "Show notifications",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "enableValidPageBadge": {
+      "type": "switch",
+      "label": "Enable valid page badge",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "enablePageBlocking": {
+      "type": "switch",
+      "label": "Enable page blocking",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "forceToolbarPin": {
+      "type": "switch",
+      "label": "Force pin extension to toolbar",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "enableCippReporting": {
+      "type": "switch",
+      "label": "Enable CIPP reporting",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "customRulesUrl": {
+      "type": "textField",
+      "label": "Custom Rules URL",
+      "omitWhenBlank": true
+    },
+    "updateInterval": {
+      "type": "number",
+      "label": "Update interval (hours, default 24)",
+      "omitWhenBlank": true
+    },
+    "enableDebugLogging": {
+      "type": "switch",
+      "label": "Enable debug logging",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "enableGenericWebhook": {
+      "type": "switch",
+      "label": "Enable generic webhook",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "webhookUrl": {
+      "type": "textField",
+      "label": "Webhook URL",
+      "omitWhenBlank": true
+    },
+    "webhookEvents": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Webhook Events (e.g. pageBlocked)",
+      "omitWhenBlank": true
+    },
+    "urlAllowlist": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "URL Allowlist (wildcards allowed)",
+      "omitWhenBlank": true
+    },
+    "domainSquattingEnabled": {
+      "type": "switch",
+      "label": "Enable domain squatting detection",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "companyName": {
+      "type": "textField",
+      "label": "Company Name",
+      "omitWhenBlank": true
+    },
+    "productName": {
+      "type": "textField",
+      "label": "Product Name",
+      "omitWhenBlank": true
+    },
+    "supportEmail": {
+      "type": "textField",
+      "label": "Support Email",
+      "omitWhenBlank": true
+    },
+    "supportUrl": {
+      "type": "textField",
+      "label": "Support URL",
+      "omitWhenBlank": true
+    },
+    "privacyPolicyUrl": {
+      "type": "textField",
+      "label": "Privacy Policy URL",
+      "omitWhenBlank": true
+    },
+    "aboutUrl": {
+      "type": "textField",
+      "label": "About URL",
+      "omitWhenBlank": true
+    },
+    "primaryColor": {
+      "type": "textField",
+      "label": "Primary Color (hex, default #F77F00)",
+      "omitWhenBlank": true
+    },
+    "logoUrl": {
+      "type": "textField",
+      "label": "Logo URL",
+      "omitWhenBlank": true
+    },
+    "AssignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Who should this app be assigned to?",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "On",
+          "label": "Do not assign"
+        },
+        {
+          "value": "allLicensedUsers",
+          "label": "Assign to all users"
+        },
+        {
+          "value": "AllDevices",
+          "label": "Assign to all devices"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "Assign to all users and devices"
+        },
+        {
+          "value": "customGroup",
+          "label": "Assign to Custom Group"
+        }
+      ]
+    },
+    "customGroup": {
+      "type": "textField",
+      "label": "Custom group name (if Custom Group selected, wildcards allowed)",
+      "omitWhenBlank": true
+    },
+    "excludeGroup": {
+      "type": "textField",
+      "label": "Exclude group name(s), comma separated (wildcards allowed)",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "IntuneMobileApps"
+  },
+  "prepare": "Get-CIPPBaselineDeployCheckChromeExtensionState",
+  "remediate": {
+    "executor": "DeployCheckChromeExtension",
+    "showNotifications": "%showNotifications%",
+    "enableValidPageBadge": "%enableValidPageBadge%",
+    "enablePageBlocking": "%enablePageBlocking%",
+    "forceToolbarPin": "%forceToolbarPin%",
+    "enableCippReporting": "%enableCippReporting%",
+    "customRulesUrl": "%customRulesUrl%",
+    "updateInterval": "%updateInterval%",
+    "enableDebugLogging": "%enableDebugLogging%",
+    "enableGenericWebhook": "%enableGenericWebhook%",
+    "webhookUrl": "%webhookUrl%",
+    "webhookEvents": "%webhookEvents%",
+    "urlAllowlist": "%urlAllowlist%",
+    "domainSquattingEnabled": "%domainSquattingEnabled%",
+    "companyName": "%companyName%",
+    "productName": "%productName%",
+    "supportEmail": "%supportEmail%",
+    "supportUrl": "%supportUrl%",
+    "privacyPolicyUrl": "%privacyPolicyUrl%",
+    "aboutUrl": "%aboutUrl%",
+    "primaryColor": "%primaryColor%",
+    "logoUrl": "%logoUrl%",
+    "assignTo": "%AssignTo%",
+    "customGroup": "%customGroup%",
+    "excludeGroup": "%excludeGroup%"
+  },
+  "checkBeforeRun": false
+}

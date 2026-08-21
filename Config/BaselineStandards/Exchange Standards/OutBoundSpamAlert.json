@@ -37,7 +37,7 @@
     "OutboundSpamContact": {
       "type": "textField",
       "label": "Outbound spam contact",
-      "default": ""
+      "required": true
     }
   },
   "expected": {

@@ -28,14 +28,18 @@ function Push-AuditLogProcessV2 {
         # this cycle OR rows left behind by an earlier crash. Not gated on the download count, so a
         # crashed/partial processing run is retried on the next cycle. The batch builder is the
         # authoritative gate (claims claimable rows; returns nothing if there's truly no work).
-        $CacheTable = Get-CippTable -TableName 'CacheWebhooks'
-        $Pending = @(Get-CIPPAzDataTableEntity @CacheTable -Filter "PartitionKey eq '$TenantFilter'" -Property @('PartitionKey', 'RowKey'))
+        # Gate on the LEDGER, not the cache. CacheWebhooks is partitioned per search
+        # (tenant|searchId), so there is no single partition to count for a tenant, and a
+        # cross-partition scan just to answer "is there anything to do" would reintroduce exactly
+        # the cost the layout removes. The ledger tracks the same state and is keyed by tenant.
+        $Ledger = Get-CippTable -TableName 'AuditLogCoverage'
+        $Pending = @(Get-CIPPAzDataTableEntity @Ledger -Filter "PartitionKey eq '$TenantFilter' and (State eq 'Downloaded' or State eq 'Processing')" -Property @('PartitionKey', 'RowKey'))
         if ($Pending.Count -eq 0) {
-            Write-Information "AuditLogProcessV2: no pending cache rows for $TenantFilter; nothing to process"
+            Write-Information "AuditLogProcessV2: no searches awaiting processing for $TenantFilter"
             return @{ Success = $true; Processed = $false }
         }
 
-        Write-Information "AuditLogProcessV2: enqueueing processing for $TenantFilter ($($Pending.Count) pending cache row(s))"
+        Write-Information "AuditLogProcessV2: enqueueing processing for $TenantFilter ($($Pending.Count) search(es) pending)"
         $InputObject = [PSCustomObject]@{
             OrchestratorName = "AuditLogProcessV2-$TenantFilter"
             QueueFunction    = [PSCustomObject]@{

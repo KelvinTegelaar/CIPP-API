@@ -55,18 +55,6 @@
     ]
   },
   "remediate": {
-    "executor": "GraphRequest",
-    "requests": [
-      {
-        "method": "PATCH",
-        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/Fido2",
-        "body": {
-          "@odata.type": "#microsoft.graph.fido2AuthenticationMethodConfiguration",
-          "state": "enabled",
-          "isAttestationEnforced": true,
-          "isSelfServiceRegistrationAllowed": true
-        }
-      }
-    ]
+    "executor": "EnableFIDO2"
   }
 }

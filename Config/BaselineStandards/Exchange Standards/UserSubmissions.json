@@ -1,0 +1,63 @@
+{
+  "name": "UserSubmissions",
+  "label": "Set the state of the built-in Report button in Outlook",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Enables or disables the built-in Report button in Outlook, optionally routing reported messages to a custom mailbox as well as Microsoft.",
+  "executiveText": "Governs how employees report suspicious email: enabling the built-in report button routes phishing reports to Microsoft and optionally to the security team, turning users into a detection layer.",
+  "docsDescription": "Grades the report submission policy and rule against the chosen posture: enabled (reports to Microsoft), enabled with a custom address (all three report types route to it and the rule is enabled), or disabled. The configured address supports tenant %variable% replacement. Remediation creates or updates the default policy and rule, removing the rule when reporting is turned off.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-ReportSubmissionPolicy or Set-ReportSubmissionPolicy",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "required": true,
+      "creatable": false,
+      "options": [
+        {
+          "label": "Enabled",
+          "value": "enable"
+        },
+        {
+          "label": "Disabled",
+          "value": "disable"
+        }
+      ],
+      "label": "Report button state"
+    },
+    "email": {
+      "omitWhenBlank": true,
+      "type": "textField",
+      "label": "Destination email address (optional)"
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "ReportSubmissionPolicy",
+      "ReportSubmissionRule"
+    ],
+    "cacheType": "ReportSubmissionPolicy"
+  },
+  "prepare": "Get-CIPPBaselineUserSubmissionsState",
+  "remediate": {
+    "executor": "UserSubmissions",
+    "state": "%state%"
+  }
+}

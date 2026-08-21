@@ -1,0 +1,53 @@
+{
+  "name": "WindowsBackupRestore",
+  "label": "Set Windows Backup and Restore state",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables or disables the Windows Backup and Restore experience during Windows setup.",
+  "executiveText": "Controls whether employees are offered to restore their previous Windows settings and files when setting up a new device, balancing convenience against a clean managed build.",
+  "docsDescription": "Sets the state of the Windows Restore device enrollment configuration.",
+  "impactColour": "info",
+  "addedDate": "2025-05-19",
+  "powershellEquivalent": "Graph API",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Windows Backup and Restore",
+      "required": true,
+      "options": [
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        }
+      ],
+      "default": "disabled"
+    }
+  },
+  "read": {
+    "cacheType": "DeviceEnrollmentConfigurations"
+  },
+  "prepare": "Get-CIPPBaselineWindowsBackupRestoreState",
+  "remediate": {
+    "executor": "DeviceEnrollmentConfiguration",
+    "body": {
+      "@odata.type": "#microsoft.graph.windowsRestoreDeviceEnrollmentConfiguration",
+      "state": "%state%"
+    }
+  }
+}

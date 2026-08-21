@@ -65,9 +65,30 @@ function Get-CIPPGeoIPLocationBatch {
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdbv2'
     $ValidAfter = (Get-Date).AddDays(-90).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
-    # 1) Seed from knownlocationdbv2 (fresh, non-Unknown entries); collect the misses
+    # In-process memo in front of the table. Despite the name, the seeding loop below issues one
+    # table read PER DISTINCT IP - measured at 2.2 ms each, so roughly 450 ms for a 200-IP window,
+    # and the audit rule engine calls this once per 500-record slice per tenant. Egress addresses
+    # repeat heavily both within a tenant and across them, so the same IPs were re-fetched over and
+    # over. Thirty minutes, far inside the table's own 90-day validity, so the memo can only
+    # shorten how long a cached answer is reused - never serve something the table would not.
+    if ($null -eq $script:GeoIpMemo) { $script:GeoIpMemo = @{} }
+    $MemoNow = [datetime]::UtcNow
+    $MemoExpiry = $MemoNow.AddMinutes(30)
+    # Bounded: sweep expired entries only once the memo is large, so the common path stays O(1).
+    if ($script:GeoIpMemo.Count -gt 20000) {
+        foreach ($MemoKey in @($script:GeoIpMemo.Keys)) {
+            if ($script:GeoIpMemo[$MemoKey].Expires -le $MemoNow) { $script:GeoIpMemo.Remove($MemoKey) }
+        }
+    }
+
+    # 1) Seed from the memo, then knownlocationdbv2 (fresh, non-Unknown entries); collect the misses
     $ToResolve = [System.Collections.Generic.List[string]]::new()
     foreach ($ip in $Distinct) {
+        $Memoised = $script:GeoIpMemo[$ip]
+        if ($Memoised -and $Memoised.Expires -gt $MemoNow) {
+            $Result[$ip] = $Memoised.Location
+            continue
+        }
         $cached = Get-CIPPAzDataTableEntity @LocationTable -Filter "PartitionKey eq 'ip' and RowKey eq '$ip' and Timestamp ge datetime'$ValidAfter'"
         if ($cached -and $cached.CountryOrRegion -and $cached.CountryOrRegion -ne 'Unknown') {
             $Result[$ip] = [pscustomobject]@{
@@ -77,6 +98,7 @@ function Get-CIPPGeoIPLocationBatch {
                 Hosting         = $cached.Hosting
                 ASName          = $cached.ASName
             }
+            $script:GeoIpMemo[$ip] = [pscustomobject]@{ Expires = $MemoExpiry; Location = $Result[$ip] }
         } else {
             $ToResolve.Add($ip)
         }
@@ -116,8 +138,11 @@ function Get-CIPPGeoIPLocationBatch {
                 ASName          = if ($r.asname) { $r.asname } else { 'Unknown' }
             }
             $Result[$ip] = $loc
-            # Only cache real results - never persist Unknown (no poisoning, matches single path)
+            # Only cache real results - never persist Unknown (no poisoning, matches single path).
+            # The memo follows the same rule, or an unresolvable address would be pinned as Unknown
+            # for the whole TTL instead of being retried.
             if ($loc.CountryOrRegion -ne 'Unknown') {
+                $script:GeoIpMemo[$ip] = [pscustomobject]@{ Expires = $MemoExpiry; Location = $loc }
                 $KnownEntities.Add(@{
                         PartitionKey    = 'ip'
                         RowKey          = $ip

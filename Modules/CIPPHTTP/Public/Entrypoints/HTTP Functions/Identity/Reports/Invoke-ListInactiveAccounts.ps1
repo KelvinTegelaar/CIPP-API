@@ -85,6 +85,18 @@ function Get-InactiveUsersFromDB {
     $TenantInfo = Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1
     $TenantDisplayName = $TenantInfo.displayName ?? $TenantFilter
 
+    # The Users-Count row is rewritten when a cache run for this tenant completes, so its table
+    # Timestamp is when this data was actually refreshed — request time must not be reported here.
+    $LastRefreshed = $null
+    try {
+        $CountRow = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Users' -CountsOnly | Select-Object -First 1
+        if ($CountRow.Timestamp) {
+            $LastRefreshed = ([DateTimeOffset]$CountRow.Timestamp).UtcDateTime.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+        }
+    } catch {
+        Write-Information "Could not determine Users cache refresh time for $($TenantFilter): $($_.Exception.Message)"
+    }
+
     $InactiveUsers = foreach ($User in $Users) {
         # Skip disabled users by default
         if ($User.accountEnabled -eq $false) { continue }
@@ -92,21 +104,18 @@ function Get-InactiveUsersFromDB {
         # Skip guest users
         if ($User.userType -eq 'Guest') { continue }
 
-        # Determine last sign-in
+        # Determine last sign-in — most recent of the three signInActivity fields.
+        # lastSuccessfulSignInDateTime can run ahead of the other two (it is what the Entra
+        # profile blade shows); leaving it out lists recently-active users as inactive.
         $lastInteractive = $User.signInActivity.lastSignInDateTime
         $lastNonInteractive = $User.signInActivity.lastNonInteractiveSignInDateTime
+        $lastSuccessful = $User.signInActivity.lastSuccessfulSignInDateTime
 
         $lastSignIn = $null
-        if ($lastInteractive -and $lastNonInteractive) {
-            $lastSignIn = if ([DateTime]$lastInteractive -gt [DateTime]$lastNonInteractive) {
-                $lastInteractive
-            } else {
-                $lastNonInteractive
+        foreach ($Candidate in @($lastInteractive, $lastNonInteractive, $lastSuccessful)) {
+            if ($Candidate -and (-not $lastSignIn -or [DateTime]$Candidate -gt [DateTime]$lastSignIn)) {
+                $lastSignIn = $Candidate
             }
-        } elseif ($lastInteractive) {
-            $lastSignIn = $lastInteractive
-        } elseif ($lastNonInteractive) {
-            $lastSignIn = $lastNonInteractive
         }
 
         # Check if user is inactive
@@ -137,7 +146,8 @@ function Get-InactiveUsersFromDB {
                 createdDateTime                  = $User.createdDateTime
                 lastSignInDateTime               = $lastInteractive
                 lastNonInteractiveSignInDateTime = $lastNonInteractive
-                lastRefreshedDateTime            = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+                lastSuccessfulSignInDateTime     = $lastSuccessful
+                lastRefreshedDateTime            = $LastRefreshed
                 numberOfAssignedLicenses         = $numberOfAssignedLicenses
                 daysSinceLastSignIn              = $daysSinceSignIn
                 accountEnabled                   = $User.accountEnabled

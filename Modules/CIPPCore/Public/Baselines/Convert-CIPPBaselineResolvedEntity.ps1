@@ -28,15 +28,29 @@ function Convert-CIPPBaselineResolvedEntity {
     $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
     # Multi-instance standards all share one definition label - the row label carries the
     # instance's identity so ten instances are ten distinguishable rows: the task name for
-    # manual tasks, the deployed template's displayName for identity-carrying standards
-    # (CA/Intune templates - their normalized ExpectedValue is the full policy).
+    # manual tasks, the deployed template's displayName for identity-carrying standards.
+    # CA/Intune templates surface it in their normalized ExpectedValue (the full policy);
+    # families whose graded Expected is presence-shaped carry no name there, so the
+    # identity variable is read from the effective Inheritance entry instead - that is
+    # the configured template reference itself.
     $Manual = & $ParseJson $Entity.Manual
     $ExpectedParsed = & $ParseJson $Entity.ExpectedValue
     $IdentitySuffix = if ($Manual.taskName) { $Manual.taskName }
-    elseif ($Definition.instanceIdentity) { $ExpectedParsed.displayName ?? $ExpectedParsed.name ?? $ExpectedParsed.$($Definition.instanceIdentity) }
+    elseif ($Definition.instanceIdentity) {
+        $FromVariables = if ($Entity.Inheritance) {
+            $Effective = @(& $ParseJson $Entity.Inheritance) | Where-Object { $_.effective } | Select-Object -First 1
+            $Value = $Effective.value.$($Definition.instanceIdentity)
+            # .value ?? works on option objects AND hashtable-shaped rows alike; plain
+            # strings have no .value and fall through.
+            $Value.value ?? $Value
+        }
+        $ExpectedParsed.displayName ?? $ExpectedParsed.name ?? $FromVariables
+    }
     if ($IdentitySuffix -and $Definition.instanceIdentity -and $ResolveTemplateName) {
         # A real display name misses the lookup and stays as-is; a raw template id resolves.
-        $IdentitySuffix = (& $ResolveTemplateName "$($Definition.remediate.executor)" "$IdentitySuffix") ?? $IdentitySuffix
+        $Partition = "$($Definition.identity.partition ?? $Definition.remediate.executor)"
+        $NameField = "$($Definition.identity.nameField ?? 'displayName')"
+        $IdentitySuffix = (& $ResolveTemplateName $Partition "$IdentitySuffix" $NameField) ?? $IdentitySuffix
     }
     $Label = if ($IdentitySuffix) { '{0} - {1}' -f ($Definition.label ?? $BaseName), $IdentitySuffix } else { $Definition.label ?? $StandardName }
 

@@ -1,0 +1,158 @@
+{
+  "name": "DevicePrepProfile",
+  "label": "Deploy Device Prep Profile",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Creates and manages a Windows Autopilot Device Preparation profile for streamlined device enrollment, including an optional device security group.",
+  "executiveText": "Automates modern Windows device preparation with consistent join, account, and timeout settings, and keeps the profile correctly assigned.",
+  "docsDescription": "One instance per profile name. Grades the enrollment settings from the cached policy plus - separately - the assignment through Compare-CIPPIntuneAssignments, so a half-deployed profile is visible. Remediation repairs a wrong assignment IN PLACE and only recreates the profile when settings drift; the device security group resolves by name and is created with the Intune Provisioning Client as owner when allowed.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "ProfileName": {
+      "type": "textField",
+      "label": "Profile Display Name",
+      "required": true
+    },
+    "ProfileDescription": {
+      "type": "textField",
+      "label": "Profile Description",
+      "omitWhenBlank": true
+    },
+    "DeploymentType": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Deployment Type",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "0",
+          "label": "Single user"
+        },
+        {
+          "value": "1",
+          "label": "Shared"
+        }
+      ]
+    },
+    "JoinType": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Join Type",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "0",
+          "label": "Microsoft Entra join"
+        },
+        {
+          "value": "1",
+          "label": "Microsoft Entra hybrid join"
+        }
+      ]
+    },
+    "AccountType": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Account Type",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "0",
+          "label": "Standard user"
+        },
+        {
+          "value": "1",
+          "label": "Administrator"
+        }
+      ]
+    },
+    "Timeout": {
+      "type": "number",
+      "label": "Timeout (minutes, default 60)",
+      "omitWhenBlank": true
+    },
+    "CustomErrorMessage": {
+      "type": "textField",
+      "label": "Custom Error Message",
+      "omitWhenBlank": true
+    },
+    "AllowSkip": {
+      "type": "switch",
+      "label": "Allow users to skip setup after failure",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "AllowDiagnostics": {
+      "type": "switch",
+      "label": "Allow users to collect diagnostics",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "DeviceGroupName": {
+      "type": "textField",
+      "label": "Device Security Group Name (wildcard match)",
+      "omitWhenBlank": true
+    },
+    "CreateNewGroup": {
+      "type": "switch",
+      "label": "Create new group if group is not found",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "AssignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Policy Assignment",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "Do not assign"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "All users (profiles deploy to the enrolling user)"
+        }
+      ]
+    }
+  },
+  "read": {
+    "cacheType": "IntuneConfigurationPolicies"
+  },
+  "prepare": "Get-CIPPBaselineDevicePrepProfileState",
+  "remediate": {
+    "executor": "DevicePrepProfile",
+    "profileName": "%ProfileName%",
+    "profileDescription": "%ProfileDescription%",
+    "deploymentType": "%DeploymentType%",
+    "joinType": "%JoinType%",
+    "accountType": "%AccountType%",
+    "timeout": "%Timeout%",
+    "customErrorMessage": "%CustomErrorMessage%",
+    "allowSkip": "%AllowSkip%",
+    "allowDiagnostics": "%AllowDiagnostics%",
+    "deviceGroupName": "%DeviceGroupName%",
+    "createNewGroup": "%CreateNewGroup%",
+    "assignTo": "%AssignTo%"
+  },
+  "multiple": true,
+  "instanceIdentity": "ProfileName"
+}

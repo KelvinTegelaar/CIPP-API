@@ -35,7 +35,9 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableCustomerLockbox' -TenantFilter $Tenant -RequiredCapabilities @('CustomerLockbox')
+    # Capabilities are keyed by servicePlanName from subscribedSkus - 'CustomerLockbox' is
+    # not one, so the old gate could never pass. The real plan names:
+    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableCustomerLockbox' -TenantFilter $Tenant -RequiredCapabilities @('LOCKBOX_ENTERPRISE', 'LOCKBOX_ENTERPRISE_GOV', 'CustomerLockboxA_Enterprise')
 
     if ($TestResult -eq $false) {
         return $true
