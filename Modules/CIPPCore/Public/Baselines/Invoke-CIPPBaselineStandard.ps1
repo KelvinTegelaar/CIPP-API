@@ -279,9 +279,17 @@ function Invoke-CIPPBaselineStandard {
             if ($GradeOnly) { return $null }
             $Missing = $Unresolved -join ', '
             Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "`"$Label`" is missing a value for $Missing - nothing is compared or changed until the baseline configures it. - Run $RunId" -Sev 'Error'
-            $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Item.Standard -Mode $Mode -TriggeredBy $TriggeredBy -Outcome 'Error' -Detail "Not configured: no value for $Missing - the standard was skipped instead of comparing or writing the raw variable name." -RunId $RunId
+            $NotConfiguredDetail = "Not configured: no value for $Missing - the standard was skipped instead of comparing or writing the raw variable name."
             $Result.Outcome = 'Error'
             $Result.Status = $PriorStatus ?? 'No Data'
+            if ($Prior) {
+                # The standard is already visible via its prior row - record the run only.
+                $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Item.Standard -Mode $Mode -TriggeredBy $TriggeredBy -Outcome 'Error' -Detail $NotConfiguredDetail -RunId $RunId
+            } else {
+                # First sight: write the No Data row too, or the standard is invisible in the
+                # alignment view and reads as if it never made it into the baseline.
+                Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId -Detail $NotConfiguredDetail
+            }
             return $Result
         }
 
@@ -358,6 +366,11 @@ function Invoke-CIPPBaselineStandard {
         # The Where-Object is load-bearing: @($null).Count is 1, so an unfiltered @() test is
         # true for every definition that simply omits the property.
         $JustRefreshed = $false
+        # Carried into the No Data row so the operator sees WHY there was nothing to grade
+        # instead of a bare absence: a thrown collector, a prepare-declared reason, or the
+        # generic empty-cache pointer.
+        $CollectorFailure = $null
+        $PrepareNoDataReason = $null
         $CacheCollector = Get-Command -Name "Set-CIPPDBCache$($Definition.read.cacheType)" -ErrorAction SilentlyContinue
         $CollectorArgs = @{ TenantFilter = $TenantFilter }
         foreach ($Argument in ($Definition.read.collectorArgs ?? [PSCustomObject]@{}).PSObject.Properties) {
@@ -377,9 +390,11 @@ function Invoke-CIPPBaselineStandard {
                     $null = & $CacheCollector @CollectorArgs
                     $Prepared = & $Definition.prepare -Item $Item -TenantFilter $TenantFilter
                 } catch {
+                    $CollectorFailure = $_.Exception.Message
                     Write-Information "Baselines: cache collection for $($Definition.read.cacheType) on $TenantFilter failed: $($_.Exception.Message)"
                 }
             }
+            $PrepareNoDataReason = "$($Prepared.NoDataReason)"
             if ($null -ne $Prepared.Expected) {
                 $ExpectedTemplate = $Prepared.Expected
                 $Expected = $Prepared.Expected
@@ -411,6 +426,7 @@ function Invoke-CIPPBaselineStandard {
                     $null = & $CacheCollector @CollectorArgs
                     $Current = & $ReadCurrent
                 } catch {
+                    $CollectorFailure = $_.Exception.Message
                     Write-Information "Baselines: cache collection for $($Definition.read.cacheType) on $TenantFilter failed: $($_.Exception.Message)"
                 }
             }
@@ -650,10 +666,26 @@ function Invoke-CIPPBaselineStandard {
             $Result.Outcome = 'Compliant'
             $Result.Status = 'Compliant'
         } elseif ($null -eq $Current) {
-            # Nothing to honestly report and remediation does not apply, so nothing is written.
-            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "$($Item.Standard): no $($Definition.read.cacheType) data in CIPPDb after collection and remediation does not apply - skipped, nothing written." -Sev 'Info'
+            # No live object to grade. First sight writes a visible 'No Data' row carrying the
+            # reason: an invisible standard is indistinguishable from one the migration or the
+            # editor dropped, which is exactly how a fleet of collector failures reads to an
+            # operator. A prior row stays untouched so a transient collection failure never
+            # overwrites known-good state with No Data.
+            $NoDataReason = if ($PrepareNoDataReason) {
+                $PrepareNoDataReason
+            } elseif ($CollectorFailure) {
+                "collecting the $($Definition.read.cacheType) cache failed: $CollectorFailure"
+            } elseif (-not $CacheCollector) {
+                "no collector exists for the $($Definition.read.cacheType) cache"
+            } else {
+                "the $($Definition.read.cacheType) cache has no data for this tenant after collection - check the CIPPDBCache log entries for this tenant for the collection error"
+            }
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "$($Item.Standard): $NoDataReason - reported as No Data, remediation does not apply. - Run $RunId" -Sev 'Info'
             $Result.Outcome = 'Skipped-NoCache'
             $Result.Status = $PriorStatus ?? 'No Data'
+            if (-not $Prior -and -not $GradeOnly) {
+                Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId -Detail "No Data: $NoDataReason"
+            }
             return $Result
         } else {
             $Result.Outcome = 'Drift'
