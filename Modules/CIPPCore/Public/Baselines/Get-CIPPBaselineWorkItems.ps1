@@ -152,6 +152,9 @@ function Get-CIPPBaselineWorkItems {
                         StageName        = $StageNames[$InstanceKey]
                         AlertEmails      = $Baseline.alertEmails
                         AlertWebhookUrl  = $Baseline.alertWebhookUrl
+                        # 'Disable Scheduled Runs': the scheduled orchestrator skips these
+                        # items (but still counts them for reconciliation).
+                        DisableScheduledRuns = [bool]$Baseline.disableScheduledRuns
                         Tiers            = @([PSCustomObject]@{
                                 templateName     = $Baseline.templateName
                                 assignedTo       = ($Baseline.assignedTenants -join ', ')

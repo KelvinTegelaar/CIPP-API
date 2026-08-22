@@ -693,6 +693,10 @@
                   "description": {
                     "type": "string"
                   },
+                  "disableScheduledRuns": {
+                    "type": "boolean",
+                    "description": "'Disable Scheduled Runs': the baseline only executes when an operator runs it. Negative flag on purpose: rows saved before the column existed default to scheduled, exactly right."
+                  },
                   "excludedTenants": {
                     "type": "array",
                     "items": {
@@ -14449,6 +14453,76 @@
         ],
         "x-cipp-role": "CIPP.AppSettings.ReadWrite",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ExecBaselineMigrate": {
+      "post": {
+        "summary": "ExecBaselineMigrate",
+        "operationId": "ExecBaselineMigrate",
+        "tags": [
+          "Tenant > Standards"
+        ],
+        "description": "Migrates classic StandardsTemplateV2 templates (standards + drift) into baselines.\naction 'preview' returns the full mapping report without writing; 'commit' migrates\nthe selected templates (all when none selected). reportOnly (default true) imports\nevery standard with remediation off - the report carries each standard's faithful\nV2 posture so the operator re-enables deliberately. addDetectStandards optionally\nadds the admin-drift detection standards to migrated drift templates. The V2\ntemplates themselves are never modified.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string"
+                  },
+                  "addDetectStandards": {
+                    "type": "boolean"
+                  },
+                  "reportOnly": {
+                    "type": "string"
+                  },
+                  "templateIds": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "Metadata": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "Results": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Baselines.ReadWrite"
       }
     },
     "/api/ExecBaselineOverride": {

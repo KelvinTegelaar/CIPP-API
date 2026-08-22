@@ -28,11 +28,39 @@
       "label": "TAP is usable only once (off allows multiple logons)",
       "default": true,
       "recommended": true
+    },
+    "MinimumLifetime": {
+      "type": "number",
+      "label": "Minimum Lifetime (minutes)",
+      "default": 60,
+      "recommended": 60
+    },
+    "MaximumLifetime": {
+      "type": "number",
+      "label": "Maximum Lifetime (minutes)",
+      "default": 480,
+      "recommended": 480
+    },
+    "DefaultLifetime": {
+      "type": "number",
+      "label": "Default Lifetime (minutes)",
+      "default": 60,
+      "recommended": 60
+    },
+    "TAPLength": {
+      "type": "number",
+      "label": "Length (characters)",
+      "default": 8,
+      "recommended": 8
     }
   },
   "expected": {
     "state": "enabled",
-    "isUsableOnce": "%isUsableOnce%"
+    "isUsableOnce": "%isUsableOnce%",
+    "minimumLifetimeInMinutes": "%MinimumLifetime%",
+    "maximumLifetimeInMinutes": "%MaximumLifetime%",
+    "defaultLifetimeInMinutes": "%DefaultLifetime%",
+    "defaultLength": "%TAPLength%"
   },
   "read": {
     "cacheType": "AuthenticationMethodsPolicy",
@@ -54,10 +82,10 @@
           "@odata.type": "#microsoft.graph.temporaryAccessPassAuthenticationMethodConfiguration",
           "state": "enabled",
           "isUsableOnce": "%isUsableOnce%",
-          "minimumLifetimeInMinutes": 60,
-          "maximumLifetimeInMinutes": 480,
-          "defaultLifetimeInMinutes": 60,
-          "defaultLength": 8
+          "minimumLifetimeInMinutes": "%MinimumLifetime%",
+          "maximumLifetimeInMinutes": "%MaximumLifetime%",
+          "defaultLifetimeInMinutes": "%DefaultLifetime%",
+          "defaultLength": "%TAPLength%"
         }
       }
     ]
