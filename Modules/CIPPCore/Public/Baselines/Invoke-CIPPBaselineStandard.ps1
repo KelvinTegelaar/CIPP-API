@@ -108,6 +108,43 @@ function Invoke-CIPPBaselineStandard {
         if ($Definition.package) { throw "Package standard $($Item.BaseName) must be expanded by the resolver and never executes directly." }
         $Label = $Definition.label ?? $Item.Standard
 
+        # Definition-aware variable pass: declared defaults apply at RUN time, not just as
+        # editor seeds. A blank variable would otherwise splice its raw '%token%' into the
+        # expected value and grade as permanent fake drift ('%enabled%' vs true). Rules:
+        # - locked variables always carry their declared value - stored data never overrides;
+        # - a blank variable takes default/recommended, EXCEPT omitWhenBlank ones, where
+        #   blank deliberately means 'prune the key';
+        # - tenant tokens typed into variable VALUES (quarantine@%defaultdomain%) resolve
+        #   here, because prepare hooks read variables directly and never pass through the
+        #   $Render step that resolves them for declarative standards.
+        $NormalizeVariables = {
+            param($Variables)
+            $Normalized = $Variables ?? [PSCustomObject]@{}
+            if ($Normalized -isnot [System.Management.Automation.PSCustomObject]) {
+                $Normalized = ConvertTo-Json -Depth 100 -InputObject $Normalized | ConvertFrom-Json
+            }
+            foreach ($DeclaredVariable in (($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties)) {
+                $Spec = $DeclaredVariable.Value
+                $Fallback = $Spec.default ?? $Spec.recommended
+                if ($null -eq $Fallback) { continue }
+                $IsBlank = [string]::IsNullOrEmpty("$($Normalized.$($DeclaredVariable.Name))")
+                if ($Spec.locked -eq $true -or ($IsBlank -and $Spec.omitWhenBlank -ne $true)) {
+                    if ($Normalized.PSObject.Properties[$DeclaredVariable.Name]) {
+                        $Normalized.$($DeclaredVariable.Name) = $Fallback
+                    } else {
+                        $Normalized | Add-Member -NotePropertyName $DeclaredVariable.Name -NotePropertyValue $Fallback
+                    }
+                }
+            }
+            foreach ($VariableProperty in $Normalized.PSObject.Properties) {
+                if ($VariableProperty.Value -is [string] -and $VariableProperty.Value.Contains('%')) {
+                    $VariableProperty.Value = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $VariableProperty.Value
+                }
+            }
+            $Normalized
+        }
+        $Item.Variables = & $NormalizeVariables $Item.Variables
+
         # A flat requiredCapabilities list is any-of; a nested array is a group that must
         # also match (AND of any-of groups).
         $Required = @($Definition.requiredCapabilities)
@@ -212,12 +249,16 @@ function Invoke-CIPPBaselineStandard {
         $Expected = & $ResolveAnyOf $ExpectedTemplate $null $false
         $Tiers = foreach ($Tier in @($Item.Tiers)) {
             if (-not $Tier) { continue }
+            # Normalized the same way as the winning item so the inheritance display shows
+            # what the tier actually enforces (defaults applied, tenant tokens resolved),
+            # never a raw '%enabled%' template.
+            $TierVariables = & $NormalizeVariables $Tier.variables
             [PSCustomObject]@{
                 templateName     = $Tier.templateName
                 assignedTo       = $Tier.assignedTo
                 # For prepare-backed standards the rendered expected is just a template
                 # reference, so show what the tier CONFIGURES instead.
-                value            = $(if ($Definition.prepare) { $Tier.variables } else { & $ResolveAnyOf (& $Render $Definition.expected $Tier.variables) $null $false })
+                value            = $(if ($Definition.prepare) { $TierVariables } else { & $ResolveAnyOf (& $Render $Definition.expected $TierVariables) $null $false })
                 remediateEnabled = [bool]$Tier.remediateEnabled
                 alertEnabled     = [bool]$Tier.alertEnabled
                 alertOnRemediate = [bool]$Tier.alertOnRemediate
@@ -267,13 +308,16 @@ function Invoke-CIPPBaselineStandard {
             return $Result
         }
 
-        # A required variable left blank leaves the raw "%var%" token in the spec. That is not
-        # a value: comparing it is permanent drift and writing it sends the literal string to
-        # the API. Blank OPTIONAL fields are legitimate, and omitWhenBlank keys are pruned.
+        # A variable left blank leaves its raw "%var%" token in the spec. That is not a
+        # value: comparing it is permanent drift and writing it sends the literal string to
+        # the API. Required blanks are always a hard stop; a NON-required blank is one too
+        # when its token actually survived into the rendered expected (no default filled it
+        # and omitWhenBlank did not prune it). Pruned/optional blanks are legitimate.
         $ConfiguredVariables = $Item.Variables ?? [PSCustomObject]@{}
+        $RenderedExpectedJson = $(if ($null -ne $ExpectedTemplate) { ConvertTo-Json -Compress -Depth 100 -InputObject $ExpectedTemplate } else { '' })
         $Unresolved = @(($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties | Where-Object {
-                $_.Value.required -eq $true -and
-                [string]::IsNullOrEmpty("$($ConfiguredVariables.$($_.Name))")
+                [string]::IsNullOrEmpty("$($ConfiguredVariables.$($_.Name))") -and
+                ($_.Value.required -eq $true -or $RenderedExpectedJson.Contains(('%{0}%' -f $_.Name)))
             } | ForEach-Object { $_.Name })
         if ($Unresolved.Count -gt 0) {
             if ($GradeOnly) { return $null }

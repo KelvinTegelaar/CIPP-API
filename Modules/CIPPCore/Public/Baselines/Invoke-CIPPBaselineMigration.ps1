@@ -6,8 +6,9 @@ function Invoke-CIPPBaselineMigration {
         Reads every 'templates' row under PK StandardsTemplateV2 and converts each into a
         one-stage ('Default') baseline via New-CIPPBaseline. -Preview builds the full
         per-template report without writing anything; commit mode writes and reports what
-        happened. The V2 rows are never touched - both systems run side by side until the
-        operator retires V2.
+        happened. The V2 rows are never touched, but while the Baselines feature flag is
+        enabled the classic Standards/Drift pages are hidden and their scheduled
+        orchestrators no-op - only one engine manages tenants at a time.
 
         Mapping rules:
         - tenantFilter/excludedTenants selector objects carry over verbatim.
@@ -85,6 +86,17 @@ function Invoke-CIPPBaselineMigration {
             'number' { $(try { [int64]"$Value" } catch { $Value }) }
             default { $Value }
         }
+    }
+    # V2 stored rich-text descriptions as HTML ('<p>...</p>'); baselines show plain text.
+    $StripHtml = {
+        param($Text)
+        $Value = "$Text"
+        if ($Value -notmatch '<[a-zA-Z!/]') { return $Value.Trim() }
+        # Breaks and block-level closers become newlines so '<p>a</p><p>b</p>' keeps shape.
+        $Value = $Value -replace '(?i)<br\s*/?>', "`n" -replace '(?i)</(p|div|li|h[1-6]|tr)>', "`n"
+        $Value = $Value -replace '<[^>]+>', ''
+        $Value = [System.Net.WebUtility]::HtmlDecode($Value)
+        ($Value -replace '[ \t]+', ' ' -replace '\n{3,}', "`n`n").Trim()
     }
     # Stable instance suffix so re-migration lands on the same instance keys.
     $InstanceId = {
@@ -351,7 +363,9 @@ function Invoke-CIPPBaselineMigration {
         # Idempotency: one baseline per V2 template, keyed by its GUID; the SHA guard
         # skips unchanged re-commits and updates changed ones in place.
         $SourceMarker = "StandardsTemplateV2:$V2Guid"
-        $Sha = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$($Row.JSON)|reportOnly=$ReportOnly|detect=$AddDetectStandards"))).ToLower()
+        # mapper= is the migration logic version: bump it when the MAPPING changes (not the
+        # source data) so unchanged V2 templates still re-commit once with the improved output.
+        $Sha = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$($Row.JSON)|reportOnly=$ReportOnly|detect=$AddDetectStandards|mapper=2"))).ToLower()
         $SafeSource = ConvertTo-CIPPODataFilterValue -Value $SourceMarker
         $Existing = Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout' and Source eq '$SafeSource'" | Select-Object -First 1
         if ($Existing -and "$($Existing.SHA)" -eq $Sha) {
@@ -368,7 +382,7 @@ function Invoke-CIPPBaselineMigration {
             $Payload = [PSCustomObject]@{
                 GUID            = $(if ($Existing) { $Existing.RowKey } else { $null })
                 templateName    = "$($Json.templateName)"
-                description     = "$($Json.description)"
+                description     = (& $StripHtml $Json.description)
                 assignedTenants = @($Assignments)
                 excludedTenants = @($Json.excludedTenants)
                 alertEmails     = $(if ($IsDrift -and -not $Json.driftAlertDisableEmail) { "$($Json.driftAlertEmail)" } else { '' })
