@@ -100,7 +100,8 @@
     "HidesPages": [
       "/tenant/standards/alignment",
       "/tenant/manage/drift",
-      "/tenant/manage/applied-standards"
+      "/tenant/manage/applied-standards",
+      "/tenant/manage/policies-deployed"
     ],
     "Hidden": false
   }
