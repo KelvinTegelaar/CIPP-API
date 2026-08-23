@@ -4,8 +4,19 @@
   "cat": "Defender Standards",
   "tag": [
     "CIS M365 7.0.0 (2.1.7)",
-    "mdo_antiphishingpolicy",
-    "NIST CSF 2.0 (DE.CM-09)"
+    "NIST CSF 2.0 (DE.CM-09)",
+    "mdo_antiphishingpolicies",
+    "mdo_phishthresholdlevel",
+    "mdo_enablemailboxintelligence",
+    "mdo_mailboxintelligenceprotection",
+    "mdo_mailboxintelligenceprotectionaction",
+    "mdo_targetedusersprotection",
+    "mdo_enabledomainstoprotect",
+    "mdo_targeteduserprotectionaction",
+    "mdo_targeteddomainprotectionaction",
+    "mdo_similaruserssafetytips",
+    "mdo_similardomainssafetytips",
+    "mdo_unusualcharacterssafetytips"
   ],
   "impact": "Low Impact",
   "helpText": "This creates an Anti-Phishing policy. On tenants without Defender for Office 365 only the settings that exist there are graded; impersonation and mailbox-intelligence protection are skipped.",
@@ -27,7 +38,7 @@
     "EXCHANGE_S_ENTERPRISE_GOV",
     "EXCHANGE_LITE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 72,
   "compare": "subset",
   "variables": {
     "name": {

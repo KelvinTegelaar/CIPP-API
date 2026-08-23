@@ -4,7 +4,9 @@
   "cat": "Defender Standards",
   "tag": [
     "CIS M365 7.0.0 (2.1.5)",
-    "NIST CSF 2.0 (DE.CM-09)"
+    "NIST CSF 2.0 (DE.CM-09)",
+    "mdo_atpprotection",
+    "mdo_safedocuments"
   ],
   "impact": "Low Impact",
   "helpText": "This creates a Atp policy that enables Defender for Office 365 for SharePoint, OneDrive and Microsoft Teams.",
@@ -36,7 +38,7 @@
       "THREAT_INTELLIGENCE_GOV"
     ]
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 10,
   "compare": "subset",
   "variables": {
     "AllowSafeDocsOpen": {

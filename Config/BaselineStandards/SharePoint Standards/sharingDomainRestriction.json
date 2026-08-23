@@ -2,7 +2,9 @@
   "name": "sharingDomainRestriction",
   "label": "Restrict sharing to a specific domain list",
   "cat": "SharePoint Standards",
-  "tag": [],
+  "tag": [
+    "spo_external_sharing_managed"
+  ],
   "impact": "High Impact",
   "helpText": "Restricts SharePoint external sharing to an allow-list or block-list of domains, or removes the restriction.",
   "executiveText": "Controls which external organizations files can be shared with, containing data exposure to sanctioned partners.",
@@ -24,7 +26,7 @@
     "warn": false,
     "remediate": false
   },
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 3,
   "compare": "subset",
   "variables": {
     "Mode": {

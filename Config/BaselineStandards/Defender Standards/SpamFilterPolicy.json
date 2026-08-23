@@ -4,8 +4,15 @@
   "cat": "Defender Standards",
   "tag": [
     "CIS M365 7.0.0 (2.1.6)",
-    "mdo_spamfilterpolicy",
-    "NIST CSF 2.0 (DE.CM-09)"
+    "NIST CSF 2.0 (DE.CM-09)",
+    "mdo_spamaction",
+    "mdo_highconfidencespamaction",
+    "mdo_bulkspamaction",
+    "mdo_phisspamacation",
+    "mdo_highconfidencephishaction",
+    "mdo_quarantineretentionperiod",
+    "mdo_zapspam",
+    "mdo_zapphish"
   ],
   "impact": "Low Impact",
   "helpText": "This creates a Spam filter policy. When the adopted policy is the built-in \"Default\", Exchange owns its scoping and no rule is graded or written.",
@@ -27,7 +34,7 @@
     "EXCHANGE_S_ENTERPRISE_GOV",
     "EXCHANGE_LITE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 28,
   "compare": "subset",
   "variables": {
     "name": {

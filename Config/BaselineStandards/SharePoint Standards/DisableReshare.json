@@ -5,7 +5,8 @@
   "tag": [
     "CIS M365 7.0.0 (7.2.5)",
     "CISA (MS.AAD.14.2v1)",
-    "CISA (MS.SPO.1.2v1)"
+    "CISA (MS.SPO.1.2v1)",
+    "spo_external_users_sharing"
   ],
   "impact": "High Impact",
   "helpText": "Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access",
@@ -32,7 +33,7 @@
     "ONEDRIVE_BASIC",
     "ONEDRIVE_ENTERPRISE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 3,
   "compare": "subset",
   "variables": {},
   "expected": {

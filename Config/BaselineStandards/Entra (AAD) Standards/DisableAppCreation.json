@@ -8,7 +8,8 @@
     "EIDSCA.AP10",
     "Essential 8 (1175)",
     "NIST CSF 2.0 (PR.AA-05)",
-    "SMB1001 (2.8)"
+    "SMB1001 (2.8)",
+    "aad_third_party_apps"
   ],
   "impact": "Low Impact",
   "helpText": "Disables the ability for users to create App registrations in the tenant.",
@@ -20,7 +21,7 @@
   "appliesToTest": ["CIS_5_1_2_2", "EIDSCAAP10", "SMB1001_2_8"],
   "recommendedBy": ["CIS", "CIPP", "SMB1001"],
   "requiredCapabilities": [],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 5,
   "compare": "subset",
   "variables": {
     "allowAppCreation": {

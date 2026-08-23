@@ -29,7 +29,7 @@
     "EXCHANGE_S_ENTERPRISE_GOV",
     "EXCHANGE_LITE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 3,
   "compare": "subset",
   "variables": {
     "enabled": {
