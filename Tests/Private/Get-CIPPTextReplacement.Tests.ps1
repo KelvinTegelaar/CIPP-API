@@ -112,6 +112,34 @@ Describe 'Get-CIPPTextReplacement' {
         }
     }
 
+    Context 'a json variable keeps its top-level array shape' {
+        # ConvertFrom-Json enumerates a top-level array, so a one-element array used to collapse to
+        # its lone object and an empty one to null. Graph then rejected any collection setting fed
+        # by the variable whenever a tenant needed exactly one entry - issue #356, Edge
+        # ExtensionInstallAllowlist being the reported case.
+        It 'keeps the brackets on a single-element array' {
+            $Value = '[{"@odata.type":"#microsoft.graph.deviceManagementConfigurationStringSettingValue","settingValueTemplateReference":null,"value":"jbkfoedolllekgbhcbcoahefnbanhhlh"}]'
+            $script:GlobalRows = @(New-VariableRow -Name 'extallowlist' -Value $Value -VariableType 'json')
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"simpleSettingCollectionValue":"%extallowlist%"}' -EscapeForJson |
+                Should -Be ('{{"simpleSettingCollectionValue":{0}}}' -f $Value)
+        }
+
+        It 'keeps an empty array empty rather than null' {
+            $script:GlobalRows = @(New-VariableRow -Name 'extallowlist' -Value '[]' -VariableType 'json')
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"%extallowlist%"}' -EscapeForJson |
+                Should -Be '{"v":[]}'
+        }
+
+        It 'leaves a top-level object a bare object' {
+            $script:GlobalRows = @(New-VariableRow -Name 'single' -Value '{"a":1}' -VariableType 'json')
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"%single%"}' -EscapeForJson |
+                Should -Be '{"v":{"a":1}}'
+        }
+    }
+
     Context 'a value that does not match its declared type falls back to the quoted form' {
         BeforeEach {
             $script:GlobalRows = @(
@@ -453,6 +481,50 @@ Describe 'Get-CIPPTextReplacement' {
         It 'resolves the partner tenant and SAM application ids' {
             Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%partnertenantid%/%samappid%' |
                 Should -Be 'partner-tenant-guid/sam-app-guid'
+        }
+    }
+
+    Context 'the partner tenant addressed by ID' {
+        # Resolving the partner/home tenant by its GUID used to skip Get-Tenants entirely, so only
+        # global variables resolved and built-in tokens came out empty - passing the domain worked,
+        # passing the ID silently did not (issue #356, diagnosis note).
+        BeforeEach {
+            $script:OldTenantId = $env:TenantID
+            $env:TenantID = '99999999-9999-9999-9999-999999999999'
+            Mock -CommandName Get-Tenants -MockWith {
+                [pscustomobject]@{
+                    customerId        = '99999999-9999-9999-9999-999999999999'
+                    defaultDomainName = 'partner.onmicrosoft.com'
+                    initialDomainName = 'partner.onmicrosoft.com'
+                    displayName       = '*Partner Tenant'
+                }
+            }
+        }
+        AfterEach {
+            $env:TenantID = $script:OldTenantId
+        }
+
+        It 'resolves per-tenant variables' {
+            $script:TenantRows = @(New-VariableRow -Name 'sitecode' -Value 'HQ01')
+
+            Get-CIPPTextReplacement -TenantFilter $env:TenantID -Text 'site=%sitecode%' |
+                Should -Be 'site=HQ01'
+        }
+
+        It 'resolves built-in tenant tokens' {
+            Get-CIPPTextReplacement -TenantFilter $env:TenantID -Text '%tenantname% (%tenantfilter%)' |
+                Should -Be '*Partner Tenant (partner.onmicrosoft.com)'
+        }
+
+        It 'degrades to globals only when the partner tenant is not in the tenant cache' {
+            # Own-tenant mode off and the partner tenant unmanaged: Get-Tenants finds nothing, and
+            # deliberately does not trigger a cache rebuild for the partner GUID. Behaviour is then
+            # what it was before the fix - global variables only, built-in tokens empty.
+            Mock -CommandName Get-Tenants -MockWith { $null }
+            $script:TenantRows = @(New-VariableRow -Name 'sitecode' -Value 'HQ01')
+
+            Get-CIPPTextReplacement -TenantFilter $env:TenantID -Text 'site=%sitecode% id=[%tenantid%]' |
+                Should -Be 'site=%sitecode% id=[]'
         }
     }
 

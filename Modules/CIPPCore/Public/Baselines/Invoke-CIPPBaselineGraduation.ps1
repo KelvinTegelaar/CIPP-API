@@ -9,6 +9,9 @@ function Invoke-CIPPBaselineGraduation {
         - time:     enteredStageAt + days/weeks has elapsed (unix seconds)
         - variable: a per-tenant custom variable (Get-CIPPTextReplacement's replacement map)
                     compared with eq/ne/startsWith/notStartsWith
+        - group:    the tenant is a member of the selected tenant group, evaluated fresh
+                    on every run - an 'All Tenants' baseline can gate a stage (say Intune
+                    policies) on an 'Intune licensed' group
         - success:  every standard rolled out by the stages reached so far is aligned
                     (Compliant or Accepted) on the tenant's resolved rows
         - manual:   never auto-advances (operator uses ExecBaselineStage)
@@ -23,6 +26,8 @@ function Invoke-CIPPBaselineGraduation {
     $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
     $Definitions = @(Get-CIPPBaselineDefinition)
+    $Groups = @()
+    try { $Groups = @(Get-TenantGroups) } catch { Write-Information "Invoke-CIPPBaselineGraduation: tenant group lookup failed: $($_.Exception.Message)" }
 
     foreach ($Baseline in @(Get-CIPPBaseline)) {
         foreach ($State in $Baseline.tenantStates) {
@@ -50,6 +55,14 @@ function Invoke-CIPPBaselineGraduation {
                                 default { $Value -eq $Condition.value }
                             }
                         }
+                    }
+                    'group' {
+                        # Membership gate: only tenants in the selected group ever advance.
+                        # Accepts the stored group ID or a hand-authored name, the same way
+                        # scope resolution does. Missing group/empty selection never advances.
+                        $GroupKey = "$($Condition.group.value ?? $Condition.group)"
+                        $Group = $Groups | Where-Object { $_.Id -eq $GroupKey -or $_.Name -eq $GroupKey } | Select-Object -First 1
+                        @($Group.Members.defaultDomainName) -contains $State.tenantFilter
                     }
                     'success' {
                         # Package standards never resolve under their own key - expand

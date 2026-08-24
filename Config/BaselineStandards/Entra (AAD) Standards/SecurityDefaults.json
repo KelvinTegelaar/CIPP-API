@@ -6,7 +6,8 @@
     "CISA (MS.AAD.11.1v1)",
     "SMB1001 (2.5)",
     "SMB1001 (2.6)",
-    "SMB1001 (2.9)"
+    "SMB1001 (2.9)",
+    "BlockLegacyAuthentication"
   ],
   "impact": "High Impact",
   "helpText": "Enables security defaults for the tenant, for newer tenants this is enabled by default. Do not enable this feature if you use Conditional Access.",
@@ -23,7 +24,7 @@
   ],
   "recommendedBy": [],
   "requiredCapabilities": [],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 8,
   "compare": "subset",
   "variables": {},
   "expected": {

@@ -5,16 +5,17 @@ BeforeAll {
 }
 
 Describe 'Intune policy list helpers' {
-    It 'defines the same eleven policy families for live and cached views' {
+    It 'defines the same twelve policy families for live and cached views' {
         $Definitions = @(Get-CIPPIntunePolicyListDefinitions)
 
-        $Definitions | Should -HaveCount 11
+        $Definitions | Should -HaveCount 12
         $Definitions.Id | Should -Be @(
             'DeviceConfigurations'
             'WindowsDriverUpdateProfiles'
             'WindowsFeatureUpdateProfiles'
             'windowsQualityUpdatePolicies'
             'windowsQualityUpdateProfiles'
+            'hardwareConfigurations'
             'GroupPolicyConfigurations'
             'MobileAppConfigurations'
             'ConfigurationPolicies'

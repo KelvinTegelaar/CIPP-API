@@ -2,7 +2,14 @@
   "name": "DefenderAVPolicy",
   "label": "Defender Antivirus Policy",
   "cat": "Defender Standards",
-  "tag": [],
+  "tag": [
+    "scid_2012",
+    "scid_2016",
+    "scid_91",
+    "scid_92",
+    "scid_89",
+    "scid_2011"
+  ],
   "impact": "High Impact",
   "helpText": "Deploys and enforces a Microsoft Defender Antivirus configuration policy via Intune. Controls scanning behaviour, real-time protection, cloud protection, network protection, signature updates, CPU priority, and threat remediation actions.",
   "executiveText": "Ensures every company device runs a consistent, hardened antivirus configuration, protecting against malware while balancing performance.",
@@ -17,7 +24,7 @@
     "warn": false,
     "remediate": false
   },
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 50,
   "compare": "subset",
   "variables": {
     "ScanArchives": {

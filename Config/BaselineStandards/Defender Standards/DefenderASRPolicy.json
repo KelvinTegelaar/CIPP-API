@@ -2,7 +2,26 @@
   "name": "DefenderASRPolicy",
   "label": "Defender Attack Surface Reduction Rules",
   "cat": "Defender Standards",
-  "tag": [],
+  "tag": [
+    "scid_2500",
+    "scid_2501",
+    "scid_2502",
+    "scid_2503",
+    "scid_2504",
+    "scid_2505",
+    "scid_2506",
+    "scid_2507",
+    "scid_2508",
+    "scid_2509",
+    "scid_2510",
+    "scid_2511",
+    "scid_2512",
+    "scid_2513",
+    "scid_2514",
+    "scid_2515",
+    "scid_2516",
+    "scid_2517"
+  ],
   "impact": "High Impact",
   "helpText": "Deploys and enforces Microsoft Defender Attack Surface Reduction (ASR) rules via Intune. Controls 20 individual ASR rules that protect against common attack vectors.",
   "executiveText": "Blocks the techniques malware abuses most - obfuscated scripts, Office macro exploitation, credential theft, ransomware behaviour - across every managed device.",
@@ -17,7 +36,7 @@
     "warn": false,
     "remediate": false
   },
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 162,
   "compare": "subset",
   "variables": {
     "Mode": {

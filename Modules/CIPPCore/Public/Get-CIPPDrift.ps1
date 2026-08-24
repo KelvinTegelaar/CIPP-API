@@ -267,6 +267,11 @@ function Get-CIPPDrift {
                         url    = 'deviceManagement/windowsQualityUpdateProfiles?$top=200'
                         method = 'GET'
                     }
+                    @{
+                        id     = 'deviceManagement/hardwareConfigurations'
+                        url    = 'deviceManagement/hardwareConfigurations?$top=200'
+                        method = 'GET'
+                    }
                 )
 
                 $TenantIntunePolicies = [System.Collections.Generic.List[object]]::new()

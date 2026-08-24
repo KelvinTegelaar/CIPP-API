@@ -50,6 +50,13 @@ function Get-CIPPIntunePolicyListDefinitions {
             PolicyTypeName = 'Quality Update'
         }
         [PSCustomObject]@{
+            Id             = 'hardwareConfigurations'
+            CacheType      = 'IntuneHardwareConfigurations'
+            GraphUri       = '/deviceManagement/hardwareConfigurations?$expand=assignments&$top=200'
+            CacheUri       = '/deviceManagement/hardwareConfigurations?$expand=assignments&$top=200'
+            PolicyTypeName = 'BIOS Configuration'
+        }
+        [PSCustomObject]@{
             Id             = 'GroupPolicyConfigurations'
             CacheType      = 'IntuneGroupPolicyConfigurations'
             GraphUri       = '/deviceManagement/groupPolicyConfigurations?$expand=assignments&$top=1000'

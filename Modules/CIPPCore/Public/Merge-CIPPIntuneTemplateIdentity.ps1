@@ -46,7 +46,8 @@ function Merge-CIPPIntuneTemplateIdentity {
         'AppProtection',
         'AppConfiguration',
         'deviceCompliancePolicies',
-        'Device'
+        'Device',
+        'hardwareConfigurations'
     )
 
     if ($TemplateType -notin $ColumnNamedTypes) {

@@ -31,6 +31,13 @@ function Invoke-CIPPBaselineDeviceEnrollmentConfiguration {
     if (@(($Remediate.body ?? [PSCustomObject]@{}).PSObject.Properties).Count -eq 0) {
         throw 'DeviceEnrollmentConfiguration: nothing configured to write.'
     }
+    # Hook-computed write values ride in on -Current next to configurationId: the ESP's
+    # blockDeviceSetupRetryByUser is the INVERSE of the operator's BlockDevice switch,
+    # which no %token% can render. Without it the PATCH fixes every property except
+    # this one and its drift flaps forever.
+    if ($null -ne $Current.blockDeviceSetupRetryByUserDesired) {
+        $Remediate.body | Add-Member -NotePropertyName 'blockDeviceSetupRetryByUser' -NotePropertyValue ([bool]$Current.blockDeviceSetupRetryByUserDesired) -Force
+    }
 
     $null = New-GraphPostRequest -tenantid $TenantFilter `
         -uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations/$ConfigurationId" `

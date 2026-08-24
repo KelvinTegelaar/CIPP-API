@@ -2,7 +2,9 @@
   "name": "DefenderEDRPolicy",
   "label": "Defender EDR Configuration",
   "cat": "Defender Standards",
-  "tag": [],
+  "tag": [
+    "scid_20000"
+  ],
   "impact": "High Impact",
   "helpText": "Deploys and enforces a Microsoft Defender for Endpoint EDR configuration policy via Intune. Controls auto-configuration from the MDE connector and sample sharing.",
   "executiveText": "Ensures consistent Endpoint Detection and Response onboarding across managed Windows devices, so security teams see every endpoint.",
@@ -17,7 +19,7 @@
     "warn": false,
     "remediate": false
   },
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 9,
   "compare": "subset",
   "variables": {
     "Config": {

@@ -36,6 +36,8 @@ function Get-CIPPIntuneTemplateType {
         if ($null -ne $ParsedRaw.settings -and $null -ne $ParsedRaw.technologies) { return 'Catalog' }
         if ($null -ne $ParsedRaw.scheduledActionsForRule -or $ODataType -match 'CompliancePolicy') { return 'deviceCompliancePolicies' }
         if ($ODataType -match 'windowsDriverUpdateProfile') { return 'windowsDriverUpdateProfiles' }
+        # BIOS configuration profiles carry no @odata.type; the format property is unique to them.
+        if ($null -ne $ParsedRaw.hardwareConfigurationFormat -or $ODataType -match 'hardwareConfiguration') { return 'hardwareConfigurations' }
         if ($ODataType -match 'ManagedApp|managedAppProtection') { return 'AppProtection' }
         if ($ODataType -match 'deviceConfiguration|#microsoft\.graph\.\w+Configuration$') { return 'Device' }
     } catch {

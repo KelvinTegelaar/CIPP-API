@@ -693,6 +693,10 @@
                   "description": {
                     "type": "string"
                   },
+                  "disableScheduledRuns": {
+                    "type": "boolean",
+                    "description": "'Disable Scheduled Runs': the baseline only executes when an operator runs it. Negative flag on purpose: rows saved before the column existed default to scheduled, exactly right."
+                  },
                   "excludedTenants": {
                     "type": "array",
                     "items": {
@@ -1389,6 +1393,67 @@
         ],
         "x-cipp-role": "Exchange.Contact.ReadWrite",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/AddCorporateDeviceIdentifier": {
+      "post": {
+        "summary": "AddCorporateDeviceIdentifier",
+        "operationId": "AddCorporateDeviceIdentifier",
+        "tags": [
+          "Endpoint > Autopilot"
+        ],
+        "description": "Uploads corporate device identifiers (manufacturer, model and serial number) for Windows Autopilot device preparation via the Graph importedDeviceIdentities API",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "devicePrepData": {
+                    "type": "string"
+                  },
+                  "overwriteExisting": {
+                    "type": "boolean"
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Autopilot.ReadWrite"
       }
     },
     "/api/AddCustomScript": {
@@ -14390,6 +14455,76 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecBaselineMigrate": {
+      "post": {
+        "summary": "ExecBaselineMigrate",
+        "operationId": "ExecBaselineMigrate",
+        "tags": [
+          "Tenant > Standards"
+        ],
+        "description": "Migrates classic StandardsTemplateV2 templates (standards + drift) into baselines.\naction 'preview' returns the full mapping report without writing; 'commit' migrates\nthe selected templates (all when none selected). reportOnly (default true) imports\nevery standard with remediation off - the report carries each standard's faithful\nV2 posture so the operator re-enables deliberately. addDetectStandards optionally\nadds the admin-drift detection standards to migrated drift templates. The V2\ntemplates themselves are never modified.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string"
+                  },
+                  "addDetectStandards": {
+                    "type": "boolean"
+                  },
+                  "reportOnly": {
+                    "type": "string"
+                  },
+                  "templateIds": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "Metadata": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "Results": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Baselines.ReadWrite"
+      }
+    },
     "/api/ExecBaselineOverride": {
       "post": {
         "summary": "ExecBaselineOverride",
@@ -23148,7 +23283,7 @@
         "tags": [
           "Email-Exchange > Tools"
         ],
-        "description": "Enables or disables Microsoft Purview Message Encryption for a tenant by setting AzureRMSLicensingEnabled, or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.",
+        "description": "Enables or disables Microsoft Purview Message Encryption for a tenant by setting AzureRMSLicensingEnabled and the Outlook Encrypt button by setting SimplifiedClientAccessEnabled, or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.",
         "requestBody": {
           "required": true,
           "content": {
@@ -23171,6 +23306,10 @@
                   },
                   "Sender": {
                     "type": "string"
+                  },
+                  "SimplifiedClientAccessEnabled": {
+                    "type": "string",
+                    "description": "Only touch the Encrypt button setting when the caller sent it, so an API client that posts just AzureRMSLicensingEnabled does not silently disable it."
                   },
                   "tenantFilter": {
                     "type": "string"
@@ -49822,17 +49961,8 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
-                      "defaultForTenant": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "department": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "displayName": {
-                        "x-cipp-field-source": "frontend"
-                      },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -49863,7 +49993,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "templateName": {
-                        "x-cipp-field-source": "storage,frontend"
+                        "x-cipp-field-source": "storage"
                       },
                       "Timestamp": {
                         "type": "string",
@@ -49871,15 +50001,6 @@
                       },
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
-                      },
-                      "usageLocation": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "usernameFormat": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "usernameSpaceHandling": {
-                        "x-cipp-field-source": "frontend"
                       }
                     }
                   }

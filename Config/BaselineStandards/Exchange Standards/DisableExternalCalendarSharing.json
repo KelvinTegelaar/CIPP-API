@@ -28,7 +28,7 @@
     "EXCHANGE_S_ENTERPRISE_GOV",
     "EXCHANGE_LITE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 5,
   "compare": "subset",
   "variables": {
     "externalCalendarSharingEnabled": {

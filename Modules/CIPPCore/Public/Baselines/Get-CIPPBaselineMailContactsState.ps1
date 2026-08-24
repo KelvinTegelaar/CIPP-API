@@ -18,7 +18,7 @@ function Get-CIPPBaselineMailContactsState {
     )
 
     $Org = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Organization') | Select-Object -First 1
-    if (-not $Org) { return @{ Current = $null } }
+    if (-not $Org) { return @{ Current = $null; NoDataReason = 'the Organization cache has no data for this tenant' } }
 
     $V = $Item.Variables
     $TechSet = @(@("$($V.SecurityContact)", "$($V.TechContact)") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique | Sort-Object)
@@ -37,7 +37,7 @@ function Get-CIPPBaselineMailContactsState {
         $Expected | Add-Member -NotePropertyName 'generalContact' -NotePropertyValue "$($V.GeneralContact)"
         $Current | Add-Member -NotePropertyName 'generalContact' -NotePropertyValue "$($Org.privacyProfile.contactEmail)"
     }
-    if (@($Expected.PSObject.Properties).Count -eq 0) { return @{ Current = $null } }
+    if (@($Expected.PSObject.Properties).Count -eq 0) { return @{ Current = $null; NoDataReason = 'no contact e-mails are configured on this standard - every field is blank, so there is nothing to grade' } }
 
     # Carried for the executor.
     $Current | Add-Member -NotePropertyName 'organizationId' -NotePropertyValue "$($Org.id)"
