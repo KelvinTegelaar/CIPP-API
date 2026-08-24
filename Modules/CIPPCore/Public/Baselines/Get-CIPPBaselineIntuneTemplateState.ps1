@@ -92,6 +92,7 @@ function Get-CIPPBaselineIntuneTemplateState {
         'windowsFeatureUpdateProfiles' { @{ Caches = @('IntuneWindowsFeatureUpdateProfiles'); NameProperty = 'displayName'; Drop = @('deployableContentDisplayName', 'endOfSupportDate', 'installLatestWindows10OnWindows11IneligibleDevice') } }
         'windowsQualityUpdatePolicies' { @{ Caches = @('IntuneWindowsQualityUpdatePolicies'); NameProperty = 'displayName' } }
         'windowsQualityUpdateProfiles' { @{ Caches = @('IntuneWindowsQualityUpdateProfiles'); NameProperty = 'displayName'; Drop = @('releaseDateDisplayName', 'deployableContentDisplayName') } }
+        'hardwareConfigurations' { @{ Caches = @('IntuneHardwareConfigurations'); NameProperty = 'displayName'; Identity = $true } }
         default { throw "Intune template type '$TemplateType' is not supported for baseline drift detection." }
     }
 

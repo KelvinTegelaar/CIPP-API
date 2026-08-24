@@ -36,7 +36,7 @@
       "THREAT_INTELLIGENCE_GOV"
     ]
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 12,
   "compare": "subset",
   "variables": {
     "name": {

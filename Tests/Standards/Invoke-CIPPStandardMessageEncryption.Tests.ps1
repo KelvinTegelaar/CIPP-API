@@ -1,6 +1,7 @@
 # Pester tests for Invoke-CIPPStandardMessageEncryption
 #
-# The standard enables Purview Message Encryption by turning on AzureRMSLicensingEnabled. The one
+# The standard enables Purview Message Encryption by turning on AzureRMSLicensingEnabled plus
+# SimplifiedClientAccessEnabled (the Encrypt button in Outlook on the web / new Outlook). The one
 # case it must NOT act on is a tenant still pointed at an on-premises AD RMS cluster: Purview
 # Message Encryption is incompatible with AD RMS, so remediating there would silently half-configure
 # a tenant that first needs a migration. That skip is what these tests pin down.
@@ -32,10 +33,11 @@ BeforeAll {
     $AdRmsLocation = 'https://rms.contoso.local/_wmcs/licensing'
 
     function New-IRMConfig {
-        param($AzureRMSLicensingEnabled = $false, $LicensingLocation = @())
+        param($AzureRMSLicensingEnabled = $false, $SimplifiedClientAccessEnabled = $false, $LicensingLocation = @())
         [pscustomobject]@{
-            AzureRMSLicensingEnabled = $AzureRMSLicensingEnabled
-            LicensingLocation        = $LicensingLocation
+            AzureRMSLicensingEnabled      = $AzureRMSLicensingEnabled
+            SimplifiedClientAccessEnabled = $SimplifiedClientAccessEnabled
+            LicensingLocation             = $LicensingLocation
         }
     }
 }
@@ -62,19 +64,31 @@ Describe 'Invoke-CIPPStandardMessageEncryption' {
     }
 
     Context 'remediation' {
-        It 'enables Azure RMS licensing when message encryption is off' {
+        It 'enables Azure RMS licensing and the Encrypt button when message encryption is off' {
             Mock -CommandName New-ExoRequest -MockWith { New-IRMConfig -AzureRMSLicensingEnabled $false }
 
             Invoke-CIPPStandardMessageEncryption -Tenant $tenant -Settings @{ remediate = $true }
 
             Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
-                $cmdlet -eq 'Set-IRMConfiguration' -and $cmdParams.AzureRMSLicensingEnabled -eq $true
+                $cmdlet -eq 'Set-IRMConfiguration' -and $cmdParams.AzureRMSLicensingEnabled -eq $true -and $cmdParams.SimplifiedClientAccessEnabled -eq $true
+            }
+        }
+
+        It 'turns on the Encrypt button when licensing is on but simplified client access is off' {
+            Mock -CommandName New-ExoRequest -MockWith {
+                New-IRMConfig -AzureRMSLicensingEnabled $true -SimplifiedClientAccessEnabled $false -LicensingLocation @($AzureRmsLocation)
+            }
+
+            Invoke-CIPPStandardMessageEncryption -Tenant $tenant -Settings @{ remediate = $true }
+
+            Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
+                $cmdlet -eq 'Set-IRMConfiguration' -and $cmdParams.SimplifiedClientAccessEnabled -eq $true
             }
         }
 
         It 'does nothing when message encryption is already enabled' {
             Mock -CommandName New-ExoRequest -MockWith {
-                New-IRMConfig -AzureRMSLicensingEnabled $true -LicensingLocation @($AzureRmsLocation)
+                New-IRMConfig -AzureRMSLicensingEnabled $true -SimplifiedClientAccessEnabled $true -LicensingLocation @($AzureRmsLocation)
             }
 
             Invoke-CIPPStandardMessageEncryption -Tenant $tenant -Settings @{ remediate = $true }
@@ -120,6 +134,18 @@ Describe 'Invoke-CIPPStandardMessageEncryption' {
             }
         }
 
+        It 'alerts about the missing Encrypt button when only simplified client access is off' {
+            Mock -CommandName New-ExoRequest -MockWith {
+                New-IRMConfig -AzureRMSLicensingEnabled $true -SimplifiedClientAccessEnabled $false -LicensingLocation @($AzureRmsLocation)
+            }
+
+            Invoke-CIPPStandardMessageEncryption -Tenant $tenant -Settings @{ alert = $true }
+
+            Should -Invoke Write-StandardsAlert -Times 1 -Exactly -ParameterFilter {
+                $message -match 'Encrypt button'
+            }
+        }
+
         It 'alerts about the AD RMS blocker even when Azure RMS licensing is on' {
             Mock -CommandName New-ExoRequest -MockWith {
                 New-IRMConfig -AzureRMSLicensingEnabled $true -LicensingLocation @($AdRmsLocation)
@@ -134,7 +160,7 @@ Describe 'Invoke-CIPPStandardMessageEncryption' {
 
         It 'stays quiet when the tenant is correctly configured' {
             Mock -CommandName New-ExoRequest -MockWith {
-                New-IRMConfig -AzureRMSLicensingEnabled $true -LicensingLocation @($AzureRmsLocation)
+                New-IRMConfig -AzureRMSLicensingEnabled $true -SimplifiedClientAccessEnabled $true -LicensingLocation @($AzureRmsLocation)
             }
 
             Invoke-CIPPStandardMessageEncryption -Tenant $tenant -Settings @{ alert = $true }
@@ -154,8 +180,10 @@ Describe 'Invoke-CIPPStandardMessageEncryption' {
             Should -Invoke Set-CIPPStandardsCompareField -Times 1 -Exactly -ParameterFilter {
                 $FieldName -eq 'standards.MessageEncryption' -and
                 $CurrentValue.AzureRMSLicensingEnabled -eq $false -and
+                $CurrentValue.SimplifiedClientAccessEnabled -eq $false -and
                 $CurrentValue.AdRmsDetected -eq $true -and
                 $ExpectedValue.AzureRMSLicensingEnabled -eq $true -and
+                $ExpectedValue.SimplifiedClientAccessEnabled -eq $true -and
                 $ExpectedValue.AdRmsDetected -eq $false
             }
             Should -Invoke Add-CIPPBPAField -Times 1 -Exactly -ParameterFilter {

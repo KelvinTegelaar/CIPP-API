@@ -14,7 +14,7 @@
   "powershellEquivalent": "Update-MgPolicyAuthorizationPolicy",
   "recommendedBy": [],
   "requiredCapabilities": [],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 4,
   "compare": "subset",
   "variables": {},
   "expected": {

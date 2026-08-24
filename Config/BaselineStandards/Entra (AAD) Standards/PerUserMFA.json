@@ -11,7 +11,9 @@
     "NIST CSF 2.0 (PR.AA-03)",
     "SMB1001 (2.5)",
     "SMB1001 (2.6)",
-    "SMB1001 (2.9)"
+    "SMB1001 (2.9)",
+    "MFARegistrationV2",
+    "AdminMFAV2"
   ],
   "impact": "High Impact",
   "helpText": "Enables per user MFA for all users. The directory synchronisation service account is excluded - it cannot complete MFA and enforcing it breaks sync.",
@@ -30,7 +32,7 @@
   ],
   "recommendedBy": [],
   "requiredCapabilities": [],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 19,
   "compare": "subset",
   "variables": {},
   "expected": {

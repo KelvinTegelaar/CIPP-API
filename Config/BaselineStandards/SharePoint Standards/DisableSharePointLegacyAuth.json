@@ -33,7 +33,7 @@
     "ONEDRIVE_BASIC",
     "ONEDRIVE_ENTERPRISE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 1,
   "compare": "subset",
   "variables": {
     "legacyAuthEnabled": {

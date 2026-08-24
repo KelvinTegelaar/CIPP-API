@@ -23,7 +23,7 @@
     "CIS"
   ],
   "requiredCapabilities": [],
-  "secureScoreImpact": 5,
+  "secureScoreImpact": 1,
   "compare": "subset",
   "variables": {
     "timeout": {

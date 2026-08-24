@@ -49,6 +49,7 @@ function ConvertTo-CIPPIntunePolicyListItem {
             '*windowsQualityUpdateProfiles*' { 'Quality Update' }
             '*iosUpdateConfiguration*' { 'iOS Update Configuration' }
             '*windowsDriverUpdateProfiles*' { 'Driver Update' }
+            '*hardwareConfigurations*' { 'BIOS Configuration' }
             '*configurationPolicies*' { 'Device Configuration' }
             '*deviceCompliancePolicies*' { 'Compliance Policy' }
             '*intents*' { 'Endpoint Security' }

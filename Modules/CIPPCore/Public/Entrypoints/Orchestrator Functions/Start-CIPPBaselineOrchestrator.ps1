@@ -82,6 +82,13 @@ function Start-CIPPBaselineOrchestrator {
         }
     }
 
+    # 'Disable Scheduled Runs' baselines only execute when an operator runs them. The
+    # filter sits AFTER the reconciliation above on purpose: their (tenant, standard)
+    # pairs still resolve, so their rows never read as orphans and never get cleaned.
+    if ($TriggeredBy -eq 'schedule') {
+        $WorkItems = @($WorkItems | Where-Object { -not $_.DisableScheduledRuns })
+    }
+
     if ($WorkItems.Count -eq 0) {
         Write-Information 'Start-CIPPBaselineOrchestrator: no baseline work items resolved - nothing to do.'
         return 0

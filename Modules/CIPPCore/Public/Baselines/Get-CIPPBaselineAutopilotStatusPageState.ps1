@@ -55,6 +55,11 @@ function Get-CIPPBaselineAutopilotStatusPageState {
         allowDeviceResetOnInstallFailure     = [bool]$Config.allowDeviceResetOnInstallFailure
         allowDeviceUseOnInstallFailure       = [bool]$Config.allowDeviceUseOnInstallFailure
         configurationId                      = "$($Config.id)"
+        # Executor carrier like configurationId: the DESIRED retry-block value. It is
+        # the inverse of the BlockDevice switch and a %token% cannot negate, so the
+        # remediate body cannot render it - without this the write would fix every
+        # property except the one, and that drift would flap forever.
+        blockDeviceSetupRetryByUserDesired   = -not [bool]($V.BlockDevice -eq $true)
     }
 
     @{ Expected = $Expected; Current = $Current }

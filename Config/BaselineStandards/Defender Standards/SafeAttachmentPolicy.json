@@ -4,10 +4,9 @@
   "cat": "Defender Standards",
   "tag": [
     "CIS M365 7.0.0 (2.1.4)",
-    "mdo_safedocuments",
-    "mdo_commonattachmentsfilter",
     "mdo_safeattachmentpolicy",
-    "NIST CSF 2.0 (DE.CM-09)"
+    "NIST CSF 2.0 (DE.CM-09)",
+    "mdo_safeattachments"
   ],
   "impact": "Low Impact",
   "helpText": "This creates a Safe Attachment policy. An existing policy carrying a legacy CIPP or Microsoft default name is adopted and updated rather than duplicated.",
@@ -40,7 +39,7 @@
       "THREAT_INTELLIGENCE_GOV"
     ]
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 13,
   "compare": "subset",
   "variables": {
     "name": {

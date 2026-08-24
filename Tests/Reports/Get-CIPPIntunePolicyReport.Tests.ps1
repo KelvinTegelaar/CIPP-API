@@ -97,7 +97,7 @@ Describe 'Get-CIPPIntunePolicyReport' {
     It 'returns every live policy family with the shared normalization' {
         $Result = @(Get-CIPPIntunePolicyReport -TenantFilter $script:Tenant)
 
-        $Result | Should -HaveCount 11
+        $Result | Should -HaveCount 12
         $Result.id | Should -Contain 'deviceCompliancePolicies-1'
         $Result.id | Should -Contain 'Intents-1'
         $Result.id | Should -Contain 'ManagedAppPolicies-1'
@@ -112,7 +112,7 @@ Describe 'Get-CIPPIntunePolicyReport' {
     It 'adds Tenant for AllTenants and excludes cache timestamp metadata' {
         $Result = @(Get-CIPPIntunePolicyReport -TenantFilter 'AllTenants')
 
-        $Result | Should -HaveCount 11
+        $Result | Should -HaveCount 12
         $Result.Tenant | Select-Object -Unique | Should -Be $script:Tenant
         $Result[0].PSObject.Properties.Name | Should -Not -Contain 'CacheTimestamp'
         Should -Invoke Get-CIPPDbItem -Times 0 -Exactly -ParameterFilter { $Type -eq 'Groups' }
@@ -123,7 +123,7 @@ Describe 'Get-CIPPIntunePolicyReport' {
 
         $Result = @(Get-CIPPIntunePolicyReport -TenantFilter $script:Tenant)
 
-        $Result | Should -HaveCount 11
+        $Result | Should -HaveCount 12
         $Result.PolicyAssignment | Select-Object -Unique | Should -Be 'Old group name'
         Should -Invoke Get-CIPPDbItem -Times 1 -Exactly -ParameterFilter {
             $TenantFilter -eq $script:Tenant -and $Type -eq 'Groups'
@@ -142,7 +142,7 @@ Describe 'Get-CIPPIntunePolicyReport' {
 
         $Result = @(Get-CIPPIntunePolicyReport -TenantFilter $script:Tenant)
 
-        $Result | Should -HaveCount 11
+        $Result | Should -HaveCount 12
         $Result.PolicyAssignment | Select-Object -Unique | Should -Be ''
         Should -Invoke Get-CIPPDbItem -Times 0 -Exactly -ParameterFilter { $Type -eq 'Groups' }
     }
@@ -174,7 +174,7 @@ Describe 'Get-CIPPIntunePolicyReport' {
         $Result = @(Get-CIPPIntunePolicyReport -TenantFilter $script:Tenant)
         $DeepPolicy = $Result | Where-Object id -eq 'deep-settings-policy'
 
-        $Result | Should -HaveCount 12
+        $Result | Should -HaveCount 13
         $DeepPolicy | Should -Not -BeNullOrEmpty
         $DeepPolicy.URLName | Should -Be 'ConfigurationPolicies'
         $DeepPolicy.PolicyTypeName | Should -Be 'Device Configuration'
@@ -192,7 +192,7 @@ Describe 'Get-CIPPIntunePolicyReport' {
 
         $Result = @(Get-CIPPIntunePolicyReport -TenantFilter $script:Tenant)
 
-        $Result | Should -HaveCount 11
+        $Result | Should -HaveCount 12
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter {
             $API -eq 'IntunePolicyReport' -and
             $tenant -eq $script:Tenant -and

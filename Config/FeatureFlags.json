@@ -91,12 +91,18 @@
   {
     "Id": "Baselines",
     "Name": "Baselines",
-    "Description": "The drift-first baseline engine (preview). Enables the scheduled baseline run; the baseline pages and on-demand runs work regardless.",
+    "Description": "The drift-first baseline engine that replaces classic Standards and Drift. Enables the scheduled baseline run and the Baselines menu, hides the classic Standards and Drift pages, and skips the scheduled classic Standards and Drift runs - the two systems never run side by side.",
     "Enabled": false,
     "AllowUserToggle": true,
     "Timers": ["9f2c7b1e-4a6d-4c3f-8b9a-5e1d2f7c0a44"],
     "Endpoints": [],
-    "Pages": [],
-    "Hidden": true
+    "Pages": ["/tenant/baselines"],
+    "HidesPages": [
+      "/tenant/standards/alignment",
+      "/tenant/manage/drift",
+      "/tenant/manage/applied-standards",
+      "/tenant/manage/policies-deployed"
+    ],
+    "Hidden": false
   }
 ]

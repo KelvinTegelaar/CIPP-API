@@ -3,7 +3,8 @@
   "label": "Set Outbound Spam Alert e-mail",
   "cat": "Exchange Standards",
   "tag": [
-    "CIS M365 7.0.0 (2.1.6)"
+    "CIS M365 7.0.0 (2.1.6)",
+    "mdo_spam_notifications_only_for_admins"
   ],
   "impact": "Low Impact",
   "helpText": "Set the Outbound Spam Alert e-mail address",
@@ -25,7 +26,7 @@
     "EXCHANGE_S_ENTERPRISE_GOV",
     "EXCHANGE_LITE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 3,
   "compare": "subset",
   "variables": {
     "NotifyOutboundSpam": {

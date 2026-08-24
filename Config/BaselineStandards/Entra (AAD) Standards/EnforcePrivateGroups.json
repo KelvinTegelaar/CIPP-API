@@ -3,7 +3,8 @@
   "label": "Enforce Private M365 Groups",
   "cat": "Entra (AAD) Standards",
   "tag": [
-    "CIS M365 7.0.0 (1.2.1)"
+    "CIS M365 7.0.0 (1.2.1)",
+    "aad_managed_approved_public_groups_only"
   ],
   "impact": "Medium Impact",
   "helpText": "Sets all public Microsoft 365 groups to private automatically. Groups can be excluded by display name keyword.",
@@ -27,7 +28,7 @@
     "ONEDRIVE_BASIC",
     "ONEDRIVE_ENTERPRISE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 3,
   "compare": "subset",
   "variables": {
     "ExcludedGroupNames": {

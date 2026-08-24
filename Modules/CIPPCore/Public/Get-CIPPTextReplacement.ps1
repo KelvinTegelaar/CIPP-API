@@ -68,10 +68,8 @@ function Get-CIPPTextReplacement {
                 return $null
             }
             'json' {
-                # Re-serialized rather than spliced in verbatim, so whatever reaches the payload is
-                # known-valid, compact JSON regardless of how it was stored.
                 try {
-                    $Object = ConvertFrom-Json -InputObject $Text -Depth 100 -ErrorAction Stop
+                    $Object = ConvertFrom-Json -InputObject $Text -Depth 100 -NoEnumerate -ErrorAction Stop
                     return (ConvertTo-Json -InputObject $Object -Depth 100 -Compress)
                 } catch {
                     return $null
@@ -116,12 +114,12 @@ function Get-CIPPTextReplacement {
         '%organizationid%'
     )
 
-    if ($TenantFilter -ne $env:TenantID) {
-        $Tenant = Get-Tenants -TenantFilter $TenantFilter
-        $CustomerId = $Tenant.customerId
-    } else {
-        $CustomerId = $TenantFilter
-    }
+    # The partner tenant is resolved like any other, so addressing it by ID reaches its per-tenant
+    # variables and built-in tokens the same way its domain name does. When it is not in the tenant
+    # cache, Get-Tenants returns nothing for the partner GUID without triggering a cache rebuild,
+    # and the raw filter still serves as the partition key.
+    $Tenant = Get-Tenants -TenantFilter $TenantFilter
+    $CustomerId = if ($Tenant.customerId) { $Tenant.customerId } else { $TenantFilter }
 
     #connect to table, get replacement map. The replacement map will allow users to create custom vars that get replaced by the actual values per tenant. Example:
     # %WallPaperPath% gets replaced by RowKey WallPaperPath which is set to C:\Wallpapers for tenant 1, and D:\Wallpapers for tenant 2

@@ -2,7 +2,9 @@
   "name": "DisableOutlookAddins",
   "label": "Disable users from installing add-ins in Outlook",
   "cat": "Exchange Standards",
-  "tag": [],
+  "tag": [
+    "exo_outlookaddins"
+  ],
   "impact": "Medium Impact",
   "helpText": "Disables the ability for users to install add-ins in Outlook. This is to prevent users from installing malicious add-ins.",
   "executiveText": "Prevents employees from installing third-party add-ins in Outlook without administrative approval, reducing security risks from potentially malicious extensions.",
@@ -23,7 +25,7 @@
     "warn": false,
     "remediate": false
   },
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 3,
   "compare": "subset",
   "variables": {},
   "read": {},

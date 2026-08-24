@@ -5,7 +5,8 @@
   "tag": [
     "CIS M365 7.0.0 (1.3.5)",
     "Security",
-    "PhishingProtection"
+    "PhishingProtection",
+    "forms_phishing_protection"
   ],
   "impact": "Low Impact",
   "helpText": "Enables internal phishing protection for Microsoft Forms to help prevent malicious forms from being created and shared within the organization. This feature scans forms created by internal users for potential phishing content and suspicious patterns.",
@@ -22,7 +23,7 @@
     "CIPP"
   ],
   "requiredCapabilities": [],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 6,
   "compare": "subset",
   "variables": {},
   "expected": {

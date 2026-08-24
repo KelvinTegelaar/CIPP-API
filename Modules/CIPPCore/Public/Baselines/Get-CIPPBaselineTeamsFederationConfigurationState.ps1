@@ -39,17 +39,25 @@ function Get-CIPPBaselineTeamsFederationConfigurationState {
         $DomainList = @("$($V.DomainList)".Split(',').Trim() | Where-Object { $_ }) | Sort-Object
     }
 
+    # PUT shapes are GET-symmetric: allow-all = an empty OBJECT (AllowAllKnownDomains), a
+    # specific list = {Domain} objects under AllowedDomain. NEVER an empty array or an
+    # AllowList envelope - the ConfigAPI coerces those into an explicit EMPTY allow list
+    # (federation with nobody) while reporting success (CyberDrain/CIPP#364).
     switch ($DomainControl) {
-        'AllowAllExternal' { $AllowFederatedUsers = $true; $ExpectedAllowed = 'AllowAllKnownDomains'; $ExpectedBlocked = @(); $AllowedPayload = @() }
-        'BlockAllExternal' { $AllowFederatedUsers = $false; $ExpectedAllowed = 'AllowAllKnownDomains'; $ExpectedBlocked = @(); $AllowedPayload = @() }
-        'AllowSpecificExternal' { $AllowFederatedUsers = $true; $ExpectedAllowed = @($DomainList); $ExpectedBlocked = @(); $AllowedPayload = @{ AllowList = @($DomainList) } }
-        'BlockSpecificExternal' { $AllowFederatedUsers = $true; $ExpectedAllowed = 'AllowAllKnownDomains'; $ExpectedBlocked = @($DomainList); $AllowedPayload = @{ AllowList = @() } }
+        'AllowAllExternal' { $AllowFederatedUsers = $true; $ExpectedAllowed = 'AllowAllKnownDomains'; $ExpectedBlocked = @(); $AllowedPayload = @{} }
+        'BlockAllExternal' { $AllowFederatedUsers = $false; $ExpectedAllowed = 'AllowAllKnownDomains'; $ExpectedBlocked = @(); $AllowedPayload = @{} }
+        'AllowSpecificExternal' { $AllowFederatedUsers = $true; $ExpectedAllowed = @($DomainList); $ExpectedBlocked = @(); $AllowedPayload = @{ AllowedDomain = @($DomainList | ForEach-Object { @{ Domain = $_ } }) } }
+        'BlockSpecificExternal' { $AllowFederatedUsers = $true; $ExpectedAllowed = 'AllowAllKnownDomains'; $ExpectedBlocked = @($DomainList); $AllowedPayload = @{} }
     }
 
-    # GET shape: allow-all = AllowedDomains with no AllowedDomain member.
+    # GET shape: allow-all = AllowedDomains with no AllowedDomain member. A member that is
+    # PRESENT but EMPTY ({"AllowedDomain":[]}) is an explicit empty allow list - federation
+    # with nobody, the #364 breakage state - so key off presence, not item count, or broken
+    # tenants grade as aligned forever.
     $CurrentAllowedDomains = @()
     $AllowedNode = $State.AllowedDomains
-    if ($AllowedNode -and ($AllowedNode.PSObject.Properties.Name -contains 'AllowedDomain') -and $AllowedNode.AllowedDomain) {
+    $HasExplicitAllowList = [bool]($AllowedNode -and ($AllowedNode.PSObject.Properties.Name -contains 'AllowedDomain'))
+    if ($HasExplicitAllowList -and $AllowedNode.AllowedDomain) {
         $CurrentAllowedDomains = @($AllowedNode.AllowedDomain | ForEach-Object { if ($_ -is [string]) { $_ } elseif ($_.Domain) { "$($_.Domain)" } else { "$_" } }) | Sort-Object
     }
     $CurrentBlockedDomains = @()
@@ -59,7 +67,7 @@ function Get-CIPPBaselineTeamsFederationConfigurationState {
     # The comma is load-bearing: an if-expression's pipeline output unwraps one array
     # level, which turned a single allowed domain into a SCALAR - graded against the
     # expected ARRAY, identical text drifted forever.
-    $CurrentAllowed = if ($CurrentAllowedDomains.Count -eq 0) { 'AllowAllKnownDomains' } else { , @($CurrentAllowedDomains) }
+    $CurrentAllowed = if (-not $HasExplicitAllowList) { 'AllowAllKnownDomains' } else { , @($CurrentAllowedDomains) }
 
     # BlockAllExternal only grades the federation switch - the classic ignored both lists there.
     if ($DomainControl -eq 'BlockAllExternal') {
@@ -87,7 +95,7 @@ function Get-CIPPBaselineTeamsFederationConfigurationState {
             AllowTeamsConsumerInbound = $AllowTeamsConsumerInbound
             AllowFederatedUsers       = $AllowFederatedUsers
             AllowedDomains            = $AllowedPayload
-            BlockedDomains            = @($ExpectedBlocked)
+            BlockedDomains            = @($ExpectedBlocked | ForEach-Object { @{ Domain = $_ } })
         })
 
     @{ Expected = $Expected; Current = $Current }

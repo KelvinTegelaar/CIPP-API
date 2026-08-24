@@ -3,7 +3,8 @@
   "label": "Ensure connection filter IP allow list is empty",
   "cat": "Defender Standards",
   "tag": [
-    "CIS M365 7.0.0 (2.1.12)"
+    "CIS M365 7.0.0 (2.1.12)",
+    "mdo_connectionfilter"
   ],
   "impact": "Medium Impact",
   "helpText": "Ensures the connection filter IP allow list is not used. IPs on this list bypass spam, spoof, and authentication checks.",
@@ -25,7 +26,7 @@
     "EXCHANGE_S_ENTERPRISE_GOV",
     "EXCHANGE_LITE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 1,
   "compare": "subset",
   "expected": {
     "IPAllowList": []

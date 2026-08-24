@@ -3,7 +3,11 @@
   "label": "Set Exchange Outbound Spam Limits",
   "cat": "Exchange Standards",
   "tag": [
-    "CIS M365 7.0.0 (2.1.15)"
+    "CIS M365 7.0.0 (2.1.15)",
+    "mdo_recipientexternallimitperhour",
+    "mdo_recipientinternallimitperhour",
+    "mdo_recipientlimitperday",
+    "mdo_thresholdreachedaction"
   ],
   "impact": "Low Impact",
   "helpText": "Configures the outbound spam recipient limits (external per hour, internal per hour, per day) and the action to take when a limit is reached. The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one. ",
@@ -26,7 +30,7 @@
     "EXCHANGE_S_ENTERPRISE_GOV",
     "EXCHANGE_LITE"
   ],
-  "secureScoreImpact": 0,
+  "secureScoreImpact": 4,
   "compare": "subset",
   "variables": {
     "recipientLimitExternalPerHour": {

@@ -7,8 +7,8 @@ function Invoke-CIPPStandardMessageEncryption {
     .SYNOPSIS
         (Label) Enable Purview Message Encryption
     .DESCRIPTION
-        (Helptext) Enables Microsoft Purview Message Encryption by turning on Azure RMS licensing for Exchange Online. Skipped with a warning when the tenant still points at an on-premises AD RMS cluster, because AD RMS has to be migrated to Azure RMS first. This standard only turns the feature on: branding, one-time passcodes, and social ID sign-in for encrypted messages are configured in the [Configure Encrypted Message Branding (OME)](https://standards.cipp.app/standards/omebranding) standard. [Read more](https://learn.microsoft.com/en-us/purview/set-up-new-message-encryption-capabilities)
-        (DocsDescription) Sets AzureRMSLicensingEnabled to true, the only prerequisite for Microsoft Purview Message Encryption. Reports the IRM licensing state per tenant, including the licensing location, so you can see at a glance which tenants have message encryption available. Remediation is deliberately skipped for tenants with an on-premises AD RMS licensing location, as Purview Message Encryption is not compatible with AD RMS and those tenants need to be migrated to Azure RMS first.
+        (Helptext) Enables Microsoft Purview Message Encryption by turning on Azure RMS licensing for Exchange Online, and turns on simplified client access so the Encrypt button appears in Outlook on the web and the new Outlook. Skipped with a warning when the tenant still points at an on-premises AD RMS cluster, because AD RMS has to be migrated to Azure RMS first. This standard only turns the feature on: branding, one-time passcodes, and social ID sign-in for encrypted messages are configured in the [Configure Encrypted Message Branding (OME)](https://standards.cipp.app/standards/omebranding) standard. [Read more](https://learn.microsoft.com/en-us/purview/set-up-new-message-encryption-capabilities)
+        (DocsDescription) Sets AzureRMSLicensingEnabled to true, the prerequisite for Microsoft Purview Message Encryption, and SimplifiedClientAccessEnabled to true so the Encrypt button appears when composing mail in Outlook on the web and the new Outlook. Reports the IRM licensing state per tenant, including the licensing location, so you can see at a glance which tenants have message encryption available. Remediation is deliberately skipped for tenants with an on-premises AD RMS licensing location, as Purview Message Encryption is not compatible with AD RMS and those tenants need to be migrated to Azure RMS first.
     .NOTES
         CAT
             Exchange Standards
@@ -21,7 +21,7 @@ function Invoke-CIPPStandardMessageEncryption {
         ADDEDDATE
             2026-08-04
         POWERSHELLEQUIVALENT
-            Set-IRMConfiguration -AzureRMSLicensingEnabled \$true
+            Set-IRMConfiguration -AzureRMSLicensingEnabled \$true -SimplifiedClientAccessEnabled \$true
         RECOMMENDEDBY
         REQUIREDCAPABILITIES
             "EXCHANGE_S_STANDARD"
@@ -56,17 +56,19 @@ function Invoke-CIPPStandardMessageEncryption {
     # ponytail: URL-shape heuristic, the only signal Get-IRMConfiguration gives us. Get-AipServiceConfiguration would confirm it, but that needs the AIPService module which CIPP does not ship.
     $LicensingLocation = @($CurrentState.LicensingLocation | Where-Object { $_ })
     $AdRmsDetected = @($LicensingLocation | Where-Object { $_ -notmatch 'aadrm\.|azurerms|\.microsoft\.(com|us)' }).Count -gt 0
-    $StateIsCorrect = $CurrentState.AzureRMSLicensingEnabled -eq $true -and $AdRmsDetected -eq $false
+    # SimplifiedClientAccessEnabled is what makes the Encrypt button show up in Outlook on the web
+    # and the new Outlook; without it the feature is on but users have no way to reach it.
+    $StateIsCorrect = $CurrentState.AzureRMSLicensingEnabled -eq $true -and $CurrentState.SimplifiedClientAccessEnabled -eq $true -and $AdRmsDetected -eq $false
 
     if ($Settings.remediate -eq $true) {
         if ($AdRmsDetected) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "An on-premises AD RMS licensing location was found ($($LicensingLocation -join ', ')). Migrate to Azure RMS before enabling Purview Message Encryption. Skipping remediation." -sev Warning
         } elseif ($StateIsCorrect) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Purview Message Encryption is already enabled.' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Purview Message Encryption and the Outlook Encrypt button are already enabled.' -sev Info
         } else {
             try {
-                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-IRMConfiguration' -cmdParams @{ AzureRMSLicensingEnabled = $true }
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Enabled Purview Message Encryption.' -sev Info
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-IRMConfiguration' -cmdParams @{ AzureRMSLicensingEnabled = $true; SimplifiedClientAccessEnabled = $true }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Enabled Purview Message Encryption and the Outlook Encrypt button.' -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable Purview Message Encryption. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
@@ -80,13 +82,16 @@ function Invoke-CIPPStandardMessageEncryption {
         } else {
             $Message = if ($AdRmsDetected) {
                 'Purview Message Encryption cannot be used, the tenant still uses an on-premises AD RMS licensing location.'
+            } elseif ($CurrentState.AzureRMSLicensingEnabled -eq $true) {
+                'Purview Message Encryption is enabled, but the Encrypt button in Outlook (simplified client access) is not.'
             } else {
                 'Purview Message Encryption is not enabled.'
             }
             $Object = [PSCustomObject]@{
-                AzureRMSLicensingEnabled = $CurrentState.AzureRMSLicensingEnabled
-                LicensingLocation        = $LicensingLocation
-                AdRmsDetected            = $AdRmsDetected
+                AzureRMSLicensingEnabled      = $CurrentState.AzureRMSLicensingEnabled
+                SimplifiedClientAccessEnabled = $CurrentState.SimplifiedClientAccessEnabled
+                LicensingLocation             = $LicensingLocation
+                AdRmsDetected                 = $AdRmsDetected
             }
             Write-StandardsAlert -message $Message -object $Object -tenant $Tenant -standardName 'MessageEncryption' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message $Message -sev Info
@@ -95,14 +100,16 @@ function Invoke-CIPPStandardMessageEncryption {
 
     if ($Settings.report -eq $true) {
         $ReportCurrent = [PSCustomObject]@{
-            AzureRMSLicensingEnabled = $CurrentState.AzureRMSLicensingEnabled
-            LicensingLocation        = $LicensingLocation
-            AdRmsDetected            = $AdRmsDetected
+            AzureRMSLicensingEnabled      = $CurrentState.AzureRMSLicensingEnabled
+            SimplifiedClientAccessEnabled = $CurrentState.SimplifiedClientAccessEnabled
+            LicensingLocation             = $LicensingLocation
+            AdRmsDetected                 = $AdRmsDetected
         }
         $ReportExpected = [PSCustomObject]@{
-            AzureRMSLicensingEnabled = $true
-            LicensingLocation        = $LicensingLocation
-            AdRmsDetected            = $false
+            AzureRMSLicensingEnabled      = $true
+            SimplifiedClientAccessEnabled = $true
+            LicensingLocation             = $LicensingLocation
+            AdRmsDetected                 = $false
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MessageEncryption' -CurrentValue $ReportCurrent -ExpectedValue $ReportExpected -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'messageEncryptionEnabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
