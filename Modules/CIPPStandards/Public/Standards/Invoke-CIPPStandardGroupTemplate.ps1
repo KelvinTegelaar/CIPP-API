@@ -47,7 +47,18 @@ function Invoke-CIPPStandardGroupTemplate {
 
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'GroupTemplate' and (RowKey eq '$($Settings.TemplateList.value -join "' or RowKey eq '")')"
-    $GroupTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+    # Resolve %variables% (e.g. %tenantname%) in the template body before any comparison. Groups are
+    # created through New-GraphPostRequest, which substitutes these tokens, so the tenant's actual
+    # group ends up named with the resolved value. Comparing the raw token-bearing name against it
+    # never matched, which recreated the group on every run and left the report permanently
+    # non-compliant. Replacement runs against the serialized JSON (escaped for that context), exactly
+    # as Push-CIPPStandard does for the settings.
+    $GroupTemplates = foreach ($TemplateJSON in (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON) {
+        if ($TemplateJSON -match '%') {
+            $TemplateJSON = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $TemplateJSON -EscapeForJson
+        }
+        $TemplateJSON | ConvertFrom-Json
+    }
 
     if ('dynamicDistribution' -in $GroupTemplates.groupType) {
         try {

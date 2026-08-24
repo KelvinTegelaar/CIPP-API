@@ -27,6 +27,8 @@ BeforeAll {
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $CurrentValue, $ExpectedValue, $TenantFilter) }
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $message, $sev, $headers, $LogData, $User) }
     function Get-NormalizedError { [CmdletBinding()] param($Message) $Message }
+    # Default no-op: only the variable-name tests mock this to actually substitute tokens.
+    function Get-CIPPTextReplacement { [CmdletBinding()] param($TenantFilter, $Text, [switch]$EscapeForJson) $Text }
 
     . $StandardPath
 
@@ -57,6 +59,23 @@ BeforeAll {
                     groupType       = 'dynamicDistribution'
                     membershipRules = "Alias -ne `$null"
                     GUID            = '22222222-2222-2222-2222-222222222222'
+                } | ConvertTo-Json -Depth 10)
+        }
+    }
+
+    # A generic template whose displayName carries a %tenantname% token, the way an operator writes
+    # a per-tenant group name. New-GraphPostRequest resolves the token at creation time, so the real
+    # group is named 'Contoso-Group'.
+    $script:VariableGroupName = '%tenantname%-Group'
+    $script:ResolvedGroupName = 'Contoso-Group'
+    function script:New-VariableTemplateEntity {
+        [pscustomobject]@{
+            JSON = ([pscustomobject]@{
+                    displayName     = $script:VariableGroupName
+                    description     = 'Test description'
+                    groupType       = 'generic'
+                    membershipRules = $null
+                    GUID            = '33333333-3333-3333-3333-333333333333'
                 } | ConvertTo-Json -Depth 10)
         }
     }
@@ -104,6 +123,40 @@ Describe 'Invoke-CIPPStandardGroupTemplate' {
             Invoke-CIPPStandardGroupTemplate -Tenant $script:Tenant -Settings (script:New-Settings -Remediate)
 
             Should -Invoke -CommandName New-CIPPGroup -Times 1 -Exactly -Because 'an empty read with no error is a real empty tenant'
+        }
+    }
+
+    Context 'template display name contains a %variable%' {
+        BeforeEach {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { script:New-VariableTemplateEntity }
+            # Resolve %tenantname% the way Get-CIPPTextReplacement does at runtime, so comparisons run
+            # against the same name New-GraphPostRequest gives the real group.
+            Mock -CommandName Get-CIPPTextReplacement -MockWith {
+                param($TenantFilter, $Text, [switch]$EscapeForJson)
+                $Text -replace '%tenantname%', 'Contoso'
+            }
+        }
+
+        It 'does not recreate the group when the resolved-name group already exists' {
+            Mock -CommandName New-GraphGetRequest -MockWith {
+                @([pscustomobject]@{ id = 'existing-id'; displayName = $script:ResolvedGroupName; description = 'Test description'; membershipRule = $null })
+            }
+
+            Invoke-CIPPStandardGroupTemplate -Tenant $script:Tenant -Settings (script:New-Settings -Remediate)
+
+            Should -Invoke -CommandName New-CIPPGroup -Times 0 -Exactly -Because 'the group exists under its resolved name, so recreating it would make a duplicate'
+        }
+
+        It 'reports compliant when the resolved-name group exists' {
+            Mock -CommandName New-GraphGetRequest -MockWith {
+                @([pscustomobject]@{ id = 'existing-id'; displayName = $script:ResolvedGroupName; description = 'Test description'; membershipRule = $null })
+            }
+
+            Invoke-CIPPStandardGroupTemplate -Tenant $script:Tenant -Settings (script:New-Settings -Report)
+
+            Should -Invoke -CommandName Set-CIPPStandardsCompareField -Times 1 -Exactly -ParameterFilter {
+                @($CurrentValue.MissingGroups).Count -eq 0
+            } -Because 'the resolved name matches an existing group, so nothing is missing'
         }
     }
 
