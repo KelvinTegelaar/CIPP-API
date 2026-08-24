@@ -1,0 +1,10 @@
+{
+    "Name": "Mimecast Offshore",
+    "MxMatch": "^(?<Prefix>[a-z]{2,3})-smtp-inbound-[0-9]\\.mimecast-offshore\\.com",
+    "SpfInclude": "",
+    "SpfReplace": [],
+    "Selectors": [],
+    "_MxComment": "https://community.mimecast.com/s/article/Connect-Application-Modifying-Your-MX-Records-673313100",
+    "_SpfComment": "Offshore (Jersey) region netblock include is not publicly documented; leave empty so no incorrect SPF include is asserted.",
+    "_DkimComment": "https://community.mimecast.com/s/article/DNS-Authentication-Configuration-Guide-345109074"
+}

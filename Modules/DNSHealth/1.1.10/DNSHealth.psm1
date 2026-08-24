@@ -2069,7 +2069,14 @@ function Read-SpfRecord {
 
     # Look for expected include record and report pass or fail
     if ($ExpectedInclude -ne '') {
-        if ($RecordList.Domain -notcontains $ExpectedInclude) {
+        $SpfMatch = $SpfResults.MailProvider.SpfMatch
+        $RegexMatchedDomain = if ($SpfMatch) {
+            $RecordList.Domain | Where-Object { $_ -match $SpfMatch } | Select-Object -First 1
+        }
+
+        if ($RegexMatchedDomain) {
+            $ValidationPasses.Add('The expected mail provider entry is part of the record.') | Out-Null
+        } elseif ($RecordList.Domain -notcontains $ExpectedInclude) {
             $ExpectedIncludeSpf = Read-SpfRecord -Domain $ExpectedInclude -Level ExpectedInclude
             $ExpectedIPCount = $ExpectedIncludeSpf.IPAddresses | Measure-Object | Select-Object -ExpandProperty Count
             $FoundIPCount = Compare-Object $IPAddresses $ExpectedIncludeSpf.IPAddresses -IncludeEqual | Where-Object -Property SideIndicator -EQ '==' | Measure-Object | Select-Object -ExpandProperty Count
@@ -2228,7 +2235,7 @@ function Read-SpfRecord {
     # Output SpfResults object
     $SpfResults
 }
-#EndRegion './Public/Records/Read-SPFRecord.ps1' 577
+#EndRegion './Public/Records/Read-SPFRecord.ps1' 584
 #Region './Public/Records/Read-TlsRptRecord.ps1' -1
 
 function Read-TlsRptRecord {
@@ -3036,3 +3043,4 @@ function Test-MtaSts {
     $MtaSts
 }
 #EndRegion './Public/Tests/Test-MtaSts.ps1' 58
+

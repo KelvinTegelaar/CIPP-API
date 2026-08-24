@@ -12,7 +12,7 @@
     RootModule        = 'DNSHealth.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.1.8'
+    ModuleVersion     = '1.1.10'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -53,8 +53,14 @@
     # Modules that must be imported into the global environment prior to importing this module
     #RequiredModules   = @('')
 
-    # Assemblies that must be loaded prior to importing this module
-    # RequiredAssemblies = @()
+    # Assemblies that must be loaded prior to importing this module.
+    # Preloads the precompiled SevenTinyRsa.dll (Source/SevenTinyRsa/) so
+    # Get-RsaPublicKeyInfo finds [SevenTiny.Bantina.Security.RSACommon]
+    # already registered — its existing Add-Type guard then short-circuits
+    # via the `-as [type]` check. Required for hosts where runtime
+    # `Add-Type -Language CSharp` fails (e.g. embedded-PowerShell hosts
+    # with no $PSHOME/ref reference-assemblies directory).
+    RequiredAssemblies = @('SevenTinyRsa.dll')
 
     # Script files (.ps1) that are run in the caller's environment prior to importing this module.
     ScriptsToProcess  = @()
@@ -78,7 +84,7 @@
     #VariablesToExport = '*'
 
     # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-    #AliasesToExport = '*'
+    AliasesToExport   = @()
 
     # DSC resources to export from this module
     # DscResourcesToExport = @()
