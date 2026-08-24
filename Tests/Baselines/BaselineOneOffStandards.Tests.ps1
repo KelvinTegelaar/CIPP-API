@@ -234,12 +234,30 @@ Describe 'Get-CIPPBaselineTeamsFederationConfigurationState' {
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
     }
 
+    It 'grades an explicit EMPTY allow list as drift, not as allow-all (#364 breakage state)' {
+        # {"AllowedDomain":[]} means federation with NOBODY. Counting items instead of
+        # checking member presence graded broken tenants compliant forever.
+        Mock New-CIPPDbRequest { @(@{ AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false; AllowFederatedUsers = $true; AllowedDomains = @{ AllowedDomain = @() }; BlockedDomains = @() } | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DomainControl = 'AllowAllExternal'; AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false } }
+        $Prepared = Get-CIPPBaselineTeamsFederationConfigurationState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.allowedDomains | Should -Not -Be 'AllowAllKnownDomains'
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'carries an empty OBJECT for allow-all - an empty ARRAY would be coerced into a block-everything allow list (#364)' {
+        Mock New-CIPPDbRequest { @(@{ AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false; AllowFederatedUsers = $true; AllowedDomains = @{}; BlockedDomains = @() } | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DomainControl = 'AllowAllExternal'; AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false } }
+        $Prepared = Get-CIPPBaselineTeamsFederationConfigurationState -Item $Item -TenantFilter $script:Tenant
+        $Payload = $Prepared.Current.writePayload.AllowedDomains
+        ($Payload | ConvertTo-Json -Compress) | Should -Be '{}'
+    }
+
     It 'writes through the ConfigAPI with the carried PUT-shaped payload' {
         Mock New-TeamsRequestV2 { }
-        $Current = [PSCustomObject]@{ writePayload = [PSCustomObject]@{ AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false; AllowFederatedUsers = $true; AllowedDomains = @{ AllowList = @('a.com') }; BlockedDomains = @() } }
+        $Current = [PSCustomObject]@{ writePayload = [PSCustomObject]@{ AllowTeamsConsumer = $false; AllowTeamsConsumerInbound = $false; AllowFederatedUsers = $true; AllowedDomains = @{ AllowedDomain = @(@{ Domain = 'a.com' }) }; BlockedDomains = @() } }
         Invoke-CIPPBaselineTeamsFederationConfiguration -Remediate $null -TenantFilter $script:Tenant -Current $Current
         Should -Invoke New-TeamsRequestV2 -Times 1 -Exactly -ParameterFilter {
-            $Action -eq 'Set' -and $NoRead -eq $true -and $Parameters.AllowedDomains.AllowList -contains 'a.com'
+            $Action -eq 'Set' -and $NoRead -eq $true -and @($Parameters.AllowedDomains.AllowedDomain).Domain -contains 'a.com'
         }
     }
 }
