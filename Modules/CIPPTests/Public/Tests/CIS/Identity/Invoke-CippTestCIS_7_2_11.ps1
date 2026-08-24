@@ -15,12 +15,22 @@ function Invoke-CippTestCIS_7_2_11 {
 
         $Cfg = $SPO | Select-Object -First 1
 
-        if ($Cfg.DefaultLinkPermission -eq 'View') {
+        # The SPOTenant cache comes from the SharePoint CSOM endpoint, which returns
+        # DefaultLinkPermission as a numeric SharingPermissionType (None=0, View=1, Edit=2) - not the
+        # friendly name Get-SPOTenant shows. Normalise before comparing, or every tenant false-fails.
+        $PermissionName = switch ("$($Cfg.DefaultLinkPermission)") {
+            '0' { 'None' }
+            '1' { 'View' }
+            '2' { 'Edit' }
+            default { "$($Cfg.DefaultLinkPermission)" }
+        }
+
+        if ($PermissionName -eq 'View') {
             $Status = 'Passed'
             $Result = 'DefaultLinkPermission is set to View.'
         } else {
             $Status = 'Failed'
-            $Result = "DefaultLinkPermission is set to $($Cfg.DefaultLinkPermission). CIS requires View."
+            $Result = "DefaultLinkPermission is set to $PermissionName. CIS requires View."
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_7_2_11' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'The SharePoint default sharing link permission is set' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Data Protection'
