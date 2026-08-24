@@ -23283,7 +23283,7 @@
         "tags": [
           "Email-Exchange > Tools"
         ],
-        "description": "Enables or disables Microsoft Purview Message Encryption for a tenant by setting AzureRMSLicensingEnabled, or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.",
+        "description": "Enables or disables Microsoft Purview Message Encryption for a tenant by setting AzureRMSLicensingEnabled and the Outlook Encrypt button by setting SimplifiedClientAccessEnabled, or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.",
         "requestBody": {
           "required": true,
           "content": {
@@ -23306,6 +23306,10 @@
                   },
                   "Sender": {
                     "type": "string"
+                  },
+                  "SimplifiedClientAccessEnabled": {
+                    "type": "string",
+                    "description": "Only touch the Encrypt button setting when the caller sent it, so an API client that posts just AzureRMSLicensingEnabled does not silently disable it."
                   },
                   "tenantFilter": {
                     "type": "string"
