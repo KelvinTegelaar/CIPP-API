@@ -583,14 +583,6 @@ function Invoke-NinjaOneTenantSync {
                 DeviceLink          = $ParsedDeviceName
             }
 
-            Add-CIPPAzDataTableEntity @DeviceTable -Entity @{
-                PartitionKey = $Customer.CustomerId
-                RowKey       = $device.AzureADDeviceId
-                RawDevice    = "$($ParsedDevice | ConvertTo-Json -Depth 100 -Compress)"
-            } -Force
-
-            $ParsedDevices.add($ParsedDevice)
-
             ### Update NinjaOne Device Fields
             if ($MatchedNinjaDevice) {
                 $NinjaDeviceUpdate = [PSCustomObject]@{}
@@ -713,14 +705,29 @@ function Invoke-NinjaOneTenantSync {
 
             }
 
-            # Update Device
+            # Update Device. Default to success so devices with no mapped fields are still cached.
+            $DeviceFieldsUpdated = $true
             if ($MappedFields.DeviceSummary -or $MappedFields.DeviceLinks -or $MappedFields.DeviceCompliance) {
+                $DeviceFieldsUpdated = $false
                 try {
                     $UpdateBody = $NinjaDeviceUpdate | ConvertTo-Json -Depth 100
                     $Result = Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/device/$($MatchedNinjaDevice.id)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body $UpdateBody
+                    $DeviceFieldsUpdated = $true
                 } catch {
-                    Write-Verbose "Error details: $($_ | ConvertTo-Json -Depth 5)"
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -tenant $TenantFilter -API 'NinjaOneSync' -message "Failed to update NinjaOne custom fields for device '$($Device.deviceName)' ($($MatchedNinjaDevice.id)): $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
                 }
+            }
+
+            # Only cache the device once its fields have been written, so a failed update is retried on the next sync instead of being skipped permanently.
+            if ($DeviceFieldsUpdated) {
+                Add-CIPPAzDataTableEntity @DeviceTable -Entity @{
+                    PartitionKey = $Customer.CustomerId
+                    RowKey       = $device.AzureADDeviceId
+                    RawDevice    = "$($ParsedDevice | ConvertTo-Json -Depth 100 -Compress)"
+                } -Force
+
+                $ParsedDevices.add($ParsedDevice)
             }
         }
 
