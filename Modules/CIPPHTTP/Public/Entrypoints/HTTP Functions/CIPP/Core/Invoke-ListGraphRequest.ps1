@@ -99,6 +99,13 @@ function Invoke-ListGraphRequest {
         $GraphRequestParams.ManualPagination = [System.Convert]::ToBoolean($Request.Query.manualPagination)
     }
 
+    # $top is Graph's page size, so $top=1 with pagination fetches the entire collection one
+    # record per round trip. A caller asking for 1 wants one record; only an explicit
+    # NoPagination/manualPagination overrides this.
+    if ($Parameters.'$top' -eq '1' -and $null -eq $Request.Query.NoPagination -and $null -eq $Request.Query.manualPagination) {
+        $GraphRequestParams.NoPagination = $true
+    }
+
     # Continue a manualPagination walk: pass back the @odata.nextLink returned with the
     # previous page. Endpoint is still required, and the other query options are already
     # encoded in the link.
