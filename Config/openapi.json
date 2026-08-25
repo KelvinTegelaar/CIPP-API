@@ -20892,6 +20892,9 @@
             }
           },
           {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
             "name": "TenantID",
             "in": "query",
             "required": false,
