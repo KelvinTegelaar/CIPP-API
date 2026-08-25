@@ -1,7 +1,7 @@
 function Invoke-ExecUserBookmarks {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.ReadWrite
     #>
