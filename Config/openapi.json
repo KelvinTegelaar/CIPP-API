@@ -35973,7 +35973,8 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.ReadWrite"
+        "x-cipp-role": "CIPP.Core.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecUserSettings": {
