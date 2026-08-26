@@ -70,12 +70,14 @@ Describe 'Send-CIPPScheduledTaskAlert - PSA snooze links' {
         }
 
         Mock -CommandName Send-CIPPAlert -MockWith {
-            param($Type, $Title, $HTMLContent, $JSONContent, $TenantFilter, $AffectedUser)
+            param($Type, $Title, $HTMLContent, $JSONContent, $TenantFilter, $AffectedUser, $PSAReference, $PSATicketId)
             $script:SentAlerts.Add([pscustomobject]@{
                     Type         = $Type
                     Title        = $Title
                     HTMLContent  = $HTMLContent
                     AffectedUser = $AffectedUser
+                    PSAReference = $PSAReference
+                    PSATicketId  = $PSATicketId
                 })
         }
     }
@@ -149,6 +151,66 @@ Describe 'Send-CIPPScheduledTaskAlert - PSA snooze links' {
 
             $script:SentAlerts.Count | Should -Be 1
             $script:SentAlerts[0].HTMLContent | Should -Match 'Snooze Individual Alerts'
+        }
+    }
+
+    # The task's reference is what lets a PSA add the result to the ticket the request came from
+    # rather than opening a second one, so every PSA call has to carry it - including the per-user
+    # split, or a split task's notes would land in new tickets while the consolidated one threads.
+    Context 'when the task carries a reference' {
+        BeforeEach {
+            $script:TaskInfo | Add-Member -NotePropertyName Reference -NotePropertyValue '[ID:1380] Starter Creation' -Force
+        }
+
+        It 'passes it on the consolidated ticket' {
+            $script:LinkTicketsToUsers = $false
+
+            Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+            $script:SentAlerts.Count | Should -Be 1
+            $script:SentAlerts[0].PSAReference | Should -Be '[ID:1380] Starter Creation'
+        }
+
+        It 'passes it on every split ticket' {
+            Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+            $script:SentAlerts.Count | Should -Be 2
+            foreach ($Alert in $script:SentAlerts) {
+                $Alert.PSAReference | Should -Be '[ID:1380] Starter Creation'
+            }
+        }
+
+        It 'passes an explicit PsaTicketId alongside it' {
+            $script:TaskInfo | Add-Member -NotePropertyName PsaTicketId -NotePropertyValue '1380' -Force
+            $script:LinkTicketsToUsers = $false
+
+            Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+            $script:SentAlerts[0].PSATicketId | Should -Be '1380'
+        }
+
+        It 'keeps the ticket id out of the email subject entirely' {
+            # PsaTicketId drives the PSA note and nothing else. A mail-ingesting PSA threads on
+            # whatever the operator chose to put in Reference, so the subject must not be stamped
+            # with a ticket token nobody asked for.
+            $script:TaskInfo | Add-Member -NotePropertyName PsaTicketId -NotePropertyValue '1380' -Force
+            $script:TaskInfo | Add-Member -NotePropertyName Reference -NotePropertyValue 'Starter Creation' -Force
+            $script:TaskInfo.PostExecution = 'email'
+
+            Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+            $script:SentAlerts[0].Type | Should -Be 'email'
+            $script:SentAlerts[0].Title | Should -Not -Match '\[ID:'
+            $script:SentAlerts[0].Title | Should -BeLike '*Reference: Starter Creation*'
+        }
+
+        It 'sends nothing extra when the task has no reference' {
+            $script:TaskInfo | Add-Member -NotePropertyName Reference -NotePropertyValue $null -Force
+            $script:LinkTicketsToUsers = $false
+
+            Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+            $script:SentAlerts[0].PSAReference | Should -BeNullOrEmpty
         }
     }
 }

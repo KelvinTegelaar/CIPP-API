@@ -42,6 +42,7 @@ function Invoke-ExecOffboardUser {
                     PSA     = [bool]$Request.Body.PostExecution.psa
                 }
                 Reference     = $Request.Body.reference
+                PsaTicketId   = $Request.Body.PsaTicketId
             }
             $Params = @{
                 Task    = $taskObject

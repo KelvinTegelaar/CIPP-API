@@ -247,6 +247,13 @@ function Send-CIPPScheduledTaskAlert {
             '*psa*' {
                 $PsaSplitSent = $false
                 $TaskAffectedUser = $null
+                # A task can name the ticket the work came from, either explicitly (PsaTicketId, set
+                # from the ticket box on the wizards) or inside its free-text reference. Both travel
+                # with the alert so a PSA that recognises them can add the result to that ticket
+                # rather than opening a new one; the extension decides which wins. Every PSA call
+                # below carries them, so a split task's per-user notes land on the same ticket.
+                $PsaReference = $TaskInfo.Reference
+                $PsaTicketId = $TaskInfo.PsaTicketId
                 try {
                     $ExtConfigTable = Get-CIPPTable -TableName Extensionsconfig
                     $ExtConfig = (Get-CIPPAzDataTableEntity @ExtConfigTable).config | ConvertFrom-Json -ErrorAction SilentlyContinue
@@ -334,7 +341,7 @@ function Send-CIPPScheduledTaskAlert {
                                     if ([string]::IsNullOrWhiteSpace($GroupKey)) {
                                         # Rows without a usable user identifier - fall back to the
                                         # task-level affected user if one was resolved.
-                                        $GroupParams = @{ Type = 'psa'; Title = $title; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter }
+                                        $GroupParams = @{ Type = 'psa'; Title = $title; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId }
                                         if ($TaskAffectedUser) { $GroupParams.AffectedUser = $TaskAffectedUser }
                                         Send-CIPPAlert @GroupParams
                                     } else {
@@ -345,7 +352,7 @@ function Send-CIPPScheduledTaskAlert {
                                             UPN         = $GroupKey
                                             DisplayName = $GroupDisplayName
                                         }
-                                        Send-CIPPAlert -Type 'psa' -Title $UserTitle -HTMLContent $GroupHTML -TenantFilter $TenantFilter -AffectedUser $AffectedUser
+                                        Send-CIPPAlert -Type 'psa' -Title $UserTitle -HTMLContent $GroupHTML -TenantFilter $TenantFilter -AffectedUser $AffectedUser -PSAReference $PsaReference -PSATicketId $PsaTicketId
                                     }
                                 }
                                 $PsaSplitSent = $true
@@ -357,12 +364,16 @@ function Send-CIPPScheduledTaskAlert {
                 }
 
                 if (-not $PsaSplitSent) {
-                    $PsaParams = @{ Type = 'psa'; Title = $title; HTMLContent = (ConvertTo-PSAHtml -Html $HTML); TenantFilter = $TenantFilter }
+                    $PsaParams = @{ Type = 'psa'; Title = $title; HTMLContent = (ConvertTo-PSAHtml -Html $HTML); TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId }
                     if ($TaskAffectedUser) { $PsaParams.AffectedUser = $TaskAffectedUser }
                     Send-CIPPAlert @PsaParams
                 }
             }
             '*email*' {
+                # Deliberately untouched by PsaTicketId: that field drives the PSA note only. What a
+                # mail-ingesting PSA threads on is whatever the operator put in Reference, which is
+                # already carried into the title above - stamping a ticket token onto every subject
+                # would push CIPP's own convention onto recipients who never asked for it.
                 $EmailParams = @{
                     Type         = 'email'
                     Title        = $title

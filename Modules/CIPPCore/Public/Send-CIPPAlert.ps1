@@ -17,6 +17,8 @@ function Send-CIPPAlert {
         $RowKey = [string][guid]::NewGuid(),
         $Attachments,
         $AffectedUser,
+        $PSAReference,
+        $PSATicketId,
         [switch]$UseStandardizedSchema
     )
     Write-Information 'Shipping Alert'
@@ -357,6 +359,15 @@ function Send-CIPPAlert {
                     TenantId   = $TenantFilter
                     AlertText  = "$HTMLContent"
                     AlertTitle = "$PsaTitle"
+                }
+                if ($PSAReference) {
+                    # Passed through verbatim - what a reference means is the PSA extension's call.
+                    $Alert.Reference = $PSAReference
+                    Write-Information "PSA alert reference: $PSAReference"
+                }
+                if ($PSATicketId) {
+                    $Alert.PsaTicketId = $PSATicketId
+                    Write-Information "PSA alert target ticket: $PSATicketId"
                 }
                 if ($AffectedUser) {
                     $Alert.AffectedUser = $AffectedUser

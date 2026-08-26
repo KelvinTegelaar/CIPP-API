@@ -6964,6 +6964,9 @@
                   "PrimDomain": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
+                  "PsaTicketId": {
+                    "type": "string"
+                  },
                   "reference": {
                     "type": "string"
                   },
@@ -27370,6 +27373,9 @@
                       }
                     }
                   },
+                  "PsaTicketId": {
+                    "type": "string"
+                  },
                   "reference": {
                     "type": "string"
                   },
@@ -44706,6 +44712,10 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
+                      "PsaTicketId": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
                       "PsaTicketStrategy": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -50335,6 +50345,12 @@
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
                       },
+                      "PsaTicketId": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Reference": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "RowKey": {
                         "x-cipp-field-source": "storage"
                       },
@@ -52546,6 +52562,10 @@
                         "x-cipp-field-source": "storage"
                       },
                       "PostExecution": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PsaTicketId": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
@@ -60269,6 +60289,12 @@
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
                       },
+                      "PsaTicketId": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Reference": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "RowKey": {
                         "x-cipp-field-source": "storage"
                       },
@@ -64326,6 +64352,12 @@
                       "x-cipp-field-source": "storage"
                     },
                     "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PsaTicketId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Reference": {
                       "x-cipp-field-source": "storage"
                     },
                     "Results": {
