@@ -103,7 +103,15 @@ function Set-CIPPIntunePolicy {
                 $ComplianceODataType = ($RawJSON | ConvertFrom-Json).'@odata.type'
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance -ODataType $ComplianceODataType
                 if ($FuzzyResult) {
-                    $RawJSON = ConvertTo-Json -InputObject ($PolicyFile | Select-Object * -ExcludeProperty 'scheduledActionsForRule') -Depth 20 -Compress
+                    $EditPolicy = $PolicyFile | Select-Object * -ExcludeProperty 'scheduledActionsForRule'
+                    # deviceCompliancePolicies is a polymorphic collection with an abstract base type. A PATCH
+                    # carrying derived-type properties (osMinimumVersion, workProfile*, ...) with no @odata.type
+                    # fails Graph model validation. Templates imported or captured without it (RAWJson has no
+                    # @odata.type) hit this, so borrow the concrete type from the matched policy.
+                    if (-not $EditPolicy.'@odata.type' -and $FuzzyResult.Policy.'@odata.type') {
+                        $null = $EditPolicy | Add-Member -MemberType NoteProperty -Name '@odata.type' -Value $FuzzyResult.Policy.'@odata.type' -Force
+                    }
+                    $RawJSON = ConvertTo-Json -InputObject $EditPolicy -Depth 20 -Compress
                     $PostType = 'edited'
                     $ExistingID = $FuzzyResult.Policy
                     if ($FuzzyResult.MatchType -eq 'fuzzy') {
