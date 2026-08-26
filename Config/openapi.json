@@ -23629,6 +23629,123 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecLicensePricing": {
+      "post": {
+        "summary": "ExecLicensePricing",
+        "operationId": "ExecLicensePricing",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Manage MSP-global license price overrides used by the license optimization report.\nSetPrice upserts a per-SKU monthly price; RemovePrice deletes an override so the SKU falls\nback to the shipped MSRP estimate.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "enum": [
+                      "RemovePrice",
+                      "SetPrice"
+                    ],
+                    "description": "SetPrice or RemovePrice"
+                  },
+                  "Currency": {
+                    "type": "string",
+                    "description": "Overrides are currency-scoped: one row per (skuId, currency), so an AUD override and a USD override for the same SKU coexist. RowKey = \"{skuId}-{currency}\"."
+                  },
+                  "MonthlyPrice": {
+                    "type": "number",
+                    "description": "Monthly price per seat, in the given currency"
+                  },
+                  "Product_Display_Name": {
+                    "type": "string"
+                  },
+                  "skuId": {
+                    "type": "string",
+                    "description": "The SKU GUID (skuId) the price applies to"
+                  },
+                  "skuPartNumber": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "Action"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "Currency": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "MonthlyPrice": {
+                      "type": "number",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Product_Display_Name": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "skuId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "skuPartNumber": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Directory.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecLicenseSearch": {
       "post": {
         "summary": "ExecLicenseSearch",
@@ -47999,6 +48116,147 @@
           }
         ],
         "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListLicenseOptimization": {
+      "get": {
+        "summary": "ListLicenseOptimization",
+        "operationId": "ListLicenseOptimization",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "License cost-optimization report for a tenant: a monetary summary plus reclaim\nopportunities across five waste tiers (unassigned seats, disabled and inactive licensed\naccounts, mailbox-only downgrade candidates, and redundant overlapping SKUs). Computed from\nthe reporting-DB cache. For tenantFilter=AllTenants it returns a per-tenant summary money\nmap (ranked by reclaimable spend) instead of the full opportunity detail.",
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "query",
+            "description": "Currency the money figures are resolved in (ISO code); defaults to USD",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "inactiveDays",
+            "in": "query",
+            "description": "Sign-in age in days past which an enabled licensed user counts as inactive (default 90)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "The tenant to report on, or AllTenants for the cross-tenant summary money map",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Directory.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListLicensePricing": {
+      "get": {
+        "summary": "ListLicensePricing",
+        "operationId": "ListLicensePricing",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Lists the resolved monthly price for every known license SKU: MSP price overrides merged\nover the shipped MSRP estimates. Consumed by the license optimization report and its\nprice-management UI. Each row carries a Source of Override, Estimate, or Unknown.\n\nPrices are resolved in the requested currency (?currency=, default USD). The response also\ncarries the list of currencies present in the price data so the UI can offer a selector.",
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "query",
+            "description": "Currency to resolve prices in (ISO code); defaults to USD",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "Currency": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "MonthlyPrice": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Product_Display_Name": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "skuId": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "skuPartNumber": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Source": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Directory.Read",
         "x-cipp-any-tenant": true
       }
     },

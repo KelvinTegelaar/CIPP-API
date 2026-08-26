@@ -69,6 +69,7 @@ function Invoke-CIPPDBCacheCollection {
             'OAuth2PermissionGrants'
             'AppRoleAssignments'
             'LicenseOverview'
+            'ActiveUserDetail'
             'BitlockerKeys'
             'AdminReportSettings'
             'PeopleInsights'
