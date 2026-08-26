@@ -58706,6 +58706,545 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListUserReportedMessage": {
+      "get": {
+        "summary": "ListUserReportedMessage",
+        "operationId": "ListUserReportedMessage",
+        "tags": [
+          "Email-Exchange > Spamfilter"
+        ],
+        "description": "Retrieves the raw EML content of a user reported message by its Internet Message ID. Tries the quarantine store first (Export-QuarantineMessage), then falls back to reading the message from the recipient's or reporter's mailbox via Graph.",
+        "parameters": [
+          {
+            "name": "InternetMessageId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "RecipientEmail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReporterEmail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "properties": {
+                      "aboutMe": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "accountEnabled": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "ageGroup": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "assignedLicenses": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "assignedPlans": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "authorizationInfo": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "birthday": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "businessPhones": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "city": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "companyName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "consentProvidedForMinor": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "country": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "createdDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "creationType": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "customSecurityAttributes": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "deletedDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "department": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "deviceEnrollmentLimit": {
+                        "type": "integer",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "employeeHireDate": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "employeeId": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "employeeLeaveDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "employeeOrgData": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "employeeType": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "externalUserState": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "externalUserStateChangeDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "faxNumber": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "givenName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "hireDate": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "identities": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "identityParentId": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "imAddresses": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "interests": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "isManagementRestricted": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "isResourceAccount": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "jobTitle": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "lastPasswordChangeDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "legalAgeGroupClassification": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "licenseAssignmentStates": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "mail": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "mailboxSettings": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "mailNickname": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "mobilePhone": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "mySite": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "officeLocation": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesDistinguishedName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesDomainName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesExtensionAttributes": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesImmutableId": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesLastSyncDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesProvisioningErrors": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesSamAccountName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesSecurityIdentifier": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesSyncEnabled": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "onPremisesUserPrincipalName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "otherMails": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "passwordPolicies": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "passwordProfile": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "pastProjects": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "preferredDataLocation": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "preferredLanguage": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "preferredName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "print": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "provisionedPlans": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "proxyAddresses": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "responsibilities": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "schools": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "securityIdentifier": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "serviceProvisioningErrors": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "showInAddressList": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "signInActivity": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "signInSessionsValidFromDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "skills": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "state": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "streetAddress": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "surname": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "usageLocation": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "userPrincipalName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "userType": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.SpamFilter.Read"
+      }
+    },
+    "/api/ListUserReportedMessages": {
+      "get": {
+        "summary": "ListUserReportedMessages",
+        "operationId": "ListUserReportedMessages",
+        "tags": [
+          "Email-Exchange > Spamfilter"
+        ],
+        "description": "Lists user reported email threat submissions (Defender Submissions with source 'user') for a tenant.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "properties": {
+                      "adminReview": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "attackSimulationInfo": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "Category": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity,frontend"
+                      },
+                      "clientSource": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "contentType": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "createdBy": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "createdDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "internetMessageId": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "Metadata": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "originalCategory": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "receivedDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "RecipientEmail": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "recipientEmailAddress": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "ReportedBy": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ReportedDateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "result": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "ResultCategory": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Results": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Sender": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity,frontend"
+                      },
+                      "senderIP": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "source": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "Status": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity,frontend"
+                      },
+                      "Subject": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity,frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "tenantAllowOrBlockListAction": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "tenantId": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.SpamFilter.Read"
+      }
+    },
     "/api/ListUsers": {
       "get": {
         "summary": "ListUsers",
