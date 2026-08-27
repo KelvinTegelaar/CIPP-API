@@ -19,49 +19,50 @@ function Set-CIPPDBCacheGroups {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching groups' -sev Debug
 
+        $MemberBatchSize = 50
         $GroupSelect = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,assignedLicenses,licenseProcessingState'
-        $Groups = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=$GroupSelect&`$expand=owners(`$select=id,displayName,userPrincipalName)" -tenantid $TenantFilter
+        $GroupUri = "https://graph.microsoft.com/beta/groups?`$top=999&`$select=$GroupSelect&`$expand=owners(`$select=id,displayName,userPrincipalName)"
 
-        # Build bulk request for group members
-        $MemberRequests = $Groups | ForEach-Object {
-            if ($_.id) {
-                [PSCustomObject]@{
-                    id     = $_.id
-                    method = 'GET'
-                    url    = "/groups/$($_.id)/members?`$top=999&`$select=id,displayName,userPrincipalName"
+        # Stream groups in batches of $MemberBatchSize so peak memory is one batch of rows
+        # plus their member lists, not the whole tenant. The writer is opened before the
+        # pipeline on purpose: GetSteppablePipeline() captures whichever scope is live, so
+        # opening it inside ForEach-Object captures the Graph call's scope, which is gone
+        # by End() - the end block then fails with "is not recognized".
+        $CachedCount = 0
+        $PendingBatch = [System.Collections.Generic.List[object]]::new()
+        $Writer = { Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -AddCount }.GetSteppablePipeline()
+        $Writer.Begin($true)
+
+        function Write-GroupBatch {
+            param(
+                [System.Collections.Generic.List[object]]$Batch,
+                $PipelineWriter,
+                [ref]$Count
+            )
+
+            if ($Batch.Count -eq 0) { return }
+
+            $MemberRequests = $Batch | ForEach-Object {
+                if ($_.id -and $_.groupTypes -notcontains 'DynamicMembership') {
+                    [PSCustomObject]@{
+                        id     = $_.id
+                        method = 'GET'
+                        url    = "/groups/$($_.id)/members?`$top=999&`$select=id,displayName,userPrincipalName"
+                    }
                 }
             }
-        }
 
-        # Index the member responses by group id. The previous per-group
-        # 'Where-Object { $_.id -eq $Group.id }' rescanned the whole response array for every
-        # group, which is O(groups x groups) - 100M comparisons on a 10k-group tenant.
-        $MembersByGroupId = @{}
-        # Tracks which shape the rows take: groups fetched with a member lookup carry a
-        # 'members' property (null when the lookup returned nothing for that group), groups
-        # fetched without one omit the property entirely. Keyed off whether the lookup ran,
-        # not off whether it returned anything, so an empty response still yields the
-        # members-shaped row the previous implementation produced.
-        $HasMembers = [bool]$MemberRequests
-        if ($HasMembers) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Fetching group members' -sev Debug
-            $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter
-            foreach ($Result in $MemberResults) {
-                if ($Result.id) { $MembersByGroupId[$Result.id] = $Result.body.value }
+            $MembersByGroupId = @{}
+            if ($MemberRequests) {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Fetching group members for batch of $($Batch.Count)" -sev Debug
+                $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter
+                foreach ($Result in $MemberResults) {
+                    if ($Result.id) { $MembersByGroupId[$Result.id] = $Result.body.value }
+                }
+                $MemberResults = $null
             }
-            $MemberResults = $null
-        }
-        $MemberRequests = $null
 
-        # Project and emit one group at a time: Add-CIPPDbItem batches internally, so peak
-        # retention is a batch of rows rather than every group (with its whole member list)
-        # plus a second materialised array. Each group's members are dropped from the index
-        # once written, so membership becomes collectable as the run progresses.
-        # Properties are applied in a single Add-Member call - adding them one at a time
-        # rebuilds the object's property bag on every call. The [ordered] dictionary keeps
-        # the emitted JSON property order identical to the previous sequential adds.
-        & {
-            foreach ($Group in $Groups) {
+            foreach ($Group in $Batch) {
                 $groupType = if ($Group.groupTypes -contains 'Unified') { 'Microsoft 365' }
                 elseif ($Group.mailEnabled -and $Group.securityEnabled) { 'Mail-Enabled Security' }
                 elseif (-not $Group.mailEnabled -and $Group.securityEnabled) { 'Security' }
@@ -74,9 +75,8 @@ function Set-CIPPDBCacheGroups {
                 else { 'unknown' }
 
                 $NoteProperties = [ordered]@{}
-                if ($HasMembers) {
+                if ($Group.id -and $Group.groupTypes -notcontains 'DynamicMembership') {
                     $NoteProperties['members'] = $MembersByGroupId[$Group.id]
-                    $MembersByGroupId.Remove($Group.id)
                 }
                 $NoteProperties['primDomain'] = ($Group.mail -split '@' | Select-Object -Last 1)
                 $NoteProperties['teamsEnabled'] = ($Group.resourceProvisioningOptions -contains 'Team')
@@ -85,14 +85,31 @@ function Set-CIPPDBCacheGroups {
                 $NoteProperties['calculatedGroupType'] = $calculatedGroupType
 
                 $Group | Add-Member -NotePropertyMembers $NoteProperties -Force
-                $Group
+                $Count.Value++
+                $PipelineWriter.Process($Group)
             }
-        } | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -AddCount
 
-        $Groups = $null
-        $MembersByGroupId = $null
+            $Batch.Clear()
+            $MembersByGroupId = $null
+        }
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached groups with members and owners successfully' -sev Debug
+        try {
+            New-GraphGetRequest -uri $GroupUri -tenantid $TenantFilter -Stream | ForEach-Object {
+                $PendingBatch.Add($_)
+                if ($PendingBatch.Count -ge $MemberBatchSize) {
+                    Write-GroupBatch -Batch $PendingBatch -PipelineWriter $Writer -Count ([ref]$CachedCount)
+                }
+            }
+
+            Write-GroupBatch -Batch $PendingBatch -PipelineWriter $Writer -Count ([ref]$CachedCount)
+
+            if ($CachedCount -gt 0) {
+                $Writer.End()
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $CachedCount groups with members and owners successfully" -sev Debug
+            }
+        } finally {
+            $Writer.Dispose()
+        }
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter `

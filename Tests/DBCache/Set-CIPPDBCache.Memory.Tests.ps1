@@ -119,9 +119,11 @@ Describe 'DBCache collectors reworked for bounded memory' {
 
             Set-CIPPDBCacheGroups -TenantFilter 'contoso.com'
 
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
             $script:DbWrites.Count | Should -Be 1
             $Rows = $script:DbWrites[0].Rows
             $Rows.Count | Should -Be 2
+            $script:DbWrites[0].EndRan | Should -BeTrue
             # Members are matched by id, not by position - the bulk response above is deliberately
             # in a different order than the group list.
             ($Rows | Where-Object id -EQ 'g1').members.id | Should -Be @('u1a', 'u1b')
@@ -138,6 +140,7 @@ Describe 'DBCache collectors reworked for bounded memory' {
 
             Set-CIPPDBCacheGroups -TenantFilter 'contoso.com'
 
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
             $Row = $script:DbWrites[0].Rows[0]
             $Added = @($Row.PSObject.Properties.Name) | Select-Object -Last 6
             $Added | Should -Be @('members', 'primDomain', 'teamsEnabled', 'dynamicGroupBool', 'groupType', 'calculatedGroupType')
@@ -156,6 +159,7 @@ Describe 'DBCache collectors reworked for bounded memory' {
 
             Set-CIPPDBCacheGroups -TenantFilter 'contoso.com'
 
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
             $Row = $script:DbWrites[0].Rows[0]
             $Row.PSObject.Properties.Name | Should -Not -Contain 'members'
             $Row.groupType | Should -Be 'Mail-Enabled Security'
@@ -169,7 +173,73 @@ Describe 'DBCache collectors reworked for bounded memory' {
 
             Set-CIPPDBCacheGroups -TenantFilter 'contoso.com'
 
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
             $script:DbWrites[0].Rows[0].PSObject.Properties.Name | Should -Contain 'members'
+        }
+
+        It 'fetches members in batches of 50 and uses a single writer end block' {
+            $Groups = 1..105 | ForEach-Object {
+                [pscustomobject]@{
+                    id                          = ('g{0:D3}' -f $_)
+                    displayName                 = "Group $_"
+                    mail                        = "g$_@contoso.com"
+                    groupTypes                  = @()
+                    mailEnabled                 = $true
+                    securityEnabled             = $true
+                    resourceProvisioningOptions = @()
+                }
+            }
+            Mock -CommandName New-GraphGetRequest -MockWith { $Groups }
+            $script:BulkCallCount = 0
+            Mock -CommandName New-GraphBulkRequest -MockWith {
+                $script:BulkCallCount++
+                foreach ($Request in $Requests) {
+                    [pscustomobject]@{ id = $Request.id; body = [pscustomobject]@{ value = @() } }
+                }
+            }
+
+            Set-CIPPDBCacheGroups -TenantFilter 'contoso.com'
+
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
+            $script:BulkCallCount | Should -Be 3
+            $script:DbWrites.Count | Should -Be 1
+            $script:DbWrites[0].Rows.Count | Should -Be 105
+            $script:DbWrites[0].EndRan | Should -BeTrue
+        }
+
+        It 'writes nothing when the stream is empty, preserving the previous cache' {
+            Mock -CommandName New-GraphGetRequest -MockWith { @() }
+            Mock -CommandName New-GraphBulkRequest -MockWith { throw 'should not be called' }
+
+            Set-CIPPDBCacheGroups -TenantFilter 'contoso.com'
+
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
+            Should -Invoke New-GraphBulkRequest -Times 0 -Exactly
+            $script:DbWrites.Count | Should -Be 1
+            $script:DbWrites[0].Rows.Count | Should -Be 0
+            $script:DbWrites[0].EndRan | Should -BeFalse
+        }
+
+        It 'skips member lookup for dynamic groups and omits the members property' {
+            Mock -CommandName New-GraphGetRequest -MockWith {
+                @(
+                    [pscustomobject]@{ id = 'g-static'; displayName = 'Static'; mail = 'static@contoso.com'; groupTypes = @(); mailEnabled = $true; securityEnabled = $true; resourceProvisioningOptions = @() }
+                    [pscustomobject]@{ id = 'g-dynamic'; displayName = 'Dynamic'; mail = 'dynamic@contoso.com'; groupTypes = @('DynamicMembership'); mailEnabled = $false; securityEnabled = $true; resourceProvisioningOptions = @(); membershipRule = '(user.department -eq "Sales")' }
+                )
+            }
+            Mock -CommandName New-GraphBulkRequest -MockWith {
+                param($Requests)
+                $Requests.id | Should -Be @('g-static')
+                @([pscustomobject]@{ id = 'g-static'; body = [pscustomobject]@{ value = @([pscustomobject]@{ id = 'u1'; userPrincipalName = 'u1@contoso.com' }) } })
+            }
+
+            Set-CIPPDBCacheGroups -TenantFilter 'contoso.com'
+
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
+            $Rows = $script:DbWrites[0].Rows
+            ($Rows | Where-Object id -EQ 'g-static').members.userPrincipalName | Should -Be @('u1@contoso.com')
+            ($Rows | Where-Object id -EQ 'g-dynamic').PSObject.Properties.Name | Should -Not -Contain 'members'
+            ($Rows | Where-Object id -EQ 'g-dynamic').dynamicGroupBool | Should -BeTrue
         }
     }
 
