@@ -16,7 +16,7 @@ function Set-CIPPRegistrationCampaign {
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        [Parameter(Mandatory = $true)]$Tenant,
+        [Parameter(Mandatory = $true)][Alias('Tenant')]$TenantFilter,
         $State,
         $TargetedAuthenticationMethod,
         $SnoozeDurationInDays,
@@ -28,11 +28,11 @@ function Set-CIPPRegistrationCampaign {
     )
 
     try {
-        $CurrentPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
+        $CurrentPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $TenantFilter
         $CurrentCampaign = $CurrentPolicy.registrationEnforcement.authenticationMethodsRegistrationCampaign
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Could not get the current registration campaign. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Could not get the current registration campaign. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         throw "Could not get the current registration campaign. Error: $($ErrorMessage.NormalizedError)"
     }
 
@@ -81,13 +81,13 @@ function Set-CIPPRegistrationCampaign {
     try {
         $Result = "Set the registration campaign state to $DesiredState targeting $DesiredMethod with a snooze duration of $DesiredSnooze day(s), $($DesiredIncludeTargets.Count) include target(s) and $($DesiredExcludeTargets.Count) exclude target(s)"
         if ($PSCmdlet.ShouldProcess('Registration campaign', "Set state to $DesiredState")) {
-            $null = New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -Type PATCH -Body $Body -ContentType 'application/json' -AsApp $false
-            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message $Result -sev Info
+            $null = New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -Type PATCH -Body $Body -ContentType 'application/json' -AsApp $false
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
         }
         return $Result
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Failed to update the registration campaign. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to update the registration campaign. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         throw "Failed to update the registration campaign. Error: $($ErrorMessage.NormalizedError)"
     }
 }

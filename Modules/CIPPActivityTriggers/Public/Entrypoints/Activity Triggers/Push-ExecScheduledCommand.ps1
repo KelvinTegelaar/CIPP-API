@@ -227,6 +227,24 @@ function Push-ExecScheduledCommand {
         Write-Information "Failed to remove parameters: $($_.Exception.Message)"
     }
 
+    # Stored parameters are user input: the command's tenant parameter is forced to the authorized
+    # task tenant so a stored value can never target another tenant. When a command declares more
+    # than one tenant-identifying name, only the most specific one is injected and the others are
+    # dropped so the command resolves them itself.
+    $DeclaredTenantParams = [array](@('TenantFilter', 'Tenant', 'TenantId') | Where-Object { $Function.Parameters.ContainsKey($_) })
+    foreach ($TenantParamName in $DeclaredTenantParams) {
+        $StoredTenantValue = $commandParameters[$TenantParamName]
+        $StoredTenantString = [string]($StoredTenantValue.value ?? $StoredTenantValue)
+        if (![string]::IsNullOrWhiteSpace($StoredTenantString) -and $StoredTenantString -ne [string]$Tenant) {
+            Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Task $($task.Name): stored parameter -$TenantParamName value '$StoredTenantString' does not match the authorized tenant '$Tenant' and was overridden." -sev Error
+        }
+        if ($TenantParamName -eq $DeclaredTenantParams[0]) {
+            $commandParameters[$TenantParamName] = $Tenant
+        } else {
+            $commandParameters.Remove($TenantParamName)
+        }
+    }
+
     if ($IsTriggerTask -eq $true -and $Trigger.ExecutePerResource -ne $true) {
         # iterate through paramters looking for %variables% and replace them with matched data from the delta query
         # examples would be %id% to be the id of the result

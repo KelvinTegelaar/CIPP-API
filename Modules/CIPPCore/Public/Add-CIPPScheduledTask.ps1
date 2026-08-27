@@ -147,7 +147,6 @@ function Add-CIPPScheduledTask {
                 $Parameters.Headers = $Headers | Select-Object -Property 'x-forwarded-for', 'x-ms-client-principal', 'x-ms-client-principal-idp', 'x-ms-client-principal-name'
             }
 
-            $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
             $AdditionalProperties = [System.Collections.Hashtable]@{}
             foreach ($Prop in $task.AdditionalProperties) {
                 if ($null -eq $Prop.Value -or $Prop.Value -eq '' -or ($Prop.Value | Measure-Object).Count -eq 0) {
@@ -156,7 +155,6 @@ function Add-CIPPScheduledTask {
                 $AdditionalProperties[$Prop.Key] = $Prop.Value
             }
             $AdditionalProperties = ([PSCustomObject]$AdditionalProperties | ConvertTo-Json -Compress)
-            if ($Parameters -eq 'null') { $Parameters = '' }
 
 
             $Recurrence = if ([string]::IsNullOrEmpty($task.Recurrence.value)) {
@@ -222,6 +220,22 @@ function Add-CIPPScheduledTask {
                     Write-Warning "Could not parse tenant filter JSON: $tenantFilter"
                 }
             }
+
+            # Stored parameters are user input: strip any tenant-identifying parameter so the
+            # authorized task tenant is injected at execution instead of a stored value, and log
+            # when the stored value pointed somewhere other than the picked tenant.
+            foreach ($TenantParamName in @('TenantFilter', 'Tenant', 'TenantId')) {
+                if (-not $Parameters.ContainsKey($TenantParamName)) { continue }
+                $StoredTenantValue = $Parameters[$TenantParamName]
+                $StoredTenantString = [string]($StoredTenantValue.value ?? $StoredTenantValue)
+                if (![string]::IsNullOrWhiteSpace($StoredTenantString) -and $StoredTenantString -ne [string]$tenantFilter) {
+                    Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Task $($task.Name): parameter -$TenantParamName value '$StoredTenantString' does not match the selected tenant '$tenantFilter' and was removed; the task runs against the selected tenant." -Sev 'Error' -Tenant $tenantFilter
+                }
+                $Parameters.Remove($TenantParamName)
+            }
+
+            $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
+            if ($Parameters -eq 'null') { $Parameters = '' }
 
             $entity = @{
                 PartitionKey         = [string]'ScheduledTask'

@@ -106,7 +106,11 @@ function Start-UserTasksOrchestrator {
                         throw "Command '$($task.Command)' not found and no module could be resolved from the command name for scheduled task '$($task.Name)'."
                     }
                 }
-                $HasTenantFilter = $CommandInfo.Parameters.ContainsKey('TenantFilter')
+                # The task's authorized tenant is injected into the most specific tenant-identifying
+                # parameter the command declares - stored parameter values must never select the tenant.
+                $TenantParamNames = [array](@('TenantFilter', 'Tenant', 'TenantId') | Where-Object { $CommandInfo.Parameters.ContainsKey($_) })
+                $HasTenantFilter = $TenantParamNames.Count -gt 0
+                $PrimaryTenantParam = $TenantParamNames.Count -gt 0 ? $TenantParamNames[0] : $null
 
                 $ScheduledCommand = [pscustomobject]@{
                     Command      = $task.Command
@@ -128,7 +132,10 @@ function Start-UserTasksOrchestrator {
                     $AllTenantCommands = foreach ($Tenant in $TenantList | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
                         $NewParams = $task.Parameters.Clone()
                         if ($HasTenantFilter) {
+                            # TenantFilter always carries the execution tenant context; it is stripped
+                            # before splatting if the command does not declare it
                             $NewParams.TenantFilter = $Tenant.defaultDomainName
+                            $NewParams.$PrimaryTenantParam = $Tenant.defaultDomainName
                         }
                         # Clone TaskInfo to prevent shared object references
                         $TaskInfoClone = $task.PSObject.Copy()
@@ -170,6 +177,7 @@ function Start-UserTasksOrchestrator {
                             $NewParams = $task.Parameters.Clone()
                             if ($HasTenantFilter) {
                                 $NewParams.TenantFilter = $ExpandedTenant.value
+                                $NewParams.$PrimaryTenantParam = $ExpandedTenant.value
                             }
                             # Clone TaskInfo to prevent shared object references
                             $TaskInfoClone = $task.PSObject.Copy()
@@ -188,6 +196,7 @@ function Start-UserTasksOrchestrator {
                         # Fall back to treating as single tenant
                         if ($HasTenantFilter) {
                             $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                            $ScheduledCommand.Parameters[$PrimaryTenantParam] = $task.Tenant
                         }
                         $Batch.Add($ScheduledCommand)
                     }
@@ -195,6 +204,7 @@ function Start-UserTasksOrchestrator {
                     # Handle single tenant
                     if ($HasTenantFilter) {
                         $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                        $ScheduledCommand.Parameters[$PrimaryTenantParam] = $task.Tenant
                     }
                     $Batch.Add($ScheduledCommand)
                 }
