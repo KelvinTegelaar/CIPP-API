@@ -493,6 +493,22 @@ function Test-CIPPAccess {
                         } elseif ($TenantFilter -eq 'AllTenants' -and $ApiRole -match 'Read$') {
                             $TenantAllowed = $true
                         } else {
+                            # A requested tenant GROUP arrives as a complex body object
+                            # {type:'Group', value:<guid>}. Authorize it by group identity against the
+                            # role's granted groups - never by expanding members - so it can't fall
+                            # through to the implicit allow at the bottom of this block. Query-string
+                            # filters are plain strings and cannot carry a group, so only the body
+                            # object is a group request.
+                            if ($Request.Body.tenantFilter.type -eq 'Group') {
+                                $RequestedGroup = $Request.Body.tenantFilter.value
+                                $AllowedGroupIds = @(foreach ($AllowedItem in $Role.AllowedTenants) {
+                                        if ($AllowedItem -is [PSCustomObject] -and $AllowedItem.type -eq 'Group') { $AllowedItem.value }
+                                    })
+                                $TenantAllowed = $AllowedGroupIds -contains $RequestedGroup
+                                if (!$TenantAllowed) { continue }
+                                break
+                            }
+
                             $Tenant = ($Tenants | Where-Object { $TenantFilter -eq $_.customerId -or $TenantFilter -eq $_.defaultDomainName }).customerId
 
                             # Expand allowed tenant groups to individual tenant IDs
