@@ -148,26 +148,36 @@ function Invoke-ListGroups {
             # add a bulk sub-request above, so this branch always means "every group in the
             # tenant". The URL previously interpolated $GroupID and $Members, both necessarily
             # empty here, which produced 'groups//' and only worked because Graph tolerated it.
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
-            @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } },
-            @{Name = 'ownersCsv'; Expression = { $_.owners.userPrincipalName -join ',' } },
-            @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } },
-            @{Name = 'groupType'; Expression = {
+            # membersCsv/ownersCsv are computed from the expanded navigation property, so emit
+            # them only when that expand was requested - otherwise they ride along always-empty
+            # and surface as permanently blank columns in the UI and exports.
+            $GroupProperties = [System.Collections.Generic.List[object]]::new()
+            $GroupProperties.Add('*')
+            $GroupProperties.Add(@{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } })
+            if ($ExpandMembers) {
+                $GroupProperties.Add(@{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } })
+            }
+            if ($ExpandOwners -and -not $ExpandMembers) {
+                $GroupProperties.Add(@{Name = 'ownersCsv'; Expression = { $_.owners.userPrincipalName -join ',' } })
+            }
+            $GroupProperties.Add(@{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } })
+            $GroupProperties.Add(@{Name = 'groupType'; Expression = {
                     if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
                     elseif ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
                     elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'Security' }
                     elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'Distribution List' }
                 }
-            },
-            @{Name = 'calculatedGroupType'; Expression = {
+            })
+            $GroupProperties.Add(@{Name = 'calculatedGroupType'; Expression = {
                     if ($_.groupTypes -contains 'Unified') { 'm365' }
                     elseif ($_.mailEnabled -and $_.securityEnabled) { 'security' }
                     elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'generic' }
                     elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'distributionList' }
                 }
-            },
-            @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } },
-            @{Name = 'SID'; Expression = { Convert-AzureAdObjectIdToSid -ObjectID $_.id } }
+            })
+            $GroupProperties.Add(@{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } })
+            $GroupProperties.Add(@{Name = 'SID'; Expression = { Convert-AzureAdObjectIdToSid -ObjectID $_.id } })
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object -Property $GroupProperties
             $GraphRequest = @($GraphRequest | Sort-Object displayName)
         }
 
