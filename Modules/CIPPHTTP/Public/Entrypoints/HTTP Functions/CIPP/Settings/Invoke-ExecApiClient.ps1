@@ -221,13 +221,21 @@ function Invoke-ExecApiClient {
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds -McpClientIds $McpClientIds
 
                 if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
+                    # Advertise the OIDC scopes alongside the resource scope so discovery-based MCP
+                    # clients (Copilot Studio, ChatGPT) request a refresh token. offline_access is
+                    # what makes Entra issue one; without it the client re-consents every ~hour.
+                    # Claude appends offline_access itself, but stricter clients only request what the
+                    # metadata advertises, so it has to be in the protected-resource document and the
+                    # EasyAuth challenge scope too - not just the authorization-server document.
+                    $McpScope = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation"
+                    $McpScopesSupported = @('openid', 'profile', 'offline_access', $McpScope)
+                    $McpDefaultScopeString = 'openid profile offline_access {0}' -f $McpScope
                     if ($env:CIPPNG) {
                         $TenantedLogin = "https://login.microsoftonline.com/$($env:TenantID)"
-                        $McpScope = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation"
                         $PrmDocument = [ordered]@{
                             resource                 = '{origin}/api/ExecMcp'
                             authorization_servers    = @('{origin}')
-                            scopes_supported         = @($McpScope)
+                            scopes_supported         = $McpScopesSupported
                             bearer_methods_supported = @('header')
                         } | ConvertTo-Json -Compress
                         $AsDocument = [ordered]@{
@@ -241,11 +249,11 @@ function Invoke-ExecApiClient {
                             grant_types_supported                 = @('authorization_code', 'refresh_token')
                             code_challenge_methods_supported      = @('S256')
                             token_endpoint_auth_methods_supported = @('none', 'client_secret_post', 'client_secret_basic')
-                            scopes_supported                      = @('openid', 'profile', 'offline_access', $McpScope)
+                            scopes_supported                      = $McpScopesSupported
                         } | ConvertTo-Json -Compress
-                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'CRAFT_PRM' = "$PrmDocument"; 'CRAFT_PRM_AS' = "$AsDocument"; 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = $McpScope }
+                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'CRAFT_PRM' = "$PrmDocument"; 'CRAFT_PRM_AS' = "$AsDocument"; 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = $McpDefaultScopeString }
                     } else {
-                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation" }
+                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = $McpDefaultScopeString }
                     }
                 } else {
                     $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES', 'CRAFT_PRM', 'CRAFT_PRM_AS')
