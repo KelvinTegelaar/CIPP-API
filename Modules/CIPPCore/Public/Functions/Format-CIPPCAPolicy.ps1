@@ -24,6 +24,12 @@ function Format-CIPPCAPolicy {
            than being removed - null is accepted on a create and still clears on an update. Empty
            assignment arrays are deliberately KEPT: an explicit "includeGroups": [] is the only
            thing that strips a group off a policy that already has one.
+
+        3. sessionControls.signInFrequency - value is Int32 in Graph but has been saved as a
+           string by older editors, so a numeric string is cast. When frequencyInterval is
+           everyTime, value/type are forced explicitly null (added if absent) since Graph
+           requires both null there and a PATCH merge would otherwise let a stale value/type
+           survive from the tenant's existing policy.
     .PARAMETER Policy
         The parsed CA policy object. Mutated in place.
     .FUNCTIONALITY
@@ -134,6 +140,21 @@ function Format-CIPPCAPolicy {
     if ($Policy.PSObject.Properties.Name -contains 'sessionControls' -and $null -ne $Policy.sessionControls) {
         if (@($Policy.sessionControls.PSObject.Properties).Count -eq 0) {
             $Policy.sessionControls = $null
+        }
+    }
+
+    # signInFrequency.value is Int32 in Graph, but editors have saved it as a string - cast it.
+    # When frequencyInterval is everyTime, Graph requires value/type to be null rather than
+    # merely absent, and this is a PATCH merge, so a stale value/type from the tenant's existing
+    # policy would otherwise survive.
+    $SignInFrequency = $Policy.sessionControls.signInFrequency
+    if ($null -ne $SignInFrequency -and $SignInFrequency -is [PSCustomObject]) {
+        if ($SignInFrequency.PSObject.Properties.Name -contains 'value' -and $SignInFrequency.value -is [string] -and $SignInFrequency.value -match '^\d+$') {
+            $SignInFrequency.value = [int]$SignInFrequency.value
+        }
+        if ($SignInFrequency.frequencyInterval -eq 'everyTime') {
+            $SignInFrequency | Add-Member -NotePropertyName 'value' -NotePropertyValue $null -Force
+            $SignInFrequency | Add-Member -NotePropertyName 'type' -NotePropertyValue $null -Force
         }
     }
 }

@@ -326,6 +326,60 @@ Describe 'Format-CIPPCAPolicy' {
         }
     }
 
+    Context 'sessionControls.signInFrequency canonicalization' {
+        It 'casts a numeric string value to an int' {
+            $Policy = Convert-Policy '{
+                "displayName": "CA201",
+                "conditions": { "users": { "includeUsers": ["All"] } },
+                "sessionControls": { "signInFrequency": { "isEnabled": true, "frequencyInterval": "timeBased", "type": "hours", "value": "12" } }
+            }'
+            $Policy.sessionControls.signInFrequency.value | Should -Be 12
+            $Policy.sessionControls.signInFrequency.value | Should -BeOfType [int]
+        }
+
+        It 'sets value and type to explicit null when frequencyInterval is everyTime' {
+            $Policy = Convert-Policy '{
+                "displayName": "CA201",
+                "conditions": { "users": { "includeUsers": ["All"] } },
+                "sessionControls": { "signInFrequency": { "isEnabled": true, "frequencyInterval": "everyTime" } }
+            }'
+            $Policy.sessionControls.signInFrequency.PSObject.Properties.Name | Should -Contain 'value'
+            $Policy.sessionControls.signInFrequency.PSObject.Properties.Name | Should -Contain 'type'
+            $Policy.sessionControls.signInFrequency.value | Should -BeNullOrEmpty
+            $Policy.sessionControls.signInFrequency.type | Should -BeNullOrEmpty
+        }
+
+        It 'overrides a stale value/type with null even when everyTime carries leftovers' {
+            $Policy = Convert-Policy '{
+                "displayName": "CA201",
+                "conditions": { "users": { "includeUsers": ["All"] } },
+                "sessionControls": { "signInFrequency": { "isEnabled": true, "frequencyInterval": "everyTime", "type": "hours", "value": "12" } }
+            }'
+            $Policy.sessionControls.signInFrequency.value | Should -BeNullOrEmpty
+            $Policy.sessionControls.signInFrequency.type | Should -BeNullOrEmpty
+        }
+
+        It 'leaves an int value under timeBased unchanged' {
+            $Policy = Convert-Policy '{
+                "displayName": "CA201",
+                "conditions": { "users": { "includeUsers": ["All"] } },
+                "sessionControls": { "signInFrequency": { "isEnabled": true, "frequencyInterval": "timeBased", "type": "days", "value": 4 } }
+            }'
+            $Policy.sessionControls.signInFrequency.value | Should -Be 4
+            $Policy.sessionControls.signInFrequency.type | Should -Be 'days'
+        }
+
+        It 'casts a disabled signInFrequency with a string value too - Graph validates disabled sub-objects' {
+            $Policy = Convert-Policy '{
+                "displayName": "CA201",
+                "conditions": { "users": { "includeUsers": ["All"] } },
+                "sessionControls": { "signInFrequency": { "isEnabled": false, "frequencyInterval": "timeBased", "type": "hours", "value": "12" } }
+            }'
+            $Policy.sessionControls.signInFrequency.value | Should -Be 12
+            $Policy.sessionControls.signInFrequency.value | Should -BeOfType [int]
+        }
+    }
+
     Context 'edge cases' {
         It 'does nothing to a policy with no conditions at all' {
             { Convert-Policy '{"displayName":"CA201"}' } | Should -Not -Throw
