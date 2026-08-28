@@ -28434,6 +28434,75 @@
         "x-cipp-role": "Exchange.SpamFilter.ReadWrite"
       }
     },
+    "/api/ExecReactivateSite": {
+      "post": {
+        "summary": "Reactivate an archived SharePoint or OneDrive site.",
+        "operationId": "ExecReactivateSite",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Reactivates (unarchives) a Microsoft 365 Archive site through the Graph beta\nsite: unarchive endpoint (POST /beta/sites/{site-id}/unarchive). Primarily used to\nreactivate archived OneDrive accounts before granting permissions to them.\nReactivation is asynchronous (can take up to 24 hours) and, for fully-archived\naccounts, may incur Microsoft 365 Archive charges and require Unlicensed OneDrive\nbilling to be enabled on the tenant.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "SiteId": {
+                    "type": "string",
+                    "description": "Site-collection GUID (the row's siteId / sharepointIds.siteId). Used to build the Graph composite site id without touching the locked, archived site."
+                  },
+                  "SiteUrl": {
+                    "type": "string",
+                    "description": "Full web URL of the archived site / OneDrive (the row's webUrl)."
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant the archived site belongs to."
+                  },
+                  "WebId": {
+                    "type": "string",
+                    "description": "Web GUID (the row's webId / sharepointIds.webId)."
+                  }
+                },
+                "required": [
+                  "SiteUrl",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.ReadWrite"
+      }
+    },
     "/api/ExecRefreshMyAccess": {
       "get": {
         "summary": "Re-check the caller's Entra group membership and refresh their CIPP roles",
@@ -46550,9 +46619,6 @@
                       "members": {
                         "x-cipp-field-source": "backend"
                       },
-                      "membersCsv": {
-                        "x-cipp-field-source": "backend"
-                      },
                       "membershipRule": {
                         "type": "string",
                         "x-cipp-field-source": "graph"
@@ -46570,9 +46636,6 @@
                         "x-cipp-field-source": "graph"
                       },
                       "owners": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "ownersCsv": {
                         "x-cipp-field-source": "backend"
                       },
                       "primDomain": {
