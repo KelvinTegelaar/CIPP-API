@@ -51,6 +51,7 @@ function Invoke-AddUserDefaults {
         $Autopassword = $Request.Body.Autopassword
         $Password = $Request.Body.password
         $MustChangePass = $Request.Body.MustChangePass
+        $PerUserMfa = [System.Convert]::ToBoolean($Request.Body.perUserMfa)
 
         $UsageLocation = if ($Request.Body.usageLocation -is [string]) {
             $Request.Body.usageLocation
@@ -119,6 +120,7 @@ function Invoke-AddUserDefaults {
             Autopassword             = $Autopassword
             password                 = $Password
             MustChangePass           = $MustChangePass
+            perUserMfa               = $PerUserMfa
             usageLocation            = $UsageLocation
             licenses                 = $Licenses
             removeLicenses           = $RemoveLicenses

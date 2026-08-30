@@ -6944,6 +6944,9 @@
                   "password": {
                     "type": "string"
                   },
+                  "perUserMfa": {
+                    "type": "boolean"
+                  },
                   "postalCode": {
                     "type": "string"
                   },
@@ -7251,6 +7254,9 @@
                     "type": "string"
                   },
                   "password": {
+                    "type": "string"
+                  },
+                  "perUserMfa": {
                     "type": "string"
                   },
                   "postalCode": {
