@@ -24,7 +24,7 @@ function Get-CIPPAlertIntuneApprovalRequests {
             # left null even for requests raised through Graph, so there is no 'who' to report.
             $Operation = ($ApprovalRequest.payloadOperation ?? 'change').ToLower()
             $Target = $ApprovalRequest.payloadName ?? (@($ApprovalRequest.requiredOperationApprovalPolicyTypes) -join ', ')
-            $Message = 'Intune {0} of "{1}" is waiting for multi-admin approval and expires {2}' -f $Operation, $Target, $ApprovalRequest.expirationDateTime
+            $Message = 'Intune {0} of "{1}" is waiting for multi-admin approval and expires {2}' -f $Operation, $Target, ([datetime]$ApprovalRequest.expirationDateTime).ToString('yyyy-MM-dd')
 
             $ApprovalRequest | Select-Object -Property id, status, requestDateTime, expirationDateTime, requestJustification,
             @{Name = 'operation'; Expression = { $ApprovalRequest.payloadOperation } },

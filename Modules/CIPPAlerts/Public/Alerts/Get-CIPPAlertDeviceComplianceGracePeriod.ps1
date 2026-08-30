@@ -26,7 +26,7 @@ function Get-CIPPAlertDeviceComplianceGracePeriod {
             if ($ExpiresWithinDays -gt 0 -and $null -ne $DaysRemaining -and $DaysRemaining -gt $ExpiresWithinDays) { continue }
 
             $Message = if ($null -ne $DaysRemaining) {
-                'Device {0} is in the compliance grace period and will be marked noncompliant on {1} ({2} days remaining)' -f $Device.deviceName, $Expiration, $DaysRemaining
+                'Device {0} is in the compliance grace period and will be marked noncompliant on {1} ({2} days remaining)' -f $Device.deviceName, ([datetime]$Expiration).ToString('yyyy-MM-dd'), $DaysRemaining
             } else {
                 'Device {0} is in the compliance grace period' -f $Device.deviceName
             }
