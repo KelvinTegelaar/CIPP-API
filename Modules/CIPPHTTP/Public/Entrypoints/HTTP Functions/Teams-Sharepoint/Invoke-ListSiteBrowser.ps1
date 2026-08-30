@@ -234,27 +234,44 @@ function Invoke-ListSiteBrowser {
             foreach ($List in @($Lists | Where-Object { $_.list.hidden -ne $true -and $_.list.template -in @('documentLibrary', 'webPageLibrary') })) {
                 $StorageUsed = $null
                 $FileCount = $null
+                $FileStreamSize = $null
+                $MetadataSize = $null
+                $VersionEstimate = $null
                 try {
                     $Metrics = New-GraphGetRequest -uri "$BaseUri/web/lists(guid'$($List.id)')/RootFolder?`$select=StorageMetrics&`$expand=StorageMetrics" -tenantid $TenantFilter -scope $SpoScope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
-                    $StorageUsed = ConvertTo-StorageUsedBytes -Raw $Metrics.StorageMetrics.TotalSize
+                    $TotalSize = ConvertTo-StorageUsedBytes -Raw $Metrics.StorageMetrics.TotalSize
+                    $FileStreamSize = ConvertTo-StorageUsedBytes -Raw $Metrics.StorageMetrics.TotalFileStreamSize
+                    $MetadataSize = ConvertTo-StorageUsedBytes -Raw $Metrics.StorageMetrics.MetadataSize
                     $FileCount = ConvertTo-NullableInt64 -Raw $Metrics.StorageMetrics.TotalFileCount
+                    $StorageUsed = $TotalSize
+                    if ($null -ne $TotalSize) {
+                        $Tip = if ($null -ne $FileStreamSize) { $FileStreamSize } else { [int64]0 }
+                        $Meta = if ($null -ne $MetadataSize) { $MetadataSize } else { [int64]0 }
+                        $VersionEstimate = [Math]::Max([int64]0, $TotalSize - $Tip - $Meta)
+                    }
                 } catch {
                     $StorageUsed = $null
                     $FileCount = $null
+                    $FileStreamSize = $null
+                    $MetadataSize = $null
+                    $VersionEstimate = $null
                 }
 
                 $Results.Add([PSCustomObject]@{
-                        type               = 'library'
-                        id                 = $List.id
-                        siteId             = $SiteId
-                        displayName        = $List.displayName
-                        name               = $List.name
-                        template           = $List.list.template
-                        siteType           = ConvertTo-SiteTypeLabel -ItemType 'library' -LibraryTemplate $List.list.template
-                        webUrl             = $List.webUrl
-                        createdDateTime    = $List.createdDateTime
-                        storageUsedInBytes = $StorageUsed
-                        fileCount          = $FileCount
+                        type                   = 'library'
+                        id                     = $List.id
+                        siteId                 = $SiteId
+                        displayName            = $List.displayName
+                        name                   = $List.name
+                        template               = $List.list.template
+                        siteType               = ConvertTo-SiteTypeLabel -ItemType 'library' -LibraryTemplate $List.list.template
+                        webUrl                 = $List.webUrl
+                        createdDateTime        = $List.createdDateTime
+                        storageUsedInBytes     = $StorageUsed
+                        fileStreamSizeInBytes  = $FileStreamSize
+                        metadataSizeInBytes    = $MetadataSize
+                        versionEstimateBytes   = $VersionEstimate
+                        fileCount              = $FileCount
                     })
             }
         }
