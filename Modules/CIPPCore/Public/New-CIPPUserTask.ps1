@@ -164,13 +164,23 @@ function New-CIPPUserTask {
             # task per level. They are separate Exchange operations anyway.
             $MailboxPermissions = @(@($UserObj.sharedMailboxPermission) | ForEach-Object { if ($_.value) { $_.value } else { $_ } } | Where-Object { $_ })
             if (-not $MailboxPermissions) { $MailboxPermissions = @('FullAccess') }
+            # FullAccessNoAutoMap is Full Access granted with automapping off. A grant carries one
+            # automapping flag, so when both variants are selected the explicit no-automapping wins.
+            if ($MailboxPermissions -contains 'FullAccessNoAutoMap') {
+                $MailboxPermissions = @($MailboxPermissions | Where-Object { $_ -ne 'FullAccess' })
+            }
             foreach ($Mailbox in @($UserObj.sharedMailboxes)) {
                 $MailboxId = if ($Mailbox.value) { $Mailbox.value } else { $Mailbox }
                 $MailboxLabel = if ($Mailbox.label) { $Mailbox.label } else { $MailboxId }
                 foreach ($MailboxPermission in $MailboxPermissions) {
+                    $PermissionLevel = if ($MailboxPermission -eq 'FullAccessNoAutoMap') { 'FullAccess' } else { $MailboxPermission }
+                    $AutoMap = $MailboxPermission -ne 'FullAccessNoAutoMap'
                     # AutoMap only applies to FullAccess, and is what makes Outlook mount the mailbox
                     # on its own, so no invitation is needed on this side of the feature.
-                    $AutoMapNote = if ($MailboxPermission -eq 'FullAccess') { ' Outlook adds the mailbox automatically.' } else { '' }
+                    $AutoMapNote = if ($PermissionLevel -ne 'FullAccess') { '' }
+                    elseif ($AutoMap) { ' Outlook adds the mailbox automatically.' }
+                    else { ' Automapping is off, so the user adds the mailbox to Outlook themselves.' }
+                    $PermissionDisplay = if ($AutoMap) { $PermissionLevel } else { 'FullAccess (no automapping)' }
                     $SharedAccessGrants.Add([PSCustomObject]@{
                             Identity   = $MailboxId
                             Kind       = 'mailbox'
@@ -181,12 +191,12 @@ function New-CIPPUserTask {
                                 TenantFilter    = $UserObj.tenantFilter
                                 UserId          = $MailboxId
                                 AccessUser      = $CreationResults.Username
-                                PermissionLevel = $MailboxPermission
+                                PermissionLevel = $PermissionLevel
                                 Action          = 'Add'
-                                AutoMap         = $true
+                                AutoMap         = $AutoMap
                                 APIName         = 'Shared Mailbox Onboarding'
                             }
-                            Success    = "Scheduled $MailboxPermission on the shared mailbox $MailboxLabel in 15 minutes.$AutoMapNote"
+                            Success    = "Scheduled $PermissionDisplay on the shared mailbox $MailboxLabel in 15 minutes.$AutoMapNote"
                         })
                 }
             }
