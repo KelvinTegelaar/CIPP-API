@@ -36,8 +36,22 @@ function Invoke-CIPPOffboardingJob {
         $AllowedCmdletsWhenDeletingUser = @('Remove-CIPPUser', 'Set-CIPPSharePointPerms')
         $SkippedForDeleteUser = [System.Collections.Generic.List[string]]::new()
 
-        # Build list of tasks in execution order with their cmdlets
+        # Build list of tasks in execution order with their cmdlets.
+        # The account-only wipe must run before session revocation, sign-in disable and device removal:
+        # the wipe is delivered on the device's next Exchange connection, so the account must still be
+        # able to authenticate and the ActiveSync partnership must still exist when it is issued.
         $TaskOrder = @(
+            @{
+                Condition  = { $Options.WipeMobile -eq $true }
+                Cmdlet     = 'Clear-CIPPMobileDevice'
+                Parameters = @{
+                    userid       = $UserID
+                    username     = $Username
+                    tenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
             @{
                 Condition  = { $Options.RevokeSessions -eq $true }
                 Cmdlet     = 'Revoke-CIPPSessions'
