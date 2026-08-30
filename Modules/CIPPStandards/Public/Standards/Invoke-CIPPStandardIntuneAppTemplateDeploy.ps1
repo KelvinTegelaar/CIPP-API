@@ -16,7 +16,7 @@ function Invoke-CIPPStandardIntuneAppTemplateDeploy {
         EXECUTIVETEXT
             Automatically deploys approved Intune applications across all managed tenants, ensuring consistent software availability and reducing manual deployment overhead. Supports WinGet, Office, Chocolatey, Win32, and MSP application types.
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":true,"creatable":false,"label":"Select Application Templates","name":"standards.IntuneAppTemplateDeploy.templateIds","api":{"url":"/api/ListAppTemplates","labelField":"Displayname","valueField":"GUID","queryKey":"StdIntuneAppTemplateList"}}
+            {"type":"autoComplete","multiple":true,"creatable":false,"label":"Select Application Templates","name":"standards.IntuneAppTemplateDeploy.templateIds","api":{"url":"/api/ListAppTemplates","labelField":"displayName","valueField":"GUID","queryKey":"StdIntuneAppTemplateList"}}
         IMPACT
             Medium Impact
         ADDEDDATE
