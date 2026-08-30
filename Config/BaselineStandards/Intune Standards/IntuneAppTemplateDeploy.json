@@ -36,7 +36,8 @@
         "url": "/api/ListAppTemplates",
         "labelField": "displayName",
         "valueField": "GUID",
-        "queryKey": "StdIntuneAppTemplateList"
+        "queryKey": "StdIntuneAppTemplateList",
+        "templateView": { "title": "Application Template" }
       }
     }
   },

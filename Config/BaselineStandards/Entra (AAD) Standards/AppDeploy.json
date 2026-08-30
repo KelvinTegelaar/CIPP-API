@@ -46,7 +46,8 @@
         "url": "/api/ListAppApprovalTemplates",
         "labelField": "TemplateName",
         "valueField": "TemplateId",
-        "queryKey": "StdAppApprovalTemplateList"
+        "queryKey": "StdAppApprovalTemplateList",
+        "templateView": { "title": "App Approval Template" }
       }
     },
     "appids": {
