@@ -299,4 +299,18 @@ Describe 'Get-CIPPBaselineSpamFilterPolicyState block-list write params' {
         @($Prepared.Current.extraPolicyParams.RegionBlockList) | Should -BeExactly @('KP', 'RU')
         $Prepared.Expected.enableRegionBlockList | Should -BeTrue
     }
+
+    It 'never grades or writes BulkMovesEnabled unless explicitly configured - the parameter is in Preview and not available in every organization' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'bulkMovesEnabled'
+        $Prepared.Current.extraPolicyParams.PSObject.Properties.Name | Should -Not -Contain 'BulkMovesEnabled'
+    }
+
+    It 'grades and writes BulkMovesEnabled when configured On, unwrapping an option wrapper if the picker saved one' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ BulkMovesEnabled = [PSCustomObject]@{ label = 'On'; value = 'On' } } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.bulkMovesEnabled | Should -BeExactly 'On'
+        $Prepared.Current.extraPolicyParams.BulkMovesEnabled | Should -BeExactly 'On'
+    }
 }
