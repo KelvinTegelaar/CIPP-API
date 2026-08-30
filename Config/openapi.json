@@ -23001,6 +23001,96 @@
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
+    "/api/ExecHistoricalSearch": {
+      "post": {
+        "summary": "ExecHistoricalSearch",
+        "operationId": "ExecHistoricalSearch",
+        "tags": [
+          "Email-Exchange > Tools"
+        ],
+        "description": "Starts or cancels an Exchange Online historical search. Historical searches cover up to 90 days,\ndeliver results as CSV (max 100,000 rows) and are limited to 250 submissions per day per tenant.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "deliveryStatus": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "direction": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "jobId": {
+                    "type": "string"
+                  },
+                  "messageId": {
+                    "type": "string"
+                  },
+                  "notifyAddress": {
+                    "type": "string"
+                  },
+                  "originalClientIP": {
+                    "type": "string"
+                  },
+                  "recipientAddress": {
+                    "type": "string"
+                  },
+                  "reportTitle": {
+                    "type": "string"
+                  },
+                  "reportType": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "senderAddress": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "jobId",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.ReadWrite"
+      }
+    },
     "/api/ExecHVEUser": {
       "post": {
         "summary": "ExecHVEUser",
@@ -25387,7 +25477,7 @@
                     },
                     "serviceSource": {
                       "type": "object",
-                      "x-cipp-field-source": "graph-entity"
+                      "x-cipp-field-source": "graph-entity,frontend"
                     },
                     "severity": {
                       "type": "object",
@@ -34210,6 +34300,108 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.ReadWrite"
+      }
+    },
+    "/api/ExecSiteBrowserLibraryCopy": {
+      "post": {
+        "summary": "ExecSiteBrowserLibraryCopy",
+        "operationId": "ExecSiteBrowserLibraryCopy",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Starts or preflights a SharePoint document library content copy (CreateCopyJobs + MoveButKeepSource).\nActions: PreflightLibraryCopy, StartLibraryCopy.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "DestLibraryName": {
+                    "type": "string"
+                  },
+                  "DestListId": {
+                    "type": "string"
+                  },
+                  "DestSiteId": {
+                    "type": "string"
+                  },
+                  "DestSiteName": {
+                    "type": "string"
+                  },
+                  "DestSiteUrl": {
+                    "type": "string"
+                  },
+                  "NameConflictBehavior": {
+                    "type": "string"
+                  },
+                  "SourceLibraryName": {
+                    "type": "string"
+                  },
+                  "SourceListId": {
+                    "type": "string"
+                  },
+                  "SourceSiteId": {
+                    "type": "string"
+                  },
+                  "SourceSiteName": {
+                    "type": "string"
+                  },
+                  "SourceSiteUrl": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "Action",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -47058,6 +47250,86 @@
         "x-cipp-role": "CIPP.Extension.Read"
       }
     },
+    "/api/ListHistoricalSearches": {
+      "get": {
+        "summary": "ListHistoricalSearches",
+        "operationId": "ListHistoricalSearches",
+        "tags": [
+          "Email-Exchange > Tools"
+        ],
+        "description": "Lists Exchange Online historical searches (async message trace/report jobs) submitted in the last 10 days.",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "EndDate": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "JobProgress": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ReportTitle": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ReportType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Rows": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "StartDate": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Status": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "SubmitDate": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.Read"
+      }
+    },
     "/api/ListHVEAccounts": {
       "get": {
         "summary": "ListHVEAccounts",
@@ -49394,6 +49666,100 @@
         "x-cipp-role": "Exchange.Mailbox.Read"
       }
     },
+    "/api/ListMailFlowReports": {
+      "get": {
+        "summary": "ListMailFlowReports",
+        "operationId": "ListMailFlowReports",
+        "tags": [
+          "Email-Exchange > Reports"
+        ],
+        "description": "Returns Exchange Online mail flow reports: disposition counts by day (Get-MailFlowStatusReport)\nand top sender/recipient summaries (Get-MailTrafficSummaryReport). Both support up to 90 days.",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reportType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MailFlowStatus",
+                "TrafficSummary"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "Count": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Date": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Direction": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "EventType": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Extra": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Name": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.Read"
+      }
+    },
     "/api/ListMailQuarantine": {
       "get": {
         "summary": "ListMailQuarantine",
@@ -49941,7 +50307,7 @@
         "tags": [
           "Email-Exchange > Tools"
         ],
-        "description": "Traces email message delivery in Exchange Online, searchable by message ID, sender, recipient, and date range.",
+        "description": "Traces email delivery in Exchange Online via the Graph message trace API\n(/beta/admin/exchange/tracing/messageTraces), searchable by sender, recipient, subject,\nstatus, IP, message ID and date range. Graph works over GDAP/app-only where the legacy\nreporting endpoints do not. Requires the \"Transport Data Platform\" service principal\n(8bd644d1-64a1-4d4b-ae52-2e0cbf64e373) in the tenant; it is provisioned on demand. Until\nthat SP activates (which can take hours), or where the Graph permission is not yet\nconsented, the request falls back to Get-MessageTraceV2 so results are returned immediately.",
         "requestBody": {
           "required": true,
           "content": {
@@ -49950,7 +50316,8 @@
                 "type": "object",
                 "properties": {
                   "days": {
-                    "type": "string"
+                    "type": "number",
+                    "description": "Parse the shared search inputs."
                   },
                   "endDate": {
                     "type": "integer"
@@ -49961,19 +50328,28 @@
                   "ID": {
                     "type": "string"
                   },
-                  "MessageId": {
+                  "messageId": {
+                    "type": "string"
+                  },
+                  "messageTraceId": {
                     "type": "string"
                   },
                   "recipient": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
                   "sender": {
-                    "$ref": "#/components/schemas/LabelValue"
+                    "type": "string"
                   },
                   "startDate": {
                     "type": "integer"
                   },
                   "status": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "subjectFilterType": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
                   "tenantFilter": {
@@ -50002,43 +50378,25 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
                     "properties": {
-                      "Action": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Date": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Detail": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Event": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "FromIP": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "MessageTraceId": {
-                        "x-cipp-field-source": "backend"
-                      },
                       "Received": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "RecipientAddress": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "SenderAddress": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Size": {
+                        "x-cipp-field-source": "frontend"
                       },
                       "Status": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "Subject": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "ToIP": {
-                        "x-cipp-field-source": "backend"
+                        "x-cipp-field-source": "frontend"
                       }
                     }
                   }
@@ -54942,6 +55300,56 @@
                     "type": "object",
                     "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.Read"
+      }
+    },
+    "/api/ListSiteBrowserLibraryCopy": {
+      "get": {
+        "summary": "ListSiteBrowserLibraryCopy",
+        "operationId": "ListSiteBrowserLibraryCopy",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Returns sanitized aggregate status for a SharePoint library copy operation (OperationId).",
+        "parameters": [
+          {
+            "name": "OperationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
                 }
               }
             }
