@@ -47073,6 +47073,78 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListGroupUsage": {
+      "get": {
+        "summary": "ListGroupUsage",
+        "operationId": "ListGroupUsage",
+        "tags": [
+          "Identity > Reports"
+        ],
+        "description": "Compiles where each Entra group is used (Conditional Access, Intune assignments, group-based\nlicensing, Teams, nested groups, Entra roles, enterprise applications, Exchange transport\nrules) from the CIPP reporting database cache. Always served from cache — no live Graph calls.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "displayName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "groupType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "isUsed": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "mail": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "usageCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "usedIn": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "usedLocations": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Group.Read"
+      }
+    },
     "/api/ListGuestUsers": {
       "get": {
         "summary": "List guest users with lifecycle status",

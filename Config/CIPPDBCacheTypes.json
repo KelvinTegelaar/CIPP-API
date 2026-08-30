@@ -648,5 +648,10 @@
     "type": "SelfServicePurchaseProducts",
     "friendlyName": "Self-Service Purchase Products",
     "description": "AllowSelfServicePurchase product policies and trial autoclaim policy"
+  },
+  {
+    "type": "GroupUsage",
+    "friendlyName": "Group Usage Sources",
+    "description": "Refreshes every cache type that feeds the group usage report (groups, Conditional Access, Intune, roles, app assignments, licenses, transport rules); writes no rows of its own"
   }
 ]
