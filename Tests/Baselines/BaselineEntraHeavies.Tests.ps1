@@ -91,6 +91,24 @@ Describe 'Get-CIPPBaselineAuthenticationMethodsState' {
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
     }
 
+    It "the 'notConfigured' state skips the method exactly like an absent variable" {
+        # The Enabled switches became three-state autoCompletes; Not Configured must never
+        # grade or write. SMS is enabled in the tenant, so treating it as $false would drift.
+        Mock New-CIPPDbRequest { @($script:AuthPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ MicrosoftAuthenticatorEnabled = $true; SMSEnabled = 'notConfigured' } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.methodsOutOfPolicy).Count | Should -Be 0
+        @($Prepared.Current.remediationSets).Count | Should -Be 0
+    }
+
+    It 'accepts an option wrapper the pipeline did not unwrap' {
+        Mock New-CIPPDbRequest { @($script:AuthPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ SMSEnabled = [PSCustomObject]@{ label = 'Disabled'; value = $false } } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.methodsOutOfPolicy | Should -Match 'SMS'
+        $Prepared.Current.remediationSets[0].Params.Enabled | Should -BeFalse
+    }
+
     It 'a drifted method contributes named drifts AND a remediation parameter set' {
         Mock New-CIPPDbRequest { @($script:AuthPolicy | ConvertTo-Cached) }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ SMSEnabled = $false } }
