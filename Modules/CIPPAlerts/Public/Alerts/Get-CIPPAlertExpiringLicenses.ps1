@@ -16,10 +16,12 @@ function Get-CIPPAlertExpiringLicenses {
         # Support both old format (direct value) and new format (object with properties)
         if ($InputValue -is [hashtable] -or $InputValue -is [PSCustomObject]) {
             $DaysThreshold = if ($InputValue.ExpiringLicensesDays) { [int]$InputValue.ExpiringLicensesDays } else { 30 }
+            $MinDaysThreshold = if ($InputValue.ExpiringLicensesMinDays) { [int]$InputValue.ExpiringLicensesMinDays } else { 0 }
             $UnassignedOnly = if ($null -ne $InputValue.ExpiringLicensesUnassignedOnly) { [bool]$InputValue.ExpiringLicensesUnassignedOnly } else { $false }
         } else {
             # Backward compatibility: if InputValue is a simple value, treat it as days threshold
             $DaysThreshold = if ($InputValue) { [int]$InputValue } else { 30 }
+            $MinDaysThreshold = 0
             $UnassignedOnly = $false
         }
 
@@ -39,7 +41,9 @@ function Get-CIPPAlertExpiringLicenses {
                 foreach ($Term in $TermData) {
                     $DaysUntilRenew = [int]$Term.DaysUntilRenew
 
-                    if ($DaysUntilRenew -lt $DaysThreshold -and $DaysUntilRenew -gt 0) {
+                    # Graph does not expose the actual commitment term (P1M/P1Y), so the minimum
+                    # threshold is the only reliable way to skip monthly auto-renewing subscriptions
+                    if ($DaysUntilRenew -lt $DaysThreshold -and $DaysUntilRenew -gt 0 -and $DaysUntilRenew -ge $MinDaysThreshold) {
 
                         $Message = if ($UnassignedOnly) {
                             "$($_.License) has $UnassignedCount unassigned license(s) expiring in $DaysUntilRenew days. The estimated term is $($Term.Term)"
