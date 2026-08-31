@@ -456,7 +456,25 @@
         if (-not $IntuneResponse) {
             $IntuneDevicesError = 'Intune device query did not return a response'
         } elseif ([int]$IntuneResponse.status -ge 400) {
-            $IntuneDevicesError = $IntuneResponse.body.error.message
+            # Graph proxies this call to Intune's DeviceFE service, which returns its own JSON
+            # error blob as the Graph error message. Unwrap it so the report shows a readable
+            # sentence instead of raw JSON, keeping the Activity ID for Microsoft support cases.
+            $RawIntuneError = $IntuneResponse.body.error.message
+            $IntuneDevicesError = $RawIntuneError
+            if ($RawIntuneError -match '^\s*\{') {
+                try {
+                    $ParsedIntuneError = $RawIntuneError | ConvertFrom-Json -ErrorAction Stop
+                    if (-not [string]::IsNullOrWhiteSpace($ParsedIntuneError.Message)) {
+                        $IntuneDevicesError = $ParsedIntuneError.Message
+                    }
+                } catch {
+                    # Not valid JSON after all - keep the raw message
+                }
+            }
+            if ($IntuneDevicesError -like 'An error has occurred*') {
+                $ActivityId = [regex]::Match($IntuneDevicesError, 'Activity ID: ([0-9a-fA-F-]{36})').Groups[1].Value
+                $IntuneDevicesError = "Intune returned an unexpected error (HTTP $($IntuneResponse.status)). This is a failure inside the Intune service itself - usually transient, or the tenant does not have Intune provisioned. Rerun the check to retry.$(if ($ActivityId) { " Microsoft support reference (Activity ID): $ActivityId" })"
+            }
             if ([string]::IsNullOrWhiteSpace($IntuneDevicesError)) {
                 $IntuneDevicesError = "Intune device query failed with status $($IntuneResponse.status)"
             }
