@@ -187,6 +187,10 @@ function Set-CIPPDBCacheDefenderCVEs {
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
+        if (Test-CIPPCacheCapabilityError -Message $_.Exception.Message) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Skipping Defender CVE cache - tenant not onboarded to Defender for Endpoint: $($ErrorMessage.NormalizedError)" -sev 'Debug' -LogData $ErrorMessage
+            return
+        }
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "CVE Cache Refresh failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
         throw
     }

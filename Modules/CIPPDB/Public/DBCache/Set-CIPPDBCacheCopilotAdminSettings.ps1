@@ -27,6 +27,6 @@ function Set-CIPPDBCacheCopilotAdminSettings {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Copilot admin settings successfully' -sev Debug
 
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Copilot admin settings: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Copilot admin settings: $($_.Exception.Message)" -sev Debug
     }
 }

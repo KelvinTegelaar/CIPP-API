@@ -79,7 +79,8 @@ function Get-DefenderTvmRaw {
         return $all
     }
     catch {
-        Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Error on page $page`: $($_.Exception.Message)" -Sev 'Error'
+        $Sev = if (Test-CIPPCacheCapabilityError -Message $_.Exception.Message) { 'Debug' } else { 'Error' }
+        Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Error on page $page`: $($_.Exception.Message)" -Sev $Sev
         throw
     }
 }

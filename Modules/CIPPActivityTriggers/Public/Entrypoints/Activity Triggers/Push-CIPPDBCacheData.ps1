@@ -67,10 +67,18 @@ function Push-CIPPDBCacheData {
 
         $DefenderCapable = $false
         try {
-            $DefenderCapable = Test-CIPPStandardLicense -StandardName Compliance'DefenderLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('MDE_SMB', 'WIN_DEF_ATP', 'DEFENDER_ENDPOINT_P1') -SkipLog
+            $DefenderCapable = Test-CIPPStandardLicense -StandardName 'DefenderLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('MDE_SMB', 'WIN_DEF_ATP', 'DEFENDER_ENDPOINT_P1') -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Compliance license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Defender license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
+        }
+
+        $MdoCapable = $false
+        try {
+            $MdoCapable = Test-CIPPStandardLicense -StandardName 'DefenderForOffice365LicenseCheck' -TenantFilter $TenantFilter -Preset DefenderForOffice365 -SkipLog
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Defender for Office 365 license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
         }
 
         $SharePointCapable = $false
@@ -89,7 +97,7 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Teams license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
         }
 
-        Write-Information "License capabilities for $TenantFilter - Intune: $IntuneCapable, CA: $ConditionalAccessCapable, P2: $AzureADPremiumP2Capable, Exchange: $ExchangeCapable, Compliance: $ComplianceCapable, SharePoint: $SharePointCapable, Teams: $TeamsCapable"
+        Write-Information "License capabilities for $TenantFilter - Intune: $IntuneCapable, CA: $ConditionalAccessCapable, P2: $AzureADPremiumP2Capable, Exchange: $ExchangeCapable, Compliance: $ComplianceCapable, SharePoint: $SharePointCapable, Teams: $TeamsCapable, MDO: $MdoCapable"
 
         # Build grouped collection tasks — one activity per license category instead of one per cache type
         $Tasks = [System.Collections.Generic.List[object]]::new()
@@ -209,6 +217,18 @@ function Push-CIPPDBCacheData {
                 })
         } else {
             Write-Host "Skipping Defender data collection for $TenantFilter - no required license"
+        }
+
+        if ($MdoCapable) {
+            $Tasks.Add(@{
+                    FunctionName   = 'ExecCIPPDBCache'
+                    CollectionType = 'DefenderForOffice365'
+                    TenantFilter   = $TenantFilter
+                    QueueId        = $QueueId
+                    QueueName      = "DB Cache DefenderForOffice365 - $TenantFilter"
+                })
+        } else {
+            Write-Host "Skipping Defender for Office 365 data collection for $TenantFilter - no required license"
         }
 
         if ($SharePointCapable) {

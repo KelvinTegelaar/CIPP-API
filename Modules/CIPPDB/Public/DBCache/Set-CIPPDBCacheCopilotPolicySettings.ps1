@@ -61,6 +61,6 @@ function Set-CIPPDBCacheCopilotPolicySettings {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Copilot policy settings successfully' -sev Debug
 
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Copilot policy settings: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Copilot policy settings: $($_.Exception.Message)" -sev Debug
     }
 }
