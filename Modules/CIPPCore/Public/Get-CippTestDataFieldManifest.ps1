@@ -144,8 +144,8 @@ function Get-CippTestDataFieldManifest {
             # 'principal' is NOT read by any test file — Get-CippDbRoleMembers reads
             # $member.principal.displayName/.userPrincipalName. Omitting it would silently blank
             # every role member across the CIS/E8/ZTNA privileged-access tests.
-            'RoleAssignmentScheduleInstances'    = @('roleDefinitionId', 'assignmentType', 'memberType', 'endDateTime', 'principalId', 'principal')
-            'RoleEligibilitySchedules'           = @('roleDefinitionId', 'principalId', 'principal', 'scheduleInfo')
+            'RoleAssignmentScheduleInstances'    = @('id', 'roleDefinitionId', 'assignmentType', 'memberType', 'startDateTime', 'endDateTime', 'principalId', 'principal', 'directoryScopeId', 'roleAssignmentOriginId', 'roleAssignmentScheduleId')
+            'RoleEligibilitySchedules'           = @('id', 'roleDefinitionId', 'principalId', 'principal', 'scheduleInfo', 'directoryScopeId', 'memberType', 'status')
             # policyId, not id: this type is sourced from roleManagementPolicyAssignments (only the
             # assignment carries roleDefinitionId) and the policy is flattened up one level.
             'RoleManagementPolicies'             = @('policyId', 'scopeId', 'scopeType', 'roleDefinitionId', 'rules', 'effectiveRules')

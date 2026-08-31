@@ -4690,6 +4690,98 @@
         ]
       }
     },
+    "/api/AddPIMRoleSettingsTemplate": {
+      "post": {
+        "summary": "Create or update a PIM role settings template.",
+        "operationId": "AddPIMRoleSettingsTemplate",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Saves a Privileged Identity Management role settings template. The settings are validated against CIPP's secure floor (activation must expire within 24 hours and require MFA or an authentication context plus a justification; eligibilities and active assignments must expire within a year; active assignments must require a justification). A template below the floor is rejected with the list of problems rather than silently adjusted. Pass GUID to update an existing template. Pass captureRoleId with a tenantFilter to build the settings from that role's current PIM policy in the tenant instead of supplying them: values below the secure floor are raised to the closest value the floor allows and every raise is reported in the results.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "captureRoleId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Capture mode: build the settings from a role's current PIM policy in a tenant."
+                  },
+                  "captureRoleName": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "GUID": {
+                    "type": "string",
+                    "description": "Existing template GUID when editing."
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Roles (label/value pairs of role template ids) when roleScope is Custom."
+                  },
+                  "roleScope": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "PrivilegedRoles | AllRoles | Custom"
+                  },
+                  "settings": {
+                    "type": "string"
+                  },
+                  "templateName": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/AddPolicy": {
       "post": {
         "summary": "AddPolicy",
@@ -28460,6 +28552,129 @@
         "x-cipp-role": "Identity.User.ReadWrite"
       }
     },
+    "/api/ExecPIMRoleAssignment": {
+      "post": {
+        "summary": "Change a directory role assignment through PIM in the secure direction only.",
+        "operationId": "ExecPIMRoleAssignment",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Converts a permanent assignment to eligible, grants a time-bound active assignment, extends or renews a time-bound assignment or eligibility, or removes an assignment. Every request must carry an expiration (a duration or an end date); permanent / no-expiration assignments are refused, as are changes to group-inherited rows, the CIPP-SAM application and the last active Global Administrator. Requires Entra ID P2.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "ConvertToEligible | GrantActive | Extend | Renew | Remove"
+                  },
+                  "AssignmentType": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The row's current assignment type: Permanent | Active | ActivatedFromEligible | Eligible"
+                  },
+                  "DirectoryScopeId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "'/' for the whole directory or '/administrativeUnits/{id}'."
+                  },
+                  "Duration": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "ISO 8601 lifetime such as PT4H or P1Y. Use either Duration or EndDateTime, not both."
+                  },
+                  "EndDateTime": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Absolute end (unix seconds or ISO 8601). Use either Duration or EndDateTime, not both."
+                  },
+                  "Justification": {
+                    "type": "string",
+                    "description": "Reason recorded on the PIM request and in the CIPP logbook."
+                  },
+                  "PrincipalId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Object id of the user, group or service principal."
+                  },
+                  "RoleDefinitionId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Role template id (roleDefinitionId as PIM reports it)."
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "TimeZone": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "IANA time zone of the browser (e.g. Australia/Perth); only used to word the end time in the result."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
     "/api/ExecQuarantineManagement": {
       "post": {
         "summary": "ExecQuarantineManagement",
@@ -51587,6 +51802,244 @@
         "x-cipp-role": "Identity.User.Read"
       }
     },
+    "/api/ListPIMRoles": {
+      "get": {
+        "summary": "List Entra directory roles grouped with their PIM assignment breakdown.",
+        "operationId": "ListPIMRoles",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Returns one row per role (per tenant when AllTenants is selected) with the role's definition details, how many principals hold it permanently, eligibly or with a time-bound active assignment, the role's PIM policy summary, a slim Members list and the full assignment rows for drill-in. Roles nobody holds are included for a single tenant so the result is also the role catalogue. Powers the Roles & PIM page; ListRoles keeps its original per-definition shape and ListRoleAssignments stays one flat row per assignment.",
+        "parameters": [
+          {
+            "name": "principalId",
+            "in": "query",
+            "description": "Restrict to the roles one principal (object id) holds.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleTemplateId",
+            "in": "query",
+            "description": "Restrict to one role template id, e.g. from an alert link.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "ActiveCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "AssignmentType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "EligibleCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "EndDateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "IsPrivilegedRole": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Members": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "MemberType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PermanentCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PolicySummary": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PrincipalDisplayName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PrincipalType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PrincipalUserPrincipalName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "RoleDisplayName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Scope": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read"
+      }
+    },
+    "/api/ListPIMRoleSettingsTemplates": {
+      "get": {
+        "summary": "List PIM role settings templates.",
+        "operationId": "ListPIMRoleSettingsTemplates",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Lists saved Privileged Identity Management role settings templates. A template names a set of roles and the activation, eligibility, assignment, approval and notification rules to enforce on them; the PIMRoleSettings standard deploys a template to tenants.",
+        "parameters": [
+          {
+            "name": "GUID",
+            "in": "query",
+            "description": "Return only the template with this GUID.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Return only the template with this GUID.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GUID": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "meetsSecureFloor": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Package": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Permissions": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "roleCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "roleScope": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "settings.activationMaxDuration": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settings.activationRequires": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settings.activationRequiresApproval": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settings.activeAssignmentMaxDuration": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settings.eligibilityMaxDuration": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "SHA": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "templateName": {
+                        "x-cipp-field-source": "storage,frontend"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "UpdatedBy": {
+                        "x-cipp-field-source": "storage,frontend"
+                      },
+                      "updatedDate": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListPotentialApps": {
       "post": {
         "summary": "ListPotentialApps",
@@ -52118,6 +52571,88 @@
         ],
         "x-cipp-role": "Security.RetentionCompliancePolicy.Read",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListRoleAssignments": {
+      "get": {
+        "summary": "List Entra directory role assignments with their PIM assignment type.",
+        "operationId": "ListRoleAssignments",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Returns one row per principal, role and scope showing whether the assignment is Permanent (active with no end date), Active (time-bound), ActivatedFromEligible or Eligible, whether it is held directly or through a role-assignable group, the scope (directory or administrative unit), the principal type, the role's description and built-in flag, and the role's PIM policy summary. For a single tenant roles that nobody holds are included as Unassigned rows so the result is also the role catalogue. A single tenant is read live from Graph (Entra ID P2 tenants via PIM, others via unified RBAC where every assignment is permanent); AllTenants is served from the reporting cache.",
+        "parameters": [
+          {
+            "name": "includeUnassigned",
+            "in": "query",
+            "description": "Single tenant: also list roles that nobody holds (AssignmentType 'Unassigned'), so the result is the full role catalogue. Default true; set to false for assignments only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permanentOnly",
+            "in": "query",
+            "description": "Only return permanent (active, no end date) assignments.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "principalId",
+            "in": "query",
+            "description": "Restrict to one principal (object id), e.g. for the user view page.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleTemplateId",
+            "in": "query",
+            "description": "Restrict to one role template id.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read"
       }
     },
     "/api/ListRoles": {
@@ -63268,6 +63803,78 @@
           }
         ],
         "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
+    "/api/RemovePIMRoleSettingsTemplate": {
+      "post": {
+        "summary": "Delete a PIM role settings template.",
+        "operationId": "RemovePIMRoleSettingsTemplate",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Deletes a saved Privileged Identity Management role settings template by GUID. Tenants already configured from the template keep their settings.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "GUID": {
+                    "type": "string",
+                    "description": "GUID of the template to delete."
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "GUID of the template to delete."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "GUID of the template to delete.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/RemovePolicy": {
