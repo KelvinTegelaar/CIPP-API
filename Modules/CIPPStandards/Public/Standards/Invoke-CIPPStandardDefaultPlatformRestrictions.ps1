@@ -7,8 +7,8 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
     .SYNOPSIS
         (Label) Device enrollment restrictions
     .DESCRIPTION
-        (Helptext) Sets the default platform restrictions for enrolling devices into Intune. Note: Do not block personally owned if platform is blocked.
-        (DocsDescription) Sets the default platform restrictions for enrolling devices into Intune. Note: Do not block personally owned if platform is blocked.
+        (Helptext) Sets the default platform restrictions for enrolling devices into Intune, including optional minimum and maximum OS version limits per platform (Android Enterprise, Android, iOS/iPadOS and Windows). Note: Do not block personally owned if platform is blocked.
+        (DocsDescription) Sets the default platform restrictions for enrolling devices into Intune, including optional minimum and maximum OS version limits per platform (Android Enterprise, Android, iOS/iPadOS and Windows). Note: Do not block personally owned if platform is blocked.
     .NOTES
         CAT
             Intune Standards
@@ -19,14 +19,22 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.platformAndroidForWorkBlocked","label":"Block platform Android Enterprise (work profile)","default":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.personalAndroidForWorkBlocked","label":"Block personally owned Android Enterprise (work profile)","default":false}
+            {"type":"textField","name":"standards.DefaultPlatformRestrictions.osMinimumVersionAndroidForWork","label":"Android Enterprise (work profile) minimum OS version","helperText":"Example: 11.0. Leave blank to not enforce a minimum.","required":false}
+            {"type":"textField","name":"standards.DefaultPlatformRestrictions.osMaximumVersionAndroidForWork","label":"Android Enterprise (work profile) maximum OS version","helperText":"Example: 14.0. Leave blank to not enforce a maximum.","required":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.platformAndroidBlocked","label":"Block platform Android","default":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.personalAndroidBlocked","label":"Block personally owned Android","default":false}
+            {"type":"textField","name":"standards.DefaultPlatformRestrictions.osMinimumVersionAndroid","label":"Android minimum OS version","helperText":"Example: 10.0. Leave blank to not enforce a minimum.","required":false}
+            {"type":"textField","name":"standards.DefaultPlatformRestrictions.osMaximumVersionAndroid","label":"Android maximum OS version","helperText":"Example: 13.0. Leave blank to not enforce a maximum.","required":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.platformiOSBlocked","label":"Block platform iOS","default":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.personaliOSBlocked","label":"Block personally owned iOS","default":false}
+            {"type":"textField","name":"standards.DefaultPlatformRestrictions.osMinimumVersioniOS","label":"iOS/iPadOS minimum OS version","helperText":"Example: 16.1. Leave blank to not enforce a minimum.","required":false}
+            {"type":"textField","name":"standards.DefaultPlatformRestrictions.osMaximumVersioniOS","label":"iOS/iPadOS maximum OS version","helperText":"Example: 18.0. Leave blank to not enforce a maximum.","required":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.platformMacOSBlocked","label":"Block platform macOS","default":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.personalMacOSBlocked","label":"Block personally owned macOS","default":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.platformWindowsBlocked","label":"Block platform Windows","default":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.personalWindowsBlocked","label":"Block personally owned Windows","default":false}
+            {"type":"textField","name":"standards.DefaultPlatformRestrictions.osMinimumVersionWindows","label":"Windows minimum OS version","helperText":"Example: 10.0.19045.0. Leave blank to not enforce a minimum.","required":false}
+            {"type":"textField","name":"standards.DefaultPlatformRestrictions.osMaximumVersionWindows","label":"Windows maximum OS version","helperText":"Example: 10.0.22631.0. Leave blank to not enforce a maximum.","required":false}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -87,6 +95,22 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
         personalWindowsBlocked        = [bool]$Settings.personalWindowsBlocked
     }
 
+    # Optional minimum/maximum OS version per platform. macOS is intentionally absent - the Intune
+    # enrollment restriction for macOS carries no version limit. Each is enforced ONLY when the
+    # operator supplied it: a blank field means 'no opinion', so it is left out of the compare,
+    # the report and the remediation body. osMinimumVersion/osMaximumVersion are free-form strings
+    # on Graph, compared as strings.
+    $VersionMap = @(
+        @{ Setting = 'osMinimumVersionAndroidForWork'; Restriction = 'androidForWorkRestriction'; Property = 'osMinimumVersion' }
+        @{ Setting = 'osMaximumVersionAndroidForWork'; Restriction = 'androidForWorkRestriction'; Property = 'osMaximumVersion' }
+        @{ Setting = 'osMinimumVersionAndroid'; Restriction = 'androidRestriction'; Property = 'osMinimumVersion' }
+        @{ Setting = 'osMaximumVersionAndroid'; Restriction = 'androidRestriction'; Property = 'osMaximumVersion' }
+        @{ Setting = 'osMinimumVersioniOS'; Restriction = 'iosRestriction'; Property = 'osMinimumVersion' }
+        @{ Setting = 'osMaximumVersioniOS'; Restriction = 'iosRestriction'; Property = 'osMaximumVersion' }
+        @{ Setting = 'osMinimumVersionWindows'; Restriction = 'windowsRestriction'; Property = 'osMinimumVersion' }
+        @{ Setting = 'osMaximumVersionWindows'; Restriction = 'windowsRestriction'; Property = 'osMaximumVersion' }
+    )
+
     $StateIsCorrect = ($CurrentState.androidForWorkRestriction.platformBlocked -eq $DesiredState.platformAndroidForWorkBlocked) -and
     ($CurrentState.androidForWorkRestriction.personalDeviceEnrollmentBlocked -eq $DesiredState.personalAndroidForWorkBlocked) -and
     ($CurrentState.androidRestriction.platformBlocked -eq $DesiredState.platformAndroidBlocked) -and
@@ -111,46 +135,65 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
         personalWindowsBlocked        = $CurrentState.windowsRestriction.personalDeviceEnrollmentBlocked
     }
 
+    # Fold in the configured version limits: grade only the fields the operator set, and surface
+    # both the desired and current value on the compare/report objects so a version drift is visible.
+    foreach ($Check in $VersionMap) {
+        $DesiredVersion = "$($Settings.($Check.Setting))"
+        if ([string]::IsNullOrWhiteSpace($DesiredVersion)) { continue }
+        $CurrentVersion = "$($CurrentState.($Check.Restriction).($Check.Property))"
+        $DesiredState | Add-Member -NotePropertyName $Check.Setting -NotePropertyValue $DesiredVersion -Force
+        $CompareField | Add-Member -NotePropertyName $Check.Setting -NotePropertyValue $CurrentVersion -Force
+        if ($CurrentVersion -ne $DesiredVersion) { $StateIsCorrect = $false }
+    }
+
     $ExpectedValue = $DesiredState
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'DefaultPlatformRestrictions is already applied correctly.' -Sev Info
         } else {
+            $RemediationBody = [PSCustomObject]@{
+                '@odata.type'             = '#microsoft.graph.deviceEnrollmentPlatformRestrictionsConfiguration'
+                androidForWorkRestriction = [PSCustomObject]@{
+                    '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
+                    platformBlocked                 = $DesiredState.platformAndroidForWorkBlocked
+                    personalDeviceEnrollmentBlocked = $DesiredState.personalAndroidForWorkBlocked
+                }
+                androidRestriction        = [PSCustomObject]@{
+                    '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
+                    platformBlocked                 = $DesiredState.platformAndroidBlocked
+                    personalDeviceEnrollmentBlocked = $DesiredState.personalAndroidBlocked
+                }
+                iosRestriction            = [PSCustomObject]@{
+                    '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
+                    platformBlocked                 = $DesiredState.platformiOSBlocked
+                    personalDeviceEnrollmentBlocked = $DesiredState.personaliOSBlocked
+                }
+                macOSRestriction          = [PSCustomObject]@{
+                    '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
+                    platformBlocked                 = $DesiredState.platformMacOSBlocked
+                    personalDeviceEnrollmentBlocked = $DesiredState.personalMacOSBlocked
+                }
+                windowsRestriction        = [PSCustomObject]@{
+                    '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
+                    platformBlocked                 = $DesiredState.platformWindowsBlocked
+                    personalDeviceEnrollmentBlocked = $DesiredState.personalWindowsBlocked
+                }
+            }
+            # Only write a version limit the operator set; a blank field is left off the payload
+            # so an unconfigured platform keeps whatever version limit it already has.
+            foreach ($Check in $VersionMap) {
+                $DesiredVersion = "$($Settings.($Check.Setting))"
+                if ([string]::IsNullOrWhiteSpace($DesiredVersion)) { continue }
+                $RemediationBody.($Check.Restriction) | Add-Member -NotePropertyName $Check.Property -NotePropertyValue $DesiredVersion -Force
+            }
             $cmdParam = @{
                 tenantid    = $Tenant
                 uri         = "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations/$($CurrentState.id)"
                 AsApp       = $false
                 Type        = 'PATCH'
                 ContentType = 'application/json; charset=utf-8'
-                Body        = [PSCustomObject]@{
-                    '@odata.type'             = '#microsoft.graph.deviceEnrollmentPlatformRestrictionsConfiguration'
-                    androidForWorkRestriction = [PSCustomObject]@{
-                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
-                        platformBlocked                 = $DesiredState.platformAndroidForWorkBlocked
-                        personalDeviceEnrollmentBlocked = $DesiredState.personalAndroidForWorkBlocked
-                    }
-                    androidRestriction        = [PSCustomObject]@{
-                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
-                        platformBlocked                 = $DesiredState.platformAndroidBlocked
-                        personalDeviceEnrollmentBlocked = $DesiredState.personalAndroidBlocked
-                    }
-                    iosRestriction            = [PSCustomObject]@{
-                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
-                        platformBlocked                 = $DesiredState.platformiOSBlocked
-                        personalDeviceEnrollmentBlocked = $DesiredState.personaliOSBlocked
-                    }
-                    macOSRestriction          = [PSCustomObject]@{
-                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
-                        platformBlocked                 = $DesiredState.platformMacOSBlocked
-                        personalDeviceEnrollmentBlocked = $DesiredState.personalMacOSBlocked
-                    }
-                    windowsRestriction        = [PSCustomObject]@{
-                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
-                        platformBlocked                 = $DesiredState.platformWindowsBlocked
-                        personalDeviceEnrollmentBlocked = $DesiredState.personalWindowsBlocked
-                    }
-                } | ConvertTo-Json -Compress -Depth 10
+                Body        = $RemediationBody | ConvertTo-Json -Compress -Depth 10
             }
             try {
                 $null = New-GraphPostRequest @cmdParam
