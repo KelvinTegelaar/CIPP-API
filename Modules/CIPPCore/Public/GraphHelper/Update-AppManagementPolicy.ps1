@@ -19,8 +19,14 @@ function Update-AppManagementPolicy {
         $headers,
         # Skip the password-addition exemption (leave secrets blocked, exempt only the SAM certificate).
         # Defaults on only for the SAM app in certificate mode; other apps still get the password exemption.
-        [bool]$CertificateOnly = ([bool]$env:CertificateAuthMode -and ($ApplicationId -eq $env:ApplicationID))
+        [bool]$CertificateOnly = ([bool]$env:CertificateAuthMode -and ($ApplicationId -eq $env:ApplicationID)),
+        # Target a service principal instead of an application registration. First-party apps (e.g. the
+        # Azure MFA client) exist only as a service principal in the tenant, so the exemption must be
+        # resolved and assigned via servicePrincipals rather than applications.
+        [switch]$ServicePrincipal
     )
+
+    $TargetResource = if ($ServicePrincipal) { 'servicePrincipals' } else { 'applications' }
 
     try {
         # Create bulk request to fetch both policies at once
@@ -38,7 +44,7 @@ function Update-AppManagementPolicy {
             @{
                 id     = 'appRegistration'
                 method = 'GET'
-                url    = "applications(appId='$ApplicationId')?`$select=id,appId,displayName"
+                url    = "$TargetResource(appId='$ApplicationId')?`$select=id,appId,displayName"
             }
         )
 
@@ -171,23 +177,13 @@ function Update-AppManagementPolicy {
             if (-not $CIPPHasExemption) {
                 # Need to create or update a policy for CIPP
                 try {
-                    # Key restrictions are always disabled so the SAM certificate can register. Password
-                    # restrictions are disabled only for secret installs; certificate mode leaves them blocked.
-                    $Restrictions = @{
-                        keyCredentials = @(
-                            @{
-                                restrictionType                     = 'asymmetricKeyLifetime'
-                                state                               = 'disabled'
-                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
-                            }
-                            @{
-                                restrictionType                     = 'trustedCertificateAuthority'
-                                state                               = 'disabled'
-                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
-                            }
-                        )
-                    }
-                    if (-not $CertificateOnly) {
+                    # Only exempt the restriction types the default policy actually enforces, so the
+                    # exemption body never carries a restriction Graph would reject as unneeded or malformed.
+                    $Restrictions = @{}
+
+                    # Password restrictions are disabled only for secret installs; certificate mode leaves
+                    # them blocked so secrets stay disallowed.
+                    if (-not $CertificateOnly -and $DefaultPolicyBlocksCredentials) {
                         $Restrictions.passwordCredentials = @(
                             @{
                                 restrictionType                     = 'passwordAddition'
@@ -196,6 +192,29 @@ function Update-AppManagementPolicy {
                             }
                             @{
                                 restrictionType                     = 'symmetricKeyAddition'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                            }
+                        )
+                    }
+
+                    # Key restrictions are disabled so the SAM certificate can register. asymmetricKeyLifetime
+                    # is a lifetime-type restriction; Graph rejects the whole policy body unless it carries a
+                    # valid maxLifetime duration, even when the restriction is disabled. Echo the tenant
+                    # default's value when present, otherwise fall back to a conservative duration.
+                    if ($DefaultPolicyBlocksKeyCredentials) {
+                        $AsymmetricKeyMaxLifetime = ($DefaultKeyRestrictions | Where-Object { $_.restrictionType -eq 'asymmetricKeyLifetime' } | Select-Object -First 1).maxLifetime
+                        if (-not $AsymmetricKeyMaxLifetime) { $AsymmetricKeyMaxLifetime = 'P730D' }
+
+                        $Restrictions.keyCredentials = @(
+                            @{
+                                restrictionType                     = 'asymmetricKeyLifetime'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                                maxLifetime                         = $AsymmetricKeyMaxLifetime
+                            }
+                            @{
+                                restrictionType                     = 'trustedCertificateAuthority'
                                 state                               = 'disabled'
                                 restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
                             }
@@ -217,12 +236,21 @@ function Update-AppManagementPolicy {
                         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
 
                         if ($CIPPApp.id) {
-                            # Assign existing policy to CIPP-SAM application
+                            # Assign existing policy to the target app registration or service principal
                             $AssignBody = @{
                                 '@odata.id' = "https://graph.microsoft.com/beta/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)"
                             }
-                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
-                            $PolicyAction = "Updated and assigned existing policy $($ExistingExemptionPolicy.id) to CIPP-SAM"
+                            try {
+                                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$TargetResource/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
+                                $PolicyAction = "Updated and assigned existing policy $($ExistingExemptionPolicy.id) to CIPP-SAM"
+                            } catch {
+                                # A duplicate reference means the policy is already assigned - that is the desired end state, not a failure.
+                                if ($_.Exception.Message -match 'already exist') {
+                                    $PolicyAction = "Existing policy $($ExistingExemptionPolicy.id) already assigned to CIPP-SAM"
+                                } else {
+                                    throw
+                                }
+                            }
                             $CIPPAppPolicyId = $ExistingExemptionPolicy.id
                             $CIPPAppTargeted = $true
                         } else {
@@ -233,12 +261,21 @@ function Update-AppManagementPolicy {
                         $CreatedPolicy = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/policies/appManagementPolicies' -type POST -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
 
                         if ($CIPPApp.id) {
-                            # Assign policy to CIPP-SAM application using beta endpoint
+                            # Assign policy to the target app registration or service principal using beta endpoint
                             $AssignBody = @{
                                 '@odata.id' = "https://graph.microsoft.com/beta/policies/appManagementPolicies/$($CreatedPolicy.id)"
                             }
-                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
-                            $PolicyAction = "Created new policy $($CreatedPolicy.id) and assigned to CIPP-SAM"
+                            try {
+                                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$TargetResource/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
+                                $PolicyAction = "Created new policy $($CreatedPolicy.id) and assigned to CIPP-SAM"
+                            } catch {
+                                # A duplicate reference means the policy is already assigned - that is the desired end state, not a failure.
+                                if ($_.Exception.Message -match 'already exist') {
+                                    $PolicyAction = "Created new policy $($CreatedPolicy.id); already assigned to CIPP-SAM"
+                                } else {
+                                    throw
+                                }
+                            }
                             $CIPPAppPolicyId = $CreatedPolicy.id
                             $CIPPAppTargeted = $true
                         } else {
