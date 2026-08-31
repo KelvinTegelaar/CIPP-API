@@ -16414,6 +16414,10 @@
                   "baselineOption": {
                     "type": "string"
                   },
+                  "certificateAuth": {
+                    "type": "boolean",
+                    "description": "Certificate-auth toggle for an existing install: enabling keeps the client secret as a rollback and switches SAM tokens to the certificate. Idempotent with a certificate-only First Setup."
+                  },
                   "email": {
                     "type": "string"
                   },
@@ -17483,6 +17487,10 @@
                   "access_token": {
                     "type": "string",
                     "description": "Find Existing app registration"
+                  },
+                  "certificateOnly": {
+                    "type": "boolean",
+                    "description": "A certificate-only setup provisions no client secret. Determined up front so every app management policy call in this flow leaves the password-addition block in force."
                   }
                 }
               }

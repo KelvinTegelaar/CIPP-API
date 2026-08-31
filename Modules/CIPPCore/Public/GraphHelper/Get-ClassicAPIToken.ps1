@@ -12,10 +12,19 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
         $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
         $Body = @{
             client_id     = $env:ApplicationID
-            client_secret = $env:ApplicationSecret
             resource      = $Resource
             refresh_token = $env:RefreshToken
             grant_type    = 'refresh_token'
+        }
+        # Certificate-exclusive auth: sign an assertion instead of sending the client secret. The
+        # audience must be the classic v1 token endpoint this request targets.
+        if ($env:CertificateAuthMode) {
+            $SAMCert = Get-CIPPSAMCertificate -ErrorAction Stop
+            if (-not $SAMCert) { throw 'Certificate authentication is enabled but no SAM certificate is available.' }
+            $Body.client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+            $Body.client_assertion = New-CIPPCertificateAssertion -TenantId $TenantID -AppId $env:ApplicationID -Certificate $SAMCert.Certificate -Audience $uri
+        } else {
+            $Body.client_secret = $env:ApplicationSecret
         }
         try {
             if (!$script:classictoken) { $script:classictoken = [HashTable]::Synchronized(@{}) }

@@ -16,7 +16,10 @@ function Update-AppManagementPolicy {
     param(
         $TenantFilter = $env:TenantID,
         $ApplicationId = $env:ApplicationID,
-        $headers
+        $headers,
+        # Skip the password-addition exemption (leave secrets blocked, exempt only the SAM certificate).
+        # Defaults on only for the SAM app in certificate mode; other apps still get the password exemption.
+        [bool]$CertificateOnly = ([bool]$env:CertificateAuthMode -and ($ApplicationId -eq $env:ApplicationID))
     )
 
     try {
@@ -134,9 +137,11 @@ function Update-AppManagementPolicy {
             $DefaultPolicyBlocksKeyCredentials = $DefaultKeyRestrictions.Count -gt 0
         }
 
-        # If default policy blocks credentials and CIPP app doesn't have an exemption, create/update policy
+        # Create/update an exemption when the default policy blocks credentials. In certificate mode a
+        # password block is left in force, so only a key-credential block requires an exemption.
         $PolicyAction = $null
-        if (($DefaultPolicyBlocksCredentials -or $DefaultPolicyBlocksKeyCredentials) -and $CIPPApp) {
+        $RequiresExemption = $DefaultPolicyBlocksKeyCredentials -or (-not $CertificateOnly -and $DefaultPolicyBlocksCredentials)
+        if ($RequiresExemption -and $CIPPApp) {
             # Check if a CIPP-SAM Exemption Policy already exists
             $ExistingExemptionPolicy = $AppPolicies | Where-Object { $_.displayName -eq 'CIPP Exemption Policy' } | Select-Object -First 1
 
@@ -144,8 +149,10 @@ function Update-AppManagementPolicy {
             $CIPPHasExemption = $false
             if ($CIPPAppPolicyId) {
                 $CIPPPolicy = $AppPolicies | Where-Object { $_.id -eq $CIPPAppPolicyId }
-                # Check if the policy explicitly allows credentials (no enabled passwordAddition/symmetricKeyAddition restriction)
-                if ($CIPPPolicy.restrictions.passwordCredentials) {
+                # In certificate mode the password block is intentional, so only the key exemption matters.
+                if ($CertificateOnly) {
+                    $CIPPHasExemption = $true
+                } elseif ($CIPPPolicy.restrictions.passwordCredentials) {
                     $CIPPHasExemption = -not ($CIPPPolicy.restrictions.passwordCredentials | Where-Object { $_.restrictionType -in @('passwordAddition', 'symmetricKeyAddition') -and $_.state -eq 'enabled' })
                 } else {
                     # No password restrictions means it allows credentials
@@ -164,37 +171,41 @@ function Update-AppManagementPolicy {
             if (-not $CIPPHasExemption) {
                 # Need to create or update a policy for CIPP
                 try {
-                    # Define policy structure with disabled restrictions
+                    # Key restrictions are always disabled so the SAM certificate can register. Password
+                    # restrictions are disabled only for secret installs; certificate mode leaves them blocked.
+                    $Restrictions = @{
+                        keyCredentials = @(
+                            @{
+                                restrictionType                     = 'asymmetricKeyLifetime'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                            }
+                            @{
+                                restrictionType                     = 'trustedCertificateAuthority'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                            }
+                        )
+                    }
+                    if (-not $CertificateOnly) {
+                        $Restrictions.passwordCredentials = @(
+                            @{
+                                restrictionType                     = 'passwordAddition'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                            }
+                            @{
+                                restrictionType                     = 'symmetricKeyAddition'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                            }
+                        )
+                    }
                     $PolicyBody = @{
                         displayName  = 'CIPP Exemption Policy'
-                        description  = 'Allows CIPP app to manage credentials'
+                        description  = if ($CertificateOnly) { 'Allows CIPP app to register certificates (password addition intentionally left blocked)' } else { 'Allows CIPP app to manage credentials' }
                         isEnabled    = $true
-                        restrictions = @{
-                            passwordCredentials = @(
-                                @{
-                                    restrictionType                     = 'passwordAddition'
-                                    state                               = 'disabled'
-                                    restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
-                                }
-                                @{
-                                    restrictionType                     = 'symmetricKeyAddition'
-                                    state                               = 'disabled'
-                                    restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
-                                }
-                            )
-                            keyCredentials      = @(
-                                @{
-                                    restrictionType                     = 'asymmetricKeyLifetime'
-                                    state                               = 'disabled'
-                                    restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
-                                }
-                                @{
-                                    restrictionType                     = 'trustedCertificateAuthority'
-                                    state                               = 'disabled'
-                                    restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
-                                }
-                            )
-                        }
+                        restrictions = $Restrictions
                     }
 
                     if ($CIPPAppPolicyId) {
