@@ -25,6 +25,10 @@
   "read": {
     "cacheType": "AuthorizationPolicy"
   },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "permissionGrantPolicyIdsAssignedToDefaultUserRole": ["ManagePermissionGrantsForSelf.microsoft-user-default-low"]
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

@@ -35,6 +35,7 @@
       "OnlineMeetingsByDefaultEnabled": true
     }
   },
+  "writeTarget": "exoOrganizationConfig",
   "remediate": {
     "executor": "ExoRequest",
     "cmdlets": [

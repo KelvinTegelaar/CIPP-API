@@ -39,6 +39,7 @@ function Set-CIPPDBCacheCopilotPolicySettings {
         # -SkipValueExtraction returns the entity intact.
         $Values = [ordered]@{}
         $PolicyIds = [ordered]@{}
+        $SucceededSettings = 0
         foreach ($Key in $SettingMap.Keys) {
             try {
                 $Current = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/copilot/admin/policySettings/$($SettingMap[$Key])" -tenantid $TenantFilter -SkipValueExtraction
@@ -46,12 +47,23 @@ function Set-CIPPDBCacheCopilotPolicySettings {
                 # never turns "0" into a number and stops matching the configured value.
                 $Values[$Key] = if ($null -eq $Current.value) { $null } else { [string]$Current.value }
                 $PolicyIds[$Key] = $Current.policyId
+                $SucceededSettings++
             } catch {
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to get Copilot policy setting '$($SettingMap[$Key])': $($_.Exception.Message)" -sev Warning
                 $Values[$Key] = $null
                 $PolicyIds[$Key] = $null
             }
         }
+
+        # When EVERY per-setting fetch failed this was a tenant-wide failure (auth, throttling,
+        # a transient Graph error), not five genuine null values: writing the all-null row would
+        # replace the previous good row via orphan cleanup. Leave the existing cache untouched
+        # and let the next successful run refresh it.
+        if ($SucceededSettings -eq 0) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'All Copilot policy setting fetches failed - leaving the existing cache untouched' -sev Warning
+            return
+        }
+
         $Values['policyIds'] = [PSCustomObject]$PolicyIds
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotPolicySettings' -Data @([PSCustomObject]$Values) -AddCount

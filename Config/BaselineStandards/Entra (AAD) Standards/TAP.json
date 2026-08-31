@@ -33,25 +33,77 @@
       "type": "number",
       "label": "Minimum Lifetime (minutes)",
       "default": 60,
-      "recommended": 60
+      "recommended": 60,
+      "validators": {
+        "min": {
+          "value": 10,
+          "message": "Minimum value is 10"
+        },
+        "max": {
+          "value": 43200,
+          "message": "Maximum value is 43200"
+        },
+        "lessThanOrEqual": {
+          "field": "MaximumLifetime",
+          "message": "Minimum lifetime cannot exceed the maximum lifetime"
+        }
+      }
     },
     "MaximumLifetime": {
       "type": "number",
       "label": "Maximum Lifetime (minutes)",
       "default": 480,
-      "recommended": 480
+      "recommended": 480,
+      "validators": {
+        "min": {
+          "value": 10,
+          "message": "Minimum value is 10"
+        },
+        "max": {
+          "value": 43200,
+          "message": "Maximum value is 43200"
+        }
+      }
     },
     "DefaultLifetime": {
       "type": "number",
       "label": "Default Lifetime (minutes)",
       "default": 60,
-      "recommended": 60
+      "recommended": 60,
+      "validators": {
+        "min": {
+          "value": 10,
+          "message": "Minimum value is 10"
+        },
+        "max": {
+          "value": 43200,
+          "message": "Maximum value is 43200"
+        },
+        "greaterThanOrEqual": {
+          "field": "MinimumLifetime",
+          "message": "Default lifetime must be at least the minimum lifetime"
+        },
+        "lessThanOrEqual": {
+          "field": "MaximumLifetime",
+          "message": "Default lifetime cannot exceed the maximum lifetime"
+        }
+      }
     },
     "TAPLength": {
       "type": "number",
       "label": "Length (characters)",
       "default": 8,
-      "recommended": 8
+      "recommended": 8,
+      "validators": {
+        "min": {
+          "value": 8,
+          "message": "Minimum value is 8"
+        },
+        "max": {
+          "value": 48,
+          "message": "Maximum value is 48"
+        }
+      }
     }
   },
   "expected": {
@@ -71,6 +123,15 @@
         "value": "TemporaryAccessPass"
       }
     ]
+  },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "TemporaryAccessPass.state": "enabled",
+    "TemporaryAccessPass.isUsableOnce": "%isUsableOnce%",
+    "TemporaryAccessPass.minimumLifetimeInMinutes": "%MinimumLifetime%",
+    "TemporaryAccessPass.maximumLifetimeInMinutes": "%MaximumLifetime%",
+    "TemporaryAccessPass.defaultLifetimeInMinutes": "%DefaultLifetime%",
+    "TemporaryAccessPass.defaultLength": "%TAPLength%"
   },
   "remediate": {
     "executor": "GraphRequest",

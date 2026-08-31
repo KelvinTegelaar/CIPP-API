@@ -23,6 +23,11 @@ function Set-CIPPDBCacheExoOutboundConnector {
         if ($OutboundConnectors) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoOutboundConnector' -Data $OutboundConnectors -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($OutboundConnectors.Count) outbound connectors" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoOutboundConnector' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 outbound connectors (none found)' -sev Debug
         }
         $OutboundConnectors = $null
 

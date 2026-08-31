@@ -17,6 +17,14 @@ function Get-CIPPBaselineWorkItems {
           instance key, except for definitions declaring instanceIdentity (e.g. the CA
           template id): there the SELECTED TEMPLATE is the identity, so the same template
           applied twice at one level collides while different templates coexist.
+        - DIFFERENT standards writing the SAME tenant object (definition writeTarget) with
+          remediation on and opposing desired values are the same class of conflict, caught
+          per tenant after resolution: each definition's writeTargetProperties render to
+          its claims on the shared object, and overlapping claims with different values
+          mark every involved item Conflicted - proven live: the umbrella
+          AuthenticationMethods rewrote per-method states, and the OauthConsent trio are
+          mutually opposing consent policies. Compare-only items never conflict here -
+          detection reads don't fight.
         - Excluded tenants get nothing from that baseline.
         Each item carries the configured variable values, action posture, inheritance tiers for
         the UI, and the baseline's alert destinations.
@@ -263,10 +271,13 @@ function Get-CIPPBaselineWorkItems {
         $Effective[$Key] = @{ Rank = 3; Candidates = $OverrideCandidates }
     }
 
+    # Collected instead of streamed: the write-target conflict pass below needs the whole
+    # tenant's resolved set in hand before anything is emitted.
+    $ResolvedItems = [System.Collections.Generic.List[object]]::new()
     foreach ($Entry in $Effective.Values) {
         $Candidates = @($Entry.Candidates | Sort-Object -Property UpdatedAt -Descending)
         if ($Candidates.Count -le 1) {
-            $Candidates[0].Item
+            $ResolvedItems.Add($Candidates[0].Item)
             continue
         }
         # Same rank, same identity, different settings: even the expected value is
@@ -297,7 +308,117 @@ function Get-CIPPBaselineWorkItems {
             $ConflictItem.SourceTemplate = ($ConflictNames -join ', ')
             $ConflictItem | Add-Member -NotePropertyName Conflicted -NotePropertyValue $true -Force
             $ConflictItem | Add-Member -NotePropertyName ConflictWith -NotePropertyValue $ConflictNames -Force
-            $ConflictItem
+            $ResolvedItems.Add($ConflictItem)
         }
     }
+
+    # ---- write-target coordination -----------------------------------------------------
+    # Definitions naming a shared tenant object (writeTarget) stamp it onto their items so
+    # the orchestrator can serialize same-object writes; parallel activities racing one
+    # object were last-writer-wins on live tenants (a Graph 409 in the worst case).
+    foreach ($ResolvedItem in $ResolvedItems) {
+        $ResolvedItem | Add-Member -NotePropertyName WriteTarget -NotePropertyValue "$($DefinitionsByName[$ResolvedItem.BaseName].writeTarget)" -Force
+    }
+
+    # Claim values are canonicalized before compare because the families mix vocabularies
+    # for the same write: the umbrella stores a method's desired state as $true/$false
+    # where the per-method standards store 'enabled'/'disabled' - both mean the same PATCH.
+    # Blank, 'notConfigured' and unresolved %tokens% are 'no opinion' and never conflict.
+    $CanonicalClaimValue = {
+        param($Value)
+        if ($null -eq $Value) { return $null }
+        $Value = $Value.value ?? $Value
+        if ($Value -is [array]) {
+            $Parts = @($Value | ForEach-Object { & $CanonicalClaimValue $_ } | Where-Object { $null -ne $_ } | Sort-Object)
+            if ($Parts.Count -eq 0) { return $null }
+            return ('[{0}]' -f ($Parts -join ','))
+        }
+        if ($Value -is [bool]) { return $(if ($Value) { 'enabled' } else { 'disabled' }) }
+        $Text = "$Value".Trim()
+        if ($Text -eq '' -or $Text -eq 'notConfigured' -or $Text -match '^%[A-Za-z0-9_]+%$') { return $null }
+        if ($Text -match '^(?i)true$') { return 'enabled' }
+        if ($Text -match '^(?i)false$') { return 'disabled' }
+        if ($Text -match '^-?\d+(\.\d+)?$') { return "$([double]$Text)" }
+        $Text.ToLowerInvariant()
+    }
+
+    # Renders a definition's writeTargetProperties with the item's variables into
+    # path -> canonical value. Defaults apply exactly as the engine applies them at run
+    # time (locked always, blank takes default/recommended) - without this a blank
+    # DisableSMS state would claim nothing while the run enforces 'disabled'.
+    $RenderWriteClaims = {
+        param($Definition, $Variables)
+        if ($null -eq $Definition.writeTargetProperties) { return $null }
+        $Values = @{}
+        foreach ($ConfiguredVariable in (($Variables ?? [PSCustomObject]@{}).PSObject.Properties)) {
+            # The UI's pickers save option WRAPPERS ({label, value}); claims need the value.
+            $Values[$ConfiguredVariable.Name] = if ($ConfiguredVariable.Value -is [array]) {
+                @($ConfiguredVariable.Value | ForEach-Object { $_.value ?? $_ })
+            } else {
+                $ConfiguredVariable.Value.value ?? $ConfiguredVariable.Value
+            }
+        }
+        foreach ($Declared in (($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties)) {
+            $Fallback = $Declared.Value.default ?? $Declared.Value.recommended
+            if ($null -eq $Fallback) { continue }
+            $IsBlank = [string]::IsNullOrEmpty("$($Values[$Declared.Name])")
+            if ($Declared.Value.locked -eq $true -or ($IsBlank -and $Declared.Value.omitWhenBlank -ne $true)) {
+                $Values[$Declared.Name] = $Fallback
+            }
+        }
+        $Claims = @{}
+        foreach ($ClaimProperty in $Definition.writeTargetProperties.PSObject.Properties) {
+            $ClaimValue = $ClaimProperty.Value
+            if ($ClaimValue -is [string] -and $ClaimValue -match '^%([A-Za-z0-9_]+)%$') {
+                $ClaimValue = $Values[$Matches[1]]
+            }
+            $Canonical = & $CanonicalClaimValue $ClaimValue
+            # Hashtable keys compare case-insensitively, which absorbs the id-casing drift
+            # between definitions ('SoftwareOath' filter vs 'softwareOath' Graph id).
+            if ($null -ne $Canonical) { $Claims[$ClaimProperty.Name] = $Canonical }
+        }
+        $Claims
+    }
+
+    # Two REMEDIATING standards claiming the same property of one shared object with
+    # different values can only scramble the tenant (each write undoes the other), so the
+    # whole set parks at Conflict through the same Conflicted plumbing as the
+    # same-standard collision above. Items already Conflicted never write and are skipped.
+    foreach ($TargetGroup in ($ResolvedItems | Where-Object { $_.WriteTarget } | Group-Object -Property { '{0}|{1}' -f $_.TenantFilter, $_.WriteTarget })) {
+        $Claimants = @($TargetGroup.Group | Where-Object { $_.RemediateEnabled -and $_.Conflicted -ne $true })
+        if ($Claimants.Count -lt 2) { continue }
+        # Index-aligned with $Claimants; a List keeps $null entries (definition without
+        # writeTargetProperties) in place where a pipeline would drop them.
+        $ClaimMaps = [System.Collections.Generic.List[object]]::new()
+        foreach ($Claimant in $Claimants) {
+            $ClaimMaps.Add((& $RenderWriteClaims $DefinitionsByName[$Claimant.BaseName] $Claimant.Variables))
+        }
+        # claimant index -> its opponents; every pairwise opposition marks BOTH sides.
+        $Opponents = @{}
+        for ($First = 0; $First -lt $Claimants.Count - 1; $First++) {
+            for ($Second = $First + 1; $Second -lt $Claimants.Count; $Second++) {
+                $MapA = $ClaimMaps[$First]
+                $MapB = $ClaimMaps[$Second]
+                if (-not $MapA -or -not $MapB) { continue }
+                $Opposed = @($MapA.Keys | Where-Object { $MapB.ContainsKey($_) -and $MapA[$_] -ne $MapB[$_] })
+                if ($Opposed.Count -eq 0) { continue }
+                foreach ($Pair in @(@($First, $Second), @($Second, $First))) {
+                    $Theirs = $Claimants[$Pair[1]]
+                    if (-not $Opponents.ContainsKey($Pair[0])) { $Opponents[$Pair[0]] = [System.Collections.Generic.List[string]]::new() }
+                    $Opponents[$Pair[0]].Add(('{0} ({1})' -f $Theirs.Standard, $Theirs.TemplateName))
+                }
+            }
+        }
+        if ($Opponents.Count -eq 0) { continue }
+        $GroupAlert = @($Opponents.Keys | Where-Object { $Claimants[$_].AlertEnabled }).Count -gt 0
+        foreach ($Index in $Opponents.Keys) {
+            $Member = $Claimants[$Index]
+            $Member.RemediateEnabled = $false
+            $Member.AlertEnabled = $GroupAlert
+            $Member | Add-Member -NotePropertyName Conflicted -NotePropertyValue $true -Force
+            $Member | Add-Member -NotePropertyName ConflictWith -NotePropertyValue @($Opponents[$Index] | Select-Object -Unique) -Force
+        }
+    }
+
+    foreach ($ResolvedItem in $ResolvedItems) { $ResolvedItem }
 }

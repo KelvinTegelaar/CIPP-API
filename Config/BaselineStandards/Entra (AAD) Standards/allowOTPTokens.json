@@ -40,6 +40,10 @@
       }
     ]
   },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "MicrosoftAuthenticator.isSoftwareOathEnabled": "%isSoftwareOathEnabled%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [
@@ -48,7 +52,6 @@
         "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator",
         "body": {
           "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethodConfiguration",
-          "state": "enabled",
           "isSoftwareOathEnabled": "%isSoftwareOathEnabled%"
         }
       }

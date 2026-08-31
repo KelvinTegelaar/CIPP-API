@@ -54,6 +54,11 @@
       }
     ]
   },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "MicrosoftAuthenticator.state": "enabled",
+    "MicrosoftAuthenticator.featureSettings.displayAppInformationRequiredState.state": "enabled"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

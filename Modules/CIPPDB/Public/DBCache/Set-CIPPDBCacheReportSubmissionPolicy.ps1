@@ -30,6 +30,11 @@ function Set-CIPPDBCacheReportSubmissionPolicy {
             $Data = @($ReportSubmissionPolicies)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ReportSubmissionPolicy' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Data.Count) Report Submission Policies" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ReportSubmissionPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Report Submission Policies (none found)' -sev Debug
         }
         $ReportSubmissionPolicies = $null
 

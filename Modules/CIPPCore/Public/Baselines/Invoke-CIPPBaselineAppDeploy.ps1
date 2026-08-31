@@ -19,20 +19,36 @@ function Invoke-CIPPBaselineAppDeploy {
         $Current
     )
 
-    $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals')
+    try {
+        $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals')
+    } catch {
+        # Without this, a storage hiccup here surfaces as a bare transport error with no hint
+        # of what AppDeploy was doing.
+        throw "AppDeploy: reading the ServicePrincipals cache for $TenantFilter failed: $($_.Exception.Message)"
+    }
     $Mode = [string]($Remediate.mode.value ?? $Remediate.mode ?? 'copy')
 
     if ($Mode -eq 'copy') {
-        foreach ($App in @("$($Remediate.appids)" -split ',')) {
-            $App = $App.Trim()
-            if (-not $App) { continue }
+        $AppIds = @("$($Remediate.appids)" -split ',' | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+        $FailedApps = [System.Collections.Generic.List[string]]::new()
+        $LastError = $null
+        foreach ($App in $AppIds) {
             $Application = $ServicePrincipals | Where-Object -Property appId -EQ $App
             try {
                 New-CIPPApplicationCopy -App $App -Tenant $TenantFilter
                 Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Added application $($Application.displayName) ($App) and updated its permissions." -Sev 'Info'
             } catch {
-                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to add app $($Application.displayName) ($App): $($_.Exception.Message)" -Sev 'Error'
+                $FailedApps.Add($App)
+                $LastError = "$($_.Exception.Message)"
+                # The log write itself can fail on the same storage hiccup that broke the
+                # deploy; the end-of-loop throw still names the app either way.
+                try { Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to add app $($Application.displayName) ($App): $($_.Exception.Message)" -Sev 'Error' } catch { $null = $_ }
             }
+        }
+        # Partial failure keeps the classic's log-and-continue; when nothing deployed at all,
+        # surface WHICH app id(s) failed instead of grading the run remediated.
+        if ($AppIds.Count -gt 0 -and $FailedApps.Count -eq $AppIds.Count) {
+            throw "AppDeploy: deploying application id(s) $($FailedApps -join ', ') failed. Last error: $LastError"
         }
         return
     }

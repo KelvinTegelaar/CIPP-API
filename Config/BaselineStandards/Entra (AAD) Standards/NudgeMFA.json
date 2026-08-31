@@ -84,6 +84,10 @@
     "cacheType": "AuthenticationMethodsPolicy"
   },
   "prepare": "Get-CIPPBaselineNudgeMFAState",
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "registrationEnforcement.authenticationMethodsRegistrationCampaign.state": "%state%"
+  },
   "remediate": {
     "executor": "NudgeMFA"
   }

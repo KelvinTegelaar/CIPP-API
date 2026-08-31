@@ -21,6 +21,10 @@ function Set-CIPPDBCachePIMSettings {
 
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Azure AD Premium P2 license, skipping PIM' -sev Debug
+            # A license skip is still a completed collection: record authoritative empty sets for
+            # both types this collector writes so collect-on-miss does not re-run it forever.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMRoleSettings' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMAssignments' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
@@ -32,6 +36,11 @@ function Set-CIPPDBCachePIMSettings {
             if ($PIMRoleSettings) {
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMRoleSettings' -Data $PIMRoleSettings -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($PIMRoleSettings.Count) PIM role settings" -sev Debug
+            } else {
+                # The request succeeded with nothing returned: write the authoritative empty set so the
+                # Count marker records a completed collection and stale rows are cleared.
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMRoleSettings' -Data @() -AddCount -ClearOnEmpty
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 PIM role settings (none found)' -sev Debug
             }
             $PIMRoleSettings = $null
         } catch {
@@ -44,6 +53,11 @@ function Set-CIPPDBCachePIMSettings {
             if ($PIMAssignments) {
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMAssignments' -Data $PIMAssignments -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($PIMAssignments.Count) PIM assignments" -sev Debug
+            } else {
+                # The request succeeded with nothing returned: write the authoritative empty set so the
+                # Count marker records a completed collection and stale rows are cleared.
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMAssignments' -Data @() -AddCount -ClearOnEmpty
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 PIM assignments (none found)' -sev Debug
             }
             $PIMAssignments = $null
         } catch {

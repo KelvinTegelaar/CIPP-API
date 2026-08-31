@@ -84,6 +84,7 @@
     "AutoAdmittedUsers": {
       "type": "autoComplete",
       "label": "Who can bypass the lobby?",
+      "helperText": "Teams couples this to the dial-in bypass switch: 'Everyone' requires that switch on, 'Only organizers and co-organizers' requires it off - other pairings are rejected with error 40013.",
       "omitWhenBlank": true,
       "options": [
         {
@@ -117,6 +118,7 @@
     "AllowPSTNUsersToBypassLobby": {
       "type": "switch",
       "label": "Allow dial-in users to bypass lobby",
+      "helperText": "Must be on when 'Who can bypass the lobby?' is 'Everyone' and off when it is 'Only organizers and co-organizers' - Teams rejects any other combination.",
       "default": false,
       "recommended": false
     },

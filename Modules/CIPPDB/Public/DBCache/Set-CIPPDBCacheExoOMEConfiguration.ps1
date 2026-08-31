@@ -24,6 +24,11 @@ function Set-CIPPDBCacheExoOMEConfiguration {
             $OMEConfigurationArray = @($OMEConfigurations)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoOMEConfiguration' -Data $OMEConfigurationArray -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($OMEConfigurationArray.Count) OME configurations" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoOMEConfiguration' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 OME configurations (none found)' -sev Debug
         }
         $OMEConfigurations = $null
 

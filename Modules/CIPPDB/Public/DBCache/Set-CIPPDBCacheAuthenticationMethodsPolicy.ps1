@@ -34,6 +34,11 @@ function Set-CIPPDBCacheAuthenticationMethodsPolicy {
             if ($Fido2Configuration) {
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Fido2Configuration' -Data @($Fido2Configuration) -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached FIDO2 authentication method configuration successfully' -sev Debug
+            } else {
+                # The request succeeded with nothing returned: write the authoritative empty set so the
+                # Count marker records a completed collection and stale rows are cleared.
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Fido2Configuration' -Data @() -AddCount -ClearOnEmpty
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 FIDO2 authentication method configurations (none found)' -sev Debug
             }
             $Fido2Configuration = $null
         } catch {

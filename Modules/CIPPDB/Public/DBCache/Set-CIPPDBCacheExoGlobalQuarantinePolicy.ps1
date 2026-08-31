@@ -26,6 +26,11 @@ function Set-CIPPDBCacheExoGlobalQuarantinePolicy {
             $GlobalQuarantinePolicyArray = @($GlobalQuarantinePolicy)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoGlobalQuarantinePolicy' -Data $GlobalQuarantinePolicyArray -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Exchange global quarantine policy' -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoGlobalQuarantinePolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 global quarantine policies (none found)' -sev Debug
         }
         $GlobalQuarantinePolicy = $null
 

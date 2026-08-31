@@ -26,7 +26,13 @@ function Set-CIPPDBCacheExoLabels {
         $LicenseCheck = Test-CIPPStandardLicense -StandardName 'ExoLabelsCache' -TenantFilter $TenantFilter -Preset Compliance -SkipLog
 
         if ($LicenseCheck -eq $false) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have a Purview/AIP license, skipping compliance labels' -sev Debug
+            # Warning, not Debug: Test-CIPPStandardLicense also returns $false when the capability
+            # lookup itself errors, so a wrong gate on a tenant that DOES have Purview must be
+            # visible in the logs rather than silently parking the standard at No Data.
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Purview/AIP capability check returned '$LicenseCheck' (requires one of RMS_S_PREMIUM, RMS_S_PREMIUM2, MIP_S_CLP1, MIP_S_CLP2) - skipping compliance labels and recording an authoritative empty set" -sev Warning
+            # A license skip is still a completed collection: record the authoritative empty set
+            # so collect-on-miss does not re-run this collector forever on unlicensed tenants.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoLabels' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
@@ -38,6 +44,11 @@ function Set-CIPPDBCacheExoLabels {
         if ($Labels) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoLabels' -Data @($Labels) -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(@($Labels).Count) compliance labels" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoLabels' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 compliance labels (none found)' -sev Debug
         }
 
     } catch {

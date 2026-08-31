@@ -10,6 +10,11 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
         $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneAppProtectionPoliciesCache' -TenantFilter $TenantFilter -Preset Intune -SkipLog
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping app protection policies cache' -sev Debug
+            # A license skip is still a completed collection: record authoritative empty sets for
+            # every type this collector writes so collect-on-miss does not re-run it forever.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @() -AddCount -ClearOnEmpty
             return
         }
 

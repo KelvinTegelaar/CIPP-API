@@ -62,6 +62,10 @@
       }
     ]
   },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "Sms.state": "%state%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

@@ -418,6 +418,28 @@
     "cacheType": "AuthenticationMethodsPolicy"
   },
   "prepare": "Get-CIPPBaselineAuthenticationMethodsState",
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "Sms.state": "%SMSEnabled%",
+    "Voice.state": "%VoiceEnabled%",
+    "Email.state": "%EmailEnabled%",
+    "x509Certificate.state": "%x509CertificateEnabled%",
+    "HardwareOath.state": "%HardwareOathEnabled%",
+    "SoftwareOath.state": "%SoftwareOathEnabled%",
+    "QRCodePin.state": "%QRCodePinEnabled%",
+    "Fido2.state": "%FIDO2Enabled%",
+    "MicrosoftAuthenticator.state": "%MicrosoftAuthenticatorEnabled%",
+    "MicrosoftAuthenticator.isSoftwareOathEnabled": "%MicrosoftAuthenticatorSoftwareOath%",
+    "MicrosoftAuthenticator.featureSettings.displayAppInformationRequiredState.state": "%MicrosoftAuthenticatorDisplayAppInfo%",
+    "MicrosoftAuthenticator.featureSettings.displayLocationInformationRequiredState.state": "%MicrosoftAuthenticatorDisplayLocation%",
+    "MicrosoftAuthenticator.featureSettings.companionAppAllowedState.state": "%MicrosoftAuthenticatorCompanionApp%",
+    "TemporaryAccessPass.state": "%TAPEnabled%",
+    "TemporaryAccessPass.isUsableOnce": "%TAPUsableOnce%",
+    "TemporaryAccessPass.defaultLifetimeInMinutes": "%TAPDefaultLifetime%",
+    "TemporaryAccessPass.minimumLifetimeInMinutes": "%TAPMinLifetime%",
+    "TemporaryAccessPass.maximumLifetimeInMinutes": "%TAPMaxLifetime%",
+    "TemporaryAccessPass.defaultLength": "%TAPDefaultLength%"
+  },
   "remediate": {
     "executor": "AuthenticationMethods"
   }

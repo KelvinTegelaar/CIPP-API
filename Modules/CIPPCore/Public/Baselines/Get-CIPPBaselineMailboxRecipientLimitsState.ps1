@@ -44,7 +44,8 @@ function Get-CIPPBaselineMailboxRecipientLimitsState {
         if ($UPN -like 'DiscoverySearchMailbox*' -or $UPN -like 'SystemMailbox*') { continue }
 
         $Plan = $PlanCap["$($Mailbox.MailboxPlanId)"]
-        $Cap = if ($Plan) { [int]"$($Plan.MaxRecipientsPerMessage)" } else { 0 }
+        # A plan without a stored limit (null on some tenants) means no cap - [int]'' throws.
+        $Cap = if ($Plan -and "$($Plan.MaxRecipientsPerMessage)" -match '^\d+$') { [int]"$($Plan.MaxRecipientsPerMessage)" } else { 0 }
         if ($Plan -and $Cap -gt 0 -and $Limit -gt $Cap) {
             $PlanIssues.Add("$UPN (plan $($Plan.DisplayName) caps at $Cap)")
             continue

@@ -26,6 +26,11 @@ function Set-CIPPDBCacheExoTransportConfig {
             $TransportConfigArray = @($TransportConfig)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoTransportConfig' -Data $TransportConfigArray -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Exchange Transport configuration' -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoTransportConfig' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Transport configurations (none found)' -sev Debug
         }
         $TransportConfig = $null
 

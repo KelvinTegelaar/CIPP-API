@@ -89,6 +89,7 @@
   "read": {
     "cacheType": "SPOTenant"
   },
+  "writeTarget": "spoTenant",
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

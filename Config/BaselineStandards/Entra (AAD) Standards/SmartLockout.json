@@ -26,12 +26,32 @@
     "LockoutDurationInSeconds": {
       "label": "Lockout Duration (seconds)",
       "type": "number",
-      "default": 60
+      "default": 60,
+      "validators": {
+        "min": {
+          "value": 5,
+          "message": "Minimum value is 5"
+        },
+        "max": {
+          "value": 18000,
+          "message": "Maximum value is 18000"
+        }
+      }
     },
     "LockoutThreshold": {
       "label": "Lockout Threshold (failed attempts)",
       "type": "number",
-      "default": 10
+      "default": 10,
+      "validators": {
+        "min": {
+          "value": 1,
+          "message": "Minimum value is 1"
+        },
+        "max": {
+          "value": 50,
+          "message": "Maximum value is 50"
+        }
+      }
     },
     "EnableBannedPasswordCheckOnPremises": {
       "label": "Enable On-Premises Password Protection",

@@ -54,6 +54,10 @@
       }
     ]
   },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "HardwareOath.state": "%state%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

@@ -10,6 +10,9 @@ function Set-CIPPDBCacheIntuneAssignmentFilters {
         $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneAssignmentFiltersCache' -TenantFilter $TenantFilter -Preset Intune -SkipLog
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping assignment filters cache' -sev Debug
+            # A license skip is still a completed collection: record the authoritative empty set
+            # so collect-on-miss does not re-run this collector forever on unlicensed tenants.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAssignmentFilters' -Data @() -AddCount -ClearOnEmpty
             return
         }
 

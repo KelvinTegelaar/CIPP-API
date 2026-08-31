@@ -30,6 +30,11 @@ function Set-CIPPDBCacheCsTeamsAppPermissionPolicy {
             $Data = @($AppPermissionPolicies)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTeamsAppPermissionPolicy' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Data.Count) Teams App Permission Policies" -sev Debug
+        } else {
+            # The request succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTeamsAppPermissionPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Teams App Permission Policies (none found)' -sev Debug
         }
         $AppPermissionPolicies = $null
 
