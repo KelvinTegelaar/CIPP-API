@@ -51982,16 +51982,19 @@
                       "RestrictiveRetention": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "RetentionAction": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "RetentionDuration": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
                       "RuleCount": {
                         "x-cipp-field-source": "backend,frontend"
                       },
+                      "ScopedLocations": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
                       "WhenChangedUTC": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "WhenCreatedUTC": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "Workload": {
                         "x-cipp-field-source": "frontend"
                       }
                     }
