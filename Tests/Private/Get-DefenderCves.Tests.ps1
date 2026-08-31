@@ -47,8 +47,9 @@ BeforeAll {
         }
     }
 
-    # A record the fold cannot bucket: Hashtable.ContainsKey rejects a null key, so this
-    # trips the per-record catch instead of producing a row.
+    # A TVM software-inventory row with no CVE. The fold skips these up front (counting them
+    # as skipped) rather than trying to bucket a null key, which previously threw and was
+    # logged per-record as an 'Allover Build' error.
     function New-UnbucketableRecord {
         param($deviceId = 'd-bad')
         [pscustomobject]@{ cveId = $null; deviceId = $deviceId }
@@ -246,21 +247,17 @@ Describe 'get-DefenderCVEs' {
             $Received | ForEach-Object { @($_).Count | Should -Be 1 }
         }
 
-        It 'folds each record as it arrives rather than after the whole fetch completes' {
+        It 'skips records with no CVE without throwing or logging an error' {
             Mock -CommandName Get-DefenderTvmRaw -MockWith {
-                New-TvmRecord -cveId 'CVE-A' -deviceId 'd1'
-                New-UnbucketableRecord
-                throw 'page 3 failed'
+                New-UnbucketableRecord -deviceId 'd0'
+                New-TvmRecord -cveId 'CVE-2024-0009' -deviceId 'd1'
             }
 
-            { get-DefenderCVEs -TenantFilter $script:Tenant } | Should -Throw
+            $Result = @(get-DefenderCVEs -TenantFilter $script:Tenant)
 
-            # The unbucketable record is only ever logged from inside the fold. A buffered
-            # fetch would throw before a single record reached the fold, so this log is the
-            # observable proof that stage 1 streams.
-            Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter {
-                $message -like 'Allover Build*'
-            }
+            $Result.cveId | Should -Be 'CVE-2024-0009'
+            Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $message -like 'Allover Build*' }
+            Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $sev -eq 'Error' }
         }
     }
 

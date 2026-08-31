@@ -68,8 +68,6 @@ function Get-CIPPCVEReport {
                     TotalDeviceCount           = 0
                     AffectedTenantsList        = [System.Collections.Generic.List[object]]::new()
                     AffectedDevicesList        = [System.Collections.Generic.List[object]]::new()
-                    DiskPathList               = [System.Collections.Generic.List[object]]::new()
-                    RegistryPathList           = [System.Collections.Generic.List[object]]::new()
                     ExceptionMatchCount        = 0
                     TotalTenantGroupCount      = 0
                     ExceptionSources           = [System.Collections.Generic.HashSet[string]]::new()
@@ -81,22 +79,14 @@ function Get-CIPPCVEReport {
 
             [void]$CveGroup.AffectedTenantsList.Add(@{ customerId = $Item.customerId })
 
-            # Unpack the device JSON details from the row
+            # Trust the unique-device count the collector wrote rather than recounting unpacked
+            # rows; for AllTenants this sums each tenant's contribution to the same CVE.
+            $CveGroup.TotalDeviceCount += [int]$Item.deviceCount
+
+            # Unpack the minimal per-device detail ({deviceId, deviceName}) from the row.
             if ($Item.deviceDetailsJson) {
-                $Devices = ConvertFrom-Json $Item.deviceDetailsJson | Sort-Object -Property deviceName -Unique
-                foreach ($Dev in $Devices) {
-                    [void]$CveGroup.AffectedDevicesList.Add(@{ deviceName = $Dev.deviceName })
-                    if ($Dev.registryPaths) {
-                        [void]$CveGroup.RegistryPathList.Add(@{ deviceName = $Dev.deviceName
-                                registryPaths                              = $Dev.registryPaths
-                            })
-                    }
-                    if ($Dev.diskPaths) {
-                        [void]$CveGroup.DiskPathList.Add(@{ deviceName = $Dev.deviceName
-                                diskPaths                              = $Dev.diskPaths
-                            })
-                    }
-                    $CveGroup.TotalDeviceCount ++
+                foreach ($Dev in @(ConvertFrom-Json $Item.deviceDetailsJson)) {
+                    [void]$CveGroup.AffectedDevicesList.Add(@{ deviceId = $Dev.deviceId; deviceName = $Dev.deviceName })
                 }
             }
         }
@@ -172,8 +162,6 @@ function Get-CIPPCVEReport {
                     softwareVersion            = $Target.softwareVersion
                     deviceCount                = $Target.TotalDeviceCount
                     tenantCount                = $Target.TotalTenantGroupCount
-                    registryPaths              = $Target.RegistryPathList
-                    diskPaths                  = $Target.DiskPathList
                     exceptionStatus            = $ExceptionStatus
                     hasException               = $HasException
                     affectedTenants            = $Target.AffectedTenantsList
