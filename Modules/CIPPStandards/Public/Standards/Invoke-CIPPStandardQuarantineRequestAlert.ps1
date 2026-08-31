@@ -63,11 +63,22 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         return
     }
 
-    $StateIsCorrect = if ($State -eq 'removed') {
-        !$CurrentState
-    } else {
-        ($CurrentState.NotifyUser -contains $Settings.NotifyUser)
+    # Expected recipients, normalised (blanks removed, sorted, de-duplicated) so the alert's actual
+    # recipients and the configured recipients can be compared as values, order-insensitively.
+    $ExpectedNotify = if ($State -eq 'removed') { @() } else { @($Settings.NotifyUser | Where-Object { $_ } | Sort-Object -Unique) }
+
+    # State is a value comparison of the alert's recipients against the expected recipients. Wrapped in a
+    # scriptblock so it can be re-evaluated against a fresh read after remediation (see below), and so the
+    # report's Current/Expected fields below are the exact values this comparison is made on.
+    $GetStateIsCorrect = {
+        if ($State -eq 'removed') {
+            -not $CurrentState
+        } else {
+            $CurrentNotify = @($CurrentState.NotifyUser | Where-Object { $_ } | Sort-Object -Unique)
+            ($CurrentNotify -join "`n") -eq ($ExpectedNotify -join "`n")
+        }
     }
+    $StateIsCorrect = & $GetStateIsCorrect
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -115,6 +126,17 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
                 }
             }
         }
+        # Re-read the live state after remediating so the alert and report modes below reflect what was
+        # actually applied this run, not the pre-remediation snapshot. Without this, a freshly created or
+        # updated alert still reports its old (usually empty) recipients until the next scheduled run,
+        # which reads as "nothing changed" immediately after a force run.
+        try {
+            $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance | Where-Object { $_.Name -eq $PolicyName }
+            $StateIsCorrect = & $GetStateIsCorrect
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not re-check the QuarantineRequestAlert state after remediation for $Tenant. Error: $ErrorMessage" -Sev Error
+        }
     }
 
     if ($Settings.alert -eq $true) {
@@ -134,11 +156,14 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'QuarantineRequestAlert' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
+        # Both sides are normalised the same way and kept as arrays (a bare @() around an if-expression
+        # unrolls a single element to a scalar, which would never match the array-shaped Current value).
+        # Compliance is then decided by CurrentValue -eq ExpectedValue in Get-CIPPTenantAlignment.
         $CurrentValue = @{
-            NotifyUser = @($CurrentState.NotifyUser | Where-Object { $_ })
+            NotifyUser = @($CurrentState.NotifyUser | Where-Object { $_ } | Sort-Object -Unique)
         }
         $ExpectedValue = @{
-            NotifyUser = if ($State -eq 'removed') { @() } else { @($Settings.NotifyUser) }
+            NotifyUser = @($ExpectedNotify)
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.QuarantineRequestAlert' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }

@@ -18,11 +18,15 @@
     }
 
     try {
+        # The received-date window has to be wide enough to catch a release request raised some time after
+        # the message was quarantined. The old 6-hour window missed most of them; a one-day window suits an
+        # hourly-scheduled alert. (The Quarantine page applies no received-date filter, which is why the
+        # request is visible there while no webhook or email is ever sent.)
         $cmdParams = @{
             PageSize          = 1000
             ReleaseStatus     = 'Requested'
-            StartReceivedDate = (Get-Date).AddHours(-6)
-            EndReceivedDate   = (Get-Date).AddHours(0)
+            StartReceivedDate = (Get-Date).AddDays(-1)
+            EndReceivedDate   = (Get-Date)
         }
         $RequestedReleases = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams $cmdParams -ErrorAction Stop | Select-Object -ExcludeProperty *data.type* | Sort-Object -Property ReceivedTime
 
