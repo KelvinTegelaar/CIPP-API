@@ -10,7 +10,9 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Test-CIPPAccess.ps1'
+    $AuthDir = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication'
+    $FunctionPath = Join-Path $AuthDir 'Test-CIPPAccess.ps1'
+    $ScopeHelperPath = Join-Path $AuthDir 'Test-CippRoleTenantScope.ps1'
 
     # Stubs for the surface the APIClient path touches.
     function Get-CippApiClient { param($AppId) }
@@ -20,6 +22,7 @@ BeforeAll {
     function Get-CippAccessScopeRule { param($Role) }
     function Expand-CIPPTenantGroups { param($TenantFilter) @() }
 
+    . $ScopeHelperPath
     . $FunctionPath
 
     # Bypass the config-file reads by pre-seeding the runspace caches the function guards on.

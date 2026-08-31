@@ -469,93 +469,48 @@ function Test-CIPPAccess {
             if ($PermissionsFound) {
                 # Tenant list and group list requests have already returned above, from the
                 # cached scope rules. Everything from here is the per-endpoint access decision.
+                # Resolve the target from the request only. Do not fall back to $env:TenantID —
+                # that is the partner/home tenant, not a customer. Missing/unmapped filters are
+                # unresolved: Test-CippRoleTenantScope returns $true (block fail-closed / allow quirk).
+                $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId.value ?? $Request.Body.tenantId
                 $TenantAllowed = $false
                 $APIAllowed = $false
                 $swPermissionEval = [System.Diagnostics.Stopwatch]::StartNew()
+
+                # Block pass: deny wins, but only when the blocking role also grants the
+                # permission and its tenant scope covers the target. Test-CippRoleTenantScope
+                # returns $true for missing/unmapped tenants — here that means fail closed (apply block).
+                foreach ($Role in $PermissionSet) {
+                    $RoleGrantsPermission = $false
+                    foreach ($Perm in $Role.Permissions) {
+                        if ($Perm -match $APIRole) {
+                            $RoleGrantsPermission = $true
+                            break
+                        }
+                    }
+                    if (-not $RoleGrantsPermission) { continue }
+                    if ($Role.BlockedEndpoints -notcontains $Request.Params.CIPPEndpoint) { continue }
+
+                    $BlockInScope = Test-CippRoleTenantScope -Role $Role -TenantFilter $TenantFilter -Tenants $Tenants -Request $Request -ApiRole $APIRole
+                    if ($BlockInScope) {
+                        throw "Access to this CIPP API endpoint is not allowed, the custom role '$($Role.Role)' has blocked this endpoint: $($Request.Params.CIPPEndpoint)"
+                    }
+                }
+
+                # Allow pass: sticky $APIAllowed preserved (permission from one role + tenant
+                # from another can still succeed). BlockedEndpoints already handled above.
                 foreach ($Role in $PermissionSet) {
                     foreach ($Perm in $Role.Permissions) {
                         if ($Perm -match $APIRole) {
-                            if ($Role.BlockedEndpoints -contains $Request.Params.CIPPEndpoint) {
-                                throw "Access to this CIPP API endpoint is not allowed, the custom role '$($Role.Role)' has blocked this endpoint: $($Request.Params.CIPPEndpoint)"
-                            }
                             $APIAllowed = $true
                             break
                         }
                     }
 
                     if ($APIAllowed) {
-                        $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId.value ?? $Request.Body.tenantId ?? $env:TenantID
-                        # Check tenant level access
-                        if (($Role.BlockedTenants | Measure-Object).Count -eq 0 -and $Role.AllowedTenants -contains 'AllTenants') {
-                            $TenantAllowed = $true
-                        } elseif ($TenantFilter -eq 'AllTenants' -and $ApiRole -match 'Write$') {
-                            $TenantAllowed = $false
-                        } elseif ($TenantFilter -eq 'AllTenants' -and $ApiRole -match 'Read$') {
-                            $TenantAllowed = $true
-                        } else {
-                            # A requested tenant GROUP arrives as a complex body object
-                            # {type:'Group', value:<guid>}. Authorize it by group identity against the
-                            # role's granted groups - never by expanding members - so it can't fall
-                            # through to the implicit allow at the bottom of this block. Query-string
-                            # filters are plain strings and cannot carry a group, so only the body
-                            # object is a group request.
-                            if ($Request.Body.tenantFilter.type -eq 'Group') {
-                                $RequestedGroup = $Request.Body.tenantFilter.value
-                                $AllowedGroupIds = @(foreach ($AllowedItem in $Role.AllowedTenants) {
-                                        if ($AllowedItem -is [PSCustomObject] -and $AllowedItem.type -eq 'Group') { $AllowedItem.value }
-                                    })
-                                $TenantAllowed = $AllowedGroupIds -contains $RequestedGroup
-                                if (!$TenantAllowed) { continue }
-                                break
-                            }
-
-                            $Tenant = ($Tenants | Where-Object { $TenantFilter -eq $_.customerId -or $TenantFilter -eq $_.defaultDomainName }).customerId
-
-                            # Expand allowed tenant groups to individual tenant IDs
-                            $ExpandedAllowedTenants = foreach ($AllowedItem in $Role.AllowedTenants) {
-                                if ($AllowedItem -is [PSCustomObject] -and $AllowedItem.type -eq 'Group') {
-                                    try {
-                                        $GroupMembers = Expand-CIPPTenantGroups -TenantFilter @($AllowedItem)
-                                        $GroupMembers | ForEach-Object { $_.addedFields.customerId }
-                                    } catch {
-                                        Write-Warning "Failed to expand allowed tenant group '$($AllowedItem.label)': $($_.Exception.Message)"
-                                        @()
-                                    }
-                                } else {
-                                    $AllowedItem
-                                }
-                            }
-
-                            # Expand blocked tenant groups to individual tenant IDs
-                            $ExpandedBlockedTenants = foreach ($BlockedItem in $Role.BlockedTenants) {
-                                if ($BlockedItem -is [PSCustomObject] -and $BlockedItem.type -eq 'Group') {
-                                    try {
-                                        $GroupMembers = Expand-CIPPTenantGroups -TenantFilter @($BlockedItem)
-                                        $GroupMembers | ForEach-Object { $_.addedFields.customerId }
-                                    } catch {
-                                        Write-Warning "Failed to expand blocked tenant group '$($BlockedItem.label)': $($_.Exception.Message)"
-                                        @()
-                                    }
-                                } else {
-                                    $BlockedItem
-                                }
-                            }
-
-                            if ($ExpandedAllowedTenants -contains 'AllTenants') {
-                                $AllowedTenants = $Tenants.customerId
-                            } else {
-                                $AllowedTenants = $ExpandedAllowedTenants
-                            }
-
-                            if ($Tenant) {
-                                $TenantAllowed = $AllowedTenants -contains $Tenant -and $ExpandedBlockedTenants -notcontains $Tenant
-                                if (!$TenantAllowed) { continue }
-                                break
-                            } else {
-                                $TenantAllowed = $true
-                                break
-                            }
-                        }
+                        $TenantAllowed = Test-CippRoleTenantScope -Role $Role -TenantFilter $TenantFilter -Tenants $Tenants -Request $Request -ApiRole $APIRole
+                        if (!$TenantAllowed) { continue }
+                        break
                     }
                 }
                 $swPermissionEval.Stop()

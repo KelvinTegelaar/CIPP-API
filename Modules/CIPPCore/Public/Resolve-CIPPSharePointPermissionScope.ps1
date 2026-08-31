@@ -50,7 +50,18 @@ function Resolve-CIPPSharePointPermissionScope {
     $BrokeInheritance = $false
     if ($IsLibrary) {
         $ListInfo = New-GraphGetRequest -uri "$ScopeUri`?`$select=HasUniqueRoleAssignments,Title" -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
-        $HasUnique = [bool]$ListInfo.HasUniqueRoleAssignments
+        # [bool]$null is $false in PowerShell, which falsely reports inheriting libraries when
+        # HasUniqueRoleAssignments is not projected. Probe the scalar property in that case.
+        $HasUniqueRaw = $ListInfo.HasUniqueRoleAssignments
+        if ($null -eq $HasUniqueRaw) {
+            try {
+                $Probe = New-GraphGetRequest -uri "$ScopeUri/HasUniqueRoleAssignments" -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
+                $HasUniqueRaw = if ($null -ne $Probe.PSObject.Properties['value']) { $Probe.value } else { $Probe }
+            } catch {
+                $HasUniqueRaw = $null
+            }
+        }
+        $HasUnique = $HasUniqueRaw -eq $true -or "$HasUniqueRaw" -eq 'true'
         $TargetLabel = if ($ListInfo.Title) { "library '$($ListInfo.Title)'" } else { "library $ListId" }
 
         if (-not $HasUnique -and $EnsureUniqueRoleAssignments.IsPresent) {
