@@ -1,5 +1,6 @@
 {
   "name": "CopilotLimitedMode",
+  "disabled": true,
   "label": "Set Copilot Limited Mode",
   "cat": "Copilot (M365) Standards",
   "tag": [],
