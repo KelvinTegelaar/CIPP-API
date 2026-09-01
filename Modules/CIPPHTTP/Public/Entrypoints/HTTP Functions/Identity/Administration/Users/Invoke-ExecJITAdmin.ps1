@@ -53,6 +53,27 @@ function Invoke-ExecJITAdmin {
         # Continue execution if we can't check the setting
     }
 
+    # Enforce the caller's allowed JIT roles (from the JIT Role Template on their custom role).
+    # Get-CIPPJITAdminAllowedRoles is authoritative and fails closed for restricted callers, so we
+    # trust its result rather than swallowing errors here.
+    $RequestedRoles = @($Request.Body.AdminRoles.value | Where-Object { $_ })
+    if ($RequestedRoles.Count -gt 0) {
+        $AllowedRoles = Get-CIPPJITAdminAllowedRoles -Headers $Headers
+        if ($AllowedRoles.Restricted) {
+            $ForbiddenRoles = @($RequestedRoles | Where-Object { $AllowedRoles.AllowedRoleIds -notcontains $_ })
+            if ($ForbiddenRoles.Count -gt 0) {
+                $ForbiddenLabels = @($Request.Body.AdminRoles | Where-Object { $ForbiddenRoles -contains $_.value } | ForEach-Object { $_.label ?? $_.value })
+                if ($ForbiddenLabels.Count -eq 0) { $ForbiddenLabels = $ForbiddenRoles }
+                $ErrorMessage = "You are not permitted to assign the following role(s): $($ForbiddenLabels -join ', ')"
+                Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Error'
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{'Results' = @($ErrorMessage) }
+                    })
+            }
+        }
+    }
+
     if ($Request.Body.userAction -eq 'create') {
         $Domain = $Request.Body.Domain.value ? $Request.Body.Domain.value : $Request.Body.Domain
         $Username = "$($Request.Body.Username)@$($Domain)"

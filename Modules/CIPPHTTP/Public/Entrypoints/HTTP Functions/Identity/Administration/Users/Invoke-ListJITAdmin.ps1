@@ -15,6 +15,18 @@
     $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
     $TenantFilter = $Request.Query.TenantFilter
 
+    # Resolve which directory roles the caller may see. When restricted, a JIT admin is only shown if
+    # every directory role it currently holds is within the caller's allow-list (strict subset). JIT
+    # admins with no resolvable roles (e.g. scheduled-but-not-yet-active, or stale cache) are shown.
+    $AllowedRoles = Get-CIPPJITAdminAllowedRoles -Headers $Request.Headers
+    $FilterJITAdmin = {
+        param($RoleTemplateIds)
+        if (-not $AllowedRoles.Restricted) { return $true }
+        $Ids = @($RoleTemplateIds | Where-Object { $_ })
+        if ($Ids.Count -eq 0) { return $true }
+        return @($Ids | Where-Object { $AllowedRoles.AllowedRoleIds -notcontains $_ }).Count -eq 0
+    }
+
     if ($TenantFilter -ne 'AllTenants') {
         # Single tenant logic
         $BulkRequests = [System.Collections.Generic.List[object]]::new()
@@ -29,27 +41,37 @@
 
         $BulkRequests.Clear()
         foreach ($User in $Users) {
+            # memberOf (groups + roles) for display
             $BulkRequests.Add(@{
                     id     = $User.id
                     method = 'GET'
                     url    = "users/$($User.id)/memberOf?`$select=id,displayName"
+                })
+            # directory roles with roleTemplateId, used for allow-list filtering
+            $BulkRequests.Add(@{
+                    id     = "role_$($User.id)"
+                    method = 'GET'
+                    url    = "users/$($User.id)/memberOf/microsoft.graph.directoryRole?`$select=id,displayName,roleTemplateId"
                 })
         }
         $RoleResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests)
         # Write-Information ($RoleResults | ConvertTo-Json -Depth 10 )
         $Results = $Users | ForEach-Object {
             $MemberOf = ($RoleResults | Where-Object -Property id -EQ $_.id).body.value | Select-Object displayName, id
-            [PSCustomObject]@{
-                id                 = $_.id
-                displayName        = $_.displayName
-                userPrincipalName  = $_.userPrincipalName
-                accountEnabled     = $_.accountEnabled
-                jitAdminEnabled    = $_.($Schema.id).jitAdminEnabled
-                jitAdminExpiration = $_.($Schema.id).jitAdminExpiration
-                jitAdminStartDate  = $_.($Schema.id).jitAdminStartDate
-                jitAdminReason     = $_.($Schema.id).jitAdminReason
-                jitAdminCreatedBy  = $_.($Schema.id).jitAdminCreatedBy
-                memberOf           = $MemberOf
+            $DirectoryRoles = ($RoleResults | Where-Object -Property id -EQ "role_$($_.id)").body.value | Select-Object displayName, id, roleTemplateId
+            if ((& $FilterJITAdmin ($DirectoryRoles.roleTemplateId))) {
+                [PSCustomObject]@{
+                    id                 = $_.id
+                    displayName        = $_.displayName
+                    userPrincipalName  = $_.userPrincipalName
+                    accountEnabled     = $_.accountEnabled
+                    jitAdminEnabled    = $_.($Schema.id).jitAdminEnabled
+                    jitAdminExpiration = $_.($Schema.id).jitAdminExpiration
+                    jitAdminStartDate  = $_.($Schema.id).jitAdminStartDate
+                    jitAdminReason     = $_.($Schema.id).jitAdminReason
+                    jitAdminCreatedBy  = $_.($Schema.id).jitAdminCreatedBy
+                    memberOf           = $MemberOf
+                }
             }
         }
 
@@ -102,6 +124,9 @@
             Write-Information "Found $($Rows.Count) rows in the cache"
             foreach ($row in ($Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant')) {
                 $UserObject = $row.JITAdminUser | ConvertFrom-Json
+                if (-not (& $FilterJITAdmin ($UserObject.roleTemplateIds))) {
+                    continue
+                }
                 $Results.Add(
                     [PSCustomObject]@{
                         Tenant             = $row.Tenant
