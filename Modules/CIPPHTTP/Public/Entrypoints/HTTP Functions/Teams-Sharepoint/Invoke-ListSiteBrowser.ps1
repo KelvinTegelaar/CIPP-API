@@ -203,7 +203,7 @@ function Invoke-ListSiteBrowser {
             if ([string]::IsNullOrWhiteSpace($SiteId)) {
                 $SiteId = $SiteMeta.id
             }
-            $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+            $BaseUri = (Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl -SharePointInfo $SharePointInfo).BaseUri
             $SiteInfo = [PSCustomObject]@{
                 id          = $SiteId
                 webUrl      = $SiteUrl

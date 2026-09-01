@@ -39,10 +39,10 @@ function Resolve-CIPPSharePointPermissionScope {
         [switch]$EnsureUniqueRoleAssignments
     )
 
-    $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-    $Scope = "$($SharePointInfo.SharePointUrl)/.default"
-    $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-    $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+    $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+    $Scope = $RestContext.Scope
+    $JsonAccept = $RestContext.Headers
+    $BaseUri = $RestContext.BaseUri
 
     $IsLibrary = -not [string]::IsNullOrWhiteSpace($ListId)
     $ScopeUri = if ($IsLibrary) { "$BaseUri/web/lists(guid'$ListId')" } else { "$BaseUri/web" }

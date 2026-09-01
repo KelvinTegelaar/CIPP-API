@@ -153,10 +153,10 @@ function Invoke-ListSiteBrowserPermissions {
     $IsLibrary = -not [string]::IsNullOrWhiteSpace($ListId)
 
     try {
-        $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-        $SpoScope = "$($SharePointInfo.SharePointUrl)/.default"
-        $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-        $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+        $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+        $SpoScope = $RestContext.Scope
+        $JsonAccept = $RestContext.Headers
+        $BaseUri = $RestContext.BaseUri
 
         # --- Target / inheritance ---
         $TargetTitle = $null

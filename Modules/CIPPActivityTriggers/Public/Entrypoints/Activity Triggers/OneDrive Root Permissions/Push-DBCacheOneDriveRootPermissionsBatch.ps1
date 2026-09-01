@@ -362,10 +362,10 @@ function Push-DBCacheOneDriveRootPermissionsBatch {
         $AssociatedGroupTitles = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
         try {
-            $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-            $Scope = "$($SharePointInfo.SharePointUrl)/.default"
-            $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-            $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+            $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+            $Scope = $RestContext.Scope
+            $JsonAccept = $RestContext.Headers
+            $BaseUri = $RestContext.BaseUri
 
             $AssociatedEndpoints = [ordered]@{
                 'Owners'   = 'associatedownergroup'
