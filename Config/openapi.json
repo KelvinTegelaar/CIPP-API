@@ -279,6 +279,14 @@
                   "logbook": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
+                  "PsaTicketPriority": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The audit form posts the raw form values, so an autocomplete selection arrives as a {label, value} object - unwrap it to the bare Halo priority id before storing."
+                  },
                   "RowKey": {
                     "type": "string"
                   },
@@ -21039,7 +21047,7 @@
           {
             "name": "TicketType",
             "in": "query",
-            "description": "Outcomes and priorities are scoped to a ticket type. The settings page sends the ticket type currently selected in the form so the lists follow the dropdown; without it both fall back to whatever ticket type was last saved.",
+            "description": "Outcomes and priorities are scoped to a ticket type. The settings page sends the ticket type currently selected in the form so the lists follow the dropdown; without it both fall back to whatever ticket type was last saved. @() on each: PowerShell unrolls single-element output, so a ticket type with one outcome (or a lookup that answers with a single explanatory row) would otherwise serialise as a bare object and break callers that expect a list.",
             "required": false,
             "schema": {
               "type": "string"
@@ -45797,6 +45805,10 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
+                      "PsaTicketPriority": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
                       "PsaTicketStrategy": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -50121,6 +50133,15 @@
         "description": "Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
           {
+            "name": "Minimal",
+            "in": "query",
+            "description": "Picker mode: address autocompletes only need the address + name, so skip the heavy field set, the per-mailbox computed properties, and the extra Get-OrganizationConfig call.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -51798,6 +51819,9 @@
                         "x-cipp-field-source": "storage"
                       },
                       "PsaTicketId": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PsaTicketPriority": {
                         "x-cipp-field-source": "storage"
                       },
                       "Reference": {
@@ -54341,6 +54365,10 @@
                         "x-cipp-field-source": "storage"
                       },
                       "PsaTicketId": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PsaTicketPriority": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
@@ -62120,6 +62148,9 @@
                       "PsaTicketId": {
                         "x-cipp-field-source": "storage"
                       },
+                      "PsaTicketPriority": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Reference": {
                         "x-cipp-field-source": "storage"
                       },
@@ -66320,6 +66351,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "PsaTicketId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PsaTicketPriority": {
                       "x-cipp-field-source": "storage"
                     },
                     "Reference": {

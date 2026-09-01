@@ -33,7 +33,14 @@ function Invoke-ListMailboxes {
 
         # Original live EXO logic
         $ZeroArchiveGuid = '00000000-0000-0000-0000-000000000000'
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,IsDirSynced,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,AutoExpandingArchiveEnabled'
+        # Picker mode: address autocompletes only need the address + name, so skip the heavy field
+        # set, the per-mailbox computed properties, and the extra Get-OrganizationConfig call.
+        $Minimal = $Request.Query.Minimal -eq $true
+        if ($Minimal) {
+            $Select = 'id,UserPrincipalName,DisplayName,PrimarySMTPAddress'
+        } else {
+            $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,IsDirSynced,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,AutoExpandingArchiveEnabled'
+        }
         $ExoRequest = @{
             tenantid  = $TenantFilter
             cmdlet    = 'Get-Mailbox'
@@ -71,6 +78,18 @@ function Invoke-ListMailboxes {
                     }
                 }
             }
+        }
+
+        if ($Minimal) {
+            $GraphRequest = @(New-ExoRequest @ExoRequest) | Select-Object Id,
+            @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+            @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
+            @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } }
+
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = @($GraphRequest)
+                })
         }
 
         $OrgAutoExpandingArchiveEnabled = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-OrganizationConfig' -Select 'AutoExpandingArchiveEnabled').AutoExpandingArchiveEnabled
