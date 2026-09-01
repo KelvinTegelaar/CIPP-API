@@ -4387,6 +4387,64 @@
         "x-cipp-role": "Identity.Role.ReadWrite"
       }
     },
+    "/api/AddJITRoleTemplate": {
+      "post": {
+        "summary": "AddJITRoleTemplate",
+        "operationId": "AddJITRoleTemplate",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Creates a JIT Role Template - a named allow-list of directory roles that can be assigned to a\nCIPP custom role to restrict which roles that role's members may grant via JIT Admin.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "roles": {
+                    "type": "string"
+                  },
+                  "templateName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "templateName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
     "/api/AddMSPApp": {
       "post": {
         "summary": "AddMSPApp",
@@ -9189,6 +9247,68 @@
                   "GUID",
                   "templateName",
                   "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
+    "/api/EditJITRoleTemplate": {
+      "post": {
+        "summary": "EditJITRoleTemplate",
+        "operationId": "EditJITRoleTemplate",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Updates an existing JIT Role Template.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "GUID": {
+                    "type": "string"
+                  },
+                  "roles": {
+                    "type": "string"
+                  },
+                  "templateName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "GUID",
+                  "templateName"
                 ]
               }
             }
@@ -18029,6 +18149,9 @@
                   "Action": {
                     "type": "string"
                   },
+                  "AllowedRolesTemplate": {
+                    "type": "string"
+                  },
                   "AllowedTenants": {
                     "type": "string"
                   },
@@ -23574,7 +23697,11 @@
                 "type": "object",
                 "properties": {
                   "AdminRoles": {
-                    "$ref": "#/components/schemas/LabelValue"
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Enforce the caller's allowed JIT roles (from the JIT Role Template on their custom role). Get-CIPPJITAdminAllowedRoles is authoritative and fails closed for restricted callers, so we trust its result rather than swallowing errors here."
                   },
                   "Domain": {
                     "$ref": "#/components/schemas/LabelValue"
@@ -49109,6 +49236,145 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListJITAllowedRoles": {
+      "get": {
+        "summary": "ListJITAllowedRoles",
+        "operationId": "ListJITAllowedRoles",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Returns the directory roles the calling user is permitted to assign via JIT Admin, based on the\nJIT Role Template(s) attached to their CIPP custom role(s). When the caller is unrestricted the\nfull role catalog is available (Restricted = false).",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListJITRoleTemplates": {
+      "get": {
+        "summary": "ListJITRoleTemplates",
+        "operationId": "ListJITRoleTemplates",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Lists JIT Role Templates - named allow-lists of directory roles used to restrict which roles a\nCIPP custom role may assign via JIT Admin.",
+        "parameters": [
+          {
+            "name": "GUID",
+            "in": "query",
+            "description": "If a specific GUID is requested, filter to that template",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "createdBy": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "createdDate": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GUID": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Package": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Permissions": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "roles": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SHA": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "templateName": {
+                        "x-cipp-field-source": "storage,frontend"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "UpdatedBy": {
+                        "x-cipp-field-source": "storage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListKnownIPDb": {
       "get": {
         "summary": "ListKnownIPDb",
@@ -64134,6 +64400,71 @@
         "tags": [
           "Identity > Administration > Users"
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
+    "/api/RemoveJITRoleTemplate": {
+      "post": {
+        "summary": "RemoveJITRoleTemplate",
+        "operationId": "RemoveJITRoleTemplate",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Deletes a JIT Role Template.",
         "requestBody": {
           "required": false,
           "content": {
