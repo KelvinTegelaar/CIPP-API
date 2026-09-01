@@ -116,3 +116,68 @@ Describe 'Start-UserSyncTimer - stale role self-heal' {
         }
     }
 }
+
+# B2B guests carry a UPN like user_home.com#EXT#@tenant.onmicrosoft.com. '#' is illegal in a Table
+# Storage RowKey (the OutOfRangeInput crash in issue #458), and with a multi-tenant sign-in the token
+# presents the guest's home email (their 'mail'), not the #EXT# UPN. The sync must key the row on a
+# clean, matchable identity so the write succeeds AND the auth layer can look the guest up.
+Describe 'Start-UserSyncTimer - B2B guest keying' {
+    BeforeEach {
+        $script:AccessGroups = @(
+            [pscustomobject]@{ PartitionKey = 'AccessRoleGroups'; RowKey = 'editor'; GroupId = 'grp-editor'; GroupName = 'SG-APP-CIPP-editor' }
+        )
+        $script:CustomRoles = @()
+        $script:ExistingUsers = @()
+        $script:GuestMember = $null
+
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            switch ($TableName) {
+                'AccessRoleGroups' { return $script:AccessGroups }
+                'CustomRoles' { return $script:CustomRoles }
+                'allowedUsers' { return $script:ExistingUsers }
+                default { return @() }
+            }
+        }
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            if ($uri -like '*grp-editor*') { return @($script:GuestMember) }
+            return @()
+        }
+    }
+
+    It 'keys a guest on their mail (home email), never the #EXT# UPN' {
+        $script:GuestMember = [pscustomobject]@{
+            '@odata.type'     = '#microsoft.graph.user'
+            userPrincipalName = 'zr-dev_dev.johnwduprey.com#EXT#@contoso.onmicrosoft.com'
+            mail              = 'ZR-Dev@dev.johnwduprey.com'
+            accountEnabled    = $true
+        }
+
+        $null = Start-UserSyncTimer
+
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $TableName -eq 'allowedUsers' -and
+            $Entity.RowKey -eq 'zr-dev@dev.johnwduprey.com' -and
+            $Entity.RowKey -notmatch '#'
+        }
+    }
+
+    It 'decodes the #EXT# UPN back to the invited address when mail is missing' {
+        $script:GuestMember = [pscustomobject]@{
+            '@odata.type'     = '#microsoft.graph.user'
+            userPrincipalName = 'bob_smith_fabrikam.com#EXT#@contoso.onmicrosoft.com'
+            mail              = $null
+            accountEnabled    = $true
+        }
+
+        $null = Start-UserSyncTimer
+
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $TableName -eq 'allowedUsers' -and
+            $Entity.RowKey -eq 'bob_smith@fabrikam.com' -and
+            $Entity.RowKey -notmatch '#'
+        }
+    }
+}

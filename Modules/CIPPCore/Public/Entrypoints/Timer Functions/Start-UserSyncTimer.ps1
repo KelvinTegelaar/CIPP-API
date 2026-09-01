@@ -78,6 +78,19 @@ function Start-UserSyncTimer {
                 foreach ($Member in $UserMembers) {
                     $Upn = $Member.userPrincipalName
                     if ([string]::IsNullOrWhiteSpace($Upn)) { continue }
+
+                    if ($Upn -match '#EXT#') {
+                        if (-not [string]::IsNullOrWhiteSpace($Member.mail)) {
+                            $Upn = $Member.mail
+                        } else {
+                            $Upn = ($Upn -replace '#EXT#@.+$', '') -replace '_([^_]+)$', '@$1'
+                        }
+                    }
+
+                    if ($Upn -match '[#/\\?]') {
+                        Write-LogMessage -API $ApiName -tenant 'none' -message "User sync skipped '$($Member.userPrincipalName)': could not derive a Table Storage-safe key." -sev Warning
+                        continue
+                    }
                     $Upn = $Upn.Trim().ToLower()
 
                     if (-not $UserRoleMap.ContainsKey($Upn)) {
