@@ -2178,6 +2178,87 @@
         "x-cipp-role": "Tenant.Administration.ReadWrite"
       }
     },
+    "/api/AddEdgeApp": {
+      "post": {
+        "summary": "AddEdgeApp",
+        "operationId": "AddEdgeApp",
+        "tags": [
+          "Endpoint > Applications"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "AssignTo": {
+                    "type": "string"
+                  },
+                  "CustomGroup": {
+                    "type": "string"
+                  },
+                  "displayLanguageLocale": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "edgeChannel": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "excludeGroup": {
+                    "type": "string"
+                  },
+                  "IntuneBody": {
+                    "type": "string"
+                  },
+                  "selectedTenants": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "customerId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "additionalProperties": true,
+                "x-cipp-passthrough": true,
+                "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Application.ReadWrite",
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Get-CIPPEdgeAppBody"
+        ]
+      }
+    },
     "/api/AddEditTransportRule": {
       "post": {
         "summary": "AddEditTransportRule",

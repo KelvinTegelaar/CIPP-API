@@ -80,6 +80,7 @@ function Invoke-ExecDeployAppTemplate {
                     'officeApp'      { Invoke-AddOfficeApp -Request $MockRequest -TriggerMetadata $null }
                     'win32ScriptApp' { Invoke-AddWin32ScriptApp -Request $MockRequest -TriggerMetadata $null }
                     'mspApp'         { Invoke-AddMSPApp -Request $MockRequest -TriggerMetadata $null }
+                    'edgeApp'        { Invoke-AddEdgeApp -Request $MockRequest -TriggerMetadata $null }
                     default          { throw "Unknown app type: $AppType" }
                 }
 
