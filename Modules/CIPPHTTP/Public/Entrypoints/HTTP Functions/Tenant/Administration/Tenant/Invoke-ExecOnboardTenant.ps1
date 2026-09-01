@@ -31,6 +31,14 @@ function Invoke-ExecOnboardTenant {
                 $TenMinutesAgo = (Get-Date).AddMinutes(-10).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                 $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$SafeId' and Timestamp ge datetime'$TenMinutesAgo'"
                 if (!$TenantOnboarding -or [bool]$Request.Body.Retry) {
+                    # Recover exclude flag from any prior row before overwrite (poll restarts omit it from the body)
+                    $ExistingOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$SafeId'"
+                    if ($Request.Body.PSObject.Properties.Name -contains 'standardsExcludeAllTenants') {
+                        $StandardsExcludeAllTenants = [bool]$Request.Body.standardsExcludeAllTenants
+                    } else {
+                        $StandardsExcludeAllTenants = [bool]$ExistingOnboarding.StandardsExcludeAllTenants
+                    }
+
                     $OnboardingSteps = [PSCustomObject]@{
                         'Step1' = @{
                             'Status'  = 'pending'
@@ -59,14 +67,15 @@ function Invoke-ExecOnboardTenant {
                         }
                     }
                     $TenantOnboarding = [PSCustomObject]@{
-                        PartitionKey    = 'Onboarding'
-                        RowKey          = [string]$SafeId
-                        CustomerId      = ''
-                        Status          = 'queued'
-                        OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
-                        Relationship    = ''
-                        Logs            = ''
-                        Exception       = ''
+                        PartitionKey               = 'Onboarding'
+                        RowKey                     = [string]$SafeId
+                        CustomerId                 = ''
+                        Status                     = 'queued'
+                        OnboardingSteps            = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
+                        Relationship               = ''
+                        Logs                       = ''
+                        Exception                  = ''
+                        StandardsExcludeAllTenants = $StandardsExcludeAllTenants
                     }
                     Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
 
@@ -77,7 +86,7 @@ function Invoke-ExecOnboardTenant {
                         AddMissingGroups           = $Request.Body.addMissingGroups
                         IgnoreMissingRoles         = $Request.Body.ignoreMissingRoles
                         AutoMapRoles               = $Request.Body.autoMapRoles
-                        StandardsExcludeAllTenants = $Request.Body.standardsExcludeAllTenants
+                        StandardsExcludeAllTenants = $StandardsExcludeAllTenants
                     }
 
                     $InputObject = @{
