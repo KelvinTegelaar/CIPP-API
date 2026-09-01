@@ -38,14 +38,15 @@ function Invoke-ListAlertsQueue {
             CustomSubject   = $Task.CustomSubject
             Enabled         = $Task.Disabled -ne $true
             RawAlert        = @{
-                Conditions    = @($Conditions)
-                Actions       = @($($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue))
-                Tenants       = @($Tenants)
-                type          = $Task.type
-                RowKey        = $Task.RowKey
-                PartitionKey  = $Task.PartitionKey
-                AlertComment  = $Task.AlertComment
-                CustomSubject = $Task.CustomSubject
+                Conditions        = @($Conditions)
+                Actions           = @($($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue))
+                Tenants           = @($Tenants)
+                type              = $Task.type
+                RowKey            = $Task.RowKey
+                PartitionKey      = $Task.PartitionKey
+                AlertComment      = $Task.AlertComment
+                CustomSubject     = $Task.CustomSubject
+                PsaTicketPriority = $Task.PsaTicketPriority
             }
         }
 

@@ -38,10 +38,13 @@ Function Invoke-ExecExtensionMapping {
         # Outcomes and priorities are scoped to a ticket type. The settings page sends the
         # ticket type currently selected in the form so the lists follow the dropdown; without
         # it both fall back to whatever ticket type was last saved.
+        # @() on each: PowerShell unrolls single-element output, so a ticket type with one outcome
+        # (or a lookup that answers with a single explanatory row) would otherwise serialise as a
+        # bare object and break callers that expect a list.
         $SelectedTicketType = $Request.Query.TicketType
-        $TicketTypes = Get-HaloTicketType
-        $Outcomes = Get-HaloTicketOutcome -TicketType $SelectedTicketType
-        $Priorities = Get-HaloPriority -TicketType $SelectedTicketType
+        $TicketTypes = @(Get-HaloTicketType)
+        $Outcomes = @(Get-HaloTicketOutcome -TicketType $SelectedTicketType)
+        $Priorities = @(Get-HaloPriority -TicketType $SelectedTicketType)
         $Result = @{
           'TicketTypes' = $TicketTypes
           'Outcomes'    = $Outcomes

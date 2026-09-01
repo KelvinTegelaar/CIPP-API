@@ -17,6 +17,7 @@ function Send-CIPPAlert {
         $RowKey = [string][guid]::NewGuid(),
         $Attachments,
         $AffectedUser,
+        $PsaTicketPriority,
         $PSAReference,
         $PSATicketId,
         [switch]$UseStandardizedSchema
@@ -373,6 +374,10 @@ function Send-CIPPAlert {
                     $Alert.AffectedUser = $AffectedUser
                     $UserLabel = if ($AffectedUser.UPN) { $AffectedUser.UPN } elseif ($AffectedUser.AzureOID) { "OID:$($AffectedUser.AzureOID)" } else { 'unknown' }
                     Write-Information "PSA alert AffectedUser: $UserLabel"
+                }
+                if ($PsaTicketPriority) {
+                    $Alert.PsaTicketPriority = $PsaTicketPriority
+                    Write-Information "PSA alert priority override: $PsaTicketPriority"
                 }
                 $PsaResult = New-CippExtAlert -Alert $Alert
                 if ($PsaResult) {

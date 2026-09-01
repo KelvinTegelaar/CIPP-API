@@ -257,6 +257,7 @@ function Add-CIPPScheduledTask {
                 AlertComment         = [string]$task.AlertComment
                 CustomSubject        = [string]$task.CustomSubject
                 PsaTicketStrategy    = [string]($task.PsaTicketStrategy.value ?? $task.PsaTicketStrategy)
+                PsaTicketPriority    = [string]($task.PsaTicketPriority.value ?? $task.PsaTicketPriority)
                 PsaTicketId          = [string]($task.PsaTicketId.value ?? $task.PsaTicketId)
             }
 

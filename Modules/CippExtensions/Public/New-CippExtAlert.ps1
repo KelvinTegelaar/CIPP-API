@@ -95,6 +95,13 @@ function New-CippExtAlert {
                         if ($Display) { $TicketParams.DisplayName = $Display }
                     }
 
+                    # Per-alert priority beats the integration-wide DefaultPriority. Unlike the
+                    # user fields above this is NOT gated on LinkTicketsToUsers - priority applies
+                    # to every ticket, and it must also work when no global default is configured.
+                    if ($Alert.PsaTicketPriority) {
+                        $TicketParams.TicketPriority = $Alert.PsaTicketPriority
+                    }
+
                     New-HaloPSATicket @TicketParams
                 }
             }

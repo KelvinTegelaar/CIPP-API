@@ -244,13 +244,14 @@ function Test-CIPPAuditLogRules {
                             $ExcludedTenants = @(Expand-CIPPTenantGroups -TenantFilter $ExcludedTenants)
                         }
                         [pscustomobject]@{
-                            Tenants       = $Tenants
-                            Excluded      = $ExcludedTenants
-                            Conditions    = $ConfigEntry.Conditions
-                            Actions       = $ConfigEntry.Actions
-                            LogType       = $ConfigEntry.Type
-                            AlertComment  = $ConfigEntry.AlertComment
-                            CustomSubject = $ConfigEntry.CustomSubject
+                            Tenants           = $Tenants
+                            Excluded          = $ExcludedTenants
+                            Conditions        = $ConfigEntry.Conditions
+                            Actions           = $ConfigEntry.Actions
+                            LogType           = $ConfigEntry.Type
+                            AlertComment      = $ConfigEntry.AlertComment
+                            CustomSubject     = $ConfigEntry.CustomSubject
+                            PsaTicketPriority = $ConfigEntry.PsaTicketPriority
                         }
                     }
                 })
@@ -839,13 +840,14 @@ function Test-CIPPAuditLogRules {
                     }
 
                     [PSCustomObject]@{
-                        conditions       = $conditions
-                        expectedAction   = $actions
-                        CIPPClause       = $CIPPClause
-                        AlertComment     = $Config.AlertComment
-                        CustomSubject    = $Config.CustomSubject
-                        HasGeoCondition  = $HasGeoCondition
-                        ExcludedUserKeys = $LocationExcludedUserKeys
+                        conditions        = $conditions
+                        expectedAction    = $actions
+                        CIPPClause        = $CIPPClause
+                        AlertComment      = $Config.AlertComment
+                        CustomSubject     = $Config.CustomSubject
+                        PsaTicketPriority = $Config.PsaTicketPriority
+                        HasGeoCondition   = $HasGeoCondition
+                        ExcludedUserKeys  = $LocationExcludedUserKeys
                     }
                 }
             } catch {
@@ -906,6 +908,7 @@ function Test-CIPPAuditLogRules {
                             $item.CIPPClause = $clause.CIPPClause -join ' and '
                             $item | Add-Member -NotePropertyName 'CIPPAlertComment' -NotePropertyValue $clause.AlertComment -Force -ErrorAction SilentlyContinue
                             $item | Add-Member -NotePropertyName 'CIPPCustomSubject' -NotePropertyValue $clause.CustomSubject -Force -ErrorAction SilentlyContinue
+                            $item | Add-Member -NotePropertyName 'CIPPPsaTicketPriority' -NotePropertyValue $clause.PsaTicketPriority -Force -ErrorAction SilentlyContinue
                             $MatchedRules.Add($clause.CIPPClause -join ' and ')
                             $item
                         }
