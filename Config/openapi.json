@@ -27756,7 +27756,7 @@
                     "type": "boolean"
                   },
                   "standardsExcludeAllTenants": {
-                    "type": "string"
+                    "type": "boolean"
                   }
                 }
               }
@@ -27800,6 +27800,9 @@
                     },
                     "RowKey": {
                       "type": "string",
+                      "x-cipp-field-source": "storage,backend"
+                    },
+                    "StandardsExcludeAllTenants": {
                       "x-cipp-field-source": "storage,backend"
                     },
                     "Status": {
@@ -56786,7 +56789,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Lists SharePoint sites or OneDrive usage for a tenant. Requires a Type parameter (SharePointSiteUsage or OneDriveUsageAccount). Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "description": "Lists SharePoint sites or OneDrive usage for a tenant. Requires a Type parameter (SharePointSiteUsage or OneDriveUsageAccount). SharePoint live data uses SPO admin RLD plus Graph enrichment; OneDrive live data uses Graph usage reports. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -59058,6 +59061,9 @@
                       },
                       "RowKey": {
                         "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "StandardsExcludeAllTenants": {
                         "x-cipp-field-source": "storage"
                       },
                       "Status": {
