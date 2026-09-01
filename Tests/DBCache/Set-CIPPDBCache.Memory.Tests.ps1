@@ -30,6 +30,9 @@ BeforeAll {
     function New-ExoRequest { param($cmdlet, $cmdParams, $Select, $Anchor, $useSystemMailbox, $tenantid, $NoAuthCheck, [switch]$Compliance, $ApiVersion, $ModuleVersion, [switch]$AsApp, [switch]$UseCertificate) }
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
+    function Get-CIPPSPOSite { param($TenantFilter, $SiteUrl) @() }
+    function Get-SharePointAdminLink { param($Public, $tenantFilter) [PSCustomObject]@{ AdminUrl = 'https://contoso-admin.sharepoint.com'; SharePointUrl = 'https://contoso.sharepoint.com' } }
+    function Get-CIPPSPOAdminListData { param($TenantFilter, $AdminUrl, $Type) @() }
     function Update-CippQueueEntry { param($RowKey, $TotalTasks, [switch]$IncrementTotalTasks) }
     function Start-CIPPOrchestrator { param($InputObject, $InputObjectGuid, [switch]$CallerIsQueueTrigger) }
     function Get-ExoOnlineStringBytes { param($SizeString) }
@@ -80,6 +83,8 @@ BeforeAll {
     # Real helper, not a stub: it is pure logic with no external calls, and the mailbox collector's
     # AutoExpandingArchive/AutoExpandingArchiveScope columns are part of the row shape under test.
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPAutoExpandingArchiveState.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-SPOUsageRootWebTemplate.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPSharePointSiteUsageRows.ps1')
 
     . (Get-CollectorPath 'Set-CIPPDBCacheGroups')
     . (Get-CollectorPath 'Set-CIPPDBCacheTeams')
@@ -263,15 +268,46 @@ Describe 'DBCache collectors reworked for bounded memory' {
 
     Context 'Set-CIPPDBCacheSharePointSiteUsage' {
         BeforeEach {
+            Mock -CommandName Get-CIPPSPOSite -MockWith { @() }
+            Mock -CommandName Get-CIPPSPOAdminListData -MockWith {
+                @(
+                    [pscustomobject]@{
+                        Title           = 'Site One'
+                        SiteUrl         = 'https://c/s1'
+                        SiteId          = '{site-1}'
+                        StorageUsed       = [int64]1073741824
+                        StorageQuota      = [int64]1024
+                        StorageQuotaBytes = [int64](1024 * 1MB)
+                        NumOfFiles        = [int64]10
+                        TemplateName    = 'STS#3'
+                        SiteOwnerEmail  = 'owner1@contoso.com'
+                        SiteOwnerName   = 'Owner One'
+                        LastActivityOn  = '2026-01-01'
+                        TimeCreated     = '2020-01-01'
+                    }
+                    [pscustomobject]@{
+                        Title           = 'Site Two'
+                        SiteUrl         = 'https://c/s2'
+                        SiteId          = '{site-2}'
+                        StorageUsed       = [int64]2048
+                        StorageQuota      = [int64]2048
+                        StorageQuotaBytes = [int64](2048 * 1MB)
+                        NumOfFiles        = [int64]2
+                        TemplateName    = 'GROUP#0'
+                        SiteOwnerEmail  = 'owner2@contoso.com'
+                        SiteOwnerName   = 'Owner Two'
+                        LastActivityOn  = '2026-02-01'
+                        TimeCreated     = '2021-01-01'
+                    }
+                )
+            }
             Mock -CommandName New-GraphBulkRequest -MockWith {
-                # First call: the site listing + usage report. Second call: the per-site lists.
                 if ($Requests[0].id -eq 'listAllSites') {
                     return @(
                         [pscustomobject]@{ id = 'listAllSites'; body = [pscustomobject]@{ value = @(
                                     [pscustomobject]@{ id = 's1'; displayName = 'Site One'; webUrl = 'https://c/s1'; isPersonalSite = $false; sharepointIds = [pscustomobject]@{ siteId = 'site-1'; webId = 'web-1' } }
                                     [pscustomobject]@{ id = 's2'; displayName = 'Site Two'; webUrl = 'https://c/s2'; isPersonalSite = $false; sharepointIds = [pscustomobject]@{ siteId = 'site-2'; webId = 'web-2' } }
                                 ) } }
-                        [pscustomobject]@{ id = 'usage'; status = 200; body = [pscustomobject]@{ value = @([pscustomobject]@{ siteId = 'site-1' }) } }
                     )
                 }
                 return @(
@@ -303,8 +339,39 @@ Describe 'DBCache collectors reworked for bounded memory' {
             Set-CIPPDBCacheSharePointSiteUsage -TenantFilter 'contoso.com'
 
             ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteListing').Rows.Count | Should -Be 2
-            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows.Count | Should -Be 1
-            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows[0].id | Should -Be 'site-1'
+            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows.Count | Should -Be 2
+            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows[0].siteId | Should -Be 'site-1'
+            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows[0].storageUsedInBytes | Should -Be 1073741824
+            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows[0].storageAllocatedInBytes | Should -Be (1024 * 1MB)
+            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows[0].ownerPrincipalName | Should -Be 'owner1@contoso.com'
+            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows[0].rootWebTemplate | Should -Be 'STS'
+            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows[1].rootWebTemplate | Should -Be 'Group'
+            ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteUsage').Rows[0].reportRefreshDate | Should -Not -BeNullOrEmpty
+        }
+
+        It 'merges file-level archive fields from Get-CIPPSPOSite into the site listing' {
+            Mock -CommandName Get-CIPPSPOSite -MockWith {
+                @(
+                    [pscustomobject]@{
+                        Url                    = 'https://c/s1'
+                        ArchivedFileDiskUsed   = 1073741824
+                        AllowFileArchive       = $true
+                    }
+                    [pscustomobject]@{
+                        Url                    = 'https://c/s2/'
+                        ArchivedFileDiskUsed   = 0
+                        AllowFileArchive       = $false
+                    }
+                )
+            }
+
+            Set-CIPPDBCacheSharePointSiteUsage -TenantFilter 'contoso.com'
+
+            $Listing = ($script:DbWrites | Where-Object Type -EQ 'SharePointSiteListing').Rows
+            ($Listing | Where-Object id -EQ 's1').archivedFileDiskUsedBytes | Should -Be 1073741824
+            ($Listing | Where-Object id -EQ 's1').allowFileArchive | Should -BeTrue
+            ($Listing | Where-Object id -EQ 's2').archivedFileDiskUsedBytes | Should -Be 0
+            ($Listing | Where-Object id -EQ 's2').allowFileArchive | Should -BeFalse
         }
     }
 

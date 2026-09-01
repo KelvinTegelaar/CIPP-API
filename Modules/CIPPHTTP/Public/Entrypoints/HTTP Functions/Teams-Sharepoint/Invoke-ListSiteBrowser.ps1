@@ -27,22 +27,6 @@ function Invoke-ListSiteBrowser {
             })
     }
 
-    function ConvertTo-StorageUsedBytes {
-        param($Raw)
-        if ($null -eq $Raw -or $Raw -eq '') { return $null }
-        $Clean = ([string]$Raw).Replace(',', '').Trim()
-        if ($Clean -eq '') { return $null }
-        try { return [int64][double]$Clean } catch { return $null }
-    }
-
-    function ConvertTo-NullableInt64 {
-        param($Raw)
-        if ($null -eq $Raw -or $Raw -eq '') { return $null }
-        $Clean = ([string]$Raw).Replace(',', '').Trim()
-        if ($Clean -eq '') { return $null }
-        try { return [int64][double]$Clean } catch { return $null }
-    }
-
     function ConvertTo-SiteTypeLabel {
         param(
             [string]$Template,
@@ -178,8 +162,6 @@ function Invoke-ListSiteBrowser {
                 }
 
                 $RootWebTemplate = [string]$Row.TemplateName
-                $StorageRaw = if ($null -ne $Row.'StorageUsed.') { $Row.'StorageUsed.' } else { $Row.StorageUsed }
-                $FilesRaw = if ($null -ne $Row.'NumOfFiles.') { $Row.'NumOfFiles.' } else { $Row.NumOfFiles }
 
                 $Results.Add([PSCustomObject]@{
                         type               = 'site'
@@ -191,10 +173,10 @@ function Invoke-ListSiteBrowser {
                         description        = $GraphSite.description
                         webUrl             = $(if ($RowUrl) { $RowUrl } else { $GraphSite.webUrl })
                         createdDateTime    = $(if ($Row.TimeCreated) { $Row.TimeCreated } else { $GraphSite.createdDateTime })
-                        storageUsedInBytes = ConvertTo-StorageUsedBytes -Raw $StorageRaw
+                        storageUsedInBytes = $Row.StorageUsed
                         siteType           = ConvertTo-SiteTypeLabel -Template $RootWebTemplate -ItemType 'site'
                         rootWebTemplate    = $RootWebTemplate
-                        fileCount          = ConvertTo-NullableInt64 -Raw $FilesRaw
+                        fileCount          = $Row.NumOfFiles
                     })
             }
 
@@ -239,10 +221,10 @@ function Invoke-ListSiteBrowser {
                 $VersionEstimate = $null
                 try {
                     $Metrics = New-GraphGetRequest -uri "$BaseUri/web/lists(guid'$($List.id)')/RootFolder?`$select=StorageMetrics&`$expand=StorageMetrics" -tenantid $TenantFilter -scope $SpoScope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
-                    $TotalSize = ConvertTo-StorageUsedBytes -Raw $Metrics.StorageMetrics.TotalSize
-                    $FileStreamSize = ConvertTo-StorageUsedBytes -Raw $Metrics.StorageMetrics.TotalFileStreamSize
-                    $MetadataSize = ConvertTo-StorageUsedBytes -Raw $Metrics.StorageMetrics.MetadataSize
-                    $FileCount = ConvertTo-NullableInt64 -Raw $Metrics.StorageMetrics.TotalFileCount
+                    $TotalSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalSize
+                    $FileStreamSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalFileStreamSize
+                    $MetadataSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.MetadataSize
+                    $FileCount = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalFileCount
                     $StorageUsed = $TotalSize
                     if ($null -ne $TotalSize) {
                         $Tip = if ($null -ne $FileStreamSize) { $FileStreamSize } else { [int64]0 }
