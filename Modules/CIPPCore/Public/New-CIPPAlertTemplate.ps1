@@ -287,7 +287,7 @@ function New-CIPPAlertTemplate {
                 $Table = ($data | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                 if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
                 $Title = "$($Tenant) - a user has logged on from a location you've set up to receive alerts for."
-                $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). According to our database this is located in $($LocationInfo.Country) - $($LocationInfo.City). <br/><br> You have set up alerts to be notified when this happens. See the table below for more info.$Table"
+                $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). According to our database this is located in $($LocationInfo.CountryOrRegion) - $($LocationInfo.City). <br/><br> You have set up alerts to be notified when this happens. See the table below for more info.$Table"
                 if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
                 if ($LocationInfo) {
                     $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
@@ -325,23 +325,23 @@ function New-CIPPAlertTemplate {
         # $Data is a single object for audit logs but an array of rows for logbook alerts,
         # so only resolve when every row agrees - a multi-user alert has no one username.
         $ResolvedSubject = [regex]::Replace($CustomSubject, '%(\w+)%', {
-            param($Match)
-            $PropertyName = switch ($Match.Groups[1].Value) {
-                'username' { 'UserId' }
-                'tenant' { return $Tenant }
-                default { $Match.Groups[1].Value }
-            }
-            $Values = foreach ($Row in @($Data)) {
-                if ($null -eq $Row) { continue }
-                if ($Row -is [System.Collections.IDictionary]) {
-                    $Row[$PropertyName]
-                } else {
-                    ($Row.PSObject.Properties | Where-Object { $_.Name -ieq $PropertyName } | Select-Object -First 1).Value
+                param($Match)
+                $PropertyName = switch ($Match.Groups[1].Value) {
+                    'username' { 'UserId' }
+                    'tenant' { return $Tenant }
+                    default { $Match.Groups[1].Value }
                 }
-            }
-            $Distinct = @($Values | Where-Object { ![string]::IsNullOrWhiteSpace("$_") } | ForEach-Object { "$_" } | Select-Object -Unique)
-            if ($Distinct.Count -eq 1) { $Distinct[0] } else { $Match.Value }
-        })
+                $Values = foreach ($Row in @($Data)) {
+                    if ($null -eq $Row) { continue }
+                    if ($Row -is [System.Collections.IDictionary]) {
+                        $Row[$PropertyName]
+                    } else {
+                        ($Row.PSObject.Properties | Where-Object { $_.Name -ieq $PropertyName } | Select-Object -First 1).Value
+                    }
+                }
+                $Distinct = @($Values | Where-Object { ![string]::IsNullOrWhiteSpace("$_") } | ForEach-Object { "$_" } | Select-Object -Unique)
+                if ($Distinct.Count -eq 1) { $Distinct[0] } else { $Match.Value }
+            })
         $Title = '{0} - {1}' -f $Tenant, $ResolvedSubject
     }
 
