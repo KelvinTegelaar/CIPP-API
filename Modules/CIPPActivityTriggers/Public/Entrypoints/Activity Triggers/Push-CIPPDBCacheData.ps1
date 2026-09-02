@@ -239,7 +239,7 @@ function Push-CIPPDBCacheData {
                     QueueId        = $QueueId
                     QueueName      = "DB Cache SharePoint - $TenantFilter"
                 })
-            # SharePointSharingLinks runs adhoc since it can take a long time to enumerate all sharing links for large tenants
+            # SharePointSharingLinks and OneDriveLongPaths run adhoc — full drive walks are too slow for nightly
         } else {
             Write-Host "Skipping SharePoint data collection for $TenantFilter - no required license"
         }
