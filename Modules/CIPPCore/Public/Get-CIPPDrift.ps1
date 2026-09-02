@@ -337,8 +337,14 @@ function Get-CIPPDrift {
                     # Graph $batch returns 200 even when individual sub-requests fail (e.g. 429
                     # throttling on one endpoint), silently dropping that policy type from the
                     # collection - which must not count as evidence the policies are gone, or their
-                    # drift rows get pruned and decided statuses reset to New.
-                    $IntunePoliciesCollected = @($IntuneGraphRequest | Where-Object { $_.status -and [int]$_.status -ge 400 }).Count -eq 0
+                    # drift rows get pruned and decided statuses reset to New. The same applies when
+                    # a collection paged and a later page failed: New-GraphBulkRequest flags that on
+                    # the item as PagingIncomplete while the status stays 200.
+                    $IncompleteIntune = @($IntuneGraphRequest | Where-Object { ($_.status -and [int]$_.status -ge 400) -or $_.PagingIncomplete })
+                    $IntunePoliciesCollected = $IncompleteIntune.Count -eq 0
+                    if (-not $IntunePoliciesCollected) {
+                        Write-Warning "Intune policy inventory for '$TenantFilter' is incomplete this run ($(($IncompleteIntune | ForEach-Object { "$($_.id): $($_.PagingError ?? $_.status)" }) -join '; ')). Policy drift rows will not be pruned."
+                    }
                 } catch {
                     Write-Warning "Failed to get Intune policies: $($_.Exception.Message)"
                 }
@@ -355,9 +361,13 @@ function Get-CIPPDrift {
                     )
                     $CAGraphRequest = New-GraphBulkRequest -Requests $CARequests -tenantid $TenantFilter -asapp $true
                     $TenantCAPolicies = ($CAGraphRequest | Where-Object { $_.id -eq 'policies' }).body.value
-                    # Same per-item check as the Intune collection: a throttled $batch item returns
-                    # inside a 200 response and must not arm the prune.
-                    $CAPoliciesCollected = @($CAGraphRequest | Where-Object { $_.status -and [int]$_.status -ge 400 }).Count -eq 0
+                    # Same per-item check as the Intune collection: a throttled $batch item or a
+                    # failed continuation page returns inside a 200 response and must not arm the prune.
+                    $IncompleteCA = @($CAGraphRequest | Where-Object { ($_.status -and [int]$_.status -ge 400) -or $_.PagingIncomplete })
+                    $CAPoliciesCollected = $IncompleteCA.Count -eq 0
+                    if (-not $CAPoliciesCollected) {
+                        Write-Warning "Conditional Access policy inventory for '$TenantFilter' is incomplete this run ($(($IncompleteCA | ForEach-Object { "$($_.id): $($_.PagingError ?? $_.status)" }) -join '; ')). Policy drift rows will not be pruned."
+                    }
                 } catch {
                     Write-Warning "Failed to get Conditional Access policies: $($_.Exception.Message)"
                     $TenantCAPolicies = @()
