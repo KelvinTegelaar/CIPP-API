@@ -9,6 +9,10 @@ function Get-CIPPMailboxesReport {
     .PARAMETER TenantFilter
         The tenant to generate the report for
 
+    .PARAMETER PageSize
+        When set, returns one page of at most this many rows as @{ Items; NextToken }, in table walk order.    .PARAMETER ContinuationToken
+        NextToken from the previous page. Only meaningful together with PageSize.
+
     .EXAMPLE
         Get-CIPPMailboxesReport -TenantFilter 'contoso.onmicrosoft.com'
         Gets all mailboxes for the tenant from the report database
@@ -16,10 +20,33 @@ function Get-CIPPMailboxesReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [int]$PageSize,
+        [string]$ContinuationToken
     )
 
     try {
+        if ($PageSize -gt 0) {
+            $Page = Get-CIPPDbItemPage -TenantFilter $TenantFilter -Type 'Mailboxes' -PageSize $PageSize -ContinuationToken $ContinuationToken
+            if ($TenantFilter -ne 'AllTenants' -and -not $ContinuationToken -and @($Page.Items).Count -eq 0 -and -not $Page.NextToken) {
+                throw 'No mailbox data found in reporting database. Sync the report data first.'
+            }
+            $Results = [System.Collections.Generic.List[PSCustomObject]]::new()
+            foreach ($Item in $Page.Items) {
+                $Mailbox = $Item.Data | ConvertFrom-Json
+                # Per-item timestamp: a page may span tenants.
+                $Mailbox | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $Item.Timestamp -Force
+                if ($TenantFilter -eq 'AllTenants') {
+                    $Mailbox | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Item.PartitionKey -Force
+                }
+                $Results.Add($Mailbox)
+            }
+            return [PSCustomObject]@{
+                Items     = $Results
+                NextToken = $Page.NextToken
+            }
+        }
+
         # Handle AllTenants
         if ($TenantFilter -eq 'AllTenants') {
             # Get all tenants that have mailbox data

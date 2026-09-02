@@ -41731,8 +41731,34 @@
         "tags": [
           "Tenant > Conditional"
         ],
-        "description": "Lists Conditional Access policies for a tenant with resolved display names for users, groups, applications, and locations.",
+        "description": "Lists Conditional Access policies for a tenant with resolved display names for users, groups, applications, and locations. When manualPagination is set on an AllTenants read, one page is returned per request with a continuation token in Metadata.nextLink.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request with a continuation token in Metadata.nextLink; AllTenants reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
@@ -47308,6 +47334,15 @@
             }
           },
           {
+            "name": "maxPageBytes",
+            "in": "query",
+            "description": "Paged AllTenants cache reads only: target page size in bytes of raw JSON, clamped between 262144 and 8388608 (default 4000000). Pages always hold at least one whole tenant.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "name": "nextLink",
             "in": "query",
             "description": "Continue a manualPagination walk: pass back the @odata.nextLink returned with the previous page. Endpoint is still required, and the other query options are already encoded in the link.",
@@ -47497,7 +47532,7 @@
         "tags": [
           "Identity > Administration > Groups"
         ],
-        "description": "Lists Entra ID groups for a tenant, including group members and owners. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "description": "Lists Entra ID groups for a tenant, including group members and owners. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set on a cached read, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
           {
             "name": "expandMembers",
@@ -47535,6 +47570,15 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "members",
             "in": "query",
             "description": "Return the members of the group named by groupID instead of the group list. Requires groupID.",
@@ -47544,12 +47588,29 @@
             }
           },
           {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers. Stream the cached blobs as raw JSON so member arrays are never re-parsed here.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "owners",
             "in": "query",
             "description": "Return the owners of the group named by groupID instead of the group list. Requires groupID.",
             "required": false,
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
@@ -47981,8 +48042,34 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity. Supports UseReportDB=true to serve cached data from the reporting database; AllTenants always uses the cache.",
+        "description": "Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity. Supports UseReportDB=true to serve cached data from the reporting database; AllTenants always uses the cache. When manualPagination is set on a cached read, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "name": "staleDays",
             "in": "query",
@@ -49830,7 +49917,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories.",
+        "description": "Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories, fetching a single entry, and server-side pagination via manualPagination/nextLink.",
         "parameters": [
           {
             "name": "API",
@@ -49859,7 +49946,7 @@
           {
             "name": "Days",
             "in": "query",
-            "description": "Days=N widens a filtered query to the last N calendar days (in the instance timezone). The scoped drawers (standard template, scheduled task, baseline run) use this: a run that finished last night otherwise shows an empty log early the next day, because the default window is \"today\" only.",
+            "description": "Days=N widens a filtered query to the last N calendar days (in the instance timezone), so the scoped drawers still show a run that finished last night. Ignored when dates are given.",
             "required": false,
             "schema": {
               "type": "integer"
@@ -49876,6 +49963,7 @@
           {
             "name": "Filter",
             "in": "query",
+            "description": "When true, the Severity/User/Tenant/API/StartDate/EndDate query filters are applied; otherwise the current day is returned unfiltered.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -49892,9 +49980,37 @@
           {
             "name": "logentryid",
             "in": "query",
+            "description": "Return single log entry by RowKey. RowKeys are either legacy GUIDs or the inverted-ticks format Write-LogMessage writes; both use only hex digits and hyphens.",
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request plus a continuation token in Metadata.nextLink, which the frontend passes back as nextLink to fetch the next page. Pages walk the requested date range newest-day-first and, within a day, in RowKey order (newest-first for entries written with the inverted-ticks RowKey scheme).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Rows to return per page, clamped between 50 and 1000. Defaults to 400.",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
@@ -50142,8 +50258,17 @@
         "tags": [
           "Email-Exchange > Administration"
         ],
-        "description": "Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "description": "Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "Minimal",
             "in": "query",
@@ -50151,6 +50276,23 @@
             "required": false,
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
@@ -51493,8 +51635,34 @@
         "tags": [
           "Identity > Reports"
         ],
-        "description": "Lists users and their MFA registration status for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "description": "Lists users and their MFA registration status for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },

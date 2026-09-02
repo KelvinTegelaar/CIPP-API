@@ -77,6 +77,12 @@ function Set-CIPPDBCacheGroups {
                 $NoteProperties = [ordered]@{}
                 if ($Group.id -and $Group.groupTypes -notcontains 'DynamicMembership') {
                     $NoteProperties['members'] = $MembersByGroupId[$Group.id]
+                    # Precompute the UPN CSV so the paged list read can stream the stored blob
+                    # verbatim instead of parsing every member array (heavy on 50k-member groups).
+                    $NoteProperties['membersCsv'] = ($MembersByGroupId[$Group.id].userPrincipalName -join ',')
+                }
+                if ($Group.owners) {
+                    $NoteProperties['ownersCsv'] = ($Group.owners.userPrincipalName -join ',')
                 }
                 $NoteProperties['primDomain'] = ($Group.mail -split '@' | Select-Object -Last 1)
                 $NoteProperties['teamsEnabled'] = ($Group.resourceProvisioningOptions -contains 'Team')

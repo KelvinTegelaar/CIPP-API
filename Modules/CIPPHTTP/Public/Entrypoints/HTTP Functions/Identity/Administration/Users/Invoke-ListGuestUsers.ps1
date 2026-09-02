@@ -7,7 +7,7 @@ function Invoke-ListGuestUsers {
     .SYNOPSIS
         List guest users with lifecycle status
     .DESCRIPTION
-        Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity. Supports UseReportDB=true to serve cached data from the reporting database; AllTenants always uses the cache.
+        Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity. Supports UseReportDB=true to serve cached data from the reporting database; AllTenants always uses the cache. When manualPagination is set on a cached read, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -21,13 +21,28 @@ function Invoke-ListGuestUsers {
     $StaleDays = $Request.Query.staleDays ? [int]$Request.Query.staleDays : 90
     # Serve from the reporting database cache instead of live Graph. AllTenants always uses the cache.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
+    # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.
+    $ManualPagination = $Request.Query.manualPagination -and [System.Convert]::ToBoolean($Request.Query.manualPagination)
+    $NextToken = $null
 
     try {
         if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {
             # Cached rows carry a per-row signInLogsCapable stamp written by the cache job,
             # so sign-in availability is judged per row below.
             $SignInLogsCapable = $null
-            $GuestUsers = Get-CIPPGuestUsersReport -TenantFilter $TenantFilter
+            if ($ManualPagination) {
+                # Rows per page, clamped between 250 and 10000. Defaults to 5000.
+                $PageSize = 5000
+                if ($Request.Query.PageSize -as [int]) {
+                    $PageSize = [Math]::Min([Math]::Max([int]$Request.Query.PageSize, 250), 10000)
+                }
+                # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                $Page = Get-CIPPGuestUsersReport -TenantFilter $TenantFilter -PageSize $PageSize -ContinuationToken $Request.Query.nextLink
+                $GuestUsers = $Page.Items
+                $NextToken = $Page.NextToken
+            } else {
+                $GuestUsers = Get-CIPPGuestUsersReport -TenantFilter $TenantFilter
+            }
         } else {
             # signInActivity can only be requested on tenants with an Entra ID P1 license - Graph
             # rejects the whole query on unlicensed tenants, so fall back to listing without
@@ -111,6 +126,19 @@ function Invoke-ListGuestUsers {
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to list guest users: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [System.Net.HttpStatusCode]::InternalServerError
         $GraphRequest = @{ Error = $ErrorMessage.NormalizedError }
+    }
+
+    # Paged cached reads return { Results, Metadata }; everything else keeps the legacy bare array.
+    if ($ManualPagination -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB) -and $StatusCode -eq [System.Net.HttpStatusCode]::OK) {
+        $Metadata = @{}
+        if ($NextToken) { $Metadata.nextLink = $NextToken }
+        return ([HttpResponseContext]@{
+                StatusCode = $StatusCode
+                Body       = [PSCustomObject]@{
+                    Results  = @($GraphRequest)
+                    Metadata = $Metadata
+                }
+            })
     }
 
     return ([HttpResponseContext]@{

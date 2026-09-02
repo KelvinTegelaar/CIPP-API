@@ -5,7 +5,7 @@ function Invoke-ListGroups {
     .ROLE
         Identity.Group.Read
     .DESCRIPTION
-        Lists Entra ID groups for a tenant, including group members and owners. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
+        Lists Entra ID groups for a tenant, including group members and owners. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set on a cached read, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,6 +24,8 @@ function Invoke-ListGroups {
     $ExpandOwners = $Request.Query.expandOwners -eq $true
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
+    # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.
+    $ManualPagination = $Request.Query.manualPagination -and [System.Convert]::ToBoolean($Request.Query.manualPagination)
 
     # members/owners read groups/<groupID>/..., so without a groupID the URL collapses to
     # groups//members and the failure surfaces as an opaque parameter binding error.
@@ -37,6 +39,25 @@ function Invoke-ListGroups {
     # Cache path: list view only — skip when fetching a specific group's details
     if ((-not $GroupID) -and (-not $Members) -and (-not $Owners) -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
         try {
+            if ($ManualPagination) {
+                # Rows per page, clamped between 100 and 5000. Defaults to 750: group rows
+                # carry full member arrays and run far heavier than other report types.
+                $PageSize = 750
+                if ($Request.Query.PageSize -as [int]) {
+                    $PageSize = [Math]::Min([Math]::Max([int]$Request.Query.PageSize, 100), 5000)
+                }
+                # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                # Stream the cached blobs as raw JSON so member arrays are never re-parsed here.
+                $Page = Get-CIPPGroupsReport -TenantFilter $TenantFilter -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -AsRawJson -ErrorAction Stop
+                $Metadata = @{}
+                if ($Page.NextToken) { $Metadata.nextLink = $Page.NextToken }
+                $MetadataJson = ConvertTo-Json -InputObject $Metadata -Depth 5 -Compress
+                return ([HttpResponseContext]@{
+                        StatusCode  = [HttpStatusCode]::OK
+                        ContentType = 'application/json'
+                        Body        = '{"Results":' + $Page.CippPagedJson + ',"Metadata":' + $MetadataJson + '}'
+                    })
+            }
             $GraphRequest = Get-CIPPGroupsReport -TenantFilter $TenantFilter -ErrorAction Stop
             $StatusCode = [HttpStatusCode]::OK
         } catch {

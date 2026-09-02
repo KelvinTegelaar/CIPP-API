@@ -30,7 +30,7 @@ function Invoke-ListExcludedLicenses {
                 $_ | Add-Member -NotePropertyName 'ExcludedEverywhere' -NotePropertyValue $true -Force
             }
             if ($null -eq $_.ShowInLicenseDropdown) {
-                $_ | Add-Member -NotePropertyName 'ShowInLicenseDropdown' -NotePropertyValue $false -Force
+                $_ | Add-Member -NotePropertyName 'ShowInLicenseDropdown' -NotePropertyValue $true -Force
             }
             $ExclusionType = if ($_.ExcludedEverywhere -eq $true) { 'Excluded Everywhere' } else { 'Excluded from Alerts Only' }
             $_ | Add-Member -NotePropertyName 'ExclusionType' -NotePropertyValue $ExclusionType -Force
