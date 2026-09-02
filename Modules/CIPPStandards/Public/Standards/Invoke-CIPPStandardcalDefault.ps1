@@ -64,16 +64,42 @@ function Invoke-CIPPStandardcalDefault {
     }
 
     # Filter to only Default user permissions that don't match target level
-    $DefaultPermissions = $CalendarPermissions | Where-Object { $_.User -eq 'Default' }
+    $DefaultPermissions = @($CalendarPermissions | Where-Object { $_.User -eq 'Default' })
     $NeedsUpdate = @($DefaultPermissions | Where-Object {
             $currentRights = if ($_.AccessRights -is [array]) { $_.AccessRights -join ',' } else { $_.AccessRights }
             $currentRights -ne $permissionLevel
         })
 
-    $CurrentValue = if ($NeedsUpdate.Count -eq 0) {
+    # Coverage is graded separately from compliance: a mailbox with no cached Default row can
+    # never enter $NeedsUpdate, so an incomplete collection used to read as a clean sweep.
+    # Matched by identity, not counts - a stale row for a deleted mailbox would offset a newly
+    # uncovered one. Identity is "<mailbox>:\<calendar>", keyed by UPN, alias or Exchange GUID.
+    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'Mailboxes' -Fields 'UPN', 'primarySmtpAddress', 'Id', 'ExternalDirectoryObjectId')
+
+    $GradedIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Permission in $DefaultPermissions) {
+        $MailboxId = ("$($Permission.Identity)" -split ':\\')[0]
+        # An empty key would match every mailbox missing that field and hide real gaps.
+        if ($MailboxId) { $null = $GradedIds.Add($MailboxId) }
+    }
+
+    $UncheckedMailboxes = @($Mailboxes | Where-Object {
+            $Keys = [string[]]@($_.UPN, $_.primarySmtpAddress, $_.Id, $_.ExternalDirectoryObjectId | Where-Object { $_ })
+            -not $GradedIds.Overlaps($Keys)
+        })
+    $Unchecked = $UncheckedMailboxes.Count
+
+    $UncheckedNames = @($UncheckedMailboxes | ForEach-Object { $_.UPN ? $_.UPN : $_.primarySmtpAddress })
+    $UncheckedSample = ($UncheckedNames | Select-Object -First 10) -join ', '
+    $CoverageWarning = "$Unchecked of $($Mailboxes.Count) mailboxes have no cached Default calendar permission and were NOT evaluated ($UncheckedSample). The calendar permission cache is incomplete."
+
+    $CurrentValue = if ($NeedsUpdate.Count -eq 0 -and $Unchecked -eq 0) {
         [PSCustomObject]@{ state = 'Configured correctly' }
     } else {
-        [PSCustomObject]@{ NonCompliantCalendars = $NeedsUpdate | Select-Object -Property Identity, AccessRights }
+        [PSCustomObject]@{
+            NonCompliantCalendars = @($NeedsUpdate | Select-Object -Property Identity, AccessRights)
+            UncheckedMailboxes    = $Unchecked
+        }
     }
     $ExpectedValue = [PSCustomObject]@{
         state = 'Configured correctly'
@@ -81,7 +107,11 @@ function Invoke-CIPPStandardcalDefault {
 
     if ($Settings.remediate -eq $true) {
         if ($NeedsUpdate.Count -eq 0) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All calendars already have the correct default permission level.' -sev Info
+            if ($Unchecked -gt 0) {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "All $($DefaultPermissions.Count) checked calendars already have the correct default permission level, but $CoverageWarning" -sev Warning
+            } else {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "All $($DefaultPermissions.Count) calendars already have the correct default permission level." -sev Info
+            }
         } else {
             $UpdateDB = $false
             try {
@@ -124,7 +154,11 @@ function Invoke-CIPPStandardcalDefault {
 
     if ($Settings.alert -eq $true) {
         if ($NeedsUpdate.Count -eq 0) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Default calendar permissions are correctly configured for all mailboxes' -sev Info
+            if ($Unchecked -gt 0) {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Default calendar permissions are correctly configured for all $($DefaultPermissions.Count) checked mailboxes, but $CoverageWarning" -sev Warning
+            } else {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Default calendar permissions are correctly configured for all mailboxes' -sev Info
+            }
         } else {
             Write-StandardsAlert -message "Default calendar permission is not set to $permissionLevel for $($NeedsUpdate.Count) calendars" -object ($NeedsUpdate | Select-Object -Property Identity, AccessRights) -tenant $Tenant -standardName 'calDefault' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Default calendar permission is not set to $permissionLevel for $($NeedsUpdate.Count) calendars" -sev Info

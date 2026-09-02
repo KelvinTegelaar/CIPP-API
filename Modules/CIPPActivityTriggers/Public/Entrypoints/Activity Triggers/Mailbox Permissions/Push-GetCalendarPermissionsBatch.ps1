@@ -29,6 +29,10 @@ function Push-GetCalendarPermissionsBatch {
         try {
             $CacheEntries = Get-CIPPAzDataTableEntity @FolderCacheTable -Filter "PartitionKey eq '$TenantFilter'"
             foreach ($Entry in $CacheEntries) {
+                # Entries predating the FolderType fix can name a subfolder instead of the root,
+                # and the name alone cannot say which. Anything unstamped is a miss: Phase 1
+                # rediscovers it and overwrites the row, so a poisoned cache self-heals.
+                if ($Entry.FolderType -ne 'Calendar') { continue }
                 $CachedFolders[$Entry.RowKey] = $Entry.FolderName
             }
             Write-Information "CAL Cached Folders count is $($CachedFolders.Count)"
@@ -70,23 +74,37 @@ function Push-GetCalendarPermissionsBatch {
             }
 
             Write-Information "Phase 1: Bulk Get-MailboxFolderStatistics for $($CacheMissMailboxes.Count) mailboxes"
-            $FolderStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($FolderStatsRequests)
+            $FolderStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($FolderStatsRequests) -Select 'Name,FolderType'
 
+            # One call returns EVERY calendar folder flattened under one OperationGuid, so
+            # last-wins cached whatever the mailbox listed last - 'United States holidays' for
+            # over half a tenant, after which Phase 2 queried that folder and got nothing.
+            # FolderType stays English in any mailbox language, same reason
+            # Invoke-ListCalendarPermissions uses it. No fallback on purpose: a guess here
+            # poisons a cache that never expires.
             foreach ($Result in $FolderStatsResults) {
                 if ($Result.error) {
                     Write-Information "Failed to get folder stats for $($Result.OperationGuid): $($Result.error)"
                     continue
                 }
                 $MailboxUPN = $Result.OperationGuid
-                $FolderName = $Result.name
-                if ($MailboxUPN -and $FolderName) {
-                    $FolderNameMap[$MailboxUPN] = $FolderName
-                    $NewCacheEntries.Add(@{
-                            PartitionKey = $TenantFilter
-                            RowKey       = $MailboxUPN
-                            FolderName   = $FolderName
-                        })
-                }
+                if (-not $MailboxUPN -or -not $Result.Name -or $Result.FolderType -ne 'Calendar') { continue }
+                if ($FolderNameMap.ContainsKey($MailboxUPN)) { continue }
+
+                $FolderNameMap[$MailboxUPN] = $Result.Name
+                $NewCacheEntries.Add(@{
+                        PartitionKey = $TenantFilter
+                        RowKey       = $MailboxUPN
+                        FolderName   = $Result.Name
+                        FolderType   = 'Calendar'
+                    })
+            }
+
+            # Loud on purpose: if the API stops returning FolderType, every mailbox fails the
+            # filter above and the whole type silently collects nothing.
+            $NoRootCalendar = $CacheMissMailboxes.Count - $NewCacheEntries.Count
+            if ($NoRootCalendar -gt 0) {
+                Write-Information "No root calendar folder (FolderType 'Calendar') found for $NoRootCalendar of $($CacheMissMailboxes.Count) cache-miss mailboxes"
             }
 
             # Persist newly discovered folder names to cache

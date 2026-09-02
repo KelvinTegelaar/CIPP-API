@@ -13,6 +13,11 @@ function Get-CIPPBaselinecalDefaultState {
         Only the 'Default' principal is graded; named delegates are somebody's deliberate
         grant and are none of this standard's business. AccessRights arrives as an array on
         some rows and a string on others, so it is joined before comparing.
+
+        Coverage is deliberately NOT graded here. 'offenders' is the only channel the compare
+        keeps, and an entry there leaves 'targets' empty - ExoBulkSweep then returns at its
+        `if ($Attempted -eq 0)` guard, before refreshCache, while the engine records Remediated.
+        Invoke-CIPPStandardcalDefault carries the coverage check instead.
     .FUNCTIONALITY
         Internal
     #>
