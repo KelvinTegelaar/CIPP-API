@@ -27771,6 +27771,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
+        "description": "Runs the offboarding wizard: one scheduled offboarding job per user, immediately or at the\nscheduled time, reporting live progress under one job id. Action=Rerun queues an existing\noffboarding task again; Action=RerunStep queues one step of it, reported to the same progress row.",
         "requestBody": {
           "required": true,
           "content": {
@@ -27778,6 +27779,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
                   "forward": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
@@ -27817,6 +27821,18 @@
                     },
                     "description": "Scheduled: when enabled, date must be a valid Unix timestamp"
                   },
+                  "StepIndex": {
+                    "type": "integer",
+                    "description": "Zero-based index of the step, as listed in the progress row, to run again"
+                  },
+                  "StepTitle": {
+                    "type": "string",
+                    "description": "Title of that step, used to name the re-run task"
+                  },
+                  "TaskId": {
+                    "type": "string",
+                    "description": "RowKey of the offboarding task to run again"
+                  },
                   "tenantFilter": {
                     "allOf": [
                       {
@@ -27842,19 +27858,23 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                  "properties": {
-                    "Results": {
-                      "x-cipp-field-source": "backend"
-                    }
-                  }
+                  "$ref": "#/components/schemas/StandardResults"
                 }
               }
             }
@@ -39503,6 +39523,59 @@
           }
         ],
         "x-cipp-role": "Endpoint.MEM.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListAsyncDeployment": {
+      "get": {
+        "summary": "Get the live progress of a background job",
+        "operationId": "ListAsyncDeployment",
+        "tags": [
+          "CIPP > Scheduler"
+        ],
+        "description": "Returns the status rows of a background job that reports progress while it runs, such as a\nuser offboarding started from the wizard: one row per target (the user) with its overall\nstatus and the status and message of every step.",
+        "parameters": [
+          {
+            "name": "DeploymentId",
+            "in": "query",
+            "description": "The job id handed back when the work was queued (e.g. DeploymentId from ExecOffboardUser)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Scheduler.Read",
         "x-cipp-any-tenant": true
       }
     },
@@ -52272,6 +52345,70 @@
           }
         ],
         "x-cipp-role": "Identity.AuditLog.Read"
+      }
+    },
+    "/api/ListOffboardingProgress": {
+      "get": {
+        "summary": "Get the live progress of an offboarding job",
+        "operationId": "ListOffboardingProgress",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Returns the progress rows of an offboarding job started from the wizard: one row per user with\nits overall status and the status and message of every step. Same rows as ListAsyncDeployment,\nunder the wizard's own permission so an offboarding operator can follow and re-run their jobs.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "DeploymentId",
+            "in": "query",
+            "description": "The DeploymentId handed back by ExecOffboardUser, also stored on each offboarding task",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListOffboardTenants": {

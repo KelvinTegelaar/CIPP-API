@@ -422,7 +422,18 @@ function Push-ExecScheduledCommand {
         if ($TaskAttachments) {
             $AlertParams.Attachments = $TaskAttachments
         }
-        Send-CIPPScheduledTaskAlert @AlertParams
+        $PostExecutionResults = @(Send-CIPPScheduledTaskAlert @AlertParams)
+        # Keep the delivery outcomes with the task, so a failed webhook, email or PSA note shows on the task page.
+        try {
+            $TaskTable = Get-CippTable -tablename 'ScheduledTasks'
+            $null = Update-AzDataTableEntity -Force @TaskTable -Entity @{
+                PartitionKey         = $task.PartitionKey
+                RowKey               = $task.RowKey
+                PostExecutionResults = [string](ConvertTo-Json -Compress -Depth 5 -InputObject $PostExecutionResults)
+            }
+        } catch {
+            Write-Information "Could not store the post-execution results: $($_.Exception.Message)"
+        }
     }
 
     try {

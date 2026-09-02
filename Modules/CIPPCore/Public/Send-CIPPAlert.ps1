@@ -347,7 +347,7 @@ function Send-CIPPAlert {
         Write-Information 'Trying to send to PSA'
         if (-not $config.sendtoIntegration) {
             Write-Information 'PSA delivery skipped: sendtoIntegration is disabled in CippNotifications config. Enable it under Settings -> Notifications to route alerts to your PSA.'
-            return
+            return 'Skipped: PSA delivery is disabled in the notification settings'
         }
         if ($PSCmdlet.ShouldProcess('PSA', 'Sending alert')) {
             try {
@@ -384,10 +384,13 @@ function Send-CIPPAlert {
                     Write-Information "PSA result: $PsaResult"
                 }
                 Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev info
+                # Same shape as the email and webhook branches, so a caller can record the outcome
+                return "Sent PSA alert: $title"
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-Information "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                return "Error: Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)"
             }
         }
     }

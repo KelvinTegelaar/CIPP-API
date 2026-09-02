@@ -27,7 +27,7 @@ function Invoke-ListScheduledItemDetails {
 
     # Retrieve the task information
     $TaskTable = Get-CIPPTable -TableName 'ScheduledTasks'
-    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$SafeRowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp, Trigger
+    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$SafeRowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, PostExecutionResults, Tenant, TenantGroup, Hidden, Results, Timestamp, Trigger
 
     if (-not $Task) {
         return ([HttpResponseContext]@{
@@ -109,6 +109,15 @@ function Invoke-ListScheduledItemDetails {
         } catch {
             Write-Warning "Failed to parse trigger information for task $($Task.RowKey): $($_.Exception.Message)"
             # Fall back to keeping original trigger value
+        }
+    }
+
+    # Delivery outcomes of the post-execution notifications (one per channel attempt), stored as JSON
+    if ($Task.PostExecutionResults) {
+        try {
+            $Task.PostExecutionResults = @($Task.PostExecutionResults | ConvertFrom-Json -ErrorAction Stop)
+        } catch {
+            $Task.PostExecutionResults = @()
         }
     }
 
