@@ -79,14 +79,20 @@ function Set-CIPPIntunePolicy {
                     if ($FuzzyResult.MatchType -eq 'fuzzy') {
                         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Fuzzy matched policy '$($FuzzyResult.OriginalName)' for template '$DisplayName' (distance=$($FuzzyResult.Distance))" -Sev Info
                     }
-                    $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, '@odata.context', targetedMobileApps
+                    $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, '@odata.context', targetedMobileApps, targetedMobileAppsDetails
                     $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 20 -Compress
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $TenantFilter -type PATCH -body $RawJSON -AddedHeaders $ApprovalHeaders
                     Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev Info
                     $CreateRequest = $FuzzyResult.Policy
                 } else {
                     $PostType = 'added'
-                    $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, '@odata.context'
+                    # The template's targetedMobileApps are ids from the tenant it was captured in.
+                    # Resolve them to this tenant's apps (or fail with the app named) before creating.
+                    $ResolvedApps = @(Resolve-CIPPIntuneTargetedMobileApps -PolicyFile $PolicyFile -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName)
+                    $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, '@odata.context', targetedMobileAppsDetails
+                    if ($ResolvedApps.Count -gt 0 -or $PolicyFile.PSObject.Properties['targetedMobileApps']) {
+                        $PolicyFile | Add-Member -NotePropertyName 'targetedMobileApps' -NotePropertyValue @($ResolvedApps) -Force
+                    }
                     $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 20 -Compress
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter -type POST -body $RawJSON -AddedHeaders $ApprovalHeaders
                     Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Added policy $($DisplayName) via template" -Sev Info

@@ -16,6 +16,22 @@ function Set-CIPPDBCacheExoSafeLinksPolicies {
         [string]$QueueId
     )
 
+    # Safe Links is a Defender for Office 365 feature. On tenants without it Exchange rejects
+    # Get-SafeLinksPolicy, which surfaced as an Error log for every unlicensed tenant on every
+    # collection. Skip those tenants and leave the cache untouched, so the tests report the
+    # collection as not run (Skipped) rather than as a failure.
+    try {
+        $Capabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
+        $MDOCapabilities = @('ATP_ENTERPRISE', 'ATP_ENTERPRISE_GOV', 'THREAT_INTELLIGENCE', 'THREAT_INTELLIGENCE_GOV')
+        $HasMDO = @($MDOCapabilities | Where-Object { $Capabilities.$_ -eq $true }).Count -gt 0
+        if (-not $HasMDO) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Skipping the Safe Links cache: this tenant is not licensed for Defender for Office 365' -sev Info
+            return
+        }
+    } catch {
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Could not determine Defender for Office 365 licensing, attempting the Safe Links cache anyway: $($_.Exception.Message)" -sev Debug
+    }
+
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Safe Links policies and rules' -sev Debug
 

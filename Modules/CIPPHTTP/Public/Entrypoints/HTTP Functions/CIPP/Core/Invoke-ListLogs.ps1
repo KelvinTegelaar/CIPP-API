@@ -98,6 +98,17 @@ function Invoke-ListLogs {
             $StartDate = if ($Request.Query.StartDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.StartDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
             $EndDate = if ($Request.Query.EndDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.EndDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
 
+            # Days=N widens a filtered query to the last N calendar days (in the instance timezone).
+            # The scoped drawers (standard template, scheduled task, baseline run) use this: a run
+            # that finished last night otherwise shows an empty log early the next day, because the
+            # default window is "today" only.
+            $Days = $Request.Query.Days -as [int]
+            if (-not $StartDate -and -not $EndDate -and $Days -gt 0) {
+                $LocalToday = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId)
+                $StartDate = $LocalToday.AddDays(-([Math]::Min($Days, 90) - 1)).ToString('yyyyMMdd')
+                $EndDate = $LocalToday.ToString('yyyyMMdd')
+            }
+
             if ($StartDate -and $EndDate) {
                 $Filter = "PartitionKey ge '$StartDate' and PartitionKey le '$EndDate'"
             } elseif ($StartDate) {

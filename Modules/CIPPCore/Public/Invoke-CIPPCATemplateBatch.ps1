@@ -48,7 +48,9 @@ function Invoke-CIPPCATemplateBatch {
     $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $Tenant -Preset Entra
     if ($TestResult -eq $false) {
         foreach ($t in $Templates) {
-            Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($t.Settings.TemplateList.value)" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
+            # LicenseAvailable is what the standards page keys off to show the licensing message;
+            # without it a bare string value renders as "data has not yet been collected".
+            Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($t.Settings.TemplateList.value)" -FieldValue 'This tenant does not have the required license for this standard.' -LicenseAvailable $false -Tenant $Tenant
         }
         return
     }
@@ -92,16 +94,23 @@ function Invoke-CIPPCATemplateBatch {
     # Load each template's JSON once
     $CATemplates = foreach ($t in $Templates) {
         $TemplateValue = $t.Settings.TemplateList.value
-        $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$TemplateValue'"
-        $JSON = (Get-CippAzDataTableEntity @Table -Filter $Filter).JSON
+        # The template picker surfaces the GUID column while the engine keys on RowKey. CIPP writes
+        # both to the same value, but templates re-synced by older releases can differ - accept
+        # either so a template that is sitting in the table is not reported as missing.
+        $SafeTemplateValue = ConvertTo-CIPPODataFilterValue -Value $TemplateValue -Type String
+        $Filter = "PartitionKey eq 'CATemplate' and (RowKey eq '$SafeTemplateValue' or GUID eq '$SafeTemplateValue')"
+        $JSON = (Get-CippAzDataTableEntity @Table -Filter $Filter | Select-Object -First 1).JSON
         # Resolve custom variables once at load: the compare helper, the dependency
         # reconciliation objects and the deploy RawJSON must all see the same resolved
         # values, or the DependencyMap ends up keyed by raw %tokens% that the (resolved)
         # policies can never look up.
         if ($JSON) { $JSON = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $JSON -EscapeForJson }
         if (-not $JSON) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Conditional Access template '$($t.Settings.TemplateList.label)' ($TemplateValue) could not be loaded from the template store - skipping." -Sev 'Error'
-            Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$TemplateValue" -FieldValue "Template '$($t.Settings.TemplateList.label)' could not be loaded from the template store." -Tenant $Tenant
+            $MissingText = "Template '$($t.Settings.TemplateList.label)' ($TemplateValue) no longer exists in the template library. Remove it from the standards template or select the template again."
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Conditional Access template '$($t.Settings.TemplateList.label)' ($TemplateValue) could not be loaded from the template store - skipping. $MissingText" -Sev 'Error'
+            # Carry the reason into the report so the standards page shows it instead of "data has
+            # not yet been collected".
+            Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$TemplateValue" -CurrentValue @{ Differences = $MissingText } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
             continue
         }
         [pscustomobject]@{

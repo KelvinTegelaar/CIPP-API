@@ -160,6 +160,12 @@ function New-GraphDeltaQuery {
             if ($DeltaError) {
                 throw "Delta Query failed for tenant '$TenantFilter'."
             }
+            # Never persist a row without a delta link. A blank DeltaUrl is not "start over", it is a
+            # row that every later evaluation reads and then fails to bind, so the trigger silently
+            # stops working until someone rebuilds it.
+            if ([string]::IsNullOrWhiteSpace($deltaLink)) {
+                throw "Graph returned no deltaLink for the '$($DeltaQuery.Resource ?? $Resource)' delta query on tenant '$TenantFilter'. The delta query row was not updated."
+            }
             $DeltaQuery.RowKey = $TenantFilter
             $DeltaQuery.DeltaUrl = $deltaLink
 

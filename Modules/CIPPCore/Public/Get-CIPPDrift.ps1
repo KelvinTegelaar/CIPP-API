@@ -29,6 +29,26 @@ function Get-CIPPDrift {
         [switch]$AllTenants
     )
 
+    # The label a standards template stores for a template reference, for the template types whose
+    # standard key ends in the referenced template id. Used when the template row itself is gone.
+    function Get-DriftTemplateLabel {
+        param($StandardName, $StandardSettings)
+        if (-not $StandardSettings) { return $null }
+        $Match = [regex]::Match([string]$StandardName, '^standards\.(IntuneTemplate|ConditionalAccessTemplate|ReusableSettingsTemplate)\.(.+)$')
+        if (-not $Match.Success) { return $null }
+        $Kind = $Match.Groups[1].Value
+        $Id = $Match.Groups[2].Value
+        foreach ($Entry in @($StandardSettings.$Kind)) {
+            foreach ($Item in @($Entry.TemplateList)) {
+                $Value = if ($Item.value) { [string]$Item.value } else { [string]$Item }
+                if ($Value -and ($Value -eq $Id -or $Value -like "$Id*" -or $Id -like "$Value*")) {
+                    if ($Item.label) { return [string]$Item.label }
+                }
+            }
+        }
+        return $null
+    }
+
     $IntuneCapable = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $TenantFilter -Preset Intune
     $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -Preset Entra
     $IntuneTable = Get-CippTable -tablename 'templates'
@@ -123,13 +143,27 @@ function Get-CIPPDrift {
         $DriftTable = Get-CippTable -tablename 'tenantDrift'
         $DriftFilter = "PartitionKey eq '$TenantFilter'"
         $ExistingDriftStates = @{}
+        # Set only once every decided status has been read. Without them every deviation looks
+        # New, and writing or pruning on that view would replace accepted / customer-specific
+        # decisions with New - so both steps below are skipped when the read did not complete.
+        $DriftStatesLoaded = $false
+        $DriftEntities = @()
         try {
-            $DriftEntities = Get-CIPPAzDataTableEntity @DriftTable -Filter $DriftFilter
+            $DriftEntities = @(Get-CIPPAzDataTableEntity @DriftTable -Filter $DriftFilter)
             foreach ($Entity in $DriftEntities) {
-                $ExistingDriftStates[$Entity.StandardName] = $Entity
+                $EntityKey = [string]$Entity.StandardName
+                if ([string]::IsNullOrWhiteSpace($EntityKey)) {
+                    # A row without a name cannot be matched to a deviation. Skipping it is the only
+                    # option that keeps the rest of the table usable - a null hashtable key throws
+                    # and would abandon every row after it.
+                    Write-Warning "Drift state row '$($Entity.RowKey)' for tenant '$TenantFilter' has no StandardName and was ignored."
+                    continue
+                }
+                $ExistingDriftStates[$EntityKey] = $Entity
             }
+            $DriftStatesLoaded = $true
         } catch {
-            Write-Warning "Failed to get existing drift states: $($_.Exception.Message)"
+            Write-Warning "Failed to get existing drift states for '$TenantFilter': $($_.Exception.Message). Drift decisions will not be written or pruned this run."
         }
 
         $Results = [System.Collections.Generic.List[object]]::new()
@@ -196,6 +230,17 @@ function Get-CIPPDrift {
                                 }
                                 $displayName = "Quarantine Policy: $(-join $Chars)"
                             }
+                        }
+                        # When the template row is gone (or its GUID column drifted from the RowKey) the
+                        # lookups above find nothing. Fall back to the label the standards template still
+                        # carries, so the deviation names the template to fix instead of showing a bare id.
+                        if (-not $displayName) {
+                            $FallbackLabel = Get-DriftTemplateLabel -StandardName $ComparisonItem.StandardName -StandardSettings $Alignment.standardSettings
+                            if ($FallbackLabel) { $displayName = $FallbackLabel }
+                        }
+                        if ($ComparisonItem.PSObject.Properties['TemplateMissing'] -and $ComparisonItem.TemplateMissing) {
+                            $displayName = "Missing template - $($displayName ?? $ComparisonItem.StandardName)"
+                            $standardDescription = [string]$ComparisonItem.StandardValue
                         }
                         $reason = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].Reason }
                         $User = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].User }
@@ -517,12 +562,14 @@ function Get-CIPPDrift {
                         })
                 }
             }
-            if ($NewDriftEntities.Count -gt 0) {
+            if ($NewDriftEntities.Count -gt 0 -and $DriftStatesLoaded) {
                 try {
                     Add-CIPPAzDataTableEntity @DriftTable -Entity $NewDriftEntities -Force
                 } catch {
                     Write-Warning "Failed to persist new drift deviations: $($_.Exception.Message)"
                 }
+            } elseif ($NewDriftEntities.Count -gt 0) {
+                Write-Warning "Skipped writing $($NewDriftEntities.Count) drift deviation rows for '$TenantFilter' because the existing drift states could not be read."
             }
 
             # License-missing standards are excluded from the deviation buckets so the counts match
@@ -572,8 +619,9 @@ function Get-CIPPDrift {
         # are invisible to the score once their key leaves ComparisonDetails, so only undecided rows
         # ('New' or missing Status) are pruned there: Accepted/Denied*/CustomerSpecific decisions must
         # survive transient key-enumeration drops (package/tag membership changes, template
-        # re-saves). A template-scoped run cannot see every valid key, so it never prunes.
-        if (-not $TemplateId) {
+        # re-saves). A template-scoped run cannot see every valid key, so it never prunes, and
+        # neither does a run whose read of the existing states did not complete.
+        if (-not $TemplateId -and $DriftStatesLoaded) {
             $StaleDriftEntities = foreach ($Entity in $DriftEntities) {
                 $EntityName = [string]$Entity.StandardName
                 if ([string]::IsNullOrWhiteSpace($EntityName) -or $ValidDriftKeys.Contains($EntityName)) { continue }

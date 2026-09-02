@@ -5,6 +5,16 @@ function New-CIPPTemplateRun {
         $TenantFilter
     )
     $Table = Get-CippTable -tablename 'templates'
+
+    # Templates created from a tenant are keyed by that tenant in their Source column and matched
+    # on it to update-in-place. The tenant can be addressed by any of its names (default domain,
+    # initial onmicrosoft domain, tenant id), and a second sync task created under a different name
+    # used to see none of the existing templates and create a full duplicate set on every run.
+    # Match on every name the tenant is known by and write the canonical one.
+    $TenantInfo = Get-Tenants -IncludeErrors -TenantFilter $TenantFilter | Select-Object -First 1
+    $SourceAliases = @(@($TenantFilter, $TenantInfo.defaultDomainName, $TenantInfo.initialDomainName, $TenantInfo.customerId) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $SourceName = if ($TenantInfo.defaultDomainName) { [string]$TenantInfo.defaultDomainName } else { [string]$TenantFilter }
+
     $ExistingTemplates = (Get-CIPPAzDataTableEntity @Table) | ForEach-Object {
         try {
             $data = $_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue -Depth 100
@@ -117,7 +127,7 @@ function New-CIPPTemplateRun {
                     foreach ($policy in $policies) {
                         try {
                             $Hash = Get-StringHash -String ($policy | ConvertTo-Json -Depth 100 -Compress)
-                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'CATemplate' -and $_.displayName -eq $policy.displayName -and $_.Source -eq $TenantFilter } | Select-Object -First 1
+                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'CATemplate' -and $_.displayName -eq $policy.displayName -and $_.Source -in $SourceAliases } | Select-Object -First 1
                             if ($ExistingPolicy -and $ExistingPolicy.SHA -eq $Hash) {
                                 "CA Policy $($policy.displayName) found, SHA matches, skipping template creation"
                                 continue
@@ -144,7 +154,7 @@ function New-CIPPTemplateRun {
                                     PartitionKey = 'CATemplate'
                                     GUID         = "$GUID"
                                     SHA          = $Hash
-                                    Source       = $TenantFilter
+                                    Source       = $SourceName
                                 }
                             }
 
@@ -188,7 +198,7 @@ function New-CIPPTemplateRun {
                                     $Hash = Get-StringHash -String ($Policy | ConvertTo-Json -Depth 100 -Compress)
                                     $DisplayName = $Policy.displayName ?? $Policy.name
 
-                                    $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $_.displayName -eq $DisplayName -and $_.Source -eq $TenantFilter } | Select-Object -First 1
+                                    $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $_.displayName -eq $DisplayName -and $_.Source -in $SourceAliases } | Select-Object -First 1
 
                                     Write-Information "Processing Intune Configuration Policy $($DisplayName) - $($ExistingPolicy ? 'Existing template found' : 'No existing template found')"
 
@@ -234,7 +244,7 @@ function New-CIPPTemplateRun {
                                             PartitionKey = 'IntuneTemplate'
                                             GUID         = "$GUID"
                                             SHA          = $Hash
-                                            Source       = $TenantFilter
+                                            Source       = $SourceName
                                         } -Force
                                     }
                                 } catch {
@@ -253,7 +263,7 @@ function New-CIPPTemplateRun {
                     foreach ($Policy in $Policies) {
                         try {
                             $Hash = Get-StringHash -String (ConvertTo-Json -Depth 100 -Compress -InputObject $Policy)
-                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $Policy.displayName -eq $_.DisplayName -and $_.Source -eq $TenantFilter } | Select-Object -First 1
+                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $Policy.displayName -eq $_.DisplayName -and $_.Source -in $SourceAliases } | Select-Object -First 1
                             if ($ExistingPolicy -and $ExistingPolicy.SHA -eq $Hash) {
                                 "Intune Compliance Policy $($Policy.displayName) found, SHA matches, skipping template creation"
                                 continue
@@ -296,7 +306,7 @@ function New-CIPPTemplateRun {
                                     PartitionKey = 'IntuneTemplate'
                                     SHA          = $Hash
                                     GUID         = "$GUID"
-                                    Source       = $TenantFilter
+                                    Source       = $SourceName
                                 } -Force
                             }
                         } catch {
@@ -312,7 +322,7 @@ function New-CIPPTemplateRun {
                     foreach ($Policy in $Policies) {
                         try {
                             $Hash = Get-StringHash -String (ConvertTo-Json -Depth 100 -Compress -InputObject $Policy)
-                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $Policy.displayName -eq $_.DisplayName -and $_.Source -eq $TenantFilter } | Select-Object -First 1
+                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $Policy.displayName -eq $_.DisplayName -and $_.Source -in $SourceAliases } | Select-Object -First 1
                             if ($ExistingPolicy -and $ExistingPolicy.SHA -eq $Hash) {
                                 "Intune Protection Policy $($Policy.displayName) found, SHA matches, skipping template creation"
                                 continue
@@ -355,7 +365,7 @@ function New-CIPPTemplateRun {
                                     PartitionKey = 'IntuneTemplate'
                                     SHA          = $Hash
                                     GUID         = "$GUID"
-                                    Source       = $TenantFilter
+                                    Source       = $SourceName
                                 } -Force
                             }
                         } catch {

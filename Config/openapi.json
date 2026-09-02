@@ -5462,21 +5462,21 @@
                   },
                   "Name": {
                     "type": "string",
-                    "description": "Validate required fields"
+                    "description": "Validate required fields. The \"create template from policy\" row action posts the policy row, which carries Name/PolicyName but no TemplateName."
                   },
                   "PolicyName": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Set name and comments - prioritize template-specific fields, falling back to the policy name so a template made from a policy is not listed with a blank name."
                   },
                   "TemplateDescription": {
                     "type": "string"
                   },
                   "TemplateName": {
                     "type": "string",
-                    "description": "Set name and comments - prioritize template-specific fields"
+                    "description": "Validate required fields. The \"create template from policy\" row action posts the policy row, which carries Name/PolicyName but no TemplateName."
                   }
                 },
                 "required": [
-                  "Name",
                   "PolicyName"
                 ]
               }
@@ -16941,7 +16941,7 @@
                       },
                       "standardsTemplateId": {
                         "type": "string",
-                        "description": "Without this the comparison would report the policy as missing while remediation would happily overwrite an existing, similarly named one. Mirrors the candidate selection Set-CIPPIntunePolicy performs at deployment time."
+                        "description": "tenantFilter is optional here - supplying it resolves the template the way the standard would for that tenant instead of comparing the stored template verbatim."
                       },
                       "templateGuid": {
                         "type": "string",
@@ -16982,7 +16982,7 @@
                       },
                       "standardsTemplateId": {
                         "type": "string",
-                        "description": "Without this the comparison would report the policy as missing while remediation would happily overwrite an existing, similarly named one. Mirrors the candidate selection Set-CIPPIntunePolicy performs at deployment time."
+                        "description": "tenantFilter is optional here - supplying it resolves the template the way the standard would for that tenant instead of comparing the stored template verbatim."
                       },
                       "templateGuid": {
                         "type": "string",
@@ -27558,6 +27558,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -41054,7 +41057,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "source": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,frontend"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -48994,7 +48997,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "source": {
-                        "x-cipp-field-source": "storage,backend"
+                        "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -49851,6 +49854,15 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "Days",
+            "in": "query",
+            "description": "Days=N widens a filtered query to the last N calendar days (in the instance timezone). The scoped drawers (standard template, scheduled task, baseline run) use this: a run that finished last night otherwise shows an empty log early the next day, because the default window is \"today\" only.",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
