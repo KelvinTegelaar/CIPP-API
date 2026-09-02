@@ -29,8 +29,11 @@ function Get-CippApiClient {
         if ($Client.IPRange) {
             try {
                 $IPRange = @($Client.IPRange | ConvertFrom-Json -ErrorAction Stop)
-                if (($IPRange | Measure-Object).Count -eq 0) { @('Any') }
-                $Client.IPRange = $IPRange
+                if (($IPRange | Measure-Object).Count -eq 0) {
+                    $Client.IPRange = @('Any')
+                } else {
+                    $Client.IPRange = $IPRange
+                }
             } catch {
                 $Client.IPRange = @('Any')
             }
