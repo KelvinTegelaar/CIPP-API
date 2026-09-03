@@ -167,7 +167,7 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
             PSVersion    = $PSVersionTable.PSVersion.ToString()
         }
     }
-    Update-AzDataTableEntity @Table -Entity $LastStartup -Force -ErrorAction SilentlyContinue
+    Add-AzDataTableEntity @Table -Entity $LastStartup -Force -ErrorAction SilentlyContinue
     try {
         Clear-CippDurables
     } catch {
