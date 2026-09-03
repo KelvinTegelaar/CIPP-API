@@ -180,10 +180,11 @@ namespace CIPP
     //   AdminPlane      5   admin.microsoft.com, reports, Defender, etc.
     //   Compliance      5   compliance redirect discovery (no-redirect)
     //   PartnerCenter   5   api.partnercenter.microsoft.com
+    //   SPO            10   *.sharepoint.com CSOM/_api (concurrent per-site fan-out)
     //   DNS             2   dns.google.com, cloudflare-dns.com (per host)
     //   Default         5   catch-all + absorbs legacy Invoke-RestMethod calls
     //   ─────────────
-    //   Total          79   leaves a 46-port buffer for the Functions host,
+    //   Total          89   leaves a 36-port buffer for the Functions host,
     //                       Durable extension, AppInsights, Azure SDK clients,
     //                       and any stragglers that bypass the pool.
     //
@@ -235,6 +236,7 @@ namespace CIPP
         private static HttpClient? _complianceClient;
         private static HttpClient? _partnerCenterClient;
         private static HttpClient? _adminPlaneClient;
+        private static HttpClient? _spoClient;
         private static HttpClient? _dnsClient;
         private static HttpClient? _defaultClient;
 
@@ -391,6 +393,25 @@ namespace CIPP
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
+        /// SharePoint / OneDrive client — dedicated lane for SPO admin CSOM (ProcessQuery) and
+        /// SPO REST (_api) against *.sharepoint.com, which have no server-side $batch. Concurrent
+        /// per-site writes (Set-CIPPSPOSiteBulk via SendConcurrent) fan out here. HTTP/2 is disabled
+        /// so MaxConnectionsPerServer is a true concurrency ceiling (10) rather than a connection
+        /// count that H2 stream-multiplexing could exceed — this keeps bursts under SPO throttling.
+        /// Cap: 10 connections.
+        /// </summary>
+        private static HttpClient BuildSpoClient() => new HttpClient(new SocketsHttpHandler
+        {
+            AutomaticDecompression         = DecompressionMethods.All,
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            EnableMultipleHttp2Connections = false,
+            AllowAutoRedirect              = true,
+            MaxAutomaticRedirections       = 10,
+            MaxConnectionsPerServer        = 10,
+        }) { Timeout = Timeout.InfiniteTimeSpan };
+
+        /// <summary>
         /// DNS client — dedicated lane for DoH (DNS-over-HTTPS) providers.
         /// Covers dns.google.com and cloudflare-dns.com. These services
         /// heavily load-balance across many server IPs, so a low per-server
@@ -444,6 +465,7 @@ namespace CIPP
                 _complianceClient is not null &&
                 _partnerCenterClient is not null &&
                 _adminPlaneClient is not null &&
+                _spoClient        is not null &&
                 _dnsClient        is not null &&
                 _defaultClient    is not null)
                 return;
@@ -460,6 +482,7 @@ namespace CIPP
                     _complianceClient = BuildComplianceClient();
                     _partnerCenterClient = BuildPartnerCenterClient();
                     _adminPlaneClient = BuildAdminPlaneClient();
+                    _spoClient        = BuildSpoClient();
                     _dnsClient        = BuildDnsClient();
                     _defaultClient    = BuildDefaultClient();
                 }
@@ -544,6 +567,12 @@ namespace CIPP
 
                 // Rule 6 — Microsoft admin/reporting/security lanes
                 var h when IsAdminPlaneHost(h)                             => (_adminPlaneClient!, "AdminPlane", host),
+
+                // Rule 6b — SharePoint / OneDrive (CSOM ProcessQuery + _api REST). Covers the
+                // tenant, -admin and -my hosts. No server-side $batch, so concurrent per-site
+                // requests fan out here, capped at 10 connections.
+                var h when h.EndsWith(".sharepoint.com",
+                    StringComparison.OrdinalIgnoreCase)                    => (_spoClient!, "SPO", host),
 
                 // Rule 7 — DNS-over-HTTPS providers (low connection cap)
                 var h when h.Equals("dns.google.com",

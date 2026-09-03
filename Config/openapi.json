@@ -11733,7 +11733,8 @@
                     }
                   },
                   "templateId": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Add-CIPPGDAPRoleTemplate already writes customer-visible logs for the template path"
                   }
                 }
               }
@@ -12344,6 +12345,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -28418,7 +28422,8 @@
                 "type": "object",
                 "properties": {
                   "enabled": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "Subscription create/update is logged by New-CIPPGraphSubscription; log the onboarding config write here."
                   },
                   "EventType": {
                     "$ref": "#/components/schemas/LabelValue"

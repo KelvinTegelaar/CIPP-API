@@ -119,18 +119,15 @@ function Invoke-CIPPStandardOneDriveLicensedQuota {
         if ($BelowQuota.Count -eq 0) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All entitled users already have a OneDrive quota of 5 TB or more.' -sev Info
         } else {
+            # One concurrent batch instead of ~2s per drive serially.
+            $BulkSites = @($BelowQuota | ForEach-Object { @{ SiteUrl = $_.siteUrl; Properties = @{ StorageMaximumLevel = $TargetQuotaMB; StorageWarningLevel = $WarningLevelMB } } })
+            $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $Tenant -Sites $BulkSites)
             foreach ($Drive in $BelowQuota) {
-                try {
-                    $SetResponse = Set-CIPPSPOSite -TenantFilter $Tenant -SiteUrl $Drive.siteUrl -Properties @{
-                        StorageMaximumLevel = $TargetQuotaMB
-                        StorageWarningLevel = $WarningLevelMB
-                    }
-                    $CsomError = ($SetResponse | Where-Object { $_.ErrorInfo } | Select-Object -First 1).ErrorInfo.ErrorMessage
-                    if ($CsomError) { throw $CsomError }
+                $BulkResult = $BulkResults | Where-Object { $_.SiteUrl -eq $Drive.siteUrl } | Select-Object -First 1
+                if ($BulkResult -and $BulkResult.Success) {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Raised OneDrive quota for $($Drive.userPrincipalName) from $($Drive.currentQuotaGB)GB to $($Drive.targetQuotaGB)GB" -sev Info
-                } catch {
-                    $ErrorMessage = Get-CippException -Exception $_
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to raise OneDrive quota for $($Drive.userPrincipalName): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                } else {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to raise OneDrive quota for $($Drive.userPrincipalName): $($BulkResult.Error)" -sev Error
                 }
             }
         }

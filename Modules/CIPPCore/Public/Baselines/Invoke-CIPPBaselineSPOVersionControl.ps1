@@ -47,15 +47,13 @@ function Invoke-CIPPBaselineSPOVersionControl {
             $SiteProperties.MajorVersionLimit = $MajorLimit
             $SiteProperties.ExpireVersionsAfterDays = $ExpireDays
         }
-        $Failures = 0
-        foreach ($Site in $Sites) {
-            try {
-                Set-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $Site.webUrl -Properties $SiteProperties
-            } catch {
-                $Failures++
-                Write-Information "Baselines: version policy on $($Site.webUrl) continued past: $($_.Exception.Message)"
-            }
+        # One concurrent batch (Set-CIPPSPOSiteBulk fans out in .NET) instead of ~2s per site.
+        $BulkSites = @($Sites | ForEach-Object { @{ SiteUrl = $_.webUrl; Properties = $SiteProperties } })
+        $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $TenantFilter -Sites $BulkSites)
+        $Failures = @($BulkResults | Where-Object { -not $_.Success })
+        foreach ($FailedSite in $Failures) {
+            Write-Information "Baselines: version policy on $($FailedSite.SiteUrl) continued past: $($FailedSite.Error)"
         }
-        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Applied the version policy to $(@($Sites).Count - $Failures) of $(@($Sites).Count) existing site(s)." -Sev 'Info'
+        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Applied the version policy to $(@($Sites).Count - $Failures.Count) of $(@($Sites).Count) existing site(s)." -Sev 'Info'
     }
 }

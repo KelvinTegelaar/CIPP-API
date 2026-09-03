@@ -128,15 +128,14 @@ function Invoke-CIPPStandardSPOVersionControl {
                         $SiteProperties.ExpireVersionsAfterDays = $DesiredExpireVersionsAfterDays
                     }
 
-                    foreach ($Site in $Sites) {
-                        try {
-                            Set-CIPPSPOSite -TenantFilter $Tenant -SiteUrl $Site.webUrl -Properties $SiteProperties
-                        } catch {
-                            $SiteError = Get-CippException -Exception $_
-                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set version policy for site $($Site.webUrl): $($SiteError.NormalizedError)" -sev Error -LogData $SiteError
-                        }
+                    # One concurrent batch instead of ~2s per site serially.
+                    $BulkSites = @($Sites | ForEach-Object { @{ SiteUrl = $_.webUrl; Properties = $SiteProperties } })
+                    $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $Tenant -Sites $BulkSites)
+                    $FailedSites = @($BulkResults | Where-Object { -not $_.Success })
+                    foreach ($FailedSite in $FailedSites) {
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set version policy for site $($FailedSite.SiteUrl): $($FailedSite.Error)" -sev Error
                     }
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Finished applying version policy to existing sites' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Finished applying version policy to $($Sites.Count - $FailedSites.Count) of $($Sites.Count) existing sites" -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
