@@ -1,7 +1,7 @@
-# SPGuestPeoplePicker covers the tenant default and every site collection from one SPOSites cache.
-# The prepare hook derives offenders/targets from that cache (no live calls); the executor applies
-# the value per target - tenant via Set-CIPPSPOTenant, sites via Set-CIPPSPOSite - tolerating partial
-# failure but throwing when every write fails. Static counting mocks only.
+# SPGuestPeoplePicker covers the tenant default (from the SPOTenant cache) and every site collection
+# (from the generic SPOSites cache). The prepare hook derives offenders/targets from those caches (no
+# live calls); the executor applies the value per target - tenant via Set-CIPPSPOTenant, sites via
+# Set-CIPPSPOSite - tolerating partial failure but throwing when every write fails. Static mocks only.
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -20,21 +20,25 @@ BeforeAll {
 
     $script:Tenant = 'contoso.onmicrosoft.com'
 
-    function script:New-Row { param([string]$Scope, [string]$Url, [bool]$Show)
-        [PSCustomObject]@{ id = ($Url ?? 'tenant-default'); Scope = $Scope; Url = $Url; ShowPeoplePickerSuggestionsForGuestUsers = $Show }
-    }
+    function script:New-Site { param([string]$Url, [bool]$Show) [PSCustomObject]@{ id = $Url; Url = $Url; ShowPeoplePickerSuggestionsForGuestUsers = $Show } }
     function script:New-Item2 { param([bool]$ShowGuests) [PSCustomObject]@{ Variables = [PSCustomObject]@{ showGuests = $ShowGuests } } }
+    function script:Set-TenantRows { param([Nullable[bool]]$Show)
+        $script:TenantRows = if ($null -eq $Show) { @() } else { @([PSCustomObject]@{ ShowPeoplePickerSuggestionsForGuestUsers = $Show }) }
+    }
 }
 
 Describe 'Get-CIPPBaselineSPGuestPeoplePickerState' {
+    BeforeEach {
+        # Static mocks answering per cache type; each It sets $script:TenantRows / $script:SiteRows.
+        $script:TenantRows = @()
+        $script:SiteRows = @()
+        Mock New-CIPPDbRequest { $script:TenantRows } -ParameterFilter { $Type -eq 'SPOTenant' }
+        Mock New-CIPPDbRequest { $script:SiteRows } -ParameterFilter { $Type -eq 'SPOSites' }
+    }
+
     It 'flags the tenant default and sites that differ (wanted = show)' {
-        Mock New-CIPPDbRequest {
-            @(
-                New-Row -Scope 'tenant' -Url $null -Show $false
-                New-Row -Scope 'site' -Url 'https://c.sharepoint.com/sites/A' -Show $false
-                New-Row -Scope 'site' -Url 'https://c.sharepoint.com/sites/B' -Show $true
-            )
-        }
+        Set-TenantRows $false
+        $script:SiteRows = @((New-Site 'https://c.sharepoint.com/sites/A' $false), (New-Site 'https://c.sharepoint.com/sites/B' $true))
         $p = Get-CIPPBaselineSPGuestPeoplePickerState -Item (New-Item2 -ShowGuests $true) -TenantFilter $script:Tenant
         @($p.Current.offenders) | Should -Be @('Tenant default', 'https://c.sharepoint.com/sites/A')
         @($p.Current.targets)[0].Scope | Should -Be 'tenant'
@@ -42,18 +46,21 @@ Describe 'Get-CIPPBaselineSPGuestPeoplePickerState' {
     }
 
     It 'flags only what differs (wanted = hide)' {
-        Mock New-CIPPDbRequest {
-            @(
-                New-Row -Scope 'tenant' -Url $null -Show $false
-                New-Row -Scope 'site' -Url 'https://c.sharepoint.com/sites/B' -Show $true
-            )
-        }
+        Set-TenantRows $false
+        $script:SiteRows = @((New-Site 'https://c.sharepoint.com/sites/B' $true))
         $p = Get-CIPPBaselineSPGuestPeoplePickerState -Item (New-Item2 -ShowGuests $false) -TenantFilter $script:Tenant
         @($p.Current.offenders) | Should -Be @('https://c.sharepoint.com/sites/B')
     }
 
-    It 'returns null Current on an empty cache so the engine collects on miss' {
-        Mock New-CIPPDbRequest { @() }
+    It 'is compliant when the tenant default and every site already match' {
+        Set-TenantRows $true
+        $script:SiteRows = @((New-Site 'https://c.sharepoint.com/sites/A' $true))
+        $p = Get-CIPPBaselineSPGuestPeoplePickerState -Item (New-Item2 -ShowGuests $true) -TenantFilter $script:Tenant
+        @($p.Current.offenders) | Should -BeNullOrEmpty
+    }
+
+    It 'returns null Current when the SPOTenant cache is empty so the engine collects on miss' {
+        Set-TenantRows $null
         $p = Get-CIPPBaselineSPGuestPeoplePickerState -Item (New-Item2 -ShowGuests $true) -TenantFilter $script:Tenant
         $p.Current | Should -BeNullOrEmpty
     }

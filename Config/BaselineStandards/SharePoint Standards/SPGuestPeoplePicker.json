@@ -32,12 +32,15 @@
     "offenders": []
   },
   "read": {
-    "cacheType": "SPOSites"
+    "cacheType": "SPOTenant",
+    "collectorArgs": {
+      "UseCertificate": true
+    }
   },
   "prepare": "Get-CIPPBaselineSPGuestPeoplePickerState",
   "remediate": {
     "executor": "SPGuestPeoplePicker",
     "useCertificate": true,
-    "refreshCache": ["SPOSites"]
+    "refreshCache": ["SPOTenant", "SPOSites"]
   }
 }

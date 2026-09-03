@@ -54,14 +54,14 @@ function Invoke-CIPPStandardSPGuestPeoplePicker {
     $WantedState = [System.Convert]::ToBoolean($StateValue)
     $HumanReadableState = if ($WantedState -eq $true) { 'shown' } else { 'hidden' }
 
-    # State from the reporting cache (tenant + site rows). No live reads for evaluation.
-    $Rows = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'SPOSites' | Where-Object { $_ })
-    if ($Rows.Count -eq 0) {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SPGuestPeoplePicker: no cached SharePoint data yet - it will populate on the next SharePoint report cache run' -sev Info
+    # State from the reporting caches: tenant default from SPOTenant, per-site from the generic
+    # SPOSites cache. No live reads for evaluation.
+    $TenantRow = New-CIPPDbRequest -TenantFilter $Tenant -Type 'SPOTenant' | Select-Object -First 1
+    if (-not $TenantRow) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SPGuestPeoplePicker: no cached SharePoint tenant data yet - it will populate on the next SharePoint report cache run' -sev Info
         return
     }
-    $TenantRow = $Rows | Where-Object { $_.Scope -eq 'tenant' } | Select-Object -First 1
-    $SiteRows = @($Rows | Where-Object { $_.Scope -eq 'site' -and $_.Url })
+    $SiteRows = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'SPOSites' | Where-Object { $_ -and $_.Url })
 
     $TenantIsCorrect = $TenantRow -and ([bool]$TenantRow.ShowPeoplePickerSuggestionsForGuestUsers -eq $WantedState)
     $NonCompliantSites = @($SiteRows | Where-Object { [bool]$_.ShowPeoplePickerSuggestionsForGuestUsers -ne $WantedState })

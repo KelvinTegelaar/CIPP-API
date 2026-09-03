@@ -426,8 +426,8 @@
   },
   {
     "type": "SPOSites",
-    "friendlyName": "SharePoint People Picker Settings",
-    "description": "SharePoint People Picker guest visibility for the tenant default (one 'tenant' row) and each site collection ('site' rows), used for drift checks"
+    "friendlyName": "SharePoint Site Settings",
+    "description": "Per-site SharePoint admin settings (sharing, lifecycle, version policy, People Picker, unmanaged-device access) for every site collection, keyed by site id"
   },
   {
     "type": "PeopleInsights",
