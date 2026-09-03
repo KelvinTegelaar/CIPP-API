@@ -104,6 +104,9 @@ function Invoke-ListMessageTrace {
 
         $MessageId = $Request.Body.messageId ?? $Request.Body.MessageId
         $MessageTraceId = $Request.Body.messageTraceId
+        # No explicit window plus a message id: sweep backwards in 10-day pages (Graph's window
+        # cap) instead of relying on Graph's silent ~48h default, which misses older messages.
+        $Sweep = (-not $Start -and -not $End) -and (![string]::IsNullOrEmpty($MessageId) -or ![string]::IsNullOrEmpty($MessageTraceId))
         $Senders = @(@($Request.Body.sender).value ?? @($Request.Body.sender) | Where-Object { -not [string]::IsNullOrEmpty($_) })
         $Recipients = @(@($Request.Body.recipient).value ?? @($Request.Body.recipient) | Where-Object { -not [string]::IsNullOrEmpty($_) })
         $Statuses = @(@($Request.Body.status).value ?? @($Request.Body.status) | Where-Object { -not [string]::IsNullOrEmpty($_) })
@@ -163,7 +166,22 @@ function Invoke-ListMessageTrace {
                 @{ Name = 'Received'; Expression = { $_.Received.ToString('u') } }, Size, FromIP, ToIP
         }
 
-        $Trace = @(& $RunWithFallback $GraphSearch $V2Search)
+        if ($Sweep) {
+            # 9 pages of 10 days covers the 90 day lookback limit.
+            $Trace = @()
+            for ($Window = 0; $Window -lt 9; $Window++) {
+                $End = [DateTime]::UtcNow.AddDays(-10 * $Window)
+                $Start = $End.AddDays(-10)
+                $WindowFilters = [System.Collections.Generic.List[string]]::new($Filters)
+                $WindowFilters.Insert(0, "receivedDateTime ge $($Start.ToString('yyyy-MM-ddTHH:mm:ssZ')) and receivedDateTime le $($End.ToString('yyyy-MM-ddTHH:mm:ssZ'))")
+                $Uri = $GraphBase + '?$top=5000'
+                if ($WindowFilters.Count -gt 0) { $Uri += "&`$filter=$([uri]::EscapeDataString($WindowFilters -join ' and '))" }
+                $Trace = @(& $RunWithFallback $GraphSearch $V2Search)
+                if (@($Trace).Count -gt 0) { break }
+            }
+        } else {
+            $Trace = @(& $RunWithFallback $GraphSearch $V2Search)
+        }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message 'Executed message trace' -Sev 'Info'
 
         $Metadata = @{ Returned = @($Trace).Count; Source = $State.Fallback ? 'Get-MessageTraceV2' : 'Graph' }
