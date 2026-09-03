@@ -276,6 +276,7 @@
   },
   {
     "type": "OneDriveSiteListing",
+    "collectedBy": "OneDriveUsage",
     "friendlyName": "OneDrive Site Listing",
     "description": "OneDrive personal site listing details used for usage reporting"
   },
@@ -291,6 +292,7 @@
   },
   {
     "type": "SharePointSiteListing",
+    "collectedBy": "SharePointSiteUsage",
     "friendlyName": "SharePoint Site Listing",
     "description": "SharePoint site listing details used for usage reporting"
   },
@@ -526,6 +528,7 @@
   },
   {
     "type": "IntuneMobileAppsAll",
+    "collectedBy": "IntuneApplications",
     "friendlyName": "All Intune Mobile Apps",
     "description": "Unfiltered mobile apps list (id, displayName, odata type) for presence checks"
   },
@@ -601,16 +604,19 @@
   },
   {
     "type": "ExoPhishSimOverridePolicy",
+    "collectedBy": "ExoPhishSimConfig",
     "friendlyName": "Phishing Simulation Override Policy",
     "description": "Third-party phishing simulation override policy"
   },
   {
     "type": "ExoPhishSimOverrideRule",
+    "collectedBy": "ExoPhishSimConfig",
     "friendlyName": "Phishing Simulation Override Rule",
     "description": "Phishing simulation override rule with sender IP ranges and domains"
   },
   {
     "type": "ExoPhishSimUrlAllowItems",
+    "collectedBy": "ExoPhishSimConfig",
     "friendlyName": "Phishing Simulation URL Allow Items",
     "description": "Advanced delivery URL allow entries for phishing simulations"
   },
@@ -636,6 +642,7 @@
   },
   {
     "type": "DlpComplianceRules",
+    "collectedBy": "DlpCompliancePolicies",
     "friendlyName": "DLP Compliance Rules",
     "description": "Data Loss Prevention compliance rules from the Purview compliance portal"
   },
@@ -646,6 +653,7 @@
   },
   {
     "type": "Fido2Configuration",
+    "collectedBy": "AuthenticationMethodsPolicy",
     "friendlyName": "FIDO2 Authentication Method Configuration",
     "description": "FIDO2 passkey authentication method configuration including passkey profiles"
   },

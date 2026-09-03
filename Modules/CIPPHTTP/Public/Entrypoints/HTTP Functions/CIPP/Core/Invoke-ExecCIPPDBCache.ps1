@@ -29,6 +29,19 @@ function Invoke-ExecCIPPDBCache {
             throw 'TenantFilter parameter is required'
         }
 
+        # A derived cache type has no collector of its own — it is produced as a side-effect of
+        # another collector (e.g. SharePointSiteListing by Set-CIPPDBCacheSharePointSiteUsage). The
+        # registry's 'collectedBy' names that producing collector, so a run of the derived type runs
+        # it and populates the derived data.
+        $CacheTypesPath = Join-Path $env:CIPPRootPath 'Config/CIPPDBCacheTypes.json'
+        if (Test-Path $CacheTypesPath) {
+            $CollectedBy = ((Get-Content $CacheTypesPath -Raw | ConvertFrom-Json) | Where-Object { $_.type -eq $Name }).collectedBy
+            if ($CollectedBy) {
+                Write-Information "ExecCIPPDBCache: '$Name' is a derived cache type; running its producing collector '$CollectedBy'"
+                $Name = "$CollectedBy"
+            }
+        }
+
         # Validate the function exists — on HttpOnly workers CIPPDB module isn't loaded,
         # so import it temporarily for validation (the actual execution runs on activity workers)
         $FunctionName = "Set-CIPPDBCache$Name"
