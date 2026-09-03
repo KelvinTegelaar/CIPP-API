@@ -24,8 +24,9 @@ function Set-CIPPSPOSiteBulk {
     SharingDomainRestrictionMode, ConditionalAccessPolicy).
 
     .PARAMETER MaxConcurrency
-    Upper bound on in-flight requests (default 8). The SPO admin connection pool caps effective
-    concurrency to that host regardless, which keeps this under SharePoint's throttle threshold.
+    Upper bound on in-flight requests (default 5, matching the SPO connection-pool cap in CIPPSharp).
+    Measured on a 526-site tenant, 5 in flight throttled far less than 8-10 - SharePoint's CSOM-admin
+    throttle is a sustained-rate limit, so a lower ceiling keeps the sweep under it.
 
     .PARAMETER UseCertificate
     Authenticate app-only with the SAM certificate (SharePoint app-only requires it).
@@ -39,7 +40,7 @@ function Set-CIPPSPOSiteBulk {
         [string]$TenantFilter,
         [Parameter(Mandatory = $true)]
         [array]$Sites,
-        [int]$MaxConcurrency = 8,
+        [int]$MaxConcurrency = 5,
         [int]$MaxRetries = 3,
         [switch]$UseCertificate
     )

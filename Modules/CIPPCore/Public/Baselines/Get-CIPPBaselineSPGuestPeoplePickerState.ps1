@@ -1,18 +1,22 @@
 function Get-CIPPBaselineSPGuestPeoplePickerState {
     <#
     .SYNOPSIS
-        Prepare hook for SPGuestPeoplePicker: the tenant default and every site collection whose
+        Prepare hook for SPGuestPeoplePicker: the tenant default and every cached site collection whose
         People Picker guest visibility differs from the wanted state.
     .DESCRIPTION
-        Reads LIVE from SharePoint (not the reporting cache), so a remediating standard never acts on
-        stale data: the tenant default via an authoritative Get-CIPPSPOTenant and every site via the
-        Get-CIPPSPOSite enumeration (fresher than the nightly SPOSites cache). SharePoint app-only
-        requires the SAM certificate. The tenant default and existing sites are set independently, so
-        this one standard covers both.
+        Decides offenders from cache, not the live enumeration. Which sites differ comes from the
+        SPOSites reporting cache (refreshed by the daily SharePoint CIPPDB run); the tenant default is
+        read through Get-CIPPSPOTenant's own 1h cache (which works app-only with the certificate even
+        where the delegated SPOTenant reporting collector cannot). Reading cache keeps a large tenant
+        from being enumerated live on every run and lets the baseline engine's optimistic post-write
+        model verify on the next daily cache read.
+
+        Detection always runs (the read is cheap and idempotent against the daily cache); the 24h
+        rerun guard lives in the executor so it throttles only the write sweep, never drift reporting.
 
         Returns the offenders/targets pair the sweep model expects: offenders are display strings
-        graded against [] ('Tenant default' plus offending site URLs); targets carry the Scope and
-        the value to write.
+        graded against [] ('Tenant default' plus offending site URLs); targets carry the Scope and the
+        value to write. Current is $null (No Data) only when the tenant configuration cannot be read.
     .FUNCTIONALITY
         Internal
     #>
@@ -24,9 +28,14 @@ function Get-CIPPBaselineSPGuestPeoplePickerState {
 
     $Wanted = ($Item.Variables.showGuests -eq $true) -or ("$($Item.Variables.showGuests)" -eq 'true')
 
-    $Tenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter -UseCertificate | Select-Object -First 1
+    try {
+        $Tenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter -UseCertificate | Select-Object -First 1
+    } catch {
+        return @{ Current = $null; NoDataReason = "Could not read the SharePoint tenant configuration: $($_.Exception.Message)" }
+    }
     if (-not $Tenant) { return @{ Current = $null; NoDataReason = 'Could not read the SharePoint tenant configuration.' } }
-    $Sites = @(Get-CIPPSPOSite -TenantFilter $TenantFilter -UseCertificate | Where-Object { $_ -and $_.Url })
+
+    $Sites = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SPOSites' | Where-Object { $_ -and $_.Url })
 
     $Offenders = [System.Collections.Generic.List[string]]::new()
     $Targets = [System.Collections.Generic.List[object]]::new()

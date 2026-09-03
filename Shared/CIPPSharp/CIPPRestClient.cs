@@ -180,11 +180,11 @@ namespace CIPP
     //   AdminPlane      5   admin.microsoft.com, reports, Defender, etc.
     //   Compliance      5   compliance redirect discovery (no-redirect)
     //   PartnerCenter   5   api.partnercenter.microsoft.com
-    //   SPO            10   *.sharepoint.com CSOM/_api (concurrent per-site fan-out)
+    //   SPO             5   *.sharepoint.com CSOM/_api (concurrent per-site fan-out)
     //   DNS             2   dns.google.com, cloudflare-dns.com (per host)
     //   Default         5   catch-all + absorbs legacy Invoke-RestMethod calls
     //   ─────────────
-    //   Total          89   leaves a 36-port buffer for the Functions host,
+    //   Total          84   leaves a 41-port buffer for the Functions host,
     //                       Durable extension, AppInsights, Azure SDK clients,
     //                       and any stragglers that bypass the pool.
     //
@@ -396,9 +396,11 @@ namespace CIPP
         /// SharePoint / OneDrive client — dedicated lane for SPO admin CSOM (ProcessQuery) and
         /// SPO REST (_api) against *.sharepoint.com, which have no server-side $batch. Concurrent
         /// per-site writes (Set-CIPPSPOSiteBulk via SendConcurrent) fan out here. HTTP/2 is disabled
-        /// so MaxConnectionsPerServer is a true concurrency ceiling (10) rather than a connection
-        /// count that H2 stream-multiplexing could exceed — this keeps bursts under SPO throttling.
-        /// Cap: 10 connections.
+        /// so MaxConnectionsPerServer is a true concurrency ceiling (5) rather than a connection count
+        /// that H2 stream-multiplexing could exceed. Measured on a 526-site tenant, 5 in flight throttled
+        /// far less than 8-10 (43 vs 56 x HTTP 429) and finished sooner — SPO's CSOM-admin throttle is a
+        /// sustained-rate limit, so a lower ceiling plus the once-per-24h sweep guard is the throttle-safe
+        /// combination. Cap: 5 connections.
         /// </summary>
         private static HttpClient BuildSpoClient() => new HttpClient(new SocketsHttpHandler
         {
@@ -408,7 +410,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 10,
+            MaxConnectionsPerServer        = 5,
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
