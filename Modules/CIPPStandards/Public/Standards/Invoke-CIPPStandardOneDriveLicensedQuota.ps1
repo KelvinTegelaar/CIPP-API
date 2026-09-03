@@ -121,7 +121,7 @@ function Invoke-CIPPStandardOneDriveLicensedQuota {
         } else {
             # One concurrent batch instead of ~2s per drive serially.
             $BulkSites = @($BelowQuota | ForEach-Object { @{ SiteUrl = $_.siteUrl; Properties = @{ StorageMaximumLevel = $TargetQuotaMB; StorageWarningLevel = $WarningLevelMB } } })
-            $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $Tenant -Sites $BulkSites)
+            $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $Tenant -Sites $BulkSites -UseCertificate)
             foreach ($Drive in $BelowQuota) {
                 $BulkResult = $BulkResults | Where-Object { $_.SiteUrl -eq $Drive.siteUrl } | Select-Object -First 1
                 if ($BulkResult -and $BulkResult.Success) {
