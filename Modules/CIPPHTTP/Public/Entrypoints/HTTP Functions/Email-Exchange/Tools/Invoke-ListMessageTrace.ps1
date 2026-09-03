@@ -86,8 +86,9 @@ function Invoke-ListMessageTrace {
 
         # Parse the shared search inputs.
         if ($Request.Body.days) {
-            $Start = (Get-Date).AddDays(-[double]$Request.Body.days).ToUniversalTime()
-            $End = (Get-Date).ToUniversalTime()
+            # Single UtcNow capture keeps the window exactly N days, not N days plus call latency.
+            $End = [DateTime]::UtcNow
+            $Start = $End.AddDays(-[double]$Request.Body.days)
         } elseif ($Request.Body.startDate -or $Request.Body.endDate) {
             $Start = $Request.Body.startDate ? ($Request.Body.startDate -match '^\d+$' ? [DateTimeOffset]::FromUnixTimeSeconds([int64]$Request.Body.startDate).UtcDateTime : [DateTime]::Parse($Request.Body.startDate, [cultureinfo]::InvariantCulture, 'AdjustToUniversal')) : $null
             $End = $Request.Body.endDate ? ($Request.Body.endDate -match '^\d+$' ? [DateTimeOffset]::FromUnixTimeSeconds([int64]$Request.Body.endDate).UtcDateTime : [DateTime]::Parse($Request.Body.endDate, [cultureinfo]::InvariantCulture, 'AdjustToUniversal')) : $null
