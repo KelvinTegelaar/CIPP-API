@@ -24768,12 +24768,35 @@
           "Email-Exchange > Administration"
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {}
+                "properties": {
+                  "Delete": {
+                    "type": "string"
+                  },
+                  "deviceid": {
+                    "type": "string"
+                  },
+                  "guid": {
+                    "type": "string"
+                  },
+                  "Quarantine": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Userid": {
+                    "type": "string",
+                    "description": "Interact with query parameters or the body of the request. This is a state-changing action, so the frontend dispatches it as a POST; keep the query fallback for backwards compatibility."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
               }
             }
           }
@@ -24817,6 +24840,7 @@
           {
             "name": "Userid",
             "in": "query",
+            "description": "Interact with query parameters or the body of the request. This is a state-changing action, so the frontend dispatches it as a POST; keep the query fallback for backwards compatibility.",
             "required": false,
             "schema": {
               "type": "string"
@@ -48611,6 +48635,9 @@
                     "type": "object",
                     "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
                     "properties": {
+                      "accountEnabled": {
+                        "x-cipp-field-source": "frontend"
+                      },
                       "daysSinceLastSignIn": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -60742,7 +60769,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
                       "AdditionalEmailAddresses": {
                         "x-cipp-field-source": "backend"
@@ -60753,11 +60780,18 @@
                       "ComplianceTagHoldApplied": {
                         "x-cipp-field-source": "backend"
                       },
+                      "Data": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
                       "DeliverToMailboxAndForward": {
                         "x-cipp-field-source": "backend"
                       },
                       "displayName": {
                         "x-cipp-field-source": "backend"
+                      },
+                      "ETag": {
+                        "x-cipp-field-source": "storage"
                       },
                       "ExchangeGuid": {
                         "x-cipp-field-source": "backend"
@@ -60801,6 +60835,9 @@
                       "MessageCopyForSentAsEnabled": {
                         "x-cipp-field-source": "backend"
                       },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "primarySmtpAddress": {
                         "x-cipp-field-source": "backend"
                       },
@@ -60812,6 +60849,16 @@
                       },
                       "RetentionHoldEnabled": {
                         "x-cipp-field-source": "backend"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Type": {
+                        "x-cipp-field-source": "storage"
                       },
                       "UPN": {
                         "x-cipp-field-source": "backend"
@@ -66245,12 +66292,20 @@
           "Tenant > Administration > Tenant"
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {}
+                "properties": {
+                  "defaultDomainName": {
+                    "type": "string",
+                    "description": "Get the tenant identifier from the request body (POST) or query (legacy GET)."
+                  }
+                },
+                "required": [
+                  "defaultDomainName"
+                ]
               }
             }
           }
@@ -66259,8 +66314,8 @@
           {
             "name": "defaultDomainName",
             "in": "query",
-            "description": "Get the tenant identifier from query parameters",
-            "required": true,
+            "description": "Get the tenant identifier from the request body (POST) or query (legacy GET).",
+            "required": false,
             "schema": {
               "type": "string"
             }
