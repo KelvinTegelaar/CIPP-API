@@ -11709,8 +11709,22 @@
                         "GroupId": {
                           "type": "string"
                         },
+                        "Results": {
+                          "type": "string"
+                        },
                         "roleDefinitionId": {
                           "type": "string"
+                        },
+                        "RoleMappings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "roleDefinitionId": {
+                                "type": "string"
+                              }
+                            }
+                          }
                         },
                         "RoleName": {
                           "type": "string"
@@ -11991,7 +12005,11 @@
           }
         ],
         "x-cipp-role": "Tenant.Relationship.ReadWrite",
-        "x-cipp-any-tenant": true
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Add-CIPPGDAPRoleTemplate",
+          "New-CIPPGDAPRoleMapping"
+        ]
       }
     },
     "/api/ExecAddMultiTenantApp": {
@@ -22066,7 +22084,13 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "CustomSuffix": {
+                    "type": "string"
+                  },
                   "GroupId": {
+                    "type": "string"
+                  },
+                  "NewRoles": {
                     "type": "string"
                   },
                   "OriginalTemplateId": {
@@ -22078,6 +22102,12 @@
                     "items": {
                       "type": "object",
                       "properties": {
+                        "GroupId": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
                         "roleDefinitionId": {
                           "type": "string"
                         }
@@ -22086,7 +22116,7 @@
                   },
                   "TemplateId": {
                     "type": "string",
-                    "description": "Use OriginalTemplateId if provided (for rename), otherwise use TemplateId"
+                    "description": "Template-first save: creates any group mappings the editor asked for, then writes the full mapping set to the template in one shot."
                   }
                 }
               }
@@ -22103,7 +22133,8 @@
               "enum": [
                 "Add",
                 "Delete",
-                "Edit"
+                "Edit",
+                "Save"
               ]
             }
           },
@@ -22129,12 +22160,18 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "GroupMappings": {
+                      "x-cipp-field-source": "frontend"
+                    },
                     "PartitionKey": {
                       "x-cipp-field-source": "storage"
                     },
                     "RoleMappings": {
                       "type": "string",
-                      "x-cipp-field-source": "storage,backend,frontend"
+                      "x-cipp-field-source": "storage,backend"
+                    },
+                    "Roles": {
+                      "x-cipp-field-source": "frontend"
                     },
                     "RowKey": {
                       "x-cipp-field-source": "storage"
@@ -46670,7 +46707,18 @@
         "tags": [
           "Tenant > GDAP"
         ],
-        "description": "Lists the configured GDAP role-to-security-group mappings used for delegated admin access.",
+        "description": "Lists the configured GDAP role-to-security-group mappings used for delegated admin access.\nPass ?validate=true to annotate each mapping with the state of its partner tenant group.",
+        "parameters": [
+          {
+            "name": "validate",
+            "in": "query",
+            "description": "Opt-in only: other consumers of this endpoint depend on the unannotated shape.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -46691,6 +46739,12 @@
                       },
                       "GroupName": {
                         "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "GroupStatus": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "GroupStatusMessage": {
+                        "x-cipp-field-source": "backend"
                       },
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
@@ -46713,6 +46767,9 @@
                       "Timestamp": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
+                      },
+                      "UsedInTemplates": {
+                        "x-cipp-field-source": "frontend"
                       }
                     }
                   }

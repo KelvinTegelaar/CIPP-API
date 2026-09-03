@@ -43,6 +43,46 @@ function Invoke-ExecGDAPRoleTemplate {
                     Results = "Added role mappings to template $RowKey"
                 }
             }
+            'Save' {
+                # Template-first save: creates any group mappings the editor asked for, then
+                # writes the full mapping set to the template in one shot.
+                $NewTemplateId = $Request.Body.TemplateId
+                $OriginalTemplateId = $Request.Body.OriginalTemplateId
+                $SaveResults = [System.Collections.Generic.List[string]]::new()
+                $RoleMappings = [System.Collections.Generic.List[object]]::new()
+
+                foreach ($Mapping in @($Request.Body.RoleMappings)) {
+                    if ($Mapping) { $RoleMappings.Add($Mapping) }
+                }
+
+                $NewRoles = @($Request.Body.NewRoles | Where-Object { $_ })
+                if ($NewRoles.Count -gt 0) {
+                    $NewMappings = New-CIPPGDAPRoleMapping -Roles $NewRoles -CustomSuffix $Request.Body.CustomSuffix
+                    foreach ($Message in $NewMappings.Results) {
+                        $SaveResults.Add([string]$Message)
+                    }
+                    foreach ($Mapping in $NewMappings.RoleMappings) {
+                        if ($Mapping.GroupId -notin $RoleMappings.GroupId) {
+                            $RoleMappings.Add($Mapping)
+                        }
+                    }
+                }
+
+                if ($OriginalTemplateId -and $OriginalTemplateId -ne $NewTemplateId) {
+                    $OldTemplate = $Templates | Where-Object -Property RowKey -EQ $OriginalTemplateId
+                    if ($OldTemplate) {
+                        Remove-CIPPAzDataTableEntity -Force @Table -Entity $OldTemplate
+                        $SaveResults.Add("Renamed template $OriginalTemplateId to $NewTemplateId")
+                    }
+                }
+
+                Add-CIPPGDAPRoleTemplate -TemplateId $NewTemplateId -RoleMappings @($RoleMappings | Select-Object -Property RoleName, GroupName, GroupId, roleDefinitionId) -Overwrite
+                $SaveResults.Add("Saved template $NewTemplateId")
+                Write-LogMessage -headers $Headers -API $APIName -message "Saved GDAP role template '$NewTemplateId' with $($RoleMappings.Count) role mappings" -Sev 'Info'
+                $Body = @{
+                    Results = @($SaveResults)
+                }
+            }
             'Edit' {
                 # Use OriginalTemplateId if provided (for rename), otherwise use TemplateId
                 $OriginalRowKey = $Request.Body.OriginalTemplateId ?? $Request.Body.TemplateId
