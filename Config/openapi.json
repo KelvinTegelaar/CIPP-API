@@ -16198,6 +16198,70 @@
         "x-cipp-role": "CIPP.Core.ReadWrite"
       }
     },
+    "/api/ExecCIPPDBCacheAdmin": {
+      "post": {
+        "summary": "SuperAdmin browse / remove / empty for CIPPDB (CippReportingDB) cache collections.",
+        "operationId": "ExecCIPPDBCacheAdmin",
+        "tags": [
+          "CIPP > Core"
+        ],
+        "description": "Typed alternative to Table Maintenance for the reporting cache. List returns decoded\ncache objects stamped with CIPPPartitionKey / CIPPRowKey / CIPPETag so the UI can\ndelete by storage key. Empty clears an entire type for a tenant (or AllTenants).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "Rows": {
+                    "type": "string"
+                  },
+                  "TenantFilter": {
+                    "type": "string"
+                  },
+                  "Type": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "TenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.SuperAdmin.ReadWrite"
+      }
+    },
     "/api/ExecCippFunction": {
       "post": {
         "summary": "Execute a CIPPCore function",
