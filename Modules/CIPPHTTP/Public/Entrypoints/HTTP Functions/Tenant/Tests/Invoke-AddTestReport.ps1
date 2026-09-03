@@ -56,14 +56,16 @@ function Invoke-AddTestReport {
 
         # Save to table
         Add-CIPPAzDataTableEntity -Entity $Report @ReportTable -Force
+        $Result = if ($IsUpdate) { "Successfully updated custom report '$($Body.name)'" } else { "Successfully created custom report '$($Body.name)'" }
+        Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
         $Body = [PSCustomObject]@{
-            Results  = if ($IsUpdate) { 'Successfully updated custom report' } else { 'Successfully created custom report' }
+            Results  = $Result
             ReportId = $ReportId
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -message "Failed to save report: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -tenant 'Global' -message "Failed to save report: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = [PSCustomObject]@{
             Results = "Failed to save report: $($ErrorMessage.NormalizedError)"
         }

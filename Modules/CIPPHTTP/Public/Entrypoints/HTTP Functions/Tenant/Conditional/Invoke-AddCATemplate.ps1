@@ -27,13 +27,13 @@ Function Invoke-AddCATemplate {
             GUID         = "$GUID"
         }
         $Result = "Created CA Template $($Name) with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message "Created CA Template $($Name) with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Created CA Template $($Name) with GUID $GUID" -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create CA Template: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -message "Failed to create CA Template: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Failed to create CA Template: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 

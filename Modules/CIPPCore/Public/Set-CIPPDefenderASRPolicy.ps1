@@ -87,7 +87,9 @@ function Set-CIPPDefenderASRPolicy {
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ASRRequest.id)')/assign" -tenantid $TenantFilter -type POST -body $AssignBody
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Assigned policy $($DisplayName) to $($ASR.AssignTo)" -Sev 'Info'
             }
-            "$($TenantFilter): Successfully added ASR Settings"
+            $Result = "$($TenantFilter): Successfully added ASR Settings"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+            $Result
         }
     }
 }

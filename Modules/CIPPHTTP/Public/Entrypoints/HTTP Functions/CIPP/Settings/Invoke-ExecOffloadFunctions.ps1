@@ -9,6 +9,9 @@ function Invoke-ExecOffloadFunctions {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     $Table = Get-CippTable -tablename 'Config'
 
     if ($Request.Query.Action -eq 'ListCurrent') {
@@ -81,9 +84,11 @@ function Invoke-ExecOffloadFunctions {
         } else {
             $Results = 'Disabled Offload Functions'
         }
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results -Sev 'Info'
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @{ results = $Results }
             })
     }
 }
+

@@ -8,6 +8,9 @@ function Invoke-ExecStandardConvert {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     function Convert-SingleStandardItem {
         param(
             [Parameter(Mandatory)]
@@ -229,8 +232,12 @@ function Invoke-ExecStandardConvert {
         }
     }
 
+    $Result = "Successfully converted $($StandardsToConvert.Count) legacy standard(s) to new format"
+    Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = 'Successfully converted legacy standards to new format'
         })
 }
+

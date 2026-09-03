@@ -7,6 +7,8 @@ function Invoke-ExecApplication {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $ValidTypes = @('applications', 'servicePrincipals')
     $ValidActions = @('Update', 'Upsert', 'Delete', 'RemoveKey', 'RemovePassword', 'Hide', 'Show')
 
@@ -95,6 +97,7 @@ function Invoke-ExecApplication {
                     state      = 'success'
                     details    = @($Response)
                 }
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
             } else {
                 # For password credentials, use bulk removePassword requests
                 $BulkRequests = foreach ($KeyId in $KeyIds) {
@@ -122,6 +125,11 @@ function Invoke-ExecApplication {
                     resultText = "Bulk RemovePassword completed. Success: $SuccessCount, Failures: $FailureCount"
                     state      = if ($FailureCount -eq 0) { 'success' } else { 'error' }
                     details    = @($BulkResults)
+                }
+                if ($FailureCount -eq 0) {
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
+                } else {
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Error'
                 }
             }
         } elseif ($Action -eq 'Hide' -or $Action -eq 'Show') {
@@ -152,13 +160,15 @@ function Invoke-ExecApplication {
                 }
                 state      = 'success'
             }
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
         } else {
-            # Handle regular actions
+            # Handle regular actions (Update, Upsert, Delete)
             $null = New-GraphPOSTRequest @PostParams -tenantid $TenantFilter -AsApp $true
             $Results = @{
                 resultText = "Successfully executed $Action on $Type with Id: $Id"
                 state      = 'success'
             }
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
         }
 
         return ([HttpResponseContext]@{
@@ -166,10 +176,12 @@ function Invoke-ExecApplication {
                 Body       = @{ Results = $Results }
             })
     } catch {
+        $ErrorMessage = Get-CippException -Exception $_
         $Results = @{
-            resultText = "Failed to execute $Action on $Type with Id: $Id. Error: $($_.Exception.Message)"
+            resultText = "Failed to execute $Action on $Type with Id: $Id. Error: $($ErrorMessage.NormalizedError)"
             state      = 'error'
         }
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Error' -LogData $ErrorMessage
 
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError

@@ -7,6 +7,8 @@ function Invoke-ExecAddGDAPRole {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'AddRoleSimple'
     $GroupBlockList = @('All Users', 'AdminAgents', 'HelpdeskAgents', 'SalesAgents')
 
@@ -16,77 +18,111 @@ function Invoke-ExecAddGDAPRole {
             $Results = @($Groups)
         }
         'AddRoleAdvanced' {
-            $Mappings = $Request.Body.mappings
-            $Table = Get-CIPPTable -TableName 'GDAPRoles'
-            $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $env:TenantID -AsApp $true
-            $Results = [System.Collections.Generic.List[object]]::new()
-            $ErrorsFound = $false
-            $Entities = foreach ($Mapping in $Mappings) {
-                $GroupId = $Mapping.GroupId
-                if ($ExistingGroups.id -contains $GroupId) {
-                    $ExistingGroup = $ExistingGroups | Where-Object -Property id -EQ $GroupId
-                    if ($ExistingGroup.displayName -in $GroupBlockList) {
-                        $Results.Add(@{
-                                state      = 'error'
-                                resultText = "Group $($ExistingGroup.displayName) is a reserved group and cannot be mapped to a GDAP role"
-                            })
-                        $ErrorsFound = $true
-                    } else {
-                        @{
-                            PartitionKey     = 'Roles'
-                            RowKey           = $GroupId
-                            RoleName         = $Mapping.RoleName
-                            GroupName        = $ExistingGroup.displayName
-                            GroupId          = $GroupId
-                            roleDefinitionId = $Mapping.roleDefinitionId
+            try {
+                $Mappings = $Request.Body.mappings
+                $Table = Get-CIPPTable -TableName 'GDAPRoles'
+                $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $env:TenantID -AsApp $true
+                $Results = [System.Collections.Generic.List[object]]::new()
+                $ErrorsFound = $false
+                $Entities = foreach ($Mapping in $Mappings) {
+                    $GroupId = $Mapping.GroupId
+                    if ($ExistingGroups.id -contains $GroupId) {
+                        $ExistingGroup = $ExistingGroups | Where-Object -Property id -EQ $GroupId
+                        if ($ExistingGroup.displayName -in $GroupBlockList) {
+                            $Results.Add(@{
+                                    state      = 'error'
+                                    resultText = "Group $($ExistingGroup.displayName) is a reserved group and cannot be mapped to a GDAP role"
+                                })
+                            $ErrorsFound = $true
+                        } else {
+                            @{
+                                PartitionKey     = 'Roles'
+                                RowKey           = $GroupId
+                                RoleName         = $Mapping.RoleName
+                                GroupName        = $ExistingGroup.displayName
+                                GroupId          = $GroupId
+                                roleDefinitionId = $Mapping.roleDefinitionId
+                            }
+                            $Results.Add(@{
+                                    state      = 'success'
+                                    resultText = "Mapped $($ExistingGroup.displayName) to $($Mapping.RoleName)"
+                                })
                         }
-                        $Results.Add(@{
-                                state      = 'success'
-                                resultText = "Mapped $($ExistingGroup.displayName) to $($Mapping.RoleName)"
-                            })
                     }
                 }
-            }
-            if (($Entities | Measure-Object).Count -gt 0) {
-                Write-Warning "Adding $($Entities.Count) entities to table"
-                Write-Information ($Entities | ConvertTo-Json -Depth 10 -Compress)
-                Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force
-            } elseif ($ErrorsFound -eq $false) {
-                $Results.Add(@{
-                        state      = 'success'
-                        resultText = 'All role mappings already exist'
+                if (($Entities | Measure-Object).Count -gt 0) {
+                    Write-Warning "Adding $($Entities.Count) entities to table"
+                    Write-Information ($Entities | ConvertTo-Json -Depth 10 -Compress)
+                    Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force
+                    $Result = "Added $($Entities.Count) GDAP role mapping(s)"
+                    Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+                } elseif ($ErrorsFound -eq $false) {
+                    $Results.Add(@{
+                            state      = 'success'
+                            resultText = 'All role mappings already exist'
+                        })
+                    Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message 'All GDAP role mappings already exist' -Sev 'Info'
+                } else {
+                    $Result = 'Failed to add GDAP role mappings: reserved groups cannot be mapped'
+                    Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                $Result = "Failed to add GDAP role mappings: $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
+                $Results = @(@{
+                        state      = 'error'
+                        resultText = $Result
                     })
             }
         }
         'AddRoleSimple' {
-            $CippDefaults = @(
-                @{ label = 'Application Administrator'; value = '9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3' },
-                @{ label = 'User Administrator'; value = 'fe930be7-5e62-47db-91af-98c3a49a38b1' },
-                @{ label = 'Intune Administrator'; value = '3a2c62db-5318-420d-8d74-23affee5d9d5' },
-                @{ label = 'Exchange Administrator'; value = '29232cdf-9323-42fd-ade2-1d097af3e4de' },
-                @{ label = 'Security Administrator'; value = '194ae4cb-b126-40b2-bd5b-6091b380977d' },
-                @{ label = 'Cloud App Security Administrator'; value = '892c5842-a9a6-463a-8041-72aa08ca3cf6' },
-                @{ label = 'Cloud Device Administrator'; value = '7698a772-787b-4ac8-901f-60d6b08affd2' },
-                @{ label = 'Teams Administrator'; value = '69091246-20e8-4a56-aa4d-066075b2a7a8' },
-                @{ label = 'SharePoint Administrator'; value = 'f28a1f50-f6e7-4571-818b-6a12f2af6b6c' },
-                @{ label = 'Authentication Policy Administrator'; value = '0526716b-113d-4c15-b2c8-68e3c22b9f80' },
-                @{ label = 'Privileged Role Administrator'; value = 'e8611ab8-c189-46e8-94e1-60213ab1f814' },
-                @{ label = 'Privileged Authentication Administrator'; value = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13' },
-                @{ label = 'Billing Administrator'; value = 'b0f54661-2d74-4c50-afa3-1ec803f12efe' },
-                @{ label = 'Global Reader'; value = 'f2ef992c-3afb-46b9-b7cf-a126ee74c451' },
-                @{ label = 'Domain Name Administrator'; value = '8329153b-31d0-4727-b945-745eb3bc5f31' }
-            )
+            try {
+                $CippDefaults = @(
+                    @{ label = 'Application Administrator'; value = '9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3' },
+                    @{ label = 'User Administrator'; value = 'fe930be7-5e62-47db-91af-98c3a49a38b1' },
+                    @{ label = 'Intune Administrator'; value = '3a2c62db-5318-420d-8d74-23affee5d9d5' },
+                    @{ label = 'Exchange Administrator'; value = '29232cdf-9323-42fd-ade2-1d097af3e4de' },
+                    @{ label = 'Security Administrator'; value = '194ae4cb-b126-40b2-bd5b-6091b380977d' },
+                    @{ label = 'Cloud App Security Administrator'; value = '892c5842-a9a6-463a-8041-72aa08ca3cf6' },
+                    @{ label = 'Cloud Device Administrator'; value = '7698a772-787b-4ac8-901f-60d6b08affd2' },
+                    @{ label = 'Teams Administrator'; value = '69091246-20e8-4a56-aa4d-066075b2a7a8' },
+                    @{ label = 'SharePoint Administrator'; value = 'f28a1f50-f6e7-4571-818b-6a12f2af6b6c' },
+                    @{ label = 'Authentication Policy Administrator'; value = '0526716b-113d-4c15-b2c8-68e3c22b9f80' },
+                    @{ label = 'Privileged Role Administrator'; value = 'e8611ab8-c189-46e8-94e1-60213ab1f814' },
+                    @{ label = 'Privileged Authentication Administrator'; value = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13' },
+                    @{ label = 'Billing Administrator'; value = 'b0f54661-2d74-4c50-afa3-1ec803f12efe' },
+                    @{ label = 'Global Reader'; value = 'f2ef992c-3afb-46b9-b7cf-a126ee74c451' },
+                    @{ label = 'Domain Name Administrator'; value = '8329153b-31d0-4727-b945-745eb3bc5f31' }
+                )
 
-            $Groups = $Request.Body.gdapRoles ?? $CippDefaults
-            $CustomSuffix = $Request.Body.customSuffix
+                $Groups = $Request.Body.gdapRoles ?? $CippDefaults
+                $CustomSuffix = $Request.Body.customSuffix
 
-            $Mapping = New-CIPPGDAPRoleMapping -Roles $Groups -CustomSuffix $CustomSuffix
-            $Results = $Mapping.Results
-            $RoleMappings = $Mapping.RoleMappings
+                $Mapping = New-CIPPGDAPRoleMapping -Roles $Groups -CustomSuffix $CustomSuffix
+                $Results = $Mapping.Results
+                $RoleMappings = $Mapping.RoleMappings
 
-            if ($Request.Body.templateId) {
-                Add-CIPPGDAPRoleTemplate -TemplateId $Request.Body.templateId -RoleMappings ($RoleMappings | Select-Object -Property RoleName, GroupName, GroupId, roleDefinitionId)
-                $Results.Add("Added role mappings to template $($Request.Body.templateId)")
+                $Created = @($Results | Where-Object { $_ -like 'Created *' })
+                $Failed = @($Results | Where-Object { $_ -like 'Could not create GDAP group:*' })
+                if ($Failed.Count -gt 0) {
+                    $Result = "GDAP role mapping completed with errors. Created: $($Created.Count), Failed: $($Failed.Count)"
+                    Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
+                } else {
+                    $Result = "GDAP role mapping completed. Groups created/reused: $($RoleMappings.Count)"
+                    Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+                }
+
+                if ($Request.Body.templateId) {
+                    # Add-CIPPGDAPRoleTemplate already writes customer-visible logs for the template path
+                    Add-CIPPGDAPRoleTemplate -Headers $Request.Headers -TemplateId $Request.Body.templateId -RoleMappings ($RoleMappings | Select-Object -Property RoleName, GroupName, GroupId, roleDefinitionId)
+                    $Results.Add("Added role mappings to template $($Request.Body.templateId)")
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                $Result = "Failed to add GDAP roles: $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
+                $Results = @($Result)
             }
         }
     }

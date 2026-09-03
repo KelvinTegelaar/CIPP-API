@@ -84,13 +84,15 @@ function Invoke-ExecDeployAppTemplate {
                     default          { throw "Unknown app type: $AppType" }
                 }
 
-                if ($HandlerResult.Body.Results) {
+                $DeployedResult = if ($HandlerResult.Body.Results) {
                     $HandlerResult.Body.Results
                 } elseif ($HandlerResult.Body) {
                     $HandlerResult.Body
                 } else {
                     "Queued '$($App.appName)'"
                 }
+                Write-LogMessage -headers $Headers -API $APIName -message "Deployed app '$($App.appName)' ($AppType) from template $TemplateId" -Sev 'Info'
+                $DeployedResult
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 "Failed '$($App.appName)': $($ErrorMessage.NormalizedError)"

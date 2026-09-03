@@ -61,6 +61,7 @@ function Invoke-PublicWebhooks {
                     FunctionName = 'PublicWebhookProcess'
                 }
                 Add-CIPPAzDataTableEntity @WebhookIncoming -Entity $Entity
+                Write-LogMessage -headers $Headers -API ($Request.Params.CIPPEndpoint ?? 'PublicWebhooks') -tenant 'Global' -message "Graph subscription webhook received and queued (CIPPID=$($Request.Query.CIPPID))" -Sev 'Info'
 
             } elseif ($Request.Query.Type -eq 'PartnerCenter') {
                 [pscustomobject]$ReceivedItem = $Request.Body
@@ -74,6 +75,7 @@ function Invoke-PublicWebhooks {
                     FunctionName = 'PublicWebhookProcess'
                 }
                 Add-CIPPAzDataTableEntity @WebhookIncoming -Entity $Entity
+                Write-LogMessage -headers $Headers -API ($Request.Params.CIPPEndpoint ?? 'PublicWebhooks') -tenant 'Global' -message "Partner Center webhook received and queued (CIPPID=$($Request.Query.CIPPID))" -Sev 'Info'
             } else {
                 $Body = 'This webhook is not authorized.'
                 $StatusCode = [HttpStatusCode]::Forbidden

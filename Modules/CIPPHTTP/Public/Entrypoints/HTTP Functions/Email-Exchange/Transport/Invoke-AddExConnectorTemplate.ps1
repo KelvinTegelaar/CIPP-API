@@ -40,12 +40,12 @@ Function Invoke-AddExConnectorTemplate {
             PartitionKey = 'ExConnectorTemplate'
         }
         $Result = "Successfully created Connector Template: $($Request.Body.name) with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Debug'
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create Connector Template: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 

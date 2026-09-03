@@ -33,12 +33,12 @@ Function Invoke-AddTransportTemplate {
             RowKey       = "$GUID"
             PartitionKey = 'TransportTemplate'
         }
-        Write-LogMessage -Headers $Headers -API $APINAME -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev Debug
+        Write-LogMessage -Headers $Headers -API $APINAME -tenant 'Global' -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev 'Info'
         $body = [pscustomobject]@{'Results' = "Created Transport Rule Template $($Request.body.name) with GUID $GUID" }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $Headers -API $APINAME -message "Failed to create Transport Rule Template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APINAME -tenant 'Global' -message "Failed to create Transport Rule Template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to create Transport Rule Template: $($ErrorMessage.NormalizedError)" }
         $StatusCode = [HttpStatusCode]::Forbidden
     }

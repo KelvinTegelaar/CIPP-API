@@ -12,6 +12,9 @@ function Invoke-ExecGitHubAction {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
     if ($Request.Query.Action) {
@@ -50,7 +53,18 @@ function Invoke-ExecGitHubAction {
             $Results = @($Files)
         }
         'ImportTemplate' {
-            $Results = Import-CommunityTemplate @SplatParams
+            try {
+                $Results = Import-CommunityTemplate @SplatParams
+                $ResultText = if ($Results -is [string]) { $Results } elseif ($Results.resultText) { $Results.resultText } else { 'Template imported' }
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $ResultText -Sev 'Info'
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                $Results = @{
+                    resultText = "Error importing template: $($ErrorMessage.NormalizedError)"
+                    state      = 'error'
+                }
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results.resultText -Sev 'Error' -LogData $ErrorMessage
+            }
         }
         'CreateRepo' {
             try {
@@ -77,6 +91,7 @@ function Invoke-ExecGitHubAction {
                         resultText = "Repository '$($Repo.name)' created"
                         state      = 'success'
                     }
+                    Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results.resultText -Sev 'Info'
                 }
             } catch {
                 Write-Information (Get-CippException -Exception $_ | ConvertTo-Json)
@@ -84,6 +99,7 @@ function Invoke-ExecGitHubAction {
                     resultText = 'You may not have permission to create repositories, check your PAT scopes and try again - {0}' -f $_.Exception.Message
                     state      = 'error'
                 }
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results.resultText -Sev 'Error'
             }
         }
         default {

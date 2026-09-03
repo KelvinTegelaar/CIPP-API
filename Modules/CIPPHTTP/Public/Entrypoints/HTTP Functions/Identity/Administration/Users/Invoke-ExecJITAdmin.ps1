@@ -207,6 +207,7 @@ function Invoke-ExecJITAdmin {
             $PasswordLink = New-PwPushLink -Payload $TempPass
             $Password = $PasswordLink ? $PasswordLink : $TempPass
 
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Created Temporary Access Pass for $Username (lifetime: $PasswordExpiration minutes)" -Sev 'Info'
             $Results.Add(@{
                     resultText = "Temporary Access Pass: $Password"
                     copyField  = $Password
@@ -268,6 +269,7 @@ function Invoke-ExecJITAdmin {
         if ($Request.Body.userAction -ne 'create') {
             Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $Request.Body.existingUser.value -Expiration $Expiration -StartDate $Start -Reason $Request.Body.Reason -CreatedBy (([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails)
         }
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Scheduled JIT Admin enable task for $Username" -Sev 'Info'
         $Results.Add("Scheduling JIT Admin enable task for $Username")
     } else {
         try {
@@ -307,6 +309,7 @@ function Invoke-ExecJITAdmin {
         ScheduledTime = $Request.Body.EndDate
     }
     $null = Add-CIPPScheduledTask -Task $DisableTaskBody -hidden $false
+    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Scheduled JIT Admin $($Request.Body.ExpireAction.value) task for $Username" -Sev 'Info'
     $Results.Add("Scheduling JIT Admin $($Request.Body.ExpireAction.value) task for $Username")
 
     return ([HttpResponseContext]@{

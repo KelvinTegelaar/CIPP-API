@@ -7,6 +7,7 @@ function Invoke-ExecExtensionsConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 
@@ -74,9 +75,13 @@ function Invoke-ExecExtensionsConfig {
         Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
 
         Register-CIPPExtensionScheduledTasks
-        "Successfully saved the extension configuration. $AddedText"
+        $Result = "Successfully saved the extension configuration. $AddedText"
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result.Trim() -Sev 'Info'
+        $Result
     } catch {
-        "Failed to save the extensions configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
+        $Result = "Failed to save the extensions configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
+        $Result
     }
 
 

@@ -87,12 +87,12 @@ Function Invoke-AddDlpCompliancePolicyTemplate {
             PartitionKey = 'DlpCompliancePolicyTemplate'
         }
         $Result = "Successfully created DLP Compliance Policy Template: $($Ordered['name']) with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Debug'
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create DLP Compliance Policy Template: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 

@@ -80,7 +80,9 @@ function Set-CIPPDefenderEDRPolicy {
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $TenantFilter -type POST -body $AssignBody
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Assigned EDR policy $($DisplayName) to $($EDR.AssignTo)" -Sev 'Info'
             }
-            "$($TenantFilter): Successfully added EDR Settings"
+            $Result = "$($TenantFilter): Successfully added EDR Settings"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+            $Result
         }
     }
 }

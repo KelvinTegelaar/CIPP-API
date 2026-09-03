@@ -86,6 +86,11 @@ function Invoke-ExecCombinedSetup {
             $notificationConfig = $request.body | Select-Object email, webhook, onepertenant, logsToInclude, sendtoIntegration, sev | ConvertTo-Json | ConvertFrom-Json -AsHashtable
             $notificationResults = Set-CIPPNotificationConfig @notificationConfig
             $Results.add($notificationResults)
+            if ($notificationResults -like 'Failed*') {
+                Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message $notificationResults -Sev 'Error'
+            } else {
+                Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message $notificationResults -Sev 'Info'
+            }
         }
         if ($Request.Body.selectedOption -eq 'Manual') {
             $KV = Get-CippKeyVaultName

@@ -113,7 +113,7 @@ Function Invoke-ExecExtensionMapping {
   catch {
     $ErrorMessage = Get-CippException -Exception $_
     $Result = "Mapping API failed. $($ErrorMessage.NormalizedError)"
-    Write-LogMessage -API $APIName -headers $Headers -message $Result -Sev 'Error' -LogData $ErrorMessage
+    Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message $Result -Sev 'Error' -LogData $ErrorMessage
     $StatusCode = [HttpStatusCode]::InternalServerError
   }
 
@@ -133,6 +133,7 @@ Function Invoke-ExecExtensionMapping {
           $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
           Write-Host "Started permissions orchestration with ID = '$InstanceId'"
           $Result = 'AutoMapping Request has been queued. Exact name matches will appear first and matches on device names and serials will take longer. Please check the CIPP Logbook and refresh the page once complete.'
+          Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message $Result -Sev 'Info'
         }
         'HaloPSA' {
           $Result = Invoke-HaloAutoMap -CIPPMapping $Table
@@ -144,7 +145,7 @@ Function Invoke-ExecExtensionMapping {
   catch {
     $ErrorMessage = Get-CippException -Exception $_
     $Result = "Mapping API failed. $($ErrorMessage.NormalizedError)"
-    Write-LogMessage -API $APIName -headers $Headers -message $Result -Sev 'Error' -LogData $ErrorMessage
+    Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message $Result -Sev 'Error' -LogData $ErrorMessage
     $StatusCode = [HttpStatusCode]::InternalServerError
   }
 
