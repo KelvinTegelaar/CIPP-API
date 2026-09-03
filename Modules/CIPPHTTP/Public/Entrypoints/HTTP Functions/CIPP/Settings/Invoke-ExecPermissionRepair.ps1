@@ -19,7 +19,7 @@ function Invoke-ExecPermissionRepair {
         $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
         $UpdatedBy = $User.UserDetails ?? 'CIPP-API'
         $Result = Update-CippSamPermissions -UpdatedBy $UpdatedBy
-        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "CIPP-SAM permissions reconciled by $UpdatedBy: applied table now contains the CIPP manifest permissions plus any additional permissions." -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "CIPP-SAM permissions reconciled by ${UpdatedBy}: applied table now contains the CIPP manifest permissions plus any additional permissions." -Sev 'Info'
         $Body = @{'Results' = $Result }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

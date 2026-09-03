@@ -30,7 +30,7 @@ function Invoke-ExecTestRefresh {
     } catch {
         $StatusCode = [HttpStatusCode]::BadRequest
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Failed to refresh test $TestName for $TenantFilter: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Failed to refresh test $TestName for ${TenantFilter}: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{
             Message = "Failed to update test $TestName for $TenantFilter"
             Error   = $ErrorMessage
