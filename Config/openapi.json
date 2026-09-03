@@ -13507,7 +13507,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Drives the super-admin \"Custom Domains\" page. All actions operate on the App Service that\nhosts this CIPP instance (Microsoft.Web/sites/$env:WEBSITE_SITE_NAME) using the managed\nidentity via New-CIPPAzRestRequest — the same resource and auth path the Container\nManagement page uses.\n\nActions (passed as Query.Action or Body.Action):\n    List           - Site metadata (default hostname, inbound IP) plus every hostname\n                     binding and any App Service Managed Certificate that matches.\n    CheckDns       - Live DoH lookup of the alias record a custom domain needs. CIPP no\n                     longer uses domain-verification TXT records, so a leftover\n                     asuid.<host> record is detected and flagged for removal rather than\n                     requested. Powers wizard step 1 + resume.\n    AddBinding     - Create the hostname binding (wizard step 2). Azure re-validates ownership.\n    AddCertificate - Create an App Service Managed Certificate and enable the SNI SSL binding\n                     (wizard step 3). Safe to re-run — reuses an existing cert if present.\n    Remove         - Delete a custom hostname binding (and its managed cert, best effort).\n\nEvery action is independently re-runnable so the wizard can resume a half-finished domain or\nretry a failed step without redoing the ones that already succeeded.",
+        "description": "Drives the super-admin \"Custom Domains\" page. All actions operate on the App Service that\nhosts this CIPP instance (Microsoft.Web/sites/$env:WEBSITE_SITE_NAME) using the managed\nidentity via New-CIPPAzRestRequest — the same resource and auth path the Container\nManagement page uses.\n\nActions (passed as Query.Action or Body.Action):\n    List           - Site metadata (default hostname, inbound IP) plus every hostname\n                     binding, any App Service Managed Certificate that matches, and the\n                     state of a certificate job still running in the background.\n    CheckDns       - Live DoH lookup of the alias record a custom domain needs. CIPP no\n                     longer uses domain-verification TXT records, so a leftover\n                     asuid.<host> record is detected and flagged for removal rather than\n                     requested. Powers wizard step 1 + resume.\n    AddBinding     - Create the hostname binding (wizard step 2). Azure validates ownership\n                     through the alias record.\n    AddCertificate - Issue an App Service Managed Certificate and enable the SNI SSL binding\n                     (wizard step 3) via Invoke-CIPPCustomDomainCertificate. Issuance that\n                     outlives the request carries on as a hidden scheduled task that retries\n                     every 15 minutes, a few times, then stops.\n    Remove         - Delete a custom hostname binding (and its managed cert, best effort).\n\nEvery action is independently re-runnable so the wizard can resume a half-finished domain or\nretry a failed step without redoing the ones that already succeeded.",
         "requestBody": {
           "required": true,
           "content": {
@@ -13517,6 +13517,10 @@
                 "properties": {
                   "Action": {
                     "type": "string"
+                  },
+                  "DnsRecordType": {
+                    "type": "string",
+                    "description": "Which alias record Azure should validate against: the one CheckDns saw resolve (A or CNAME), else the recommended type for this hostname shape."
                   },
                   "Hostname": {
                     "type": "string"
@@ -14520,7 +14524,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Returns Azure portal deep links for the CIPP deployment's own infrastructure (resource group, key vault, function app, static web app) plus its subscription, SKU, hosting mode and timezone.",
+        "description": "Returns Azure portal deep links for the CIPP deployment's own infrastructure (resource group, key vault, the function app or web app, its App Service plan, static web app) plus its subscription, SKU and timezone. Whether the instance is CyberDrain-hosted or CIPP-NG comes from /api/me.",
         "responses": {
           "200": {
             "description": "Success",
