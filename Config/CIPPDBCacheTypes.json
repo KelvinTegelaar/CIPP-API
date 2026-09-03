@@ -425,6 +425,11 @@
     "description": "SharePoint tenant admin settings including sharing capability, site creation, sync, timezone and excluded file extensions"
   },
   {
+    "type": "SPOSites",
+    "friendlyName": "SharePoint People Picker Settings",
+    "description": "SharePoint People Picker guest visibility for the tenant default (one 'tenant' row) and each site collection ('site' rows), used for drift checks"
+  },
+  {
     "type": "PeopleInsights",
     "friendlyName": "People Insights Settings",
     "description": "Organization-level people insights (Viva Insights) settings"

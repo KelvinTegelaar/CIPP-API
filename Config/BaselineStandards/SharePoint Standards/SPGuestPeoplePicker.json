@@ -1,0 +1,43 @@
+{
+  "name": "SPGuestPeoplePicker",
+  "label": "Show guest users in the SharePoint People Picker",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Controls whether guest (external) users already in the tenant appear as suggestions in the SharePoint and OneDrive People Picker. Enforces the wanted state on BOTH the tenant default and every existing site collection - the two are set independently, so changing the tenant default does not update existing sites. Remediation sets the tenant default and sweeps every site that differs.",
+  "executiveText": "Makes existing external collaborators discoverable (or hidden) when sharing SharePoint and OneDrive content, consistently across the whole tenant - the default for new sites and every existing site. This keeps the sharing experience predictable and prevents individual sites from drifting away from the agreed collaboration posture.",
+  "docsDescription": "Enforces ShowPeoplePickerSuggestionsForGuestUsers at both levels it is set independently: the tenant default and each site collection. Reads the SPOTenant and SPOSites caches, reports the tenant default and every site that differs from the wanted state as offenders, and remediates the tenant default (Set-SPOTenant) and each offending site (Set-SPOSite). Guests are not shown by default even when they exist in the tenant, and changing the tenant default does not retroactively change existing sites - which is why both are covered here.",
+  "impactColour": "info",
+  "addedDate": "2026-09-03",
+  "powershellEquivalent": "Set-SPOTenant / Set-SPOSite -ShowPeoplePickerSuggestionsForGuestUsers $true or $false",
+  "recommendedBy": ["CIPP"],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "showGuests": {
+      "type": "switch",
+      "label": "Show guests in the People Picker",
+      "default": true
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "SPOSites"
+  },
+  "prepare": "Get-CIPPBaselineSPGuestPeoplePickerState",
+  "remediate": {
+    "executor": "SPGuestPeoplePicker",
+    "useCertificate": true,
+    "refreshCache": ["SPOSites"]
+  }
+}
