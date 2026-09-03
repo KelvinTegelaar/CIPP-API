@@ -27,7 +27,7 @@ function Set-CIPPDBCacheMailboxes {
 
         # Get mailboxes and user details in a single bulk request
         $ZeroArchiveGuid = '00000000-0000-0000-0000-000000000000'
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,RemotePowerShellEnabled,Guid,Identity,AutoExpandingArchiveEnabled,IsExchangeCloudManaged,IsDirSynced,MailboxPlan,MailboxPlanId,RecipientLimits,AccountDisabled,AuditEnabled,AuditOwner,AuditDelegate,AuditAdmin,DefaultAuditSet'
+        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,RemotePowerShellEnabled,Guid,Identity,AutoExpandingArchiveEnabled,ArchiveQuota,IsExchangeCloudManaged,IsDirSynced,MailboxPlan,MailboxPlanId,RecipientLimits,AccountDisabled,AuditEnabled,AuditOwner,AuditDelegate,AuditAdmin,DefaultAuditSet'
         $BulkRequests = @(
             @{ CmdletInput = @{ CmdletName = 'Get-Mailbox'; Parameters = @{} } }
             @{ CmdletInput = @{ CmdletName = 'Get-User'; Parameters = @{} } }
@@ -61,6 +61,7 @@ function Set-CIPPDBCacheMailboxes {
                     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                     @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
                     @{ Name = 'ArchiveEnabled'; Expression = { $_.ArchiveGuid -and $_.ArchiveGuid.ToString() -ne $ZeroArchiveGuid } },
+                    @{ Name = 'ArchiveQuota'; Expression = { try { Get-ExoOnlineStringBytes -SizeString ([string]$_.ArchiveQuota) } catch { 0 } } },
                     @{ Name = 'AutoExpandingArchive'; Expression = { $AutoExpandingArchiveState.AutoExpandingArchive } },
                     @{ Name = 'AutoExpandingArchiveScope'; Expression = { $AutoExpandingArchiveState.AutoExpandingArchiveScope } },
                     @{ Name = 'ArchiveSize'; Expression = { 0 } },

@@ -24,7 +24,11 @@ function Get-CIPPAlertNewAppApproval {
                 $userConsentRequests = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/identityGovernance/appConsent/appConsentRequests/$($App.id)/userConsentRequests" -tenantid $TenantFilter
 
                 $userConsentRequests | ForEach-Object {
-                    if ($_.status -eq 'Expired') {
+                    # Only alert on pending (InProgress) requests. The top-level appConsentRequests
+                    # filter matches an app when ANY of its userConsentRequests is InProgress, but
+                    # this per-app list returns ALL of them - including Completed, Denied and Expired
+                    # - so without this guard already-resolved requests were being alerted on.
+                    if ($_.status -ne 'InProgress') {
                         return
                     }
                     $consentUrl = if ($App.consentType -eq 'Static') {
