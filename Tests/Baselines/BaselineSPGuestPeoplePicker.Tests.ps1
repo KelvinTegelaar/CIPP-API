@@ -11,6 +11,7 @@ BeforeAll {
     function Get-CIPPSPOTenant { param($TenantFilter, [switch]$UseCertificate) }
     function Set-CIPPSPOTenant { [CmdletBinding()] param([Parameter(ValueFromPipeline)]$InputObject, $Properties, [switch]$UseCertificate) process {} }
     function Set-CIPPSPOSite { param($TenantFilter, $SiteUrl, $Properties, [switch]$UseCertificate) }
+    function Set-CIPPSPOSiteBulk { param($TenantFilter, $Sites, $MaxConcurrency, $MaxRetries, [switch]$UseCertificate) }
     function Set-CIPPDBCacheSPOSites { param($TenantFilter) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Write-Information { param($MessageData) }
@@ -71,12 +72,17 @@ Describe 'Invoke-CIPPBaselineSPGuestPeoplePicker' {
         Mock Write-LogMessage {}
         Mock Set-CIPPDBCacheSPOSites {}
         Mock Get-CIPPSPOTenant { [PSCustomObject]@{ _ObjectIdentity_ = 'id'; TenantFilter = $script:Tenant } }
+        Mock Set-CIPPSPOTenant {}
         $script:Remediate = [PSCustomObject]@{ executor = 'SPGuestPeoplePicker'; useCertificate = $true; refreshCache = @('SPOSites') }
     }
 
-    It 'writes the tenant default and each site, then refreshes the cache' {
-        Mock Set-CIPPSPOTenant {}
-        Mock Set-CIPPSPOSite {}
+    It 'writes the tenant default singly and the sites in one bulk call, then refreshes cache' {
+        Mock Set-CIPPSPOSiteBulk {
+            @(
+                [PSCustomObject]@{ SiteUrl = 'https://c.sharepoint.com/sites/A'; Success = $true; Error = $null }
+                [PSCustomObject]@{ SiteUrl = 'https://c.sharepoint.com/sites/B'; Success = $true; Error = $null }
+            )
+        }
         $Current = [PSCustomObject]@{ targets = @(
                 [PSCustomObject]@{ Scope = 'tenant'; SiteUrl = $null; Wanted = $true }
                 [PSCustomObject]@{ Scope = 'site'; SiteUrl = 'https://c.sharepoint.com/sites/A'; Wanted = $true }
@@ -84,14 +90,18 @@ Describe 'Invoke-CIPPBaselineSPGuestPeoplePicker' {
             ) }
         Invoke-CIPPBaselineSPGuestPeoplePicker -Remediate $script:Remediate -TenantFilter $script:Tenant -Current $Current
         Should -Invoke Set-CIPPSPOTenant -Times 1 -Exactly
-        Should -Invoke Set-CIPPSPOSite -Times 2 -Exactly
+        Should -Invoke Set-CIPPSPOSiteBulk -Times 1 -Exactly
+        Should -Invoke Set-CIPPSPOSiteBulk -Times 1 -Exactly -ParameterFilter { @($Sites).Count -eq 2 }
         Should -Invoke Set-CIPPDBCacheSPOSites -Times 1 -Exactly
     }
 
-    It 'tolerates a partial failure without throwing' {
-        Mock Set-CIPPSPOTenant {}
-        Mock Set-CIPPSPOSite { throw 'boom' } -ParameterFilter { $SiteUrl -eq 'https://c.sharepoint.com/sites/B' }
-        Mock Set-CIPPSPOSite {} -ParameterFilter { $SiteUrl -eq 'https://c.sharepoint.com/sites/A' }
+    It 'tolerates a partial site failure without throwing' {
+        Mock Set-CIPPSPOSiteBulk {
+            @(
+                [PSCustomObject]@{ SiteUrl = 'https://c.sharepoint.com/sites/A'; Success = $true; Error = $null }
+                [PSCustomObject]@{ SiteUrl = 'https://c.sharepoint.com/sites/B'; Success = $false; Error = 'boom' }
+            )
+        }
         $Current = [PSCustomObject]@{ targets = @(
                 [PSCustomObject]@{ Scope = 'site'; SiteUrl = 'https://c.sharepoint.com/sites/A'; Wanted = $true }
                 [PSCustomObject]@{ Scope = 'site'; SiteUrl = 'https://c.sharepoint.com/sites/B'; Wanted = $true }
@@ -100,15 +110,14 @@ Describe 'Invoke-CIPPBaselineSPGuestPeoplePicker' {
     }
 
     It 'throws when every write fails' {
-        Mock Set-CIPPSPOSite { throw 'denied' }
+        Mock Set-CIPPSPOSiteBulk { @([PSCustomObject]@{ SiteUrl = 'https://c.sharepoint.com/sites/A'; Success = $false; Error = 'denied' }) }
         $Current = [PSCustomObject]@{ targets = @([PSCustomObject]@{ Scope = 'site'; SiteUrl = 'https://c.sharepoint.com/sites/A'; Wanted = $true }) }
         { Invoke-CIPPBaselineSPGuestPeoplePicker -Remediate $script:Remediate -TenantFilter $script:Tenant -Current $Current } | Should -Throw
     }
 
     It 'does nothing when there are no targets' {
-        Mock Set-CIPPSPOSite {}
-        Mock Set-CIPPSPOTenant {}
+        Mock Set-CIPPSPOSiteBulk {}
         Invoke-CIPPBaselineSPGuestPeoplePicker -Remediate $script:Remediate -TenantFilter $script:Tenant -Current ([PSCustomObject]@{ targets = @() })
-        Should -Invoke Set-CIPPSPOSite -Times 0 -Exactly
+        Should -Invoke Set-CIPPSPOSiteBulk -Times 0 -Exactly
     }
 }

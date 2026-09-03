@@ -34,21 +34,37 @@ function Invoke-CIPPBaselineSPGuestPeoplePicker {
     $Failed = 0
     $FailureDetail = [System.Collections.Generic.List[string]]::new()
 
-    foreach ($Target in $Targets) {
+    # Tenant default (at most one target) - a single CSOM write.
+    foreach ($Target in @($Targets | Where-Object { $_.Scope -eq 'tenant' })) {
         $Attempted++
         try {
-            if ($Target.Scope -eq 'tenant') {
-                $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter @AuthSplat
-                if (-not $SPOTenant) { throw "Could not resolve the SharePoint tenant object for $TenantFilter." }
-                $null = $SPOTenant | Set-CIPPSPOTenant -Properties @{ $Property = [bool]$Target.Wanted } @AuthSplat
-            } else {
-                $Response = Set-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $Target.SiteUrl -Properties @{ $Property = [bool]$Target.Wanted } @AuthSplat
-                $CsomError = ($Response | Where-Object { $_.ErrorInfo } | Select-Object -First 1).ErrorInfo.ErrorMessage
-                if ($CsomError) { throw $CsomError }
-            }
+            $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter @AuthSplat
+            if (-not $SPOTenant) { throw "Could not resolve the SharePoint tenant object for $TenantFilter." }
+            $null = $SPOTenant | Set-CIPPSPOTenant -Properties @{ $Property = [bool]$Target.Wanted } @AuthSplat
         } catch {
             $Failed++
-            $FailureDetail.Add("$($Target.SiteUrl ?? 'Tenant default') -> $($_.Exception.Message)")
+            $FailureDetail.Add("Tenant default -> $($_.Exception.Message)")
+        }
+    }
+
+    # Existing sites - one concurrent batch (Set-CIPPSPOSiteBulk fans out in .NET), so ~500 sites
+    # run in minutes instead of ~2s each serially.
+    $SiteTargets = @($Targets | Where-Object { $_.Scope -eq 'site' -and $_.SiteUrl })
+    if ($SiteTargets.Count -gt 0) {
+        $BulkSites = @($SiteTargets | ForEach-Object { @{ SiteUrl = $_.SiteUrl; Properties = @{ $Property = [bool]$_.Wanted } } })
+        try {
+            $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $TenantFilter -Sites $BulkSites @AuthSplat)
+            foreach ($BulkResult in $BulkResults) {
+                $Attempted++
+                if (-not $BulkResult.Success) {
+                    $Failed++
+                    $FailureDetail.Add("$($BulkResult.SiteUrl) -> $($BulkResult.Error)")
+                }
+            }
+        } catch {
+            # A whole-batch failure (e.g. token acquisition) fails every site in it.
+            foreach ($SiteTarget in $SiteTargets) { $Attempted++; $Failed++ }
+            $FailureDetail.Add("Site batch -> $($_.Exception.Message)")
         }
     }
 

@@ -38,6 +38,45 @@ namespace CIPP
     }
 
     // =====================================================================
+    // CIPPConcurrentRequest / CIPPConcurrentResult
+    // =====================================================================
+    // One PowerShell call, many async HTTP requests. PowerShell builds the
+    // request list (and acquires any auth token once, passing it in Headers),
+    // then calls CIPPRestClient.SendConcurrent — the .NET side fans the requests
+    // out concurrently, bounded by a semaphore, with Retry-After / backoff on
+    // 429 and 5xx. This keeps concurrency in .NET (robust async) rather than
+    // ForEach-Object -Parallel runspaces in the PowerShell worker. Per-hostname
+    // connection caps (see the pool design above) still apply, so a burst to one
+    // host cannot exceed that host's connection budget.
+    // =====================================================================
+    public sealed class CIPPConcurrentRequest
+    {
+        public string                      Uri                { get; set; } = string.Empty;
+        public string                      Method             { get; set; } = "GET";
+        public string?                     Body               { get; set; }
+        public Dictionary<string, string>? Headers            { get; set; }
+        public string?                     ContentType        { get; set; }
+        public int                         TimeoutSec         { get; set; } = 100;
+        public int                         MaximumRedirection { get; set; } = -1;
+    }
+
+    /// <summary>
+    /// Per-request outcome, returned in the same order as the input requests.
+    /// A failed request never aborts the batch: transport failures land in
+    /// <see cref="Error"/>, HTTP responses (including 4xx/5xx after retries) land
+    /// in <see cref="Result"/>. Index maps back to the caller's request array.
+    /// </summary>
+    public sealed class CIPPConcurrentResult
+    {
+        public int         Index      { get; init; }
+        public bool        IsSuccess  { get; init; }
+        public int         StatusCode { get; init; }
+        public HttpResult? Result     { get; init; }
+        public string?     Error      { get; init; }
+        public int         Attempts   { get; init; }
+    }
+
+    // =====================================================================
     // CIPPResponseHeaders / CIPPHttpResponse / CIPPHttpRequestException
     // =====================================================================
     // When a request returns a non-success status, the PowerShell wrapper
@@ -798,6 +837,112 @@ namespace CIPP
                     ResponseHeaders = allHeaders,
                 };
             }
+        }
+
+        // -----------------------------------------------------------------
+        // Concurrent fan-out — one PowerShell call, many async requests
+        // -----------------------------------------------------------------
+        // PowerShell passes a list of requests (each already carrying its auth
+        // header) and gets back one result per request, in order. Concurrency is
+        // bounded by maxConcurrency here AND by each destination's
+        // MaxConnectionsPerServer cap, whichever is tighter. 429/5xx are retried
+        // with Retry-After (when present) or exponential backoff with jitter. A
+        // single request's failure is captured, never thrown, so the batch always
+        // completes and the caller can act on partial success.
+        //
+        // Synchronous shim for PowerShell (cannot await Tasks natively). Safe here
+        // for the same reason Send() is — no SynchronizationContext to deadlock on.
+        // -----------------------------------------------------------------
+        public static CIPPConcurrentResult[] SendConcurrent(
+            IEnumerable<CIPPConcurrentRequest> requests,
+            int maxConcurrency = 8,
+            int maxRetries     = 3)
+        {
+            return SendConcurrentAsync(requests, maxConcurrency, maxRetries)
+                   .GetAwaiter().GetResult();
+        }
+
+        public static async Task<CIPPConcurrentResult[]> SendConcurrentAsync(
+            IEnumerable<CIPPConcurrentRequest> requests,
+            int maxConcurrency = 8,
+            int maxRetries     = 3)
+        {
+            var list = requests is null ? new List<CIPPConcurrentRequest>() : requests.ToList();
+            if (list.Count == 0) return Array.Empty<CIPPConcurrentResult>();
+            if (maxConcurrency < 1) maxConcurrency = 1;
+            if (maxRetries    < 0) maxRetries     = 0;
+
+            using var gate = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+            var tasks = new Task<CIPPConcurrentResult>[list.Count];
+            for (int i = 0; i < list.Count; i++)
+            {
+                int index = i;
+                var req   = list[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    await gate.WaitAsync().ConfigureAwait(false);
+                    try   { return await SendOneWithRetryAsync(index, req, maxRetries).ConfigureAwait(false); }
+                    finally { gate.Release(); }
+                });
+            }
+            return await Task.WhenAll(tasks).ConfigureAwait(false);
+        }
+
+        private static async Task<CIPPConcurrentResult> SendOneWithRetryAsync(
+            int index, CIPPConcurrentRequest req, int maxRetries)
+        {
+            var attempt = 0;
+            while (true)
+            {
+                attempt++;
+                try
+                {
+                    // skipErrorCheck: 429/5xx must come back as results (not thrown) so we can
+                    // decide whether to retry; the caller inspects StatusCode/Content itself.
+                    var res = await SendAsync(req.Uri, req.Method, req.Body, req.Headers,
+                                              req.ContentType, skipErrorCheck: true,
+                                              timeoutSec: req.TimeoutSec,
+                                              maximumRedirection: req.MaximumRedirection).ConfigureAwait(false);
+
+                    var retryable = res.StatusCode == 429 || (res.StatusCode >= 500 && res.StatusCode <= 599);
+                    if (retryable && attempt <= maxRetries)
+                    {
+                        await Task.Delay(RetryDelay(res, attempt)).ConfigureAwait(false);
+                        continue;
+                    }
+                    return new CIPPConcurrentResult
+                    {
+                        Index = index, IsSuccess = res.IsSuccess, StatusCode = res.StatusCode,
+                        Result = res, Attempts = attempt,
+                    };
+                }
+                catch (Exception ex)
+                {
+                    if (attempt <= maxRetries)
+                    {
+                        await Task.Delay(RetryDelay(null, attempt)).ConfigureAwait(false);
+                        continue;
+                    }
+                    return new CIPPConcurrentResult
+                    {
+                        Index = index, IsSuccess = false, StatusCode = 0,
+                        Error = ex.Message, Attempts = attempt,
+                    };
+                }
+            }
+        }
+
+        private static TimeSpan RetryDelay(HttpResult? res, int attempt)
+        {
+            // Honour a sane Retry-After (seconds) when the server sends one.
+            if (res is not null &&
+                res.ResponseHeaders.TryGetValue("Retry-After", out var ra) &&
+                ra.Length > 0 && int.TryParse(ra[0], out var secs) && secs > 0 && secs <= 300)
+                return TimeSpan.FromSeconds(secs);
+
+            // Otherwise exponential backoff (1s, 2s, 4s, capped 8s) with jitter.
+            var baseMs = Math.Min(8000, 1000 * (int)Math.Pow(2, attempt - 1));
+            return TimeSpan.FromMilliseconds(baseMs + Random.Shared.Next(0, 1000));
         }
 
         // -----------------------------------------------------------------

@@ -81,17 +81,15 @@ function Invoke-CIPPStandardSPGuestPeoplePicker {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set the tenant default guest People Picker suggestions to $HumanReadableState. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 }
             }
-            $Failed = 0
-            foreach ($Site in $NonCompliantSites) {
-                try {
-                    $null = Set-CIPPSPOSite -TenantFilter $Tenant -SiteUrl $Site.Url -Properties @{ ShowPeoplePickerSuggestionsForGuestUsers = $WantedState } -UseCertificate
-                } catch {
-                    $Failed++
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set guest People Picker suggestions to $HumanReadableState on $($Site.Url): $($_.Exception.Message)" -sev Error
-                }
-            }
             if ($NonCompliantSites.Count -gt 0) {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set guest People Picker suggestions to $HumanReadableState on $($NonCompliantSites.Count - $Failed) of $($NonCompliantSites.Count) drifted sites" -sev Info
+                # One concurrent batch instead of ~2s per site serially.
+                $BulkSites = @($NonCompliantSites | ForEach-Object { @{ SiteUrl = $_.Url; Properties = @{ ShowPeoplePickerSuggestionsForGuestUsers = $WantedState } } })
+                $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $Tenant -Sites $BulkSites -UseCertificate)
+                $FailedSites = @($BulkResults | Where-Object { -not $_.Success })
+                foreach ($FailedSite in $FailedSites) {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set guest People Picker suggestions to $HumanReadableState on $($FailedSite.SiteUrl): $($FailedSite.Error)" -sev Error
+                }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set guest People Picker suggestions to $HumanReadableState on $($NonCompliantSites.Count - $FailedSites.Count) of $($NonCompliantSites.Count) drifted sites" -sev Info
             }
         }
     }
