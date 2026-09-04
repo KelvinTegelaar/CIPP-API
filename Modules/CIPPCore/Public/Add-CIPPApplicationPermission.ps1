@@ -165,6 +165,11 @@ function Add-CIPPApplicationPermission {
         # App-only scopes changed; a cached client_credentials token still carries the old
         # roles, so drop it rather than wait out its TTL.
         $null = Clear-CippTokenCache -TenantFilter $TenantFilter
+        Write-LogMessage -API 'Add-CIPPApplicationPermission' -tenant $TenantFilter -message "Added $counter application permission(s) to $($ourSVCPrincipal.displayName)" -Sev 'Info'
+    }
+    $Failures = @($Results | Where-Object { $_ -match '^Failed to' })
+    if ($Failures.Count -gt 0) {
+        Write-LogMessage -API 'Add-CIPPApplicationPermission' -tenant $TenantFilter -message "Failed during application permission update for $($ourSVCPrincipal.displayName): $($Failures.Count) error(s)" -Sev 'Warning' -LogData @{ Failures = $Failures }
     }
     "Added $counter Application permissions to $($ourSVCPrincipal.displayName)"
     return $Results

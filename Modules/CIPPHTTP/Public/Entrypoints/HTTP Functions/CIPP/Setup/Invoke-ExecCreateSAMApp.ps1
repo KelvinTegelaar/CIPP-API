@@ -9,6 +9,8 @@ function Invoke-ExecCreateSAMApp {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $KV = Get-CippKeyVaultName
 
     try {
@@ -159,7 +161,7 @@ function Invoke-ExecCreateSAMApp {
                 }
             }
             if (-not $SecretsReadable) {
-                Write-LogMessage -message "Created the application registration but could not read the application id back from storage after $ReadAttempts attempts. This instance holds the new credentials, but other instances may still serve the previous values until the write propagates." -Sev 'Warning'
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Created the application registration but could not read the application id back from storage after $ReadAttempts attempts. This instance holds the new credentials, but other instances may still serve the previous values until the write propagates." -Sev 'Warning'
             }
 
             $ConfigTable = Get-CippTable -tablename 'Config'
@@ -199,6 +201,7 @@ function Invoke-ExecCreateSAMApp {
 
             $CredentialNote = if ($CertificateOnly) { ' This is a certificate-only setup - no client secret was created, and CIPP will authenticate with the SAM certificate.' } else { '' }
             $Results = @{'message' = "Successfully $state the application registration. The application ID is $($AppId.appid).$CredentialNote You may continue to the next step."; severity = 'success' }
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Successfully $state CIPP-SAM application registration AppId=$($AppId.appId) (certificate-only=$CertificateOnly)" -Sev 'Info'
         }
 
     } catch {
@@ -210,6 +213,7 @@ function Invoke-ExecCreateSAMApp {
         } else {
             $_.Exception.Message
         }
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Failed to create or update CIPP-SAM application registration: $ErrorDetail" -Sev 'Error'
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $ErrorDetail"; severity = 'failed' }
     }
 
