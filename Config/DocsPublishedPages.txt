@@ -374,8 +374,8 @@ user-documentation/tenant/gdap-management/relationships/relationship/mappings
 user-documentation/tenant/gdap-management/role-templates
 user-documentation/tenant/gdap-management/role-templates/add
 user-documentation/tenant/gdap-management/role-templates/edit
+user-documentation/tenant/gdap-management/role-templates/mappings/add
 user-documentation/tenant/gdap-management/roles
-user-documentation/tenant/gdap-management/roles/add
 user-documentation/tenant/manage
 user-documentation/tenant/manage/applied-standards
 user-documentation/tenant/manage/backup
