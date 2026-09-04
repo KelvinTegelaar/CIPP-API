@@ -20503,6 +20503,69 @@
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
+    "/api/ExecEmptySiteRecycleBin": {
+      "post": {
+        "summary": "ExecEmptySiteRecycleBin",
+        "operationId": "ExecEmptySiteRecycleBin",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Permanently empty a site recycle bin (first stage, second stage, or both).\nItem ids are used only server-side; the response never includes file names.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "SiteUrl": {
+                    "type": "string"
+                  },
+                  "Stage": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "SiteUrl",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.SiteRecycleBin.ReadWrite"
+      }
+    },
     "/api/ExecEnableArchive": {
       "post": {
         "summary": "ExecEnableArchive",
@@ -57573,6 +57636,64 @@
         "x-cipp-role": "Sharepoint.SiteRecycleBin.Read"
       }
     },
+    "/api/ListSiteRecycleBinSummary": {
+      "get": {
+        "summary": "ListSiteRecycleBinSummary",
+        "operationId": "ListSiteRecycleBinSummary",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Aggregate recycle bin sizes for a site (counts + bytes by stage). Never returns\nitem titles, leaf names, or paths — storage-report privacy ceiling.",
+        "parameters": [
+          {
+            "name": "MaxItems",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SiteUrl",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.SiteRecycleBin.Read"
+      }
+    },
     "/api/ListSiteRoleDefinitions": {
       "get": {
         "summary": "ListSiteRoleDefinitions",
@@ -57745,6 +57866,56 @@
           },
           "500": {
             "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.Read"
+      }
+    },
+    "/api/ListSiteStorageComposition": {
+      "get": {
+        "summary": "ListSiteStorageComposition",
+        "operationId": "ListSiteStorageComposition",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Site-level storage composition at library ceiling: tip / previous-version estimate /\nrecycle estimate from root web StorageMetrics + site StorageUsed. No file names.",
+        "parameters": [
+          {
+            "name": "SiteUrl",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
           }
         },
         "security": [
