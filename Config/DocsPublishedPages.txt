@@ -238,11 +238,12 @@ user-documentation/identity/administration/groups/edit
 user-documentation/identity/administration/groups/group
 user-documentation/identity/administration/jit-admin
 user-documentation/identity/administration/jit-admin-templates
-user-documentation/identity/administration/jit-admin-templates/add-jit-admin-template
-user-documentation/identity/administration/jit-admin-templates/edit-jit-admin-template
+user-documentation/identity/administration/jit-admin-templates/add
+user-documentation/identity/administration/jit-admin-templates/edit
 user-documentation/identity/administration/jit-admin/add
 user-documentation/identity/administration/offboarding-wizard
 user-documentation/identity/administration/risky-users
+user-documentation/identity/administration/user-defaults
 user-documentation/identity/administration/users
 user-documentation/identity/administration/users/patch-wizard
 user-documentation/identity/administration/users/user
@@ -382,7 +383,6 @@ user-documentation/tenant/manage/drift
 user-documentation/tenant/manage/edit
 user-documentation/tenant/manage/history
 user-documentation/tenant/manage/policies-deployed
-user-documentation/tenant/manage/user-defaults
 user-documentation/tenant/reports
 user-documentation/tenant/reports/application-consent
 user-documentation/tenant/reports/custom-test-report
