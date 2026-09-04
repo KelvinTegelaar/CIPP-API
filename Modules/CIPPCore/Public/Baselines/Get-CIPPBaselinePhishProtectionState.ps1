@@ -34,9 +34,14 @@ function Get-CIPPBaselinePhishProtectionState {
     background-image: url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($TenantFilter)&URL=https://$($CIPPUrl));
 }
 "@
+    # The here-string inherits the source file's line endings, but the branding CSS round-trips
+    # through Graph as LF. Normalise both sides so a CRLF checkout (or CSS stored with different
+    # endings) still grades a re-read as a match rather than a silent drift.
+    $CSS = $CSS -replace "`r`n", "`n"
+    $NormalizedBody = "$CurrentBody" -replace "`r`n", "`n"
 
     $Current = [PSCustomObject]@{
-        phishingCSSEnabled = [bool]("$CurrentBody" -like "*$CSS*")
+        phishingCSSEnabled = [bool]($NormalizedBody -like "*$CSS*")
     }
     # Carried for the executor.
     $Current | Add-Member -NotePropertyName 'currentBody' -NotePropertyValue "$CurrentBody"

@@ -52574,18 +52574,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Returns the progress rows of an offboarding job started from the wizard: one row per user with\nits overall status and the status and message of every step. Same rows as ListAsyncDeployment,\nunder the wizard's own permission so an offboarding operator can follow and re-run their jobs.",
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {}
-              }
-            }
-          }
-        },
+        "description": "Returns the progress rows of an offboarding job started from the wizard: one row per user with\nits overall status and the status and message of every step. Same rows as ListAsyncDeployment.\nThis is a read-only GET, so it carries a read role; an offboarding operator (who holds the\nbroader user write role) can still follow and re-run their jobs.",
         "parameters": [
           {
             "name": "DeploymentId",
@@ -52627,7 +52616,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Identity.User.ReadWrite",
+        "x-cipp-role": "Identity.User.Read",
         "x-cipp-any-tenant": true
       }
     },

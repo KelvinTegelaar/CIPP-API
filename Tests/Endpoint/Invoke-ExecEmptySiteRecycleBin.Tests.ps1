@@ -17,6 +17,16 @@ BeforeAll {
     }
 
     function Get-SharePointAdminLink { param($Public, $tenantFilter) [PSCustomObject]@{ SharePointUrl = 'https://contoso.sharepoint.com'; AdminUrl = 'https://contoso-admin.sharepoint.com' } }
+    function Resolve-CIPPSharePointRestContext {
+        param($TenantFilter, $SiteUrl)
+        $BaseUri = 'https://contoso.sharepoint.com/sites/a/_api'
+        [PSCustomObject]@{
+            Scope   = 'https://contoso.sharepoint.com/.default'
+            Headers = @{ Accept = 'application/json;odata=nometadata' }
+            BaseUri = $BaseUri
+            WebUri  = "$BaseUri/web"
+        }
+    }
     function Write-LogMessage { param($Headers, $API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) [PSCustomObject]@{ NormalizedError = $Exception.Message } }
 
