@@ -91,7 +91,7 @@
   {
     "Id": "Baselines",
     "Name": "Baselines",
-    "Description": "The drift-first baseline engine that replaces classic Standards and Drift. Enables the scheduled baseline run and the Baselines menu, hides the classic Standards and Drift pages, and skips the scheduled classic Standards and Drift runs - the two systems never run side by side.",
+    "Description": "This is pre-alpha do not enable in production. The drift-first baseline engine that replaces classic Standards and Drift. Enables the scheduled baseline run and the Baselines menu, hides the classic Standards and Drift pages, and skips the scheduled classic Standards and Drift runs - the two systems never run side by side.",
     "Enabled": false,
     "AllowUserToggle": true,
     "Timers": ["9f2c7b1e-4a6d-4c3f-8b9a-5e1d2f7c0a44"],
