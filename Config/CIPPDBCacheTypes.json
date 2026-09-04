@@ -317,6 +317,11 @@
     "description": "Site and document library permission assignments, including libraries that no longer inherit and grants to tenant-wide claims such as Everyone except external users"
   },
   {
+    "type": "StorageCleanupScan",
+    "friendlyName": "Storage Cleanup Scan",
+    "description": "Per-site library version estimates and recycle totals for the storage report cleanup signals. Report-private; not used by other CIPP features."
+  },
+  {
     "type": "OfficeActivations",
     "friendlyName": "Office Activations",
     "description": "Microsoft 365 app activation counts per user per platform (Windows, Mac, Mobile)"
