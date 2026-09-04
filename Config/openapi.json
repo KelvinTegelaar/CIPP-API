@@ -22043,6 +22043,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -58685,6 +58688,78 @@
         ],
         "x-cipp-role": "Tenant.Standards.Read",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListStorageCleanupScan": {
+      "get": {
+        "summary": "ListStorageCleanupScan",
+        "operationId": "ListStorageCleanupScan",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Reads the hold-only StorageCleanupScan CIPPDB cache and rebuilds the scans map expected by\nthe storage report cleanup opportunity helpers. No live enumeration — refresh via\nExecCIPPDBCache Name=StorageCleanupScan. Report-private; not used by other List APIs.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "cleanupSynced": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "lastDataRefresh": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "librariesScanned": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "scans": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "sitesScanned": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "sitesSkipped": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "sitesWithRecycle": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "summary": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.Read"
       }
     },
     "/api/ListTeams": {
