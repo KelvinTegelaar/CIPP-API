@@ -114,8 +114,10 @@ function Invoke-ListIntuneScript {
                 }
             }
 
-            $script | Add-Member -NotePropertyName 'ScriptAssignment' -NotePropertyValue ($ScriptAssignment -join ', ') -Force
-            $script | Add-Member -NotePropertyName 'ScriptExclude' -NotePropertyValue ($ScriptExclude -join ', ') -Force
+            $script | Add-Member -NotePropertyMembers ([ordered]@{
+                    ScriptAssignment = ($ScriptAssignment -join ', ')
+                    ScriptExclude    = ($ScriptExclude -join ', ')
+                }) -Force
         }
 
         $scripts | Add-Member -MemberType NoteProperty -Name scriptType -Value $scriptId

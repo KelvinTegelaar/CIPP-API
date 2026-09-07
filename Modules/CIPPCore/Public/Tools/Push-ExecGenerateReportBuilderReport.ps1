@@ -42,16 +42,23 @@ function Push-ExecGenerateReportBuilderReport {
                 $ParsedBlocks = @($Blocks)
             }
         } elseif ($TemplateGUID) {
+            # A schedule that references a template by GUID follows the template: blocks, page
+            # setup and name are read fresh on every run, so edits made to the template after the
+            # schedule was created are picked up without recreating the schedule.
             $TemplateTable = Get-CippTable -tablename 'templates'
             $Template = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'ReportBuilderTemplate' and RowKey eq '$($TemplateGUID)'"
-            if ($Template -and $Template.JSON) {
-                $TemplateData = ConvertFrom-Json -InputObject $Template.JSON
-                $ParsedBlocks = @($TemplateData.Blocks)
-                # A schedule created before page setup existed passes no Settings, so fall back to
-                # whatever the template itself was saved with.
-                if (-not $ParsedSettings -and $TemplateData.Settings) {
-                    $ParsedSettings = $TemplateData.Settings
-                }
+            if (-not $Template -or -not $Template.JSON) {
+                throw "Report template $TemplateGUID was not found. It may have been deleted; recreate the schedule from a saved template."
+            }
+            $TemplateData = ConvertFrom-Json -InputObject $Template.JSON
+            $ParsedBlocks = @($TemplateData.Blocks)
+            if ($TemplateData.Name) {
+                $TemplateName = $TemplateData.Name
+            }
+            # A schedule created before page setup existed passes no Settings, so fall back to
+            # whatever the template itself was saved with.
+            if (-not $ParsedSettings -and $TemplateData.Settings) {
+                $ParsedSettings = $TemplateData.Settings
             }
         }
 
@@ -166,8 +173,10 @@ function Push-ExecGenerateReportBuilderReport {
                                     (@($HeaderLine, $SeparatorLine) + $DataLines) -join "`n"
                                 }
                             }
-                            $Block | Add-Member -NotePropertyName 'content' -NotePropertyValue $BlockContent -Force
-                            $Block | Add-Member -NotePropertyName 'static' -NotePropertyValue $true -Force
+                            $Block | Add-Member -NotePropertyMembers ([ordered]@{
+                                    content = $BlockContent
+                                    static  = $true
+                                }) -Force
                         } else {
                             $Block | Add-Member -NotePropertyName 'content' -NotePropertyValue 'No data available for this data source.' -Force
                         }

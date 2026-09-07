@@ -18,7 +18,7 @@ BeforeAll {
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
     . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
     . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
-    foreach ($Name in @('ExternalMFATrusted', 'IntuneDeviceRetirementDays', 'AppManagementPolicy', 'EnableAppConsentRequests', 'TeamsFederationConfiguration', 'OMEBranding')) {
+    foreach ($Name in @('ExternalMFATrusted', 'ExternalComplianceTrusted', 'IntuneDeviceRetirementDays', 'AppManagementPolicy', 'EnableAppConsentRequests', 'TeamsFederationConfiguration', 'OMEBranding')) {
         . (Join-Path $Baselines "Get-CIPPBaseline${Name}State.ps1")
         . (Join-Path $Baselines "Invoke-CIPPBaseline${Name}.ps1")
     }
@@ -54,6 +54,30 @@ Describe 'Get-CIPPBaselineExternalMFATrustedState' {
         Invoke-CIPPBaselineExternalMFATrusted -Remediate ([PSCustomObject]@{ trusted = $true }) -TenantFilter $script:Tenant -Current $null
         Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
             $type -eq 'PATCH' -and $body -match '"isMfaAccepted":\s*true' -and $body -match 'isCompliantDeviceAccepted'
+        }
+    }
+}
+
+Describe 'Get-CIPPBaselineExternalComplianceTrustedState' {
+    It 'grades the compliance switch in BOTH directions' {
+        Mock New-CIPPDbRequest { @(@{ inboundTrust = @{ isCompliantDeviceAccepted = $true } } | ConvertTo-Cached) }
+        $Off = [PSCustomObject]@{ Variables = [PSCustomObject]@{ state = $false } }
+        $Prepared = Get-CIPPBaselineExternalComplianceTrustedState -Item $Off -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+        $On = [PSCustomObject]@{ Variables = [PSCustomObject]@{ state = $true } }
+        $Prepared2 = Get-CIPPBaselineExternalComplianceTrustedState -Item $On -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared2.Expected -Current $Prepared2.Current).Count | Should -Be 0
+    }
+
+    It 'patches the merged inboundTrust, never the lone flag' {
+        Mock New-GraphGetRequest { [PSCustomObject]@{ inboundTrust = [PSCustomObject]@{ isMfaAccepted = $true; isCompliantDeviceAccepted = $false; isHybridAzureADJoinedDeviceAccepted = $true } } }
+        Mock New-GraphPostRequest { }
+        Invoke-CIPPBaselineExternalComplianceTrusted -Remediate ([PSCustomObject]@{ trusted = $true }) -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            $type -eq 'PATCH' -and
+            $body -match '"isCompliantDeviceAccepted":\s*true' -and
+            $body -match 'isMfaAccepted' -and
+            $body -match 'isHybridAzureADJoinedDeviceAccepted'
         }
     }
 }

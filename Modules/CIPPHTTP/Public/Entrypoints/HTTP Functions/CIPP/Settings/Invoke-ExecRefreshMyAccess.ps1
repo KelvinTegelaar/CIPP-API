@@ -59,6 +59,7 @@ function Invoke-ExecRefreshMyAccess {
             $SecondsSince = ((Get-Date).ToUniversalTime() - $CooldownMarker.Timestamp.UtcDateTime).TotalSeconds
             if ($SecondsSince -lt $CooldownSeconds) {
                 $WaitSeconds = [math]::Ceiling($CooldownSeconds - $SecondsSince)
+                Write-LogMessage -API 'RefreshMyAccess' -headers $Request.Headers -message "$Upn hit the access-refresh cooldown; returned 429 asking them to retry in $WaitSeconds seconds." -sev Info
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::TooManyRequests
                         Body       = @{ Results = "Your access was refreshed less than $CooldownSeconds seconds ago. Try again in $WaitSeconds seconds." }

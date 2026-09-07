@@ -582,15 +582,23 @@
     "name": "standards.AuthenticationMethods",
     "cat": "Entra (AAD) Standards",
     "tag": [],
-    "helpText": "Configures all authentication methods for the tenant including Microsoft Authenticator, FIDO2, SMS, Voice, Email OTP, Temporary Access Pass, Software OATH, Hardware OATH, Certificate-based, and QR Code Pin. Enable or disable each method and optionally target specific groups.",
-    "docsDescription": "Unified standard to configure all authentication method policies in a single place. Each method can be independently enabled or disabled, targeted to all users or specific groups using group name wildcards, and configured with method-specific settings such as TAP lifetime, QR code pin length, and Authenticator software OTP.",
+    "helpText": "Configures all authentication methods for the tenant including Microsoft Authenticator, FIDO2, SMS, Voice, Email OTP, Temporary Access Pass, Software OATH, Hardware OATH, Certificate-based, and QR Code Pin. Set each method to Enabled, Disabled or Not Configured and optionally target specific groups. Methods set to Not Configured (or left blank) keep the tenant's current setting.",
+    "docsDescription": "Unified standard to configure all authentication method policies in a single place. Each method can be independently set to Enabled, Disabled or Not Configured (leaving the tenant's current configuration untouched), targeted to all users or specific groups using group name wildcards, and configured with method-specific settings such as TAP lifetime, QR code pin length, and Authenticator software OTP.",
     "executiveText": "Provides centralized control over all tenant authentication methods from a single standard. Administrators can enable phishing-resistant methods like FIDO2 and Microsoft Authenticator while disabling less secure options like SMS and Voice. Each method supports group-level targeting using wildcard group names, allowing staged rollouts and granular control.",
     "addedComponent": [
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.MicrosoftAuthenticatorEnabled",
         "label": "Microsoft Authenticator",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -599,7 +607,7 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.MicrosoftAuthenticatorEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -610,7 +618,7 @@
         "defaultValue": false,
         "condition": {
           "field": "standards.AuthenticationMethods.MicrosoftAuthenticatorEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -627,7 +635,7 @@
         ],
         "condition": {
           "field": "standards.AuthenticationMethods.MicrosoftAuthenticatorEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -644,7 +652,7 @@
         ],
         "condition": {
           "field": "standards.AuthenticationMethods.MicrosoftAuthenticatorEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -661,7 +669,7 @@
         ],
         "condition": {
           "field": "standards.AuthenticationMethods.MicrosoftAuthenticatorEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -678,15 +686,23 @@
         ],
         "condition": {
           "field": "standards.AuthenticationMethods.MicrosoftAuthenticatorEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.FIDO2Enabled",
         "label": "FIDO2 Security Keys",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -695,15 +711,23 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.FIDO2Enabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.TAPEnabled",
         "label": "Temporary Access Pass",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -712,7 +736,7 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.TAPEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -728,7 +752,7 @@
         ],
         "condition": {
           "field": "standards.AuthenticationMethods.TAPEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -739,7 +763,7 @@
         "defaultValue": 60,
         "condition": {
           "field": "standards.AuthenticationMethods.TAPEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -750,7 +774,7 @@
         "defaultValue": 60,
         "condition": {
           "field": "standards.AuthenticationMethods.TAPEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -761,7 +785,7 @@
         "defaultValue": 480,
         "condition": {
           "field": "standards.AuthenticationMethods.TAPEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -772,15 +796,23 @@
         "defaultValue": 8,
         "condition": {
           "field": "standards.AuthenticationMethods.TAPEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.SoftwareOathEnabled",
         "label": "Third-Party Software OATH Tokens",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -789,15 +821,23 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.SoftwareOathEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.HardwareOathEnabled",
         "label": "Hardware OATH Tokens",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -806,15 +846,23 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.HardwareOathEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.SMSEnabled",
         "label": "SMS",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -823,15 +871,23 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.SMSEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.VoiceEnabled",
         "label": "Voice Call",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -840,15 +896,23 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.VoiceEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.EmailEnabled",
         "label": "Email OTP",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -857,15 +921,23 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.EmailEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.x509CertificateEnabled",
         "label": "Certificate-Based Authentication",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -874,15 +946,23 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.x509CertificateEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
       {
-        "type": "switch",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "required": false,
         "name": "standards.AuthenticationMethods.QRCodePinEnabled",
         "label": "QR Code Pin",
-        "defaultValue": false
+        "helperText": "Not Configured or blank leaves the tenant's current setting untouched.",
+        "options": [
+          { "label": "Enabled", "value": true },
+          { "label": "Disabled", "value": false },
+          { "label": "Not Configured", "value": "notConfigured" }
+        ]
       },
       {
         "type": "textField",
@@ -891,7 +971,7 @@
         "required": false,
         "condition": {
           "field": "standards.AuthenticationMethods.QRCodePinEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -902,7 +982,7 @@
         "defaultValue": 365,
         "condition": {
           "field": "standards.AuthenticationMethods.QRCodePinEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       },
@@ -913,7 +993,7 @@
         "defaultValue": 8,
         "condition": {
           "field": "standards.AuthenticationMethods.QRCodePinEnabled",
-          "compareType": "is",
+          "compareType": "valueEq",
           "compareValue": true
         }
       }
@@ -999,7 +1079,8 @@
           "labelField": "TemplateName",
           "valueField": "TemplateId",
           "queryKey": "StdAppApprovalTemplateList",
-          "addedField": { "AppId": "AppId" }
+          "addedField": { "AppId": "AppId" },
+          "templateView": { "title": "App Approval Template" }
         },
         "condition": {
           "field": "standards.AppDeploy.mode",
@@ -1354,6 +1435,32 @@
     "recommendedBy": []
   },
   {
+    "name": "standards.ExternalComplianceTrusted",
+    "cat": "Entra (AAD) Standards",
+    "tag": [],
+    "helpText": "Sets the state of the Cross-tenant access setting to trust external compliant devices. This allows guest users to use a compliant device from their home tenant to access your tenant.",
+    "executiveText": "Allows external partners and vendors to use compliant devices from their own organization when accessing company resources, streamlining collaboration while maintaining security standards. This reduces friction for external users while ensuring their devices still meet compliance requirements.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Select value",
+        "name": "standards.ExternalComplianceTrusted.state",
+        "options": [
+          { "label": "Enabled", "value": "true" },
+          { "label": "Disabled", "value": "false" }
+        ]
+      }
+    ],
+    "label": "Sets the Cross-tenant access setting to trust external compliant devices",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-08-25",
+    "powershellEquivalent": "Update-MgBetaPolicyCrossTenantAccessPolicyDefault",
+    "recommendedBy": []
+  },
+  {
     "name": "standards.DisableTenantCreation",
     "cat": "Entra (AAD) Standards",
     "tag": ["CIS M365 7.0.0 (5.1.2.3)", "CISA (MS.AAD.6.1v1)", "SMB1001 (2.8)"],
@@ -1661,7 +1768,7 @@
     "cat": "Entra (AAD) Standards",
     "tag": ["SMB1001 (2.8)"],
     "appliesToTest": ["SMB1001_2_8", "ZTNA21858"],
-    "helpText": "Blocks login for guest users that have not logged in for a number of days",
+    "helpText": "Blocks login for guest users whose most recent sign-in attempt, interactive or non-interactive, is older than the number of days. Guests that have never signed in are only included when 'Disable accounts that have not yet signed in' is enabled. Accounts an administrator re-enabled in the last 7 days are left alone.",
     "executiveText": "Automatically disables external guest accounts that haven't been used for a number of days, reducing security risks from dormant accounts while maintaining access for active external collaborators. This helps maintain a clean user directory and reduces potential attack vectors.",
     "addedComponent": [
       {
@@ -1670,6 +1777,12 @@
         "required": true,
         "defaultValue": 90,
         "label": "Days of inactivity"
+      },
+      {
+        "type": "switch",
+        "name": "standards.DisableGuests.IncludeNeverSignedIn",
+        "label": "Disable accounts that have not yet signed in",
+        "defaultValue": false
       }
     ],
     "label": "Disable Guest accounts that have not logged on for a number of days",
@@ -2128,6 +2241,16 @@
         "type": "textField",
         "name": "standards.OutBoundSpamAlert.OutboundSpamContact",
         "label": "Outbound spam contact"
+      },
+      {
+        "type": "switch",
+        "name": "standards.OutBoundSpamAlert.BccSuspiciousOutboundMail",
+        "label": "BCC suspicious outbound mail to a mailbox"
+      },
+      {
+        "type": "textField",
+        "name": "standards.OutBoundSpamAlert.BccSuspiciousOutboundContact",
+        "label": "BCC recipient for suspicious outbound mail"
       }
     ],
     "label": "Set Outbound Spam Alert e-mail",
@@ -3322,7 +3445,7 @@
     "tag": ["CIS M365 7.0.0 (8.6.1)"],
     "appliesToTest": ["CIS_8_6_1"],
     "helpText": "Set the state of the spam submission button in Outlook",
-    "docsDescription": "Set the state of the built-in Report button in Outlook. This gives the users the ability to report emails as spam or phish.",
+    "docsDescription": "Set the state of the built-in Report button in Outlook. This gives the users the ability to report emails as spam or phish. When a destination email address is set, the 'Send reported items to' setting controls whether reported messages go to Microsoft and the reporting mailbox, or to the reporting mailbox only (for third-party phishing report services).",
     "executiveText": "Enables employees to easily report suspicious emails directly from Outlook, helping improve the organization's spam and phishing detection systems. This crowdsourced approach to security allows users to contribute to threat detection while providing valuable feedback to enhance email security filters.",
     "addedComponent": [
       {
@@ -3340,6 +3463,16 @@
         "name": "standards.UserSubmissions.email",
         "required": false,
         "label": "Destination email address"
+      },
+      {
+        "type": "autoComplete",
+        "multiple": false,
+        "label": "Send reported items to (when a destination email address is set)",
+        "name": "standards.UserSubmissions.reportDestination",
+        "options": [
+          { "label": "Microsoft and my reporting mailbox", "value": "Both" },
+          { "label": "My reporting mailbox only", "value": "Mailbox" }
+        ]
       }
     ],
     "label": "Set the state of the built-in Report button in Outlook",
@@ -4311,6 +4444,18 @@
       },
       {
         "type": "autoComplete",
+        "required": false,
+        "multiple": false,
+        "creatable": false,
+        "label": "Bulk moves enabled (deliver bulk mail below the threshold to the Promotions folder - Preview)",
+        "name": "standards.SpamFilterPolicy.BulkMovesEnabled",
+        "options": [
+          { "label": "On", "value": "On" },
+          { "label": "Off", "value": "Off" }
+        ]
+      },
+      {
+        "type": "autoComplete",
         "required": true,
         "multiple": false,
         "creatable": false,
@@ -4779,7 +4924,7 @@
     "cat": "Intune Standards",
     "tag": ["CIS M365 7.0.0 (4.2)", "CISA (MS.AAD.19.1v1)"],
     "appliesToTest": ["CIS_4_2"],
-    "helpText": "Sets the default platform restrictions for enrolling devices into Intune. Note: Do not block personally owned if platform is blocked.",
+    "helpText": "Sets the default platform restrictions for enrolling devices into Intune, including optional minimum and maximum OS version limits per platform (Android Enterprise, Android, iOS/iPadOS and Windows). Note: Do not block personally owned if platform is blocked.",
     "executiveText": "Controls which types of devices (iOS, Android, Windows, macOS) and ownership models (corporate vs. personal) can be enrolled in the company's device management system. This helps maintain security standards while supporting necessary business device types and usage scenarios.",
     "addedComponent": [
       {
@@ -4795,6 +4940,20 @@
         "default": false
       },
       {
+        "type": "textField",
+        "name": "standards.DefaultPlatformRestrictions.osMinimumVersionAndroidForWork",
+        "label": "Android Enterprise (work profile) minimum OS version",
+        "helperText": "Example: 11.0. Leave blank to not enforce a minimum.",
+        "required": false
+      },
+      {
+        "type": "textField",
+        "name": "standards.DefaultPlatformRestrictions.osMaximumVersionAndroidForWork",
+        "label": "Android Enterprise (work profile) maximum OS version",
+        "helperText": "Example: 14.0. Leave blank to not enforce a maximum.",
+        "required": false
+      },
+      {
         "type": "switch",
         "name": "standards.DefaultPlatformRestrictions.platformAndroidBlocked",
         "label": "Block platform Android",
@@ -4807,6 +4966,20 @@
         "default": false
       },
       {
+        "type": "textField",
+        "name": "standards.DefaultPlatformRestrictions.osMinimumVersionAndroid",
+        "label": "Android minimum OS version",
+        "helperText": "Example: 10.0. Leave blank to not enforce a minimum.",
+        "required": false
+      },
+      {
+        "type": "textField",
+        "name": "standards.DefaultPlatformRestrictions.osMaximumVersionAndroid",
+        "label": "Android maximum OS version",
+        "helperText": "Example: 13.0. Leave blank to not enforce a maximum.",
+        "required": false
+      },
+      {
         "type": "switch",
         "name": "standards.DefaultPlatformRestrictions.platformiOSBlocked",
         "label": "Block platform iOS",
@@ -4817,6 +4990,20 @@
         "name": "standards.DefaultPlatformRestrictions.personaliOSBlocked",
         "label": "Block personally owned iOS",
         "default": false
+      },
+      {
+        "type": "textField",
+        "name": "standards.DefaultPlatformRestrictions.osMinimumVersioniOS",
+        "label": "iOS/iPadOS minimum OS version",
+        "helperText": "Example: 16.1. Leave blank to not enforce a minimum.",
+        "required": false
+      },
+      {
+        "type": "textField",
+        "name": "standards.DefaultPlatformRestrictions.osMaximumVersioniOS",
+        "label": "iOS/iPadOS maximum OS version",
+        "helperText": "Example: 18.0. Leave blank to not enforce a maximum.",
+        "required": false
       },
       {
         "type": "switch",
@@ -4841,6 +5028,20 @@
         "name": "standards.DefaultPlatformRestrictions.personalWindowsBlocked",
         "label": "Block personally owned Windows",
         "default": false
+      },
+      {
+        "type": "textField",
+        "name": "standards.DefaultPlatformRestrictions.osMinimumVersionWindows",
+        "label": "Windows minimum OS version",
+        "helperText": "Example: 10.0.19045.0. Leave blank to not enforce a minimum.",
+        "required": false
+      },
+      {
+        "type": "textField",
+        "name": "standards.DefaultPlatformRestrictions.osMaximumVersionWindows",
+        "label": "Windows maximum OS version",
+        "helperText": "Example: 10.0.22631.0. Leave blank to not enforce a maximum.",
+        "required": false
       }
     ],
     "label": "Device enrollment restrictions",
@@ -5252,6 +5453,40 @@
     "addedDate": "2024-04-20",
     "powershellEquivalent": "Update-MgBetaAdminSharePointSetting",
     "recommendedBy": [],
+    "requiredCapabilities": [
+      "SHAREPOINTWAC",
+      "SHAREPOINTSTANDARD",
+      "SHAREPOINTENTERPRISE",
+      "SHAREPOINTENTERPRISE_EDU",
+      "ONEDRIVE_BASIC",
+      "ONEDRIVE_ENTERPRISE"
+    ]
+  },
+  {
+    "name": "standards.SPGuestPeoplePicker",
+    "cat": "SharePoint Standards",
+    "tag": [],
+    "helpText": "Controls whether guest (external) users already in the tenant appear as suggestions in the SharePoint and OneDrive People Picker. Enforces the wanted state on BOTH the tenant default and every existing site collection - they are set independently, so changing the tenant default does not update existing sites. The per-site picture is read from the SharePoint reporting cache (refreshed daily), so a large tenant is never enumerated live during a run; a 24h rerun guard stops the write sweep from repeating before that cache refreshes and re-evaluates the result.",
+    "executiveText": "Makes existing external collaborators discoverable (or hidden) when sharing SharePoint and OneDrive content, consistently across the tenant default and every existing site. This keeps the sharing experience predictable and prevents individual sites from drifting away from the agreed collaboration posture.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Guest People Picker suggestions",
+        "name": "standards.SPGuestPeoplePicker.state",
+        "options": [
+          { "label": "Show guests in the People Picker", "value": "true" },
+          { "label": "Hide guests in the People Picker", "value": "false" }
+        ]
+      }
+    ],
+    "label": "Show guest users in the SharePoint People Picker",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-09-03",
+    "powershellEquivalent": "Set-SPOTenant / Set-SPOSite -ShowPeoplePickerSuggestionsForGuestUsers $true or $false",
+    "recommendedBy": ["CIPP"],
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
@@ -5801,7 +6036,7 @@
       "CIS_8_5_8",
       "CIS_8_5_9"
     ],
-    "helpText": "Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl",
+    "helpText": "Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl, AllowExternalNonTrustedMeetingChat, AllowCloudRecording",
     "executiveText": "Establishes security-focused default settings for Teams meetings, controlling who can join meetings, present content, and participate in chats. These policies balance collaboration needs with security requirements, ensuring meetings remain productive while protecting against unauthorized access and disruption.",
     "addedComponent": [
       {
@@ -5876,13 +6111,39 @@
         "type": "switch",
         "name": "standards.TeamsGlobalMeetingPolicy.AllowExternalParticipantGiveRequestControl",
         "label": "External participants can give or request control"
+      },
+      {
+        "type": "autoComplete",
+        "required": false,
+        "multiple": false,
+        "creatable": false,
+        "name": "standards.TeamsGlobalMeetingPolicy.AllowExternalNonTrustedMeetingChat",
+        "label": "External meeting chat",
+        "helperText": "CIS 8.5.8 recommends Off. Leave blank to keep the tenant's current value.",
+        "options": [
+          { "label": "Off (CIS recommended)", "value": false },
+          { "label": "On", "value": true }
+        ]
+      },
+      {
+        "type": "autoComplete",
+        "required": false,
+        "multiple": false,
+        "creatable": false,
+        "name": "standards.TeamsGlobalMeetingPolicy.AllowCloudRecording",
+        "label": "Meeting cloud recording",
+        "helperText": "CIS 8.5.9 recommends Off. Leave blank to keep the tenant's current value.",
+        "options": [
+          { "label": "Off (CIS recommended)", "value": false },
+          { "label": "On", "value": true }
+        ]
       }
     ],
     "label": "Define Global Meeting Policy for Teams",
     "impact": "Low Impact",
     "impactColour": "info",
     "addedDate": "2024-11-12",
-    "powershellEquivalent": "Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting $false -AllowAnonymousUsersToStartMeeting $false -AutoAdmittedUsers $AutoAdmittedUsers -AllowPSTNUsersToBypassLobby $false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode $DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl $false -AllowParticipantGiveRequestControl $false",
+    "powershellEquivalent": "Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting $false -AllowAnonymousUsersToStartMeeting $false -AutoAdmittedUsers $AutoAdmittedUsers -AllowPSTNUsersToBypassLobby $false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode $DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl $false -AllowParticipantGiveRequestControl $false -AllowExternalNonTrustedMeetingChat $false -AllowCloudRecording $false",
     "recommendedBy": ["CIS"],
     "requiredCapabilities": ["MCOSTANDARD", "MCOEV", "MCOIMP", "TEAMS1", "Teams_Room_Standard"]
   },
@@ -8092,7 +8353,8 @@
           "url": "/api/ListAppTemplates",
           "labelField": "displayName",
           "valueField": "GUID",
-          "queryKey": "StdIntuneAppTemplateList"
+          "queryKey": "StdIntuneAppTemplateList",
+          "templateView": { "title": "Application Template" }
         }
       }
     ],
@@ -8493,5 +8755,50 @@
       "warn": false,
       "remediate": false
     }
+  },
+  {
+    "name": "standards.PIMRoleSettings",
+    "label": "PIM Role Settings Template",
+    "cat": "Templates",
+    "multiple": true,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
+    "impact": "High Impact",
+    "impactColour": "danger",
+    "addedDate": "2026-08-23",
+    "tag": [],
+    "helpText": "Deploys a Privileged Identity Management role settings template to the tenant: activation limits, MFA or authentication context, justification, approval, eligibility and active-assignment expiry and notification rules for the roles the template covers. Templates cannot weaken settings below CIPP's secure floor.",
+    "docsDescription": "Deploys a Privileged Identity Management role settings template to the tenant. The template defines, for a set of roles, the maximum activation duration, whether activation requires MFA or an authentication context, justification, ticket and approval requirements, the maximum lifetime of eligible and active assignments, and additional notification recipients. Templates are validated against CIPP's secure floor (activation within 24 hours with MFA or an authentication context and a justification; eligible and active assignments must expire within a year; active assignments require a justification) and are refused, not adjusted, when they fall below it. Requires Entra ID P2.",
+    "executiveText": "Enforces consistent Privileged Identity Management settings so that administrator roles can only be used for a limited time, after strong authentication and with a recorded reason. This keeps standing administrative access to a minimum and makes every use of privilege visible and accountable.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "name": "TemplateList",
+        "multiple": false,
+        "required": true,
+        "creatable": false,
+        "label": "Select PIM Role Settings Template",
+        "api": {
+          "url": "/api/ListPIMRoleSettingsTemplates",
+          "labelField": "templateName",
+          "valueField": "GUID",
+          "queryKey": "ListPIMRoleSettingsTemplates",
+          "showRefresh": true,
+          "templateView": {
+            "title": "PIM Role Settings Template"
+          }
+        }
+      }
+    ],
+    "powershellEquivalent": "Update-MgBetaPolicyRoleManagementPolicyRule",
+    "recommendedBy": [
+      "CIPP"
+    ],
+    "requiredCapabilities": [
+      "AAD_PREMIUM_P2"
+    ]
   }
 ]

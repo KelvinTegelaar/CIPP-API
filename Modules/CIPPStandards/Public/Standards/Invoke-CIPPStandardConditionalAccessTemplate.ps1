@@ -121,8 +121,11 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         $Policy = if ($JSONObj) { $JSONObj | ConvertFrom-Json -Depth 100 } else { $null }
 
         if ($null -eq $Policy) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Conditional Access template '$($Settings.TemplateList.label)' ($($Settings.TemplateList.value)) could not be loaded from the template store - skipping." -Sev 'Error'
-            Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = "Template '$($Settings.TemplateList.label)' could not be loaded from the template store." } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
+            # Same wording as Invoke-CIPPCATemplateBatch, so the report row says which template is
+            # gone and what to do about it instead of a bare "could not be loaded".
+            $MissingText = "Template '$($Settings.TemplateList.label)' ($($Settings.TemplateList.value)) no longer exists in the template library. Remove it from the standards template or select the template again."
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Conditional Access template '$($Settings.TemplateList.label)' ($($Settings.TemplateList.value)) could not be loaded from the template store - skipping. $MissingText" -Sev 'Error'
+            Set-CIPPStandardsCompareField -FieldName $FieldName -CurrentValue @{ Differences = $MissingText } -ExpectedValue @{ Differences = @() } -Tenant $Tenant
             return
         }
 

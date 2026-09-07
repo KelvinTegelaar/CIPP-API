@@ -46,8 +46,10 @@ function Get-CIPPIntuneReusableSettingsReport {
             $rawJson = $null
         }
 
-        $Setting | Add-Member -NotePropertyName 'RawJSON' -NotePropertyValue $rawJson -Force
-        $Setting | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+        $Setting | Add-Member -NotePropertyMembers ([ordered]@{
+                RawJSON        = $rawJson
+                CacheTimestamp = $CacheTimestamp
+            }) -Force
         $Results.Add($Setting)
     }
 

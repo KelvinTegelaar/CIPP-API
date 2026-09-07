@@ -105,10 +105,58 @@ function Push-CIPPOffboardingComplete {
 
             Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Offboarding completed successfully for $Username" -sev Info -headers $Headers
 
-            # Send post-execution alerts if configured
+            # Send post-execution alerts if configured, and keep each delivery outcome with the task and
+            # on the progress row, so a failed webhook, email or PSA note is as visible as a failed step.
             if ($TaskInfo.PostExecution -and $ProcessedResults) {
-                Send-CIPPScheduledTaskAlert -Results $ProcessedResults -TaskInfo $TaskInfo -TenantFilter $TenantFilter -TaskType 'User Offboarding'
+                $DeploymentId = $Item.Parameters.DeploymentId
+                # The notification steps have been on the row since the job started; show them running
+                # while the deliveries are made, then fill each one in by title.
+                $NotifyIndexes = @{}
+                if ($DeploymentId) {
+                    $Row = Get-CIPPAsyncDeployment -JobId $DeploymentId | Where-Object { $_.Name -eq $Username }
+                    $RowSteps = @($Row.Steps)
+                    for ($i = 0; $i -lt $RowSteps.Count; $i++) {
+                        if ($RowSteps[$i].Kind -eq 'notify') {
+                            $NotifyIndexes[[string]$RowSteps[$i].Title] = $i
+                            Set-CIPPAsyncDeploymentStep -JobId $DeploymentId -Name $Username -StepIndex $i -StepStatus 'running' -Message 'Sending'
+                        }
+                    }
+                }
+
+                $PostExecutionResults = @(Send-CIPPScheduledTaskAlert -Results $ProcessedResults -TaskInfo $TaskInfo -TenantFilter $TenantFilter -TaskType 'User Offboarding')
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
+                    PartitionKey         = $TaskInfo.PartitionKey
+                    RowKey               = $TaskInfo.RowKey
+                    PostExecutionResults = [string](ConvertTo-Json -Compress -Depth 5 -InputObject $PostExecutionResults)
+                }
+
+                if ($DeploymentId) {
+                    # One step per channel; the PSA channel can make several deliveries (per-user tickets).
+                    $Covered = @{}
+                    foreach ($Group in ($PostExecutionResults | Group-Object -Property Channel)) {
+                        $Title = "Notify via $($Group.Name)"
+                        $Message = @($Group.Group | ForEach-Object { [string]$_.Result }) -join "`n"
+                        # Skipped = asked for and not delivered, so it fails the step.
+                        $NotifyStatus = if (@($Group.Group | Where-Object { [string]$_.Result -match '^(Error|Could not|Failed|Skipped)' }).Count -gt 0) { 'failed' } else { 'succeeded' }
+                        if ($NotifyIndexes.ContainsKey($Title)) {
+                            $Covered[$Title] = $true
+                            Set-CIPPAsyncDeploymentStep -JobId $DeploymentId -Name $Username -StepIndex $NotifyIndexes[$Title] -StepStatus $NotifyStatus -Message $Message
+                        } else {
+                            Add-CIPPAsyncDeploymentStep -JobId $DeploymentId -Name $Username -Title $Title -StepStatus $NotifyStatus -Message $Message -Kind 'notify'
+                        }
+                    }
+                    # A channel that produced no delivery at all (the sender gave up before reaching it)
+                    foreach ($Title in @($NotifyIndexes.Keys | Where-Object { -not $Covered.ContainsKey($_) })) {
+                        Set-CIPPAsyncDeploymentStep -JobId $DeploymentId -Name $Username -StepIndex $NotifyIndexes[$Title] -StepStatus 'failed' -Message 'No delivery was attempted'
+                    }
+                }
             }
+        }
+        if ($Item.Parameters.DeploymentId) {
+            # Close the live-progress row: failed when any step failed, otherwise succeeded.
+            $Row = Get-CIPPAsyncDeployment -JobId $Item.Parameters.DeploymentId | Where-Object { $_.Name -eq $Username }
+            $FinalStatus = if (@($Row.Steps | Where-Object { $_.Status -eq 'failed' }).Count -gt 0) { 'failed' } else { 'succeeded' }
+            Set-CIPPAsyncDeploymentStatus -JobId $Item.Parameters.DeploymentId -Name $Username -Status $FinalStatus -Logs $StoredResults
         }
         Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Offboarding completed for $Username" -sev Info -headers $Headers
         return "Offboarding completed for $Username"
@@ -116,6 +164,9 @@ function Push-CIPPOffboardingComplete {
     } catch {
         $ErrorMsg = "Failed to complete offboarding for $Username : $($_.Exception.Message)"
         Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message $ErrorMsg -sev Error -headers $Headers -LogData (Get-CippException -Exception $_)
+        if ($Item.Parameters.DeploymentId) {
+            Set-CIPPAsyncDeploymentStatus -JobId $Item.Parameters.DeploymentId -Name $Username -Status 'failed' -Logs $ErrorMsg
+        }
         throw $ErrorMsg
     }
 }

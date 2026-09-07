@@ -31,6 +31,11 @@ function Set-CIPPDBCacheCsTenantFederationConfiguration {
             $Data = @($Federation)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTenantFederationConfiguration' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Teams Tenant Federation Configuration' -sev Debug
+        } else {
+            # The request succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTenantFederationConfiguration' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Teams Tenant Federation Configurations (none found)' -sev Debug
         }
         $Federation = $null
 

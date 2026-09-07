@@ -112,10 +112,10 @@ function Set-CIPPSharePointObjectPermission {
         throw "None of the groups ($($GroupNames -join ', ')) could be found in $TenantFilter by display name."
     }
 
-    $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-    $Scope = "$($SharePointInfo.SharePointUrl)/.default"
-    $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-    $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+    $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+    $Scope = $RestContext.Scope
+    $JsonAccept = $RestContext.Headers
+    $BaseUri = $RestContext.BaseUri
     $TargetLabel = if ($ListId) { "library $ListId" } else { 'site root' }
 
     if (-not $PSCmdlet.ShouldProcess($SiteUrl, "Grant $PermissionLevel on $TargetLabel")) { return }

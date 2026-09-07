@@ -25,7 +25,13 @@
       "type": "textField",
       "label": "Message expiration timeout (hh:mm:ss)",
       "default": "12:00:00",
-      "recommended": "12:00:00"
+      "recommended": "12:00:00",
+      "validators": {
+        "pattern": {
+          "value": "^(1\\.00:00:00|(0\\.)?(1[2-9]|2[0-3]):[0-5][0-9]:[0-5][0-9])$",
+          "message": "Must be a timespan between 12:00:00 (12 hours) and 1.00:00:00 (24 hours)"
+        }
+      }
     }
   },
   "expected": {

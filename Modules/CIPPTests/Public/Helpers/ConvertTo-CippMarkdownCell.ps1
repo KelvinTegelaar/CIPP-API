@@ -38,6 +38,8 @@ function ConvertTo-CippMarkdownCell {
         $Text = [string]$Value
         if ([string]::IsNullOrEmpty($Text)) { return '' }
 
-        return ($Text -replace '\|', '\|' -replace '\r?\n', ' ').Trim()
+        # Backslashes first: they are the escape character the frontend table parser honours,
+        # so a literal one (CONTOSO\jdoe) has to be doubled before the pipe escape adds new ones.
+        return ($Text -replace '\\', '\\' -replace '\|', '\|' -replace '\r?\n', ' ').Trim()
     }
 }

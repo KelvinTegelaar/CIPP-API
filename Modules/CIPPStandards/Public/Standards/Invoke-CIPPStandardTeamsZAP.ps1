@@ -42,10 +42,25 @@ function Invoke-CIPPStandardTeamsZAP {
     $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsZAP' -TenantFilter $Tenant -Preset Exchange
     if ($TestResult -eq $false) { return $true }
 
+    # The Teams protection policy only exists on tenants with Defender for Office 365 - Exchange
+    # Online returns 403 for Get-TeamsProtectionPolicy on any other tenant. Gate on the license
+    # (which records a 'License Missing' report row) instead of logging an error every run.
+    $MDOTestResult = Test-CIPPStandardLicense -StandardName 'TeamsZAP' -TenantFilter $Tenant -Preset DefenderForOffice365
+    if ($MDOTestResult -eq $false) { return $true }
+
     try {
         $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TeamsProtectionPolicy' -cmdParams @{ Identity = 'Teams Protection Policy' }).ZapEnabled
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
+        if ($ErrorMessage.NormalizedError -match '\b403\b') {
+            # The capability check passed but Exchange still refused the cmdlet: the plan carries the
+            # capability without Teams protection (or the tenant has not been onboarded yet). Report
+            # it as a licensing gap rather than a failure so it does not surface as an error every run.
+            $LicenseMessage = 'License Missing: Exchange Online returned 403 for Get-TeamsProtectionPolicy. Teams protection requires Defender for Office 365 on this tenant.'
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "TeamsZAP: $LicenseMessage" -sev Info
+            Set-CIPPStandardsCompareField -FieldName 'standards.TeamsZAP' -FieldValue $LicenseMessage -LicenseAvailable $false -TenantFilter $Tenant
+            return $true
+        }
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "TeamsZAP: Failed to get Teams Protection Policy. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         return
     }

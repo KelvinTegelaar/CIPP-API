@@ -98,8 +98,9 @@ function Get-InactiveUsersFromDB {
     }
 
     $InactiveUsers = foreach ($User in $Users) {
-        # Skip disabled users by default
-        if ($User.accountEnabled -eq $false) { continue }
+        # Disabled (blocked) users are kept: a dormant, already-blocked account is a cleanup
+        # candidate, and the accountEnabled field below lets the report show which inactive
+        # accounts are already blocked and need no further action.
 
         # Skip guest users
         if ($User.userType -eq 'Guest') { continue }

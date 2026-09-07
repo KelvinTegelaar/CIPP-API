@@ -52,6 +52,7 @@
     "cacheType": "SPOTenant"
   },
   "prepare": "Get-CIPPBaselineSPOVersionControlState",
+  "writeTarget": "spoTenant",
   "remediate": {
     "executor": "SPOVersionControl",
     "enableAutoTrim": "%EnableAutoTrim%",

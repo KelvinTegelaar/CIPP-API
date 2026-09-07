@@ -39,7 +39,14 @@
     "cacheType": "SelfServicePurchaseProducts"
   },
   "prepare": "Get-CIPPBaselineDisableSelfServiceLicensesState",
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "allowedToSignUpEmailBasedSubscriptions": false
+  },
   "remediate": {
-    "executor": "DisableSelfServiceLicenses"
+    "executor": "DisableSelfServiceLicenses",
+    "refreshCache": [
+      "SelfServicePurchaseProducts"
+    ]
   }
 }

@@ -8,6 +8,9 @@ function Invoke-ExecCustomData {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     $Action = $Request.Query.Action ?? $Request.Body.Action
     $CustomDataTable = Get-CippTable -TableName 'CustomData'
     $CustomDataMappingsTable = Get-CippTable -TableName 'CustomDataMappings'
@@ -63,18 +66,22 @@ function Invoke-ExecCustomData {
                 Add-CIPPAzDataTableEntity @CustomDataTable -Entity $Entity -Force
                 $SchemaExtensions = Get-CIPPSchemaExtensions | Where-Object { $_.id -eq $SchemaExtension.id }
 
+                $Result = "Schema extension '$($SchemaExtension.id)' added successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Schema extension '$($SchemaExtension.id)' added successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $Result = "Failed to add schema extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to add schema extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -109,18 +116,22 @@ function Invoke-ExecCustomData {
                 # Delete the schema extension entity
                 Remove-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaEntity
 
+                $Result = "Schema extension '$SchemaId' deleted successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Schema extension '$SchemaId' deleted successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $Result = "Failed to delete schema extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to delete schema extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -173,18 +184,22 @@ function Invoke-ExecCustomData {
                 Add-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaEntity -Force
                 try { $null = Get-CIPPSchemaExtensions } catch {}
 
+                $Result = "Property '$($NewProperty.name)' added to schema extension '$SchemaId' successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Property '$($NewProperty.name)' added to schema extension '$SchemaId' successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $Result = "Failed to add property to schema extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to add property to schema extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -223,18 +238,22 @@ function Invoke-ExecCustomData {
                 Add-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaEntity -Force
                 $null = Get-CIPPSchemaExtensions
 
+                $Result = "Schema extension '$SchemaId' status changed to '$NewStatus' successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Schema extension '$SchemaId' status changed to '$NewStatus' successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $Result = "Failed to change schema extension status: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to change schema extension status: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -295,14 +314,6 @@ function Invoke-ExecCustomData {
 
                 $Response = New-GraphPOSTRequest -Uri $Uri -Body $BodyContent -AsApp $true -NoAuthCheck $true -tenantid $env:TenantID
 
-                $Body = @{
-                    Results = @{
-                        state      = 'success'
-                        resultText = "Directory extension '$ExtensionName' added successfully."
-                        extension  = $Response
-                    }
-                }
-
                 # store the extension in the custom data table
                 $Entity = @{
                     PartitionKey = 'DirectoryExtension'
@@ -310,12 +321,24 @@ function Invoke-ExecCustomData {
                     JSON         = [string](ConvertTo-Json $Response -Compress -Depth 5)
                 }
                 Add-CIPPAzDataTableEntity @CustomDataTable -Entity $Entity -Force
+
+                $Result = "Directory extension '$ExtensionName' added successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+                $Body = @{
+                    Results = @{
+                        state      = 'success'
+                        resultText = $Result
+                        extension  = $Response
+                    }
+                }
             } catch {
+                $Result = "Failed to add directory extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to add directory extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -344,18 +367,22 @@ function Invoke-ExecCustomData {
                     Write-Warning "Failed to delete directory extension from custom data table: $($_.Exception.Message)"
                 }
 
+                $Result = "Directory extension '$ExtensionName' deleted successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Directory extension '$ExtensionName' deleted successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $Result = "Failed to delete directory extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to delete directory extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -428,18 +455,22 @@ function Invoke-ExecCustomData {
                 Add-CIPPAzDataTableEntity @CustomDataMappingsTable -Entity $Entity -Force
                 Register-CIPPExtensionScheduledTasks
 
+                $Result = 'Mapping saved successfully.'
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = 'Mapping saved successfully.'
+                        resultText = $Result
                     }
                 }
             } catch {
+                $Result = "Failed to add mapping: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to add mapping: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -461,18 +492,22 @@ function Invoke-ExecCustomData {
                 # Delete the mapping entity
                 Remove-CIPPAzDataTableEntity @CustomDataMappingsTable -Entity $MappingEntity
                 Register-CIPPExtensionScheduledTasks
+                $Result = 'Mapping deleted successfully.'
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = 'Mapping deleted successfully.'
+                        resultText = $Result
                     }
                 }
             } catch {
+                $Result = "Failed to delete mapping: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to delete mapping: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }

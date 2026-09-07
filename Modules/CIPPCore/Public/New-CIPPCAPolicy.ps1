@@ -45,11 +45,19 @@ function New-CIPPCAPolicy {
                     }
                 } elseif ($CreateGroups) {
                     Write-Warning "Creating group $_ as it does not exist in the tenant"
-                    if ($GroupTemplates.displayName -eq $_) {
+                    # A template store with duplicate display names returns every match here. Passing that
+                    # array to New-CIPPGroup makes the Graph create body's displayName an array, so the
+                    # create fails ("Unexpected token: StartArray. Path 'resourcePayload.displayName'") and
+                    # leaves an empty group id, which Graph then rejects with the opaque
+                    # "1054: Invalid group value: ." on the whole policy. Select a single template.
+                    $MatchingTemplates = @($GroupTemplates | Where-Object -Property displayName -EQ $_)
+                    if ($MatchingTemplates.Count -gt 0) {
+                        if ($MatchingTemplates.Count -gt 1) {
+                            Write-Warning "Multiple group templates found with display name '$_'. Using the first match."
+                            $null = Write-LogMessage -Headers $Headers -API $APIName -message "Multiple group templates found with display name '$_'. Using the first match; remove the duplicate group template." -Sev 'Warning'
+                        }
                         Write-Information "Creating group from template for $_"
-                        $GroupTemplate = $GroupTemplates | Where-Object -Property displayName -EQ $_
-                        $NewGroup = New-CIPPGroup -GroupObject $GroupTemplate -TenantFilter $TenantFilter -APIName $APIName
-                        $GroupIds.Add($NewGroup.GroupId)
+                        $NewGroup = New-CIPPGroup -GroupObject ($MatchingTemplates | Select-Object -First 1) -TenantFilter $TenantFilter -APIName $APIName
                     } else {
                         Write-Information "No template found, creating security group for $_"
                         $username = $_ -replace '[^a-zA-Z0-9]', ''
@@ -63,8 +71,14 @@ function New-CIPPCAPolicy {
                             securityEnabled = $true
                         }
                         $NewGroup = New-CIPPGroup -GroupObject $GroupObject -TenantFilter $TenantFilter -APIName $APIName
-                        $GroupIds.Add($NewGroup.GroupId)
                     }
+                    # Fail closed: never add an empty id. A dropped exclusion silently widens the policy
+                    # (e.g. break-glass accounts no longer excluded), and Graph rejects the empty value
+                    # anyway. Surface why the create failed instead of the opaque 1054 group error.
+                    if (-not $NewGroup.Success -or [string]::IsNullOrWhiteSpace($NewGroup.GroupId)) {
+                        throw "Failed to create group '$_' in tenant $TenantFilter$(if ($NewGroup.Error) { ": $($NewGroup.Error)" }). Resolve the group manually or remove the duplicate group template, then redeploy."
+                    }
+                    $GroupIds.Add($NewGroup.GroupId)
                 } else {
                     Write-Warning "Group $_ not found in the tenant and CreateGroups is disabled"
                     throw "Group '$_' not found in tenant $TenantFilter. Enable 'Create groups if they do not exist' or create the group manually before deploying this policy."
@@ -488,8 +502,14 @@ function New-CIPPCAPolicy {
         }
     }
     switch ($ReplacePattern) {
-        'none' {
+        { $_ -in 'none', 'leave' } {
+            # The deploy drawer sends 'leave'; treat it like 'none'.
             Write-Information 'Replacement pattern for inclusions and exclusions is none'
+            # Graph wants ids; a name-based template fails with an opaque 1054, so say why here.
+            $NamedGroups = @(@($JSONobj.conditions.users.includeGroups) + @($JSONobj.conditions.users.excludeGroups) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and -not (Test-IsGuid -String $_) })
+            if ($NamedGroups.Count -gt 0) {
+                throw "Policy '$($JSONobj.displayName)' references groups by name ($($NamedGroups -join ', ')). Deploy it with 'Replace by display name' so the names are resolved to group ids, or store object ids in the template."
+            }
             break
         }
         'AllUsers' {

@@ -82,7 +82,7 @@ function Get-CIPPBaselineDeployContactTemplatesState {
         @{ Template = 'jobTitle'; Current = "$($Existing.Title)" }
         @{ Template = 'city'; Current = "$($Existing.City)" }
         @{ Template = 'postalCode'; Current = "$($Existing.PostalCode)" }
-        @{ Template = 'country'; Current = "$($Existing.CountryOrRegion)" }
+        @{ Template = 'country'; Current = "$($Existing.CountryOrRegion)"; IsCountry = $true }
         @{ Template = 'mobilePhone'; Current = "$($Existing.MobilePhone)" }
     )
     $Differences = [System.Collections.Generic.List[string]]::new()
@@ -93,7 +93,11 @@ function Get-CIPPBaselineDeployContactTemplatesState {
             continue
         }
         if ([string]::IsNullOrWhiteSpace("$TemplateValue")) { continue }
-        $Mismatch = if ($Field.IsEmail) {
+        # country: template stores an ISO code ('US'), Exchange returns the full name
+        # ('United States'); normalise both to a code before comparing.
+        $Mismatch = if ($Field.IsCountry) {
+            [string]::IsNullOrWhiteSpace($Field.Current) -or (ConvertTo-CIPPCountryCode "$TemplateValue") -ne (ConvertTo-CIPPCountryCode $Field.Current)
+        } elseif ($Field.IsEmail) {
             [string]::IsNullOrWhiteSpace($Field.Current) -or -not "$TemplateValue".Equals($Field.Current, [System.StringComparison]::OrdinalIgnoreCase)
         } else {
             [string]::IsNullOrWhiteSpace($Field.Current) -or "$TemplateValue" -ne $Field.Current

@@ -84,6 +84,7 @@
     "AutoAdmittedUsers": {
       "type": "autoComplete",
       "label": "Who can bypass the lobby?",
+      "helperText": "Teams couples this to the dial-in bypass switch: 'Everyone' requires that switch on, 'Only organizers and co-organizers' requires it off - other pairings are rejected with error 40013.",
       "omitWhenBlank": true,
       "options": [
         {
@@ -117,6 +118,7 @@
     "AllowPSTNUsersToBypassLobby": {
       "type": "switch",
       "label": "Allow dial-in users to bypass lobby",
+      "helperText": "Must be on when 'Who can bypass the lobby?' is 'Everyone' and off when it is 'Only organizers and co-organizers' - Teams rejects any other combination.",
       "default": false,
       "recommended": false
     },
@@ -151,6 +153,32 @@
       "label": "External participants can give or request control",
       "default": false,
       "recommended": false
+    },
+    "AllowExternalNonTrustedMeetingChat": {
+      "type": "autoComplete",
+      "label": "External meeting chat",
+      "helperText": "CIS 8.5.8 recommends Off. Leave blank to keep the tenant's current value.",
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "Keep the tenant's current value", "value": "" },
+        { "label": "Off (CIS recommended)", "value": false },
+        { "label": "On", "value": true }
+      ],
+      "default": "",
+      "recommended": false
+    },
+    "AllowCloudRecording": {
+      "type": "autoComplete",
+      "label": "Meeting cloud recording",
+      "helperText": "CIS 8.5.9 recommends Off. Leave blank to keep the tenant's current value.",
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "Keep the tenant's current value", "value": "" },
+        { "label": "Off (CIS recommended)", "value": false },
+        { "label": "On", "value": true }
+      ],
+      "default": "",
+      "recommended": false
     }
   },
   "expected": {
@@ -161,7 +189,9 @@
     "MeetingChatEnabledType": "%MeetingChatEnabledType%",
     "DesignatedPresenterRoleMode": "%DesignatedPresenterRoleMode%",
     "AllowExternalParticipantGiveRequestControl": "%AllowExternalParticipantGiveRequestControl%",
-    "AllowParticipantGiveRequestControl": "%AllowParticipantGiveRequestControl%"
+    "AllowParticipantGiveRequestControl": "%AllowParticipantGiveRequestControl%",
+    "AllowExternalNonTrustedMeetingChat": "%AllowExternalNonTrustedMeetingChat%",
+    "AllowCloudRecording": "%AllowCloudRecording%"
   },
   "read": {
     "cacheType": "CsTeamsMeetingPolicy"
@@ -179,7 +209,9 @@
           "MeetingChatEnabledType": "%MeetingChatEnabledType%",
           "DesignatedPresenterRoleMode": "%DesignatedPresenterRoleMode%",
           "AllowExternalParticipantGiveRequestControl": "%AllowExternalParticipantGiveRequestControl%",
-          "AllowParticipantGiveRequestControl": "%AllowParticipantGiveRequestControl%"
+          "AllowParticipantGiveRequestControl": "%AllowParticipantGiveRequestControl%",
+          "AllowExternalNonTrustedMeetingChat": "%AllowExternalNonTrustedMeetingChat%",
+          "AllowCloudRecording": "%AllowCloudRecording%"
         }
       }
     ]

@@ -23,6 +23,11 @@ function Set-CIPPDBCacheExoRemoteDomain {
         if ($RemoteDomains) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoRemoteDomain' -Data $RemoteDomains -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($RemoteDomains.Count) Remote Domains" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoRemoteDomain' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Remote Domains (none found)' -sev Debug
         }
         $RemoteDomains = $null
 

@@ -9,7 +9,14 @@ function Invoke-CippTestCIS_2_1_4 {
         $SA = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSafeAttachmentPolicies'
 
         if (-not $SA) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_2_1_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'ExoSafeAttachmentPolicies cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Safe Attachments policy is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
+            # A Count marker means the cache was collected but the tenant has no Safe Attachments
+            # policy - that is a real failure, not a missing cache. No marker means the type was
+            # never collected, so a Cache refresh is the correct guidance.
+            if (Get-CIPPDbItem -TenantFilter $Tenant -Type 'ExoSafeAttachmentPolicies' -CountsOnly) {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_2_1_4' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'No Safe Attachments policy exists for this tenant, so Safe Attachments is not enabled.' -Risk 'High' -Name 'Safe Attachments policy is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
+            } else {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_2_1_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'ExoSafeAttachmentPolicies has not been collected for this tenant. Run a Cache refresh (Cache & Tests); if it persists, the tenant may not have Defender for Office 365.' -Risk 'High' -Name 'Safe Attachments policy is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
+            }
             return
         }
 

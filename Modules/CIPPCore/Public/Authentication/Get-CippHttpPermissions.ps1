@@ -31,20 +31,35 @@ function Get-CippHttpPermissions {
     $AllPermissionCacheTable = Get-CIPPTable -tablename 'cachehttppermissions'
     $AllPermissionsRow = Get-CIPPAzDataTableEntity @AllPermissionCacheTable -Filter "PartitionKey eq 'HttpFunctions' and RowKey eq 'HttpFunctions' and Version eq '$($Version)'"
 
-    if (-not $AllPermissionsRow.Permissions) {
-        $AllPermissions = Get-CIPPHttpFunctions -ByRole | Select-Object -ExpandProperty Permission
-        $Entity = @{
-            PartitionKey = 'HttpFunctions'
-            RowKey       = 'HttpFunctions'
-            Version      = [string]$Version
-            Permissions  = [string]($AllPermissions | ConvertTo-Json -Compress)
-        }
-        Add-CIPPAzDataTableEntity @AllPermissionCacheTable -Entity $Entity -Force
+    # A universe written by an out-of-memory worker is short or garbage and was never recomputed; validate on read and write.
+    $Cached = if ($AllPermissionsRow.Permissions) {
+        try { @($AllPermissionsRow.Permissions | ConvertFrom-Json -ErrorAction Stop) } catch { @() }
+    } else { @() }
+
+    if (Test-CippHttpPermissionUniverse -Permissions $Cached) {
+        $AllPermissions = $Cached
     } else {
-        $AllPermissions = $AllPermissionsRow.Permissions | ConvertFrom-Json
+        if ($AllPermissionsRow.Permissions) {
+            Write-Warning "The cached HTTP permission universe for version $Version is not usable ($($Cached.Count) entries); recomputing it."
+        }
+        $AllPermissions = @(Get-CIPPHttpFunctions -ByRole | Select-Object -ExpandProperty Permission)
+        if (Test-CippHttpPermissionUniverse -Permissions $AllPermissions) {
+            $Entity = @{
+                PartitionKey = 'HttpFunctions'
+                RowKey       = 'HttpFunctions'
+                Version      = [string]$Version
+                Permissions  = [string]($AllPermissions | ConvertTo-Json -Compress)
+            }
+            Add-CIPPAzDataTableEntity @AllPermissionCacheTable -Entity $Entity -Force
+        } else {
+            # Serve it uncached so the next request retries.
+            Write-Warning "HTTP permission enumeration returned $($AllPermissions.Count) entries, which is not a complete universe; not caching it."
+            return @($AllPermissions)
+        }
     }
 
     $script:CippHttpPermissions = @($AllPermissions)
     $script:CippHttpPermissionsVersion = $Version
     return $script:CippHttpPermissions
 }
+

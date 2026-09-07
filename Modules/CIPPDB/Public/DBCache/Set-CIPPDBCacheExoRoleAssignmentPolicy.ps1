@@ -23,6 +23,11 @@ function Set-CIPPDBCacheExoRoleAssignmentPolicy {
         if ($RoleAssignmentPolicies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoRoleAssignmentPolicy' -Data $RoleAssignmentPolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($RoleAssignmentPolicies.Count) role assignment policies" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoRoleAssignmentPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 role assignment policies (none found)' -sev Debug
         }
         $RoleAssignmentPolicies = $null
 

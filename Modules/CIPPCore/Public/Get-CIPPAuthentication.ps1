@@ -108,6 +108,16 @@ function Get-CIPPAuthentication {
             Write-LogMessage -message 'Could not preload or provision the SAM certificate. It will be retried by the weekly token update.' -Sev 'Warning' -API 'CIPP Authentication' -LogData (Get-CippException -Exception $_)
         }
 
+        # Mirror the CertificateAuthentication flag to an env var so the hot token path (Get-GraphToken)
+        # reads it without a table hit. The flag is the single source of truth; set when enabled,
+        # cleared when not - consumers do a plain truthiness check (same pattern as SetFromProfile).
+        try {
+            $CertFlag = Get-CIPPFeatureFlag -Id 'CertificateAuthentication'
+            $env:CertificateAuthMode = if ($CertFlag.Enabled -eq $true) { $true } else { $null }
+        } catch {
+            Write-Information "Could not resolve certificate auth mode: $($_.Exception.Message)"
+        }
+
         Write-LogMessage -message 'Reloaded authentication data from KeyVault' -Sev 'debug' -API 'CIPP Authentication'
 
         return $true

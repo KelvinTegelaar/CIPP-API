@@ -16,8 +16,7 @@ function Set-CIPPNotificationConfig {
         $logsToInclude,
         $sendtoIntegration,
         $sev,
-        [boolean]$UseStandardizedSchema,
-        $APIName = 'Set Notification Config'
+        [boolean]$UseStandardizedSchema
     )
 
     try {

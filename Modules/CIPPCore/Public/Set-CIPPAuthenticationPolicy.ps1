@@ -1,7 +1,9 @@
 function Set-CIPPAuthenticationPolicy {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        [Parameter(Mandatory = $true)]$Tenant,
+        # TenantFilter (not Tenant) so the scheduler treats this as the protected tenant scope;
+        # the alias keeps existing -Tenant callers working
+        [Parameter(Mandatory = $true)][Alias('Tenant')]$TenantFilter,
         [Parameter(Mandatory = $true)][ValidateSet('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate', 'QRCodePin')]$AuthenticationMethodId,
         [Parameter(Mandatory = $true)][bool]$Enabled, # true = enabled or false = disabled
         $MicrosoftAuthenticatorSoftwareOathEnabled,
@@ -30,11 +32,11 @@ function Set-CIPPAuthenticationPolicy {
     $State = if ($Enabled) { 'enabled' } else { 'disabled' }
     # Get current state of the called authentication method and Set state of authentication method to input state
     try {
-        $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -tenantid $Tenant -AsApp $True
+        $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -tenantid $TenantFilter -AsApp $True
         $CurrentInfo.state = $State
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Could not get CurrentInfo for $AuthenticationMethodId. Error:$($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Could not get CurrentInfo for $AuthenticationMethodId. Error:$($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         # Throw rather than return: callers treat any returned string as a successful write, so returning
         # here made a failed read look like a completed remediation in both the audit log and the API response.
         throw "Could not get CurrentInfo for $AuthenticationMethodId. Error:$($ErrorMessage.NormalizedError)"
@@ -180,7 +182,7 @@ function Set-CIPPAuthenticationPolicy {
             }
         }
         default {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive." -sev Error
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive." -sev Error
             throw "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
         }
     }
@@ -202,14 +204,14 @@ function Set-CIPPAuthenticationPolicy {
     try {
         if ($PSCmdlet.ShouldProcess($AuthenticationMethodId, "Set state to $State $OptionalLogMessage")) {
             # Convert body to JSON and send request
-            $null = New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type PATCH -Body (ConvertTo-Json -InputObject $CurrentInfo -Compress -Depth 10) -ContentType 'application/json' -AsApp $True
-            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info
+            $null = New-GraphPostRequest -tenantid $TenantFilter -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type PATCH -Body (ConvertTo-Json -InputObject $CurrentInfo -Compress -Depth 10) -ContentType 'application/json' -AsApp $True
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info
         }
         return "Set $AuthenticationMethodId state to $State $OptionalLogMessage"
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Failed to $State $AuthenticationMethodId Support: $ErrorMessage" -sev Error -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $ErrorMessage" -sev Error -LogData $ErrorMessage
         throw "Failed to $State $AuthenticationMethodId Support. Error: $($ErrorMessage.NormalizedError)"
     }
 }

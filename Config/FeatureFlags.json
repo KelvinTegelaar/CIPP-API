@@ -91,7 +91,7 @@
   {
     "Id": "Baselines",
     "Name": "Baselines",
-    "Description": "The drift-first baseline engine that replaces classic Standards and Drift. Enables the scheduled baseline run and the Baselines menu, hides the classic Standards and Drift pages, and skips the scheduled classic Standards and Drift runs - the two systems never run side by side.",
+    "Description": "This is pre-alpha do not enable in production. The drift-first baseline engine that replaces classic Standards and Drift. Enables the scheduled baseline run and the Baselines menu, hides the classic Standards and Drift pages, and skips the scheduled classic Standards and Drift runs - the two systems never run side by side.",
     "Enabled": false,
     "AllowUserToggle": true,
     "Timers": ["9f2c7b1e-4a6d-4c3f-8b9a-5e1d2f7c0a44"],
@@ -104,5 +104,16 @@
       "/tenant/manage/policies-deployed"
     ],
     "Hidden": false
+  },
+  {
+    "Id": "CertificateAuthentication",
+    "Name": "Certificate Authentication",
+    "Description": "Authenticate CIPP's SAM application with the SAM certificate instead of the client secret for every Graph and Exchange Online call (app-only and delegated). Managed from the Setup Wizard - enable it for an existing install (the client secret is kept as a rollback) or provision a secret-less install from scratch.",
+    "Enabled": false,
+    "AllowUserToggle": false,
+    "Timers": [],
+    "Endpoints": [],
+    "Pages": [],
+    "Hidden": true
   }
 ]

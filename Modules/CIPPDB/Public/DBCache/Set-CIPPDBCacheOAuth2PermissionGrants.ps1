@@ -24,6 +24,11 @@ function Set-CIPPDBCacheOAuth2PermissionGrants {
         if ($OAuth2PermissionGrants) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants' -Data $OAuth2PermissionGrants -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($OAuth2PermissionGrants.Count) OAuth2 permission grants" -sev Debug
+        } else {
+            # The request succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 OAuth2 permission grants (none found)' -sev Debug
         }
         $OAuth2PermissionGrants = $null
 

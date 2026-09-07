@@ -38,14 +38,16 @@ function Invoke-ListIntuneTemplates {
                 $JSONData = $Row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
                 $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
                 if ($null -eq $data) { throw 'RAWJson is empty or not valid JSON' }
-                $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
-                $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
-                $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
-                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $Row.RowKey -Force
-                $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $Row.Package -Force
-                $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($Row.SHA)) -Force
-                $data | Add-Member -NotePropertyName 'source' -NotePropertyValue $Row.Source -Force
-                $data | Add-Member -NotePropertyName 'reusableSettings' -NotePropertyValue $JSONData.ReusableSettings -Force
+                $data | Add-Member -NotePropertyMembers ([ordered]@{
+                        displayName      = $JSONData.Displayname
+                        description      = $JSONData.Description
+                        Type             = $JSONData.Type
+                        GUID             = $Row.RowKey
+                        package          = $Row.Package
+                        isSynced         = (![string]::IsNullOrEmpty($Row.SHA))
+                        source           = $Row.Source
+                        reusableSettings = $JSONData.ReusableSettings
+                    }) -Force
                 $data
             } catch {
                 # A row that fails to parse used to be dropped from this list entirely, so a corrupt
@@ -137,14 +139,16 @@ function Invoke-ListIntuneTemplates {
                                 try {
                                     $JSONData = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
                                     $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
-                                    $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
-                                    $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
-                                    $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
-                                    $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
-                                    $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $_.Package -Force
-                                    $data | Add-Member -NotePropertyName 'source' -NotePropertyValue $_.Source -Force
-                                    $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($_.SHA)) -Force
-                                    $data | Add-Member -NotePropertyName 'reusableSettings' -NotePropertyValue $JSONData.ReusableSettings -Force
+                                    $data | Add-Member -NotePropertyMembers ([ordered]@{
+                                            displayName      = $JSONData.Displayname
+                                            description      = $JSONData.Description
+                                            Type             = $JSONData.Type
+                                            GUID             = $_.RowKey
+                                            package          = $_.Package
+                                            source           = $_.Source
+                                            isSynced         = (![string]::IsNullOrEmpty($_.SHA))
+                                            reusableSettings = $JSONData.ReusableSettings
+                                        }) -Force
                                     $data
                                 } catch {
 

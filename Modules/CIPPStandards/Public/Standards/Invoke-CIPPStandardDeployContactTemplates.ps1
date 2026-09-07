@@ -153,7 +153,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
                         @{ Template = 'jobTitle';      Current = $ExtendedContact.Title }
                         @{ Template = 'city';          Current = $ExtendedContact.City }
                         @{ Template = 'postalCode';    Current = $ExtendedContact.PostalCode }
-                        @{ Template = 'country';       Current = $ExtendedContact.CountryOrRegion }
+                        @{ Template = 'country';       Current = $ExtendedContact.CountryOrRegion; IsCountry = $true }
                         @{ Template = 'mobilePhone';   Current = $ExtendedContact.MobilePhone }
                     )
 
@@ -172,9 +172,13 @@ function Invoke-CIPPStandardDeployContactTemplates {
                         # Only compare if template specifies a value; empty template fields are not enforced.
                         if ([string]::IsNullOrWhiteSpace($TemplateValue)) { continue }
 
+                        # country: the template stores an ISO code ('US') but Exchange returns the
+                        # full name ('United States'), so normalise both to a code before comparing.
                         # Case-insensitive compare for email; exact for everything else.
                         $IsEmail = $Field.Template -eq 'email'
-                        $Mismatch = if ($IsEmail) {
+                        $Mismatch = if ($Field.IsCountry) {
+                            [string]::IsNullOrWhiteSpace($CurrentValue) -or (ConvertTo-CIPPCountryCode $TemplateValue) -ne (ConvertTo-CIPPCountryCode $CurrentValue)
+                        } elseif ($IsEmail) {
                             [string]::IsNullOrWhiteSpace($CurrentValue) -or -not $TemplateValue.Equals($CurrentValue, [System.StringComparison]::OrdinalIgnoreCase)
                         } else {
                             [string]::IsNullOrWhiteSpace($CurrentValue) -or $TemplateValue -ne $CurrentValue

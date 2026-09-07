@@ -1,0 +1,41 @@
+{
+  "name": "ExternalComplianceTrusted",
+  "label": "Sets the Cross-tenant Access Setting to Trust External Compliant Devices",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the default state for whether device compliance performed in an external tenant is trusted for inbound B2B access.",
+  "executiveText": "Controls whether guests using compliant devices from their home organization can access this tenant without requiring device compliance to be evaluated again. Trusting external compliance reduces partner friction while preserving device-based access controls.",
+  "docsDescription": "Grades and sets inboundTrust.isCompliantDeviceAccepted on the default cross-tenant access policy. Remediation reads the live policy and rewrites the merged inboundTrust object, preserving the MFA and hybrid-join trust flags alongside it.",
+  "impactColour": "info",
+  "addedDate": "2026-08-25",
+  "powershellEquivalent": "Update-MgPolicyCrossTenantAccessPolicyDefault",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "switch",
+      "label": "Trust compliant devices from external tenants",
+      "default": false,
+      "recommended": true
+    }
+  },
+  "read": {
+    "cacheType": "CrossTenantAccessPolicy"
+  },
+  "prepare": "Get-CIPPBaselineExternalComplianceTrustedState",
+  "remediate": {
+    "executor": "ExternalComplianceTrusted",
+    "trusted": "%state%"
+  }
+}

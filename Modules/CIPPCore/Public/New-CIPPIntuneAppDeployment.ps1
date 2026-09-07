@@ -25,6 +25,11 @@ function New-CIPPIntuneAppDeployment {
     $ExcludeGroup = $AppConfig.excludeGroup
     $AppType = if ($AppConfig.type) { $AppConfig.type } else { 'Choco' }
 
+    # Older templates may hold a Graph-read body (has an id); only Office/Edge can deploy from one.
+    if ($IntuneBody.id -and $AppType -notin @('OfficeApp', 'EdgeApp')) {
+        throw "'$($AppConfig.Applicationname)' was templated from an existing Intune application with uploaded installer content. CIPP cannot deploy uploaded installer content; only script or package based applications can be templated. Rebuild this template entry as a Store, Chocolatey, Office, Edge, MSP or Custom Application."
+    }
+
     # Build IntuneBody from raw config if not pre-built (template/standard path)
     if (-not $IntuneBody -and $AppType -eq 'WinGet') {
         $PackageId = $AppConfig.packagename ?? $AppConfig.PackageName
@@ -116,13 +121,12 @@ function New-CIPPIntuneAppDeployment {
 
     $BaseUri = 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps'
 
-    # Check if app already exists (any type with matching display name). Office is a singleton per
-    # tenant and Graph names it 'Microsoft 365 Apps for Windows 10 and later' regardless of what the
-    # template calls it, so match that one on type instead or it is redeployed on every run.
-    $ApplicationList = if ($AppType -eq 'OfficeApp') {
-        New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.officeSuiteApp' }
-    } else {
-        New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.DisplayName -eq $AppConfig.Applicationname }
+    # Check if app already exists (any type with matching display name). Office and Edge are
+    # singletons per tenant whose Graph display name may differ from the template, so match on type.
+    $ApplicationList = switch ($AppType) {
+        'OfficeApp' { New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.officeSuiteApp' } }
+        'EdgeApp' { New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windowsMicrosoftEdgeApp' } }
+        default { New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.DisplayName -eq $AppConfig.Applicationname } }
     }
     if ($ApplicationList.displayname.count -ge 1) {
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "$($AppConfig.Applicationname) exists. Skipping this application" -Sev 'Info'
@@ -209,6 +213,13 @@ function New-CIPPIntuneAppDeployment {
             }
             $NewApp = New-GraphPostRequest -Uri $BaseUri -tenantid $TenantFilter -Body (ConvertTo-Json -InputObject $ObjBody -Depth 10) -Type POST
         }
+        'EdgeApp' {
+            $ObjBody = Get-CIPPEdgeAppBody -Config $AppConfig
+            if (-not $ObjBody) {
+                throw "No Edge configuration could be built from the supplied settings for '$($AppConfig.Applicationname)'."
+            }
+            $NewApp = New-GraphPostRequest -Uri $BaseUri -tenantid $TenantFilter -Body (ConvertTo-Json -InputObject $ObjBody -Depth 10) -Type POST
+        }
         default {
             throw "Unsupported app type: $AppType"
         }
@@ -224,6 +235,7 @@ function New-CIPPIntuneAppDeployment {
                 'WinGet' { 'WinGet' }
                 'WinGetNew' { 'WinGet' }
                 'OfficeApp' { $null }
+                'EdgeApp' { $null }
                 default { 'Win32Lob' }
             }
             Start-Sleep -Milliseconds 200

@@ -68,6 +68,7 @@ function New-GraphBulkRequest {
                         id  = $MoreData.id
                         url = $InitialNextUrl
                     })
+                $RetriedPages = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
                 while ($NextLinkQueue.Count -gt 0) {
                     # Drain up to 20 nextLinks into a batch
@@ -88,7 +89,36 @@ function New-GraphBulkRequest {
                         $NextReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $NextReqBody
                     }
 
+                    # A continuation page that fails (throttled, timed out, or missing from the batch
+                    # reply) used to be dropped silently: the parent item kept status 200 with only
+                    # its first page, so callers took a partial list for the complete one. The drift
+                    # engine then pruned the decisions for every policy that sat on a later page and
+                    # re-created them as New on the next run. Retry the page once, then mark the
+                    # parent so callers can tell the collection is incomplete.
+                    $AnsweredIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                     foreach ($NextResponse in $NextReturn.responses) {
+                        $null = $AnsweredIds.Add([string]$NextResponse.id)
+                        $PageStatus = $NextResponse.status -as [int]
+                        if ($PageStatus -ge 400) {
+                            $PageRequest = $NextBatchRequests | Where-Object { $_.id -eq $NextResponse.id } | Select-Object -First 1
+                            $RetryKey = "$($NextResponse.id)|$($PageRequest.url)"
+                            if ($PageRequest -and $RetriedPages.Add($RetryKey)) {
+                                $RetryAfter = [Math]::Min([Math]::Max(($NextResponse.headers.'Retry-After' -as [int]), 0), 30)
+                                if ($RetryAfter -gt 0) { Start-Sleep -Seconds $RetryAfter }
+                                $NextLinkQueue.Enqueue([PSCustomObject]@{
+                                        id  = $PageRequest.id
+                                        url = $PageRequest.url
+                                    })
+                                continue
+                            }
+                            $PageError = "continuation page returned $PageStatus$(if ($NextResponse.body.error.message) { ": $($NextResponse.body.error.message)" })"
+                            Write-Warning "Graph bulk request for '$($NextResponse.id)' ($tenantid): $PageError. The result is incomplete."
+                            $MoreData | Add-Member -NotePropertyMembers ([ordered]@{
+                                    PagingIncomplete = $true
+                                    PagingError      = $PageError
+                                }) -Force
+                            continue
+                        }
                         if ($NextResponse.body.value) {
                             $NewValues = [System.Collections.Generic.List[PSCustomObject]]$MoreData.body.value
                             foreach ($val in $NextResponse.body.value) { $NewValues.Add($val) }
@@ -102,23 +132,37 @@ function New-GraphBulkRequest {
                                 })
                         }
                     }
+                    foreach ($Unanswered in ($NextBatchRequests | Where-Object { -not $AnsweredIds.Contains([string]$_.id) })) {
+                        Write-Warning "Graph bulk request for '$($Unanswered.id)' ($tenantid): no reply for continuation page '$($Unanswered.url)'. The result is incomplete."
+                        $MoreData | Add-Member -NotePropertyMembers ([ordered]@{
+                                PagingIncomplete = $true
+                                PagingError      = 'continuation page missing from the batch reply'
+                            }) -Force
+                    }
                 }
             }
 
         } catch {
             Write-Host 'updating graph table because something failed.'
+            $ErrorRecord = $_ # $_ is the parse error inside the nested catch
             # Try to parse ErrorDetails.Message as JSON
-            if ($_.ErrorDetails.Message) {
+            $ErrorBody = [string]$ErrorRecord.ErrorDetails.Message
+            if ($ErrorBody) {
                 try {
-                    $ErrorJson = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop
+                    $ErrorJson = $ErrorBody | ConvertFrom-Json -ErrorAction Stop
                     $Message = $ErrorJson.error.message
                 } catch {
-                    $Message = $_.ErrorDetails.Message
+                    $Message = $ErrorBody
                 }
             }
 
             if ([string]::IsNullOrEmpty($Message)) {
-                $Message = $_.Exception.Message
+                $Message = $ErrorRecord.Exception.Message
+            }
+
+            # An IIS error page ('Request Too Long') is HTML, not a Graph error; keep its text only.
+            if ($Message -match '(?i)<html') {
+                $Message = ($Message -replace '(?s)<[^>]+>', ' ' -replace '\s+', ' ').Trim()
             }
 
             if ($Message -ne 'Request not applicable to target tenant.') {

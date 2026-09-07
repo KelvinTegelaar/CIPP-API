@@ -36,8 +36,13 @@ function Get-CIPPBaselineUserSubmissionsState {
         if ($Email -notmatch '@') { return @{ Current = $null } }
     }
 
+    # 'Send reported items to' only applies when an address is configured; blank or missing
+    # keeps the original posture (Microsoft as well as the reporting mailbox).
+    $Destination = "$($Item.Variables.reportDestination.value ?? $Item.Variables.reportDestination)"
+    $ReportToMicrosoft = [string]::IsNullOrWhiteSpace($Email) -or $Destination -ne 'Mailbox'
+
     if ($State -eq 'enable' -and -not [string]::IsNullOrWhiteSpace($Email)) {
-        $Expected = [PSCustomObject]@{ reportToMicrosoft = $true; customAddressCorrect = $true; ruleCorrect = $true }
+        $Expected = [PSCustomObject]@{ reportToMicrosoft = $ReportToMicrosoft; customAddressCorrect = $true; ruleCorrect = $true }
         $Current = [PSCustomObject]@{
             reportToMicrosoft    = [bool]$Policy.EnableReportToMicrosoft
             customAddressCorrect = [bool]($Policy.ReportJunkToCustomizedAddress -eq $true -and @($Policy.ReportJunkAddresses) -eq $Email -and
@@ -69,6 +74,7 @@ function Get-CIPPBaselineUserSubmissionsState {
     $Current | Add-Member -NotePropertyName 'ruleExists' -NotePropertyValue ([bool]$Rule)
     $Current | Add-Member -NotePropertyName 'ruleEnabled' -NotePropertyValue ([bool]($Rule -and "$($Rule.State)" -eq 'Enabled'))
     $Current | Add-Member -NotePropertyName 'resolvedEmail' -NotePropertyValue $Email
+    $Current | Add-Member -NotePropertyName 'reportDestination' -NotePropertyValue $Destination
 
     @{ Expected = $Expected; Current = $Current }
 }

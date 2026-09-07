@@ -75,10 +75,10 @@ function Invoke-ExecSetSharePointMember {
             $SiteUrl = $Request.Body.URL
             if (-not $SiteUrl) { throw 'No site URL was provided for this site.' }
 
-            $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-            $Scope = "$($SharePointInfo.SharePointUrl)/.default"
-            $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-            $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+            $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+            $Scope = $RestContext.Scope
+            $JsonAccept = $RestContext.Headers
+            $BaseUri = $RestContext.BaseUri
             $RoleGroup = $AssociatedGroups[[string]$Role]
             $RoleLabel = ([string]$Role).ToLower().TrimEnd('s')
             $Article = if ($RoleLabel -match '^[aeiou]') { 'an' } else { 'a' }

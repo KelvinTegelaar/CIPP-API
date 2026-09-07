@@ -221,6 +221,12 @@ function Invoke-CippWebhookProcessing {
                 if ($AffectedUser) {
                     $CIPPAlert.AffectedUser = $AffectedUser
                 }
+                # Per-alert priority rides on the record rather than a function parameter, the same
+                # way CustomSubject does above - this function has a second caller
+                # (Push-PublicWebhookProcess) that has no alert config to pass.
+                if ($Data.CIPPPsaTicketPriority) {
+                    $CIPPAlert.PsaTicketPriority = $Data.CIPPPsaTicketPriority
+                }
                 Send-CIPPAlert @CIPPAlert
             }
             'generateWebhook' {

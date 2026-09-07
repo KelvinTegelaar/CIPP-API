@@ -8,6 +8,9 @@ function Invoke-ExecStandardConvert {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     function Convert-SingleStandardItem {
         param(
             [Parameter(Mandatory)]
@@ -198,10 +201,12 @@ function Invoke-ExecStandardConvert {
     foreach ($OldStd in $StandardsToConvert) {
         $Converted = Convert-OldStandardToNewFormat $OldStd ($AllTenantsExclusions)
         $GUID = [guid]::NewGuid()
-        $Converted | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
-        $Converted | Add-Member -NotePropertyName 'createdAt' -NotePropertyValue ((Get-Date).ToUniversalTime()) -Force
-        $Converted | Add-Member -NotePropertyName 'updatedBy' -NotePropertyValue 'System' -Force
-        $Converted | Add-Member -NotePropertyName 'updatedAt' -NotePropertyValue (Get-Date).ToUniversalTime() -Force
+        $Converted | Add-Member -NotePropertyMembers ([ordered]@{
+                GUID      = $GUID
+                createdAt = ((Get-Date).ToUniversalTime())
+                updatedBy = 'System'
+                updatedAt = (Get-Date).ToUniversalTime()
+            }) -Force
         $JSON = ConvertTo-Json -Depth 100 -InputObject $Converted -Compress
 
         $Table = Get-CippTable -tablename 'templates'
@@ -229,8 +234,12 @@ function Invoke-ExecStandardConvert {
         }
     }
 
+    $Result = "Successfully converted $($StandardsToConvert.Count) legacy standard(s) to new format"
+    Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = 'Successfully converted legacy standards to new format'
         })
 }
+

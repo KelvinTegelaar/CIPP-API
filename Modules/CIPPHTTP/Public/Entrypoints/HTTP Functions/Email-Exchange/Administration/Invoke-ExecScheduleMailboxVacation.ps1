@@ -124,6 +124,7 @@ function Invoke-ExecScheduleMailboxVacation {
         Add-CIPPScheduledTask -Task $RemoveTaskBody -hidden $false
 
         $Result = "Successfully scheduled mailbox vacation mode for $DelegateDisplay -> $OwnerDisplay."
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

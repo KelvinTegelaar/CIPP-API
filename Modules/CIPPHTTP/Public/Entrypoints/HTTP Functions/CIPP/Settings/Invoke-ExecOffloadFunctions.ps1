@@ -9,6 +9,9 @@ function Invoke-ExecOffloadFunctions {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     $Table = Get-CippTable -tablename 'Config'
 
     if ($Request.Query.Action -eq 'ListCurrent') {
@@ -16,6 +19,9 @@ function Invoke-ExecOffloadFunctions {
         $VersionTable = Get-CippTable -tablename 'Version'
         $Version = Get-CIPPAzDataTableEntity @VersionTable -Filter "RowKey ne 'Version'"
         $MainVersion = $Version | Where-Object { $_.RowKey -eq $env:WEBSITE_SITE_NAME }
+        # The main app's row is keyed by WEBSITE_SITE_NAME, which the container runtime does not
+        # set, so fall back to the running build rather than comparing against an empty string.
+        $MainVersionString = if ($MainVersion.Version) { $MainVersion.Version } elseif ($env:APP_VERSION) { $env:APP_VERSION } else { $null }
         $OffloadVersions = $Version | Where-Object { Test-CippOffloadFunctionApp -SiteName $_.RowKey }
 
         $Alerts = [System.Collections.Generic.List[string]]::new()
@@ -29,9 +35,12 @@ function Invoke-ExecOffloadFunctions {
 
         foreach ($Offload in $OffloadVersions) {
             $FunctionName = $Offload.RowKey
-            if ([semver]$Offload.Version -ne [semver]$MainVersion.Version) {
+            if (-not $MainVersionString) {
                 $CanEnable = $false
-                $Alerts.Add("The version of $FunctionName ($($Offload.Version)) does not match the current version of $($MainVersion.Version).")
+                $Alerts.Add("The version of $FunctionName ($($Offload.Version)) could not be checked because the current version is unknown.")
+            } elseif ([semver]$Offload.Version -ne [semver]$MainVersionString) {
+                $CanEnable = $false
+                $Alerts.Add("The version of $FunctionName ($($Offload.Version)) does not match the current version of $MainVersionString.")
             }
         }
 
@@ -75,9 +84,11 @@ function Invoke-ExecOffloadFunctions {
         } else {
             $Results = 'Disabled Offload Functions'
         }
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results -Sev 'Info'
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @{ results = $Results }
             })
     }
 }
+

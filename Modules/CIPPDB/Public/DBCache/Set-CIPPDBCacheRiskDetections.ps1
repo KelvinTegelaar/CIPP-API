@@ -26,6 +26,9 @@ function Set-CIPPDBCacheRiskDetections {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskDetections' -Data $RiskDetections -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($RiskDetections.Count) risk detections successfully" -sev Debug
         } else {
+            # The request succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskDetections' -Data @() -AddCount -ClearOnEmpty
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No risk detections found or Identity Protection not available' -sev Debug
         }
 

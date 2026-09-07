@@ -71,9 +71,11 @@ function Get-CIPPIntuneApplicationReport {
             }
         }
 
-        $App | Add-Member -NotePropertyName 'AppAssignment' -NotePropertyValue ($AppAssignment -join ', ') -Force
-        $App | Add-Member -NotePropertyName 'AppExclude' -NotePropertyValue ($AppExclude -join ', ') -Force
-        $App | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+        $App | Add-Member -NotePropertyMembers ([ordered]@{
+                AppAssignment  = ($AppAssignment -join ', ')
+                AppExclude     = ($AppExclude -join ', ')
+                CacheTimestamp = $CacheTimestamp
+            }) -Force
         $Results.Add($App)
     }
 

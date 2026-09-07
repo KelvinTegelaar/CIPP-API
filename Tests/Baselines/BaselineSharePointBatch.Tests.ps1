@@ -15,8 +15,9 @@ BeforeAll {
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
     function New-GraphBulkRequest { param($tenantid, $Requests) }
     function Get-CIPPSPOTenant { param($TenantFilter) }
-    function Set-CIPPSPOTenant { [CmdletBinding()] param([Parameter(ValueFromPipeline = $true)]$InputObject, $Properties, $MethodName, $MethodParameters) process { } }
+    function Set-CIPPSPOTenant { [CmdletBinding()] param([Parameter(ValueFromPipeline = $true)]$InputObject, $Properties, $MethodName, $MethodParameters, [switch]$UseCertificate) process { } }
     function Set-CIPPSPOSite { param($TenantFilter, $SiteUrl, $Properties) }
+    function Set-CIPPSPOSiteBulk { [CmdletBinding()] param($TenantFilter, $Sites, $MaxConcurrency, $MaxRetries, [switch]$UseCertificate) }
     function Get-CIPPTextReplacement { param($TenantFilter, $Text) $Text }
     function Get-NormalizedError { param($Message) "$Message" }
 
@@ -160,10 +161,18 @@ Describe 'Get-CIPPBaselineSPOVersionControlState' {
         Mock Get-CIPPSPOTenant { [PSCustomObject]@{ _ObjectIdentity_ = 'fresh'; TenantFilter = $script:Tenant } }
         Mock Set-CIPPSPOTenant { }
         Mock New-GraphGetRequest { @([PSCustomObject]@{ webUrl = 'https://c.sharepoint.com/sites/bad' }, [PSCustomObject]@{ webUrl = 'https://c.sharepoint.com/sites/good' }) }
-        Mock Set-CIPPSPOSite { if ($SiteUrl -like '*bad') { throw 'site locked' } }
-        Invoke-CIPPBaselineSPOVersionControl -Remediate ([PSCustomObject]@{ enableAutoTrim = $true; applyToExistingSites = $true }) -TenantFilter $script:Tenant -Current $null
-        Should -Invoke Set-CIPPSPOSite -Times 2 -Exactly
-        Should -Invoke Set-CIPPSPOSite -Times 1 -Exactly -ParameterFilter { $SiteUrl -like '*good' -and $Properties.InheritVersionPolicyFromTenant -eq $true }
+        # The fan-out is now one concurrent Set-CIPPSPOSiteBulk call; a per-site failure comes back
+        # as Success=$false in its result rather than a thrown exception, and must not abort the run.
+        Mock Set-CIPPSPOSiteBulk {
+            @(foreach ($Site in $Sites) {
+                    [PSCustomObject]@{ SiteUrl = $Site.SiteUrl; Success = ($Site.SiteUrl -notlike '*bad'); Error = if ($Site.SiteUrl -like '*bad') { 'site locked' } else { $null } }
+                })
+        }
+        { Invoke-CIPPBaselineSPOVersionControl -Remediate ([PSCustomObject]@{ enableAutoTrim = $true; applyToExistingSites = $true }) -TenantFilter $script:Tenant -Current $null } | Should -Not -Throw
+        Should -Invoke Set-CIPPSPOSiteBulk -Times 1 -Exactly
+        Should -Invoke Set-CIPPSPOSiteBulk -Times 1 -Exactly -ParameterFilter {
+            @($Sites).Count -eq 2 -and @($Sites | Where-Object { $_.SiteUrl -like '*good' -and $_.Properties.InheritVersionPolicyFromTenant -eq $true }).Count -eq 1
+        }
     }
 }
 

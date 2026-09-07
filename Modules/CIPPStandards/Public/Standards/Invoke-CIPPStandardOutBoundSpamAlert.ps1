@@ -16,6 +16,8 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
             "CIS M365 5.0 (2.1.6)"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.OutBoundSpamAlert.OutboundSpamContact","label":"Outbound spam contact"}
+            {"type":"switch","name":"standards.OutBoundSpamAlert.BccSuspiciousOutboundMail","label":"BCC suspicious outbound mail to a mailbox"}
+            {"type":"textField","name":"standards.OutBoundSpamAlert.BccSuspiciousOutboundContact","label":"BCC recipient for suspicious outbound mail"}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -51,28 +53,58 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
         return
     }
 
+    $Contacts = $Settings.OutboundSpamContact
+    # BccSuspiciousOutboundMail is opt-in: only graded/remediated when the operator enables the
+    # toggle. CIS 2.1.6 requires both the flag AND a recipient, so a compliant state needs the
+    # additional recipients too when a BCC contact is supplied.
+    $ManageBcc = $Settings.BccSuspiciousOutboundMail -eq $true
+    $BccContacts = $Settings.BccSuspiciousOutboundContact
+
+    $CurrentNotifyRecipients = @($CurrentInfo.NotifyOutboundSpamRecipients) -join ', '
+    $NotifyIsCorrect = ($CurrentInfo.NotifyOutboundSpam -eq $true) -and ($CurrentNotifyRecipients -eq "$Contacts")
+
+    $CurrentBccRecipients = @($CurrentInfo.BccSuspiciousOutboundAdditionalRecipients) -join ', '
+    if (-not $ManageBcc) {
+        $BccIsCorrect = $true
+    } elseif ([string]::IsNullOrWhiteSpace($BccContacts)) {
+        $BccIsCorrect = $CurrentInfo.BccSuspiciousOutboundMail -eq $true
+    } else {
+        $BccIsCorrect = ($CurrentInfo.BccSuspiciousOutboundMail -eq $true) -and ($CurrentBccRecipients -eq "$BccContacts")
+    }
+    $StateIsCorrect = $NotifyIsCorrect -and $BccIsCorrect
+
     if ($Settings.remediate -eq $true) {
 
-        if ($CurrentInfo.NotifyOutboundSpam -ne $true -or $CurrentInfo.NotifyOutboundSpamRecipients -ne $settings.OutboundSpamContact) {
-            $Contacts = $settings.OutboundSpamContact
+        if ($StateIsCorrect -eq $true) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Outbound spam filter alert is already set to $($CurrentInfo.NotifyOutboundSpamRecipients)" -sev Info
+        } else {
+            $cmdParams = @{
+                Identity                     = 'Default'
+                NotifyOutboundSpam           = $true
+                NotifyOutboundSpamRecipients = $Contacts
+            }
+            if ($ManageBcc) {
+                $cmdParams.BccSuspiciousOutboundMail = $true
+                if (-not [string]::IsNullOrWhiteSpace($BccContacts)) {
+                    $cmdParams.BccSuspiciousOutboundAdditionalRecipients = $BccContacts
+                }
+            }
             try {
-                New-ExoRequest -tenantid $tenant -cmdlet 'Set-HostedOutboundSpamFilterPolicy' -cmdParams @{ Identity = 'Default'; NotifyOutboundSpam = $true; NotifyOutboundSpamRecipients = $Contacts } -useSystemMailbox $true
+                New-ExoRequest -tenantid $tenant -cmdlet 'Set-HostedOutboundSpamFilterPolicy' -cmdParams $cmdParams -useSystemMailbox $true
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Set outbound spam filter alert to $($Contacts)" -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not set outbound spam contact to $($Contacts). $ErrorMessage" -sev Error
             }
-        } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Outbound spam filter alert is already set to $($CurrentInfo.NotifyOutboundSpamRecipients)" -sev Info
         }
     }
 
     if ($Settings.alert -eq $true) {
 
-        if ($CurrentInfo.NotifyOutboundSpam -eq $true) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Outbound spam filter alert is set to $($CurrentInfo.NotifyOutboundSpamRecipients)" -sev Info
         } else {
-            $Object = $CurrentInfo | Select-Object -Property NotifyOutboundSpamRecipients, NotifyOutboundSpam
+            $Object = $CurrentInfo | Select-Object -Property NotifyOutboundSpam, NotifyOutboundSpamRecipients, BccSuspiciousOutboundMail, BccSuspiciousOutboundAdditionalRecipients
             Write-StandardsAlert -message 'Outbound spam filter alert is not set' -object $Object -tenant $tenant -standardName 'OutBoundSpamAlert' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Outbound spam filter alert is not set' -sev Info
         }
@@ -82,11 +114,17 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
         Add-CIPPBPAField -FieldName 'OutboundSpamAlert' -FieldValue $CurrentInfo.NotifyOutboundSpam -StoreAs bool -Tenant $tenant
         $CurrentValue = @{
             NotifyOutboundSpam           = $CurrentInfo.NotifyOutboundSpam
-            NotifyOutboundSpamRecipients = ($CurrentInfo.NotifyOutboundSpamRecipients -join ', ')
+            NotifyOutboundSpamRecipients = $CurrentNotifyRecipients
         }
         $ExpectedValue = @{
             NotifyOutboundSpam           = $true
-            NotifyOutboundSpamRecipients = $settings.OutboundSpamContact
+            NotifyOutboundSpamRecipients = $Contacts
+        }
+        if ($ManageBcc) {
+            $CurrentValue.BccSuspiciousOutboundMail = $CurrentInfo.BccSuspiciousOutboundMail
+            $CurrentValue.BccSuspiciousOutboundAdditionalRecipients = $CurrentBccRecipients
+            $ExpectedValue.BccSuspiciousOutboundMail = $true
+            $ExpectedValue.BccSuspiciousOutboundAdditionalRecipients = $BccContacts
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.OutBoundSpamAlert' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }

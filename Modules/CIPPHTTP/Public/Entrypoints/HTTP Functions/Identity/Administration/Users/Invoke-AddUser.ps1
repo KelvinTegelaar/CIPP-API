@@ -39,6 +39,7 @@ function Invoke-AddUser {
                 Parameters    = [pscustomobject]@{ UserObj = $UserObj }
                 ScheduledTime = $UserObj.Scheduled.date
                 Reference     = $UserObj.reference ?? $null
+                PsaTicketId   = $UserObj.PsaTicketId ?? $null
                 PostExecution = @{
                     Webhook = [bool]$Request.Body.PostExecution.Webhook
                     Email   = [bool]$Request.Body.PostExecution.Email

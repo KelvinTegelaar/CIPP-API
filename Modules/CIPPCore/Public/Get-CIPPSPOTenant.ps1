@@ -7,8 +7,16 @@ function Get-CIPPSPOTenant {
         # Only meaningful alongside SharepointPrefix. Sovereign clouds are not on sharepoint.com
         # (see Get-SharePointAdminLink), so a prefix on its own cannot build the admin URL.
         [string]$SharepointDomain = 'sharepoint.com',
-        [switch]$SkipCache
+        [switch]$SkipCache,
+        # SharePoint app-only auth requires a certificate (secret app-only is rejected by SPO with
+        # 'Unsupported app only token'). When set, authenticate app-only with the SAM certificate
+        # instead of the default delegated (refresh-token) context.
+        [switch]$UseCertificate
     )
+
+    # Threaded onto every SPO admin call below; empty = unchanged delegated behaviour.
+    $AuthSplat = @{}
+    if ($UseCertificate) { $AuthSplat['AsApp'] = $true; $AuthSplat['UseCertificate'] = $true }
 
     if (!$SharepointPrefix) {
         # get sharepoint admin site
@@ -47,7 +55,7 @@ function Get-CIPPSPOTenant {
 
     # $AdminUrl, not $SharePointInfo.AdminUrl - the latter is empty when a prefix was supplied.
     try {
-        $Results = New-GraphPostRequest -scope "$($AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
+        $Results = New-GraphPostRequest -scope "$($AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders @AuthSplat
     } catch {
         # The admin endpoint answers a bare 401 when the CIPP service principal holds no SharePoint
         # app-only consent in the tenant - the token is issued fine, SharePoint just refuses it. That

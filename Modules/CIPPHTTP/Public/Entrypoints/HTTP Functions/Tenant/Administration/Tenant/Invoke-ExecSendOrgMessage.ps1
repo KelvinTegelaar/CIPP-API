@@ -7,12 +7,15 @@ Function Invoke-ExecSendOrgMessage {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     $Device = $request.query.ID
+    $MessageType = $request.Query.type
     try {
 
-        $type = switch ($request.Query.type) {
+        $type = switch ($MessageType) {
             'taskbar' {
                 '844ec9d0-dd31-459c-a1e7-21fb1b39d5da'
                 $placementDetails = @(@{
@@ -99,11 +102,15 @@ Function Invoke-ExecSendOrgMessage {
         Write-Host $tmpbody
 
         $GraphRequest = New-GraphPOSTRequest -noauthcheck $true -type 'POST' -uri 'https://graph.microsoft.com/beta/deviceManagement/organizationalMessageDetails' -tenantid $tenantfilter -body $tmpbody
+        $Result = "Successfully sent organizational message of type '$MessageType'"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to send organizational message of type '$MessageType': $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
-        $GraphRequest = $ErrorMessage
+        $GraphRequest = $ErrorMessage.NormalizedError
     }
     return [HttpResponseContext]@{
             StatusCode = $StatusCode

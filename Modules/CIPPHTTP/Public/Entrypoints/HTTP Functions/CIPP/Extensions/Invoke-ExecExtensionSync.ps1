@@ -55,6 +55,9 @@ Function Invoke-ExecExtensionSync {
                         #Write-Host ($InputObject | ConvertTo-Json)
                         $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
 
+                        $SyncTenantFilter = if ($Request.Query.TenantFilter) { $Request.Query.TenantFilter } else { $Tenant.RowKey }
+                        Write-LogMessage -API 'NinjaOneSync' -tenant $SyncTenantFilter -message "On-demand NinjaOne Synchronization queued for $($Tenant.IntegrationName)" -Sev 'Info' -Headers $Request.Headers
+
                         $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.IntegrationName)" }
                     } else {
                         $Results = [pscustomobject]@{'Results' = 'Tenant was not found.' }

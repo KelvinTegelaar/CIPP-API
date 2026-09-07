@@ -57,6 +57,10 @@
   "read": {
     "cacheType": "AuthorizationPolicy"
   },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "allowInvitesFrom": "%allowInvitesFrom%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

@@ -88,12 +88,12 @@ function Invoke-ExecEditTemplate {
                 SHA          = ''
             }
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -OperationType 'UpsertMerge'
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Edited template $($Request.Body.name) with GUID $GUID" -Sev 'Debug'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Edited template $($Request.Body.name) with GUID $GUID" -Sev 'Info'
         }
         $body = [pscustomobject]@{ 'Results' = 'Successfully saved the template' }
 
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to edit template: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Failed to edit template: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Editing template failed: $($_.Exception.Message)" }
     }
 

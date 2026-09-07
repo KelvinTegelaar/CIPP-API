@@ -21,6 +21,13 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
 
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Azure AD Premium license, skipping CA' -sev Debug
+            # A license skip is still a completed collection: record authoritative empty sets for
+            # the CA types this collector writes so collect-on-miss does not re-run it forever.
+            # SecurityDefaults is deliberately NOT emptied here - it applies exactly to tenants
+            # without Entra Premium and its ungated collector keeps that cache populated.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'NamedLocations' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationStrengths' -Data @() -AddCount -ClearOnEmpty
             return
         }
 

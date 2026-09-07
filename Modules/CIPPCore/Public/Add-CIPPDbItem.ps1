@@ -130,7 +130,11 @@ function Add-CIPPDbItem {
                 $Filter += " and Timestamp lt datetime'{0}'" -f $RunStartUtc.UtcDateTime.ToString('yyyy-MM-ddTHH:mm:ss.fffffffZ')
             }
 
-            $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag, OriginalEntityId, RunId
+            # Project all row-level split markers (OriginalEntityId, PartIndex, PartCount) so split
+            # entities reassemble; a subset makes the module drop them. Reassembly is what keeps this
+            # sound - each logical row carries its RunId. Raw rows (no markers) would be wrong: part
+            # rows lack RunId and would look like foreign-run orphans.
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag, OriginalEntityId, RunId, PartIndex, PartCount
             if ($Existing) {
                 $Orphans = foreach ($Row in @($Existing)) {
                     if ($Row.RowKey -eq "$Type-Count") { continue }

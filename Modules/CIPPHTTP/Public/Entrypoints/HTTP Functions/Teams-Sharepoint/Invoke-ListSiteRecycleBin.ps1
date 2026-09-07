@@ -20,10 +20,10 @@ function Invoke-ListSiteRecycleBin {
     try {
         if (-not $SiteUrl) { throw 'SiteUrl is required.' }
 
-        $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-        $Scope = "$($SharePointInfo.SharePointUrl)/.default"
-        $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-        $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+        $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+        $Scope = $RestContext.Scope
+        $JsonAccept = $RestContext.Headers
+        $BaseUri = $RestContext.BaseUri
 
         $Items = New-GraphGetRequest -uri "$BaseUri/site/RecycleBin?`$top=500&`$orderby=DeletedDate desc" -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
 

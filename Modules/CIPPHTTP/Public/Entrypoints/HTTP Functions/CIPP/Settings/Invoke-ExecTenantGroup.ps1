@@ -144,6 +144,7 @@ function Invoke-ExecTenantGroup {
                     })
             }
 
+            Write-LogMessage -API 'TenantGroups' -tenant 'Global' -headers $Request.Headers -message "Group '$groupName' saved successfully" -Sev 'Info'
             $Body = @{ Results = $Results }
         }
         'Delete' {
@@ -151,7 +152,9 @@ function Invoke-ExecTenantGroup {
             $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$groupId'"
             if ($GroupEntity) {
                 Remove-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
-                $Body = @{ Results = "Group '$($GroupEntity.Name)' deleted successfully" }
+                $Result = "Group '$($GroupEntity.Name)' deleted successfully"
+                Write-LogMessage -API 'TenantGroups' -tenant 'Global' -headers $Request.Headers -message $Result -Sev 'Info'
+                $Body = @{ Results = $Result }
             } else {
                 $Body = @{ Results = "Group '$groupId' not found" }
             }

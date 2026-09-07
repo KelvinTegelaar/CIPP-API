@@ -91,6 +91,24 @@ Describe 'Get-CIPPBaselineAuthenticationMethodsState' {
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
     }
 
+    It "the 'notConfigured' state skips the method exactly like an absent variable" {
+        # The Enabled switches became three-state autoCompletes; Not Configured must never
+        # grade or write. SMS is enabled in the tenant, so treating it as $false would drift.
+        Mock New-CIPPDbRequest { @($script:AuthPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ MicrosoftAuthenticatorEnabled = $true; SMSEnabled = 'notConfigured' } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.methodsOutOfPolicy).Count | Should -Be 0
+        @($Prepared.Current.remediationSets).Count | Should -Be 0
+    }
+
+    It 'accepts an option wrapper the pipeline did not unwrap' {
+        Mock New-CIPPDbRequest { @($script:AuthPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ SMSEnabled = [PSCustomObject]@{ label = 'Disabled'; value = $false } } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.methodsOutOfPolicy | Should -Match 'SMS'
+        $Prepared.Current.remediationSets[0].Params.Enabled | Should -BeFalse
+    }
+
     It 'a drifted method contributes named drifts AND a remediation parameter set' {
         Mock New-CIPPDbRequest { @($script:AuthPolicy | ConvertTo-Cached) }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ SMSEnabled = $false } }
@@ -179,6 +197,30 @@ Describe 'Get-CIPPBaselineFIDO2PasskeyProfilesState' {
         Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
             $type -eq 'PATCH' -and $AsApp -eq $true -and $body -match 'p-other' -and $body -match 'guid-1'
         }
+    }
+
+    It 'expects enforcement whenever AAGUIDs are supplied, even with the enforce switch off' {
+        # HubSpot 47469698699: Graph only retains a profile's AAGUID list while isEnforced = $true,
+        # so the expected state must enforce when AAGUIDs are present or the executor's write (which
+        # also enforces) would perpetually read back as drift.
+        Mock New-CIPPDbRequest { @($script:Fido2 | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'registrationOnly'; EnforceKeyRestrictions = $false; EnforcementType = 'allow'; AAGUIDs = 'de1e552d-db1d-4423-a619-566b625cdc84' } }
+        $Prepared = Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.keyRestrictionsEnforced | Should -BeTrue
+        @($Prepared.Expected.aaGuids) | Should -Be @('de1e552d-db1d-4423-a619-566b625cdc84')
+    }
+
+    It 'enforces key restrictions in the PATCH when AAGUIDs are supplied without the enforce switch' {
+        Mock New-GraphPostRequest { $script:capturedBody = $body }
+        $Current = [PSCustomObject]@{
+            defaultProfileId = 'p-default'
+            allProfiles      = @($script:Fido2.passkeyProfiles | ConvertTo-Cached)
+        }
+        Invoke-CIPPBaselineFIDO2PasskeyProfiles -Remediate ([PSCustomObject]@{ passkeyTypes = 'deviceBound'; attestationEnforcement = 'registrationOnly'; enforceKeyRestrictions = $false; enforcementType = 'allow'; aaGuids = 'de1e552d-db1d-4423-a619-566b625cdc84' }) -TenantFilter $script:Tenant -Current $Current
+        $Body = $script:capturedBody | ConvertFrom-Json
+        $Default = @($Body.passkeyProfiles) | Where-Object { $_.id -eq 'p-default' }
+        $Default.keyRestrictions.isEnforced | Should -BeTrue
+        @($Default.keyRestrictions.aaGuids) | Should -Be @('de1e552d-db1d-4423-a619-566b625cdc84')
     }
 }
 

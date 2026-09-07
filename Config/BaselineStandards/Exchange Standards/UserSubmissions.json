@@ -4,9 +4,9 @@
   "cat": "Exchange Standards",
   "tag": [],
   "impact": "Medium Impact",
-  "helpText": "Enables or disables the built-in Report button in Outlook, optionally routing reported messages to a custom mailbox as well as Microsoft.",
+  "helpText": "Enables or disables the built-in Report button in Outlook, optionally routing reported messages to a custom mailbox as well as, or instead of, Microsoft.",
   "executiveText": "Governs how employees report suspicious email: enabling the built-in report button routes phishing reports to Microsoft and optionally to the security team, turning users into a detection layer.",
-  "docsDescription": "Grades the report submission policy and rule against the chosen posture: enabled (reports to Microsoft), enabled with a custom address (all three report types route to it and the rule is enabled), or disabled. The configured address supports tenant %variable% replacement. Remediation creates or updates the default policy and rule, removing the rule when reporting is turned off.",
+  "docsDescription": "Grades the report submission policy and rule against the chosen posture: enabled (reports to Microsoft), enabled with a custom address (all three report types route to it and the rule is enabled), or disabled. When a custom address is set, the 'Send reported items to' setting controls whether reports also go to Microsoft or to the reporting mailbox only (for third-party phishing report services). The configured address supports tenant %variable% replacement. Remediation creates or updates the default policy and rule, removing the rule when reporting is turned off.",
   "impactColour": "warning",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "New-ReportSubmissionPolicy or Set-ReportSubmissionPolicy",
@@ -46,6 +46,23 @@
       "omitWhenBlank": true,
       "type": "textField",
       "label": "Destination email address (optional)"
+    },
+    "reportDestination": {
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "required": false,
+      "creatable": false,
+      "options": [
+        {
+          "label": "Microsoft and my reporting mailbox",
+          "value": "Both"
+        },
+        {
+          "label": "My reporting mailbox only",
+          "value": "Mailbox"
+        }
+      ],
+      "label": "Send reported items to (when a destination email address is set)"
     }
   },
   "read": {

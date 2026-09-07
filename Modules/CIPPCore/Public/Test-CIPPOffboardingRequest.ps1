@@ -67,7 +67,7 @@ function Test-CIPPOffboardingRequest {
     # Keep this list in sync with the conditions in Invoke-CIPPOffboardingJob.
     $BooleanActions = @(
         'ConvertToShared', 'HideFromGAL', 'removeCalendarInvites', 'removePermissions', 'removeCalendarPermissions',
-        'RemoveRules', 'RemoveMobile', 'RemoveGroups', 'RemoveLicenses', 'RevokeSessions', 'DisableSignIn',
+        'RemoveRules', 'RemoveMobile', 'WipeMobile', 'RemoveGroups', 'RemoveLicenses', 'RevokeSessions', 'DisableSignIn',
         'ClearImmutableId', 'ResetPass', 'RemoveMFADevices', 'RemoveTeamsPhoneDID', 'DeleteUser',
         'DisableOneDriveSharing', 'disableForwarding'
     )

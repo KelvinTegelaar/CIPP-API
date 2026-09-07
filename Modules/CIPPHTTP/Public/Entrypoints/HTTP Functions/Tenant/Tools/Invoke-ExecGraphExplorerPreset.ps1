@@ -108,6 +108,15 @@ function Invoke-ExecGraphExplorerPreset {
         $Message = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::BadRequest
     }
+
+    if ($Action -in @('Save', 'Delete', 'Copy')) {
+        if ($Success) {
+            Write-LogMessage -headers $Headers -API ($Request.Params.CIPPEndpoint) -tenant 'Global' -message $Message -Sev 'Info'
+        } else {
+            Write-LogMessage -headers $Headers -API ($Request.Params.CIPPEndpoint) -tenant 'Global' -message $Message -Sev 'Error'
+        }
+    }
+
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{

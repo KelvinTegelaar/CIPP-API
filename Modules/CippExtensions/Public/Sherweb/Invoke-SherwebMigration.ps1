@@ -13,6 +13,11 @@ function Invoke-SherwebMigration {
         return
     }
 
+    if ($Config.AutoMigrations -ne $true) {
+        Write-Information "Sherweb automated migration is disabled, skipping migration check for $TenantFilter"
+        return
+    }
+
     # Get licenses within the transfer window (renewing within 7 days)
     $Licenses = Get-CIPPLicenseOverview -TenantFilter $TenantFilter | Where-Object {
         $null -ne $_.TermInfo -and ($_.TermInfo | Where-Object { $_.DaysUntilRenew -le 7 -and $_.DaysUntilRenew -ge 0 })
@@ -43,7 +48,14 @@ function Invoke-SherwebMigration {
 
     if (-not $LicencesToMigrate) { return }
 
-    switch -wildcard ($Config.migrationMethods) {
+    # migrationMethods and migrateToLicense are autoComplete fields, stored as { label, value }
+    # objects (older configs may hold a bare string). Match on the value only: wildcard-matching
+    # the whole object stringifies the label too, and every method label contains 'cancellation
+    # window', so notify-only and buy-and-notify would both wrongly trigger the cancel branch.
+    $MigrationMethod = if ($null -ne $Config.migrationMethods.value) { $Config.migrationMethods.value } else { $Config.migrationMethods }
+    $MigrateToLicense = if ($null -ne $Config.migrateToLicense.value) { $Config.migrateToLicense.value } else { $Config.migrateToLicense }
+
+    switch -wildcard ($MigrationMethod) {
         '*notify*' {
             $Subject = "Sherweb Migration: $($TenantFilter) - $($LicencesToMigrate.Count) licenses to migrate"
             $HTMLContent = New-CIPPAlertTemplate -Data $LicencesToMigrate -Format 'html' -InputObject 'sherwebmig'
@@ -55,7 +67,7 @@ function Invoke-SherwebMigration {
         '*buy*' {
             try {
                 foreach ($MigLicense in $LicencesToMigrate) {
-                    $PotentialLicense = Get-SherwebCatalog -TenantFilter $TenantFilter | Where-Object { $_.microsoftSkuId -eq $MigLicense.SkuId -and $_.sku -like "*$($Config.migrateToLicense)" } | Select-Object -First 1
+                    $PotentialLicense = Get-SherwebCatalog -TenantFilter $TenantFilter | Where-Object { $_.microsoftSkuId -eq $MigLicense.SkuId -and $_.sku -like "*$MigrateToLicense" } | Select-Object -First 1
                     if (-not $PotentialLicense) {
                         throw "Cannot buy new license: no matching license found in catalog for SKU $($MigLicense.SkuId)"
                     }

@@ -45,6 +45,10 @@
       }
     ]
   },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "x509Certificate.state": "%state%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

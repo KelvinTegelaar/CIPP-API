@@ -16,7 +16,7 @@ function Invoke-CIPPStandardIntuneAppTemplateDeploy {
         EXECUTIVETEXT
             Automatically deploys approved Intune applications across all managed tenants, ensuring consistent software availability and reducing manual deployment overhead. Supports WinGet, Office, Chocolatey, Win32, and MSP application types.
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":true,"creatable":false,"label":"Select Application Templates","name":"standards.IntuneAppTemplateDeploy.templateIds","api":{"url":"/api/ListAppTemplates","labelField":"Displayname","valueField":"GUID","queryKey":"StdIntuneAppTemplateList"}}
+            {"type":"autoComplete","multiple":true,"creatable":false,"label":"Select Application Templates","name":"standards.IntuneAppTemplateDeploy.templateIds","api":{"url":"/api/ListAppTemplates","labelField":"displayName","valueField":"GUID","queryKey":"StdIntuneAppTemplateList","templateView":{"title":"Application Template"}}}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -52,9 +52,10 @@ function Invoke-CIPPStandardIntuneAppTemplateDeploy {
     $Table = Get-CIPPTable -TableName 'templates'
     $MissingApps = [System.Collections.Generic.List[PSCustomObject]]::new()
     $CurrentAppNames = @($CurrentApps.displayName)
-    # Office is a singleton per tenant that Graph always names 'Microsoft 365 Apps for Windows 10
-    # and later', which never matches the name the template stores, so track it by type instead.
+    # Office and Edge are singletons per tenant whose Graph display name may differ from the
+    # template, so track them by type instead.
     $OfficeDeployed = @($CurrentApps | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.officeSuiteApp' }).Count -gt 0
+    $EdgeDeployed = @($CurrentApps | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windowsMicrosoftEdgeApp' }).Count -gt 0
 
     foreach ($TemplateId in $TemplateIds) {
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppTemplate' and RowKey eq '$TemplateId'"
@@ -75,7 +76,11 @@ function Invoke-CIPPStandardIntuneAppTemplateDeploy {
             $AppType = [string]$AppTypes[$i]
             $DisplayName = [string]($Config.ApplicationName ?? $Config.displayName ?? $AppNames[$i])
 
-            $IsDeployed = if ($AppType -eq 'officeApp') { $OfficeDeployed } else { $DisplayName -in $CurrentAppNames }
+            $IsDeployed = switch ($AppType) {
+                'officeApp' { $OfficeDeployed }
+                'edgeApp' { $EdgeDeployed }
+                default { $DisplayName -in $CurrentAppNames }
+            }
 
             if (-not $IsDeployed) {
                 $MissingApps.Add([PSCustomObject]@{
@@ -109,17 +114,20 @@ function Invoke-CIPPStandardIntuneAppTemplateDeploy {
                         'win32ScriptApp' { 'Win32ScriptApp' }
                         'mspApp'         { 'MSPApp' }
                         'officeApp'      { 'OfficeApp' }
+                        'edgeApp'        { 'EdgeApp' }
                         default          { $App.AppType }
                     }
 
                     # Build AppConfig in the same format as the apps queue
                     # Assignment info comes from the template's per-app config
                     $DeployConfig = $App.Config | ConvertTo-Json -Depth 100 | ConvertFrom-Json -Depth 100
-                    $DeployConfig | Add-Member -NotePropertyName 'type' -NotePropertyValue $QueueType -Force
-                    $DeployConfig | Add-Member -NotePropertyName 'Applicationname' -NotePropertyValue $App.AppName -Force
                     # Compute assignTo the same way the HTTP handlers do
                     $AppAssignTo = if ($DeployConfig.AssignTo -eq 'customGroup') { $DeployConfig.CustomGroup } else { $DeployConfig.AssignTo }
-                    $DeployConfig | Add-Member -NotePropertyName 'assignTo' -NotePropertyValue $AppAssignTo -Force
+                    $DeployConfig | Add-Member -NotePropertyMembers ([ordered]@{
+                            type            = $QueueType
+                            Applicationname = $App.AppName
+                            assignTo        = $AppAssignTo
+                        }) -Force
 
                     $null = New-CIPPIntuneAppDeployment -AppConfig $DeployConfig -TenantFilter $Tenant -APIName 'Standards'
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Deployed Intune app '$($App.AppName)' ($($App.AppType)) from template '$($App.TemplateName)'." -sev Info

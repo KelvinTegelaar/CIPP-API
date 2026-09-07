@@ -55,6 +55,16 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
         return
     }
 
+    # An AAGUID allow/block list only takes effect while key restrictions are enforced
+    # (keyRestrictions.isEnforced = $true). With the 'Enforce AAGUID Key Restrictions' switch left off,
+    # isEnforced was $false, so AAGUIDs an operator added were stored but never applied - the profile
+    # kept no active key restriction and any authenticator could still register, which reads as "the
+    # AAGUIDs did not add to the profile". Supplying AAGUIDs is an implicit request to restrict to them,
+    # so enable enforcement whenever AAGUIDs are present. (Confirmed live against Graph beta.)
+    if ($AAGUIDs.Count -gt 0) {
+        $EnforceKeyRestrictions = $true
+    }
+
     # Get current FIDO2 configuration
     try {
         $CurrentConfig = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Fido2' -tenantid $Tenant -AsApp $true

@@ -73,7 +73,7 @@ function Get-CIPPLicenseOverview {
             $null -eq $_.ExcludedEverywhere -or $_.ExcludedEverywhere -eq $true
         } | ForEach-Object { $_.GUID })
     }
-    $DropdownVisibleGuids = @($ExcludedSkuList | Where-Object { $_.ShowInLicenseDropdown -eq $true } | ForEach-Object { $_.GUID })
+    $HiddenFromDropdownGuids = @($ExcludedSkuList | Where-Object { $_.ShowInLicenseDropdown -eq $false } | ForEach-Object { $_.GUID })
 
     $AllLicensedUsers = @(($Results | Where-Object { $_.id -eq 'licensedUsers' }).body.value) | Sort-Object -Property displayName
     $UsersBySku = @{}
@@ -123,7 +123,7 @@ function Get-CIPPLicenseOverview {
         $skuId = $singleReq.Licenses
         foreach ($sku in $skuId) {
             if ($sku.skuId -in $EffectiveExcludedGuids) {
-                if (!$IncludeExcluded -or $sku.skuId -notin $DropdownVisibleGuids) { continue }
+                if (!$IncludeExcluded -or $sku.skuId -in $HiddenFromDropdownGuids) { continue }
             }
             $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.aadSkuId -eq $sku.skuId } | Select-Object -ExpandProperty displayName -First 1
             $PrettyNameCSV = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1

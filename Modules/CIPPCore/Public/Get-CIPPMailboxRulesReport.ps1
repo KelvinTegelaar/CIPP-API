@@ -62,13 +62,12 @@ function Get-CIPPMailboxRulesReport {
         foreach ($Item in $RulesItems | Where-Object { $_.RowKey -ne 'MailboxRules-Count' }) {
             $Rule = $Item.Data | ConvertFrom-Json
 
-            # Add cache timestamp to the rule
-            $Rule | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force -ErrorAction SilentlyContinue
-
-            # Ensure Tenant property is set
+            # Add cache timestamp to the rule; ensure Tenant property is set
+            $RuleProps = [ordered]@{ CacheTimestamp = $CacheTimestamp }
             if (-not $Rule.Tenant) {
-                $Rule | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantFilter -Force -ErrorAction SilentlyContinue
+                $RuleProps['Tenant'] = $TenantFilter
             }
+            $Rule | Add-Member -NotePropertyMembers $RuleProps -Force -ErrorAction SilentlyContinue
 
             $AllRules.Add($Rule)
         }

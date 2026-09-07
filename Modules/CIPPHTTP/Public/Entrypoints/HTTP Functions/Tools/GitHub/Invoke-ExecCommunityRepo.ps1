@@ -12,6 +12,9 @@ function Invoke-ExecCommunityRepo {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     $Action = $Request.Body.Action
     $Id = $Request.Body.Id
     if ($Request.Body.Id) {
@@ -368,6 +371,14 @@ function Invoke-ExecCommunityRepo {
                 resultText = "Action $Action not supported"
                 state      = 'error'
             }
+        }
+    }
+
+    if ($Results) {
+        if ($Results.state -eq 'success') {
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results.resultText -Sev 'Info'
+        } elseif ($Results.state -eq 'error') {
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results.resultText -Sev 'Error'
         }
     }
 

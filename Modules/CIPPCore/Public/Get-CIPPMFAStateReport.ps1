@@ -26,6 +26,10 @@ function Get-CIPPMFAStateReport {
     .PARAMETER TenantFilter
         The tenant to generate the report for
 
+    .PARAMETER PageSize
+        When set, returns one page of at most this many rows as @{ Items; NextToken }, in table walk order.    .PARAMETER ContinuationToken
+        NextToken from the previous page. Only meaningful together with PageSize.
+
     .EXAMPLE
         Get-CIPPMFAStateReport -TenantFilter 'contoso.onmicrosoft.com'
         Gets MFA state for all users in the tenant
@@ -33,10 +37,41 @@ function Get-CIPPMFAStateReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [int]$PageSize,
+        [string]$ContinuationToken
     )
 
     try {
+        if ($PageSize -gt 0) {
+            $Page = Get-CIPPDbItemPage -TenantFilter $TenantFilter -Type 'MFAState' -PageSize $PageSize -ContinuationToken $ContinuationToken
+            if ($TenantFilter -ne 'AllTenants' -and -not $ContinuationToken -and @($Page.Items).Count -eq 0 -and -not $Page.NextToken) {
+                throw 'No MFA state data found in reporting database. Sync the report data first.'
+            }
+            # Same memory discipline as the unpaged path below: hashtables, no Add-Member.
+            $Results = [System.Collections.Generic.List[object]]::new()
+            foreach ($Item in $Page.Items) {
+                $MFAUser = $Item.Data | ConvertFrom-Json -AsHashtable
+
+                # Legacy rows stored these as embedded JSON strings rather than as objects.
+                if ($MFAUser['CAPolicies'] -is [string]) {
+                    $MFAUser['CAPolicies'] = try { $MFAUser['CAPolicies'] | ConvertFrom-Json -AsHashtable } catch { $MFAUser['CAPolicies'] }
+                }
+                if ($MFAUser['MFAMethods'] -is [string]) {
+                    $MFAUser['MFAMethods'] = try { $MFAUser['MFAMethods'] | ConvertFrom-Json -AsHashtable } catch { $MFAUser['MFAMethods'] }
+                }
+
+                $MFAUser['CacheTimestamp'] = $Item.Timestamp
+                # Tenant is already stored on every row by Get-CIPPMFAState; only fill it
+                # in for older rows that predate that.
+                if (-not $MFAUser['Tenant']) { $MFAUser['Tenant'] = $Item.PartitionKey }
+                $Results.Add($MFAUser)
+            }
+            return [PSCustomObject]@{
+                Items     = $Results
+                NextToken = $Page.NextToken
+            }
+        }
 
         # Handle AllTenants
         if ($TenantFilter -eq 'AllTenants') {

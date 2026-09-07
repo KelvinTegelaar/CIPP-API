@@ -24,6 +24,11 @@ function Set-CIPPDBCacheExoSharingPolicy {
         if ($SharingPolicies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSharingPolicy' -Data $SharingPolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($SharingPolicies.Count) Sharing Policies" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSharingPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Sharing Policies (none found)' -sev Debug
         }
         $SharingPolicies = $null
 

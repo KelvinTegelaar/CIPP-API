@@ -124,8 +124,10 @@ function Invoke-ExecSharePointTemplate {
             $Body = $Templates | ForEach-Object {
                 $TemplateData = $_.JSON | ConvertFrom-Json
                 $OutputObject = $TemplateData | Select-Object -Property *
-                $OutputObject | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $_.RowKey -Force
-                $OutputObject | Add-Member -NotePropertyName 'Timestamp' -NotePropertyValue $_.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ') -Force
+                $OutputObject | Add-Member -NotePropertyMembers ([ordered]@{
+                        TemplateId = $_.RowKey
+                        Timestamp  = $_.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ')
+                    }) -Force
                 return $OutputObject
             }
         }
@@ -198,8 +200,10 @@ function Invoke-ExecSharePointTemplate {
             $Body = $Templates | ForEach-Object {
                 $TemplateData = $_.JSON | ConvertFrom-Json
                 $OutputObject = $TemplateData | Select-Object -Property *
-                $OutputObject | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $_.RowKey -Force
-                $OutputObject | Add-Member -NotePropertyName 'Timestamp' -NotePropertyValue $_.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ') -Force
+                $OutputObject | Add-Member -NotePropertyMembers ([ordered]@{
+                        TemplateId = $_.RowKey
+                        Timestamp  = $_.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ')
+                    }) -Force
                 return $OutputObject
             }
         }

@@ -5,7 +5,7 @@ function Invoke-ExecSendPush {
     .ROLE
         Identity.User.Read
     .DESCRIPTION
-        Sends a test MFA push notification to a user's authenticator app and reports whether it was approved. Used to confirm a user's MFA registration works. This causes a real prompt on the user's device.
+        Sends a test MFA push notification to a user's authenticator app and reports whether it was approved, or - when an OTP code is supplied - verifies that typed code without sending a push. Used to confirm a user's MFA registration works. The push path causes a real prompt on the user's device.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -13,117 +13,113 @@ function Invoke-ExecSendPush {
     $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.body.TenantFilter
     $UserEmail = $Request.body.UserEmail
-    $MFAAppID = '981f26a1-7f43-403b-a875-f8b09b8cd720'
+    # When an OTP code is supplied we verify that code instead of sending a push notification.
+    $OTP = $Request.body.OTP
+    $VerifyOtp = -not [string]::IsNullOrWhiteSpace($OTP)
 
-    # Function to keep trying to get the access token while we wait for MS to actually set the temp password
-    function Get-ClientAccess {
-        param(
-            $uri,
-            $body,
-            $count = 1
-        )
-        try {
-            $ClientToken = Invoke-RestMethod -Method post -Uri $uri -Body $body -ea stop
-        } catch {
-            if ($count -lt 20) {
+    # Defaults so every path returns a well-formed state, even when an early step fails.
+    $State = 'error'
+    $Body = 'An unknown error occurred while processing the MFA request.'
+    $obj = $null
+    $ResultValue = $null
 
-                $count++
-                Start-Sleep 1
-                $ClientToken = Get-ClientAccess -uri $uri -body $body -count $count
-            } else {
-                throw "Could not get Client Token: $_"
-            }
-        }
-        return $ClientToken
-    }
-
-
-    # Get all service principals
-    $SPResult = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$top=999&`$select=id,appId" -tenantid $TenantFilter -AsApp $true
-
-    # Check if we have one for the MFA App
-    $SPID = ($SPResult | Where-Object { $_.appId -eq $MFAAppID }).id
-
-    # Create a service principal if needed
-    if (!$SPID) {
-
-        $SPBody = [pscustomobject]@{
-            appId = $MFAAppID
-        } | ConvertTo-Json -Depth 5
-        $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody -AsApp $true).id
-    }
-
+    # Mint a connector token (this provisions a temporary secret on the MFA client service principal).
     try {
-        $PolicyUpdate = Update-AppManagementPolicy -TenantFilter $TenantFilter -ApplicationId $MFAAppID
-        Write-Information $PolicyUpdate.PolicyAction
+        $Connector = New-CIPPMFAConnectorToken -TenantFilter $TenantFilter -Headers $Request.Headers
     } catch {
-        Write-Information "Failed to update app management policy: $($_.Exception.Message)"
+        $Body = $_.Exception.Message
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed MFA request for $UserEmail - $Body" -Sev 'Error'
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = [pscustomobject]@{'Results' = @{ resultText = $Body; state = 'error' } }
+            })
     }
 
-    $PassReqBody = @{
-        'passwordCredential' = @{
-            'displayName'   = 'MFA Temporary Password'
-            'endDateTime'   = $((Get-Date).AddMinutes(5))
-            'startDateTime' = $((Get-Date).AddMinutes(-5))
-        }
-    } | ConvertTo-Json -Depth 5
+    $ClientHeaders = @{ 'Authorization' = "Bearer $($Connector.AccessToken)" }
 
-    $TempPass = (New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SPID/addPassword" -tenantid $TenantFilter -type POST -body $PassReqBody -AsApp $true).secretText
+    # Policy: a typed code is only accepted when the user has no Microsoft Authenticator registered. When the
+    # Authenticator is present the stronger interactive push is required, so a TOTP code is refused.
+    $HasAuthenticator = $false
+    if ($VerifyOtp) {
+        $UserMethods = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserEmail/authentication/methods" -tenantid $TenantFilter
+        $HasAuthenticator = @($UserMethods).'@odata.type' -contains '#microsoft.graph.microsoftAuthenticatorAuthenticationMethod'
+    }
 
-    # Give it a chance to apply
-    #Start-Sleep 5
-
-    # Generate the XML for the push request
-    $XML = @"
+    if ($VerifyOtp -and $HasAuthenticator) {
+        $Body = 'This user has Microsoft Authenticator registered, so a push notification is required instead of a typed code.'
+        $State = 'error'
+    } elseif ($VerifyOtp) {
+        # OTP verification is a two-call handshake against the modernized StrongAuthenticationService host
+        # (the adnotifications host only supports push): Begin with SyncCall=false so no push is sent, then
+        # End with the typed code in AdditionalAuthData, keyed to the returned SessionId.
+        $StrongAuthUri = 'https://strongauthenticationservice.auth.microsoft.com/StrongAuthenticationService.svc/Connector'
+        $ContextId = (New-Guid).Guid
+        $BeginXML = @"
 <BeginTwoWayAuthenticationRequest>
 <Version>1.0</Version>
 <UserPrincipalName>$UserEmail</UserPrincipalName>
-<Lcid>en-us</Lcid><AuthenticationMethodProperties xmlns:a="http://schemas.microsoft.com/2003/10/Serialization/Arrays"><a:KeyValueOfstringstring><a:Key>OverrideVoiceOtp</a:Key><a:Value>false</a:Value></a:KeyValueOfstringstring></AuthenticationMethodProperties><ContextId>69ff05bf-eb61-47f7-a70e-e7d77b6d47d0</ContextId>
-<SyncCall>true</SyncCall><RequireUserMatch>true</RequireUserMatch><CallerName>radius</CallerName><CallerIP>UNKNOWN:</CallerIP></BeginTwoWayAuthenticationRequest>
+<Lcid>en-us</Lcid><AuthenticationMethodProperties xmlns:a="http://schemas.microsoft.com/2003/10/Serialization/Arrays"><a:KeyValueOfstringstring><a:Key>OverrideVoiceOtp</a:Key><a:Value>false</a:Value></a:KeyValueOfstringstring></AuthenticationMethodProperties><ContextId>$ContextId</ContextId>
+<SyncCall>false</SyncCall><RequireUserMatch>true</RequireUserMatch><CallerName>radius</CallerName><CallerIP>UNKNOWN:</CallerIP></BeginTwoWayAuthenticationRequest>
 "@
+        $BeginResp = Invoke-RestMethod -Uri "$StrongAuthUri/BeginTwoWayAuthentication" -Method POST -Headers $ClientHeaders -Body $BeginXML -ContentType 'application/xml'
+        $SessionId = $BeginResp.BeginTwoWayAuthenticationResponse.SessionId
 
-    # Request to get client token
-    $body = @{
-        'resource'      = 'https://adnotifications.windowsazure.com/StrongAuthenticationService.svc/Connector'
-        'client_id'     = $MFAAppID
-        'client_secret' = $TempPass
-        'grant_type'    = 'client_credentials'
-        'scope'         = 'openid'
-    }
+        if ($SessionId) {
+            $EndXML = @"
+<EndTwoWayAuthenticationRequest>
+<Version>1.0</Version>
+<SessionId>$SessionId</SessionId>
+<AdditionalAuthData>$OTP</AdditionalAuthData>
+</EndTwoWayAuthenticationRequest>
+"@
+            $obj = Invoke-RestMethod -Uri "$StrongAuthUri/EndTwoWayAuthentication" -Method POST -Headers $ClientHeaders -Body $EndXML -ContentType 'application/xml'
+            $ResultValue = $obj.EndTwoWayAuthenticationResponse.Result.Value
 
-    # Attempt to get a token using the temp password
-    $ClientUri = "https://login.microsoftonline.com/$TenantFilter/oauth2/token"
-    try {
-        $ClientToken = Get-ClientAccess -Uri $ClientUri -Body $body
-    } catch {
-        $Body = 'Failed to create temporary token for MFA Application. Error: ' + $_.Exception.Message
-    }
-
-    # If we got a token send a push
-    if ($ClientToken) {
-
-        $ClientHeaders = @{ 'Authorization' = "Bearer $($ClientToken.access_token)" }
-
-        $obj = Invoke-RestMethod -Uri 'https://adnotifications.windowsazure.com/StrongAuthenticationService.svc/Connector//BeginTwoWayAuthentication' -Method POST -Headers $ClientHeaders -Body $XML -ContentType 'application/xml'
-
-        if ($obj.BeginTwoWayAuthenticationResponse.result) {
-            $Body = "Received an MFA confirmation: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)"
-            $State = 'success'
-        }
-        if ($obj.BeginTwoWayAuthenticationResponse.AuthenticationResult -ne $true) {
-            $Body = "Authentication Failed! Does the user have Push/Phone call MFA configured? ErrorCode: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)"
+            if ($obj.EndTwoWayAuthenticationResponse.AuthenticationResult -eq $true -and $ResultValue -eq 'Success') {
+                $Body = 'The MFA code was verified successfully.'
+                $State = 'success'
+            } elseif ($ResultValue -eq 'OathCodeIncorrect') {
+                $Body = 'The MFA code was incorrect. Please check the code and try again.'
+                $State = 'error'
+            } else {
+                $Body = "MFA code verification failed: $ResultValue"
+                $State = 'error'
+            }
+        } else {
+            $Body = 'Could not start an MFA verification session. Does the user have an authenticator (OTP) method registered?'
             $State = 'error'
         }
+    } else {
+        # Push notification: SyncCall=true blocks until the user approves or denies on their device.
+        # AuthenticationMethodId forces the Authenticator push so it prompts even when the user's default
+        # method is something else (e.g. an OATH code); otherwise the connector targets the default and
+        # returns immediately without a prompt.
+        $ContextId = (New-Guid).Guid
+        $XML = @"
+<BeginTwoWayAuthenticationRequest>
+<Version>1.0</Version>
+<UserPrincipalName>$UserEmail</UserPrincipalName>
+<Lcid>en-us</Lcid><AuthenticationMethodId>PhoneAppNotification</AuthenticationMethodId><AuthenticationMethodProperties xmlns:a="http://schemas.microsoft.com/2003/10/Serialization/Arrays"><a:KeyValueOfstringstring><a:Key>OverrideVoiceOtp</a:Key><a:Value>false</a:Value></a:KeyValueOfstringstring></AuthenticationMethodProperties><ContextId>$ContextId</ContextId>
+<SyncCall>true</SyncCall><RequireUserMatch>true</RequireUserMatch><CallerName>radius</CallerName><CallerIP>UNKNOWN:</CallerIP></BeginTwoWayAuthenticationRequest>
+"@
+        $obj = Invoke-RestMethod -Uri 'https://adnotifications.windowsazure.com/StrongAuthenticationService.svc/Connector//BeginTwoWayAuthentication' -Method POST -Headers $ClientHeaders -Body $XML -ContentType 'application/xml'
+        $ResultValue = $obj.BeginTwoWayAuthenticationResponse.result.value
 
+        if ($obj.BeginTwoWayAuthenticationResponse.AuthenticationResult -eq $true) {
+            $Body = "Received an MFA confirmation: $($ResultValue | Out-String)"
+            $State = 'success'
+        } else {
+            $Body = "Authentication Failed! Does the user have Push/Phone call MFA configured? ErrorCode: $($ResultValue | Out-String)"
+            $State = 'error'
+        }
     }
 
     $Results = [pscustomobject]@{'Results' = @{ resultText = $Body; state = $State } }
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev 'Info'
+    $LogAction = if ($VerifyOtp) { 'Verified MFA code' } else { 'Sent push request' }
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message "$LogAction for $UserEmail - Result: $($ResultValue | Out-String)" -Sev 'Info'
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })
-
-
 }

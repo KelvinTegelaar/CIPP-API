@@ -26,6 +26,9 @@ function Invoke-CIPPBaselineFIDO2PasskeyProfiles {
     $EnforcementType = "$($Remediate.enforcementType)"
     if ([string]::IsNullOrWhiteSpace($EnforcementType)) { $EnforcementType = 'allow' }
     $AAGUIDs = @("$($Remediate.aaGuids)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    # A profile's AAGUID list only takes effect while key restrictions are enforced; sent with
+    # isEnforced = $false the list is stored but never applied. Supplying AAGUIDs implies enforcement.
+    if ($AAGUIDs.Count -gt 0) { $Enforce = $true }
 
     $UpdatedProfiles = @(@($Current.allProfiles) | ForEach-Object {
             if ("$($_.id)" -eq $DefaultId) {

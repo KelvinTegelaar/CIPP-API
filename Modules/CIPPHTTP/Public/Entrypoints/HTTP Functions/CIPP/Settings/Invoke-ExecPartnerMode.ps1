@@ -8,6 +8,8 @@ function Invoke-ExecPartnerMode {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
 
     $Table = Get-CippTable -tablename 'tenantMode'
     if ($request.body.TenantMode) {
@@ -39,12 +41,15 @@ function Invoke-ExecPartnerMode {
             Start-CIPPOrchestrator -InputObject $InputObject
         }
 
+        $Result = "Set Tenant mode to $($Request.body.TenantMode)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @{
                     results = @(
                         @{
-                            resultText = "Set Tenant mode to $($Request.body.TenantMode)"
+                            resultText = $Result
                             state      = 'success'
                         }
                     )
@@ -72,3 +77,4 @@ function Invoke-ExecPartnerMode {
     }
 
 }
+

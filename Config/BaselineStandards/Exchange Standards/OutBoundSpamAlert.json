@@ -39,13 +39,24 @@
       "type": "textField",
       "label": "Outbound spam contact",
       "required": true
+    },
+    "BccSuspiciousOutboundMail": {
+      "type": "switch",
+      "label": "BCC suspicious outbound mail to a mailbox",
+      "omitWhenBlank": true
+    },
+    "BccSuspiciousOutboundContact": {
+      "type": "textField",
+      "label": "BCC recipient for suspicious outbound mail",
+      "omitWhenBlank": true
     }
   },
   "expected": {
     "NotifyOutboundSpam": "%NotifyOutboundSpam%",
     "NotifyOutboundSpamRecipients": [
       "%OutboundSpamContact%"
-    ]
+    ],
+    "BccSuspiciousOutboundMail": "%BccSuspiciousOutboundMail%"
   },
   "read": {
     "cacheType": "ExoHostedOutboundSpamFilterPolicy",
@@ -64,7 +75,9 @@
         "params": {
           "Identity": "Default",
           "NotifyOutboundSpam": "%NotifyOutboundSpam%",
-          "NotifyOutboundSpamRecipients": "%OutboundSpamContact%"
+          "NotifyOutboundSpamRecipients": "%OutboundSpamContact%",
+          "BccSuspiciousOutboundMail": "%BccSuspiciousOutboundMail%",
+          "BccSuspiciousOutboundAdditionalRecipients": "%BccSuspiciousOutboundContact%"
         }
       }
     ]

@@ -16,6 +16,7 @@ Function Invoke-ExecAddSPN {
     try {
         $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $env:TenantID -type POST -Body "{ `"appId`": `"2832473f-ec63-45fb-976f-5d45a7d4bb91`" }" -NoAuthCheck $true
         $Result = "Successfully completed request. Add your GDAP migration permissions to your SAM application here: https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/CallAnAPI/appId/$($env:ApplicationID)/isMSAApp/ "
+        Write-LogMessage -headers $Headers -API $APIName -tenant $env:TenantID -message 'Successfully added GDAP migration service principal (SPN)' -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

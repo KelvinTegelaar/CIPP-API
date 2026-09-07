@@ -24,6 +24,11 @@ function Set-CIPPDBCacheExoTeamsProtectionPolicy {
             $TeamsProtectionPolicyArray = @($TeamsProtectionPolicies)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoTeamsProtectionPolicy' -Data $TeamsProtectionPolicyArray -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($TeamsProtectionPolicyArray.Count) Teams protection policies" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoTeamsProtectionPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Teams protection policies (none found)' -sev Debug
         }
         $TeamsProtectionPolicies = $null
 

@@ -1,0 +1,476 @@
+skuId,skuPartNumber,Product_Display_Name,MonthlyPrice,Currency
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,18,AUD
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,68.9,BRL
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,16.3,CAD
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,9.8,CHF
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,77.9,DKK
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,10.4,EUR
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,9.3,GBP
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,1000,INR
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,1805,JPY
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,16300,KRW
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,122.4,NOK
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,19.5,NZD
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,115.1,SEK
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,385,TWD
+efccb6f7-5641-4e0e-bd10-b4976e1bf68e,EMS,Enterprise Mobility + Security E3,12,USD
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,27,AUD
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,103.3,BRL
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,24.5,CAD
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,14.6,CHF
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,116.7,DKK
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,15.6,EUR
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,13.9,GBP
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,1500,INR
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,2704,JPY
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,24400,KRW
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,183.4,NOK
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,29.2,NZD
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,172.4,SEK
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,580,TWD
+b05e124f-c7cc-45a0-a6aa-8cf78c946968,EMSPREMIUM,Enterprise Mobility + Security E5,18,USD
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),6,AUD
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),22.9,BRL
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),5.4,CAD
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),3.2,CHF
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),25.9,DKK
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),3.5,EUR
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),3.1,GBP
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),335,INR
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),599,JPY
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),5400,KRW
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),40.7,NOK
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),6.5,NZD
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),38.2,SEK
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),130,TWD
+4b9405b0-7788-4568-add1-99614e613b69,EXCHANGESTANDARD,Exchange Online (Plan 1),4,USD
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),12,AUD
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),45.8,BRL
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),10.9,CAD
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),6.5,CHF
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),51.7,DKK
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),6.9,EUR
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),6.2,GBP
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),665,INR
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),1199,JPY
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),10800,KRW
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),81.3,NOK
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),12.9,NZD
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),76.5,SEK
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),255,TWD
+19ec0d23-8335-4cbd-94ac-6050e30712fa,EXCHANGEENTERPRISE,Exchange Online (Plan 2),8,USD
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,15.8,AUD
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,57.3,BRL
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,14.2,CAD
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,10.1,CHF
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,81.9,DKK
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,11,EUR
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,9.8,GBP
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,830,INR
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,1499,JPY
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,13200,KRW
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,127.6,NOK
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,19.2,NZD
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,120,SEK
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,370,TWD
+cdd28e44-67e3-425e-be4c-737fab2899d3,O365_BUSINESS,Microsoft 365 Apps for Business,10,USD
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,22.1,AUD
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,80.2,BRL
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,19.8,CAD
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,14.2,CHF
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,114.7,DKK
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,15.4,EUR
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,13.7,GBP
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,1165,INR
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,2098,JPY
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,18500,KRW
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,178.6,NOK
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,26.9,NZD
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,168,SEK
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,515,TWD
+c2273bd0-dff7-4215-9ef5-2c7bcfb06425,OFFICESUBSCRIPTION,Microsoft 365 Apps for Enterprise,14,USD
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,10.5,AUD
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,33.4,BRL
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,9.5,CAD
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,5.67,CHF
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,45.27,DKK
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,6.07,EUR
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,5.4,GBP
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,170,INR
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,1049,JPY
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,9500,KRW
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,71.16,NOK
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,11.3,NZD
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,66.91,SEK
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,225,TWD
+3b555118-da6a-4418-894f-7df1e2096870,O365_BUSINESS_ESSENTIALS,Microsoft 365 Business Basic,7,USD
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,32.9,AUD
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,126,BRL
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,29.8,CAD
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,17.82,CHF
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,142.27,DKK
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,19.06,EUR
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,16.9,GBP
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,1830,INR
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,3298,JPY
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,29700,KRW
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,223.63,NOK
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,35.6,NZD
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,210.29,SEK
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,705,TWD
+cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,SPB,Microsoft 365 Business Premium,22,USD
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,21,AUD
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,80.2,BRL
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,19,CAD
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,11.34,CHF
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,90.54,DKK
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,12.13,EUR
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,10.8,GBP
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,860,INR
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,2098,JPY
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,18900,KRW
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,142.31,NOK
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,22.6,NZD
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,133.82,SEK
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,450,TWD
+f245ecc8-75af-4f8e-b61f-27d8114de5f3,O365_BUSINESS_PREMIUM,Microsoft 365 Business Standard,14,USD
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,58.4,AUD
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,223.3,BRL
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,52.9,CAD
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,35.32,CHF
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,281.97,DKK
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,37.78,EUR
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,33.5,GBP
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,3245,INR
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,5847,JPY
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,52700,KRW
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,442.03,NOK
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,63.1,NZD
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,416.77,SEK
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,1255,TWD
+05e9a617-0261-4cee-bb44-138d3ef5d965,SPE_E3,Microsoft 365 E3,39,USD
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),45.6,AUD
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),174.3,BRL
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),41.3,CAD
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),27,GBP
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),2535,INR
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),4565,JPY
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),41100,KRW
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),49.3,NZD
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),980,TWD
+dcf0408c-aaec-446c-afd4-43e3683943ea,Microsoft_365_E3_(no_Teams),Microsoft 365 E3 (no Teams),30.45,USD
+c2fe850d-fbbb-4858-b67d-bd0c6e746da3,O365_w/o Teams Bundle_M3,Microsoft 365 E3 EEA (no Teams),28.38,CHF
+c2fe850d-fbbb-4858-b67d-bd0c6e746da3,O365_w/o Teams Bundle_M3,Microsoft 365 E3 EEA (no Teams),226.68,DKK
+c2fe850d-fbbb-4858-b67d-bd0c6e746da3,O365_w/o Teams Bundle_M3,Microsoft 365 E3 EEA (no Teams),30.36,EUR
+c2fe850d-fbbb-4858-b67d-bd0c6e746da3,O365_w/o Teams Bundle_M3,Microsoft 365 E3 EEA (no Teams),355.12,NOK
+c2fe850d-fbbb-4858-b67d-bd0c6e746da3,O365_w/o Teams Bundle_M3,Microsoft 365 E3 EEA (no Teams),335.04,SEK
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,89.8,AUD
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,343.5,BRL
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,81.4,CAD
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,54.33,CHF
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,433.8,DKK
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,58.13,EUR
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,51.6,GBP
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,4990,INR
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,8995,JPY
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,81100,KRW
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,680.04,NOK
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,97.1,NZD
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,641.18,SEK
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,1930,TWD
+06ebc4ee-1bb5-47dd-8120-11324bc54e06,SPE_E5,Microsoft 365 E5,60,USD
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),77,AUD
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),294.6,BRL
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),69.8,CAD
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),45,GBP
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),4280,INR
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),7713,JPY
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),69500,KRW
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),83.2,NZD
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),1655,TWD
+18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e,Microsoft_365_E5_(no_Teams),Microsoft 365 E5 (no Teams),51.45,USD
+3271cf8e-2be5-4a09-a549-70fd05baaa17,O365_w/o_Teams_Bundle_M5,Microsoft 365 E5 EEA (no Teams),47.4,CHF
+3271cf8e-2be5-4a09-a549-70fd05baaa17,O365_w/o_Teams_Bundle_M5,Microsoft 365 E5 EEA (no Teams),378.5,DKK
+3271cf8e-2be5-4a09-a549-70fd05baaa17,O365_w/o_Teams_Bundle_M5,Microsoft 365 E5 EEA (no Teams),50.71,EUR
+3271cf8e-2be5-4a09-a549-70fd05baaa17,O365_w/o_Teams_Bundle_M5,Microsoft 365 E5 EEA (no Teams),593.13,NOK
+3271cf8e-2be5-4a09-a549-70fd05baaa17,O365_w/o_Teams_Bundle_M5,Microsoft 365 E5 EEA (no Teams),559.44,SEK
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,89.8,AUD
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,343.5,BRL
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,81.4,CAD
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,54.33,CHF
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,433.8,DKK
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,58.13,EUR
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,51.6,GBP
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,4990,INR
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,8995,JPY
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,81100,KRW
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,680.04,NOK
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,97.1,NZD
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,641.18,SEK
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,1930,TWD
+cd2925a3-5076-4233-8931-638a8c94f773,SPE_E5_NOPSTNCONF,Microsoft 365 E5 without Audio Conferencing,60,USD
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,4.5,AUD
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,17.2,BRL
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,4.1,CAD
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,2.43,CHF
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,19.4,DKK
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,2.6,EUR
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,2.3,GBP
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,250,INR
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,449,JPY
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,4100,KRW
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,30.5,NOK
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,4.9,NZD
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,28.68,SEK
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,96.5,TWD
+50f60901-3181-4b75-8a2c-4c8e4c1d5a72,M365_F1_COMM,Microsoft 365 F1,3,USD
+0666269f-b167-4c5b-a76f-fc574f2b1118,Microsoft_365_F1_EEA_(no_Teams),Microsoft 365 F1 EEA (no Teams),2.02,CHF
+0666269f-b167-4c5b-a76f-fc574f2b1118,Microsoft_365_F1_EEA_(no_Teams),Microsoft 365 F1 EEA (no Teams),16.16,DKK
+0666269f-b167-4c5b-a76f-fc574f2b1118,Microsoft_365_F1_EEA_(no_Teams),Microsoft 365 F1 EEA (no Teams),2.16,EUR
+0666269f-b167-4c5b-a76f-fc574f2b1118,Microsoft_365_F1_EEA_(no_Teams),Microsoft 365 F1 EEA (no Teams),25.41,NOK
+0666269f-b167-4c5b-a76f-fc574f2b1118,Microsoft_365_F1_EEA_(no_Teams),Microsoft 365 F1 EEA (no Teams),23.89,SEK
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,15,AUD
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,57.3,BRL
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,13.6,CAD
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,8.1,CHF
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,64.67,DKK
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,8.66,EUR
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,7.7,GBP
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,830,INR
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,1499,JPY
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,13500,KRW
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,101.65,NOK
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,16.2,NZD
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,95.59,SEK
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,320,TWD
+66b55226-6b4f-492c-910c-a3b7a3c9d993,SPE_F1,Microsoft 365 F3,10,USD
+f7ee79a7-7aec-4ca4-9fb9-34d6b930ad87,Microsoft_365_F3_EEA_(no_Teams),Microsoft 365 F3 EEA (no Teams),7.23,CHF
+f7ee79a7-7aec-4ca4-9fb9-34d6b930ad87,Microsoft_365_F3_EEA_(no_Teams),Microsoft 365 F3 EEA (no Teams),57.74,DKK
+f7ee79a7-7aec-4ca4-9fb9-34d6b930ad87,Microsoft_365_F3_EEA_(no_Teams),Microsoft 365 F3 EEA (no Teams),7.73,EUR
+f7ee79a7-7aec-4ca4-9fb9-34d6b930ad87,Microsoft_365_F3_EEA_(no_Teams),Microsoft 365 F3 EEA (no Teams),90.77,NOK
+f7ee79a7-7aec-4ca4-9fb9-34d6b930ad87,Microsoft_365_F3_EEA_(no_Teams),Microsoft 365 F3 EEA (no Teams),85.35,SEK
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,44.9,AUD
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,171.8,BRL
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,40.7,CAD
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,24.3,CHF
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,194,DKK
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,26,EUR
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,23.1,GBP
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,2495,INR
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,4497,JPY
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,40500,KRW
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,305,NOK
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,48.5,NZD
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,286.8,SEK
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,965,TWD
+639dec6b-bb19-468b-871c-c5c441c4b0cb,Microsoft_365_Copilot,Microsoft Copilot for Microsoft 365,30,USD
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,4.5,AUD
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,13.7,BRL
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,4.1,CAD
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,2.4,CHF
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,19.4,DKK
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,2.6,EUR
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,2.3,GBP
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,250,INR
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,449,JPY
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,4100,KRW
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,30.5,NOK
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,4.9,NZD
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,28.7,SEK
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,96.5,TWD
+5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,Microsoft Defender for Business,3,USD
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,10.5,AUD
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,40.1,BRL
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,9.5,CAD
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,5.7,CHF
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,45.3,DKK
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,6.1,EUR
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,5.4,GBP
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,580,INR
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,1049,JPY
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,9500,KRW
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,71.2,NOK
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,11.3,NZD
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,66.9,SEK
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,225,TWD
+cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Microsoft_Entra_ID_Governance,Microsoft Entra ID Governance,7,USD
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,10.5,AUD
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,40.1,BRL
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,9.5,CAD
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,5.7,CHF
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,45.3,DKK
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,6.1,EUR
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,5.4,GBP
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,580,INR
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,1049,JPY
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,9500,KRW
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,71.2,NOK
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,11.3,NZD
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,66.9,SEK
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,225,TWD
+078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,Microsoft Entra ID P1,7,USD
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,15,AUD
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,57.3,BRL
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,13.6,CAD
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,8.1,CHF
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,64.7,DKK
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,8.7,EUR
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,7.7,GBP
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,830,INR
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,1499,JPY
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,13500,KRW
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,101.7,NOK
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,16.2,NZD
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,95.6,SEK
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,320,TWD
+84a661c4-e949-4bd2-a560-ed7766fcaf2b,AAD_PREMIUM_P2,Microsoft Entra ID P2,10,USD
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,12.8,AUD
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,49,BRL
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,11.6,CAD
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,6.6,GBP
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,710,INR
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,1281,JPY
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,11600,KRW
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,13.8,NZD
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,275,TWD
+7e31c0d9-9551-471d-836f-32ee72be4a01,Microsoft_Teams_Enterprise_New,Microsoft Teams Enterprise,8.55,USD
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,6,AUD
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,22.9,BRL
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,5.4,CAD
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,3.2,CHF
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,25.9,DKK
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,3.5,EUR
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,3.1,GBP
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,115,INR
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,599,JPY
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,5400,KRW
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,40.7,NOK
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,6.5,NZD
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,38.2,SEK
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,130,TWD
+fde42873-30b6-436b-b361-21af5a6b84ae,Teams_Ess,Microsoft Teams Essentials,4,USD
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,15,AUD
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,57.3,BRL
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,13.6,CAD
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,8.1,CHF
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,64.7,DKK
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,8.7,EUR
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,7.7,GBP
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,830,INR
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,1499,JPY
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,13500,KRW
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,101.7,NOK
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,16.2,NZD
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,95.6,SEK
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,320,TWD
+e43b5b99-8dfb-405f-9987-dc307f34bcbd,MCOEV,Microsoft Teams Phone Standard,10,USD
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,59.9,AUD
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,229,BRL
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,54.3,CAD
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,32.4,CHF
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,258.7,DKK
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,34.7,EUR
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,30.8,GBP
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,5997,JPY
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,54100,KRW
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,406.6,NOK
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,64.7,NZD
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,382.3,SEK
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,1285,TWD
+4cde982a-ede4-4409-9ae6-b003453c8ea6,Microsoft_Teams_Rooms_Pro,Microsoft Teams Rooms Pro,40,USD
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,15,AUD
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,57.3,BRL
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,13.6,CAD
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,8.1,CHF
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,64.67,DKK
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,8.66,EUR
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,7.7,GBP
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,830,INR
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,1499,JPY
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,13500,KRW
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,101.65,NOK
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,16.2,NZD
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,95.59,SEK
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,320,TWD
+18181a46-0d4e-45cd-891e-60aabd171b4e,STANDARDPACK,Office 365 E1,10,USD
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),10.2,AUD
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),38.9,BRL
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),9.2,CAD
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),5.2,GBP
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),565,INR
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),1017,JPY
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),9200,KRW
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),11,NZD
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),220,TWD
+f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Office_365_E1_(no_Teams),Office 365 E1 (no Teams),6.79,USD
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,38.9,AUD
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,148.9,BRL
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,35.3,CAD
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,24.56,CHF
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,195.65,DKK
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,26.27,EUR
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,23.3,GBP
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,2165,INR
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,3898,JPY
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,35100,KRW
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,305.29,NOK
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,44.4,NZD
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,289.81,SEK
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,905,TWD
+6fd2c87f-b296-42f0-b197-1e91e994b900,ENTERPRISEPACK,Office 365 E3,26,USD
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),26.1,AUD
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),99.9,BRL
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),23.7,CAD
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),16.7,GBP
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),1450,INR
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),2616,JPY
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),23600,KRW
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),30.6,NZD
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),635,TWD
+46c3a859-c90d-40b3-9551-6178a48d5c18,Office_365_E3_(no_Teams),Office 365 E3 (no Teams),17.45,USD
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,61.4,AUD
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,234.8,BRL
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,55.6,CAD
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,38.72,CHF
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,308.53,DKK
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,41.42,EUR
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,36.8,GBP
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,3410,INR
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,6146,JPY
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,55400,KRW
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,481.41,NOK
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,70.1,NZD
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,457,SEK
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,1425,TWD
+c7df2760-2c81-4ef7-b578-5b5392b571df,ENTERPRISEPREMIUM,Office 365 E5,41,USD
+4b585984-651b-448a-9e53-3b10f069cf7f,DESKLESSPACK,Office 365 F3,4.00,USD
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,35.9,AUD
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,137.4,BRL
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,32.6,CAD
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,19.4,CHF
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,155.2,DKK
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,20.8,EUR
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,18.5,GBP
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,1995,INR
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,3598,JPY
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,32400,KRW
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,244,NOK
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,38.8,NZD
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,229.4,SEK
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,770,TWD
+c1d032e0-5619-4761-9b5c-75b6831e1711,PBI_PREMIUM_PER_USER,Power BI Premium Per User,24,USD
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,21,AUD
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,80.2,BRL
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,19,CAD
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,11.3,CHF
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,90.5,DKK
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,12.1,EUR
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,10.8,GBP
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,1165,INR
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,2098,JPY
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,18900,KRW
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,142.3,NOK
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,22.6,NZD
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,133.8,SEK
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,450,TWD
+f8a1db68-be16-40ed-86d5-cb42ce701560,POWER_BI_PRO,Power BI Pro,14,USD

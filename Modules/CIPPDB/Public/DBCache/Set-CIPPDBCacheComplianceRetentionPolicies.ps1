@@ -26,6 +26,9 @@ function Set-CIPPDBCacheComplianceRetentionPolicies {
 
         if ($LicenseCheck -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have a Purview/AIP license, skipping retention compliance policies' -sev Debug
+            # A license skip is still a completed collection: record the authoritative empty set
+            # so collect-on-miss does not re-run this collector forever on unlicensed tenants.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ComplianceRetentionPolicies' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
@@ -37,6 +40,11 @@ function Set-CIPPDBCacheComplianceRetentionPolicies {
         if ($Policies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ComplianceRetentionPolicies' -Data @($Policies) -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(@($Policies).Count) retention compliance policies" -sev Debug
+        } else {
+            # The read succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ComplianceRetentionPolicies' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 retention compliance policies (none found)' -sev Debug
         }
 
     } catch {

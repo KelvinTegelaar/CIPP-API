@@ -33,10 +33,12 @@ function Invoke-CIPPBaselineIntuneAppTemplateDeploy {
                 default { "$($App.AppType)" }
             }
             $DeployConfig = $App.Config | ConvertTo-Json -Depth 100 | ConvertFrom-Json -Depth 100
-            $DeployConfig | Add-Member -NotePropertyName 'type' -NotePropertyValue $QueueType -Force
-            $DeployConfig | Add-Member -NotePropertyName 'Applicationname' -NotePropertyValue "$($App.AppName)" -Force
             $AppAssignTo = if ("$($DeployConfig.AssignTo)" -eq 'customGroup') { $DeployConfig.CustomGroup } else { $DeployConfig.AssignTo }
-            $DeployConfig | Add-Member -NotePropertyName 'assignTo' -NotePropertyValue $AppAssignTo -Force
+            $DeployConfig | Add-Member -NotePropertyMembers ([ordered]@{
+                    type            = $QueueType
+                    Applicationname = "$($App.AppName)"
+                    assignTo        = $AppAssignTo
+                }) -Force
 
             $null = New-CIPPIntuneAppDeployment -AppConfig $DeployConfig -TenantFilter $TenantFilter -APIName 'Baselines'
             Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Queued the Intune app '$($App.AppName)' ($($App.AppType)) from template '$($App.TemplateName)'." -Sev 'Info'

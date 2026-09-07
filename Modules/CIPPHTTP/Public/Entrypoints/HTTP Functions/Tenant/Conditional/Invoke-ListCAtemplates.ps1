@@ -48,10 +48,12 @@ function Invoke-ListCAtemplates {
                 templates     = @($packageTemplates | ForEach-Object {
                         try {
                             $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
-                            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
-                            $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $_.Package -Force
-                            $data | Add-Member -NotePropertyName 'source' -NotePropertyValue $_.Source -Force
-                            $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($_.SHA)) -Force
+                            $data | Add-Member -NotePropertyMembers ([ordered]@{
+                                    GUID     = $_.GUID
+                                    package  = $_.Package
+                                    source   = $_.Source
+                                    isSynced = (![string]::IsNullOrEmpty($_.SHA))
+                                }) -Force
                             $data
                         } catch {
                         }
@@ -71,10 +73,12 @@ function Invoke-ListCAtemplates {
             try {
                 $row = $_
                 $data = $row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
-                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $row.GUID -Force
-                $data | Add-Member -NotePropertyName 'source' -NotePropertyValue $row.Source -Force
-                $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($row.SHA)) -Force
-                $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $row.Package -Force
+                $data | Add-Member -NotePropertyMembers ([ordered]@{
+                        GUID     = $row.GUID
+                        source   = $row.Source
+                        isSynced = (![string]::IsNullOrEmpty($row.SHA))
+                        package  = $row.Package
+                    }) -Force
                 $data
             } catch {
                 Write-Warning "Failed to process CA template: $($row.RowKey) - $($_.Exception.Message)"

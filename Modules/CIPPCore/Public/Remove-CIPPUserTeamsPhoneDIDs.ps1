@@ -13,6 +13,8 @@ function Remove-CIPPUserTeamsPhoneDIDs {
         $TenantFilter
     )
 
+    $BaseUri = 'https://graph.microsoft.com/v1.0/admin/teams/telephoneNumberManagement/numberAssignments'
+
     try {
 
         # Set Username to UserID if not provided
@@ -25,61 +27,41 @@ function Remove-CIPPUserTeamsPhoneDIDs {
         $SuccessCount = 0
         $ErrorCount = 0
 
-        # Get all tenant DIDs
-        $TeamsPhoneDIDs = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/admin/teams/telephoneNumberManagement/numberAssignments" -tenant $TenantFilter
+        $TeamsPhoneDIDs = New-GraphGetRequest -uri $BaseUri -tenantid $TenantFilter
 
         if (-not $TeamsPhoneDIDs -or $TeamsPhoneDIDs.Count -eq 0) {
-            $Result = "No Teams Phone DIDs found in tenant"
+            $Result = 'No Teams Phone DIDs found in tenant'
             $Results.Add($Result)
             return $Results.ToArray()
         }
 
         # Filter DIDs assigned to the specific user
-        $UserDIDs = $TeamsPhoneDIDs | Where-Object { $_.assignmentTargetId -eq $UserID -and $_.assignmentStatus -ne 'unassigned' }
+        $UserDIDs = @($TeamsPhoneDIDs | Where-Object { $_.assignmentTargetId -eq $UserID -and $_.assignmentStatus -ne 'unassigned' })
 
-        if (-not $UserDIDs -or $UserDIDs.Count -eq 0) {
+        if ($UserDIDs.Count -eq 0) {
             $Result = "No Teams Phone DIDs found assigned to user: '$Username' - '$UserID'"
             $Results.Add($Result)
             return $Results.ToArray()
         }
 
-        # Prepare bulk requests for all DIDs
-        $RemoveRequests = foreach ($DID in $UserDIDs) {
-            @{
-                id      = $DID.telephoneNumber
-                method  = 'POST'
-                url     = "admin/teams/telephoneNumberManagement/numberAssignments/unassignNumber"
-                headers = @{
-                    'Content-Type' = 'application/json'
+        # One POST per number: $batch fails with an IIS 'Request Too Long' page.
+        foreach ($DID in $UserDIDs) {
+            $PhoneNumber = $DID.telephoneNumber
+            try {
+                $Body = @{
+                    telephoneNumber = $PhoneNumber
+                    numberType      = Get-CippTeamsNumberType -NumberType $DID.numberType
                 }
-                body    = @{
-                    telephoneNumber = $DID.telephoneNumber
-                    numberType      = $DID.numberType
-                }
-            }
-        }
+                $null = New-GraphPOSTRequest -uri "$BaseUri/unassignNumber" -tenantid $TenantFilter -body ($Body | ConvertTo-Json -Compress) -type POST
 
-        # Execute bulk request
-        $RemoveResults = New-GraphBulkRequest -tenantid $TenantFilter -requests @($RemoveRequests)
-
-        # Process results
-        $RemoveResults | ForEach-Object {
-            $PhoneNumber = $_.id
-
-            if ($_.status -in (202, 204)) {
                 $SuccessResult = "Successfully removed Teams Phone DID: '$PhoneNumber' from: '$Username' - '$UserID'"
                 Write-LogMessage -headers $Headers -API $APIName -message $SuccessResult -Sev 'Info' -tenant $TenantFilter
                 $Results.Add($SuccessResult)
                 $SuccessCount++
-            } else {
-                $ErrorMessage = if ($_.body.error.message) {
-                    $_.body.error.message
-                } else {
-                    "HTTP Status: $($_.status)"
-                }
-
-                $ErrorResult = "Failed to remove Teams Phone DID: '$PhoneNumber' from: '$Username' - '$UserID'. Error: $ErrorMessage"
-                Write-LogMessage -headers $Headers -API $APIName -message $ErrorResult -Sev 'Error' -tenant $TenantFilter
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                $ErrorResult = "Failed to remove Teams Phone DID: '$PhoneNumber' from: '$Username' - '$UserID'. Error: $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APIName -message $ErrorResult -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
                 $Results.Add($ErrorResult)
                 $ErrorCount++
             }

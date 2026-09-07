@@ -38,6 +38,10 @@
     "cacheType": "AuthorizationPolicy",
     "object": "defaultUserRolePermissions"
   },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "defaultUserRolePermissions.allowedToCreateSecurityGroups": "%allowSecurityGroupCreation%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [
