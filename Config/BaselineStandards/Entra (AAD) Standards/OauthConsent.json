@@ -30,6 +30,10 @@
     "cacheType": "AuthorizationPolicy"
   },
   "prepare": "Get-CIPPBaselineOauthConsentState",
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "permissionGrantPolicyIdsAssignedToDefaultUserRole": ["ManagePermissionGrantsForSelf.cipp-consent-policy"]
+  },
   "remediate": {
     "executor": "OauthConsent"
   }

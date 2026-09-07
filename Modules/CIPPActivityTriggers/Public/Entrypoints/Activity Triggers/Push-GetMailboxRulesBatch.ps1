@@ -38,8 +38,10 @@ function Push-GetMailboxRulesBatch {
         # Add metadata and return for aggregation
         if (($Rules | Measure-Object).Count -gt 0) {
             $RulesWithMetadata = foreach ($Rule in $Rules) {
-                $Rule | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantFilter -Force
-                $Rule | Add-Member -NotePropertyName 'UserPrincipalName' -NotePropertyValue $Rule.OperationGuid -Force
+                $Rule | Add-Member -NotePropertyMembers ([ordered]@{
+                        Tenant            = $TenantFilter
+                        UserPrincipalName = $Rule.OperationGuid
+                    }) -Force
                 $Rule
             }
             return , $RulesWithMetadata

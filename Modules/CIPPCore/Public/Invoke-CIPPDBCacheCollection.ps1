@@ -9,13 +9,14 @@ function Invoke-CIPPDBCacheCollection {
         compared to individual per-type activities, eliminating replay overhead.
 
         Collection types map to license categories:
-        - Graph:              Core tenant data (no special license needed)
-        - ExchangeConfig:     Exchange Online policy/config data
-        - ExchangeData:       Mailboxes, CAS mailboxes, usage reports
-        - ConditionalAccess:  CA policies and registration details
-        - IdentityProtection: Risky users/SPs, risk detections, PIM
-        - Intune:             Managed devices, policies, app protection
-        - Defender:           Defender Vulnerabilities
+        - Graph:                Core tenant data (no special license needed)
+        - ExchangeConfig:       Exchange Online policy/config data
+        - ExchangeData:         Mailboxes, CAS mailboxes, usage reports
+        - ConditionalAccess:    CA policies and registration details
+        - IdentityProtection:   Risky users/SPs, risk detections, PIM
+        - Intune:               Managed devices, policies, app protection
+        - DefenderForOffice365: Safe Links/Attachments, ATP, Teams protection (MDO P1/P2)
+        - Defender:             Defender for Endpoint vulnerabilities (TVM/CVE)
 
     .PARAMETER CollectionType
         The group of cache functions to execute
@@ -32,7 +33,7 @@ function Invoke-CIPPDBCacheCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'Intune', 'Compliance', 'CopilotUsage', 'SharePoint', 'Teams', 'Defender')]
+        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'Intune', 'Compliance', 'CopilotUsage', 'SharePoint', 'Teams', 'DefenderForOffice365', 'Defender')]
         [string]$CollectionType,
 
         [Parameter(Mandatory = $true)]
@@ -69,6 +70,7 @@ function Invoke-CIPPDBCacheCollection {
             'OAuth2PermissionGrants'
             'AppRoleAssignments'
             'LicenseOverview'
+            'ActiveUserDetail'
             'BitlockerKeys'
             'AdminReportSettings'
             'PeopleInsights'
@@ -88,15 +90,12 @@ function Invoke-CIPPDBCacheCollection {
         ExchangeConfig     = @(
             'ExoAntiPhishPolicies'
             'ExoMalwareFilterPolicies'
-            'ExoSafeLinksPolicies'
-            'ExoSafeAttachmentPolicies'
             'ExoTransportRules'
             'ExoDkimSigningConfig'
             'ExoOrganizationConfig'
             'ExoAcceptedDomains'
             'ExoHostedContentFilterPolicy'
             'ExoHostedOutboundSpamFilterPolicy'
-            'ExoAtpPolicyForO365'
             'ExoQuarantinePolicy'
             'ExoRemoteDomain'
             'ExoSharingPolicy'
@@ -111,7 +110,6 @@ function Invoke-CIPPDBCacheCollection {
             'ExoTransportConfig'
             'ExoHostedConnectionFilterPolicy'
             'ExoExternalInOutlook'
-            'ExoTeamsProtectionPolicy'
             'ExoOutboundConnector'
             'ExoRoleAssignmentPolicy'
             'ExoHostedContentFilterRule'
@@ -181,6 +179,7 @@ function Invoke-CIPPDBCacheCollection {
         )
         SharePoint         = @(
             'SPOTenant'
+            'SPOSites'
             'SPOTenantSyncClientRestriction'
             'SharePointAdminSettings'
             'SharePointSiteUsage'
@@ -202,6 +201,12 @@ function Invoke-CIPPDBCacheCollection {
         )
         Defender           = @(
             'DefenderCVEs'
+        )
+        DefenderForOffice365 = @(
+            'ExoSafeLinksPolicies'
+            'ExoSafeAttachmentPolicies'
+            'ExoAtpPolicyForO365'
+            'ExoTeamsProtectionPolicy'
         )
     }
 

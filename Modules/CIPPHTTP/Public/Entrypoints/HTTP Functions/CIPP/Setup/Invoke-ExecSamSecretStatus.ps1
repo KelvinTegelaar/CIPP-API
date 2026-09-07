@@ -18,6 +18,25 @@ function Invoke-ExecSamSecretStatus {
     try {
         $null = Get-CIPPAuthentication
 
+        # Certificate mode has no client secret to wait on - report ready once the SAM certificate
+        # exists, so the sign-in step isn't gated on a secret that will never be created.
+        if ($env:CertificateAuthMode) {
+            $Cert = Get-CIPPSAMCertificate -SkipCache -ErrorAction SilentlyContinue
+            if ($Cert) {
+                $Results = @{ ready = $true; reason = 'certificate' }
+            } else {
+                $Results = @{
+                    ready   = $false
+                    reason  = 'certificatePending'
+                    message = 'Preparing the SAM certificate. This unlocks automatically once the certificate is registered on the application.'
+                }
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = $Results
+                })
+        }
+
         # Same placeholder set the deployment template seeds and Get-CIPPAuthentication skips.
         $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
         $Configured = $env:ApplicationID -and $env:ApplicationID -notmatch $PlaceholderPattern -and

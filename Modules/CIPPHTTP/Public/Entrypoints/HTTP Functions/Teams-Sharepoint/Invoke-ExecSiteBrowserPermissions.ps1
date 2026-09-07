@@ -234,10 +234,10 @@ function Invoke-ExecSiteBrowserPermissions {
         $GroupId = $Request.Body.GroupId
         if ([string]::IsNullOrWhiteSpace($GroupId)) { throw 'GroupId is required.' }
 
-        $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-        $Scope = "$($SharePointInfo.SharePointUrl)/.default"
-        $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-        $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+        $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+        $Scope = $RestContext.Scope
+        $JsonAccept = $RestContext.Headers
+        $BaseUri = $RestContext.BaseUri
 
         $Principals = ConvertTo-BrowserPermissionPrincipals `
             -PrincipalId $Request.Body.PrincipalId `

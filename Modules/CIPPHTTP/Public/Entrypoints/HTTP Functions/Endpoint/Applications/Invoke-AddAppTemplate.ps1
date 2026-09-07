@@ -23,6 +23,17 @@ function Invoke-AddAppTemplate {
         $AppsList = [System.Collections.Generic.List[hashtable]]::new()
         foreach ($App in @($RawApps)) {
             $ConfigValue = if ($App.config -is [string]) { $App.config } else { $App.config | ConvertTo-Json -Depth 15 -Compress }
+
+            # An IntuneBody with an id was read off Graph. Only Office/Edge can rebuild from one;
+            # CIPP cannot re-upload a customer's .intunewin, so the template could never deploy.
+            $AppType = [string]$App.appType
+            $ParsedConfig = $null
+            try { $ParsedConfig = $ConfigValue | ConvertFrom-Json -Depth 100 -ErrorAction Stop } catch { $ParsedConfig = $null }
+            if ($ParsedConfig.IntuneBody.id -and $AppType -notin @('officeApp', 'edgeApp')) {
+                $AppName = if ($App.appName) { [string]$App.appName } else { [string]$ParsedConfig.ApplicationName }
+                throw "'$AppName' is an existing Intune application with uploaded installer content. CIPP application templates are rebuilt from a package or script at deployment, so only Store, Chocolatey, Office, Edge, MSP and Custom (script) applications can be templated."
+            }
+
             $AppsList.Add(@{
                 appType = [string]$App.appType
                 appName = [string]$App.appName

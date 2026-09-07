@@ -17,8 +17,9 @@ Function Invoke-AddSafeLinksPolicyTemplate {
     try {
         $GUID = (New-Guid).GUID
 
-        # Validate required fields
-        if ([string]::IsNullOrEmpty($Request.body.Name)) {
+        # Validate required fields. The "create template from policy" row action posts the policy
+        # row, which carries Name/PolicyName but no TemplateName.
+        if ([string]::IsNullOrEmpty($Request.body.Name) -and [string]::IsNullOrEmpty($Request.body.TemplateName)) {
             throw "Template name is required but was not provided"
         }
 
@@ -29,8 +30,9 @@ Function Invoke-AddSafeLinksPolicyTemplate {
         # Create a new ordered hashtable to store selected properties
         $policyObject = [ordered]@{}
 
-        # Set name and comments - prioritize template-specific fields
-        $policyObject["TemplateName"] = $Request.body.TemplateName
+        # Set name and comments - prioritize template-specific fields, falling back to the policy
+        # name so a template made from a policy is not listed with a blank name.
+        $policyObject["TemplateName"] = if (-not [string]::IsNullOrEmpty($Request.body.TemplateName)) { $Request.body.TemplateName } else { $Request.body.PolicyName }
         $policyObject["TemplateDescription"] = $Request.body.TemplateDescription
 
         # For templates, if no specific policy description is provided, use template description as default

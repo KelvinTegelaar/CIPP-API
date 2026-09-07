@@ -21,7 +21,11 @@ function New-CIPPCertificateAssertion {
         [string]$AppId,
 
         [Parameter(Mandatory = $true)]
-        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
+
+        # Token endpoint the assertion is presented to (the aud claim). Defaults to the v2 endpoint;
+        # the classic v1 endpoint (/oauth2/token) must be passed explicitly so the STS accepts it.
+        [string]$Audience = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
     )
 
     # get sha256 hash of certificate for the x5t#S256 header
@@ -52,7 +56,7 @@ function New-CIPPCertificateAssertion {
         iss = $AppId
 
         # What endpoint is allowed to use this JWT
-        aud = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+        aud = $Audience
 
         # JWT ID: random guid
         jti = [guid]::NewGuid()

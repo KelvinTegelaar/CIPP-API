@@ -48,6 +48,28 @@ function Get-CIPPBaselineDefaultPlatformRestrictionsState {
         $Expected | Add-Member -NotePropertyName $Entry.e -NotePropertyValue ([bool]($V.($Entry.e) -eq $true))
         $Current | Add-Member -NotePropertyName $Entry.e -NotePropertyValue ([bool]$Config.($Entry.c).($Entry.p))
     }
+
+    # Minimum/maximum OS version per platform. macOS is intentionally absent - the Intune
+    # enrollment restriction for macOS carries no version limit. Each is graded ONLY when the
+    # operator supplied it (like WHfB's newer fields): a blank field means 'no opinion', so it
+    # stays out of the compare here and omitWhenBlank prunes it from the remediation body.
+    # osMinimumVersion/osMaximumVersion are free-form strings on Graph, compared as strings.
+    $VersionMap = @(
+        @{ e = 'osMinimumVersionAndroidForWork'; c = 'androidForWorkRestriction'; p = 'osMinimumVersion' }
+        @{ e = 'osMaximumVersionAndroidForWork'; c = 'androidForWorkRestriction'; p = 'osMaximumVersion' }
+        @{ e = 'osMinimumVersionAndroid'; c = 'androidRestriction'; p = 'osMinimumVersion' }
+        @{ e = 'osMaximumVersionAndroid'; c = 'androidRestriction'; p = 'osMaximumVersion' }
+        @{ e = 'osMinimumVersioniOS'; c = 'iosRestriction'; p = 'osMinimumVersion' }
+        @{ e = 'osMaximumVersioniOS'; c = 'iosRestriction'; p = 'osMaximumVersion' }
+        @{ e = 'osMinimumVersionWindows'; c = 'windowsRestriction'; p = 'osMinimumVersion' }
+        @{ e = 'osMaximumVersionWindows'; c = 'windowsRestriction'; p = 'osMaximumVersion' }
+    )
+    foreach ($Entry in $VersionMap) {
+        if ([string]::IsNullOrWhiteSpace("$($V.($Entry.e))")) { continue }
+        $Expected | Add-Member -NotePropertyName $Entry.e -NotePropertyValue "$($V.($Entry.e))"
+        $Current | Add-Member -NotePropertyName $Entry.e -NotePropertyValue "$($Config.($Entry.c).($Entry.p))"
+    }
+
     $Current | Add-Member -NotePropertyName 'configurationId' -NotePropertyValue "$($Config.id)"
 
     @{ Expected = $Expected; Current = $Current }

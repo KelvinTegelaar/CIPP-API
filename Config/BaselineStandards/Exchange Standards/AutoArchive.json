@@ -24,7 +24,17 @@
     "threshold": {
       "type": "number",
       "label": "Auto-Archiving Threshold Percentage (80-100, default 96, 100 disables)",
-      "default": 96
+      "default": 96,
+      "validators": {
+        "min": {
+          "value": 80,
+          "message": "Exchange only accepts a threshold between 80 and 100"
+        },
+        "max": {
+          "value": 100,
+          "message": "Exchange only accepts a threshold between 80 and 100"
+        }
+      }
     }
   },
   "expected": {
@@ -33,6 +43,7 @@
   "read": {
     "cacheType": "ExoOrganizationConfig"
   },
+  "writeTarget": "exoOrganizationConfig",
   "remediate": {
     "executor": "ExoRequest",
     "cmdlets": [

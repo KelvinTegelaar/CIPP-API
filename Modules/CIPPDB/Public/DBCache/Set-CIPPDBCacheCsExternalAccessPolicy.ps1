@@ -30,6 +30,11 @@ function Set-CIPPDBCacheCsExternalAccessPolicy {
             $Data = @($ExternalAccess)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsExternalAccessPolicy' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Teams External Access Policy' -sev Debug
+        } else {
+            # The request succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsExternalAccessPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Teams External Access Policies (none found)' -sev Debug
         }
         $ExternalAccess = $null
 

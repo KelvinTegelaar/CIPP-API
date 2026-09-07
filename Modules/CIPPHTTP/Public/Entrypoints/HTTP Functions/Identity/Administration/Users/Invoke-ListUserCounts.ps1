@@ -98,11 +98,32 @@ Function Invoke-ListUserCounts {
         }
     }
 
+    # PIM view of the Global Administrator role: how many of the admins are standing (permanent)
+    # versus eligible. Only meaningful on Entra ID P2 tenants; elsewhere every GA is permanent.
+    $PermanentGAs = $GAs
+    $EligibleGAs = 0
+    $PIMCapable = $false
+    if ($TenantFilter -ne 'AllTenants') {
+        try {
+            $GARows = @(Get-CIPPPIMRoleAssignments -TenantFilter $TenantFilter -RoleDefinitionId '62e90394-69f5-4237-9190-012177145e10')
+            $PIMCapable = [bool](($GARows | Select-Object -First 1).PIMCapable)
+            if ($PIMCapable) {
+                $PermanentGAs = @($GARows | Where-Object { $_.AssignmentType -eq 'Permanent' }).Count
+                $EligibleGAs = @($GARows | Where-Object { $_.AssignmentType -eq 'Eligible' }).Count
+            }
+        } catch {
+            Write-Information "Could not read PIM assignments for the Global Administrator role: $($_.Exception.Message)"
+        }
+    }
+
     $Counts = @{
-        Users    = $Users
-        LicUsers = $LicUsers
-        Gas      = $GAs
-        Guests   = $Guests
+        Users        = $Users
+        LicUsers     = $LicUsers
+        Gas          = $GAs
+        PermanentGas = $PermanentGAs
+        EligibleGas  = $EligibleGAs
+        PIMCapable   = $PIMCapable
+        Guests       = $Guests
     }
 
     return ([HttpResponseContext]@{

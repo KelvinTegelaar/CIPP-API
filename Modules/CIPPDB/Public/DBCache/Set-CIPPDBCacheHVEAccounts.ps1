@@ -41,7 +41,7 @@ function Set-CIPPDBCacheHVEAccounts {
                 $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($BulkCmdlets)
                 for ($i = 0; $i -lt $HVEAccounts.Count; $i++) {
                     $Result = $BulkResults[$i]
-                    if ($Result.body -and -not $Result.body.error -and $Result.body.value) {
+                    if ($Result.body -and -not $Result.body.error -and $Result.body.value -and $HVEAccounts[$i].PrimarySmtpAddress) {
                         $PolicyData = $Result.body.value
                         $BillingPolicyMap[$HVEAccounts[$i].PrimarySmtpAddress] = @{
                             BillingPolicyId   = $PolicyData.BillingPolicyId
@@ -55,7 +55,9 @@ function Set-CIPPDBCacheHVEAccounts {
         }
 
         foreach ($HVE in $HVEAccounts) {
-            $Policy = $BillingPolicyMap[$HVE.PrimarySmtpAddress]
+            # PrimarySmtpAddress can be null for a partially-provisioned HVE account - same
+            # null-key-indexing hazard as the Mailboxes cache (see Set-CIPPDBCacheMailboxes.ps1).
+            $Policy = if ($HVE.PrimarySmtpAddress) { $BillingPolicyMap[$HVE.PrimarySmtpAddress] } else { $null }
 
             $Transformed.Add(($HVE | Select-Object `
                     @{ Name = 'displayName'; Expression = { $_.DisplayName } },

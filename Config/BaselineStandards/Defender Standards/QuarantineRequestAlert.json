@@ -36,7 +36,13 @@
       "type": "textField",
       "label": "E-mail to receive the alert",
       "helperText": "Ignored when the alert state is Removed.",
-      "required": true
+      "required": true,
+      "validators": {
+        "pattern": {
+          "value": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+          "message": "Must be a valid e-mail address"
+        }
+      }
     },
     "AllowExtraAddresses": {
       "type": "switch",

@@ -91,11 +91,13 @@ function Get-CIPPIntuneAppProtectionPolicyReport {
             }
         }
 
-        $Policy | Add-Member -NotePropertyName 'PolicyTypeName' -NotePropertyValue $policyType -Force
-        $Policy | Add-Member -NotePropertyName 'PolicySource' -NotePropertyValue 'AppProtection' -Force
-        $Policy | Add-Member -NotePropertyName 'PolicyAssignment' -NotePropertyValue ($PolicyAssignment -join ', ') -Force
-        $Policy | Add-Member -NotePropertyName 'PolicyExclude' -NotePropertyValue ($PolicyExclude -join ', ') -Force
-        $Policy | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+        $Policy | Add-Member -NotePropertyMembers ([ordered]@{
+                PolicyTypeName   = $policyType
+                PolicySource     = 'AppProtection'
+                PolicyAssignment = ($PolicyAssignment -join ', ')
+                PolicyExclude    = ($PolicyExclude -join ', ')
+                CacheTimestamp   = $CacheTimestamp
+            }) -Force
         $Results.Add($Policy)
     }
 
@@ -130,15 +132,18 @@ function Get-CIPPIntuneAppProtectionPolicyReport {
             }
         }
 
-        $Config | Add-Member -NotePropertyName 'PolicyTypeName' -NotePropertyValue $policyType -Force
-        $Config | Add-Member -NotePropertyName 'URLName' -NotePropertyValue 'mobileAppConfigurations' -Force
-        $Config | Add-Member -NotePropertyName 'PolicySource' -NotePropertyValue 'AppConfiguration' -Force
-        $Config | Add-Member -NotePropertyName 'PolicyAssignment' -NotePropertyValue ($PolicyAssignment -join ', ') -Force
-        $Config | Add-Member -NotePropertyName 'PolicyExclude' -NotePropertyValue ($PolicyExclude -join ', ') -Force
-        if (-not $Config.PSObject.Properties['isAssigned']) {
-            $Config | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue $false -Force
+        $ConfigProps = [ordered]@{
+            PolicyTypeName   = $policyType
+            URLName          = 'mobileAppConfigurations'
+            PolicySource     = 'AppConfiguration'
+            PolicyAssignment = ($PolicyAssignment -join ', ')
+            PolicyExclude    = ($PolicyExclude -join ', ')
         }
-        $Config | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+        if (-not $Config.PSObject.Properties['isAssigned']) {
+            $ConfigProps['isAssigned'] = $false
+        }
+        $ConfigProps['CacheTimestamp'] = $CacheTimestamp
+        $Config | Add-Member -NotePropertyMembers $ConfigProps -Force
         $Results.Add($Config)
     }
 

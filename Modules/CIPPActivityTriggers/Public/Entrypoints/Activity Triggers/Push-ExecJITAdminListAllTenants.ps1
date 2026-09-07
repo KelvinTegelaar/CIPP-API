@@ -31,7 +31,7 @@ function Push-ExecJITAdminListAllTenants {
                 $BulkRequests.Add(@{
                         id     = $User.id
                         method = 'GET'
-                        url    = "users/$($User.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName"
+                        url    = "users/$($User.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName,roleTemplateId"
                     })
             }
             # Ensure $BulkRequests is not empty or null before making the bulk request
@@ -45,7 +45,7 @@ function Push-ExecJITAdminListAllTenants {
                     if ($RoleResults) {
                         $userRoleResult = $RoleResults | Where-Object -Property id -EQ $currentUser.id
                         if ($userRoleResult -and $userRoleResult.body -and $userRoleResult.body.value) {
-                            $MemberOf = $userRoleResult.body.value | Select-Object displayName, id
+                            $MemberOf = $userRoleResult.body.value | Select-Object displayName, id, roleTemplateId
                         }
                     }
 
@@ -61,6 +61,7 @@ function Push-ExecJITAdminListAllTenants {
                         jitAdminEnabled    = $jitAdminEnabled
                         jitAdminExpiration = $jitAdminExpiration
                         memberOf           = ($MemberOf | ConvertTo-Json -Depth 5 -Compress)
+                        roleTemplateIds    = @($MemberOf.roleTemplateId | Where-Object { $_ })
                     }
                 }
 

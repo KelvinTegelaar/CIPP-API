@@ -42,6 +42,8 @@ function ConvertTo-CIPPIntunePolicyListItem {
             '*windowsUpdateForBusinessConfiguration*' { 'Update Configuration' }
             '*windowsHealthMonitoringConfiguration*' { 'Health Monitoring' }
             '*microsoft.graph.macOSGeneralDeviceConfiguration*' { 'MacOS Configuration' }
+            '*microsoft.graph.macOSSoftwareUpdateConfiguration*' { 'macOS Update Configuration' }
+            '*microsoft.graph.windows10GeneralConfiguration*' { 'Windows Configuration' }
             '*microsoft.graph.macOSEndpointProtectionConfiguration*' { 'MacOS Endpoint Protection' }
             '*microsoft.graph.androidWorkProfileGeneralDeviceConfiguration*' { 'Android Configuration' }
             '*windowsFeatureUpdateProfiles*' { 'Feature Update' }
@@ -67,7 +69,14 @@ function ConvertTo-CIPPIntunePolicyListItem {
             } elseif (-not [string]::IsNullOrWhiteSpace($DefaultPolicyTypeName)) {
                 $PolicyTypeName = $DefaultPolicyTypeName
             } else {
-                $PolicyTypeName = $AssignmentContext
+                # Unmapped family: name it from the @odata type in the assignment context so the
+                # column never surfaces a raw Graph URL.
+                $OdataType = [regex]::Match([string]$AssignmentContext, 'microsoft\.graph\.([A-Za-z0-9]+)').Groups[1].Value
+                if ($OdataType) {
+                    $PolicyTypeName = (($OdataType -creplace '([a-z\d])([A-Z])', '$1 $2') -creplace '([A-Z]+)([A-Z][a-z])', '$1 $2')
+                } else {
+                    $PolicyTypeName = $AssignmentContext
+                }
             }
         }
 

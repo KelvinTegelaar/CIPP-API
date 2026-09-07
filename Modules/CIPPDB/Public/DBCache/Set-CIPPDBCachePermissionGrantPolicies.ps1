@@ -19,7 +19,8 @@ function Set-CIPPDBCachePermissionGrantPolicies {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching permission grant policies' -sev Debug
 
-        $PermissionGrantPolicies = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies?$expand=includes' -tenantid $TenantFilter)
+        # includes/excludes are auto-expanded on GET; $expand is rejected by Graph
+        $PermissionGrantPolicies = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies' -tenantid $TenantFilter)
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PermissionGrantPolicies' -Data @($PermissionGrantPolicies) -AddCount
         $PermissionGrantPolicies = $null
 

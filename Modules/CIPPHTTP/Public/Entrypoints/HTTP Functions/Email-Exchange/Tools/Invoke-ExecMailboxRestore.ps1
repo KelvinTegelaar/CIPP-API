@@ -6,6 +6,8 @@ function Invoke-ExecMailboxRestore {
         Exchange.Mailbox.ReadWrite
     #>
     Param($Request, $TriggerMetadata)
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     try {
         $Action = $Request.Query.Action ?? $Request.Body.Action
         $Identity = $Request.Query.Identity ?? $Request.Body.Identity
@@ -106,6 +108,7 @@ function Invoke-ExecMailboxRestore {
         }
 
         $GraphRequest = New-ExoRequest @ExoRequest
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $SuccessMessage -Sev 'Info'
 
         $Body = @{
             RestoreRequest = $GraphRequest
@@ -113,11 +116,13 @@ function Invoke-ExecMailboxRestore {
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to $($Action ?? 'create') mailbox restore request: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::OK
         $Body = @{
             RestoreRequest = $null
-            Results        = @($ErrorMessage)
+            Results        = @($ErrorMessage.NormalizedError)
             colour         = 'danger'
         }
     }

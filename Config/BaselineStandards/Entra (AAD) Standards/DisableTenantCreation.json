@@ -42,6 +42,10 @@
     "cacheType": "AuthorizationPolicy",
     "object": "defaultUserRolePermissions"
   },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "defaultUserRolePermissions.allowedToCreateTenants": "%allowTenantCreation%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

@@ -69,8 +69,10 @@ function Invoke-ListSiteActivity {
                             if ($RowSiteId -ne $LookupSiteId) { continue }
                         }
 
-                        $Row | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
-                        $Row | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+                        $Row | Add-Member -NotePropertyMembers ([ordered]@{
+                                Tenant         = $Tenant
+                                CacheTimestamp = $CacheTimestamp
+                            }) -Force
                         [void]$AllResults.Add($Row)
                     }
                 } catch {

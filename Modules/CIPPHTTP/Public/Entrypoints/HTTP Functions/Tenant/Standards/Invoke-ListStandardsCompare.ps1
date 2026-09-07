@@ -23,6 +23,8 @@ function Invoke-ListStandardsCompare {
 
     $ScopedTemplateGuids = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $ScopedQuarantineNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    # Plain standard keys in scope (standards.<Name>, and one key per reusable settings template).
+    $ScopedStandardKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($Entry in $StandardList) {
         switch ($Entry.Standard) {
             { $_ -in @('IntuneTemplate', 'ConditionalAccessTemplate') } {
@@ -32,15 +34,34 @@ function Invoke-ListStandardsCompare {
                 $DisplayName = $Entry.Settings.displayName.value ?? $Entry.Settings.displayName
                 if ($DisplayName) { $null = $ScopedQuarantineNames.Add($DisplayName) }
             }
+            'ReusableSettingsTemplate' {
+                foreach ($Item in @($Entry.Settings.TemplateList)) {
+                    $Id = if ($Item.value) { [string]$Item.value } else { [string]$Item }
+                    if ($Id) { $null = $ScopedStandardKeys.Add("standards.ReusableSettingsTemplate.$Id") }
+                }
+            }
+            default {
+                if ($Entry.Standard) { $null = $ScopedStandardKeys.Add("standards.$($Entry.Standard)") }
+            }
         }
+    }
+
+    # A report row carries the id of the template whose settings last ran the standard. With the
+    # three-tier merge that is the tenant-specific or group template, so filtering rows on that id
+    # hid every standard an AllTenants template shares with a more specific one and the page said
+    # the data had never been collected. Rows are matched on the standard key instead, and the
+    # selected template's own definition is read so its overridden standards still count as in scope
+    # (Get-CIPPStandards only emits the template that won the merge).
+    if ($TemplateFilter) {
+        $TemplateScope = Get-CIPPStandardsTemplateScope -TemplateId $TemplateFilter
+        $ScopedStandardKeys.UnionWith($TemplateScope.StandardKeys)
+        $ScopedTemplateGuids.UnionWith($TemplateScope.TemplateGuids)
+        $ScopedQuarantineNames.UnionWith($TemplateScope.QuarantineNames)
     }
 
     $Filters = [system.collections.generic.list[string]]::new()
     if ($TenantFilter) {
         $Filters.Add("PartitionKey eq '{0}'" -f $TenantFilter)
-    }
-    if ($TemplateFilter) {
-        $Filters.Add("TemplateId eq '{0}'" -f $TemplateFilter)
     }
     $Filter = $Filters -join ' and '
 
@@ -68,6 +89,9 @@ function Invoke-ListStandardsCompare {
             }
             $DecodedName = -join $Chars
             if (-not $ScopedQuarantineNames.Contains($DecodedName)) { continue }
+        } elseif ($TemplateFilter -and $Standard.TemplateId -ne $TemplateFilter -and -not $ScopedStandardKeys.Contains($FieldName)) {
+            # Not written by this template and not one of its standards: belongs to another template.
+            continue
         }
 
         # decode field names that are hex encoded (e.g. QuarantineTemplates)

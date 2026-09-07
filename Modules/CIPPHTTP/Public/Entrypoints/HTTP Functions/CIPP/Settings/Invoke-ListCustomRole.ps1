@@ -139,6 +139,21 @@ function Invoke-ListCustomRole {
             $Role | Add-Member -NotePropertyName EntraGroup -NotePropertyValue $EntraGroup.GroupName -Force
             $Role | Add-Member -NotePropertyName EntraGroupId -NotePropertyValue $EntraGroup.GroupId -Force
         }
+
+        # Custom roles keep their IP allow-list in AccessIPRanges (same as the built-in roles
+        # above); surface it here so this read-only list carries it too.
+        $IPRangeEntity = $AccessIPRanges | Where-Object -Property RowKey -EQ $Role.RowKey
+        if ($IPRangeEntity) {
+            try {
+                $IPRanges = @($IPRangeEntity.IPRanges | ConvertFrom-Json)
+            } catch {
+                $IPRanges = @()
+            }
+        } else {
+            $IPRanges = @()
+        }
+        $Role | Add-Member -NotePropertyName IPRange -NotePropertyValue $IPRanges -Force
+
         $RoleList.Add($Role)
     }
     $Body = @($RoleList)

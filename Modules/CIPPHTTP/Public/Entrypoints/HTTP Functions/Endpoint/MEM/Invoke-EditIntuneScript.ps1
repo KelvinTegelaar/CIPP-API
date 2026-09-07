@@ -107,6 +107,8 @@ function Invoke-EditIntuneScript {
 
             try {
                 $patchResult = New-GraphPOSTRequest @parms -type 'PATCH'
+                $Result = "Updated Intune $scriptType script $($Request.Body.ScriptId)"
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $Request.Body.TenantFilter -message $Result -Sev 'Info'
                 $body = [pscustomobject]@{'Results' = $patchResult }
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
@@ -114,6 +116,8 @@ function Invoke-EditIntuneScript {
                     })
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
+                $Result = "Failed to update Intune $scriptType script $($Request.Body.ScriptId): $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $Request.Body.TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = "Failed to update script: $($ErrorMessage.NormalizedError)"

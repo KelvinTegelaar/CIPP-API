@@ -42,6 +42,7 @@
     "cacheType": "DeviceRegistrationPolicy"
   },
   "prepare": "Get-CIPPBaselineDeviceRegistrationPolicyState",
+  "writeTarget": "deviceRegistrationPolicy",
   "remediate": {
     "executor": "DeviceRegistrationPolicy",
     "requireAdminConfigurable": "azureADRegistration",

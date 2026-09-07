@@ -8,7 +8,7 @@ function Set-CIPPDBCacheExoMailContacts {
         baselines. Get-MailContact carries the mail-specific properties (ExternalEmailAddress,
         MailTip, HiddenFromAddressListsEnabled) while the extended directory properties
         (FirstName, Company, City, Phone, etc.) only exist on Get-Contact, so both are fetched
-        in one bulk request and merged per contact.
+        (each $select-projected to only the stored fields) and merged per contact.
 
         ExternalEmailAddress is normalized: the 'SMTP:'/'smtp:' prefix is stripped and the value
         lowercased, because Exchange re-cases the domain part when it creates a contact
@@ -31,17 +31,11 @@ function Set-CIPPDBCacheExoMailContacts {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Mail Contacts' -sev Debug
 
-        $BulkRequests = @(
-            @{ CmdletInput = @{ CmdletName = 'Get-MailContact'; Parameters = @{ ResultSize = 'Unlimited' } } }
-            @{ CmdletInput = @{ CmdletName = 'Get-Contact'; Parameters = @{ ResultSize = 'Unlimited' } } }
-        )
-        $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $BulkRequests -useSystemMailbox $true -ReturnWithCommand $true
-
-        # Build lookups from Get-Contact results: primary key ExternalDirectoryObjectId,
-        # fallback Identity for contacts without a directory object id.
+        $MailContactResults = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailContact' -cmdParams @{ ResultSize = 'Unlimited' } -Select 'Identity,Guid,ExternalDirectoryObjectId,DisplayName,ExternalEmailAddress,MailTip,HiddenFromAddressListsEnabled')
+        $ContactResults = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Contact' -cmdParams @{ ResultSize = 'Unlimited' } -Select 'Identity,FirstName,LastName,Company,StateOrProvince,StreetAddress,Phone,WebPage,Title,City,PostalCode,CountryOrRegion,MobilePhone')
         $ContactByDirectoryId = @{}
         $ContactByIdentity = @{}
-        foreach ($Contact in @($BulkResults.'Get-Contact')) {
+        foreach ($Contact in $ContactResults) {
             if ($Contact.ExternalDirectoryObjectId) {
                 $ContactByDirectoryId[[string]$Contact.ExternalDirectoryObjectId] = $Contact
             }
@@ -51,7 +45,7 @@ function Set-CIPPDBCacheExoMailContacts {
         }
 
         $MailContacts = [System.Collections.Generic.List[PSObject]]::new()
-        foreach ($MailContact in @($BulkResults.'Get-MailContact')) {
+        foreach ($MailContact in $MailContactResults) {
             $MatchedContact = $null
             if ($MailContact.ExternalDirectoryObjectId -and $ContactByDirectoryId.ContainsKey([string]$MailContact.ExternalDirectoryObjectId)) {
                 $MatchedContact = $ContactByDirectoryId[[string]$MailContact.ExternalDirectoryObjectId]
@@ -85,7 +79,8 @@ function Set-CIPPDBCacheExoMailContacts {
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoMailContacts' -Data @($MailContacts) -AddCount
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($MailContacts.Count) Mail Contacts" -sev Debug
 
-        $BulkResults = $null
+        $MailContactResults = $null
+        $ContactResults = $null
         $ContactByDirectoryId = $null
         $ContactByIdentity = $null
         $MailContacts = $null

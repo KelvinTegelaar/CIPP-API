@@ -22,7 +22,9 @@ function Set-CIPPAccessRole {
         [Parameter(Mandatory = $true)]
         [string]$Role,
         [Parameter(Mandatory = $true)]
-        $Group
+        $Group,
+        $Headers,
+        $APIName = 'Set-CIPPAccessRole'
     )
 
     $BlacklistedRoles = @('authenticated', 'anonymous')
@@ -56,5 +58,7 @@ function Set-CIPPAccessRole {
         Clear-CippAccessUserCache
         try { Start-UserSyncTimer } catch {}
         try { [Craft.Services.AuthBridge]::InvalidateUsers() } catch {}
+
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Mapped Entra group '$($Group.displayName)' to CIPP access role '$Role'" -Sev 'Info'
     }
 }

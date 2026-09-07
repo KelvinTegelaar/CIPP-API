@@ -35,6 +35,7 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) $script:SavedEntity = $Entity }
     function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) $script:RemovedEntity = $Entity }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
+    function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
 

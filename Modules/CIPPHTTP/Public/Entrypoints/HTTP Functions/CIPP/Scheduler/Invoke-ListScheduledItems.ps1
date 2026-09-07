@@ -45,10 +45,11 @@ function Invoke-ListScheduledItems {
     }
 
     if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
-        # Tasks are stored against either the customerId or the default domain name depending on
-        # what created them, so resolve the tenant up front and let storage match either.
+        # Tasks are stored against whichever tenant identifier the caller supplied - customerId,
+        # default domain, or the initial .onmicrosoft.com domain - so resolve the tenant up front
+        # and let storage match any of them. (Get-Tenants itself accepts all three as -TenantFilter.)
         $TenantObject = Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1
-        $TenantIdentifiers = @($TenantObject.defaultDomainName, $TenantObject.customerId) | Where-Object { $_ } | Select-Object -Unique
+        $TenantIdentifiers = @($TenantObject.defaultDomainName, $TenantObject.initialDomainName, $TenantObject.customerId) | Where-Object { $_ } | Select-Object -Unique
         if (-not $TenantIdentifiers) {
             # Tenant could not be resolved (deleted, excluded, or not visible to the caller).
             # Fall back to the raw value so we filter on something rather than on nothing.
@@ -76,9 +77,9 @@ function Invoke-ListScheduledItems {
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
 
     $TenantLookup = @{}
-    foreach ($Tenant in (Get-Tenants -IncludeErrors | Select-Object customerId, defaultDomainName)) {
+    foreach ($Tenant in (Get-Tenants -IncludeErrors | Select-Object customerId, defaultDomainName, initialDomainName)) {
         if ($Tenant.customerId) {
-            $TenantLookup[[string]$Tenant.customerId] = $Tenant.defaultDomainName
+            $TenantLookup[[string]$Tenant.customerId] = $Tenant
         }
     }
 
@@ -87,7 +88,11 @@ function Invoke-ListScheduledItems {
         foreach ($AllowedTenant in $AllowedTenants) {
             $null = $AllowedTenantIdentifiers.Add([string]$AllowedTenant)
             if ($TenantLookup.ContainsKey([string]$AllowedTenant)) {
-                $null = $AllowedTenantIdentifiers.Add($TenantLookup[[string]$AllowedTenant])
+                # A task keyed on any of the tenant's identifiers must pass the access check, not just
+                # the default domain - otherwise a scoped user cannot see their own initial-domain tasks.
+                foreach ($Domain in @($TenantLookup[[string]$AllowedTenant].defaultDomainName, $TenantLookup[[string]$AllowedTenant].initialDomainName)) {
+                    if ($Domain) { $null = $AllowedTenantIdentifiers.Add([string]$Domain) }
+                }
             }
         }
         $Tasks = $Tasks | Where-Object { $AllowedTenantIdentifiers.Contains([string]$_.Tenant) }
@@ -147,7 +152,7 @@ function Invoke-ListScheduledItems {
             } else {
                 $TenantValue = [string]$Task.Tenant
                 if ($TenantLookup.ContainsKey($TenantValue)) {
-                    $TenantValue = $TenantLookup[$TenantValue]
+                    $TenantValue = $TenantLookup[$TenantValue].defaultDomainName
                 }
                 $Task.Tenant = [PSCustomObject]@{
                     label = $TenantValue

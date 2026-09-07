@@ -126,11 +126,12 @@ function Invoke-ExecAppApprovalTemplate {
                 # Create output object preserving original structure
                 $outputObject = $templateData | Select-Object -Property *
 
-                # Add the TemplateId (RowKey) to the output
-                $outputObject | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $_.RowKey -Force
-
-                # Add timestamp from the table entity
-                $outputObject | Add-Member -NotePropertyName 'Timestamp' -NotePropertyValue $_.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ') -Force
+                $outputObject | Add-Member -NotePropertyMembers ([ordered]@{
+                        # Add the TemplateId (RowKey) to the output
+                        TemplateId = $_.RowKey
+                        # Add timestamp from the table entity
+                        Timestamp  = $_.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ')
+                    }) -Force
 
                 return $outputObject
             }
@@ -148,11 +149,12 @@ function Invoke-ExecAppApprovalTemplate {
                 # Create output object preserving original structure
                 $outputObject = $templateData | Select-Object -Property *
 
-                # Add the TemplateId (RowKey) to the output
-                $outputObject | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $_.RowKey -Force
-
-                # Add timestamp from the table entity
-                $outputObject | Add-Member -NotePropertyName 'Timestamp' -NotePropertyValue $_.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ') -Force
+                $outputObject | Add-Member -NotePropertyMembers ([ordered]@{
+                        # Add the TemplateId (RowKey) to the output
+                        TemplateId = $_.RowKey
+                        # Add timestamp from the table entity
+                        Timestamp  = $_.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ')
+                    }) -Force
 
                 return $outputObject
             }

@@ -7,6 +7,9 @@ Function Invoke-ExecNotificationConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $sev = ([pscustomobject]$Request.body.Severity).value -join (',')
     $config = @{
         email                  = $Request.body.email
@@ -25,6 +28,11 @@ Function Invoke-ExecNotificationConfig {
         sev                    = $sev
     }
     $Results = Set-cippNotificationConfig @Config
+    if ($Results -like 'Failed*') {
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results -Sev 'Error'
+    } else {
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results -Sev 'Info'
+    }
     $body = [pscustomobject]@{'Results' = $Results }
 
     return ([HttpResponseContext]@{

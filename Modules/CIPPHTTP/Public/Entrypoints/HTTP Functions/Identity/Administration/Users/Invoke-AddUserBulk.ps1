@@ -128,6 +128,7 @@ function Invoke-AddUserBulk {
                         $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
                         Set-CIPPUserLicense -UserId $BulkResult.id -AddLicenses $LicenseSkus -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
                     }
+                    Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Message.resultText -Sev 'Info'
                     $Results.Add(@{
                             resultText = $Message.resultText
                             state      = 'success'

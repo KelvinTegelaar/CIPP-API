@@ -5,7 +5,7 @@ function Invoke-ListMailboxes {
     .ROLE
         Exchange.Mailbox.Read
     .DESCRIPTION
-        Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
+        Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -13,10 +13,30 @@ function Invoke-ListMailboxes {
     $TenantFilter = $Request.Query.tenantFilter
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
+    # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.
+    $ManualPagination = $Request.Query.manualPagination -and [System.Convert]::ToBoolean($Request.Query.manualPagination)
     try {
         # If UseReportDB is specified, retrieve from report database
         if ($UseReportDB) {
             try {
+                if ($ManualPagination) {
+                    # Rows per page, clamped between 250 and 10000. Defaults to 5000.
+                    $PageSize = 5000
+                    if ($Request.Query.PageSize -as [int]) {
+                        $PageSize = [Math]::Min([Math]::Max([int]$Request.Query.PageSize, 250), 10000)
+                    }
+                    # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                    $Page = Get-CIPPMailboxesReport -TenantFilter $TenantFilter -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -ErrorAction Stop
+                    $Metadata = @{}
+                    if ($Page.NextToken) { $Metadata.nextLink = $Page.NextToken }
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::OK
+                            Body       = [PSCustomObject]@{
+                                Results  = @($Page.Items)
+                                Metadata = $Metadata
+                            }
+                        })
+                }
                 $GraphRequest = Get-CIPPMailboxesReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
@@ -33,7 +53,14 @@ function Invoke-ListMailboxes {
 
         # Original live EXO logic
         $ZeroArchiveGuid = '00000000-0000-0000-0000-000000000000'
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,IsDirSynced,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,AutoExpandingArchiveEnabled'
+        # Picker mode: address autocompletes only need the address + name, so skip the heavy field
+        # set, the per-mailbox computed properties, and the extra Get-OrganizationConfig call.
+        $Minimal = $Request.Query.Minimal -eq $true
+        if ($Minimal) {
+            $Select = 'id,UserPrincipalName,DisplayName,PrimarySMTPAddress'
+        } else {
+            $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,IsDirSynced,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,AutoExpandingArchiveEnabled'
+        }
         $ExoRequest = @{
             tenantid  = $TenantFilter
             cmdlet    = 'Get-Mailbox'
@@ -71,6 +98,18 @@ function Invoke-ListMailboxes {
                     }
                 }
             }
+        }
+
+        if ($Minimal) {
+            $GraphRequest = @(New-ExoRequest @ExoRequest) | Select-Object Id,
+            @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+            @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
+            @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } }
+
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = @($GraphRequest)
+                })
         }
 
         $OrgAutoExpandingArchiveEnabled = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-OrganizationConfig' -Select 'AutoExpandingArchiveEnabled').AutoExpandingArchiveEnabled

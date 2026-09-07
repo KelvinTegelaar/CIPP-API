@@ -22,10 +22,10 @@ function Invoke-ExecRestoreRecycleBinItems {
         if (-not $SiteUrl) { throw 'SiteUrl is required.' }
         if ($Ids.Count -eq 0) { throw 'No recycle bin items were selected.' }
 
-        $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-        $Scope = "$($SharePointInfo.SharePointUrl)/.default"
-        $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-        $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+        $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+        $Scope = $RestContext.Scope
+        $JsonAccept = $RestContext.Headers
+        $BaseUri = $RestContext.BaseUri
 
         $RestoreBody = ConvertTo-Json -Compress -Depth 5 -InputObject @{ ids = @($Ids) }
         try {

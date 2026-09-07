@@ -392,11 +392,15 @@ Describe 'Per-drive sharing-links scan' {
     Context 'incremental scan from a stored delta token' {
         BeforeEach {
             $script:ScanId = 'scan-incr-1'
+            # LastFullScanUtc must sit inside the incremental window (Push-...'s $FullScanDays,
+            # default 14) or the drive falls back to a full scan. Anchor it to "now" so the
+            # fixture never drifts out of the window as the calendar advances past a fixed date.
+            $script:LastFullScanUtc = [string]([DateTimeOffset]::UtcNow.AddDays(-1).ToString('o'))
             Initialize-TestScan -ScanId $script:ScanId -TotalSites 1
             Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{
                 PartitionKey = 'contoso.com'; RowKey = 'delta-b!driveone'; DriveId = 'b!driveone'; SiteId = 'contoso.sharepoint.com,site1,web1'
                 DeltaLink = 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=stored'
-                LastScanId = 'previous-scan'; LastScanUtc = '2026-08-10T00:00:00Z'; LastFullScanUtc = '2026-08-10T00:00:00Z'
+                LastScanId = 'previous-scan'; LastScanUtc = $script:LastFullScanUtc; LastFullScanUtc = $script:LastFullScanUtc
             }
             Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01ITEMX_permOld'
             Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01ITEMY_permKeep'
@@ -427,7 +431,7 @@ Describe 'Per-drive sharing-links scan' {
             $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
             $DriveState.DeltaLink | Should -BeLike '*token=newer'
             # Incremental completion must not claim a full scan happened.
-            $DriveState.LastFullScanUtc | Should -Be '2026-08-10T00:00:00Z'
+            $DriveState.LastFullScanUtc | Should -Be $script:LastFullScanUtc
         }
 
         It 'falls back to a classic full scan when the stored token is rejected' {
@@ -452,7 +456,7 @@ Describe 'Per-drive sharing-links scan' {
 
             $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
             $DriveState.DeltaLink | Should -BeLike '*token=rebuilt'
-            $DriveState.LastFullScanUtc | Should -Not -Be '2026-08-10T00:00:00Z'
+            $DriveState.LastFullScanUtc | Should -Not -Be $script:LastFullScanUtc
         }
     }
 

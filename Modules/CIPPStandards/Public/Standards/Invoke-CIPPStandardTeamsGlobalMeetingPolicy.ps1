@@ -7,8 +7,8 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     .SYNOPSIS
         (Label) Define Global Meeting Policy for Teams
     .DESCRIPTION
-        (Helptext) Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl
-        (DocsDescription) Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl
+        (Helptext) Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl, AllowExternalNonTrustedMeetingChat, AllowCloudRecording
+        (DocsDescription) Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl, AllowExternalNonTrustedMeetingChat, AllowCloudRecording
     .NOTES
         CAT
             Teams Standards
@@ -30,12 +30,14 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.MeetingChatEnabledType","label":"Meeting chat policy","options":[{"label":"On for everyone","value":"Enabled"},{"label":"On for everyone but anonymous users","value":"EnabledExceptAnonymous"},{"label":"Off for everyone","value":"Disabled"}]}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowParticipantGiveRequestControl","label":"Participants can give or request control"}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowExternalParticipantGiveRequestControl","label":"External participants can give or request control"}
+            {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.AllowExternalNonTrustedMeetingChat","label":"External meeting chat","helperText":"CIS 8.5.8 recommends Off. Leave blank to keep the tenant's current value.","options":[{"label":"Off (CIS recommended)","value":false},{"label":"On","value":true}]}
+            {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.AllowCloudRecording","label":"Meeting cloud recording","helperText":"CIS 8.5.9 recommends Off. Leave blank to keep the tenant's current value.","options":[{"label":"Off (CIS recommended)","value":false},{"label":"On","value":true}]}
         IMPACT
             Low Impact
         ADDEDDATE
             2024-11-12
         POWERSHELLEQUIVALENT
-            Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting \$false -AllowAnonymousUsersToStartMeeting \$false -AutoAdmittedUsers \$AutoAdmittedUsers -AllowPSTNUsersToBypassLobby \$false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode \$DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl \$false -AllowParticipantGiveRequestControl \$false
+            Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting \$false -AllowAnonymousUsersToStartMeeting \$false -AutoAdmittedUsers \$AutoAdmittedUsers -AllowPSTNUsersToBypassLobby \$false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode \$DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl \$false -AllowParticipantGiveRequestControl \$false -AllowExternalNonTrustedMeetingChat \$false -AllowCloudRecording \$false
         RECOMMENDEDBY
             "CIS"
         REQUIREDCAPABILITIES
@@ -58,7 +60,7 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
 
     try {
         $CurrentState = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TeamsMeetingPolicy' -Action Get -Identity 'Global' |
-            Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl
+            Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl, AllowExternalNonTrustedMeetingChat, AllowCloudRecording
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsGlobalMeetingPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -84,6 +86,15 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     $AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl ?? $false
     $AllowParticipantGiveRequestControl = $Settings.AllowParticipantGiveRequestControl ?? $false
 
+    # Opt-in booleans (autoComplete Off/On, or blank to keep the tenant's current value). Unlike the
+    # switches above, a blank here means "do not manage" so existing deployments are never surprised
+    # into disabling external chat or cloud recording. The option value can arrive as a real bool or
+    # as "true"/"false", so ToBoolean handles both; blank/absent falls back to the current state.
+    $RawExternalChat = $Settings.AllowExternalNonTrustedMeetingChat.value ?? $Settings.AllowExternalNonTrustedMeetingChat
+    $AllowExternalNonTrustedMeetingChat = if ($null -eq $RawExternalChat -or "$RawExternalChat" -eq '') { $CurrentState.AllowExternalNonTrustedMeetingChat } else { [System.Convert]::ToBoolean($RawExternalChat) }
+    $RawCloudRecording = $Settings.AllowCloudRecording.value ?? $Settings.AllowCloudRecording
+    $AllowCloudRecording = if ($null -eq $RawCloudRecording -or "$RawCloudRecording" -eq '') { $CurrentState.AllowCloudRecording } else { [System.Convert]::ToBoolean($RawCloudRecording) }
+
     $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $AllowAnonymousUsersToJoinMeeting) -and
     ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $AllowAnonymousUsersToStartMeeting) -and
     ($CurrentState.AutoAdmittedUsers -eq $AutoAdmittedUsers) -and
@@ -91,7 +102,9 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     ($CurrentState.MeetingChatEnabledType -eq $MeetingChatEnabledType) -and
     ($CurrentState.DesignatedPresenterRoleMode -eq $DesignatedPresenterRoleMode) -and
     ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $AllowExternalParticipantGiveRequestControl) -and
-    ($CurrentState.AllowParticipantGiveRequestControl -eq $AllowParticipantGiveRequestControl)
+    ($CurrentState.AllowParticipantGiveRequestControl -eq $AllowParticipantGiveRequestControl) -and
+    ($CurrentState.AllowExternalNonTrustedMeetingChat -eq $AllowExternalNonTrustedMeetingChat) -and
+    ($CurrentState.AllowCloudRecording -eq $AllowCloudRecording)
 
 
     if ($Settings.remediate -eq $true) {
@@ -108,6 +121,8 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
                 DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
                 AllowExternalParticipantGiveRequestControl = $AllowExternalParticipantGiveRequestControl
                 AllowParticipantGiveRequestControl         = $AllowParticipantGiveRequestControl
+                AllowExternalNonTrustedMeetingChat         = $AllowExternalNonTrustedMeetingChat
+                AllowCloudRecording                        = $AllowCloudRecording
             }
 
             try {
@@ -140,6 +155,8 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             DesignatedPresenterRoleMode                = $CurrentState.DesignatedPresenterRoleMode
             AllowExternalParticipantGiveRequestControl = $CurrentState.AllowExternalParticipantGiveRequestControl
             AllowParticipantGiveRequestControl         = $CurrentState.AllowParticipantGiveRequestControl
+            AllowExternalNonTrustedMeetingChat         = $CurrentState.AllowExternalNonTrustedMeetingChat
+            AllowCloudRecording                        = $CurrentState.AllowCloudRecording
         }
         $ExpectedValue = @{
             AllowAnonymousUsersToJoinMeeting           = $AllowAnonymousUsersToJoinMeeting
@@ -150,6 +167,8 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
             AllowExternalParticipantGiveRequestControl = $AllowExternalParticipantGiveRequestControl
             AllowParticipantGiveRequestControl         = $AllowParticipantGiveRequestControl
+            AllowExternalNonTrustedMeetingChat         = $AllowExternalNonTrustedMeetingChat
+            AllowCloudRecording                        = $AllowCloudRecording
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGlobalMeetingPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'TeamsGlobalMeetingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant

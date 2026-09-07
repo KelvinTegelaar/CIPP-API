@@ -225,6 +225,39 @@ Describe 'New-CIPPUserTask' {
             $Result.Results | Should -Contain 'Scheduled SendAs on the shared mailbox Facility in 15 minutes.'
         }
 
+        It 'grants FullAccess without automapping when the no-automap variant is selected' {
+            $UserObj = New-TestUserObj -SharedMailboxes @(
+                [pscustomobject]@{ label = 'Facility'; value = 'facility@contoso.com' }
+            ) -SharedMailboxPermission ([pscustomobject]@{ label = 'Full Access (no Automapping)'; value = 'FullAccessNoAutoMap' })
+
+            $Result = New-CIPPUserTask -UserObj $UserObj
+
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter {
+                $Task.Parameters.PermissionLevel -eq 'FullAccess' -and
+                $Task.Parameters.AutoMap -eq $false
+            }
+            $Result.Results | Should -Contain 'Scheduled FullAccess (no automapping) on the shared mailbox Facility in 15 minutes. Automapping is off, so the user adds the mailbox to Outlook themselves.'
+        }
+
+        It 'lets the no-automap variant win when both FullAccess variants are selected' {
+            # One grant carries one automapping flag; scheduling both would make the second
+            # Add-MailboxPermission fail on the already existing permission entry anyway.
+            $UserObj = New-TestUserObj -SharedMailboxes @(
+                [pscustomobject]@{ label = 'Facility'; value = 'facility@contoso.com' }
+            ) -SharedMailboxPermission @(
+                [pscustomobject]@{ label = 'Full Access'; value = 'FullAccess' }
+                [pscustomobject]@{ label = 'Full Access (no Automapping)'; value = 'FullAccessNoAutoMap' }
+            )
+
+            $null = New-CIPPUserTask -UserObj $UserObj
+
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter {
+                $Task.Parameters.PermissionLevel -eq 'FullAccess' -and
+                $Task.Parameters.AutoMap -eq $false
+            }
+        }
+
         It 'schedules one task per permission level when several are selected' {
             $UserObj = New-TestUserObj -SharedMailboxes @(
                 [pscustomobject]@{ label = 'Facility'; value = 'facility@contoso.com' }

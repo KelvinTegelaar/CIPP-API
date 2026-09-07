@@ -15,16 +15,27 @@ function Invoke-ExecGDAPRepairRoleMappings {
     $Results = [System.Collections.Generic.List[object]]::new()
 
     try {
-        # Fetch the partner tenant security groups once and reuse them for every store we repair
-        $PartnerGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+        # Fetch the partner tenant security groups once and reuse them for every store we repair.
+        # Groups recreated by one pass are appended so later passes re-link instead of creating duplicates.
+        $PartnerGroups = [System.Collections.Generic.List[object]]::new()
+        foreach ($Group in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true)) {
+            $PartnerGroups.Add($Group)
+        }
+        $AddCreatedGroups = {
+            param($Check)
+            foreach ($Created in ($Check.Results | Where-Object { $_.Status -eq 'Created' })) {
+                $PartnerGroups.Add([PSCustomObject]@{ id = $Created.GroupId; displayName = $Created.GroupName })
+            }
+        }
 
         # Repair the GDAPRoles registry (stale group ids are remapped to the existing "M365 GDAP" group)
         $RolesTable = Get-CIPPTable -TableName 'GDAPRoles'
         $StoredRoles = Get-CIPPAzDataTableEntity @RolesTable -Filter "PartitionKey eq 'Roles'"
         if (($StoredRoles | Measure-Object).Count -gt 0) {
-            $RoleCheck = Test-CIPPGDAPGroupMappings -RoleMappings $StoredRoles -PartnerGroups $PartnerGroups -WriteBack -APIName $APIName -Headers $Headers
+            $RoleCheck = Test-CIPPGDAPGroupMappings -RoleMappings $StoredRoles -PartnerGroups @($PartnerGroups) -CreateMissing -WriteBack -APIName $APIName -Headers $Headers
+            & $AddCreatedGroups $RoleCheck
             foreach ($Result in $RoleCheck.Results) {
-                if ($Result.Status -eq 'Stale') {
+                if ($Result.Status -in @('Stale', 'Created')) {
                     $Results.Add(@{ resultText = "GDAP Roles: $($Result.Message)"; state = 'success' })
                 } elseif ($Result.Status -eq 'Missing') {
                     $Results.Add(@{ resultText = "GDAP Roles: $($Result.Message)"; state = 'error' })
@@ -43,9 +54,10 @@ function Invoke-ExecGDAPRepairRoleMappings {
             }
             if (($TemplateMappings | Measure-Object).Count -eq 0) { continue }
 
-            $TemplateCheck = Test-CIPPGDAPGroupMappings -RoleMappings $TemplateMappings -PartnerGroups $PartnerGroups -TemplateId $Template.RowKey -APIName $APIName -Headers $Headers
+            $TemplateCheck = Test-CIPPGDAPGroupMappings -RoleMappings $TemplateMappings -PartnerGroups @($PartnerGroups) -CreateMissing -TemplateId $Template.RowKey -APIName $APIName -Headers $Headers
+            & $AddCreatedGroups $TemplateCheck
             foreach ($Result in $TemplateCheck.Results) {
-                if ($Result.Status -eq 'Stale') {
+                if ($Result.Status -in @('Stale', 'Created')) {
                     $Results.Add(@{ resultText = "Template '$($Template.RowKey)': $($Result.Message)"; state = 'success' })
                 } elseif ($Result.Status -eq 'Missing') {
                     $Results.Add(@{ resultText = "Template '$($Template.RowKey)': $($Result.Message)"; state = 'error' })

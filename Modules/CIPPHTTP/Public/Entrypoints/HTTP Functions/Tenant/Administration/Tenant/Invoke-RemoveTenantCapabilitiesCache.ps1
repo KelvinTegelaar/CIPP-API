@@ -12,8 +12,8 @@ function Invoke-RemoveTenantCapabilitiesCache {
     $Headers = $Request.Headers
 
 
-    # Get the tenant identifier from query parameters
-    $DefaultDomainName = $Request.Query.defaultDomainName
+    # Get the tenant identifier from the request body (POST) or query (legacy GET).
+    $DefaultDomainName = $Request.Body.defaultDomainName ?? $Request.Query.defaultDomainName
     if (-not $DefaultDomainName) {
         $body = [pscustomobject]@{'Results' = 'Missing required parameter: defaultDomainName' }
         $StatusCode = [HttpStatusCode]::BadRequest

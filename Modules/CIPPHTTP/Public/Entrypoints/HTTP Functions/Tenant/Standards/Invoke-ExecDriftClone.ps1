@@ -8,6 +8,9 @@ function Invoke-ExecDriftClone {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint ?? 'ExecDriftClone'
+    $Headers = $Request.Headers
+
     try {
         $TemplateId = $Request.Body.id
 
@@ -22,9 +25,22 @@ function Invoke-ExecDriftClone {
                 })
             return
         }
-        $CloneResult = New-CippStandardsDriftClone -TemplateId $TemplateId -UpgradeToDrift -Headers $Request.Headers
+        $CloneResult = New-CippStandardsDriftClone -TemplateId $TemplateId -UpgradeToDrift
+        if ($CloneResult -like 'Failed*') {
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $CloneResult -Sev 'Error'
+            $Results = [pscustomobject]@{
+                'Results' = $CloneResult
+                'Success' = $false
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::InternalServerError
+                    Body       = $Results
+                })
+        }
+
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $CloneResult -Sev 'Info'
         $Results = [pscustomobject]@{
-            'Results' = $CloneResult
+            'Results' = 'Clone Completed successfully'
             'Success' = $true
         }
 
@@ -33,6 +49,8 @@ function Invoke-ExecDriftClone {
                 Body       = $Results
             })
     } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Failed to create drift clone: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Results = [pscustomobject]@{
             'Results' = "Failed to create drift clone: $($_.Exception.Message)"
             'Success' = $false

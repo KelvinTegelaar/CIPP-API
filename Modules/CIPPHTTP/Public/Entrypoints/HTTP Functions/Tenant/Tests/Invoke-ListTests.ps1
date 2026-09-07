@@ -194,9 +194,11 @@ function Invoke-ListTests {
                 $ScriptGuid = ($TestResult.RowKey -replace '^CustomScript-', '')
                 if (-not [string]::IsNullOrWhiteSpace($ScriptGuid) -and $CustomScriptMetadataLookup.ContainsKey($ScriptGuid)) {
                     $CustomMetadata = $CustomScriptMetadataLookup[$ScriptGuid]
-                    $TestResult | Add-Member -NotePropertyName 'Description' -NotePropertyValue ($CustomMetadata.Description) -Force
-                    $TestResult | Add-Member -NotePropertyName 'ReturnType' -NotePropertyValue ($CustomMetadata.ReturnType) -Force
-                    $TestResult | Add-Member -NotePropertyName 'MarkdownTemplate' -NotePropertyValue ($CustomMetadata.MarkdownTemplate) -Force
+                    $TestResult | Add-Member -NotePropertyMembers ([ordered]@{
+                            Description      = ($CustomMetadata.Description)
+                            ReturnType       = ($CustomMetadata.ReturnType)
+                            MarkdownTemplate = ($CustomMetadata.MarkdownTemplate)
+                        }) -Force
                 }
             }
         }

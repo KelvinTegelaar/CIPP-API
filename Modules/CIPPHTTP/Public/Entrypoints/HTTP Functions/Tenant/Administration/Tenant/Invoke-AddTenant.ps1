@@ -7,6 +7,7 @@ function Invoke-AddTenant {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 
@@ -78,10 +79,12 @@ function Invoke-AddTenant {
             }
 
             if (!$CanCreateCustomers) {
+                $Result = 'You do not have permission to create customers. You must be a Tier 1 or Tier 2 CSP.'
+                Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error'
                 $Body = @{
-                    $Results = @(@{
+                    Results = @(@{
                             state      = 'error'
-                            resultText = 'You do not have permission to create customers. You must be a Tier 1 or Tier 2 CSP.'
+                            resultText = $Result
                         })
                 }
             } else {
@@ -147,6 +150,8 @@ function Invoke-AddTenant {
                     ####
 
 
+                    $Result = "Tenant created successfully for $TenantName.onmicrosoft.com (username: $($Response.userCredentials.userName)@$TenantName.onmicrosoft.com)"
+                    Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
                     $Body = @{
                         Results = @(@{
                                 state      = 'success'
@@ -155,10 +160,13 @@ function Invoke-AddTenant {
                             })
                     }
                 } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    $Result = "Failed to create tenant: $($ErrorMessage.NormalizedError)"
+                    Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
                     $Body = @{
                         Results = @(@{
                                 state      = 'error'
-                                resultText = "Failed to create tenant: $($_.Exception.Message)"
+                                resultText = $Result
                             })
                     }
                     $StatusCode = [HttpStatusCode]::BadRequest

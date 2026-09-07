@@ -19,11 +19,11 @@ Function Invoke-AddBPATemplate {
             PartitionKey = 'BPATemplate'
             GUID         = $Request.body.name
         }
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created BPA named $($Request.body.name)" -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Created BPA named $($Request.body.name)" -Sev 'Info'
 
         $body = [pscustomobject]@{'Results' = 'Successfully added template' }
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "BPA Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "BPA Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "BPA Template Creation failed: $($_.Exception.Message)" }
     }
 

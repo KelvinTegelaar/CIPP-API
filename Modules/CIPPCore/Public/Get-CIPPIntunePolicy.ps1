@@ -242,6 +242,43 @@ function Get-CIPPIntunePolicy {
                     return $policies
                 }
             }
+            'AppConfiguration' {
+                # Managed-device app configuration policies. Without this case the IntuneTemplate
+                # standard could never find a deployed app configuration and reported it missing on
+                # every run while remediation kept patching the policy that was already there.
+                $PlatformType = 'deviceAppManagement'
+                $TemplateTypeURL = 'mobileAppConfigurations'
+                $ExcludedProperties = @('id', 'createdDateTime', 'lastModifiedDateTime', 'version', '@odata.context')
+
+                if ($DisplayName) {
+                    $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
+                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
+                    if ($policy) {
+                        $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
+                        $policyDetails = $policyDetails | Select-Object * -ExcludeProperty $ExcludedProperties
+                        $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
+                        $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                    }
+                    return $policy
+                } elseif ($PolicyId) {
+                    $policy = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')" -tenantid $tenantFilter
+                    if ($policy) {
+                        $policyDetails = $policy | Select-Object * -ExcludeProperty $ExcludedProperties
+                        $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
+                        $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                    }
+                    return $policy
+                } else {
+                    $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
+                    foreach ($policy in $policies) {
+                        $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
+                        $policyDetails = $policyDetails | Select-Object * -ExcludeProperty $ExcludedProperties
+                        $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
+                        $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                    }
+                    return $policies
+                }
+            }
             'Device' {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'deviceConfigurations'

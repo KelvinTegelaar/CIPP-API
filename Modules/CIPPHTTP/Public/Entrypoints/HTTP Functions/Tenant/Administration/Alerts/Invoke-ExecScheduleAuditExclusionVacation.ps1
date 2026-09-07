@@ -67,6 +67,7 @@ function Invoke-ExecScheduleAuditExclusionVacation {
             }) -hidden $false
 
         $Result = "Successfully scheduled location alert exclusion vacation mode for $UserDisplay."
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

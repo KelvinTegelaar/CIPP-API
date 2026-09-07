@@ -89,21 +89,22 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             switch ($TableName) {
                 'WebhookRules' {
                     [pscustomobject]@{
-                        PartitionKey    = 'WebhookRules'
-                        RowKey          = 'rule-1'
-                        Tenants         = (@('AllTenants') | ConvertTo-Json -Compress)
-                        excludedTenants = $null
-                        Conditions      = (@(
+                        PartitionKey      = 'WebhookRules'
+                        RowKey            = 'rule-1'
+                        Tenants           = (@('AllTenants') | ConvertTo-Json -Compress)
+                        excludedTenants   = $null
+                        Conditions        = (@(
                                 @{
                                     Property = @{ label = 'Operation' }
                                     Operator = @{ label = 'eq' }
                                     Input    = @{ value = 'Set-Mailbox' }
                                 }
                             ) | ConvertTo-Json -Compress -Depth 5)
-                        Actions         = (@('generatemail') | ConvertTo-Json -Compress)
-                        Type            = 'Audit'
-                        AlertComment    = 'test comment'
-                        CustomSubject   = ''
+                        Actions           = (@('generatemail') | ConvertTo-Json -Compress)
+                        Type              = 'Audit'
+                        AlertComment      = 'test comment'
+                        CustomSubject     = ''
+                        PsaTicketPriority = '5'
                     }
                 }
                 'cacheauditloglookups' {
@@ -243,6 +244,9 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             $data.CIPPAction | Should -Not -BeNullOrEmpty
             $data.CIPPClause | Should -Not -BeNullOrEmpty
             $data.CIPPAlertComment | Should -Be 'test comment'
+            # Covers the full per-alert priority chain through this function: the config
+            # projection, the where-clause object, and the stamp onto the matched record.
+            $data.CIPPPsaTicketPriority | Should -Be '5'
         }
 
         It 'dispatches the matched record to webhook processing' {

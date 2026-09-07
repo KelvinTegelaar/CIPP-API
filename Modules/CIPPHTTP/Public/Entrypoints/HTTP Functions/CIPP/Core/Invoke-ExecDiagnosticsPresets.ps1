@@ -11,6 +11,9 @@ function Invoke-ExecDiagnosticsPresets {
         $TriggerMetadata
     )
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     try {
         $Table = Get-CIPPTable -TableName 'DiagnosticsPresets'
         $Action = $Request.Body.action
@@ -30,6 +33,9 @@ function Invoke-ExecDiagnosticsPresets {
                 PartitionKey = 'Preset'
                 RowKey       = $GUID
             }
+
+            $Result = "Diagnostics preset deleted successfully (GUID=$GUID)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
 
             return [HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
@@ -68,6 +74,9 @@ function Invoke-ExecDiagnosticsPresets {
 
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
+            $Result = "Diagnostics preset saved successfully (Name=$Name, GUID=$GUID)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+
             return [HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @{
@@ -79,10 +88,12 @@ function Invoke-ExecDiagnosticsPresets {
             }
         }
     } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Failed to manage diagnostics preset: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::InternalServerError
             Body       = @{
-                Error = "Failed to manage diagnostics preset: $($_.Exception.Message)"
+                Error = "Failed to manage diagnostics preset: $($ErrorMessage.NormalizedError)"
             }
         }
     }

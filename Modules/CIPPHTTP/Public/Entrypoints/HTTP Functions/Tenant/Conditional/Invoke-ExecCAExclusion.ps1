@@ -185,12 +185,15 @@ function Invoke-ExecCAExclusion {
                     Reference     = $Request.Body.reference
                 }
                 Add-CIPPScheduledTask -Task $TravelRemoveTask -hidden $false
-                $Results += "Successfully scheduled temporary travel policy '$TravelPolicyName' restricting sign-ins to $($TravelCountries -join ', '). The policy and named location will be removed at the end date."
+                $TravelResult = "Successfully scheduled temporary travel policy '$TravelPolicyName' restricting sign-ins to $($TravelCountries -join ', '). The policy and named location will be removed at the end date."
+                Write-LogMessage -headers $Headers -API 'Invoke-ExecCAExclusion' -message $TravelResult -Sev 'Info' -tenant $TenantFilter
+                $Results += $TravelResult
             }
 
             if ($DuplicateGroupWarning) {
                 $Results += $DuplicateGroupWarning
             }
+            Write-LogMessage -headers $Headers -API 'Invoke-ExecCAExclusion' -message "Successfully added vacation mode schedule for $Username on policy '$PolicyName'." -Sev 'Info' -tenant $TenantFilter
             $body = @{ Results = $Results }
         } else {
             $Parameters = @{

@@ -23,6 +23,9 @@ function Set-CIPPDBCacheIntuneWindowsAutopilotDeploymentProfiles {
         $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneAutopilotProfilesCache' -TenantFilter $TenantFilter -Preset Intune -SkipLog
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping Autopilot profiles cache' -sev Debug
+            # A license skip is still a completed collection: record the authoritative empty set
+            # so collect-on-miss does not re-run this collector forever on unlicensed tenants.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneWindowsAutopilotDeploymentProfiles' -Data @() -AddCount -ClearOnEmpty
             return
         }
 

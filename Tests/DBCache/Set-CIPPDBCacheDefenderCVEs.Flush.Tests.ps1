@@ -122,7 +122,8 @@ Describe 'Set-CIPPDBCacheDefenderCVEs flush semantics' {
         $Batch.Count | Should -Be 1
         $Batch[0].PartitionKey | Should -Be $script:Tenant
         $Batch[0].Type | Should -Be 'DefenderCVEs'
-        $Batch[0].RowKey | Should -BeLike 'DefenderCVEs-*'
+        # Stable, idempotent RowKey derived from the CVE id (was a random GUID per run).
+        $Batch[0].RowKey | Should -Be 'DefenderCVEs-CVE-2024-0001'
 
         # Get-CIPPCVEReport reads these fields off the deserialised Data blob.
         $Payload = $Batch[0].Data | ConvertFrom-Json

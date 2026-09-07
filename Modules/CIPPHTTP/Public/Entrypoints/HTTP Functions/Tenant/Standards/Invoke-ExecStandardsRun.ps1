@@ -26,11 +26,14 @@ function Invoke-ExecStandardsRun {
         $_.guid -like $TemplateId
     }
 
+    # [bool] over an array (or the string 'false') is always $true, which flipped wildcard runs to manual-only.
+    $RunManually = @($Templates).Count -eq 1 -and ("$(@($Templates)[0].runManually)" -eq 'True')
+
     # Call the wrapper - it handles queuing internally via Start-CIPPOrchestrator
     try {
-        $null = New-CIPPStandardsRun -TenantFilter $TenantFilter -TemplateID $TemplateId -runManually ([bool]$Templates.runManually) -Force
+        $null = New-CIPPStandardsRun -TenantFilter $TenantFilter -TemplateID $TemplateId -runManually $RunManually -Force
         $TemplateName = if ($TemplateId -eq '*') { 'All' } else { "$($Templates.templateName) ($($Templates.GUID))" }
-        $RunMode = if ([bool]$Templates.runManually) { ' (Manual Only)' } else { '' }
+        $RunMode = if ($RunManually) { ' (Manual Only)' } else { '' }
         $Results = "Successfully started Standards Run for tenant: $TenantFilter - Template: $TemplateName$RunMode"
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Info'
     } catch {

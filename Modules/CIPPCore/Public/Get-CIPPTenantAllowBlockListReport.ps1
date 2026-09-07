@@ -43,9 +43,11 @@ function Get-CIPPTenantAllowBlockListReport {
         $Entries = [System.Collections.Generic.List[PSCustomObject]]::new()
         foreach ($Row in $Rows) {
             $Entry = $Row.Data | ConvertFrom-Json
-            $Entry | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Row.PartitionKey -Force
-            # Per row rather than per report: each tenant is cached on its own schedule.
-            $Entry | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $Row.Timestamp -Force
+            $Entry | Add-Member -NotePropertyMembers ([ordered]@{
+                    Tenant         = $Row.PartitionKey
+                    # Per row rather than per report: each tenant is cached on its own schedule.
+                    CacheTimestamp = $Row.Timestamp
+                }) -Force
             $Entries.Add($Entry)
         }
 

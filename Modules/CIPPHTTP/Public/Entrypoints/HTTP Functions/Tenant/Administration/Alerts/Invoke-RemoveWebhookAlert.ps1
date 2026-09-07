@@ -19,6 +19,7 @@ Function Invoke-RemoveWebhookAlert {
             $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.query.ID
             Remove-CIPPAzDataTableEntity -Force @WebhookTable -Entity $Entity | Out-Null
             $Results = "Removed Alert Rule for $($Request.query.TenantFilter)"
+            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Request.query.TenantFilter -message $Results -Sev 'Info'
         } else {
             if ($Request.query.TenantFilter -eq 'AllTenants') {
                 $Tenants = Get-Tenants -IncludeAll -IncludeErrors | Select-Object -ExpandProperty defaultDomainName
@@ -31,7 +32,7 @@ Function Invoke-RemoveWebhookAlert {
                     }
                     Remove-CIPPAzDataTableEntity -Force @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
                 } catch {
-                    Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to remove webhook for AllTenants. $($_.Exception.Message)" -Sev 'Error'
+                    Write-LogMessage -headers $Request.Headers -API $APIName -tenant 'Global' -message "Failed to remove webhook for AllTenants. $($_.Exception.Message)" -Sev 'Error'
                 }
             } else {
                 $Tenants = $Request.query.TenantFilter
@@ -41,12 +42,14 @@ Function Invoke-RemoveWebhookAlert {
                 Remove-CIPPGraphSubscription -TenantFilter $Tenant -Type 'AuditLog'
                 $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.query.ID
                 Remove-CIPPAzDataTableEntity -Force @WebhookTable -Entity $Entity | Out-Null
-                "Removed Alert Rule for $($Request.query.TenantFilter)"
+                $Message = "Removed Alert Rule for $($Request.query.TenantFilter)"
+                Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Info'
+                $Message
             }
         }
         $body = [pscustomobject]@{'Results' = $Results }
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to remove webhook alert. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Failed to remove webhook alert. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to remove webhook alert: $($_.Exception.Message)" }
     }
 

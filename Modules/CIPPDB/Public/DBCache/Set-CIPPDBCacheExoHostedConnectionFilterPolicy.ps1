@@ -23,6 +23,11 @@ function Set-CIPPDBCacheExoHostedConnectionFilterPolicy {
         if ($ConnectionFilterPolicies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoHostedConnectionFilterPolicy' -Data $ConnectionFilterPolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($ConnectionFilterPolicies.Count) hosted connection filter policies" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoHostedConnectionFilterPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 hosted connection filter policies (none found)' -sev Debug
         }
         $ConnectionFilterPolicies = $null
 

@@ -8,12 +8,12 @@ function Get-CIPPBaselineDisableSharedMailboxState {
         standard read the adminapi Mailbox endpoint live; the cache carries
         recipientTypeDetails and ExternalDirectoryObjectId, so no live call is needed.
 
-        NOTE - a deliberate behaviour change. The classic filter read
+        NOTE - the classic filter read
             RecipientTypeDetails -eq 'SharedMailbox' -or RecipientTypeDetails -eq 'SchedulingMailbox' -and UserPrincipalName -in $UserList
-        and -and binds tighter than -or, so the enabled/cloud-only test only ever applied to
-        SchedulingMailbox. Every shared mailbox was swept regardless, including ones whose
-        account was already disabled or directory-synced. The join here applies to both types,
-        which is what the standard's own description says it does.
+        which looks like it only joins SchedulingMailbox against the user list, but does not:
+        PowerShell gives -and and -or the same precedence and associates them left to right, so
+        it means '(shared or scheduling) and still enabled'. Same set as the join here; the only
+        real difference is that this one keys on ExternalDirectoryObjectId instead of the UPN.
     .FUNCTIONALITY
         Internal
     #>

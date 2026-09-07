@@ -7,6 +7,8 @@ function Invoke-ExecServicePrincipals {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $TenantFilter = $env:TenantID
 
     $Success = $true
@@ -30,6 +32,7 @@ function Invoke-ExecServicePrincipals {
                     if ($BlockList -contains $Request.Query.AppId) {
                         $Results = 'Service Principal creation is blocked for this AppId'
                         $Success = $false
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Error'
                     } else {
                         $Body = @{
                             'appId' = $Request.Query.AppId
@@ -37,14 +40,18 @@ function Invoke-ExecServicePrincipals {
                         try {
                             $ServicePrincipal = New-GraphPostRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -type POST -body $Body -NoAuthCheck $true
                             $Results = "Created service principal for $($ServicePrincipal.displayName) ($($ServicePrincipal.appId))"
+                            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Info'
                         } catch {
-                            $Results = "Unable to create service principal: $($_.Exception.Message)"
+                            $ErrorMessage = Get-CippException -Exception $_
+                            $Results = "Unable to create service principal: $($ErrorMessage.NormalizedError)"
                             $Success = $false
+                            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Error' -LogData $ErrorMessage
                         }
                     }
                 } else {
                     $Results = 'Invalid AppId'
                     $Success = $false
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Error'
                 }
             }
             default {
@@ -66,8 +73,12 @@ function Invoke-ExecServicePrincipals {
             }
         }
     } catch {
-        $Results = $_.Exception.Message
+        $ErrorMessage = Get-CippException -Exception $_
+        $Results = $ErrorMessage.NormalizedError
         $Success = $false
+        if ($Action -eq 'Create') {
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to create service principal: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        }
     }
 
     $Metadata = @{

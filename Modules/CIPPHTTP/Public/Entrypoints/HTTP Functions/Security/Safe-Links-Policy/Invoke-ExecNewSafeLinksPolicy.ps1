@@ -17,6 +17,16 @@ function Invoke-ExecNewSafeLinksPolicy {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
 
+    # Exchange cmdlets need one tenant. With All Tenants selected the request used to fall through
+    # the authorisation check, skip the cmdlets and still report success, so the policy was never
+    # created anywhere while the logbook said it was.
+    if ([string]::IsNullOrWhiteSpace($TenantFilter) -or $TenantFilter -eq 'AllTenants') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Select a single tenant before creating a Safe Links policy. Safe Links policies cannot be created with All Tenants selected.' }
+            })
+    }
+
     # Extract policy settings from body
     $PolicyName = $Request.Body.PolicyName
     $EnableSafeLinksForEmail = $Request.Body.EnableSafeLinksForEmail

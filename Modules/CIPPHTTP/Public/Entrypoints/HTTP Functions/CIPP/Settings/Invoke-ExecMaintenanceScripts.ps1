@@ -60,6 +60,7 @@ Function Invoke-ExecMaintenanceScripts {
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $MaintenanceScriptRow -Force
 
+                Write-LogMessage -headers $Request.Headers -API $APIName -tenant 'Global' -message "Created one-time maintenance script link for $Filename" -Sev 'Info'
                 $Body = @{ Link = "/api/PublicScripts?guid=$LinkGuid" }
             } else {
                 $Body = @{ ScriptContent = $ScriptContent }

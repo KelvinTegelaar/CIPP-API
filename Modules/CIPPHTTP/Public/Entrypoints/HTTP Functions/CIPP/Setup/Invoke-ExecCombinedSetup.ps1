@@ -11,6 +11,38 @@ function Invoke-ExecCombinedSetup {
     #Make arraylist of Results
     $Results = [System.Collections.ArrayList]::new()
     try {
+        # Certificate-auth toggle for an existing install: enabling keeps the client secret as a rollback
+        # and switches SAM tokens to the certificate. Idempotent with a certificate-only First Setup.
+        if ($null -ne $Request.Body.certificateAuth) {
+            # Ensure credentials are loaded so the secret-usability check below is accurate on a cold
+            # runspace (otherwise a legitimate secret-based install could be wrongly refused a disable).
+            $null = Get-CIPPAuthentication
+            if ($Request.Body.certificateAuth -eq $true) {
+                try {
+                    # Make sure the certificate exists and is registered on the app before switching to it.
+                    $null = Update-CIPPSAMCertificate -ErrorAction Stop
+                    $Cert = Get-CIPPSAMCertificate -SkipCache -ErrorAction Stop
+                    if (-not $Cert) { throw 'No SAM certificate is available to authenticate with.' }
+                    $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $true -Force
+                    $env:CertificateAuthMode = $true
+                    $Results.add('Enabled certificate authentication. CIPP now authenticates with the SAM certificate instead of the client secret. The client secret is kept as a rollback - disable this option to switch back.')
+                } catch {
+                    $Results.add("Could not enable certificate authentication: $($_.Exception.Message). The existing authentication method is unchanged.")
+                }
+            } else {
+                # Refuse to disable with no usable secret to fall back to - that would break auth.
+                $SecretPlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
+                $SecretUsable = $env:ApplicationSecret -and $env:ApplicationSecret -notmatch $SecretPlaceholderPattern
+                if (-not $SecretUsable) {
+                    $Results.add('Certificate authentication cannot be disabled: this install has no client secret to fall back to.')
+                } else {
+                    $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $false -Force
+                    $env:CertificateAuthMode = $null
+                    $Results.add('Disabled certificate authentication. CIPP will use the client secret again.')
+                }
+            }
+        }
+
         if ($request.body.selectedBaselines -and $request.body.baselineOption -eq 'downloadBaselines') {
             #do a single download of the selected baselines.
             foreach ($template in $request.body.selectedBaselines) {
@@ -54,6 +86,11 @@ function Invoke-ExecCombinedSetup {
             $notificationConfig = $request.body | Select-Object email, webhook, onepertenant, logsToInclude, sendtoIntegration, sev | ConvertTo-Json | ConvertFrom-Json -AsHashtable
             $notificationResults = Set-CIPPNotificationConfig @notificationConfig
             $Results.add($notificationResults)
+            if ($notificationResults -like 'Failed*') {
+                Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message $notificationResults -Sev 'Error'
+            } else {
+                Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message $notificationResults -Sev 'Info'
+            }
         }
         if ($Request.Body.selectedOption -eq 'Manual') {
             $KV = Get-CippKeyVaultName

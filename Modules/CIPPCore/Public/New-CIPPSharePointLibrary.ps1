@@ -37,10 +37,10 @@ function New-CIPPSharePointLibrary {
         $Headers
     )
 
-    $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-    $Scope = "$($SharePointInfo.SharePointUrl)/.default"
-    $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-    $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+    $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+    $Scope = $RestContext.Scope
+    $JsonAccept = $RestContext.Headers
+    $BaseUri = $RestContext.BaseUri
 
     # Idempotency: return the existing library when one with this title is already present.
     $EscapedTitle = $LibraryName -replace "'", "''"

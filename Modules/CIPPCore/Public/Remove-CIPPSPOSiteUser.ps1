@@ -44,7 +44,7 @@ function Remove-CIPPSPOSiteUser {
 
     foreach ($SiteUrl in $SiteUrls) {
         if (-not $PSCmdlet.ShouldProcess($SiteUrl, "Remove $LoginName")) { continue }
-        $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+        $BaseUri = (Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl -SharePointInfo $SharePointInfo).BaseUri
         try {
             try {
                 $EnsureBody = ConvertTo-Json -Compress -InputObject @{ logonName = $LoginName }

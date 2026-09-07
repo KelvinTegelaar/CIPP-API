@@ -18,16 +18,18 @@ function Invoke-ListAppleEnrollmentProfiles {
         $DepOnboardingSettings = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings' -tenantid $TenantFilter)
         $Tokens = foreach ($DepSetting in $DepOnboardingSettings) {
             $Token = $DepSetting | Select-Object *
-            $Token | Add-Member -NotePropertyName 'daysUntilExpiration' -NotePropertyValue $(
-                if ($Token.tokenExpirationDateTime) {
-                    [math]::Floor(([datetime]$Token.tokenExpirationDateTime - [datetime]::UtcNow).TotalDays)
-                } else {
-                    $null
-                }
-            ) -Force
-            $Token | Add-Member -NotePropertyName 'isExpired' -NotePropertyValue $(
-                if ($Token.tokenExpirationDateTime) { ([datetime]$Token.tokenExpirationDateTime) -lt [datetime]::UtcNow } else { $false }
-            ) -Force
+            $Token | Add-Member -NotePropertyMembers ([ordered]@{
+                    daysUntilExpiration = $(
+                        if ($Token.tokenExpirationDateTime) {
+                            [math]::Floor(([datetime]$Token.tokenExpirationDateTime - [datetime]::UtcNow).TotalDays)
+                        } else {
+                            $null
+                        }
+                    )
+                    isExpired           = $(
+                        if ($Token.tokenExpirationDateTime) { ([datetime]$Token.tokenExpirationDateTime) -lt [datetime]::UtcNow } else { $false }
+                    )
+                }) -Force
             $Token
         }
 
@@ -47,13 +49,15 @@ function Invoke-ListAppleEnrollmentProfiles {
                     }
 
                     $ProfileObject = $EnrollmentProfile | Select-Object *
-                    $ProfileObject | Add-Member -NotePropertyName 'platform' -NotePropertyValue $Platform -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'profileType' -NotePropertyValue 'apple' -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'tokenId' -NotePropertyValue $DepSetting.id -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'tokenName' -NotePropertyValue $DepSetting.tokenName -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'appleIdentifier' -NotePropertyValue $DepSetting.appleIdentifier -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'tokenExpirationDateTime' -NotePropertyValue $DepSetting.tokenExpirationDateTime -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'tokenType' -NotePropertyValue $DepSetting.tokenType -Force
+                    $ProfileObject | Add-Member -NotePropertyMembers ([ordered]@{
+                            platform                = $Platform
+                            profileType             = 'apple'
+                            tokenId                 = $DepSetting.id
+                            tokenName               = $DepSetting.tokenName
+                            appleIdentifier         = $DepSetting.appleIdentifier
+                            tokenExpirationDateTime = $DepSetting.tokenExpirationDateTime
+                            tokenType               = $DepSetting.tokenType
+                        }) -Force
                     $ProfileObject
                 }
             } catch {

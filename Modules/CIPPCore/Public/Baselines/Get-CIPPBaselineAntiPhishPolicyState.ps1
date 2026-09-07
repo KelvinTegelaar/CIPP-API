@@ -43,6 +43,11 @@ function Get-CIPPBaselineAntiPhishPolicyState {
     $Rule = @($Rules | Where-Object { "$($_.Name)" -eq $RuleName }) | Select-Object -First 1
     $V = $Item.Variables
 
+    # Get-AntiPhishPolicy only populates Enabled for the built-in default policy; on a custom policy
+    # the active state lives on the rule's State (see Invoke-ListAntiPhishingFilters). Fall back to
+    # the policy value so the built-in default policy stays correct.
+    $PolicyEnabled = if ($null -ne $Rule.State) { $Rule.State -eq 'Enabled' } else { [bool]$Policy.Enabled }
+
     # The eight properties every tenant has.
     $Expected = [PSCustomObject]@{
         name                         = $PolicyName
@@ -56,7 +61,7 @@ function Get-CIPPBaselineAntiPhishPolicyState {
     }
     $Current = [PSCustomObject]@{
         name                         = "$($Policy.Name)"
-        enabled                      = [bool]$Policy.Enabled
+        enabled                      = $PolicyEnabled
         enableSpoofIntelligence      = [bool]$Policy.EnableSpoofIntelligence
         enableFirstContactSafetyTips = [bool]$Policy.EnableFirstContactSafetyTips
         enableUnauthenticatedSender  = [bool]$Policy.EnableUnauthenticatedSender

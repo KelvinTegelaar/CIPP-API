@@ -49,8 +49,10 @@ function Set-CIPPDBCacheOneDriveUsage {
 
         foreach ($UsageRow in $OneDriveUsage) {
             if ($null -eq $UsageRow) { continue }
-            $UsageRow | Add-Member -NotePropertyName 'id' -NotePropertyValue $UsageRow.siteId -Force
-            $UsageRow | Add-Member -NotePropertyName 'userPrincipalName' -NotePropertyValue $UsageRow.ownerPrincipalName -Force
+            $UsageRow | Add-Member -NotePropertyMembers ([ordered]@{
+                    id                = $UsageRow.siteId
+                    userPrincipalName = $UsageRow.ownerPrincipalName
+                }) -Force
         }
 
         $OneDriveListing = [System.Collections.Generic.List[object]]::new()

@@ -20,13 +20,18 @@ function Set-CIPPDBCacheSPOTenant {
     param(
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
-        [string]$QueueId
+        [string]$QueueId,
+        # SharePoint app-only requires the SAM certificate. Opt-in per caller (e.g. a baseline's
+        # read.collectorArgs) so this shared collector's default (delegated) is unchanged.
+        [switch]$UseCertificate
     )
 
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching SharePoint Online tenant configuration' -sev Debug
 
-        $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter -SkipCache
+        $AuthSplat = @{}
+        if ($UseCertificate) { $AuthSplat['UseCertificate'] = $true }
+        $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter -SkipCache @AuthSplat
 
         # An empty response is a failure too: this collection only runs for SharePoint-licensed
         # tenants, so there is always a configuration object to return. Falling through quietly

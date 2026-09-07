@@ -45,7 +45,11 @@ function Get-CIPPIntuneCompareExclusions {
         'templateId',
         'source',
         'package',
-        'assignments'
+        'assignments',
+        # App configuration policies name their apps by mobileApp id, which differs per tenant by
+        # construction; the app identity captured next to it is deployment metadata, not policy.
+        'targetedMobileApps',
+        'targetedMobileAppsDetails'
     )
     if ($AppProtection) {
         $Exclusions = $Exclusions + @('apps', 'deployedAppCount', 'isAssigned')

@@ -75,12 +75,14 @@ Function Invoke-ListUsers {
             }
         }
         $UserData | ForEach-Object {
-            $_ | Add-Member -MemberType NoteProperty -Name 'onPremisesSyncEnabled' -Value ([bool]($_.onPremisesSyncEnabled)) -Force
-            $_ | Add-Member -MemberType NoteProperty -Name 'username' -Value ($_.userPrincipalName -split '@' | Select-Object -First 1) -Force
-            $_ | Add-Member -MemberType NoteProperty -Name 'Aliases' -Value ($_.ProxyAddresses -join ', ') -Force
             $SkuID = $_.AssignedLicenses.skuid
-            $_ | Add-Member -MemberType NoteProperty -Name 'LicJoined' -Value ((@($SkuID | ForEach-Object { ($ConversionTable | Where-Object guid -EQ ([string]$_) | Select-Object -First 1 -ExpandProperty Product_Display_Name) }) -join ', ')) -Force
-            $_ | Add-Member -MemberType NoteProperty -Name 'primDomain' -Value @{value = ($_.userPrincipalName -split '@' | Select-Object -Last 1); label = ($_.userPrincipalName -split '@' | Select-Object -Last 1); } -Force
+            $_ | Add-Member -NotePropertyMembers ([ordered]@{
+                    onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
+                    username              = ($_.userPrincipalName -split '@' | Select-Object -First 1)
+                    Aliases               = ($_.ProxyAddresses -join ', ')
+                    LicJoined             = ((@($SkuID | ForEach-Object { ($ConversionTable | Where-Object guid -EQ ([string]$_) | Select-Object -First 1 -ExpandProperty Product_Display_Name) }) -join ', '))
+                    primDomain            = @{value = ($_.userPrincipalName -split '@' | Select-Object -Last 1); label = ($_.userPrincipalName -split '@' | Select-Object -Last 1); }
+                }) -Force
             $_
         }
     } elseif ($null -ne (Get-CippRequestContext).AllowedTenants) {

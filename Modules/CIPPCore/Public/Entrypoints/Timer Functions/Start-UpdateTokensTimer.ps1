@@ -52,7 +52,12 @@ function Start-UpdateTokensTimer {
                 Write-Information ($_.InvocationInfo.PositionMessage)
             }
 
-            if ($LastPasswordCredential.endDateTime -lt (Get-Date).AddDays(30).ToUniversalTime()) {
+            if ($env:CertificateAuthMode) {
+                # Certificate-exclusive mode: CIPP authenticates with the SAM certificate, so never
+                # generate a client secret. Doing so would fail on tenants blocking password addition,
+                # or silently re-create a secret on a secret-less install. The certificate is renewed below.
+                Write-Information "Certificate authentication is enabled for $AppId; skipping client secret generation."
+            } elseif ($LastPasswordCredential.endDateTime -lt (Get-Date).AddDays(30).ToUniversalTime()) {
                 Write-Information "Application secret for $AppId is expiring soon. Generating a new application secret."
                 $AppSecret = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppRegistration.id)/addPassword" -Body '{"passwordCredential":{"displayName":"UpdateTokens"}}' -NoAuthCheck $true -AsApp $true -ErrorAction Stop
                 Write-Information "New application secret generated for $AppId. Expiration date: $($AppSecret.endDateTime)."

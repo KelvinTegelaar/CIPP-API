@@ -23,6 +23,11 @@ function Set-CIPPDBCacheExoQuarantinePolicy {
         if ($QuarantinePolicies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoQuarantinePolicy' -Data $QuarantinePolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($QuarantinePolicies.Count) Quarantine policies" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoQuarantinePolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Quarantine policies (none found)' -sev Debug
         }
         $QuarantinePolicies = $null
 
@@ -37,6 +42,11 @@ function Set-CIPPDBCacheExoQuarantinePolicy {
         if ($GlobalQuarantinePolicy) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoGlobalQuarantinePolicy' -Data $GlobalQuarantinePolicy -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Global Quarantine policy' -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoGlobalQuarantinePolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Global Quarantine policies (none found)' -sev Debug
         }
         $GlobalQuarantinePolicy = $null
 

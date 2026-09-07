@@ -9,7 +9,8 @@ function Get-CIPPSPOAdminListData {
     Returns flat admin list Row objects (all pages). Does not join Graph or map browser DTOs.
 
     Dotted numeric props (e.g. StorageUsed.) are an RLD quirk; -NormalizeRows copies them to
-    undotted names when present.
+    undotted names when present, coerces StorageUsed / NumOfFiles / StorageQuota to int64, and
+    adds StorageQuotaBytes (admin quota is MB unless already byte-sized).
 
     .PARAMETER TenantFilter
     Tenant to query.
@@ -35,7 +36,8 @@ function Get-CIPPSPOAdminListData {
     Abort if paging exceeds this many pages.
 
     .PARAMETER NormalizeRows
-    Copy StorageUsed. / NumOfFiles. / etc. onto undotted property names.
+    Copy StorageUsed. / NumOfFiles. / etc. onto undotted property names, parse numerics, and
+    derive StorageQuotaBytes.
 
     .FUNCTIONALITY
     Internal
@@ -177,6 +179,23 @@ function Get-CIPPSPOAdminListData {
                         if (-not ($Row.PSObject.Properties.Name -contains $Plain)) {
                             $Row | Add-Member -NotePropertyName $Plain -NotePropertyValue $Prop.Value -Force
                         }
+                    }
+                }
+                foreach ($Field in @('StorageUsed', 'NumOfFiles', 'StorageQuota')) {
+                    if ($Row.PSObject.Properties.Name -contains $Field) {
+                        $Coerced = ConvertTo-SPOAdminListInt64 -Raw $Row.$Field
+                        if ($null -ne $Coerced) {
+                            $Row | Add-Member -NotePropertyName $Field -NotePropertyValue $Coerced -Force
+                        } elseif ($Row.$Field -is [string] -and -not [string]::IsNullOrWhiteSpace($Row.$Field)) {
+                            $Row | Add-Member -NotePropertyName $Field -NotePropertyValue $null -Force
+                        }
+                    }
+                }
+                if ($Row.PSObject.Properties.Name -contains 'StorageQuota') {
+                    $QuotaMb = $Row.StorageQuota
+                    if ($null -ne $QuotaMb -and $QuotaMb -gt 0) {
+                        $QuotaBytes = if ($QuotaMb -lt 1TB) { [int64]($QuotaMb * 1MB) } else { $QuotaMb }
+                        $Row | Add-Member -NotePropertyName 'StorageQuotaBytes' -NotePropertyValue $QuotaBytes -Force
                     }
                 }
             }

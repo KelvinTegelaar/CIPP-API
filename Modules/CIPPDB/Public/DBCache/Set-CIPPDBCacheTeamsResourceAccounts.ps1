@@ -27,6 +27,9 @@ function Set-CIPPDBCacheTeamsResourceAccounts {
 
         if ($LicenseCheck -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have a Teams license, skipping Teams resource accounts' -sev Debug
+            # A license skip is still a completed collection: record the authoritative empty set
+            # so collect-on-miss does not re-run this collector forever on unlicensed tenants.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'TeamsResourceAccounts' -Data @() -AddCount -ClearOnEmpty
             return
         }
 

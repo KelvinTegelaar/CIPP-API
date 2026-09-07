@@ -24,7 +24,8 @@ function Invoke-CIPPBaselineSPOVersionControl {
     $ExpireDays = [int]"$($Remediate.expireVersionsAfterDays ?? 0)"
     if (-not $AutoTrim -and $ExpireDays -ne 0 -and ($ExpireDays -lt 30 -or $ExpireDays -gt 36500)) { return }
 
-    $State = Get-CIPPSPOTenant -TenantFilter $TenantFilter | Select-Object -Property _ObjectIdentity_, TenantFilter
+    # SharePoint app-only requires the SAM certificate; delegated is not available on every tenant.
+    $State = Get-CIPPSPOTenant -TenantFilter $TenantFilter -UseCertificate | Select-Object -Property _ObjectIdentity_, TenantFilter
     if (-not $State) { throw 'Could not read the SPO tenant configuration - refusing a blind write.' }
 
     $MethodParams = if ($AutoTrim) {
@@ -32,7 +33,7 @@ function Invoke-CIPPBaselineSPOVersionControl {
     } else {
         @(@{ Type = 'Boolean'; Value = $false }, @{ Type = 'Int32'; Value = $MajorLimit }, @{ Type = 'Int32'; Value = $ExpireDays })
     }
-    $State | Set-CIPPSPOTenant -MethodName 'SetFileVersionPolicy' -MethodParameters $MethodParams
+    $State | Set-CIPPSPOTenant -MethodName 'SetFileVersionPolicy' -MethodParameters $MethodParams -UseCertificate
     Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Set the file version policy (autoTrim=$AutoTrim$(if (-not $AutoTrim) { ", limit=$MajorLimit, expire=${ExpireDays}d" }))." -Sev 'Info'
 
     if ($Remediate.applyToExistingSites -eq $true -or "$($Remediate.applyToExistingSites)" -eq 'True') {
@@ -47,15 +48,13 @@ function Invoke-CIPPBaselineSPOVersionControl {
             $SiteProperties.MajorVersionLimit = $MajorLimit
             $SiteProperties.ExpireVersionsAfterDays = $ExpireDays
         }
-        $Failures = 0
-        foreach ($Site in $Sites) {
-            try {
-                Set-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $Site.webUrl -Properties $SiteProperties
-            } catch {
-                $Failures++
-                Write-Information "Baselines: version policy on $($Site.webUrl) continued past: $($_.Exception.Message)"
-            }
+        # One concurrent batch (Set-CIPPSPOSiteBulk fans out in .NET) instead of ~2s per site.
+        $BulkSites = @($Sites | ForEach-Object { @{ SiteUrl = $_.webUrl; Properties = $SiteProperties } })
+        $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $TenantFilter -Sites $BulkSites -UseCertificate)
+        $Failures = @($BulkResults | Where-Object { -not $_.Success })
+        foreach ($FailedSite in $Failures) {
+            Write-Information "Baselines: version policy on $($FailedSite.SiteUrl) continued past: $($FailedSite.Error)"
         }
-        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Applied the version policy to $(@($Sites).Count - $Failures) of $(@($Sites).Count) existing site(s)." -Sev 'Info'
+        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Applied the version policy to $(@($Sites).Count - $Failures.Count) of $(@($Sites).Count) existing site(s)." -Sev 'Info'
     }
 }

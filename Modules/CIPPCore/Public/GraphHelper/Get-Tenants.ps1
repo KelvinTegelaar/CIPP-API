@@ -43,7 +43,8 @@ function Get-Tenants {
             $IncludedTenantFilter = [scriptblock]::Create("`$_.customerId -eq '$SafeTenantFilter'")
             $RelationshipFilter = " and customer/tenantId eq '$SafeTenantFilter'"
         } else {
-            $Filter = "{0} and defaultDomainName eq '{1}' or initialDomainName eq '{1}'" -f $Filter, $SafeTenantFilter
+            # parens: OData 'and' binds tighter than 'or', which would leave the initialDomainName clause unscoped
+            $Filter = "{0} and (defaultDomainName eq '{1}' or initialDomainName eq '{1}')" -f $Filter, $SafeTenantFilter
             $IncludedTenantFilter = [scriptblock]::Create("`$_.defaultDomainName -eq '$SafeTenantFilter' -or `$_.initialDomainName -eq '$SafeTenantFilter'")
             $RelationshipFilter = ''
         }
@@ -94,6 +95,13 @@ function Get-Tenants {
         if (!$env:RefreshToken) {
             throw 'RefreshToken not set. Cannot get tenant list.'
         }
+        # GDAP relationship objects carry customerId, not domains, so a domain-scoped refresh must key
+        # on the customerId of the row already read above - otherwise it matches zero relationships.
+        $ResolvedCustomerId = ($IncludedTenantsCache | Select-Object -First 1).customerId
+        if ($TenantFilter -and -not $RelationshipFilter -and $ResolvedCustomerId) {
+            $RelationshipFilter = " and customer/tenantId eq '$ResolvedCustomerId'"
+            $IncludedTenantFilter = [scriptblock]::Create("`$_.customerId -eq '$ResolvedCustomerId'")
+        }
         #get the full list of tenants
         $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'$RelationshipFilter&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
         # Filter out MLT relationships locally
@@ -118,6 +126,12 @@ function Get-Tenants {
             # Write-Host "Processing $($_.Name), $($_.displayName) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
 
+            # Reset per tenant so a fallback on one tenant does not leak RequiresRefresh onto the next.
+            $RequiresRefresh = $false
+
+            # Resolved before the cache-hit check below, which compares against its displayName.
+            $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
+
             $Alias = (Get-AzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$($_.Name)' and RowKey eq 'Alias'").Value
 
             if ($Alias) {
@@ -131,7 +145,14 @@ function Get-Tenants {
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
             }
 
-            if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false -and ($ExistingTenantInfo.displayName -eq $LatestRelationship.displayName -or $ExistingTenantInfo.displayName -eq $Alias)) {
+            # Re-read domains for a row last derived over 7 days ago even when it looks healthy: a custom
+            # domain can be made default in M365 after onboarding with nothing here to signal it, and the
+            # cache-hit branch below never re-reads domains. LastRefresh is stamped only on a real fetch.
+            # (Table returns a DateTimeOffset; [datetime] cannot cast it. Null/garbage throws -> stale.)
+            try { $DomainsStale = ([DateTimeOffset]$ExistingTenantInfo.LastRefresh) -lt [DateTimeOffset]::UtcNow.AddDays(-7) } catch { $DomainsStale = $true }
+
+            # A refresh scoped to one tenant is an explicit "re-read this one now" - never shortcut it.
+            if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false -and -not $DomainsStale -and -not ($TriggerRefresh.IsPresent -and $TenantFilter) -and ($ExistingTenantInfo.displayName -eq $LatestRelationship.displayName -or $ExistingTenantInfo.displayName -eq $Alias)) {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
 
                 $DisplayNameUpdated = $false
@@ -157,7 +178,6 @@ function Get-Tenants {
                 $ExistingTenantInfo
                 return
             }
-            $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
             if (!$SkipDomains.IsPresent) {
                 try {
@@ -172,14 +192,17 @@ function Get-Tenants {
                         Write-Host "Domain variable is $Domain"
                         $Domain = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/findTenantInformationByTenantId(tenantId='$($LatestRelationship.customerId)')" -NoAuthCheck:$true ).defaultDomainName
                         Write-Host "Alternative method worked, got domain $Domain."
-                        $RequiresRefresh = $true
                     } catch {
                         $ErrorMessage = Get-CippException -Exception $_
                         Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -Sev 'Critical' -LogData $ErrorMessage
                         $Domain = 'Invalid'
                     } finally {
-                        $defaultDomainName = $Domain
-                        $initialDomainName = $Domain
+                        # Main read failed, so this value is provisional - always flag for retry. The fallback returns
+                        # the initial (.onmicrosoft.com) domain for many tenants: keep a good cached custom default over it.
+                        $RequiresRefresh = $true
+                        $KeepCached = $ExistingTenantInfo.defaultDomainName -and $ExistingTenantInfo.defaultDomainName -notlike '*.onmicrosoft.com'
+                        $defaultDomainName = if ($KeepCached) { $ExistingTenantInfo.defaultDomainName } else { $Domain }
+                        $initialDomainName = if ($KeepCached) { $ExistingTenantInfo.initialDomainName } else { $Domain }
                     }
                 }
                 Write-Host 'finished getting domain'

@@ -45,6 +45,10 @@
       }
     ]
   },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "QRCodePin.state": "%state%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

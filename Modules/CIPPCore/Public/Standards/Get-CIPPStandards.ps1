@@ -73,11 +73,13 @@ function Get-CIPPStandards {
                                 $TemplateLabel = if ($TemplateJSON.displayName) { $TemplateJSON.displayName } else { "$($TemplateItem.RowKey)" }
                                 $NewItem = $Item.PSObject.Copy()
                                 $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
-                                $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
-                                        label = $TemplateLabel
-                                        value = "$($TemplateItem.RowKey)"
+                                $NewItem | Add-Member -NotePropertyMembers ([ordered]@{
+                                        TemplateList = ([pscustomobject]@{
+                                                label = $TemplateLabel
+                                                value = "$($TemplateItem.RowKey)"
+                                            })
+                                        TemplateId   = $Template.GUID
                                     }) -Force
-                                $NewItem | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
                                 $NewItem
                             }
                         } else {
@@ -105,11 +107,13 @@ function Get-CIPPStandards {
                         $TemplateLabel = if ($TemplateJSON.displayName) { $TemplateJSON.displayName } else { "$($TemplateItem.RowKey)" }
                         $NewItem = $StandardValue.PSObject.Copy()
                         $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
-                        $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
-                                label = $TemplateLabel
-                                value = "$($TemplateItem.RowKey)"
+                        $NewItem | Add-Member -NotePropertyMembers ([ordered]@{
+                                TemplateList = ([pscustomobject]@{
+                                        label = $TemplateLabel
+                                        value = "$($TemplateItem.RowKey)"
+                                    })
+                                TemplateId   = $Template.GUID
                             }) -Force
-                        $NewItem | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
                         $NewItem
                     }
                     $ExpandedStandards[$StandardName] = $NewArray

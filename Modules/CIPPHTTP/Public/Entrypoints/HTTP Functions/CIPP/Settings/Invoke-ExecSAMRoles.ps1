@@ -8,17 +8,29 @@ function Invoke-ExecSAMRoles {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     $SAMRolesTable = Get-CIPPTable -tablename 'SAMRoles'
     switch ($Request.Query.Action) {
         'Update' {
-            $Entity = [pscustomobject]@{
-                PartitionKey = 'SAMRoles'
-                RowKey       = 'SAMRoles'
-                Roles        = [string](ConvertTo-Json -Depth 5 -Compress -InputObject $Request.Body.Roles)
-                Tenants      = [string](ConvertTo-Json -Depth 5 -Compress -InputObject $Request.Body.Tenants)
+            try {
+                $Entity = [pscustomobject]@{
+                    PartitionKey = 'SAMRoles'
+                    RowKey       = 'SAMRoles'
+                    Roles        = [string](ConvertTo-Json -Depth 5 -Compress -InputObject $Request.Body.Roles)
+                    Tenants      = [string](ConvertTo-Json -Depth 5 -Compress -InputObject $Request.Body.Tenants)
+                }
+                $null = Add-CIPPAzDataTableEntity @SAMRolesTable -Entity $Entity -Force
+                $Result = 'Successfully updated SAM roles'
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+                $Body = [pscustomobject]@{'Results' = $Result }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                $Result = "Failed to update SAM roles: $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
+                $Body = [pscustomobject]@{'Results' = $Result }
             }
-            $null = Add-CIPPAzDataTableEntity @SAMRolesTable -Entity $Entity -Force
-            $Body = [pscustomobject]@{'Results' = 'Successfully updated SAM roles' }
         }
         default {
             $SAMRoles = Get-CIPPAzDataTableEntity @SAMRolesTable

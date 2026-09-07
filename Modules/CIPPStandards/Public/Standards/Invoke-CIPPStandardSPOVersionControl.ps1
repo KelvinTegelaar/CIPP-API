@@ -63,7 +63,8 @@ function Invoke-CIPPStandardSPOVersionControl {
     }
 
     try {
-        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object -Property _ObjectIdentity_, TenantFilter, EnableAutoExpirationVersionTrim, MajorVersionLimit, ExpireVersionsAfterDays
+        # SharePoint app-only requires the SAM certificate; delegated is not available on every tenant.
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant -UseCertificate | Select-Object -Property _ObjectIdentity_, TenantFilter, EnableAutoExpirationVersionTrim, MajorVersionLimit, ExpireVersionsAfterDays
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Could not get the SPOVersionControl state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
@@ -72,21 +73,39 @@ function Invoke-CIPPStandardSPOVersionControl {
 
     if ($DesiredAutoTrim) {
         $StateIsCorrect = $CurrentState.EnableAutoExpirationVersionTrim -eq $true
+
+        # With automatic trimming on, SharePoint manages the version limit and expiry itself, so
+        # they are not part of the desired state. The compare report and drift detection grade
+        # the current and expected objects as a whole, so the tenant-managed values must be left
+        # out of both sides - a null placeholder on the expected side never matches and marked
+        # every auto-trim tenant non-compliant.
+        $CurrentValue = [PSCustomObject]@{
+            EnableAutoExpirationVersionTrim = $CurrentState.EnableAutoExpirationVersionTrim
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnableAutoExpirationVersionTrim = $true
+        }
     } else {
         $StateIsCorrect = ($CurrentState.EnableAutoExpirationVersionTrim -eq $false) -and
         ($CurrentState.MajorVersionLimit -eq $DesiredMajorVersionLimit) -and
         ($CurrentState.ExpireVersionsAfterDays -eq $DesiredExpireVersionsAfterDays)
+
+        $CurrentValue = [PSCustomObject]@{
+            EnableAutoExpirationVersionTrim = $CurrentState.EnableAutoExpirationVersionTrim
+            MajorVersionLimit               = $CurrentState.MajorVersionLimit
+            ExpireVersionsAfterDays         = $CurrentState.ExpireVersionsAfterDays
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnableAutoExpirationVersionTrim = $false
+            MajorVersionLimit               = $DesiredMajorVersionLimit
+            ExpireVersionsAfterDays         = $DesiredExpireVersionsAfterDays
+        }
     }
 
-    $CurrentValue = [PSCustomObject]@{
-        EnableAutoExpirationVersionTrim = $CurrentState.EnableAutoExpirationVersionTrim
-        MajorVersionLimit               = $CurrentState.MajorVersionLimit
-        ExpireVersionsAfterDays         = $CurrentState.ExpireVersionsAfterDays
-    }
-    $ExpectedValue = [PSCustomObject]@{
-        EnableAutoExpirationVersionTrim = $DesiredAutoTrim
-        MajorVersionLimit               = if ($DesiredAutoTrim) { $null } else { $DesiredMajorVersionLimit }
-        ExpireVersionsAfterDays         = if ($DesiredAutoTrim) { $null } else { $DesiredExpireVersionsAfterDays }
+    $ExpectedDescription = if ($DesiredAutoTrim) {
+        'AutoTrim=True (version limit and expiry managed by Microsoft)'
+    } else {
+        "AutoTrim=False, MajorVersionLimit=$DesiredMajorVersionLimit, ExpireVersionsAfterDays=$DesiredExpireVersionsAfterDays"
     }
 
     if ($Settings.remediate -eq $true) {
@@ -109,8 +128,8 @@ function Invoke-CIPPStandardSPOVersionControl {
                         @{ Type = 'Int32'; Value = $DesiredExpireVersionsAfterDays }
                     )
                 }
-                $CurrentState | Set-CIPPSPOTenant -MethodName 'SetFileVersionPolicy' -MethodParameters $MethodParams
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully configured SharePoint version control (AutoTrim: $DesiredAutoTrim, MajorVersionLimit: $DesiredMajorVersionLimit, ExpireVersionsAfterDays: $DesiredExpireVersionsAfterDays)" -sev Info
+                $CurrentState | Set-CIPPSPOTenant -MethodName 'SetFileVersionPolicy' -MethodParameters $MethodParams -UseCertificate
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully configured SharePoint version control ($ExpectedDescription)" -sev Info
 
                 # Apply to all existing sites and their document libraries
                 if ($Settings.ApplyToExistingSites -eq $true) {
@@ -128,15 +147,14 @@ function Invoke-CIPPStandardSPOVersionControl {
                         $SiteProperties.ExpireVersionsAfterDays = $DesiredExpireVersionsAfterDays
                     }
 
-                    foreach ($Site in $Sites) {
-                        try {
-                            Set-CIPPSPOSite -TenantFilter $Tenant -SiteUrl $Site.webUrl -Properties $SiteProperties
-                        } catch {
-                            $SiteError = Get-CippException -Exception $_
-                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set version policy for site $($Site.webUrl): $($SiteError.NormalizedError)" -sev Error -LogData $SiteError
-                        }
+                    # One concurrent batch instead of ~2s per site serially.
+                    $BulkSites = @($Sites | ForEach-Object { @{ SiteUrl = $_.webUrl; Properties = $SiteProperties } })
+                    $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $Tenant -Sites $BulkSites -UseCertificate)
+                    $FailedSites = @($BulkResults | Where-Object { -not $_.Success })
+                    foreach ($FailedSite in $FailedSites) {
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set version policy for site $($FailedSite.SiteUrl): $($FailedSite.Error)" -sev Error
                     }
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Finished applying version policy to existing sites' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Finished applying version policy to $($Sites.Count - $FailedSites.Count) of $($Sites.Count) existing sites" -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
@@ -149,7 +167,7 @@ function Invoke-CIPPStandardSPOVersionControl {
         if ($StateIsCorrect) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SharePoint version control settings are configured correctly' -sev Info
         } else {
-            $Message = "SharePoint version control is not configured correctly. Current: AutoTrim=$($CurrentState.EnableAutoExpirationVersionTrim), MajorVersionLimit=$($CurrentState.MajorVersionLimit), ExpireVersionsAfterDays=$($CurrentState.ExpireVersionsAfterDays). Expected: AutoTrim=$DesiredAutoTrim, MajorVersionLimit=$DesiredMajorVersionLimit, ExpireVersionsAfterDays=$DesiredExpireVersionsAfterDays"
+            $Message = "SharePoint version control is not configured correctly. Current: AutoTrim=$($CurrentState.EnableAutoExpirationVersionTrim), MajorVersionLimit=$($CurrentState.MajorVersionLimit), ExpireVersionsAfterDays=$($CurrentState.ExpireVersionsAfterDays). Expected: $ExpectedDescription"
             Write-StandardsAlert -message $Message -object $CurrentState -tenant $Tenant -standardName 'SPOVersionControl' -standardId $Settings.standardId
         }
     }

@@ -31,6 +31,18 @@ function Register-CIPPExtensionScheduledTasks {
         $ExtensionConfig = $Config.$Extension
         if ($ExtensionConfig.Enabled -eq $true -or $Extension -eq 'CustomData') {
             if ($Extension -eq 'Sherweb') {
+                # Mapping a tenant for CSP licensing must not enrol it into daily migration checks.
+                # Only schedule migration tasks when automated migration is explicitly enabled; when
+                # it is off, clean up any tasks that were previously created so they stop firing.
+                if ($ExtensionConfig.AutoMigrations -ne $true) {
+                    $SherwebMigTasks | ForEach-Object {
+                        Write-Information "Sherweb automated migration disabled: Cleaning up scheduled task $($_.Name) for tenant $($_.Tenant)"
+                        $Entity = $_ | Select-Object -Property PartitionKey, RowKey
+                        Remove-CIPPAzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
+                    }
+                    $SherwebMigTasks = @() # Clear the list since we removed them all
+                    continue
+                }
                 # Sherweb migration tasks - schedule per mapped tenant
                 $SherwebMappings = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq 'SherwebMapping'"
                 foreach ($Mapping in $SherwebMappings) {

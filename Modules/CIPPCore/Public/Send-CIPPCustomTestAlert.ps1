@@ -59,8 +59,10 @@ function Send-CIPPCustomTestAlert {
         # Email — Send-CIPPAlert no-ops if no notification email is configured.
         $null = Send-CIPPAlert -Type 'email' -Title $Title -HTMLContent $Template.htmlcontent -TenantFilter $TenantFilter -APIName 'CustomTests'
 
-        # PSA — Send-CIPPAlert no-ops unless config.sendtoIntegration is set.
-        $null = Send-CIPPAlert -Type 'psa' -Title $Title -HTMLContent $Template.htmlcontent -TenantFilter $TenantFilter -APIName 'CustomTests'
+        # Gate here so Send-CIPPAlert's skip warning only fires for deliveries someone asked for.
+        if ($Config.sendtoIntegration) {
+            $null = Send-CIPPAlert -Type 'psa' -Title $Title -HTMLContent $Template.htmlcontent -TenantFilter $TenantFilter -APIName 'CustomTests'
+        }
 
         # Webhook — hand-built payload, Send-CIPPAlert no-ops if no webhook is configured.
         $WebhookData = [PSCustomObject]@{

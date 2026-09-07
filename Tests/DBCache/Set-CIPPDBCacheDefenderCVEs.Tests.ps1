@@ -14,6 +14,9 @@ BeforeAll {
     function Get-DefenderTvmRaw { param($TenantId, [int]$MaxPages, [switch]$Stream) }
     function Get-CippException { param($Exception) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
+    # Not a capability (licence) error by default, so the outer catch takes the normal
+    # 'CVE Cache Refresh failed' path rather than the skip-and-return branch.
+    function Test-CIPPCacheCapabilityError { param($Message) $false }
     function Add-CIPPDbItem {
         [CmdletBinding()]
         param(
@@ -82,38 +85,31 @@ Describe 'Set-CIPPDBCacheDefenderCVEs' {
 
             $Row.PartitionKey | Should -Be 'CVE-2024-0001'
             $Row.RowKey | Should -Be $script:Tenant
+            # Stable RowKey source: Add-CIPPDbItem derives "DefenderCVEs-<id>".
+            $Row.id | Should -Be 'CVE-2024-0001'
             $Row.customerId | Should -Be $script:Tenant
             $Row.cveId | Should -Be 'CVE-2024-0001'
             $Row.softwareVendor | Should -Be 'microsoft'
             $Row.softwareName | Should -Be 'edge'
+            $Row.softwareVersion | Should -Be '120.0.0'
             $Row.vulnerabilitySeverityLevel | Should -Be 'High'
-            $Row.recommendedSecurityUpdate | Should -Be 'KB5034123'
-            $Row.recommendedSecurityUpdateUrl | Should -Be 'https://support.microsoft.com/kb/5034123'
             $Row.exploitabilityLevel | Should -Be 'ExploitIsPublic'
             $Row.deviceCount | Should -Be 1
             # PowerShell 7's -UFormat drops the literal '+' prefix, so the stored stamp is
             # a bare ISO-8601 UTC string truncated to whole seconds.
             $Row.lastUpdated | Should -Match '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$'
 
+            # Dropped fields are no longer stored.
+            $Row.PSObject.Properties.Name | Should -Not -Contain 'recommendedSecurityUpdate'
+            $Row.PSObject.Properties.Name | Should -Not -Contain 'recommendedSecurityUpdateUrl'
+
+            # Minimal per-device payload: id and name only.
             $Devices = $Row.deviceDetailsJson | ConvertFrom-Json
             $Devices.deviceId | Should -Be 'd1'
             $Devices.deviceName | Should -Be 'PC-1'
-            $Devices.osVersion | Should -Be '10.0.19045'
-            $Devices.softwareVersion | Should -Be '120.0.0'
-            $Devices.diskPaths | Should -Be ''
-            $Devices.registryPaths | Should -Be ''
-        }
-
-        It 'joins disk and registry path arrays with semicolons' {
-            Mock -CommandName Get-DefenderTvmRaw -MockWith {
-                New-TvmRecord -diskPaths @('C:\a\edge.exe', 'C:\b\edge.exe') -registryPaths @('HKLM\SOFTWARE\X')
-            }
-
-            Set-CIPPDBCacheDefenderCVEs -TenantFilter $script:Tenant
-
-            $Devices = $script:Rows[0].deviceDetailsJson | ConvertFrom-Json
-            $Devices.diskPaths | Should -Be 'C:\a\edge.exe;C:\b\edge.exe'
-            $Devices.registryPaths | Should -Be 'HKLM\SOFTWARE\X'
+            $Devices.PSObject.Properties.Name | Should -Not -Contain 'osVersion'
+            $Devices.PSObject.Properties.Name | Should -Not -Contain 'diskPaths'
+            $Devices.PSObject.Properties.Name | Should -Not -Contain 'registryPaths'
         }
 
         It 'serialises a single device as a JSON object and multiple devices as a JSON array' {
@@ -157,10 +153,36 @@ Describe 'Set-CIPPDBCacheDefenderCVEs' {
             $Row = $script:Rows[0]
             $Row.softwareVendor | Should -Be ''
             $Row.softwareName | Should -Be ''
+            $Row.softwareVersion | Should -Be ''
             $Row.vulnerabilitySeverityLevel | Should -Be ''
-            $Row.recommendedSecurityUpdate | Should -Be ''
-            $Row.recommendedSecurityUpdateUrl | Should -Be ''
             $Row.exploitabilityLevel | Should -Be ''
+        }
+
+        It 'counts a device once and stores it once when the same device reports the CVE across several software packages' {
+            Mock -CommandName Get-DefenderTvmRaw -MockWith {
+                New-TvmRecord -cveId 'CVE-DEDUP' -deviceId 'd1' -deviceName 'PC-1' -softwareName 'edge'
+                New-TvmRecord -cveId 'CVE-DEDUP' -deviceId 'd1' -deviceName 'PC-1' -softwareName 'chrome'
+                New-TvmRecord -cveId 'CVE-DEDUP' -deviceId 'd2' -deviceName 'PC-2' -softwareName 'edge'
+            }
+
+            Set-CIPPDBCacheDefenderCVEs -TenantFilter $script:Tenant
+
+            $script:Rows.Count | Should -Be 1
+            $script:Rows[0].deviceCount | Should -Be 2
+            (($script:Rows[0].deviceDetailsJson | ConvertFrom-Json).deviceId | Sort-Object) | Should -Be @('d1', 'd2')
+        }
+
+        It 'skips software-inventory rows with no CVE without throwing or logging an error' {
+            Mock -CommandName Get-DefenderTvmRaw -MockWith {
+                [pscustomobject]@{ cveId = $null; deviceId = 'd0'; deviceName = 'PC-0' }
+                New-TvmRecord -cveId 'CVE-2024-0009' -deviceId 'd1'
+            }
+
+            Set-CIPPDBCacheDefenderCVEs -TenantFilter $script:Tenant
+
+            $script:Rows.Count | Should -Be 1
+            $script:Rows[0].cveId | Should -Be 'CVE-2024-0009'
+            Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $sev -eq 'Error' }
         }
     }
 

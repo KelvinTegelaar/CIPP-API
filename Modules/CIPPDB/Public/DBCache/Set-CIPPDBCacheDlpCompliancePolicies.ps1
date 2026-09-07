@@ -27,6 +27,10 @@ function Set-CIPPDBCacheDlpCompliancePolicies {
 
         if ($LicenseCheck -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have a Purview/AIP license, skipping DLP compliance policies' -sev Debug
+            # A license skip is still a completed collection: record authoritative empty sets for
+            # both types this collector writes so collect-on-miss does not re-run it forever.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DlpCompliancePolicies' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DlpComplianceRules' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
@@ -40,6 +44,11 @@ function Set-CIPPDBCacheDlpCompliancePolicies {
         if ($Policies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DlpCompliancePolicies' -Data @($Policies) -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(@($Policies).Count) DLP compliance policies" -sev Debug
+        } else {
+            # The read succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DlpCompliancePolicies' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 DLP compliance policies (none found)' -sev Debug
         }
 
         # Full rule objects: the compare needs the Rule allowlist fields (AdvancedRule, conditions,
@@ -49,6 +58,11 @@ function Set-CIPPDBCacheDlpCompliancePolicies {
         if ($Rules) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DlpComplianceRules' -Data @($Rules) -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(@($Rules).Count) DLP compliance rules" -sev Debug
+        } else {
+            # The read succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DlpComplianceRules' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 DLP compliance rules (none found)' -sev Debug
         }
 
     } catch {

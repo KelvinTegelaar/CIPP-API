@@ -140,6 +140,16 @@ function Get-CIPPBaselineSpamFilterPolicyState {
         $Current | Add-Member -NotePropertyName 'regionBlockList' -NotePropertyValue @(@($Policy.RegionBlockList) | Where-Object { $_ } | ForEach-Object { "$_".ToUpper() } | Sort-Object)
     }
 
+    # BulkMovesEnabled (bulk mail to the Promotions folder) is in Preview and not available in
+    # every organization, so it is only graded - and written, via extraPolicyParams below - when
+    # explicitly configured On or Off. 'Do not configure' never sends the parameter to a tenant
+    # that may reject it.
+    $BulkMovesEnabled = "$($V.BulkMovesEnabled.value ?? $V.BulkMovesEnabled)"
+    if ($BulkMovesEnabled -in @('On', 'Off')) {
+        $Expected | Add-Member -NotePropertyName 'bulkMovesEnabled' -NotePropertyValue $BulkMovesEnabled
+        $Current | Add-Member -NotePropertyName 'bulkMovesEnabled' -NotePropertyValue "$($Policy.BulkMovesEnabled)"
+    }
+
     # The built-in Default policy cannot carry a rule.
     if (-not $IsDefaultPolicy) {
         $Expected | Add-Member -NotePropertyName 'rule' -NotePropertyValue ([PSCustomObject]@{
@@ -188,6 +198,9 @@ function Get-CIPPBaselineSpamFilterPolicyState {
         $ExtraPolicyParams['RegionBlockList'] = @(& $SplitList $V.RegionBlockList 'upper')
     } else {
         $ExtraPolicyParams['EnableRegionBlockList'] = $false
+    }
+    if ($BulkMovesEnabled -in @('On', 'Off')) {
+        $ExtraPolicyParams['BulkMovesEnabled'] = $BulkMovesEnabled
     }
     $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]$ExtraPolicyParams)
 
