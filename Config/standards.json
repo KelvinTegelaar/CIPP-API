@@ -5396,6 +5396,29 @@
     ]
   },
   {
+    "name": "standards.MigrateOneDriveShortcuts",
+    "cat": "SharePoint Standards",
+    "tag": [],
+    "helpText": "Finds SharePoint library shortcuts sitting in each user's OneDrive root and moves them into the Shortcuts folder (PATCH move into special/shortcuts), matching the optional Microsoft UI location.",
+    "docsDescription": "Over time Add shortcut to OneDrive can leave many remote library links in the OneDrive root. Microsoft also supports placing those links in an optional Shortcuts folder. This standard lists each enabled member user's OneDrive root with Prefer Include-Feature=AddToOneDrive, then for any remoteItem shortcuts still outside Shortcuts moves them into special/shortcuts. Users without a provisioned OneDrive are skipped. Failures name the user, shortcut, and site URL when available.",
+    "executiveText": "Keeps employee OneDrive roots tidy by moving SharePoint library shortcuts into the dedicated Shortcuts folder instead of leaving them scattered among personal files.",
+    "addedComponent": [],
+    "label": "Migrate OneDrive root shortcuts to the Shortcuts folder",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-09-08",
+    "powershellEquivalent": "PATCH drive/items/{id} parentReference → special/shortcuts",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "SHAREPOINTWAC",
+      "SHAREPOINTSTANDARD",
+      "SHAREPOINTENTERPRISE",
+      "SHAREPOINTENTERPRISE_EDU",
+      "SHAREPOINTENTERPRISE_GOV",
+      "ONEDRIVEENTERPRISE"
+    ]
+  },
+  {
     "name": "standards.SPFileRequests",
     "cat": "SharePoint Standards",
     "tag": [],

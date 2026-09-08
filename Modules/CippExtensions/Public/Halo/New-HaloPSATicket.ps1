@@ -18,6 +18,7 @@ function New-HaloPSATicket {
   $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
   $TicketTable = Get-CIPPTable -TableName 'PSATickets'
   $token = Get-HaloToken -configuration $Configuration
+  $UserAgent = Get-CippUserAgent
 
   # Resolve affected user to a HaloPSA contact when the integration is configured for it.
   # Unmatched users fall through to userlookup.id = -1 (the client's General User contact).
@@ -62,7 +63,7 @@ function New-HaloPSATicket {
   }
 
   if ($TargetTicketId) {
-    $Ticket = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets/$($TargetTicketId)?includedetails=true&includelastaction=false&nocache=undefined&includeusersassets=false&isdetailscreen=true" -ContentType 'application/json; charset=utf-8' -Method Get -Headers @{Authorization = "Bearer $($token.access_token)" } -SkipHttpErrorCheck
+    $Ticket = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/Tickets/$($TargetTicketId)?includedetails=true&includelastaction=false&nocache=undefined&includeusersassets=false&isdetailscreen=true" -ContentType 'application/json; charset=utf-8' -Method Get -Headers @{Authorization = "Bearer $($token.access_token)" } -SkipHttpErrorCheck
     if ($Ticket.id) {
       if (!$Ticket.hasbeenclosed) {
         Write-Information 'Ticket is still open, adding new note'
@@ -87,7 +88,7 @@ function New-HaloPSATicket {
         $NoteAdded = $false
         try {
           if ($PSCmdlet.ShouldProcess('Add note to HaloPSA ticket', 'Add note')) {
-            $Action = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/actions" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
+            $Action = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/actions" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
             Write-Information "Note added to ticket in HaloPSA: $TargetTicketId"
             $NoteAdded = $true
           }
@@ -228,7 +229,7 @@ function New-HaloPSATicket {
   Write-Information $body
   try {
     if ($PSCmdlet.ShouldProcess('Send ticket to HaloPSA', 'Create ticket')) {
-      $Ticket = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
+      $Ticket = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
       Write-Information "Ticket created in HaloPSA: $($Ticket.id)"
 
       if ($Configuration.ConsolidateTickets) {

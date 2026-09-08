@@ -15,9 +15,16 @@ Function Invoke-ExecOneDriveShortCut {
     $Username = $Request.Body.username
     $UserId = $Request.Body.userid
     $URL = $Request.Body.siteUrl.value
+    $Destination = $Request.Body.destination
+    if ($Destination -is [psobject] -and $Destination.value) {
+        $Destination = $Destination.value
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$Destination)) {
+        $Destination = 'root'
+    }
 
     Try {
-        $Result = New-CIPPOneDriveShortCut -Username $Username -UserId $UserId -TenantFilter $TenantFilter -URL $URL -Headers $Headers
+        $Result = New-CIPPOneDriveShortCut -Username $Username -UserId $UserId -TenantFilter $TenantFilter -URL $URL -Destination $Destination -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message

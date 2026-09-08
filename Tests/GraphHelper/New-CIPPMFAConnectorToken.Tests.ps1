@@ -12,6 +12,8 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Filter) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Get-Tenants { param($TenantFilter) }
+    function Get-CippKeyVaultSecret { param($Name, [switch]$AsPlainText) }
+    function Set-CippKeyVaultSecret { param($Name, $SecretValue) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/New-CIPPMFAConnectorToken.ps1')
 
@@ -59,5 +61,52 @@ Describe 'New-CIPPMFAConnectorToken secret caching' {
         # addPassword is the only New-GraphPostRequest here (the SP already exists), and the new secret is cached.
         Should -Invoke New-GraphPostRequest -Times 1 -Exactly
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly
+    }
+}
+
+Describe 'New-CIPPMFAConnectorToken Key Vault (production) storage path' {
+    BeforeEach {
+        # Production path: no dev-storage markers, so the secret is read from and written to Key Vault.
+        $script:SavedStorage = [Environment]::GetEnvironmentVariable('AzureWebJobsStorage')
+        Remove-Item env:AzureWebJobsStorage -ErrorAction SilentlyContinue
+        Remove-Item env:NonLocalHostAzurite -ErrorAction SilentlyContinue
+        Mock Set-CippKeyVaultSecret {}
+        Mock Update-AppManagementPolicy {}
+        Mock Invoke-RestMethod { [pscustomobject]@{ access_token = 'TOKEN123' } }
+        Mock New-GraphGetRequest { @([pscustomobject]@{ id = 'mfa-sp-id'; appId = $script:MFAAppID }) }
+        Mock New-GraphPostRequest { [pscustomobject]@{ secretText = 'NEWSECRET' } }
+    }
+
+    AfterEach {
+        if ($null -ne $script:SavedStorage) { $env:AzureWebJobsStorage = $script:SavedStorage }
+    }
+
+    It 'provisions when Key Vault has no cached secret yet (404) instead of failing' {
+        # The Key Vault helper throws on a missing secret rather than returning nothing; the first call for a
+        # tenant must treat that as a cache miss and provision, not surface the 404 to the user.
+        Mock Get-CippKeyVaultSecret { throw "Failed to retrieve secret 'NPS-x' from vault 'cippx': Response status code does not indicate success: 404" }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly
+        Should -Invoke Set-CippKeyVaultSecret -Times 1 -Exactly
+    }
+
+    It 'reuses a cached Key Vault secret without provisioning' {
+        Mock Get-CippKeyVaultSecret { 'CACHEDSECRET' }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        Should -Not -Invoke New-GraphPostRequest
+        Should -Not -Invoke Set-CippKeyVaultSecret
+    }
+
+    It 'surfaces a non-404 Key Vault failure rather than silently reprovisioning' {
+        Mock Get-CippKeyVaultSecret { throw "Failed to retrieve secret 'NPS-x' from vault 'cippx': Response status code does not indicate success: 403" }
+
+        { New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid } | Should -Throw -ExpectedMessage '*403*'
+        Should -Not -Invoke New-GraphPostRequest
     }
 }

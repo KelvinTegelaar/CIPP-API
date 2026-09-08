@@ -13,7 +13,8 @@ function Get-HaloToken {
             scope         = 'all'
         }
         if ($Configuration.Tenant -ne 'None') { $Tenant = "?tenant=$($Configuration.Tenant)" }
-        $token = Invoke-RestMethod -Uri "$($Configuration.AuthURL)/token$Tenant" -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded'
+        $UserAgent = Get-CippUserAgent
+        $token = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.AuthURL)/token$Tenant" -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded'
         return $token
     } else {
         throw 'No Halo configuration'

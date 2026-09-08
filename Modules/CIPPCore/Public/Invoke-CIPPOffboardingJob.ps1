@@ -446,12 +446,21 @@ function Invoke-CIPPOffboardingJob {
             }
         }
 
-        # Start orchestration
+        # Start orchestration.
+        #
+        # Offboarding steps must run in payload order — a later step can undo an earlier one if they race
+        # (e.g. convert-to-shared reverting mailbox grants added a step earlier). DurableMode='Sequence' is
+        # the legacy Azure Functions durable flag and is kept for that host; Craft ignores it and instead
+        # honours Sequential, which pins the whole run to ONE worker and runs the steps one at a time in
+        # order. Start-CIPPOrchestrator probes the Craft bridge arity, so on a Craft too old to know
+        # Sequential it logs a warning and falls back to fan-out rather than failing — safe here because the
+        # grant steps are already idempotent (they read the ACE back), so the ordering is belt-and-suspenders.
         $InputObject = [PSCustomObject]@{
             OrchestratorName = "OffboardingUser_$($Username)_$TenantFilter"
             Batch            = @($Batch)
             SkipLog          = $true
             DurableMode      = 'Sequence'
+            Sequential       = $true
         }
 
         # Add post-execution handler if TaskInfo is provided (from scheduled task)

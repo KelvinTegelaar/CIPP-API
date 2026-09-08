@@ -42,9 +42,10 @@ function Get-HaloMapping {
         $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
 
         $Token = Get-HaloToken -configuration $Configuration
+        $UserAgent = Get-CippUserAgent
         $i = 1
         $RawHaloClients = do {
-            $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999&pageinate=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
+            $Result = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999&pageinate=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
             $Result.clients | Select-Object * -ExcludeProperty logo
             $i++
             $pagecount = [Math]::Ceiling($Result.record_count / 999)

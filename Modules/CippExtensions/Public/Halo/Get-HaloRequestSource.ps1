@@ -21,8 +21,9 @@ function Get-HaloRequestSource {
     try {
         $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
         $Token = Get-HaloToken -configuration $Configuration
+        $UserAgent = Get-CippUserAgent
 
-        $Response = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/lookup?lookupid=22&showall=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
+        $Response = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/lookup?lookupid=22&showall=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
 
         # Halo returns a bare array here, but some of its lookup responses wrap the rows. Handle
         # both so a version difference reads as "no sources" rather than throwing.

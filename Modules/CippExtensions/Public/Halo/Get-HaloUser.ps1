@@ -34,6 +34,7 @@ function Get-HaloUser {
     )
 
     $Headers = @{ Authorization = "Bearer $($Token.access_token)" }
+    $UserAgent = Get-CippUserAgent
     $BaseUri = "$($Configuration.ResourceURL)/Users?client_id=$ClientId&includeinactive=false&pageinate=false"
 
     $BuildResult = {
@@ -58,7 +59,7 @@ function Get-HaloUser {
                 filter_value = $FilterValue
             })
             $EncodedFilter = [System.Uri]::EscapeDataString($Filter)
-            $Response = Invoke-RestMethod -Uri "$BaseUri&advanced_search=$EncodedFilter" -ContentType 'application/json' -Method GET -Headers $Headers
+            $Response = Invoke-RestMethod -UserAgent $UserAgent -Uri "$BaseUri&advanced_search=$EncodedFilter" -ContentType 'application/json' -Method GET -Headers $Headers
             if ($Response.users) { return $Response.users }
             return $Response
         } catch {
@@ -77,7 +78,7 @@ function Get-HaloUser {
         param($Term)
         try {
             $EncodedTerm = [System.Uri]::EscapeDataString($Term)
-            $Response = Invoke-RestMethod -Uri "$BaseUri&search=$EncodedTerm" -ContentType 'application/json' -Method GET -Headers $Headers
+            $Response = Invoke-RestMethod -UserAgent $UserAgent -Uri "$BaseUri&search=$EncodedTerm" -ContentType 'application/json' -Method GET -Headers $Headers
             if ($Response.users) { return $Response.users }
             return $Response
         } catch {
