@@ -29,11 +29,12 @@ function Invoke-HaloAutoMap {
 
     $GuidRegex = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
     $Headers = @{Authorization = "Bearer $($Token.access_token)" }
+    $UserAgent = Get-CippUserAgent
 
     # type=2 connections are Halo's customer-tenant (Microsoft 365) integrations; the
     # connection detail carries the client <-> Azure tenant ID mapping table.
     try {
-        $ConnectionsResponse = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/AzureADConnection?type=2" -Method GET -ContentType 'application/json' -Headers $Headers
+        $ConnectionsResponse = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/AzureADConnection?type=2" -Method GET -ContentType 'application/json' -Headers $Headers
         $Connections = if ($ConnectionsResponse -is [array]) {
             $ConnectionsResponse
         } elseif ($ConnectionsResponse.id) {
@@ -43,7 +44,7 @@ function Invoke-HaloAutoMap {
         }
 
         $HaloTenantMappings = foreach ($Connection in $Connections) {
-            $Detail = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/AzureADConnection/$($Connection.id)?type=2&includedetails=true&includetenants=true" -Method GET -ContentType 'application/json' -Headers $Headers
+            $Detail = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/AzureADConnection/$($Connection.id)?type=2&includedetails=true&includetenants=true" -Method GET -ContentType 'application/json' -Headers $Headers
             $Detail.mappings_client | Where-Object { $_.azure_tenant_id -match $GuidRegex -and $_.client_id }
         }
     } catch {

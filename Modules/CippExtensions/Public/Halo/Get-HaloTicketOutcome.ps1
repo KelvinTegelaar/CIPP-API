@@ -20,13 +20,14 @@ function Get-HaloTicketOutcome {
   try {
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
     $Token = Get-HaloToken -configuration $Configuration
+    $UserAgent = Get-CippUserAgent
     if (-not $TicketType) {
       $TicketType = $Configuration.TicketType.value ?? $Configuration.TicketType
     }
     if ($TicketType) {
-      $WorkflowId = (Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/tickettype/$TicketType" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }).workflow_id
-      $Workflow = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/workflow/$WorkflowId" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
-      $Outcomes = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/outcome" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
+      $WorkflowId = (Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/tickettype/$TicketType" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }).workflow_id
+      $Workflow = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/workflow/$WorkflowId" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
+      $Outcomes = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/outcome" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
       $Outcomes | Where-Object { $_.id -in $Workflow.steps.actions.action_id } | Sort-Object -Property buttonname
     }
     else {

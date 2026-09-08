@@ -41,7 +41,15 @@ function New-CIPPMFAConnectorToken {
             $Row = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'NPSSecret' and RowKey eq '$TenantId'"
             return $Row.SecretValue
         }
-        return Get-CippKeyVaultSecret -Name $SecretName -AsPlainText -ErrorAction SilentlyContinue
+        # A missing secret is the normal first-call state for a tenant. The Key Vault helper throws on a
+        # 404 rather than returning nothing, so treat not-found as "nothing cached yet" and let provisioning
+        # create the secret. Any other retrieval failure is a real problem and propagates.
+        try {
+            return Get-CippKeyVaultSecret -Name $SecretName -AsPlainText -ErrorAction Stop
+        } catch {
+            if ($_.Exception.Message -match '404') { return $null }
+            throw
+        }
     }
     function Set-StoredSecret {
         param($Value)

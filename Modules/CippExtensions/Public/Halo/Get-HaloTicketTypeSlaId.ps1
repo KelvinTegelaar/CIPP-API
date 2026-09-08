@@ -32,7 +32,8 @@ function Get-HaloTicketTypeSlaId {
 
     try {
         $Headers = @{ Authorization = "Bearer $($Token.access_token)" }
-        $TicketTypeRecord = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/tickettype/$TicketType" -ContentType 'application/json' -Method GET -Headers $Headers
+        $UserAgent = Get-CippUserAgent
+        $TicketTypeRecord = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/tickettype/$TicketType" -ContentType 'application/json' -Method GET -Headers $Headers
 
         # Halo's /tickettype/{id} response uses different field names for the linked SLA across
         # versions. Check the known variants in order and take the first usable match. Halo uses

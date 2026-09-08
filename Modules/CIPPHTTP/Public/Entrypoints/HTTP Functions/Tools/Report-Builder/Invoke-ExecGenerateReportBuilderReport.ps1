@@ -66,7 +66,7 @@ function Invoke-ExecGenerateReportBuilderReport {
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = ConvertTo-Json -InputObject $Result -Depth 20
         })

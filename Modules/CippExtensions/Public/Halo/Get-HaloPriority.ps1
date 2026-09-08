@@ -36,6 +36,7 @@ function Get-HaloPriority {
         }
 
         $Headers = @{ Authorization = "Bearer $($Token.access_token)" }
+        $UserAgent = Get-CippUserAgent
         $SlaId = Get-HaloTicketTypeSlaId -TicketType $TicketType -Configuration $Configuration -Token $Token
 
         if (-not $SlaId) {
@@ -51,7 +52,7 @@ function Get-HaloPriority {
         # The /SLA/{id} response shape varies between Halo versions: some return full priority
         # objects under .priorities, some only IDs. Resolve both by fetching the canonical
         # priority list and filtering by ID, which works regardless of the SLA payload shape.
-        $Sla = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/SLA/$SlaId" -ContentType 'application/json' -Method GET -Headers $Headers
+        $Sla = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/SLA/$SlaId" -ContentType 'application/json' -Method GET -Headers $Headers
 
         $SlaPriorityIds = @()
         if ($Sla.priorities) {
@@ -60,7 +61,7 @@ function Get-HaloPriority {
             }
         }
 
-        $AllPriorities = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Priority" -ContentType 'application/json' -Method GET -Headers $Headers
+        $AllPriorities = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/Priority" -ContentType 'application/json' -Method GET -Headers $Headers
 
         if ($SlaPriorityIds.Count -gt 0) {
             $AllPriorities | Where-Object { $_.id -in $SlaPriorityIds } | Sort-Object -Property priorityorder, name

@@ -48,9 +48,23 @@ function Push-CIPPStandardsApplyBatch {
 
         Write-Information "Aggregated $($AllStandards.Count) standards from all tenants: $($AllStandards | ConvertTo-Json -Depth 5 -Compress)"
 
+        # Match the list phase's per-scope naming (see New-CIPPStandardsRun): once concurrent
+        # single-tenant list runs no longer collide, their apply phases must not collide either. The
+        # scope comes from the aggregated standards, which already carry Tenant and TemplateId: a single
+        # tenant and/or a single template contributes that part of the suffix, so two manual runs for the
+        # same tenant but different templates get distinct apply runs. The all-tenants sweep aggregates
+        # many tenants (and templates), so both parts drop and it keeps the bare name.
+        $ApplyTenants = @($AllStandards.Tenant | Where-Object { $_ } | Sort-Object -Unique)
+        $ApplyTemplates = @($AllStandards.TemplateId | Where-Object { $_ } | Sort-Object -Unique)
+        $ApplyScope = @(
+            if ($ApplyTenants.Count -eq 1) { $ApplyTenants[0] }
+            if ($ApplyTemplates.Count -eq 1) { $ApplyTemplates[0] }
+        ) -join '-'
+        $OrchestratorName = if ($ApplyScope) { "StandardsApply-$ApplyScope" } else { 'StandardsApply' }
+
         # Start orchestrator to apply standards
         $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'StandardsApply'
+            OrchestratorName = $OrchestratorName
             Batch            = @($AllStandards)
             SkipLog          = $true
         }

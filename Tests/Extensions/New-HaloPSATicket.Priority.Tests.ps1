@@ -5,6 +5,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Filter, $Property) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Get-HaloToken { param($configuration) }
+    function Get-CippUserAgent { 'CIPP/test' }
     function Get-HaloTicketTypeSlaId { param($TicketType, $Configuration, $Token) }
     function Get-HaloUser { param($AzureOID, $Email, $ClientId, $Configuration, $Token) }
     function Get-StringHash { param($String) }
