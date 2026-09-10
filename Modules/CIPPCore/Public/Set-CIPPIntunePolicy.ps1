@@ -214,7 +214,9 @@ function Set-CIPPIntunePolicy {
                 if ($Template.templateReference.templateId) {
                     # Remove settings this tenant does not offer. The comparison paths run the
                     # baseline through the same helper so they diff against what actually lands.
-                    $Template = Select-CIPPIntuneAvailableSetting -Policy $Template -TenantFilter $TenantFilter
+                    # ThrowOnMissingRequired turns Graph's opaque "required Setting not present"
+                    # rejection into a named, actionable error for stale Apple enrollment templates.
+                    $Template = Select-CIPPIntuneAvailableSetting -Policy $Template -TenantFilter $TenantFilter -ThrowOnMissingRequired
                     $RawJSON = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
 
