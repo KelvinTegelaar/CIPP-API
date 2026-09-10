@@ -41409,6 +41409,67 @@
         "x-cipp-role": "Exchange.Mailbox.Read"
       }
     },
+    "/api/ListCAPolicyCoverage": {
+      "get": {
+        "summary": "ListCAPolicyCoverage",
+        "operationId": "ListCAPolicyCoverage",
+        "tags": [
+          "Tenant > Conditional"
+        ],
+        "description": "Resolves identity assignment coverage for a single Conditional Access policy: which users\nare touched by includes or exclusions, their net status (covered or excluded), and why\n(users, transitive groups, roles, guests, special tokens). Does not evaluate apps,\nlocations, or sign-in what-if conditions.",
+        "parameters": [
+          {
+            "name": "GUID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.ConditionalAccess.Read"
+      }
+    },
     "/api/ListCAtemplates": {
       "get": {
         "summary": "ListCAtemplates",
