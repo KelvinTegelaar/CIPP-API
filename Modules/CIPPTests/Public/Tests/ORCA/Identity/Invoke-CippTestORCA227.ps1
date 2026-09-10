@@ -15,7 +15,11 @@ function Invoke-CippTestORCA227 {
         }
 
         if (-not $SafeAttachmentPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA227' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'No Safe Attachments policies found. Each domain should have a Safe Attachments policy.' -Risk 'High' -Name 'Each domain has a Safe Attachments policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Attachments'
+            if (-not (Test-CIPPStandardLicense -StandardName 'ORCA227' -TenantFilter $Tenant -Preset DefenderForOffice365 -SkipLog)) {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA227' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Defender for Office 365 (ATP). Required capabilities: ATP_ENTERPRISE, ATP_ENTERPRISE_GOV, THREAT_INTELLIGENCE, THREAT_INTELLIGENCE_GOV.' -Risk 'High' -Name 'Each domain has a Safe Attachments policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Attachments'
+            } else {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA227' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'No Safe Attachments policies found. Each domain should have a Safe Attachments policy.' -Risk 'High' -Name 'Each domain has a Safe Attachments policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Attachments'
+            }
             return
         }
 

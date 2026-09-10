@@ -9,7 +9,11 @@ function Invoke-CippTestORCA158 {
         $AtpPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAtpPolicyForO365'
 
         if (-not $AtpPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA158' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Safe Attachments enabled for SharePoint and Teams' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Safe Attachments'
+            if (-not (Test-CIPPStandardLicense -StandardName 'ORCA158' -TenantFilter $Tenant -Preset DefenderForOffice365 -SkipLog)) {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA158' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Defender for Office 365 (ATP). Required capabilities: ATP_ENTERPRISE, ATP_ENTERPRISE_GOV, THREAT_INTELLIGENCE, THREAT_INTELLIGENCE_GOV.' -Risk 'High' -Name 'Safe Attachments enabled for SharePoint and Teams' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Safe Attachments'
+            } else {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA158' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in the database. Data collection for this tenant may not have completed yet - refresh the cache and try again.' -Risk 'High' -Name 'Safe Attachments enabled for SharePoint and Teams' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Safe Attachments'
+            }
             return
         }
 

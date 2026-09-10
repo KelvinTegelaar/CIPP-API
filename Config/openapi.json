@@ -7261,7 +7261,8 @@
                     "type": "string"
                   },
                   "tenantFilter": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "User creation is single-tenant only. Without this guard an 'AllTenants' (or otherwise unresolvable) tenantFilter fails Get-AuthorisedRequest, the Graph write helpers return $null non-terminating, and the endpoint reports success while creating nothing."
                   },
                   "usageLocation": {
                     "$ref": "#/components/schemas/LabelValue"
@@ -7399,6 +7400,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -11437,8 +11441,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "SkipCache": {
+                    "type": "string",
+                    "description": "Re-run the check instead of serving the cached result."
+                  },
                   "TenantId": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The tenant to (re)check for the 'Tenants' type. Query or body, for the same reason as Type."
+                  },
+                  "Type": {
+                    "type": "string",
+                    "description": "Which self-diagnostic to run: Permissions, Tenants or GDAP. Read from either the query string or the body: the UI calls this as a GET with ?Type=, while a POST dispatcher (the MCP gateway documents it as POST because it also reads a body field) delivers it in the body - reading only the query left both empty and returned an empty result for every Type."
                   }
                 }
               }
@@ -11452,12 +11465,22 @@
             "description": "Re-run the check instead of serving the cached result.",
             "required": false,
             "schema": {
-              "type": "boolean"
+              "type": "string"
+            }
+          },
+          {
+            "name": "TenantId",
+            "in": "query",
+            "description": "The tenant to (re)check for the 'Tenants' type. Query or body, for the same reason as Type.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           },
           {
             "name": "Type",
             "in": "query",
+            "description": "Which self-diagnostic to run: Permissions, Tenants or GDAP. Read from either the query string or the body: the UI calls this as a GET with ?Type=, while a POST dispatcher (the MCP gateway documents it as POST because it also reads a body field) delivers it in the body - reading only the query left both empty and returned an empty result for every Type.",
             "required": false,
             "schema": {
               "type": "string",
@@ -40583,6 +40606,9 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       },
+                      "lastSyncDateTime": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "numberOfHoursFromLastSync": {
                         "x-cipp-field-source": "backend"
                       },
@@ -45988,7 +46014,8 @@
                     "type": "string"
                   },
                   "cmdParams": {
-                    "type": "string"
+                    "type": "object",
+                    "description": "Parameters to splat onto the Exchange cmdlet, as an object of name/value pairs (e.g. { \"Identity\": \"user@contoso.com\" }). Cast to an object so the generated schema types cmdParams as an object rather than a string - a string-typed schema made the client reject an object body, leaving no way to pass parameters."
                   },
                   "Compliance": {
                     "type": "boolean"
@@ -60511,6 +60538,7 @@
           {
             "name": "category",
             "in": "query",
+            "description": "Restrict to a single category (the framework/area name a test belongs to).",
             "required": false,
             "schema": {
               "type": "string"
@@ -60519,6 +60547,7 @@
           {
             "name": "countsOnly",
             "in": "query",
+            "description": "'true' to return only the aggregate counts with no rows. Implies includeCounts.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60527,6 +60556,7 @@
           {
             "name": "includeCounts",
             "in": "query",
+            "description": "'true' to also return aggregate counts (per status, high-risk failures, distinct tenants).",
             "required": false,
             "schema": {
               "type": "string"
@@ -60535,6 +60565,7 @@
           {
             "name": "risk",
             "in": "query",
+            "description": "Restrict to a single risk level: High, Medium or Low.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60543,6 +60574,7 @@
           {
             "name": "rowStatus",
             "in": "query",
+            "description": "Return rows only for these statuses, while still counting every status the filters match.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60551,6 +60583,7 @@
           {
             "name": "status",
             "in": "query",
+            "description": "Narrow the scan to these statuses: Passed, Failed, Investigate, Skipped, Informational.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60559,6 +60592,7 @@
           {
             "name": "summaryOnly",
             "in": "query",
+            "description": "'true' to project away the large ResultMarkdown/ResultDataJson blobs for a lighter read.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60567,6 +60601,7 @@
           {
             "name": "tenantFilter",
             "in": "query",
+            "description": "One or more tenant domains to report on. Omit, or pass 'AllTenants', to query every tenant the caller may see. Accepts a string, a comma-delimited string, or an array.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60575,6 +60610,7 @@
           {
             "name": "testId",
             "in": "query",
+            "description": "One or more test IDs (the result row's RowKey), e.g. 'CustomScript-<guid>'.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60583,6 +60619,7 @@
           {
             "name": "testType",
             "in": "query",
+            "description": "Restrict to a single test type: Identity, Devices or Custom.",
             "required": false,
             "schema": {
               "type": "string"

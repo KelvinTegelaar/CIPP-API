@@ -18,7 +18,6 @@ function Get-CIPPAlertUserReportedPhishing {
         $Submissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/security/threatSubmission/emailThreats?`$filter=createdDateTime ge $Since" -tenantid $TenantFilter -AsApp $true
 
         $AlertData = foreach ($Submission in $Submissions) {
-            # Only include user-reported submissions
             if ($Submission.source -ne 'user') { continue }
 
             [PSCustomObject]@{
@@ -42,6 +41,11 @@ function Get-CIPPAlertUserReportedPhishing {
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-AlertMessage -message "User-reported phishing alert failed for $($TenantFilter): $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -LogData $ErrorMessage
+        if ($ErrorMessage.NormalizedError -match 'dataservice\.protection\.outlook\.com' -or $ErrorMessage.NormalizedError -match 'No HTTP resource was found') {
+            $Message = "User-reported phishing alert skipped for $($TenantFilter): Exchange Online API unavailable in this tenant's region. Check tenant and EXO health."
+        } else {
+            $Message = "User-reported phishing alert failed for $($TenantFilter): $($ErrorMessage.NormalizedError)"
+        }
+        Write-AlertMessage -message $Message -tenant $TenantFilter -LogData $ErrorMessage
     }
 }
