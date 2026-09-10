@@ -284,5 +284,14 @@
     "RunOnProcessor": true,
     "TZOffset": true,
     "PreferredProcessor": "standards"
+  },
+  {
+    "Id": "3f7a1c92-58d4-4e0b-9a13-6c2b8d45e7f1",
+    "Command": "Start-InstanceHealthSample",
+    "Description": "Sample container log health into the InstanceHealth table",
+    "Cron": "0 */5 * * * *",
+    "Priority": 0,
+    "RunOnProcessor": true,
+    "IsSystem": true
   }
 ]
