@@ -46,6 +46,15 @@ function Start-InstanceHealthSample {
 
         $Table = Get-CIPPTable -TableName 'InstanceHealth'
 
+        # Egress ledger is instance-wide, Craft-owned, and only exists when accounting is on -
+        # a missing bridge or ledger means "no egress data", never a fake zero.
+        $Ledger = $null
+        try {
+            $Ledger = Get-CIPPEgressLedger -LogDirectory ([Craft.Services.LogBridge]::GetLogDirectory()) -Now $Now
+        } catch {
+            Write-Information "[InstanceHealth] Log bridge unavailable for egress ledger: $($_.Exception.Message)"
+        }
+
         # One fixed partition for the whole table so a window read is a single partition-scoped
         # RowKey range instead of a cross-partition scan; the bucket lives in RowKey and Bucket.
         $Entity = @{
@@ -66,6 +75,32 @@ function Start-InstanceHealthSample {
         if ($null -ne $Sample.HeapMb) { $Entity.HeapMb = [int]$Sample.HeapMb }
         if ($null -ne $HeapMbLive) { $Entity.HeapMbLive = [int]$HeapMbLive }
         if ($null -ne $GcHeapLimitMb) { $Entity.GcHeapLimitMb = [int]$GcHeapLimitMb }
+        if ($Sample.EgressRejectCount -gt 0) { $Entity.EgressRejectCount = [int]$Sample.EgressRejectCount }
+        if (@($Sample.EgressRejectClients).Count -gt 0) { $Entity.EgressRejectClients = [string]($Sample.EgressRejectClients | ConvertTo-Json -Compress) }
+
+        if ($Ledger) {
+            $Entity.EgressBytesToday = [long]$Ledger.Bytes
+
+            $Today = $Now.ToString('yyyy-MM-dd')
+            $PreviousSamples = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'InstanceHealth' and RowKey ge '${Today}T00:00' and Kind eq 'sample'")
+            $PreviousWithEgress = $PreviousSamples | Where-Object { $null -ne $_.EgressBytesToday } | Sort-Object -Property Bucket -Descending | Select-Object -First 1
+
+            if ($PreviousWithEgress) {
+                $Delta = [long]$Ledger.Bytes - [long]$PreviousWithEgress.EgressBytesToday
+                if ($Delta -lt 0) { $Delta = 0 }
+                $Entity.EgressBytes = $Delta
+            } else {
+                # No earlier reading today: the ledger total is everything since the day (or accounting) began.
+                $Entity.EgressBytes = [long]$Ledger.Bytes
+            }
+        }
+
+        if ($env:CRAFT_API_EGRESS_LIMIT_BYTES) {
+            $CapBytes = 0
+            if ([long]::TryParse($env:CRAFT_API_EGRESS_LIMIT_BYTES, [ref]$CapBytes) -and $CapBytes -gt 0) {
+                $Entity.EgressCapBytes = $CapBytes
+            }
+        }
 
         Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
 

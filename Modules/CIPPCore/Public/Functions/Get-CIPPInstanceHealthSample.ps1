@@ -30,6 +30,10 @@ function Get-CIPPInstanceHealthSample {
     $StalledRunCount = 0
     $MaxLimiterWaitMs = 0
     $HeapMb = $null
+    $EgressRejectCount = 0
+    # Ordered HashSet-backed dedup - same client can be rejected many times per window.
+    $EgressRejectClients = [System.Collections.Generic.List[string]]::new()
+    $EgressRejectClientsSeen = [System.Collections.Generic.HashSet[string]]::new()
 
     $Endpoints = @{}
     # Keyed on AppId - the same client can appear under several IPs, the last one wins.
@@ -43,6 +47,13 @@ function Get-CIPPInstanceHealthSample {
         if ($Line -match 'HTTP pool exhausted') { $PoolExhaustedCount++ }
         if ($Line -match '\[ERR\]') { $ErrCount++ }
         if ($Line -match 'T\+([0-9]{2,})\.[0-9]+min: .* 0 running ([1-9][0-9]*) pending') { $StalledRunCount++ }
+
+        if ($Line -match 'Egress cap reached') {
+            $EgressRejectCount++
+            if ($Line -match '429 for (\S+) on' -and $EgressRejectClientsSeen.Add($Matches[1])) {
+                $EgressRejectClients.Add($Matches[1])
+            }
+        }
 
         if ($Line -match 'Limiter slot acquired after (\d+)ms') {
             $Wait = [int]$Matches[1]
@@ -102,5 +113,7 @@ function Get-CIPPInstanceHealthSample {
         StalledRunCount    = $StalledRunCount
         TopEndpointsMs     = $TopEndpoints
         Clients            = $ClientList
+        EgressRejectCount  = $EgressRejectCount
+        EgressRejectClients = $EgressRejectClients
     }
 }

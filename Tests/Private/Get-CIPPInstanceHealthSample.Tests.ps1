@@ -87,6 +87,17 @@ Describe 'Get-CIPPInstanceHealthSample' {
             $Top.ContainsKey('Invoke-ListDomains') | Should -BeFalse
         }
 
+        It 'counts egress rejections and captures distinct client names' {
+            $Lines = @(
+                '2026-09-10T10:00:00.000Z [WRN] Egress cap reached — 429 for AcmeRMM on GET /api/ListTenants; served 1000000000/1000000000 bytes today, Retry-After 30s'
+                '2026-09-10T10:00:01.000Z [WRN] Egress cap reached — 429 for AcmeRMM on GET /api/ListUsers; served 1000000000/1000000000 bytes today, Retry-After 30s'
+                '2026-09-10T10:00:02.000Z [WRN] Egress cap reached — 429 for OtherPSA on GET /api/ListDomains; served 1000000000/1000000000 bytes today, Retry-After 30s'
+            )
+            $Sample = Get-CIPPInstanceHealthSample -Lines $Lines
+            $Sample.EgressRejectCount | Should -Be 3
+            @($Sample.EgressRejectClients) | Should -Be @('AcmeRMM', 'OtherPSA')
+        }
+
         It 'groups API access by AppId and counts repeats' {
             $Clients = (Get-CIPPInstanceHealthSample -Lines $script:MixedLines).Clients
             $Clients.Count | Should -Be 2
@@ -108,6 +119,8 @@ Describe 'Get-CIPPInstanceHealthSample' {
             $Sample.StalledRunCount | Should -Be 0
             $Sample.TopEndpointsMs.Count | Should -Be 0
             $Sample.Clients.Count | Should -Be 0
+            $Sample.EgressRejectCount | Should -Be 0
+            @($Sample.EgressRejectClients).Count | Should -Be 0
         }
 
         It 'reports no heap reading rather than zero when no sample was logged' {

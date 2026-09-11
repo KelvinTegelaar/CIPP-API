@@ -43,6 +43,12 @@ function Invoke-ListInstanceDiagnostics {
         return $HeapCapMb
     }
 
+    function Format-DiagnosticsBytes {
+        param([long]$Bytes)
+        if ($Bytes -ge 1GB) { return '{0:N1} GB' -f ($Bytes / 1GB) }
+        return '{0:N1} MB' -f ($Bytes / 1MB)
+    }
+
     try {
         $Now = [DateTime]::UtcNow
         $WindowStart = $Now.AddHours(-$Hours)
@@ -128,6 +134,47 @@ function Invoke-ListInstanceDiagnostics {
                         Detail = if ($StalledTotal -gt 0) { "$StalledTotal stalled orchestrator run report(s) in the last ${Hours}h" } else { "No stalled orchestrator runs in the last ${Hours}h" }
                         Fix    = if ($StalledTotal -gt 0) { 'Runs have pending work but nothing running - cancel the stuck run from Worker Health and let it re-queue.' } else { $null }
                     })
+
+                $EgressSamples = @($Samples | Where-Object { $null -ne $_.EgressBytesToday })
+                if ($EgressSamples.Count -eq 0) {
+                    $Results.Add(@{ Check = 'egress'; Status = 'INFO'; Detail = 'No API egress recorded in this window - egress accounting is off or no API client traffic was served'; Fix = $null })
+                } else {
+                    $NewestEgress = $EgressSamples | Sort-Object -Property Bucket | Select-Object -Last 1
+                    $TodayBytes = [long]$NewestEgress.EgressBytesToday
+                    $CapSample = @($Samples | Where-Object { [long]$_.EgressCapBytes -gt 0 }) | Select-Object -Last 1
+                    $CapBytes = if ($CapSample) { [long]$CapSample.EgressCapBytes } else { $null }
+                    $EgressRejectTotal = ($Samples | Measure-Object -Property EgressRejectCount -Sum).Sum ?? 0
+
+                    if ($EgressRejectTotal -gt 0) {
+                        # Distinct client names across the window's reject lists, in first-seen order.
+                        $RejectClients = [System.Collections.Generic.List[string]]::new()
+                        $Seen = [System.Collections.Generic.HashSet[string]]::new()
+                        foreach ($RejectSample in ($Samples | Where-Object { $_.EgressRejectClients })) {
+                            try {
+                                foreach ($ClientName in @($RejectSample.EgressRejectClients | ConvertFrom-Json)) {
+                                    if ($Seen.Add($ClientName)) { $RejectClients.Add($ClientName) }
+                                }
+                            } catch {}
+                        }
+                        $CapDisplay = if ($CapBytes) { Format-DiagnosticsBytes -Bytes $CapBytes } else { 'unknown' }
+                        $Results.Add(@{
+                                Check  = 'egress'
+                                Status = 'FAIL'
+                                Detail = "API egress cap reached: $EgressRejectTotal request(s) rejected with 429, clients: $($RejectClients -join ', '); served $(Format-DiagnosticsBytes -Bytes $TodayBytes) of $CapDisplay"
+                                Fix    = 'Identify which integration is pulling the most data and throttle it, or raise the daily egress budget.'
+                            })
+                    } elseif ($CapBytes) {
+                        $Percent = [math]::Round(($TodayBytes / $CapBytes) * 100, 1)
+                        $EgressDetail = "Served $(Format-DiagnosticsBytes -Bytes $TodayBytes) of $(Format-DiagnosticsBytes -Bytes $CapBytes) today ($Percent%)"
+                        if ($Percent -ge 75) {
+                            $Results.Add(@{ Check = 'egress'; Status = 'WARN'; Detail = $EgressDetail; Fix = $null })
+                        } else {
+                            $Results.Add(@{ Check = 'egress'; Status = 'PASS'; Detail = $EgressDetail; Fix = $null })
+                        }
+                    } else {
+                        $Results.Add(@{ Check = 'egress'; Status = 'INFO'; Detail = "Served $(Format-DiagnosticsBytes -Bytes $TodayBytes) today (no daily budget set)"; Fix = $null })
+                    }
+                }
 
                 $TotalAccess = 0
                 foreach ($Client in $ClientTotals.Values) { $TotalAccess += $Client.Count }
@@ -259,6 +306,8 @@ function Invoke-ListInstanceDiagnostics {
                             StalledRunCount    = [int]$Sample.StalledRunCount
                             HeapMb             = if ($null -ne $Sample.HeapMb) { [int]$Sample.HeapMb } else { $null }
                             HeapMbLive         = if ($null -ne $Sample.HeapMbLive) { [int]$Sample.HeapMbLive } else { $null }
+                            EgressBytes        = if ($null -ne $Sample.EgressBytes) { [long]$Sample.EgressBytes } else { $null }
+                            EgressBytesToday   = if ($null -ne $Sample.EgressBytesToday) { [long]$Sample.EgressBytesToday } else { $null }
                             TopEndpointsMs     = $TopEndpoints
                             Clients            = @($BucketClients)
                         })
@@ -308,7 +357,18 @@ function Invoke-ListInstanceDiagnostics {
                         })
                 }
 
-                $Body = @{ Results = @{ Buckets = @($Buckets); Events = @($Events); HeapCapMb = Get-DiagnosticsHeapCapMb -Samples $Samples } }
+                $EgressCapSample = @($Samples | Where-Object { [long]$_.EgressCapBytes -gt 0 }) | Select-Object -Last 1
+                $EgressAvailable = @($Samples | Where-Object { $null -ne $_.EgressBytesToday }).Count -gt 0
+
+                $Body = @{
+                    Results = @{
+                        Buckets         = @($Buckets)
+                        Events          = @($Events)
+                        HeapCapMb       = Get-DiagnosticsHeapCapMb -Samples $Samples
+                        EgressCapBytes  = if ($EgressCapSample) { [long]$EgressCapSample.EgressCapBytes } else { $null }
+                        EgressAvailable = $EgressAvailable
+                    }
+                }
             }
             default {
                 return [HttpResponseContext]@{
