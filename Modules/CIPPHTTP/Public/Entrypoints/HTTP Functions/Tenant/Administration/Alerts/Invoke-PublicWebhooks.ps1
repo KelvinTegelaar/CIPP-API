@@ -8,9 +8,17 @@ function Invoke-PublicWebhooks {
     param($Request, $TriggerMetadata)
     $Headers = $Request.Headers
     Write-Host 'Received request'
-    $url = ($Headers.'x-ms-original-url').split('/API') | Select-Object -First 1
-    $CIPPURL = [string]$url
-    Write-Host $url
+    # x-ms-original-url is only set by the Static Web App proxy. When a request arrives directly on
+    # the Function App hostname - which is what the Partner Webhooks page registers whenever no
+    # custom domain is bound to the App Service - the header is absent and .split() threw a
+    # NullReferenceException here, returning HTTP 500 before the validation branches below were
+    # ever reached. The derived $CIPPURL was not used anywhere else in this function.
+    $OriginalUrl = [string]$Headers.'x-ms-original-url'
+    if ($OriginalUrl) {
+        Write-Host "Inbound URL: $OriginalUrl"
+    } else {
+        Write-Host 'Inbound URL: no x-ms-original-url - request did not arrive via the SWA proxy'
+    }
 
     # Graph (and Partner Center) validate a new subscription by POSTing a token and comparing the raw
     # response body to it byte for byte. The response has to be the bare token as text/plain - the
