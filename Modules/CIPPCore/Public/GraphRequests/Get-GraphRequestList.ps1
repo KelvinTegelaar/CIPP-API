@@ -92,6 +92,13 @@ function Get-GraphRequestList {
     $Endpoint = $Endpoint -replace '^/', ''
     $DisplayName = ($Endpoint -split '/')[0]
 
+    # @odata.count is only returned when the request carries $count=true, so a CountOnly caller
+    # that did not also pass $count got a response with no count and CountOnly returned $null.
+    # Add it here (ConsistencyLevel:eventual is set via ComplexFilter on the count request below).
+    if ($CountOnly.IsPresent -and -not $Parameters.ContainsKey('$count')) {
+        $Parameters['$count'] = 'true'
+    }
+
     if ($QueueNameOverride) {
         $QueueName = $QueueNameOverride
     } else {

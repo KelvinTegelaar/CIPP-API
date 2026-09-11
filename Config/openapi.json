@@ -7261,7 +7261,8 @@
                     "type": "string"
                   },
                   "tenantFilter": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "User creation is single-tenant only. Without this guard an 'AllTenants' (or otherwise unresolvable) tenantFilter fails Get-AuthorisedRequest, the Graph write helpers return $null non-terminating, and the endpoint reports success while creating nothing."
                   },
                   "usageLocation": {
                     "$ref": "#/components/schemas/LabelValue"
@@ -7399,6 +7400,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -11437,8 +11441,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "SkipCache": {
+                    "type": "string",
+                    "description": "Re-run the check instead of serving the cached result."
+                  },
                   "TenantId": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The tenant to (re)check for the 'Tenants' type. Query or body, for the same reason as Type."
+                  },
+                  "Type": {
+                    "type": "string",
+                    "description": "Which self-diagnostic to run: Permissions, Tenants or GDAP. Read from either the query string or the body: the UI calls this as a GET with ?Type=, while a POST dispatcher (the MCP gateway documents it as POST because it also reads a body field) delivers it in the body - reading only the query left both empty and returned an empty result for every Type."
                   }
                 }
               }
@@ -11452,12 +11465,22 @@
             "description": "Re-run the check instead of serving the cached result.",
             "required": false,
             "schema": {
-              "type": "boolean"
+              "type": "string"
+            }
+          },
+          {
+            "name": "TenantId",
+            "in": "query",
+            "description": "The tenant to (re)check for the 'Tenants' type. Query or body, for the same reason as Type.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           },
           {
             "name": "Type",
             "in": "query",
+            "description": "Which self-diagnostic to run: Permissions, Tenants or GDAP. Read from either the query string or the body: the UI calls this as a GET with ?Type=, while a POST dispatcher (the MCP gateway documents it as POST because it also reads a body field) delivers it in the body - reading only the query left both empty and returned an empty result for every Type.",
             "required": false,
             "schema": {
               "type": "string",
@@ -40583,6 +40606,9 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       },
+                      "lastSyncDateTime": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "numberOfHoursFromLastSync": {
                         "x-cipp-field-source": "backend"
                       },
@@ -41381,6 +41407,67 @@
           }
         ],
         "x-cipp-role": "Exchange.Mailbox.Read"
+      }
+    },
+    "/api/ListCAPolicyCoverage": {
+      "get": {
+        "summary": "ListCAPolicyCoverage",
+        "operationId": "ListCAPolicyCoverage",
+        "tags": [
+          "Tenant > Conditional"
+        ],
+        "description": "Resolves identity assignment coverage for a single Conditional Access policy: which users\nare touched by includes or exclusions, their net status (covered or excluded), and why\n(users, transitive groups, roles, guests, special tokens). Does not evaluate apps,\nlocations, or sign-in what-if conditions.",
+        "parameters": [
+          {
+            "name": "GUID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.ConditionalAccess.Read"
       }
     },
     "/api/ListCAtemplates": {
@@ -45988,7 +46075,8 @@
                     "type": "string"
                   },
                   "cmdParams": {
-                    "type": "string"
+                    "type": "object",
+                    "description": "Parameters to splat onto the Exchange cmdlet, as an object of name/value pairs (e.g. { \"Identity\": \"user@contoso.com\" }). Cast to an object so the generated schema types cmdParams as an object rather than a string - a string-typed schema made the client reject an object body, leaving no way to pass parameters."
                   },
                   "Compliance": {
                     "type": "boolean"
@@ -48953,6 +49041,168 @@
           }
         ],
         "x-cipp-role": "Tenant.Directory.Read"
+      }
+    },
+    "/api/ListInstanceDiagnostics": {
+      "get": {
+        "summary": "ListInstanceDiagnostics",
+        "operationId": "ListInstanceDiagnostics",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Self diagnostics for this instance. Checks turns the recorded InstanceHealth samples\ninto a pass/warn/fail list with a suggested fix per finding; Timeline returns the raw\nbuckets plus the restart and out-of-memory events, with the API clients that were\nbusiest in the hour leading up to each event. Requires SuperAdmin access.",
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Checks",
+                "Timeline"
+              ]
+            }
+          },
+          {
+            "name": "Hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "BootTime": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Bucket": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EgressBytes": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EgressBytesToday": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EgressCapBytes": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EgressRejectClients": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EgressRejectCount": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ErrCount": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GapMinutes": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GcHeapLimitMb": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "HeapMb": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "HeapMbLive": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Kind": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "MaxLimiterWaitMs": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "OomCount": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PoolExhaustedCount": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PreviousSample": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "StalledRunCount": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "TopEndpointsMs": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Version": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "WatchdogCount": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.SuperAdmin.Read",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListIntuneApprovalRequests": {
@@ -56853,7 +57103,7 @@
         "tags": [
           "Identity > Reports"
         ],
-        "description": "Lists recent sign-in log entries for a tenant, filterable by various criteria. Supports AllTenants queries.",
+        "description": "Lists recent sign-in log entries for a tenant, filterable by various criteria. Supports AllTenants queries.\n\nDeprecated: use ListGraphRequest with Endpoint=auditLogs/signIns instead, which supports $filter, $top,\n$orderby, and manualPagination with nextLink continuation. This endpoint returns at most one page of\nresults and will be removed in a future release.",
         "parameters": [
           {
             "name": "Days",
@@ -60511,6 +60761,7 @@
           {
             "name": "category",
             "in": "query",
+            "description": "Restrict to a single category (the framework/area name a test belongs to).",
             "required": false,
             "schema": {
               "type": "string"
@@ -60519,6 +60770,7 @@
           {
             "name": "countsOnly",
             "in": "query",
+            "description": "'true' to return only the aggregate counts with no rows. Implies includeCounts.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60527,6 +60779,7 @@
           {
             "name": "includeCounts",
             "in": "query",
+            "description": "'true' to also return aggregate counts (per status, high-risk failures, distinct tenants).",
             "required": false,
             "schema": {
               "type": "string"
@@ -60535,6 +60788,7 @@
           {
             "name": "risk",
             "in": "query",
+            "description": "Restrict to a single risk level: High, Medium or Low.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60543,6 +60797,7 @@
           {
             "name": "rowStatus",
             "in": "query",
+            "description": "Return rows only for these statuses, while still counting every status the filters match.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60551,6 +60806,7 @@
           {
             "name": "status",
             "in": "query",
+            "description": "Narrow the scan to these statuses: Passed, Failed, Investigate, Skipped, Informational.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60559,6 +60815,7 @@
           {
             "name": "summaryOnly",
             "in": "query",
+            "description": "'true' to project away the large ResultMarkdown/ResultDataJson blobs for a lighter read.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60567,6 +60824,7 @@
           {
             "name": "tenantFilter",
             "in": "query",
+            "description": "One or more tenant domains to report on. Omit, or pass 'AllTenants', to query every tenant the caller may see. Accepts a string, a comma-delimited string, or an array.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60575,6 +60833,7 @@
           {
             "name": "testId",
             "in": "query",
+            "description": "One or more test IDs (the result row's RowKey), e.g. 'CustomScript-<guid>'.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60583,6 +60842,7 @@
           {
             "name": "testType",
             "in": "query",
+            "description": "Restrict to a single test type: Identity, Devices or Custom.",
             "required": false,
             "schema": {
               "type": "string"

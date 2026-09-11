@@ -75,9 +75,7 @@ function Test-CIPPAccess {
         $Type = 'APIClient'
         $swApiClient = [System.Diagnostics.Stopwatch]::StartNew()
         # Direct API Access
-        $ForwardedFor = $Request.Headers.'x-forwarded-for' -split ',' | Select-Object -First 1
-        $IPRegex = '^(?<IP>(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|[0-9a-fA-F:]+))(?::\d+)?$'
-        $IPAddress = $ForwardedFor -replace $IPRegex, '$1' -replace '[\[\]]', ''
+        $IPAddress = Get-CippRequestIPAddress -Request $Request
 
         $Client = Get-CippApiClient -AppId $Request.Headers.'x-ms-client-principal-name'
         if ($Client) {
@@ -106,15 +104,7 @@ function Test-CIPPAccess {
                             $_
                         }
                     }
-                    $BaseRole = $null
-                    foreach ($Role in $script:CIPPBaseRoles.PSObject.Properties) {
-                        foreach ($ClientRole in $Client.Role) {
-                            if ($Role.Name -eq $ClientRole) {
-                                $BaseRole = $Role
-                                break
-                            }
-                        }
-                    }
+                    $BaseRole = Find-CippBaseRole -Roles $Client.Role -BaseRoles $script:CIPPBaseRoles
                 } else {
                     $CustomRoles = @('cipp-api')
                 }
@@ -184,9 +174,7 @@ function Test-CIPPAccess {
         $AllowedIPRanges = Get-CIPPRoleIPRanges -Roles $User.userRoles
 
         if ($AllowedIPRanges -notcontains 'Any') {
-            $ForwardedFor = $Request.Headers.'x-forwarded-for' -split ',' | Select-Object -First 1
-            $IPRegex = '^(?<IP>(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|[0-9a-fA-F:]+))(?::\d+)?$'
-            $IPAddress = $ForwardedFor -replace $IPRegex, '$1' -replace '[\[\]]', ''
+            $IPAddress = Get-CippRequestIPAddress -Request $Request
             if ($IPAddress) {
                 $IPAllowed = $false
                 foreach ($Range in $AllowedIPRanges) {
@@ -224,129 +212,8 @@ function Test-CIPPAccess {
         }
 
         if ($Request.Params.CIPPEndpoint -eq 'me') {
-
-            if (!$User.userRoles) {
-                return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::OK
-                        Body       = (
-                            @{
-                                'clientPrincipal' = $null
-                                'permissions'     = @()
-                            } | ConvertTo-Json -Depth 5)
-                    })
-            }
-
-            if (!$IPAllowed) {
-                return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::OK
-                        Body       = (
-                            @{
-                                'clientPrincipal' = $null
-                                'permissions'     = @()
-                                'message'         = "Your IP address ($IPAddress) is not in the allowed range for your role(s)"
-                            } | ConvertTo-Json -Depth 5)
-                    })
-            }
-
-            $swPermsMe = [System.Diagnostics.Stopwatch]::StartNew()
-            $Permissions = Get-CippAllowedPermissions -UserRoles $User.userRoles
-            $swPermsMe.Stop()
-            $AccessTimings['GetPermissions(me)'] = $swPermsMe.Elapsed.TotalMilliseconds
-
-            # Include SSO migration status for admins with AppSettings permissions
-            $MeResponse = @{
-                'clientPrincipal' = $User
-                'permissions'     = @($Permissions)
-            }
-            if ($script:CippImpersonation) {
-                # The frontend banner needs these to render the exit affordance even when
-                # the impersonated role has almost no permissions.
-                $MeResponse['impersonating'] = $script:CippImpersonation.Impersonating
-                $MeResponse['realUserRoles'] = @($script:CippImpersonation.RealRoles)
-            }
-
-            # Hosted payment status checks — shown to all users (no permission gating)
-            if ($env:cipp_hosted_subscription_ended) {
-                $MeResponse['hostedSubscriptionEnded'] = $true
-            }
-            if ($env:cipp_hosted_failed_payments) {
-                $MeResponse['hostedFailedPayments'] = $true
-            }
-            # CyberDrain-hosted instance (CIPP_HOSTED is set by the hosted deployment templates).
-            # Lets the frontend point at the management portal for anything the instance's own
-            # identity cannot do, such as custom domains on the shared App Service plan.
-            $MeResponse['hosted'] = $env:CIPP_HOSTED -eq 'true'
-            # CIPP-NG (container web app on an App Service plan) versus a legacy function app plus
-            # static web app - the backend page shows different resources for each.
-            $MeResponse['ng'] = $env:CIPPNG -eq 'true'
-
-            $CanManageAppSettings = $Permissions -contains 'CIPP.AppSettings.ReadWrite'
-            $HasAnyPermission = ($Permissions | Measure-Object).Count -gt 0
-
-            # Initial setup state: real (non-placeholder) SAM credentials loaded in this
-            # worker. Placeholder set matches Get-CIPPAuthentication/Initialize-CIPPAuth.
-            # The frontend blocks the whole UI behind the setup wizard until complete;
-            # samAppPresent distinguishes "no app registration at all" from "app exists
-            # but the refresh token is missing" so the wizard can offer a token reset.
-            $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
-            $TestSamCredentials = {
-                $HasAppId = [bool]($env:ApplicationID -and $env:ApplicationID -notmatch $PlaceholderPattern -and
-                    $env:TenantID -and $env:TenantID -notmatch $PlaceholderPattern)
-                $HasRefreshToken = [bool]($env:RefreshToken -and $env:RefreshToken -notmatch $PlaceholderPattern)
-                @{ HasAppId = $HasAppId; Complete = ($HasAppId -and $HasRefreshToken) }
-            }
-            $SamState = & $TestSamCredentials
-            if (-not $SamState.Complete) {
-                # Env vars are per-worker and loaded at warmup, so setup completed on
-                # another worker leaves this one stale. Reload at most once per 30s per
-                # worker, tracked in an env var because runspaces don't share script
-                # scope, so an unconfigured instance doesn't hit storage on every poll.
-                $NowUnix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-                $LastAttempt = [int64]0
-                $null = [int64]::TryParse($env:CippMeAuthReloadAt, [ref]$LastAttempt)
-                if (($NowUnix - $LastAttempt) -ge 30) {
-                    $env:CippMeAuthReloadAt = [string]$NowUnix
-                    $null = Get-CIPPAuthentication
-                    $SamState = & $TestSamCredentials
-                }
-            }
-            $MeResponse['initialSetupComplete'] = $SamState.Complete
-            $MeResponse['samAppPresent'] = $SamState.HasAppId
-
-            # Forced SSO migration: non-dismissible prompt when migration env var is set.
-            # Suppressed until initial setup (SAM app) is complete — the setup wizard has
-            # to run first, and ExecSSOSetup needs the SAM app to create the CIPP-SSO
-            # registration.
-            $InitialSetupComplete = $SamState.Complete
-            if ($env:CIPP_SSO_MIGRATION_APPID -and $CanManageAppSettings -and $InitialSetupComplete) {
-                $MeResponse['forceSsoMigration'] = @{
-                    appId  = $env:CIPP_SSO_MIGRATION_APPID
-                    status = 'pending'
-                }
-            }
-
-            if ($env:CIPPNG -ne 'true' -and $HasAnyPermission) {
-                try {
-                    $SSOTable = Get-CIPPTable -tablename 'SSOMigration'
-                    $SSOMigration = Get-CIPPAzDataTableEntity @SSOTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue
-                    if ($SSOMigration) {
-                        $MeResponse['ssoMigration'] = @{
-                            status      = $SSOMigration.Status
-                            appId       = $SSOMigration.AppId
-                            multiTenant = [bool]($SSOMigration.MultiTenant -eq 'true' -or $SSOMigration.MultiTenant -eq 'True')
-                        }
-                    } else {
-                        $MeResponse['ssoMigration'] = @{ status = 'none' }
-                    }
-                } catch {
-                    $MeResponse['ssoMigration'] = @{ status = 'none' }
-                }
-            }
-
-            return ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::OK
-                    Body       = ($MeResponse | ConvertTo-Json -Depth 5)
-                })
+            # Impersonation marker passed explicitly rather than read from script scope inside the helper.
+            return (New-CippMeResponse -User $User -IPAllowed $IPAllowed -IPAddress $IPAddress -Impersonation $script:CippImpersonation -AccessTimings $AccessTimings)
         }
 
         if ($User.userRoles -contains 'admin' -or $User.userRoles -contains 'superadmin') {
@@ -368,14 +235,7 @@ function Test-CIPPAccess {
         } elseif ($User.userRoles -contains 'admin') {
             $User.userRoles = @('admin')
         }
-        foreach ($Role in $script:CIPPBaseRoles.PSObject.Properties) {
-            foreach ($UserRole in $User.userRoles) {
-                if ($Role.Name -eq $UserRole) {
-                    $BaseRole = $Role
-                    break
-                }
-            }
-        }
+        $BaseRole = Find-CippBaseRole -Roles $User.userRoles -BaseRoles $script:CIPPBaseRoles
 
     }
 
@@ -401,7 +261,6 @@ function Test-CIPPAccess {
 
     # Check custom role permissions for limitations on api calls or tenants
     if ($null -eq $BaseRole.Name -and $Type -eq 'User' -and ($CustomRoles | Measure-Object).Count -eq 0) {
-        Write-Information $BaseRole.Name
         throw 'Access to this CIPP API endpoint is not allowed, the user does not have the required permission'
     } elseif (($CustomRoles | Measure-Object).Count -gt 0) {
         if (@('admin', 'superadmin') -contains $BaseRole.Name) {
@@ -477,16 +336,17 @@ function Test-CIPPAccess {
                 # Tenant list and group list requests have already returned above, from the
                 # cached scope rules. Everything from here is the per-endpoint access decision.
                 # Resolve the target from the request only. Do not fall back to $env:TenantID —
-                # that is the partner/home tenant, not a customer. Missing/unmapped filters are
-                # unresolved: Test-CippRoleTenantScope returns $true (block fail-closed / allow quirk).
+                # that is the partner/home tenant, not a customer. A missing filter means the
+                # endpoint is not tenant-scoped; a filter that resolves to no known tenant is
+                # denied on the allow pass and stays in scope for the block pass.
                 $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId.value ?? $Request.Body.tenantId
                 $TenantAllowed = $false
                 $APIAllowed = $false
                 $swPermissionEval = [System.Diagnostics.Stopwatch]::StartNew()
 
                 # Block pass: deny wins, but only when the blocking role also grants the
-                # permission and its tenant scope covers the target. Test-CippRoleTenantScope
-                # returns $true for missing/unmapped tenants — here that means fail closed (apply block).
+                # permission and its tenant scope covers the target. -TreatUnresolvedAsInScope
+                # keeps unresolved targets in scope so the deny still applies (fail closed).
                 foreach ($Role in $PermissionSet) {
                     $RoleGrantsPermission = $false
                     foreach ($Perm in $Role.Permissions) {
@@ -498,7 +358,7 @@ function Test-CIPPAccess {
                     if (-not $RoleGrantsPermission) { continue }
                     if ($Role.BlockedEndpoints -notcontains $Request.Params.CIPPEndpoint) { continue }
 
-                    $BlockInScope = Test-CippRoleTenantScope -Role $Role -TenantFilter $TenantFilter -Tenants $Tenants -Request $Request -ApiRole $APIRole
+                    $BlockInScope = Test-CippRoleTenantScope -Role $Role -TenantFilter $TenantFilter -Tenants $Tenants -Request $Request -ApiRole $APIRole -TreatUnresolvedAsInScope
                     if ($BlockInScope) {
                         throw "Access to this CIPP API endpoint is not allowed, the custom role '$($Role.Role)' has blocked this endpoint: $($Request.Params.CIPPEndpoint)"
                     }
@@ -538,19 +398,6 @@ function Test-CIPPAccess {
                 }
                 throw 'Access to this CIPP API endpoint is not allowed, the user does not have the required permission'
             }
-
-            if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
-                if (!$APIAllowed) {
-                    throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
-                }
-                if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
-                    Write-Information "Tenant not allowed: $TenantFilter"
-
-                    throw 'Access to this tenant is not allowed'
-                } else {
-                    return $true
-                }
-            }
         } else {
             # No permissions found for any roles
             if ($TenantList.IsPresent) {
@@ -558,8 +405,6 @@ function Test-CIPPAccess {
             }
             throw 'Access to this CIPP API endpoint is not allowed, the user does not have the required permission'
         }
-        $swUserBranch.Stop()
-        $AccessTimings['UserBranch'] = $swUserBranch.Elapsed.TotalMilliseconds
     }
 
     if ($TenantList.IsPresent) {

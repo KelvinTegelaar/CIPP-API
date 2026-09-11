@@ -7,7 +7,7 @@ function Update-CIPPSSOPreconsent {
     .DESCRIPTION
     Reads the stored SSO AppId from Key Vault (or the DevSecrets table in dev mode) and
     ensures an AllPrincipals oauth2PermissionGrant exists for it against Microsoft Graph
-    covering the delegated scopes New-CIPPSSOApp requests (openid, profile, email).
+    covering the delegated scopes New-CIPPSSOApp requests (openid, profile, email, offline_access).
 
     Runs from warmup rather than at app-creation time: the service principal is not always
     queryable immediately after the app registration is created, so a create-time grant is
@@ -25,7 +25,7 @@ function Update-CIPPSSOPreconsent {
 
     $GraphAppId = '00000003-0000-0000-c000-000000000000'
     # Keep in sync with the delegated permissions New-CIPPSSOApp requests.
-    $RequiredScopes = @('openid', 'profile', 'email')
+    $RequiredScopes = @('openid', 'profile', 'email', 'offline_access')
 
     $MigrationTable = Get-CIPPTable -TableName 'SSOMigration'
     $Existing = $null

@@ -29,8 +29,12 @@ Function Invoke-ListSharepointQuota {
             # tenants where the service account lacks SharePoint admin rights, which made this
             # endpoint silently return 'Not available'.
             $SharePointQuota = New-GraphGetRequest -extraHeaders $extraHeaders -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -uri "$($SharePointInfo.AdminUrl)/_api/StorageQuotas()?api-version=1.3.2" -asapp $true -UseCertificate
-            $GeoUsedStorageMB = ($SharePointQuota.GeoUsedStorageMB | Measure-Object -Sum).Sum
-            $TenantStorageMB = $SharePointQuota.TenantStorageMB | Select-Object -First 1
+            # The API types every figure as a string. Cast each geo's used storage before summing
+            # (Measure-Object -Sum does not add strings, so this returned $null), and cast the
+            # tenant pool, so both surface as numbers instead of a null and a string.
+            $GeoUsedStorageMB = (@($SharePointQuota) | ForEach-Object { [double]($_.GeoUsedStorageMB ?? 0) } | Measure-Object -Sum).Sum
+            $TenantStorageRaw = @($SharePointQuota.TenantStorageMB | Where-Object { $_ }) | Select-Object -First 1
+            $TenantStorageMB = if ($null -ne $TenantStorageRaw) { [double]$TenantStorageRaw } else { 0 }
 
             # Per-geo detail so a Multi-Geo tenant can see where the used storage actually sits
             # rather than only a tenant-wide total. The API types every figure as a string, so

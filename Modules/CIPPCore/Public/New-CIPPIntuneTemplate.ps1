@@ -90,6 +90,13 @@ function New-CIPPIntuneTemplate {
         'configurationPolicies' {
             $Type = 'Catalog'
             $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')?`$expand=settings" -tenantid $TenantFilter | Select-Object name, description, settings, platforms, technologies, templateReference
+            # Apple enrollment (ADE) policies deploy only with a creationSource binding them to the
+            # target tenant's ADE token ("DepTokenId_{tokenId}"). That id is per tenant, so strip the
+            # source tenant's token and store a %ADETokenId% placeholder the deploy resolves from the
+            # target tenant's custom variable (see Get-CIPPTextReplacement / Set-CIPPIntunePolicy).
+            if ($Template.templateReference.templateFamily -like 'enrollment*' -or $Template.technologies -match 'enrollment') {
+                $Template | Add-Member -NotePropertyName 'creationSource' -NotePropertyValue 'DepTokenId_%ADETokenId%' -Force
+            }
             $TemplateJson = $Template | ConvertTo-Json -Depth 100 -Compress
             $DisplayName = $Template.name
 

@@ -16,7 +16,11 @@ function Get-HaloTicketType {
         $Token = Get-HaloToken -configuration $Configuration
         $UserAgent = Get-CippUserAgent
 
-        Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/TicketType?showall=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
+        # Invoke-RestMethod emits a top-level JSON array as one Object[] without enumerating it,
+        # so returning it directly makes @(Get-HaloTicketType) a nested array. Writing the
+        # variable enumerates the rows.
+        $TicketTypes = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/TicketType?showall=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
+        $TicketTypes
     } catch {
         $Message = if ($_.ErrorDetails.Message) {
             Get-NormalizedError -Message $_.ErrorDetails.Message

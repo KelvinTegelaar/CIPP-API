@@ -4,7 +4,7 @@ function New-CIPPSSOApp {
         Creates or updates the CIPP-SSO app registration for EasyAuth SSO migration.
     .DESCRIPTION
         Creates a new or updates an existing Entra ID app registration for CIPP-SSO with
-        openid, profile, and email delegated permissions. If ExistingAppId is provided,
+        openid, profile, email, and offline_access delegated permissions. If ExistingAppId is provided,
         looks up that specific app by clientId. If the app no longer exists in the tenant,
         creates a new one. Does NOT create a client secret — call Add-CIPPSSOAppSecret
         for that as a separate step so the AppId can be persisted before the (sometimes
@@ -42,6 +42,7 @@ function New-CIPPSSOApp {
         @{ id = '37f7f235-527c-4136-accd-4a02d197296e'; type = 'Scope' }  # openid
         @{ id = '14dad69e-099b-42c9-810b-d002981feec1'; type = 'Scope' }  # profile
         @{ id = '64a6cdd6-aab1-4aaf-94b8-3cc8405e90d0'; type = 'Scope' }  # email
+        @{ id = '7427e0e9-2fba-42fe-b0c0-848c9e6a8182'; type = 'Scope' }  # offline_access
     )
 
     # Look up existing app by stored AppId (not by name — supports multiple CIPP instances)

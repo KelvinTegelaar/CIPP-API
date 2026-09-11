@@ -23,15 +23,15 @@ function Invoke-CippTestCISAMSEXO102 {
             return
         }
 
-        $AcceptableActions = @('DeleteMessage', 'Quarantine')
+        $AcceptableActions = @('Quarantine', 'Reject')
         $FailedPolicies = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Policy in $MalwarePolicies) {
-            if ($Policy.Action -notin $AcceptableActions) {
+            if ($Policy.FileTypeAction -notin $AcceptableActions) {
                 $FailedPolicies.Add([PSCustomObject]@{
                     'Policy Name' = $Policy.Name
-                    'Current Action' = $Policy.Action
-                    'Expected' = 'DeleteMessage or Quarantine'
+                    'Current Action' = $Policy.FileTypeAction
+                    'Expected' = 'Quarantine or Reject'
                 })
             }
         }
