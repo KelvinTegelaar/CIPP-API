@@ -6,13 +6,12 @@ Ensuring that emails containing malware are immediately quarantined or deleted p
 
 1. Navigate to Microsoft 365 Defender portal > Email & collaboration > Policies & rules > Threat policies > Anti-malware
 2. Select each malware filter policy
-3. Under "Protection settings":
-   - Set "Malware detection response" to either "Delete entire message" or "Quarantine message"
-4. Or use PowerShell:
+3. Under "Protection settings" enable the common attachments filter and set its action so matching mail is either quarantined or rejected (dropped)
+4. Or use PowerShell (FileTypeAction accepts `Quarantine` or `Reject`):
 ```powershell
-Set-MalwareFilterPolicy -Identity "Default" -Action Quarantine
-# Or
-Set-MalwareFilterPolicy -Identity "Default" -Action DeleteMessage
+Set-MalwareFilterPolicy -Identity "Default" -EnableFileFilter $true -FileTypeAction Quarantine
+# Or reject (drop) matching mail instead
+Set-MalwareFilterPolicy -Identity "Default" -EnableFileFilter $true -FileTypeAction Reject
 ```
 
 **Links:**

@@ -5,11 +5,11 @@
   "tag": [
     "SMB1001 (2.8)"
   ],
-  "impact": "Medium Impact",
-  "helpText": "Blocks login for guest users whose most recent sign-in attempt, interactive or non-interactive, is older than the number of days. Guests that have never signed in are only included when 'Disable accounts that have not yet signed in' is enabled. Accounts an administrator re-enabled in the last 7 days are left alone.",
-  "executiveText": "Automatically disables external guest accounts that haven't been used for a number of days, reducing security risks from dormant accounts while maintaining access for active external collaborators. This helps maintain a clean user directory and reduces potential attack vectors.",
-  "docsDescription": "Blocks login for guest users whose most recent sign-in attempt, interactive or non-interactive, is older than the number of days. Guests that have never signed in are only included when 'Disable accounts that have not yet signed in' is enabled.",
-  "impactColour": "warning",
+  "impact": "High Impact",
+  "helpText": "Blocks login for guest users whose most recent sign-in attempt, interactive or non-interactive, is older than the number of days. Optionally soft-deletes already-disabled guests after a configurable grace period past that threshold (0 = never delete). Guests that have never signed in are only included when 'Disable accounts that have not yet signed in' is enabled. Accounts an administrator re-enabled in the last 7 days are left alone. Deleted guests remain recoverable from Deleted Items for about 30 days.",
+  "executiveText": "Automatically disables external guest accounts that haven't been used for a number of days, and can optionally remove already-disabled dormant guests after an additional grace period. This reduces security risks from abandoned external access, keeps the directory clean, and avoids errors when previously disabled guests need to be invited back.",
+  "docsDescription": "Blocks login for guest users whose most recent sign-in attempt, interactive or non-interactive, is older than the number of days. Remediation first disables stale enabled guests, and later soft-deletes guests that are already disabled once they have been inactive for the disable threshold plus the configured grace delta (deletion age = days + deleteGraceDays). The disable-before-delete grace is further guaranteed by never deleting a guest in the same pass it was disabled. Guests that have never signed in are only included when 'Disable accounts that have not yet signed in' is enabled. Accounts an administrator re-enabled in the last 7 days are left alone. Graph user DELETE is a soft-delete (recoverable from Deleted Items for about 30 days).",
+  "impactColour": "danger",
   "addedDate": "2022-10-20",
   "powershellEquivalent": "Graph API",
   "appliesToTest": [
@@ -33,6 +33,17 @@
       "required": true,
       "default": 90
     },
+    "deleteGraceDays": {
+      "type": "number",
+      "label": "Grace days after disable before deletion (0 = never delete). Guests are deleted once inactive for the disable threshold plus this many additional days.",
+      "default": 0,
+      "validators": {
+        "min": {
+          "value": 0,
+          "message": "Minimum value is 0"
+        }
+      }
+    },
     "IncludeNeverSignedIn": {
       "type": "switch",
       "label": "Disable accounts that have not yet signed in",
@@ -54,11 +65,17 @@
     ],
     "writes": [
       {
+        "from": "guestsToDisable",
         "method": "PATCH",
         "uri": "users/%id%",
         "body": {
           "accountEnabled": false
         }
+      },
+      {
+        "from": "guestsToDelete",
+        "method": "DELETE",
+        "uri": "users/%id%"
       }
     ]
   }

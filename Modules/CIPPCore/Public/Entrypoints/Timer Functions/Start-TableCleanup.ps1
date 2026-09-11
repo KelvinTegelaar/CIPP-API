@@ -141,6 +141,18 @@ function Start-TableCleanup {
             }
         }
         @{
+            # 5-minute instance health samples and boot markers. Two weeks covers the
+            # diagnostics window (max 14 days) with nothing left over.
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'InstanceHealth'
+            DataTableProps = @{
+                Filter   = "PartitionKey eq 'InstanceHealth' and Timestamp lt datetime'$((Get-Date).AddDays(-14).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
             FunctionName = 'TableCleanupTask'
             Type         = 'DeleteTable'
             Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync')

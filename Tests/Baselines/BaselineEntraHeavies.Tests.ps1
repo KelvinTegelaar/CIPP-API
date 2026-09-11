@@ -280,7 +280,7 @@ Describe 'Get-CIPPBaselineDisableSelfServiceLicensesState' {
         Invoke-CIPPBaselineDisableSelfServiceLicenses -Remediate $null -TenantFilter $script:Tenant -Current $Prepared.Current
         Should -Invoke New-GraphPostRequest -ParameterFilter { $uri -match 'autoclaim' }
         Should -Invoke New-GraphPostRequest -ParameterFilter { $uri -match 'authorizationPolicy' -and $type -eq 'PATCH' }
-        Should -Invoke New-GraphPostRequest -ParameterFilter { $uri -match 'licensing.m365.microsoft.com' -and $type -eq 'PUT' }
+        Should -Invoke New-GraphPostRequest -ParameterFilter { $uri -match 'licensing.m365.microsoft.com' -and $type -eq 'PUT' -and $AsApp }
     }
 }
 

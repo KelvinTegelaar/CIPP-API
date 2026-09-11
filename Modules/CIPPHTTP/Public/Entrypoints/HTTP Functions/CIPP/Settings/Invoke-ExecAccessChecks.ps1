@@ -16,10 +16,19 @@ function Invoke-ExecAccessChecks {
     $4HoursAgo = (Get-Date).AddHours(-1).ToUniversalTime()
     $TimestampFilter = $4HoursAgo.ToString('yyyy-MM-ddTHH:mm:ss.fffK')
 
-    # Re-run the check instead of serving the cached result.
-    $SkipCache = $Request.Query.SkipCache -eq $true
+    # Which self-diagnostic to run: Permissions, Tenants or GDAP. Read from either the query
+    # string or the body: the UI calls this as a GET with ?Type=, while a POST dispatcher (the
+    # MCP gateway documents it as POST because it also reads a body field) delivers it in the
+    # body - reading only the query left both empty and returned an empty result for every Type.
+    $Type = $Request.Query.Type ?? $Request.Body.Type
 
-    switch ($Request.Query.Type) {
+    # Re-run the check instead of serving the cached result.
+    $SkipCache = ($Request.Query.SkipCache ?? $Request.Body.SkipCache) -eq $true
+
+    # The tenant to (re)check for the 'Tenants' type. Query or body, for the same reason as Type.
+    $TenantId = $Request.Body.TenantId ?? $Request.Query.TenantId
+
+    switch ($Type) {
         'Permissions' {
             if (-not $SkipCache) {
                 try {
@@ -43,7 +52,7 @@ function Invoke-ExecAccessChecks {
         }
         'Tenants' {
             $AccessChecks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantAccessChecks'"
-            if (!$Request.Body.TenantId) {
+            if (!$TenantId) {
                 try {
                     $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID }
                     $Results = foreach ($Tenant in $Tenants) {
@@ -109,8 +118,8 @@ function Invoke-ExecAccessChecks {
                 $Message = Test-CIPPAccessTenant -Headers $Request.Headers
             }
 
-            if ($Request.Body.TenantId) {
-                $Tenant = Get-Tenants -TenantFilter $Request.Body.TenantId
+            if ($TenantId) {
+                $Tenant = Get-Tenants -TenantFilter $TenantId
                 $null = Test-CIPPAccessTenant -Tenant $Tenant.customerId -Headers $Request.Headers
                 $Results = "Refreshing tenant $($Tenant.displayName)"
             }

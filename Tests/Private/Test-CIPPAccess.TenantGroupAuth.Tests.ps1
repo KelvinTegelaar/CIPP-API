@@ -24,6 +24,9 @@ BeforeAll {
 
     . $ScopeHelperPath
     . $FunctionPath
+    $PrivateAuthDir = Join-Path $RepoRoot 'Modules/CIPPCore/Private/Authentication'
+    . (Join-Path $PrivateAuthDir 'Get-CippRequestIPAddress.ps1')
+    . (Join-Path $PrivateAuthDir 'Find-CippBaseRole.ps1')
 
     # Bypass the config-file reads by pre-seeding the runspace caches the function guards on.
     $script:CIPPFunctionPermissions = @{

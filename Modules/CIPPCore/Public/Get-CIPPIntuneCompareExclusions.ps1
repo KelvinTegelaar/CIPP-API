@@ -38,6 +38,7 @@ function Get-CIPPIntuneCompareExclusions {
         'featureUpdatesPauseStartDate'
         'wslDistributions',
         'lastSuccessfulSyncDateTime',
+        'inventorySyncStatus',
         'tenantFilter',
         'agents',
         'isSynced'

@@ -9,12 +9,12 @@ function Test-CippRoleTenantScope {
         group-shaped body authorized by group identity (no member expand), then
         allowed-minus-blocked after expanding tenant groups.
 
-        Unknown / missing / unmapped tenant filters return $true. Callers interpret that
-        differently: the allow path treats it as allow (legacy quirk); the
-        BlockedEndpoints pass treats it as in-scope so the deny still applies
-        (fail closed). Do not fall back to $env:TenantID — that is the partner
-        home tenant, not a customer. Do not "align" those call sites without an
-        explicit decision.
+        An empty tenant filter means the endpoint is not tenant-scoped, so every role
+        is in scope. A filter that is present but resolves to no known tenant is
+        denied, unless the caller passes -TreatUnresolvedAsInScope — the
+        BlockedEndpoints pass does, so its deny still applies to unresolved targets
+        (fail closed). Do not fall back to $env:TenantID — that is the partner home
+        tenant, not a customer.
 
     .PARAMETER Role
         Role permission object from Get-CIPPRolePermissions (AllowedTenants, BlockedTenants, ...).
@@ -30,6 +30,11 @@ function Test-CippRoleTenantScope {
 
     .PARAMETER ApiRole
         Endpoint permission string; used for AllTenants Write$ / Read$ branches.
+
+    .PARAMETER TreatUnresolvedAsInScope
+        Keep a present-but-unresolvable tenant filter in scope instead of denying it.
+        Only the BlockedEndpoints pass sets this, so a block still applies when the
+        target cannot be resolved.
 
     .OUTPUTS
         [bool] $true if the role's scope covers the target.
@@ -57,7 +62,10 @@ function Test-CippRoleTenantScope {
         $Request,
 
         [Parameter(Mandatory = $true)]
-        [string]$ApiRole
+        [string]$ApiRole,
+
+        [Parameter()]
+        [switch]$TreatUnresolvedAsInScope
     )
 
     $Tenants = @($Tenants)
@@ -127,6 +135,13 @@ function Test-CippRoleTenantScope {
         return ($AllowedTenants -contains $Tenant -and $ExpandedBlockedTenants -notcontains $Tenant)
     }
 
-    # Unmapped tenant filter: true for both call sites (allow quirk / block fail-closed).
-    return $true
+    # No filter (or an AllTenants request the ApiRole branches above did not handle):
+    # the request is not scoped to a resolvable single tenant, so the role is in scope.
+    if ([string]::IsNullOrWhiteSpace($TenantFilter) -or $TenantFilter -eq 'AllTenants') {
+        return $true
+    }
+
+    # Filter present but resolves to no known tenant: denied, unless the caller opted
+    # into fail-closed block semantics.
+    return $TreatUnresolvedAsInScope.IsPresent
 }

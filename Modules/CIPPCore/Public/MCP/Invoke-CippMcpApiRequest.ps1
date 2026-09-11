@@ -25,10 +25,23 @@ function Invoke-CippMcpApiRequest {
         [string]$Method = 'GET',
         # Wire-name -> real-name map from the catalog entry (_paramAlias), for parameters that
         # had to be renamed to satisfy the MCP property-name rules.
-        [hashtable]$ParamAlias
+        [hashtable]$ParamAlias,
+        # The tool's inputSchema from the catalog entry, used to coerce argument shapes (a bare
+        # string sent for a { value } LabelValue field is wrapped so the endpoint's .value read
+        # resolves instead of silently dropping the scope).
+        $InputSchema
     )
 
     $ArgHash = ConvertTo-CippMcpHashtable -InputObject $Arguments
+
+    # Reshape arguments to the tool's schema before dispatch: a caller that sends a bare string
+    # for an autocomplete/select (LabelValue) field would otherwise make the endpoint's
+    # $Field.value read resolve to $null, silently dropping a query scope and returning an
+    # unscoped 200. Done on the wire-named args, before the OData alias reversal below, because
+    # the schema is keyed by the same wire names.
+    if ($InputSchema) {
+        $ArgHash = ConvertTo-CippMcpArgumentShape -Arguments $ArgHash -InputSchema $InputSchema
+    }
 
     # Restore any parameter renamed for the wire. OData options ('$filter', '$top', ...) are
     # advertised as odata_filter / odata_top because MCP property names cannot contain '$';

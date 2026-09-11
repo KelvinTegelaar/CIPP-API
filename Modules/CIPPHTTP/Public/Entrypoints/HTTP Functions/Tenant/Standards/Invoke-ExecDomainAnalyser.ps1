@@ -9,7 +9,9 @@ function Invoke-ExecDomainAnalyser {
     param($Request, $TriggerMetadata)
 
     # Call the wrapper - it handles queuing internally via Start-CIPPOrchestrator
-    $Params = @{}
+    $Params = @{
+        SkipExchangeFilter = $true
+    }
     if ($Request.Body.tenantFilter) {
         $Params.TenantFilter = $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter
     }

@@ -6,6 +6,11 @@ function Invoke-CippTestCIS_2_1_7 {
     param($Tenant)
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName 'CIS_2_1_7' -TenantFilter $Tenant -Preset DefenderForOffice365 -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_2_1_7' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Defender for Office 365 (ATP). Required capabilities: ATP_ENTERPRISE, ATP_ENTERPRISE_GOV, THREAT_INTELLIGENCE, THREAT_INTELLIGENCE_GOV.' -Risk 'High' -Name 'An anti-phishing policy has been created' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Protection'
+            return
+        }
+
         $AntiPhish = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAntiPhishPolicies'
 
         if (-not $AntiPhish) {

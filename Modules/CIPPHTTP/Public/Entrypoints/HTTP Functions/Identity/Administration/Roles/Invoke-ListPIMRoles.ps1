@@ -76,6 +76,8 @@ function Invoke-ListPIMRoles {
                     PIMCapable          = $Meta.PIMCapable
                     PolicySummary       = $Meta.PolicySummary
                     PolicyBelowFloor    = $Meta.PolicyBelowFloor
+                    PolicySettings      = $Meta.PolicySettings
+                    FloorIssues         = @($Meta.FloorIssues)
                     MemberCount         = $Assignments.Count
                     PermanentCount      = $PermanentCount
                     EligibleCount       = $EligibleCount
