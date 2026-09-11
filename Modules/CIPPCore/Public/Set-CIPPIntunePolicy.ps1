@@ -211,6 +211,25 @@ function Set-CIPPIntunePolicy {
                 }
 
                 $Template = $RawJSON | ConvertFrom-Json
+
+                # Apple enrollment (ADE) policies must carry a creationSource that binds them to this
+                # tenant's ADE token ("DepTokenId_{tokenId}"). The token id is per tenant, so templates
+                # store a %ADETokenId% placeholder that Get-CIPPTextReplacement (run above) resolves
+                # from the tenant's custom variable. Missing it, the DCV2 create fails with an opaque
+                # generic error - so fail early with the tenant's real token id(s) to set instead.
+                $IsEnrollmentPolicy = $Template.templateReference.templateFamily -like 'enrollment*' -or $Template.technologies -match 'enrollment'
+                if ($IsEnrollmentPolicy -and (-not $Template.creationSource -or $Template.creationSource -match '%')) {
+                    try { $DepTokens = @(New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings' -tenantid $TenantFilter) } catch { $DepTokens = @() }
+                    $TokenHint = if ($DepTokens.Count -eq 0) {
+                        'This tenant has no Apple ADE/DEP token - connect one under Apple enrollment first.'
+                    } elseif ($DepTokens.Count -eq 1) {
+                        "Create a tenant custom variable named 'ADETokenId' set to '$($DepTokens[0].id)', then redeploy."
+                    } else {
+                        "Create a tenant custom variable named 'ADETokenId' set to one of this tenant's ADE token ids ($(@($DepTokens.id) -join ', ')), then redeploy."
+                    }
+                    throw "Apple enrollment policy '$DisplayName' has no ADE token binding. $TokenHint"
+                }
+
                 if ($Template.templateReference.templateId) {
                     # Remove settings this tenant does not offer. The comparison paths run the
                     # baseline through the same helper so they diff against what actually lands.
@@ -224,7 +243,10 @@ function Set-CIPPIntunePolicy {
                 $CatalogTemplateId = $Template.templateReference.templateId
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance -NameProperty 'name' -TemplateId $CatalogTemplateId
                 if ($FuzzyResult) {
-                    $PolicyFile = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty Platform, PolicyType, CreationSource
+                    # CreationSource is a read-only echo on ordinary Catalog policies, but on an
+                    # enrollment policy it is the token binding and must survive the edit (PUT).
+                    $ExcludeOnEdit = if ($IsEnrollmentPolicy) { @('Platform', 'PolicyType') } else { @('Platform', 'PolicyType', 'CreationSource') }
+                    $PolicyFile = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty $ExcludeOnEdit
                     $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 100 -Compress
                     $ExistingID = $FuzzyResult.Policy
                     if ($FuzzyResult.MatchType -eq 'fuzzy') {
