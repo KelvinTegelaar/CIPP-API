@@ -49090,6 +49090,24 @@
                       "Bucket": {
                         "x-cipp-field-source": "storage"
                       },
+                      "EgressBytes": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EgressBytesToday": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EgressCapBytes": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EgressRejectClients": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EgressRejectCount": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
                       "ErrCount": {
                         "type": "integer",
                         "x-cipp-field-source": "storage"
