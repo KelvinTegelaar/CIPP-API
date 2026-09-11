@@ -7,6 +7,7 @@ on:
       - '.github/workflows/openapi-enriched-check.yml'
       - '.github/workflows/openapi-enriched-release.yml'
       - '.redocly.lint-ignore.yaml'
+      - 'Config/openapi.json'
       - 'redocly.yaml'
       - 'Tests/Build/**'
   workflow_dispatch:
@@ -35,16 +36,32 @@ jobs:
           Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force
           Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
 
-      - name: Run build tests
+      - name: Run OpenAPI enrichment tests
         shell: pwsh
-        run: ./Tests/Build/Invoke-BuildTests.ps1
+        run: |
+          $scriptPath = './.build/Add-OpenApiResponseSchemas.ps1'
+          $testPath = './Tests/Build/Add-OpenApiResponseSchemas.Tests.ps1'
+          $analysisFindings = @(
+            foreach ($path in @($scriptPath, $testPath)) {
+              Invoke-ScriptAnalyzer -Path $path -Severity Warning, Error
+            }
+          )
+          if ($analysisFindings.Count -gt 0) {
+            $analysisFindings | Format-Table -AutoSize | Out-String | Write-Host
+            exit 1
+          }
+          $pesterConfig = New-PesterConfiguration
+          $pesterConfig.Run.Path = $testPath
+          $pesterConfig.Run.Exit = $true
+          $pesterConfig.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $pesterConfig
 
       - name: Generate enriched OpenAPI spec
         shell: pwsh
         run: |
           pwsh -NoProfile -File .build/Add-OpenApiResponseSchemas.ps1 `
             -FrontendRepoPath ./_frontend `
-            -InputSpec ./openapi.json `
+            -InputSpec ./Config/openapi.json `
             -OutputSpec ./openapi.enriched.json
 
       - name: Strict lint enriched OpenAPI spec

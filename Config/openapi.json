@@ -8,8 +8,14 @@
   },
   "servers": [
     {
-      "url": "/",
-      "description": "This CIPP deployment"
+      "url": "{origin}",
+      "description": "CIPP deployment origin",
+      "variables": {
+        "origin": {
+          "default": "https://your-cipp-deployment.example",
+          "description": "CIPP deployment origin including scheme and host, without a trailing slash or /api suffix."
+        }
+      }
     }
   ],
   "security": [

@@ -41,7 +41,7 @@ jobs:
         run: |
           pwsh -NoProfile -File .build/Add-OpenApiResponseSchemas.ps1 `
             -FrontendRepoPath ./_frontend `
-            -InputSpec ./openapi.json `
+            -InputSpec ./Config/openapi.json `
             -OutputSpec ./openapi.enriched.json
 
       - name: Strict lint enriched OpenAPI spec

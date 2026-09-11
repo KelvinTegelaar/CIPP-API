@@ -1,10 +1,16 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-    Enriches a CIPP openapi.json with typed 200 response schemas derived by static
-    analysis of the API and frontend repositories.
+    Makes the generated CIPP OpenAPI spec portable across deployments, then enriches
+    it with typed 200 response schemas derived by static analysis of the API and
+    frontend repositories.
 
 .DESCRIPTION
+    The generated CIPP spec currently uses a relative server URL (`/` or the older
+    `/api`) with paths that already begin `/api/`. This stage replaces that server
+    URL with a deployment origin variable so consumers compose {origin}/api/<Endpoint>
+    without duplicating /api.
+
     The generated CIPP spec types every request body but leaves every 200 response
     as the generic StandardResults envelope. This stage fills typed per-endpoint
     response schemas for the read surface, using two deterministic sources that are
@@ -22,8 +28,8 @@
     repositories always produce a byte-identical spec.
 
 .PARAMETER InputSpec
-    Path to the source openapi.json. Defaults to the repo-root spec relative to this
-    script (.build/.. ).
+    Path to the source openapi.json. Defaults to Config/openapi.json relative to this
+    script.
 
 .PARAMETER OutputSpec
     Path to write the enriched spec. Defaults to InputSpec (in-place rewrite).
@@ -38,11 +44,11 @@
 .EXAMPLE
     ./Add-OpenApiResponseSchemas.ps1 -FrontendRepoPath ../CIPP
 
-    Rewrites the repo-root openapi.json in place with typed response schemas.
+    Rewrites Config/openapi.json in place with typed response schemas.
 #>
 [CmdletBinding()]
 param(
-    [string]$InputSpec = (Join-Path $PSScriptRoot '..' 'openapi.json'),
+    [string]$InputSpec = (Join-Path $PSScriptRoot '..' 'Config' 'openapi.json'),
     [string]$OutputSpec,
     [string]$FrontendRepoPath,
     [switch]$PassThru
@@ -192,6 +198,33 @@ function ConvertTo-ResponseEnvelopeSchema {
 }
 
 
+function Add-CippServerOriginTemplate {
+    <#
+    .SYNOPSIS
+        Configures the spec to accept a deployment origin without an API prefix.
+    .DESCRIPTION
+        CIPP operation paths already carry the fixed /api/ prefix. Replacing the
+        generated relative server URL (`/` or `/api`) prevents OpenAPI consumers
+        from composing /api/api/<Endpoint> and keeps the only deployment-specific
+        input in the origin variable.
+    #>
+    param([Parameter(Mandatory)][System.Collections.IDictionary]$Spec)
+
+    $Spec['servers'] = @(
+        [ordered]@{
+            url         = '{origin}'
+            description = 'CIPP deployment origin'
+            variables   = [ordered]@{
+                origin = [ordered]@{
+                    default     = 'https://your-cipp-deployment.example'
+                    description = 'CIPP deployment origin including scheme and host, without a trailing slash or /api suffix.'
+                }
+            }
+        }
+    )
+}
+
+
 function Get-CippOperationId {
     <#
     .SYNOPSIS
@@ -331,6 +364,7 @@ function Add-CippResponseSchema {
     $baselineMap = Get-ShapeBaselineMap -ShapesDir (Join-Path $FrontendRepoPath 'Tests' 'Shapes')
     $columnMap = Get-FrontendColumnMap -SrcDir (Join-Path $FrontendRepoPath 'src')
 
+    Add-CippServerOriginTemplate -Spec $spec
     $operationIdResult = Add-CippOperationId -Spec $spec
     $result = Resolve-SpecResponse -Spec $spec -BaselineMap $baselineMap -ColumnMap $columnMap
     Write-Information "Operations: $($result.Operations) | typed responses added: $($result.Typed) | operationIds injected: $($operationIdResult.Injected) | unique operationIds: $($operationIdResult.Unique)" -InformationAction Continue
