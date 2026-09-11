@@ -57085,7 +57085,7 @@
         "tags": [
           "Identity > Reports"
         ],
-        "description": "Lists recent sign-in log entries for a tenant, filterable by various criteria. Supports AllTenants queries.",
+        "description": "Lists recent sign-in log entries for a tenant, filterable by various criteria. Supports AllTenants queries.\n\nDeprecated: use ListGraphRequest with Endpoint=auditLogs/signIns instead, which supports $filter, $top,\n$orderby, and manualPagination with nextLink continuation. This endpoint returns at most one page of\nresults and will be removed in a future release.",
         "parameters": [
           {
             "name": "Days",
