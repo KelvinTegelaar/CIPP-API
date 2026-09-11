@@ -32,7 +32,7 @@ function Invoke-CIPPBaselineDisableSelfServiceLicenses {
                 $null = New-GraphPostRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/v1.0/policies/authorizationPolicy' -type PATCH -body '{"allowedToSignUpEmailBasedSubscriptions":false}'
             } else {
                 $Body = @{ policyValue = "$($Item.policyValue)" } | ConvertTo-Json -Compress
-                $null = New-GraphPostRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -tenantid $TenantFilter -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$Id" -type PUT -body $Body
+                $null = New-GraphPostRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -tenantid $TenantFilter -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$Id" -type PUT -body $Body -AsApp $true
             }
         } catch {
             $Failures++

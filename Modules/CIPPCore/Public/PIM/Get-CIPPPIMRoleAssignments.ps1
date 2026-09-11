@@ -124,6 +124,8 @@ function Get-CIPPPIMRoleAssignments {
             PIMCapable                 = $PIMCapable
             PolicySummary              = $null
             PolicyBelowFloor           = $null
+            PolicySettings             = $null
+            FloorIssues                = @()
         }
     }
 
@@ -290,6 +292,8 @@ function Get-CIPPPIMRoleAssignments {
                 if ($Policy) {
                     $Row.PolicySummary = $Policy.Summary.SummaryText
                     $Row.PolicyBelowFloor = $Policy.Summary.BelowFloor
+                    $Row.PolicySettings = $Policy.Settings
+                    $Row.FloorIssues = @($Policy.Summary.FloorIssues)
                 }
             }
         } catch {

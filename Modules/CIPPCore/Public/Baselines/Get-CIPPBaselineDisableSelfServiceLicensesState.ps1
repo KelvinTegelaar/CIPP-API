@@ -11,8 +11,8 @@ function Get-CIPPBaselineDisableSelfServiceLicensesState {
 
         The products and autoclaim live OUTSIDE Graph (licensing.m365.microsoft.com and
         admin.microsoft.com, each with its own token scope); the cache collector already
-        speaks both, and the products list requires the Billing Administrator GDAP role -
-        a 403 there parks the row at No Data rather than inventing a verdict.
+        speaks both - a failed product collection parks the row at No Data rather than
+        inventing a verdict.
     .FUNCTIONALITY
         Internal
     #>
