@@ -1,8 +1,9 @@
 function Update-CIPPSSORedirectUri {
     <#
     .SYNOPSIS
-    Ensures the CIPP-SSO app registration includes redirect URIs for all bound hostnames
-    and that signInAudience matches the stored multi-tenant flag.
+    Ensures the CIPP-SSO app registration includes redirect URIs for all bound hostnames,
+    that signInAudience matches the stored multi-tenant flag, and that its delegated Graph
+    permissions include every scope CIPP-SSO requires.
 
     .DESCRIPTION
     Reads the stored SSO AppId and MultiTenant flag from Key Vault (or DevSecrets table
@@ -11,8 +12,12 @@ function Update-CIPPSSORedirectUri {
     2. Ensures the SSO app's web.redirectUris includes a callback URI for each hostname.
     3. Verifies and patches signInAudience on the app reg if it doesn't match the stored
        multi-tenant flag (AzureADMyOrg for single-tenant, AzureADMultipleOrgs for multi).
+    4. Ensures requiredResourceAccess declares the delegated Graph scopes New-CIPPSSOApp
+       requests (openid, profile, email, offline_access), backfilling any missing on an app
+       created before a scope was added to the default set.
 
-    Additive only — it never removes a URI, so a domain bound out-of-band keeps working.
+    Additive only — it never removes a URI or a permission, so a domain bound out-of-band
+    keeps working.
 
     .PARAMETER PassThru
     Emit a result object describing what happened. Off by default so warmup callers
@@ -83,7 +88,7 @@ function Update-CIPPSSORedirectUri {
     }
 
     try {
-        $AppResponse = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$SSOAppId')?`$select=id,web,signInAudience" -NoAuthCheck $true -AsApp $true
+        $AppResponse = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$SSOAppId')?`$select=id,web,signInAudience,requiredResourceAccess" -NoAuthCheck $true -AsApp $true
         $ExistingUris = @($AppResponse.web.redirectUris)
 
         # Determine which URIs are missing
@@ -93,8 +98,23 @@ function Update-CIPPSSORedirectUri {
         $ExpectedAudience = if ($SSOMultiTenant) { 'AzureADMultipleOrgs' } else { 'AzureADMyOrg' }
         $AudienceMismatch = $AppResponse.signInAudience -ne $ExpectedAudience
 
-        if ($MissingUris.Count -eq 0 -and -not $AudienceMismatch) {
-            Write-Information '[SSO-Redirect] All redirect URIs present and signInAudience correct'
+        # Determine which delegated Graph scopes the app registration is missing. Kept in sync
+        # with New-CIPPSSOApp's $Permissions - an app created before offline_access was added to
+        # the default set gets it backfilled here at warmup, so the Entra "API permissions" view
+        # and the admin-consent grant (Update-CIPPSSOPreconsent) stay consistent. Additive only.
+        $GraphResourceId = '00000003-0000-0000-c000-000000000000'
+        $DesiredScopeIds = @(
+            '37f7f235-527c-4136-accd-4a02d197296e'  # openid
+            '14dad69e-099b-42c9-810b-d002981feec1'  # profile
+            '64a6cdd6-aab1-4aaf-94b8-3cc8405e90d0'  # email
+            '7427e0e9-2fba-42fe-b0c0-848c9e6a8182'  # offline_access
+        )
+        $GraphEntry = @($AppResponse.requiredResourceAccess) | Where-Object { $_.resourceAppId -eq $GraphResourceId } | Select-Object -First 1
+        $GrantedScopeIds = @($GraphEntry.resourceAccess | Where-Object { $_.type -eq 'Scope' } | ForEach-Object { $_.id })
+        $MissingScopeIds = @($DesiredScopeIds | Where-Object { $_ -notin $GrantedScopeIds })
+
+        if ($MissingUris.Count -eq 0 -and -not $AudienceMismatch -and $MissingScopeIds.Count -eq 0) {
+            Write-Information '[SSO-Redirect] All redirect URIs present, signInAudience correct, and required scopes declared'
             if ($HostnameState.Discovered) {
                 & $Result 'nochange' $ExistingUris @() 'All sign-in URLs are already registered.'
             } else {
@@ -129,6 +149,35 @@ function Update-CIPPSSORedirectUri {
                 # EasyAuth issuer validation already enforces the effective tenant scope, so the
                 # app registration can stay as-is. Log at Info so warmup doesn't spam warnings.
                 Write-Information "[SSO-Redirect] signInAudience change to $ExpectedAudience was rejected by tenant policy (leaving app reg as $($AppResponse.signInAudience)): $($_.Exception.Message)"
+            }
+        }
+
+        # Backfill any missing delegated Graph scopes on the app registration. Patched separately
+        # from URIs/audience so a policy rejection here can't drop those additions.
+        if ($MissingScopeIds.Count -gt 0) {
+            try {
+                # Rebuild the Graph resourceAccess as the union of what's already declared and the
+                # missing scopes, so nothing already consented is dropped.
+                $MergedGraphAccess = [System.Collections.Generic.List[object]]::new()
+                foreach ($Access in @($GraphEntry.resourceAccess)) { $MergedGraphAccess.Add(@{ id = $Access.id; type = $Access.type }) }
+                foreach ($ScopeId in $MissingScopeIds) { $MergedGraphAccess.Add(@{ id = $ScopeId; type = 'Scope' }) }
+
+                # Preserve any non-Graph resource entries untouched.
+                $NewResourceAccess = @(
+                    @($AppResponse.requiredResourceAccess) | Where-Object { $_.resourceAppId -ne $GraphResourceId } | ForEach-Object {
+                        @{ resourceAppId = $_.resourceAppId; resourceAccess = @($_.resourceAccess | ForEach-Object { @{ id = $_.id; type = $_.type } }) }
+                    }
+                    @{ resourceAppId = $GraphResourceId; resourceAccess = @($MergedGraphAccess) }
+                )
+
+                $PermsBody = @{ requiredResourceAccess = $NewResourceAccess } | ConvertTo-Json -Depth 6
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $PermsBody -type PATCH -NoAuthCheck $true -AsApp $true
+                Write-Information "[SSO-Redirect] Added missing delegated Graph scopes to app registration: $($MissingScopeIds -join ', ')"
+                Write-LogMessage -API 'SSO-Redirect' -message "Added missing delegated Graph scopes to CIPP-SSO app registration: $($MissingScopeIds -join ', ')" -sev Info
+            } catch {
+                # Non-fatal: sign-in and existing consent are unaffected. The admin-consent grant
+                # written by Update-CIPPSSOPreconsent is the load-bearing path for offline_access.
+                Write-Information "[SSO-Redirect] Could not update app registration permissions (non-fatal): $($_.Exception.Message)"
             }
         }
 
