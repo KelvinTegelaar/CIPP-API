@@ -7,8 +7,8 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     .SYNOPSIS
         (Label) Disable Self Service Licensing
     .DESCRIPTION
-        (Helptext) **Requires 'Billing Administrator' GDAP role.** This standard disables all self service licenses and enables all exclusions
-        (DocsDescription) \*\*Requires 'Billing Administrator' GDAP role.\*\* This standard disables all self service licenses and enables all exclusions
+        (Helptext) This standard disables all self service licenses and enables all exclusions
+        (DocsDescription) This standard disables all self service licenses and enables all exclusions
     .NOTES
         CAT
             Entra (AAD) Standards
@@ -23,7 +23,7 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         ADDEDDATE
             2021-11-16
         POWERSHELLEQUIVALENT
-            Set-MsolCompanySettings -AllowAdHocSubscriptions \$false
+            Update-MSCommerceProductPolicy -PolicyId AllowSelfServicePurchase -Value Disabled
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -34,10 +34,10 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     param($Tenant, $Settings)
 
     try {
-        $selfServiceItems = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant).items
+        $selfServiceItems = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant -AsApp $true).items
     } catch {
         if ($_.Exception.Message -like '*403*') {
-            $Message = "Failed to retrieve self service products: Insufficient permissions. Please ensure the tenant GDAP relationship includes the 'Billing Administrator' role: $($_.Exception.Message)"
+            $Message = "Failed to retrieve self service products: Insufficient permissions: $($_.Exception.Message)"
         } else {
             $Message = "Failed to retrieve self service products: $($_.Exception.Message)"
         }
@@ -45,11 +45,7 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         throw $Message
     }
 
-    if ($settings.exclusions -like '*;*') {
-        $exclusions = $settings.Exclusions -split (';')
-    } else {
-        $exclusions = $settings.Exclusions -split (',')
-    }
+    $exclusions = @("$($Settings.Exclusions)" -split '[,;]' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
     $CurrentValues = [System.Collections.Generic.List[PSCustomObject]]::new()
     foreach ($Item in $selfServiceItems) {
@@ -146,7 +142,7 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
                         $authBody = @{ allowedToSignUpEmailBasedSubscriptions = $false } | ConvertTo-Json -Compress
                         New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/policies/authorizationPolicy' -tenantid $Tenant -body $authBody -type PATCH
                     } else {
-                        New-GraphPOSTRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($Item.productId)" -tenantid $Tenant -body $body -type PUT
+                        New-GraphPOSTRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($Item.productId)" -tenantid $Tenant -body $body -type PUT -AsApp $true
                     }
 
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Changed Self Service status for product '$($Item.productName) - $($Item.productId)' from '$currentValue' to '$($Item.policyValue)'" -sev Info
@@ -157,7 +153,7 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         }
 
         $CurrentValues = [System.Collections.Generic.List[PSCustomObject]]::new()
-        $refreshedItems = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant).items
+        $refreshedItems = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant -AsApp $true).items
         foreach ($Item in $refreshedItems) {
             $CurrentValues.Add([PSCustomObject]@{
                     productName = $Item.productName
@@ -197,12 +193,14 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     }
 
     if ($Settings.alert) {
-        $selfServiceItemsToAlert = $CurrentValues | Where-Object { $_.policyValue -eq 'Enabled' }
-        if (!$selfServiceItemsToAlert) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'All self-service licenses are disabled' -sev Info
+        # Alert on current rows that differ from expected (exclusions stay Enabled; OnlyTrialsWithoutPaymentMethod is also drift)
+        $selfServiceItemsToAlert = @(Compare-Object -ReferenceObject $ExpectedValues -DifferenceObject $CurrentValues -Property productName, productId, policyValue |
+                Where-Object { $_.SideIndicator -eq '=>' })
+        if ($selfServiceItemsToAlert.Count -eq 0) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'All self-service licenses are set correctly' -sev Info
         } else {
-            Write-StandardsAlert -message 'One or more self-service licenses are enabled' -object $selfServiceItemsToAlert -tenant $tenant -standardName 'DisableSelfServiceLicenses' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'One or more self-service licenses are enabled' -sev Info
+            Write-StandardsAlert -message 'One or more self-service license settings are out of policy' -object $selfServiceItemsToAlert -tenant $tenant -standardName 'DisableSelfServiceLicenses' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'One or more self-service license settings are out of policy' -sev Info
         }
     }
 

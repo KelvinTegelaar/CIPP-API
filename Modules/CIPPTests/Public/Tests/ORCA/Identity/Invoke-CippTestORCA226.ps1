@@ -15,7 +15,11 @@ function Invoke-CippTestORCA226 {
         }
 
         if (-not $SafeLinksPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA226' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'No Safe Links policies found. Each domain should have a Safe Links policy.' -Risk 'High' -Name 'Each domain has a Safe Links policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Links'
+            if (-not (Test-CIPPStandardLicense -StandardName 'ORCA226' -TenantFilter $Tenant -Preset DefenderForOffice365 -SkipLog)) {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA226' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Defender for Office 365 (ATP). Required capabilities: ATP_ENTERPRISE, ATP_ENTERPRISE_GOV, THREAT_INTELLIGENCE, THREAT_INTELLIGENCE_GOV.' -Risk 'High' -Name 'Each domain has a Safe Links policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Links'
+            } else {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA226' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'No Safe Links policies found. Each domain should have a Safe Links policy.' -Risk 'High' -Name 'Each domain has a Safe Links policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Links'
+            }
             return
         }
 

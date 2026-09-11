@@ -6,7 +6,9 @@
 #     sign-in alone, which stays old while a blocked or disabled guest keeps trying;
 #   - guests with no sign-in on record are skipped unless IncludeNeverSignedIn is on, and a
 #     template that predates the switch behaves as off;
-#   - a guest an admin re-enabled in the last 7 days is left alone.
+#   - a guest an admin re-enabled in the last 7 days is left alone;
+#   - deleteGraceDays missing/0 never issues DELETE; grace > 0 deletes only already-disabled
+#     guests past days+grace, never guests disabled in the same pass.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -48,6 +50,7 @@ BeforeAll {
             [string]$Id,
             [string]$Upn,
             [string]$State = 'Accepted',
+            [bool]$AccountEnabled = $true,
             [int]$CreatedDaysAgo = 400,
             [Nullable[int]]$InteractiveDaysAgo,
             [Nullable[int]]$NonInteractiveDaysAgo,
@@ -59,7 +62,7 @@ BeforeAll {
             userPrincipalName = $Upn
             mail              = $Upn
             userType          = 'Guest'
-            accountEnabled    = $true
+            accountEnabled    = $AccountEnabled
             createdDateTime   = $script:Now.AddDays(-$CreatedDaysAgo).ToString('o')
             externalUserState = $State
         }
@@ -80,7 +83,10 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
         $script:alerts = [System.Collections.Generic.List[object]]::new()
         $script:compare = [System.Collections.Generic.List[object]]::new()
         $script:disabled = [System.Collections.Generic.List[string]]::new()
-        $script:guests = @()
+        $script:deleted = [System.Collections.Generic.List[string]]::new()
+        $script:bulkMethods = [System.Collections.Generic.List[string]]::new()
+        $script:enabledGuests = @()
+        $script:disabledGuests = @()
         $script:audits = @()
 
         Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
@@ -100,12 +106,19 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
         Mock -CommandName New-GraphGetRequest -MockWith {
             param($uri, $tenantid, $scope)
             if ($uri -like '*directoryAudits*') { return $script:audits }
-            return $script:guests
+            if ($uri -like '*accountEnabled eq false*') { return $script:disabledGuests }
+            return $script:enabledGuests
         }
         Mock -CommandName New-GraphBulkRequest -MockWith {
             param($tenantid, $Requests)
             @(foreach ($Request in $Requests) {
-                    $script:disabled.Add(($Request.url -replace '^users/', ''))
+                    $script:bulkMethods.Add([string]$Request.method)
+                    $Id = ($Request.url -replace '^users/', '')
+                    if ($Request.method -eq 'DELETE') {
+                        $script:deleted.Add($Id)
+                    } else {
+                        $script:disabled.Add($Id)
+                    }
                     [pscustomobject]@{ id = $Request.id; status = 204; body = $null }
                 })
         }
@@ -115,7 +128,7 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
         It 'keeps a guest whose last successful sign-in is old but who attempted a sign-in inside the window' {
             # The reported shape: a successful sign-in 300 days back, an interactive attempt 154 days
             # back and a non-interactive attempt 3 days back, against a 180-day threshold.
-            $script:guests = @(New-Guest -Id 'g1' -Upn 'bas_example.com#EXT#@contoso.onmicrosoft.com' -SuccessfulDaysAgo 300 -InteractiveDaysAgo 154 -NonInteractiveDaysAgo 3)
+            $script:enabledGuests = @(New-Guest -Id 'g1' -Upn 'bas_example.com#EXT#@contoso.onmicrosoft.com' -SuccessfulDaysAgo 300 -InteractiveDaysAgo 154 -NonInteractiveDaysAgo 3)
 
             Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 180 }
 
@@ -125,7 +138,7 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
         }
 
         It 'disables a guest whose newest attempt of any kind is outside the window, and logs that date' {
-            $script:guests = @(
+            $script:enabledGuests = @(
                 New-Guest -Id 'stale' -Upn 'stale@example.com' -SuccessfulDaysAgo 250 -InteractiveDaysAgo 200 -NonInteractiveDaysAgo 190
                 New-Guest -Id 'active' -Upn 'active@example.com' -SuccessfulDaysAgo 250 -InteractiveDaysAgo 200 -NonInteractiveDaysAgo 100
             )
@@ -141,7 +154,7 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
         }
 
         It 'counts a lastSuccessfulSignInDateTime that runs ahead of both attempt timestamps as activity' {
-            $script:guests = @(New-Guest -Id 'ahead' -Upn 'ahead@example.com' -InteractiveDaysAgo 200 -SuccessfulDaysAgo 10)
+            $script:enabledGuests = @(New-Guest -Id 'ahead' -Upn 'ahead@example.com' -InteractiveDaysAgo 200 -SuccessfulDaysAgo 10)
 
             Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 180 }
 
@@ -151,7 +164,7 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
 
     Context 'guests with no sign-in on record' {
         It 'are skipped when the template predates the switch or has it off' {
-            $script:guests = @(New-Guest -Id 'pending' -Upn 'pending@example.com' -State 'PendingAcceptance')
+            $script:enabledGuests = @(New-Guest -Id 'pending' -Upn 'pending@example.com' -State 'PendingAcceptance')
 
             Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 90 }
             Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 90; IncludeNeverSignedIn = $false }
@@ -161,7 +174,7 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
         }
 
         It 'are disabled only when IncludeNeverSignedIn is on, with the invitation age as the reason' {
-            $script:guests = @(
+            $script:enabledGuests = @(
                 New-Guest -Id 'pending' -Upn 'pending@example.com' -State 'PendingAcceptance'
                 New-Guest -Id 'fresh' -Upn 'fresh@example.com' -InteractiveDaysAgo 5
             )
@@ -175,7 +188,7 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
 
     Context 'recently re-enabled guests' {
         It 'are left alone for 7 days after an admin re-enables them' {
-            $script:guests = @(New-Guest -Id 'stale' -Upn 'stale@example.com' -InteractiveDaysAgo 200)
+            $script:enabledGuests = @(New-Guest -Id 'stale' -Upn 'stale@example.com' -InteractiveDaysAgo 200)
             $script:audits = @([pscustomobject]@{ targetResources = @([pscustomobject]@{ id = 'stale' }) })
 
             Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 90 }
@@ -185,9 +198,78 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
         }
     }
 
+    Context 'delete grace' {
+        It 'never deletes when deleteGraceDays is missing or 0' {
+            $script:enabledGuests = @(New-Guest -Id 'stale' -Upn 'stale@example.com' -InteractiveDaysAgo 200)
+            $script:disabledGuests = @(New-Guest -Id 'old' -Upn 'old@example.com' -AccountEnabled $false -InteractiveDaysAgo 400)
+
+            Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 90 }
+            Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 90; deleteGraceDays = 0 }
+
+            @($script:disabled) | Should -Be @('stale', 'stale')
+            @($script:deleted) | Should -BeNullOrEmpty
+            @($script:bulkMethods) | Should -Not -Contain 'DELETE'
+        }
+
+        It 'deletes only already-disabled guests past days plus grace, not guests disabled in the same pass' {
+            $script:enabledGuests = @(New-Guest -Id 'toDisable' -Upn 'todisable@example.com' -InteractiveDaysAgo 200)
+            $script:disabledGuests = @(
+                New-Guest -Id 'toDelete' -Upn 'todelete@example.com' -AccountEnabled $false -InteractiveDaysAgo 200
+                New-Guest -Id 'tooRecent' -Upn 'toorecent@example.com' -AccountEnabled $false -InteractiveDaysAgo 100
+            )
+
+            # days=90, grace=30 => delete age 120. toDelete (200) qualifies; tooRecent (100) does not;
+            # toDisable is enabled so it is PATCHed this run and must not be DELETE'd in the same pass.
+            Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 90; deleteGraceDays = 30 }
+
+            @($script:disabled) | Should -Be @('toDisable')
+            @($script:deleted) | Should -Be @('toDelete')
+            @($script:bulkMethods) | Should -Contain 'PATCH'
+            @($script:bulkMethods) | Should -Contain 'DELETE'
+            @($script:logs | Where-Object { $_.Message -like 'Deleted guest todelete@example.com (toDelete). Reason: last sign-in: *' }).Count | Should -Be 1
+        }
+
+        It 'respects IncludeNeverSignedIn for the delete set' {
+            $script:enabledGuests = @()
+            $script:disabledGuests = @(New-Guest -Id 'pending' -Upn 'pending@example.com' -AccountEnabled $false -State 'PendingAcceptance')
+
+            Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 90; deleteGraceDays = 30 }
+            @($script:deleted) | Should -BeNullOrEmpty
+
+            Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 90; deleteGraceDays = 30; IncludeNeverSignedIn = $true }
+            @($script:deleted) | Should -Be @('pending')
+        }
+
+        It 'still deletes when the disable set is empty even if audit would fail' {
+            $script:enabledGuests = @()
+            $script:disabledGuests = @(New-Guest -Id 'old' -Upn 'old@example.com' -AccountEnabled $false -InteractiveDaysAgo 200)
+            Mock -CommandName New-GraphGetRequest -MockWith {
+                param($uri, $tenantid, $scope)
+                if ($uri -like '*directoryAudits*') { throw 'audit unavailable' }
+                if ($uri -like '*accountEnabled eq false*') { return $script:disabledGuests }
+                return $script:enabledGuests
+            }
+
+            Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = 90; deleteGraceDays = 30 }
+
+            Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like '*directoryAudits*' } -Times 0 -Exactly
+            @($script:deleted) | Should -Be @('old')
+        }
+
+        It 'treats string days as an int so delete age is days plus grace, not concatenation' {
+            $script:enabledGuests = @()
+            # 200 days inactive: qualifies for delete at 90+30=120, would not if age were wrongly 9030
+            $script:disabledGuests = @(New-Guest -Id 'old' -Upn 'old@example.com' -AccountEnabled $false -InteractiveDaysAgo 200)
+
+            Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ remediate = $true; days = '90'; deleteGraceDays = '30' }
+
+            @($script:deleted) | Should -Be @('old')
+        }
+    }
+
     Context 'alert and report' {
         It 'splits stale sign-ins from never-signed-in guests and records the switch' {
-            $script:guests = @(
+            $script:enabledGuests = @(
                 New-Guest -Id 'stale' -Upn 'stale@example.com' -InteractiveDaysAgo 200
                 New-Guest -Id 'pending' -Upn 'pending@example.com' -State 'PendingAcceptance'
                 New-Guest -Id 'active' -Upn 'active@example.com' -NonInteractiveDaysAgo 2
@@ -202,10 +284,12 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
             $script:compare.Count | Should -Be 1
             $Current = $script:compare[0].Current
             $Current.GuestsDisabledAfterDays | Should -Be 90
+            $Current.GuestsDeleteGraceDays | Should -Be 0
             $Current.GuestsIncludeNeverSignedIn | Should -BeTrue
             $Current.GuestsDisabledAccountCount | Should -Be 2
             $Current.GuestsStaleSignInCount | Should -Be 1
             $Current.GuestsNeverSignedInCount | Should -Be 1
+            $Current.GuestsMeetingDeleteThreshold | Should -Be 'Deletion disabled'
             @($Current.GuestsNeverSignedInDetails).id | Should -Be 'pending'
             @($Current.GuestsDisabledAccountDetails | Where-Object { -not $_.NeverSignedIn }).LastSignInDateTime | Should -Not -BeNullOrEmpty
 
@@ -214,10 +298,11 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
             $Expected.GuestsStaleSignInCount | Should -Be 0
             $Expected.GuestsNeverSignedInCount | Should -Be 0
             $Expected.GuestsIncludeNeverSignedIn | Should -BeTrue
+            $Expected.GuestsMeetingDeleteThreshold | Should -Be 'Deletion disabled'
         }
 
         It 'reports the switch off and no never-signed-in guests when the template omits it' {
-            $script:guests = @(New-Guest -Id 'pending' -Upn 'pending@example.com' -State 'PendingAcceptance')
+            $script:enabledGuests = @(New-Guest -Id 'pending' -Upn 'pending@example.com' -State 'PendingAcceptance')
 
             Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ report = $true; days = 90 }
 
@@ -225,6 +310,20 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
             $Current.GuestsIncludeNeverSignedIn | Should -BeFalse
             $Current.GuestsDisabledAccountCount | Should -Be 0
             $Current.GuestsNeverSignedInCount | Should -Be 0
+        }
+
+        It 'includes delete candidates in alert and report when grace is set' {
+            $script:enabledGuests = @(New-Guest -Id 'stale' -Upn 'stale@example.com' -InteractiveDaysAgo 200)
+            $script:disabledGuests = @(New-Guest -Id 'old' -Upn 'old@example.com' -AccountEnabled $false -InteractiveDaysAgo 200)
+
+            Invoke-CIPPStandardDisableGuests -Tenant $script:Tenant -Settings @{ alert = $true; report = $true; days = 90; deleteGraceDays = 30 }
+
+            $script:alerts[0].Message | Should -Match '1 meeting delete threshold \(inactive 120 days, already disabled\)'
+            $Current = $script:compare[0].Current
+            $Current.GuestsDeleteGraceDays | Should -Be 30
+            $Current.GuestsMeetingDeleteCount | Should -Be 1
+            @($Current.GuestsMeetingDeleteThreshold).id | Should -Be 'old'
+            $script:compare[0].Expected.GuestsMeetingDeleteThreshold | Should -Be @()
         }
     }
 }

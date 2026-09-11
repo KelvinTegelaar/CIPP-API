@@ -111,6 +111,11 @@ function Set-CIPPDBCacheSharePointPermissions {
                 Parameters   = @{
                     TenantFilter      = $TenantFilter
                     ExpectedSiteCount = $ExpectedSiteCount
+                    # The full expected site-id set lets Push-StoreSharePointPermissions tell a site
+                    # whose batch failed this run (carry its prior rows over, flagged Skipped) from
+                    # one that no longer exists (let it fall out), so a single flaky batch no longer
+                    # discards the whole run and empties the report.
+                    ExpectedSiteIds   = @($Sites.id)
                 }
             }
         }
