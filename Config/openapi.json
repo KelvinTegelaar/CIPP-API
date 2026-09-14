@@ -38886,6 +38886,58 @@
         "x-cipp-role": "Endpoint.Autopilot.Read"
       }
     },
+    "/api/ListApiEgress": {
+      "get": {
+        "summary": "ListApiEgress",
+        "operationId": "ListApiEgress",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Per-API-client egress usage for this instance against the daily cap. Reads the\nCraftEgressAccounting table that the Craft runtime mirrors its egress accounting into (the same\nstorage account, so this reads it directly): a per-day audit row per client plus an instance\ntotal, and 15-minute buckets for the trend. Returns today's instance summary (used-of-cap,\nenforcing, when the cap was first hit, how many requests were shed), the per-client breakdown,\nand the last-24h instance trend. When the table has no data for today - accounting off, a\nnon-hosted instance, or simply no app-only traffic yet - Enabled is false and the UI hides the\ncard. SuperAdmin only.",
+        "parameters": [
+          {
+            "name": "Hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.SuperAdmin.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListApiTest": {
       "get": {
         "summary": "ListApiTest",
@@ -49088,24 +49140,6 @@
                         "x-cipp-field-source": "storage"
                       },
                       "Bucket": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "EgressBytes": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "EgressBytesToday": {
-                        "type": "integer",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "EgressCapBytes": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "EgressRejectClients": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "EgressRejectCount": {
-                        "type": "integer",
                         "x-cipp-field-source": "storage"
                       },
                       "ErrCount": {
