@@ -125,12 +125,36 @@ function Set-CIPPMCPClientApp {
         $SpaRedirectUris.Add($Uri)
     }
 
+    # Declare offline_access (Microsoft Graph, delegated) so Entra will issue a refresh token to
+    # MCP clients. Without it, Copilot Studio (Manual OAuth) and stricter discovery clients
+    # re-prompt for sign-in roughly every hour when the access token expires. Additive — every
+    # permission already on the app is preserved; only offline_access is added if missing.
+    $GraphResourceId = '00000003-0000-0000-c000-000000000000'
+    $OfflineAccessId = '7427e0e9-2fba-42fe-b0c0-848c9e6a8182'
+    $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
+    $GraphEntrySeen = $false
+    foreach ($Resource in @($App.requiredResourceAccess)) {
+        $ResourceAccess = [System.Collections.Generic.List[object]]::new()
+        foreach ($Access in @($Resource.resourceAccess)) { $ResourceAccess.Add(@{ id = $Access.id; type = $Access.type }) }
+        if ($Resource.resourceAppId -eq $GraphResourceId) {
+            $GraphEntrySeen = $true
+            if (-not ($ResourceAccess | Where-Object { $_.id -eq $OfflineAccessId })) {
+                $ResourceAccess.Add(@{ id = $OfflineAccessId; type = 'Scope' })
+            }
+        }
+        $RequiredResourceAccess.Add(@{ resourceAppId = $Resource.resourceAppId; resourceAccess = @($ResourceAccess) })
+    }
+    if (-not $GraphEntrySeen) {
+        $RequiredResourceAccess.Add(@{ resourceAppId = $GraphResourceId; resourceAccess = @(@{ id = $OfflineAccessId; type = 'Scope' }) })
+    }
+
     $PatchBody = @{
         identifierUris         = @($IdentifierUris)
         api                    = $Api
         web                    = @{ redirectUris = @($WebRedirectUris) }
         spa                    = @{ redirectUris = @($SpaRedirectUris) }
         publicClient           = @{ redirectUris = @($PublicRedirectUris) }
+        requiredResourceAccess = @($RequiredResourceAccess)
         # "Allow public client flows" — required for the secret-less PKCE redemption every MCP
         # client above performs.
         isFallbackPublicClient = $true
@@ -140,6 +164,20 @@ function Set-CIPPMCPClientApp {
         try {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($App.id)" -type PATCH -body $PatchBody -NoAuthCheck $true -asapp $true
             Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "Configured app registration $AppId as MCP resource (identifier URIs, v2 tokens, known MCP client callbacks + pre-authorization)." -Sev 'Info'
+
+            # Admin-consent the OIDC + offline_access delegated scopes for this app so Entra
+            # issues the refresh token without a per-user consent prompt. Copilot Studio uses
+            # Manual OAuth and never reads the challenge/discovery scope, so this app-registration
+            # consent — not WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES — is what makes its refresh work.
+            # Best-effort: the app still works without it (users may see a one-time prompt, or the
+            # grant is retried the next time the client is saved), so a failure here is non-fatal.
+            try {
+                $ConsentResult = Grant-CippAppGraphConsent -AppId $AppId -Scopes @('openid', 'profile', 'offline_access')
+                Write-Information "[MCP-Client] offline_access admin-consent for $AppId : $($ConsentResult.Action)"
+            } catch {
+                Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "MCP client $AppId configured, but admin-consent for offline_access could not be written (refresh tokens may prompt on first use): $($_.Exception.Message)" -Sev 'Warning'
+            }
+
             return @{ Success = $true; IdentifierUris = @($IdentifierUris); RedirectUris = @($PublicRedirectUris) }
         } catch {
             $ErrMsg = $_.Exception.Message
