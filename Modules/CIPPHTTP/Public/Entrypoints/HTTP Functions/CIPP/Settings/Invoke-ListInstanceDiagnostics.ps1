@@ -76,6 +76,10 @@ function Invoke-ListInstanceDiagnostics {
             if ($Row.IP) { $ClientTotals[$AppId].IP = [string]$Row.IP }
         }
 
+        # Craft owns this table and only writes it when egress accounting is on, so $null here
+        # means "no egress data" for both actions.
+        $Egress = Get-CIPPEgressAccounting -Hours $Hours -Now $Now
+
         switch ($Action) {
             'Checks' {
                 $Results = [System.Collections.Generic.List[hashtable]]::new()
@@ -135,44 +139,41 @@ function Invoke-ListInstanceDiagnostics {
                         Fix    = if ($StalledTotal -gt 0) { 'Runs have pending work but nothing running - cancel the stuck run from Worker Health and let it re-queue.' } else { $null }
                     })
 
-                $EgressSamples = @($Samples | Where-Object { $null -ne $_.EgressBytesToday })
-                if ($EgressSamples.Count -eq 0) {
-                    $Results.Add(@{ Check = 'egress'; Status = 'INFO'; Detail = 'No API egress recorded in this window - egress accounting is off or no API client traffic was served'; Fix = $null })
+                # Craft stamps the daily instance-total row on the first API response it serves,
+                # so no row means no API-client traffic today rather than a zero reading.
+                $EgressHasDay = $Egress -and ($Egress.TodayBytes -gt 0 -or $Egress.TodayRequests -gt 0 -or $Egress.CapBytes -gt 0)
+                if (-not $EgressHasDay) {
+                    $Results.Add(@{ Check = 'egress'; Status = 'INFO'; Detail = 'No API egress recorded today - egress accounting is off or no API client traffic was served'; Fix = $null })
                 } else {
-                    $NewestEgress = $EgressSamples | Sort-Object -Property Bucket | Select-Object -Last 1
-                    $TodayBytes = [long]$NewestEgress.EgressBytesToday
-                    $CapSample = @($Samples | Where-Object { [long]$_.EgressCapBytes -gt 0 }) | Select-Object -Last 1
-                    $CapBytes = if ($CapSample) { [long]$CapSample.EgressCapBytes } else { $null }
-                    $EgressRejectTotal = ($Samples | Measure-Object -Property EgressRejectCount -Sum).Sum ?? 0
+                    $TodayDisplay = Format-DiagnosticsBytes -Bytes $Egress.TodayBytes
+                    $CapDisplay = if ($Egress.CapBytes -gt 0) { Format-DiagnosticsBytes -Bytes $Egress.CapBytes } else { 'unknown' }
+                    $Percent = if ($Egress.CapBytes -gt 0) { [math]::Round(($Egress.TodayBytes / $Egress.CapBytes) * 100, 1) } else { $null }
 
-                    if ($EgressRejectTotal -gt 0) {
-                        # Distinct client names across the window's reject lists, in first-seen order.
-                        $RejectClients = [System.Collections.Generic.List[string]]::new()
-                        $Seen = [System.Collections.Generic.HashSet[string]]::new()
-                        foreach ($RejectSample in ($Samples | Where-Object { $_.EgressRejectClients })) {
-                            try {
-                                foreach ($ClientName in @($RejectSample.EgressRejectClients | ConvertFrom-Json)) {
-                                    if ($Seen.Add($ClientName)) { $RejectClients.Add($ClientName) }
-                                }
-                            } catch {}
-                        }
-                        $CapDisplay = if ($CapBytes) { Format-DiagnosticsBytes -Bytes $CapBytes } else { 'unknown' }
+                    $Busiest = [System.Collections.Generic.List[string]]::new()
+                    foreach ($Client in (@($Egress.Clients) | Select-Object -First 2)) {
+                        $Busiest.Add("$($Client.AppName) ($(Format-DiagnosticsBytes -Bytes $Client.Bytes))")
+                    }
+                    $TopClientText = if ($Busiest.Count -gt 0) { $Busiest[0] } else { 'no API clients' }
+
+                    if ($Egress.TodayShed -gt 0 -or $Egress.CapReachedUtc) {
+                        $BusiestText = if ($Busiest.Count -gt 0) { $Busiest -join ', ' } else { 'no API clients' }
                         $Results.Add(@{
                                 Check  = 'egress'
                                 Status = 'FAIL'
-                                Detail = "API egress cap reached: $EgressRejectTotal request(s) rejected with 429, clients: $($RejectClients -join ', '); served $(Format-DiagnosticsBytes -Bytes $TodayBytes) of $CapDisplay"
-                                Fix    = 'Identify which integration is pulling the most data and throttle it, or raise the daily egress budget.'
+                                Detail = "API egress cap reached at $($Egress.CapReachedUtc): $($Egress.TodayShed) request(s) refused with 429; served $TodayDisplay of $CapDisplay; busiest: $BusiestText"
+                                Fix    = 'Throttle the named integration or raise the daily egress budget.'
                             })
-                    } elseif ($CapBytes) {
-                        $Percent = [math]::Round(($TodayBytes / $CapBytes) * 100, 1)
-                        $EgressDetail = "Served $(Format-DiagnosticsBytes -Bytes $TodayBytes) of $(Format-DiagnosticsBytes -Bytes $CapBytes) today ($Percent%)"
-                        if ($Percent -ge 75) {
-                            $Results.Add(@{ Check = 'egress'; Status = 'WARN'; Detail = $EgressDetail; Fix = $null })
-                        } else {
-                            $Results.Add(@{ Check = 'egress'; Status = 'PASS'; Detail = $EgressDetail; Fix = $null })
-                        }
+                    } elseif ($Egress.Enforcing -and $null -ne $Percent -and $Percent -ge 75) {
+                        $Results.Add(@{
+                                Check  = 'egress'
+                                Status = 'WARN'
+                                Detail = "$TodayDisplay of $CapDisplay daily API egress budget ($Percent%) - on course to hit the cap; busiest: $TopClientText"
+                                Fix    = 'Throttle the named integration or raise the daily egress budget.'
+                            })
+                    } elseif ($Egress.Enforcing) {
+                        $Results.Add(@{ Check = 'egress'; Status = 'PASS'; Detail = "$TodayDisplay of $CapDisplay ($Percent%)"; Fix = $null })
                     } else {
-                        $Results.Add(@{ Check = 'egress'; Status = 'INFO'; Detail = "Served $(Format-DiagnosticsBytes -Bytes $TodayBytes) today (no daily budget set)"; Fix = $null })
+                        $Results.Add(@{ Check = 'egress'; Status = 'INFO'; Detail = "$TodayDisplay served to API clients today (no daily budget set); busiest: $TopClientText"; Fix = $null })
                     }
                 }
 
@@ -306,8 +307,6 @@ function Invoke-ListInstanceDiagnostics {
                             StalledRunCount    = [int]$Sample.StalledRunCount
                             HeapMb             = if ($null -ne $Sample.HeapMb) { [int]$Sample.HeapMb } else { $null }
                             HeapMbLive         = if ($null -ne $Sample.HeapMbLive) { [int]$Sample.HeapMbLive } else { $null }
-                            EgressBytes        = if ($null -ne $Sample.EgressBytes) { [long]$Sample.EgressBytes } else { $null }
-                            EgressBytesToday   = if ($null -ne $Sample.EgressBytesToday) { [long]$Sample.EgressBytesToday } else { $null }
                             TopEndpointsMs     = $TopEndpoints
                             Clients            = @($BucketClients)
                         })
@@ -357,16 +356,19 @@ function Invoke-ListInstanceDiagnostics {
                         })
                 }
 
-                $EgressCapSample = @($Samples | Where-Object { [long]$_.EgressCapBytes -gt 0 }) | Select-Object -Last 1
-                $EgressAvailable = @($Samples | Where-Object { $null -ne $_.EgressBytesToday }).Count -gt 0
+                if ($Egress) {
+                    $Egress | Add-Member -NotePropertyName 'Available' -NotePropertyValue $true -Force
+                    $EgressBody = $Egress
+                } else {
+                    $EgressBody = @{ Available = $false }
+                }
 
                 $Body = @{
                     Results = @{
-                        Buckets         = @($Buckets)
-                        Events          = @($Events)
-                        HeapCapMb       = Get-DiagnosticsHeapCapMb -Samples $Samples
-                        EgressCapBytes  = if ($EgressCapSample) { [long]$EgressCapSample.EgressCapBytes } else { $null }
-                        EgressAvailable = $EgressAvailable
+                        Buckets   = @($Buckets)
+                        Events    = @($Events)
+                        HeapCapMb = Get-DiagnosticsHeapCapMb -Samples $Samples
+                        Egress    = $EgressBody
                     }
                 }
             }

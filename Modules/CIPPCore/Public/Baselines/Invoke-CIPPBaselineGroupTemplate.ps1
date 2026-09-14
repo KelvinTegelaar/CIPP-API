@@ -44,6 +44,14 @@ function Invoke-CIPPBaselineGroupTemplate {
         default { "$($Template.groupType)" }
     }
 
+    if ($NormalizedGroupType -eq 'DynamicDistribution') {
+        # Dynamic Distribution Groups are no longer supported by CIPP: EXO canonicalises the recipient
+        # filter (permanent drift) and Set-DynamicDistributionGroup -RecipientFilter throws. Skip the write
+        # and surface the skip in the run log instead of failing every remediation.
+        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Group Template '$($Template.displayName)': skipped - Dynamic Distribution Groups are not supported by CIPP." -Sev 'Warn'
+        return
+    }
+
     if (-not $Existing) {
         if ($NormalizedGroupType -in @('Distribution', 'DynamicDistribution')) {
             $LicenseCheck = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $TenantFilter -Preset Exchange -SkipLog

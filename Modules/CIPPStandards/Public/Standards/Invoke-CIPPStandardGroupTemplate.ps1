@@ -66,6 +66,17 @@ function Invoke-CIPPStandardGroupTemplate {
     $ResolvedIds = @(@($TemplateRows.RowKey) + @($GroupTemplates.GUID) | Where-Object { $_ } | Select-Object -Unique)
     $MissingIds = @($RequestedIds | Where-Object { $_ -notin $ResolvedIds })
 
+    # Dynamic Distribution Groups are no longer supported by CIPP: EXO canonicalises RecipientFilter
+    # so it never matches the template's raw filter (permanent drift), and Set-DynamicDistributionGroup
+    # -RecipientFilter throws. Drop them from normal processing but keep the skip visible - a Warn in the
+    # logs and a matching note on both sides of the report (identical, so it shows without reading as drift).
+    $SkippedDynamicGroups = @($GroupTemplates | Where-Object { "$($_.groupType)" -eq 'dynamicDistribution' })
+    $GroupTemplates = @($GroupTemplates | Where-Object { "$($_.groupType)" -ne 'dynamicDistribution' })
+    if ($SkippedDynamicGroups.Count -gt 0) {
+        $SkippedNames = @($SkippedDynamicGroups.displayName) -join ', '
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Group Template: skipped $($SkippedDynamicGroups.Count) Dynamic Distribution Group template(s) ($SkippedNames) - Dynamic Distribution Groups are not supported by CIPP." -sev 'Warn'
+    }
+
     if ('dynamicDistribution' -in $GroupTemplates.groupType) {
         try {
             $DynamicDistros = New-ExoRequest -cmdlet 'Get-DynamicDistributionGroup' -tenantid $tenant -Select 'Identity,Name,Alias,RecipientFilter,PrimarySmtpAddress' -ErrorAction Stop
@@ -286,6 +297,13 @@ function Invoke-CIPPStandardGroupTemplate {
         $ExpectedValue = @{
             MissingGroups    = @()
             MissingTemplates = @()
+        }
+
+        if ($SkippedDynamicGroups.Count -gt 0) {
+            # Identical on both sides: visible to the user as "skipped / not supported", never graded as drift.
+            $SkippedNote = "Dynamic Distribution Groups are not supported by CIPP and were skipped: $(@($SkippedDynamicGroups.displayName) -join ', ')"
+            $CurrentValue.SkippedDynamicDistributionGroups = $SkippedNote
+            $ExpectedValue.SkippedDynamicDistributionGroups = $SkippedNote
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.GroupTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant

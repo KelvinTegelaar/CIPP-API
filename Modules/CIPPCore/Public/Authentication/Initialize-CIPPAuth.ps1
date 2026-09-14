@@ -243,6 +243,59 @@ function Initialize-CIPPAuth {
                     } else {
                         Write-Information "[Auth-Init] EasyAuth already matches $($EnabledClients.Count) enabled API client(s) — no update needed"
                     }
+
+                    # Ensure offline_access is admin-consented on every MCP-enabled client so Entra
+                    # issues a refresh token — without it, MCP clients (Copilot Studio especially)
+                    # re-authenticate roughly every hour when the access token expires. Set at
+                    # client-creation time by Set-CIPPMCPClientApp, but re-checked here so a client
+                    # created before this existed, or whose service principal had not replicated at
+                    # creation, self-heals on the next warmup. Idempotent and cheap: the grant helper
+                    # no-ops once the scopes are present. Best-effort per client.
+                    foreach ($McpId in $McpClientIds) {
+                        if ([string]::IsNullOrEmpty($McpId)) { continue }
+                        try {
+                            $McpConsent = Grant-CippAppGraphConsent -AppId $McpId -Scopes @('openid', 'profile', 'offline_access')
+                            if ($McpConsent.Action -ne 'nochange') {
+                                Write-Information "[Auth-Init] MCP client $McpId offline_access consent: $($McpConsent.Action)"
+                            }
+                        } catch {
+                            Write-Information "[Auth-Init] MCP client $McpId offline_access consent reconcile failed (non-fatal): $_"
+                        }
+                    }
+
+                    # Ensure the MCP OAuth scope advertisement (challenge header + discovery docs)
+                    # includes offline_access. These app settings are written by "Save to Azure",
+                    # but a code deploy does NOT regenerate them — an instance that never re-saved
+                    # after offline_access was added would still hand strict discovery clients
+                    # (e.g. Copilot CLI) a scope with no offline_access, so they re-authenticate
+                    # ~hourly. Reconcile on drift only: once offline_access is present this never
+                    # writes (or restarts) again. Values come from the same helper Save to Azure
+                    # uses, so a write here is byte-identical and self-terminating.
+                    if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
+                        try {
+                            $McpScope = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation"
+                            $HeaderTokens = @("$($env:WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES)" -split ' ' | Where-Object { $_ })
+                            $ScopeDrift = ('offline_access' -notin $HeaderTokens) -or ($McpScope -notin $HeaderTokens)
+                            if (-not $ScopeDrift -and $env:CIPPNG) {
+                                foreach ($DocJson in @($env:CRAFT_PRM, $env:CRAFT_PRM_AS)) {
+                                    $Supported = $null
+                                    try { $Supported = @(($DocJson | ConvertFrom-Json -ErrorAction Stop).scopes_supported) } catch { $ScopeDrift = $true; break }
+                                    if ('offline_access' -notin $Supported -or $McpScope -notin $Supported) { $ScopeDrift = $true; break }
+                                }
+                            }
+                            if ($ScopeDrift) {
+                                $McpRg = Get-CIPPFunctionAppResourceGroup -SiteName $env:WEBSITE_SITE_NAME
+                                $McpAppSettings = Get-CippMcpScopeAppSettings -Hostname $env:WEBSITE_HOSTNAME -TenantId $env:TenantID -IsCippNg:([bool]$env:CIPPNG)
+                                $null = Update-CIPPAzFunctionAppSetting -Name $env:WEBSITE_SITE_NAME -ResourceGroupName $McpRg -AppSetting $McpAppSettings
+                                Write-Information '[Auth-Init] MCP OAuth scope advertisement was missing offline_access — reconciled app settings and requesting restart'
+                                Request-CIPPRestart -Reason 'MCP OAuth scope settings reconciled (offline_access) during warmup'
+                            } else {
+                                Write-Information '[Auth-Init] MCP OAuth scope advertisement already includes offline_access — no update needed'
+                            }
+                        } catch {
+                            Write-Information "[Auth-Init] MCP OAuth scope reconcile failed (non-fatal): $_"
+                        }
+                    }
                 }
             } catch {
                 Write-Information "[Auth-Init] API client reconcile failed (non-fatal): $_"

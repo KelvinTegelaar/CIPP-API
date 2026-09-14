@@ -182,20 +182,48 @@ Describe 'Invoke-CIPPStandardGroupTemplate' {
             Should -Invoke -CommandName Set-CIPPStandardsCompareField -Times 0 -Exactly -Because 'reporting every group as missing on a failed read produces false drift'
         }
 
-        It 'creates no dynamic distribution groups when the Exchange read fails' {
+    }
+
+    Context 'dynamic distribution group templates are not supported' {
+        # DDLs were removed from CIPP: EXO canonicalises RecipientFilter (permanent drift) and
+        # Set-DynamicDistributionGroup -RecipientFilter throws. They must be skipped - never created,
+        # never remediated - but the skip must be visible in the logs and in the report.
+        BeforeEach {
             Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { script:New-DynamicDistroTemplateEntity }
-            # The Graph read succeeds (empty) but the Exchange read for dynamic distros fails.
             Mock -CommandName New-GraphGetRequest -MockWith { @() }
-            Mock -CommandName New-ExoRequest -MockWith { throw 'Exchange is unavailable' }
+            Mock -CommandName New-ExoRequest -MockWith { }
+        }
 
-            { Invoke-CIPPStandardGroupTemplate -Tenant $script:Tenant -Settings (script:New-Settings -Remediate) } |
-                Should -Not -Throw
+        It 'skips a dynamic distribution template in remediate mode and logs a Warn' {
+            $Settings = [pscustomobject]@{
+                remediate     = $true
+                report        = $false
+                groupTemplate = [pscustomobject]@{ value = '22222222-2222-2222-2222-222222222222' }
+            }
+            Invoke-CIPPStandardGroupTemplate -Tenant $script:Tenant -Settings $Settings
 
-            Should -Invoke -CommandName New-CIPPGroup -Times 0 -Exactly -Because 'a failed Exchange read must not be treated as "no dynamic distribution groups exist"'
+            Should -Invoke -CommandName New-CIPPGroup -Times 0 -Exactly -Because 'DDLs are not supported and must not be created'
+            Should -Invoke -CommandName New-ExoRequest -Times 0 -Exactly -Because 'Set-DynamicDistributionGroup must never run for a skipped DDL'
 
-            $Errors = @($script:logs | Where-Object { $_.Sev -eq 'Error' })
-            $Errors.Count | Should -BeGreaterThan 0
-            $Errors[0].Message | Should -Match 'skipping this run to avoid creating duplicate groups'
+            $Warns = @($script:logs | Where-Object { $_.Sev -eq 'Warn' })
+            $Warns.Count | Should -BeGreaterThan 0
+            $Warns[0].Message | Should -Match 'Dynamic Distribution Group.*not supported by CIPP'
+        }
+
+        It 'surfaces a skipped dynamic distribution template in the report, not as drift' {
+            $Settings = [pscustomobject]@{
+                remediate     = $false
+                report        = $true
+                groupTemplate = [pscustomobject]@{ value = '22222222-2222-2222-2222-222222222222' }
+            }
+            Invoke-CIPPStandardGroupTemplate -Tenant $script:Tenant -Settings $Settings
+
+            Should -Invoke -CommandName Set-CIPPStandardsCompareField -Times 1 -Exactly -ParameterFilter {
+                $null -ne $CurrentValue.SkippedDynamicDistributionGroups -and
+                $CurrentValue.SkippedDynamicDistributionGroups -eq $ExpectedValue.SkippedDynamicDistributionGroups -and
+                @($CurrentValue.MissingGroups).Count -eq 0 -and
+                @($CurrentValue.MissingTemplates).Count -eq 0
+            } -Because 'the DDL is reported as skipped/not-supported, identical on both sides so it shows without reading as drift'
         }
     }
 }
