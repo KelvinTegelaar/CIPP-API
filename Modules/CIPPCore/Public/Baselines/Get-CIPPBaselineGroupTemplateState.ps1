@@ -35,18 +35,16 @@ function Get-CIPPBaselineGroupTemplateState {
     if (-not $Template -or [string]::IsNullOrWhiteSpace($GroupName)) { return @{ Current = $null } }
 
     if ("$($Template.groupType)" -eq 'dynamicDistribution') {
-        $Distros = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ExoDynamicDistributionGroup')
-        if ($Distros.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'ExoDynamicDistributionGroup')) {
-            return @{ Current = $null }
-        }
-        $Existing = $Distros | Where-Object { "$($_.Name)" -eq $GroupName } | Select-Object -First 1
-    } else {
-        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
-        if ($Groups.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Groups')) {
-            return @{ Current = $null }
-        }
-        $Existing = $Groups | Where-Object { "$($_.displayName)" -eq $GroupName } | Select-Object -First 1
+        # Dynamic Distribution Groups are not supported by CIPP: do not grade them (a graded DDL reads as
+        # permanent drift and its executor write throws). Return not-applicable, consistent with the executor skip.
+        return @{ Current = $null }
     }
+
+    $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
+    if ($Groups.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Groups')) {
+        return @{ Current = $null }
+    }
+    $Existing = $Groups | Where-Object { "$($_.displayName)" -eq $GroupName } | Select-Object -First 1
 
     $Current = [PSCustomObject]@{ deployed = [bool]$Existing }
     # Carried for the executor, not graded.

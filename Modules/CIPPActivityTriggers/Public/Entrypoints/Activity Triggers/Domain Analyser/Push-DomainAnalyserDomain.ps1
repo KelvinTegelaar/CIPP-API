@@ -242,6 +242,18 @@ function Push-DomainAnalyserDomain {
             $Result.DKIMEnabled = $false
             $ScoreExplanation.Add('DKIM Not Configured') | Out-Null
         }
+
+        # Persist the selectors the analyser just discovered so GetDkimSelectors reads them from the
+        # Domains table instead of returning nothing (mirrors how Invoke-ListDomainHealth/ExecDnsConfig store them).
+        $DiscoveredSelectors = @($DkimRecord.Selectors | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) | Sort-Object -Unique
+        if ($DiscoveredSelectors.Count -gt 0) {
+            $DkimSelectorsJson = [string]($DiscoveredSelectors | ConvertTo-Json -Compress)
+            if ($DomainObject.PSObject.Properties.Name -notcontains 'DkimSelectors') {
+                $DomainObject | Add-Member -MemberType NoteProperty -Name DkimSelectors -Value $DkimSelectorsJson -Force
+            } else {
+                $DomainObject.DkimSelectors = $DkimSelectorsJson
+            }
+        }
     } catch {
         $Message = 'DKIM Exception'
         Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message $Message -LogData (Get-CippException -Exception $_) -sev Error
