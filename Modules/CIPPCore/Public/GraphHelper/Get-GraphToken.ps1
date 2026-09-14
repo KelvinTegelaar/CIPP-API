@@ -209,7 +209,6 @@ function Get-GraphToken {
             if (!$Tenant.RowKey) {
                 $donotset = $true
                 $Tenant = [pscustomobject]@{
-                    GraphErrorCount     = 0
                     LastGraphTokenError = ''
                     LastGraphError      = ''
                     PartitionKey        = 'TenantFailed'
@@ -226,7 +225,6 @@ function Get-GraphToken {
             } else {
                 $_.Exception.Message
             }
-            $Tenant.GraphErrorCount++
 
             if (!$donotset) { Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant }
             throw "Could not get token: $($Tenant.LastGraphError)"

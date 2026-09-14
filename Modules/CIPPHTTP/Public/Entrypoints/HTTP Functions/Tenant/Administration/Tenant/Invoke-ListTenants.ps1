@@ -116,7 +116,6 @@ function Invoke-ListTenants {
                     defaultDomainName = 'AllTenants'
                     displayName       = '*All Tenants'
                     domains           = 'AllTenants'
-                    GraphErrorCount   = 0
                 }
 
                 # Add offboarding defaults to AllTenants object if requested

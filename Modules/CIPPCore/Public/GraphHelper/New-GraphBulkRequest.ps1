@@ -35,7 +35,6 @@ function New-GraphBulkRequest {
         $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant) {
             $Tenant = @{
-                GraphErrorCount = 0
                 LastGraphError  = ''
                 PartitionKey    = 'TenantFailed'
                 RowKey          = 'Failed'
@@ -167,7 +166,6 @@ function New-GraphBulkRequest {
 
             if ($Message -ne 'Request not applicable to target tenant.') {
                 $Tenant.LastGraphError = $Message ?? ''
-                $Tenant.GraphErrorCount++
                 Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             }
             throw $Message

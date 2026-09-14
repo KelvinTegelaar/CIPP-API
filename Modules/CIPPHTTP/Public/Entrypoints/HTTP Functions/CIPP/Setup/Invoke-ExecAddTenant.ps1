@@ -107,7 +107,6 @@ function Invoke-ExecAddTenant {
                 Excluded                      = $false
                 ExcludeUser                   = ''
                 ExcludeDate                   = ''
-                GraphErrorCount               = 0
                 LastGraphError                = ''
                 RequiresRefresh               = $false
                 LastRefresh                   = (Get-Date).ToUniversalTime()

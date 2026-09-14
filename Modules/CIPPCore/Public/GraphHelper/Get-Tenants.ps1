@@ -30,7 +30,7 @@ function Get-Tenants {
     } elseif ($IncludeErrors.IsPresent) {
         $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
     } else {
-        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false and GraphErrorCount lt 50"
+        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
     }
 
     if ($TenantFilter) {
@@ -138,13 +138,6 @@ function Get-Tenants {
                 Write-Host "Alias found for $($_.Name) - $Alias."
             }
 
-            if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
-                # Reset error count
-                Write-Host "Resetting error count for $($_.Name)"
-                $ExistingTenantInfo.GraphErrorCount = 0
-                Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
-            }
-
             # Re-read domains for a row last derived over 7 days ago even when it looks healthy: a custom
             # domain can be made default in M365 after onboarding with nothing here to signal it, and the
             # cache-hit branch below never re-reads domains. LastRefresh is stamped only on a real fetch.
@@ -229,7 +222,6 @@ function Get-Tenants {
                     Excluded                 = $false
                     ExcludeUser              = ''
                     ExcludeDate              = ''
-                    GraphErrorCount          = 0
                     LastGraphError           = ''
                     RequiresRefresh          = [bool]$RequiresRefresh
                     LastRefresh              = (Get-Date).ToUniversalTime()
@@ -259,7 +251,6 @@ function Get-Tenants {
                 Excluded          = $false
                 ExcludeUser       = ''
                 ExcludeDate       = ''
-                GraphErrorCount   = 0
                 LastGraphError    = ''
                 RequiresRefresh   = [bool]$RequiresRefresh
                 LastRefresh       = (Get-Date).ToUniversalTime()
@@ -290,7 +281,6 @@ function Get-Tenants {
                 Excluded          = $false
                 ExcludeUser       = ''
                 ExcludeDate       = ''
-                GraphErrorCount   = 0
                 LastGraphError    = ''
                 RequiresRefresh   = [bool]$RequiresRefresh
                 LastRefresh       = (Get-Date).ToUniversalTime()
