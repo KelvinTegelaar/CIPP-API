@@ -12261,9 +12261,6 @@
                     "ExcludeUser": {
                       "x-cipp-field-source": "storage"
                     },
-                    "GraphErrorCount": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "hasAutoExtend": {
                       "x-cipp-field-source": "storage"
                     },
@@ -21050,9 +21047,6 @@
                     },
                     "ExcludeUser": {
                       "x-cipp-field-source": "storage,frontend"
-                    },
-                    "GraphErrorCount": {
-                      "x-cipp-field-source": "storage"
                     },
                     "hasAutoExtend": {
                       "x-cipp-field-source": "storage"
@@ -30468,9 +30462,6 @@
                       "x-cipp-field-source": "storage"
                     },
                     "ExcludeUser": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "GraphErrorCount": {
                       "x-cipp-field-source": "storage"
                     },
                     "hasAutoExtend": {
