@@ -16,16 +16,9 @@
   "compare": "subset",
   "variables": {
     "usageLocation": {
-      "type": "autoComplete",
-      "multiple": false,
-      "creatable": false,
+      "type": "CountryCodeSelect",
       "label": "Usage location",
-      "required": true,
-      "api": {
-        "url": "/countryList.json",
-        "labelField": "Name",
-        "valueField": "Code"
-      }
+      "required": true
     },
     "includeGroups": {
       "type": "autoComplete",

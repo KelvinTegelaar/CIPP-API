@@ -16,7 +16,7 @@ function Invoke-CIPPStandardUsageLocation {
         EXECUTIVETEXT
             Ensures every employee account records the country it is used from, which Microsoft requires before licences can be assigned and which security monitoring uses to recognise sign-ins from unexpected locations. Staff based in other countries are exempted through a group.
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":false,"creatable":false,"required":true,"name":"standards.UsageLocation.usageLocation","label":"Usage location","api":{"url":"/countryList.json","labelField":"Name","valueField":"Code"}}
+            {"type":"CountryCodeSelect","required":true,"name":"standards.UsageLocation.usageLocation","label":"Usage location"}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.UsageLocation.includeGroups","label":"Only apply to members of these groups (display names; blank = all member accounts)"}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.UsageLocation.excludeGroups","label":"Skip members of these groups (display names; users legitimately located elsewhere)"}
             {"type":"switch","name":"standards.UsageLocation.onlyWhenBlank","label":"Only set accounts that have no usage location (never overwrite an existing value)","required":false}
