@@ -1074,6 +1074,13 @@
                   "excludeGroup": {
                     "type": "string"
                   },
+                  "ExcludeGroupIds": {
+                    "type": "string"
+                  },
+                  "GroupIds": {
+                    "type": "string",
+                    "description": "Group ids from the deploy drawer's single-tenant picker. CustomGroup/excludeGroup still carry the display names for logging and as a fallback if the ids are ever dropped."
+                  },
                   "InstallAsSystem": {
                     "type": "string"
                   },
@@ -2214,6 +2221,13 @@
                   },
                   "excludeGroup": {
                     "type": "string"
+                  },
+                  "ExcludeGroupIds": {
+                    "type": "string"
+                  },
+                  "GroupIds": {
+                    "type": "string",
+                    "description": "Group ids from the deploy drawer's single-tenant picker. CustomGroup/excludeGroup still carry the display names for logging and as a fallback if the ids are ever dropped."
                   },
                   "IntuneBody": {
                     "type": "string"
@@ -4429,6 +4443,15 @@
                   "defaultUseRoles": {
                     "type": "boolean"
                   },
+                  "defaultVacationCAPolicy": {
+                    "type": "string"
+                  },
+                  "defaultVacationExcludeAuditAlerts": {
+                    "type": "boolean"
+                  },
+                  "defaultVacationMode": {
+                    "type": "boolean"
+                  },
                   "generateTAPByDefault": {
                     "type": "boolean"
                   },
@@ -4563,6 +4586,13 @@
                   },
                   "excludeGroup": {
                     "type": "string"
+                  },
+                  "ExcludeGroupIds": {
+                    "type": "string"
+                  },
+                  "GroupIds": {
+                    "type": "string",
+                    "description": "Group ids from the deploy drawer's single-tenant picker. CustomGroup/excludeGroup still carry the display names for logging and as a fallback if the ids are ever dropped."
                   },
                   "PackageName": {
                     "type": "string",
@@ -4770,6 +4800,13 @@
                   "excludeGroup": {
                     "type": "string"
                   },
+                  "ExcludeGroupIds": {
+                    "type": "string"
+                  },
+                  "GroupIds": {
+                    "type": "string",
+                    "description": "Group ids from the deploy drawer's single-tenant picker. CustomGroup/excludeGroup still carry the display names for logging and as a fallback if the ids are ever dropped."
+                  },
                   "IntuneBody": {
                     "type": "string",
                     "description": "A template saved from an existing app carries the full body: reuse it, minus the read-only properties Graph rejects on create."
@@ -4970,6 +5007,13 @@
                   },
                   "excludeGroup": {
                     "type": "string"
+                  },
+                  "ExcludeGroupIds": {
+                    "type": "string"
+                  },
+                  "GroupIds": {
+                    "type": "string",
+                    "description": "Sent by the deploy drawer when a single tenant is selected and groups were picked by id. customGroup/excludeGroup still carry the display names for logging and as a fallback."
                   },
                   "RAWJson": {
                     "type": "string"
@@ -6304,6 +6348,10 @@
                   "GUID": {
                     "type": "string"
                   },
+                  "standards": {
+                    "type": "string",
+                    "description": "Drop standards toggled on but left with no instances (empty array) - e.g. a template standard whose last selection was removed in the editor, which leaves 'standards.<Name> = []' in the form. Persisting these produces phantom 'NOT FOUND' drift entries with no template to compare against."
+                  },
                   "templateName": {
                     "type": "string"
                   },
@@ -6379,6 +6427,16 @@
                   },
                   "description": {
                     "type": "string"
+                  },
+                  "excludeGroup": {
+                    "type": "string"
+                  },
+                  "ExcludeGroupIds": {
+                    "type": "string"
+                  },
+                  "GroupIds": {
+                    "type": "string",
+                    "description": "Group ids from the deploy drawer's single-tenant picker. CustomGroup/excludeGroup still carry the display names for logging and as a fallback if the ids are ever dropped."
                   },
                   "InstallAsSystem": {
                     "type": "boolean",
@@ -7659,6 +7717,16 @@
                   },
                   "enforceSignatureCheck": {
                     "type": "boolean"
+                  },
+                  "excludeGroup": {
+                    "type": "string"
+                  },
+                  "ExcludeGroupIds": {
+                    "type": "string"
+                  },
+                  "GroupIds": {
+                    "type": "string",
+                    "description": "Group ids from the deploy drawer's single-tenant picker. CustomGroup/excludeGroup still carry the display names for logging and as a fallback if the ids are ever dropped."
                   },
                   "InstallAsSystem": {
                     "type": "string"
@@ -9333,6 +9401,15 @@
                     "type": "string"
                   },
                   "defaultUseRoles": {
+                    "type": "boolean"
+                  },
+                  "defaultVacationCAPolicy": {
+                    "type": "string"
+                  },
+                  "defaultVacationExcludeAuditAlerts": {
+                    "type": "boolean"
+                  },
+                  "defaultVacationMode": {
                     "type": "boolean"
                   },
                   "generateTAPByDefault": {
@@ -12724,7 +12801,7 @@
                   },
                   "MCPAllowed": {
                     "type": "string",
-                    "description": "When this client is MCP-enabled, configure its app registration as the MCP OAuth resource (host identifier URIs + v2 tokens) so the Claude connector flow can resolve it."
+                    "description": "When this client is MCP-enabled it becomes the instance's single MCP resource. Only one client may hold MCP Access at a time - the connector flow advertises exactly one app registration - so clear the flag on every other client first. This stops stale holders left behind by failed setup attempts from accumulating and one of them being advertised (see issue #619)."
                   },
                   "RemoveAppReg": {
                     "type": "boolean"
