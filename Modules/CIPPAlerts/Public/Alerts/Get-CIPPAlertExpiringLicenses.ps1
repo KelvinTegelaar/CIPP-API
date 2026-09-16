@@ -52,6 +52,7 @@ function Get-CIPPAlertExpiringLicenses {
                         }
 
                         [PSCustomObject]@{
+                            Id             = $Term.SubscriptionId
                             Message        = $Message
                             License        = $_.License
                             SkuId          = $_.skuId
