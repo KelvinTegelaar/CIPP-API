@@ -24,10 +24,11 @@ BeforeAll {
     $script:Tenant = 'contoso.onmicrosoft.com'
     $script:PlannerPlan = [pscustomobject]@{ servicePlanId = 'b737dad2-2f6c-4c65-90e3-ca563267e8b9'; capabilityStatus = 'Enabled' }
     $script:Users = @(
-        [pscustomobject]@{ id = '11111111-1111-1111-1111-111111111111'; userPrincipalName = 'ann@contoso.com'; displayName = 'Ann'; userType = 'Member'; assignedPlans = @($script:PlannerPlan) }
-        [pscustomobject]@{ id = '22222222-2222-2222-2222-222222222222'; userPrincipalName = 'ben@contoso.com'; displayName = 'Ben'; userType = 'Member'; assignedPlans = @($script:PlannerPlan) }
-        [pscustomobject]@{ id = '44444444-4444-4444-4444-444444444444'; userPrincipalName = 'carl@contoso.com'; displayName = 'Carl'; userType = 'Member'; assignedPlans = @() }
-        [pscustomobject]@{ id = '33333333-3333-3333-3333-333333333333'; userPrincipalName = 'guest@external.com'; displayName = 'Guest'; userType = 'Guest'; assignedPlans = @($script:PlannerPlan) }
+        [pscustomobject]@{ id = '11111111-1111-1111-1111-111111111111'; userPrincipalName = 'ann@contoso.com'; displayName = 'Ann'; userType = 'Member'; accountEnabled = $true; assignedPlans = @($script:PlannerPlan) }
+        [pscustomobject]@{ id = '22222222-2222-2222-2222-222222222222'; userPrincipalName = 'ben@contoso.com'; displayName = 'Ben'; userType = 'Member'; accountEnabled = $true; assignedPlans = @($script:PlannerPlan) }
+        [pscustomobject]@{ id = '55555555-5555-5555-5555-555555555555'; userPrincipalName = 'disabled@contoso.com'; displayName = 'Disabled'; userType = 'Member'; accountEnabled = $false; assignedPlans = @($script:PlannerPlan) }
+        [pscustomobject]@{ id = '44444444-4444-4444-4444-444444444444'; userPrincipalName = 'carl@contoso.com'; displayName = 'Carl'; userType = 'Member'; accountEnabled = $true; assignedPlans = @() }
+        [pscustomobject]@{ id = '33333333-3333-3333-3333-333333333333'; userPrincipalName = 'guest@external.com'; displayName = 'Guest'; userType = 'Guest'; accountEnabled = $true; assignedPlans = @($script:PlannerPlan) }
     )
 }
 
@@ -127,7 +128,7 @@ Describe 'Invoke-CIPPStandardPlannerBlockTaskDelete' {
     It 'remediates with PUT for Planner-licensed members only and skips UserPolicy GET' {
         Invoke-CIPPStandardPlannerBlockTaskDelete -Tenant $script:Tenant -Settings @{ remediate = $true }
 
-        # Guest + unlicensed Carl excluded; Ann + Ben both get idempotent PUT
+        # Guest, unlicensed Carl, and disabled account excluded; Ann + Ben get idempotent PUT
         $script:putCalls.Count | Should -Be 2
         ($script:putCalls.Uri | ForEach-Object { if ($_ -match "UserPolicy\('([^']+)'\)") { $Matches[1] } } | Sort-Object) |
             Should -Be @('ann@contoso.com', 'ben@contoso.com')
@@ -166,6 +167,8 @@ Describe 'Invoke-CIPPStandardPlannerBlockTaskDelete' {
         @($script:alerts[0].Object.userPrincipalName) | Should -Contain 'ann@contoso.com'
         @($script:alerts[0].Object.userPrincipalName) | Should -Not -Contain 'ben@contoso.com'
         @($script:alerts[0].Object.userPrincipalName) | Should -Not -Contain 'carl@contoso.com'
+        @($script:logs | Where-Object { $_.Message -match '1 in-scope account\(s\) are missing' }).Count | Should -Be 1
+        @($script:logs | Where-Object { $_.Message -match 'ann@contoso.com' }).Count | Should -Be 0
     }
 
     It 'skips remediate within the 24h guard but still alerts' {

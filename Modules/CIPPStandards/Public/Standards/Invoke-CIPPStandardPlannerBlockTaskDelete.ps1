@@ -7,8 +7,8 @@ function Invoke-CIPPStandardPlannerBlockTaskDelete {
     .SYNOPSIS
         (Label) Block Planner users from deleting tasks they did not create
     .DESCRIPTION
-        (Helptext) Sets the Planner user policy that blocks each in-scope member from deleting Planner tasks they did not create. Applies across all basic Planner plans for that user (not a single board). Only members with an enabled Microsoft Planner (PROJECTWORKMANAGEMENT) service plan are touched. Optionally limit the sweep to members of named groups or skip members of named groups. The remediate wash is limited to once per 24 hours per tenant because there is no list API and every user needs its own write. Alert and report still run every time. May also prevent those users from deleting plans. Requires CIPP-SAM consent for ProjectWorkManagement OrgSettings-Planner permissions.
-        (DocsDescription) Uses the Planner tenant admin UserPolicy API (tasks.office.com) to set blockDeleteTasksNotCreatedBySelf to true for each in-scope member account that has an enabled PROJECTWORKMANAGEMENT (Microsoft Planner) service plan in the user cache. Guest accounts and members without that plan are ignored. Group names are resolved per tenant by display name and expanded to their transitive user members: include groups restrict the sweep to those members, exclude groups remove them from it. A configured group that does not exist in a tenant, or a failed membership lookup, skips the run rather than sweeping the wrong accounts. When no include group is named, every Planner-licensed member account is in scope. Remediate is an idempotent PUT per candidate with no preflight GET; a 24-hour rerun guard (Test-CIPPRerun) skips repeating that write sweep for the same settings, while alert and report still GET live state each run. The policy is per user and applies to all basic plans that user can access; it is not board-scoped. Known side effect: the same policy can also block plan deletion. Requires application permissions OrgSettings-Planner.ReadWrite.All on ProjectWorkManagement (tasks.office.com), consented via CIPP-SAM repair and CPV refresh.
+        (Helptext) Sets the Planner user policy that blocks each in-scope member from deleting Planner tasks they did not create. Applies across all basic Planner plans for that user (not a single board). Only enabled members with an enabled Microsoft Planner (PROJECTWORKMANAGEMENT) service plan are touched. Optionally limit the sweep to members of named groups or skip members of named groups. The remediate wash is limited to once per 24 hours per tenant because there is no list API and every user needs its own write. Alert and report still run every time. May also prevent those users from deleting plans. Requires CIPP-SAM consent for ProjectWorkManagement OrgSettings-Planner permissions.
+        (DocsDescription) Uses the Planner tenant admin UserPolicy API (tasks.office.com) to set blockDeleteTasksNotCreatedBySelf to true for each in-scope enabled member account that has an enabled PROJECTWORKMANAGEMENT (Microsoft Planner) service plan in the user cache. Guest accounts, disabled accounts, and members without that plan are ignored. Group names are resolved per tenant by display name and expanded to their transitive user members: include groups restrict the sweep to those members, exclude groups remove them from it. A configured group that does not exist in a tenant, or a failed membership lookup, skips the run rather than sweeping the wrong accounts. When no include group is named, every Planner-licensed enabled member account is in scope. Remediate is an idempotent PUT per candidate with no preflight GET; a 24-hour rerun guard (Test-CIPPRerun) skips repeating that write sweep for the same settings, while alert and report still GET live state each run. The policy is per user and applies to all basic plans that user can access; it is not board-scoped. Known side effect: the same policy can also block plan deletion. Requires application permissions OrgSettings-Planner.ReadWrite.All on ProjectWorkManagement (tasks.office.com), consented via CIPP-SAM repair and CPV refresh.
     .NOTES
         CAT
             Teams Standards
@@ -16,7 +16,7 @@ function Invoke-CIPPStandardPlannerBlockTaskDelete {
         EXECUTIVETEXT
             Stops employees from deleting Planner tasks they did not create, reducing accidental loss on boards used as shared work queues. Can be limited to a department security group so only those staff are locked down.
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.PlannerBlockTaskDelete.includeGroups","label":"Only apply to members of these groups (display names; blank = all member accounts)"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.PlannerBlockTaskDelete.includeGroups","label":"Only apply to members of these groups (display names; blank = all Planner-licensed enabled members)"}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.PlannerBlockTaskDelete.excludeGroups","label":"Skip members of these groups (display names)"}
         IMPACT
             Medium Impact
@@ -96,7 +96,7 @@ function Invoke-CIPPStandardPlannerBlockTaskDelete {
     }
 
     $Candidates = @($AllUsers | Where-Object {
-            $_.userType -eq 'Member' -and $_.id -and $_.userPrincipalName -and
+            $_.userType -eq 'Member' -and $_.accountEnabled -eq $true -and $_.id -and $_.userPrincipalName -and
             ($_.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' -and $_.servicePlanId -eq $PlannerPlanId })
         })
     if ($IncludeNames.Count -gt 0) { $Candidates = @($Candidates | Where-Object { $IncludedIds.ContainsKey("$($_.id)") }) }
@@ -180,7 +180,7 @@ function Invoke-CIPPStandardPlannerBlockTaskDelete {
     if ($Settings.alert -eq $true) {
         if ($IncorrectUsers.Count -gt 0) {
             Write-StandardsAlert -message 'The following accounts are not blocked from deleting Planner tasks they did not create' -object @($IncorrectUsers) -tenant $Tenant -standardName 'PlannerBlockTaskDelete' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "The following accounts are missing Planner blockDeleteTasksNotCreatedBySelf: $($IncorrectUsers.userPrincipalName -join ', ')" -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "PlannerBlockTaskDelete: $($IncorrectUsers.Count) in-scope account(s) are missing blockDeleteTasksNotCreatedBySelf." -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All in-scope accounts have Planner blockDeleteTasksNotCreatedBySelf enabled.' -sev Info
         }
