@@ -23898,7 +23898,7 @@
         "tags": [
           "Email-Exchange > Tools"
         ],
-        "description": "Enables or disables Microsoft Purview Message Encryption for a tenant by setting AzureRMSLicensingEnabled and the Outlook Encrypt button by setting SimplifiedClientAccessEnabled, or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.",
+        "description": "Updates the Microsoft Purview Message Encryption configuration for a tenant (AzureRMSLicensingEnabled, SimplifiedClientAccessEnabled, EnablePdfEncryption, DecryptAttachmentForEncryptOnly, SimplifiedClientAccessDoNotForwardDisabled, SimplifiedClientAccessEncryptOnlyDisabled, TransportDecryptionSetting; only the settings present in the body are changed), or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.",
         "requestBody": {
           "required": true,
           "content": {
@@ -23913,20 +23913,16 @@
                       "Test"
                     ]
                   },
-                  "AzureRMSLicensingEnabled": {
-                    "type": "string"
-                  },
                   "Recipient": {
                     "type": "string"
                   },
                   "Sender": {
                     "type": "string"
                   },
-                  "SimplifiedClientAccessEnabled": {
-                    "type": "string",
-                    "description": "Only touch the Encrypt button setting when the caller sent it, so an API client that posts just AzureRMSLicensingEnabled does not silently disable it."
-                  },
                   "tenantFilter": {
+                    "type": "string"
+                  },
+                  "TransportDecryptionSetting": {
                     "type": "string"
                   }
                 },
@@ -49904,6 +49900,12 @@
                       "AzureRMSLicensingEnabled": {
                         "x-cipp-field-source": "backend"
                       },
+                      "DecryptAttachmentForEncryptOnly": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "EnablePdfEncryption": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "ExternalLicensingEnabled": {
                         "x-cipp-field-source": "backend"
                       },
@@ -49919,7 +49921,13 @@
                       "MessageEncryptionEnabled": {
                         "x-cipp-field-source": "backend"
                       },
+                      "SimplifiedClientAccessDoNotForwardDisabled": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "SimplifiedClientAccessEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "SimplifiedClientAccessEncryptOnlyDisabled": {
                         "x-cipp-field-source": "backend"
                       },
                       "TransportDecryptionSetting": {
