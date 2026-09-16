@@ -743,6 +743,15 @@
           "type": "Scope"
         }
       ]
+    },
+    {
+      "resourceAppId": "09abbdfd-ed23-44ee-a2d9-a627aa1c90f3",
+      "resourceAccess": [
+        {
+          "id": "68067c9d-a1be-4603-b095-3eaf54a42510",
+          "type": "Role"
+        }
+      ]
     }
   ],
   "servicePrincipalLockConfiguration": {

@@ -18695,5 +18695,12 @@
     "id": "e60370c1-e451-437e-aa6e-d76df38e5f15",
     "origin": "Delegated (Skype and Teams Tenant Admin API)",
     "value": "user_impersonation"
+  },
+  {
+    "description": "Allows the app to read and write organization-wide Microsoft Planner settings, without a signed-in user.",
+    "displayName": "Read and write organization-wide Microsoft Planner settings",
+    "id": "68067c9d-a1be-4603-b095-3eaf54a42510",
+    "origin": "Application (ProjectWorkManagement)",
+    "value": "OrgSettings-Planner.ReadWrite.All"
   }
 ]
