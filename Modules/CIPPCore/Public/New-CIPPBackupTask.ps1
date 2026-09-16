@@ -144,6 +144,16 @@ function New-CIPPBackupTask {
             }
         }
 
+        'teamsvoice' {
+            Measure-CippTask -TaskName 'TeamsVoice' -EventName 'CIPP.BackupCompleted' -Script {
+                # Keep only what assignNumber can recreate: numbers held by a user or resource account.
+                # Unassigned numbers carry nothing to restore; policyAssigned targets a shared-calling policy.
+                New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/admin/teams/telephoneNumberManagement/numberAssignments' -tenantid $TenantFilter |
+                    Where-Object { $_.assignmentStatus -in @('userAssigned', 'voiceApplicationAssigned') -and $_.assignmentTargetId } |
+                    Select-Object telephoneNumber, assignmentTargetId, assignmentStatus, assignmentCategory, numberType, locationId
+            }
+        }
+
         'CippWebhookAlerts' {
             Measure-CippTask -TaskName 'WebhookAlerts' -EventName 'CIPP.BackupCompleted' -Script {
                 $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
