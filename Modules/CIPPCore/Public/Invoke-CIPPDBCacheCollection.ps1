@@ -183,6 +183,7 @@ function Invoke-CIPPDBCacheCollection {
             'SPOTenantSyncClientRestriction'
             'SharePointAdminSettings'
             'SharePointSiteUsage'
+            'SharePointUsageReport'
             'SiteActivity'
             'OneDriveUsage'
         )
