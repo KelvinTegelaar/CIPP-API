@@ -56,6 +56,18 @@ function Invoke-AddStandardsTemplate {
     $request.body | Add-Member -NotePropertyName 'createdAt' -NotePropertyValue ($Request.body.createdAt ? $Request.body.createdAt : (Get-Date).ToUniversalTime()) -Force
     $Request.body | Add-Member -NotePropertyName 'updatedBy' -NotePropertyValue ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails -Force
     $Request.body | Add-Member -NotePropertyName 'updatedAt' -NotePropertyValue (Get-Date).ToUniversalTime() -Force
+
+    # Drop standards toggled on but left with no instances (empty array) - e.g. a template standard
+    # whose last selection was removed in the editor, which leaves 'standards.<Name> = []' in the form.
+    # Persisting these produces phantom 'NOT FOUND' drift entries with no template to compare against.
+    if ($Request.body.standards) {
+        foreach ($Property in @($Request.body.standards.PSObject.Properties)) {
+            if ($Property.Value -is [array] -and $Property.Value.Count -eq 0) {
+                $Request.body.standards.PSObject.Properties.Remove($Property.Name)
+            }
+        }
+    }
+
     $JSON = (ConvertTo-Json -Compress -Depth 100 -InputObject ($Request.body))
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true

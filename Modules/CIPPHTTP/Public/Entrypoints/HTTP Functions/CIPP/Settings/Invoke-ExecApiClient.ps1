@@ -160,9 +160,26 @@ function Invoke-ExecApiClient {
 
                 Add-CIPPAzDataTableEntity @Table -Entity $Client -Force | Out-Null
 
-                # When this client is MCP-enabled, configure its app registration as the MCP OAuth
-                # resource (host identifier URIs + v2 tokens) so the Claude connector flow can resolve it.
+                # When this client is MCP-enabled it becomes the instance's single MCP resource.
+                # Only one client may hold MCP Access at a time - the connector flow advertises
+                # exactly one app registration - so clear the flag on every other client first. This
+                # stops stale holders left behind by failed setup attempts from accumulating and one
+                # of them being advertised (see issue #619).
                 if ([bool]($Request.Body.MCPAllowed ?? $false)) {
+                    $OtherMcpClients = @(Get-CIPPAzDataTableEntity @Table | Where-Object {
+                            ![string]::IsNullOrEmpty($_.RowKey) -and $_.RowKey -ne "$ClientId" -and "$($_.MCPAllowed)" -eq 'True'
+                        })
+                    foreach ($OtherClient in $OtherMcpClients) {
+                        $OtherClient | Add-Member -NotePropertyName 'MCPAllowed' -NotePropertyValue $false -Force
+                        Add-CIPPAzDataTableEntity @Table -Entity $OtherClient -Force | Out-Null
+                    }
+                    if ($OtherMcpClients.Count -gt 0) {
+                        Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Cleared MCP Access on $($OtherMcpClients.Count) other client(s); '$($Client.AppName)' is now the sole MCP resource." -Sev 'Info'
+                        $Results.Add("MCP Access is limited to one client - cleared it on $($OtherMcpClients.Count) other client(s).")
+                    }
+
+                    # Configure this app registration as the MCP OAuth resource (host identifier URIs
+                    # + v2 tokens) so the Claude connector flow can resolve it.
                     try {
                         $null = Set-CIPPMCPClientApp -AppId $ClientId -Headers $Request.Headers
                         $Results.Add('MCP resource URIs, v2 tokens, and callbacks for known MCP clients (Claude, ChatGPT, VS Code, Copilot) configured on the app registration. Run Save to Azure to apply the changes.')
