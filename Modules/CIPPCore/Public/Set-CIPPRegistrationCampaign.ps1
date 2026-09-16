@@ -44,8 +44,8 @@ function Set-CIPPRegistrationCampaign {
     if ($DesiredState -notin @('default', 'enabled', 'disabled')) {
         throw "State must be one of 'default', 'enabled' or 'disabled'"
     }
-    if ($DesiredMethod -notin @('microsoftAuthenticator', 'fido2')) {
-        throw "TargetedAuthenticationMethod must be 'microsoftAuthenticator' or 'fido2'"
+    if ($DesiredMethod -notin @('microsoftAuthenticator', 'FIDO2')) {
+        throw "TargetedAuthenticationMethod must be 'microsoftAuthenticator' or 'FIDO2'"
     }
     if ($DesiredSnooze -lt 0 -or $DesiredSnooze -gt 14) {
         throw 'SnoozeDurationInDays must be between 0 and 14'
