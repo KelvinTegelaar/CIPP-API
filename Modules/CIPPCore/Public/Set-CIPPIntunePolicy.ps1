@@ -7,6 +7,10 @@ function Set-CIPPIntunePolicy {
         $RawJSON,
         $AssignTo,
         $ExcludeGroup,
+        # Group ids from the deploy drawer's single-tenant picker. When present they win over the
+        # name-based AssignTo/ExcludeGroup resolution inside Set-CIPPAssignedPolicy.
+        $GroupIds,
+        $ExcludeGroupIds,
         $Headers,
         $APIName = 'Set-CIPPIntunePolicy',
         $TenantFilter,
@@ -399,6 +403,9 @@ function Set-CIPPIntunePolicy {
                 ExcludeGroup   = $ExcludeGroup
                 AssignmentMode = $AssignmentMode
             }
+            # '@($null).Count' is 1, so test the value before counting it.
+            if ($GroupIds -and @($GroupIds).Count -gt 0) { $AssignParams.GroupIds = @($GroupIds) }
+            if ($ExcludeGroupIds -and @($ExcludeGroupIds).Count -gt 0) { $AssignParams.ExcludeGroupIds = @($ExcludeGroupIds) }
 
             if ($AssignmentFilterName) {
                 $AssignParams.AssignmentFilterName = $AssignmentFilterName

@@ -90,6 +90,28 @@ Describe 'Set-CIPPAssignedPolicy' {
         }
     }
 
+    Context 'a picked group whose display name is a broad-target token' {
+        # The deploy drawers send the picked group's display name as GroupName next to its id.
+        It 'assigns the group by id instead of expanding the name to All Devices' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'AllDevices' -GroupIds @($script:SalesId) -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Targets = ($body | ConvertFrom-Json).assignments.target
+                @($Targets).Count -eq 1 -and
+                $Targets[0].'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget' -and
+                $Targets[0].groupId -eq $script:SalesId
+            }
+        }
+
+        It 'does not read a group named On as do-not-assign' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'On' -GroupIds @($script:SalesId) -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                ($body | ConvertFrom-Json).assignments.target.groupId -eq $script:SalesId
+            }
+        }
+    }
+
     Context 'broad targets on a device management policy' {
         It 'sends the allLicensedUsers target' {
             $null = Set-CIPPAssignedPolicy -GroupName 'allLicensedUsers' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant

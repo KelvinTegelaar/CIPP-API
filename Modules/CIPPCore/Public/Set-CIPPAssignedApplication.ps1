@@ -61,8 +61,10 @@ function Set-CIPPAssignedApplication {
             }
         }
 
-        # Build the assignment object
-        $MobileAppAssignment = switch ($GroupName) {
+        # Build the assignment object. Explicit ids win over the name: GroupName doubles as the display
+        # name of a picked group, and a group called 'AllDevices' must still resolve to that group.
+        $AssignmentTarget = if ($GroupIds -and @($GroupIds).Count -gt 0) { 'GroupIds' } else { $GroupName }
+        $MobileAppAssignment = switch ($AssignmentTarget) {
             'AllUsers' {
                 @(@{
                         '@odata.type' = '#microsoft.graph.mobileAppAssignment'

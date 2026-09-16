@@ -52,7 +52,10 @@ function Set-CIPPAssignedPolicy {
         }
 
         $assignmentsList = [System.Collections.Generic.List[object]]::new()
-        switch ($GroupName) {
+        # Explicit ids win over the name. GroupName doubles as the display name of a picked group,
+        # and a group called 'AllDevices' or 'On' must still resolve to that group, not to the token.
+        $AssignmentTarget = if ($GroupIds -and @($GroupIds).Count -gt 0) { 'GroupIds' } else { $GroupName }
+        switch ($AssignmentTarget) {
             { $_ -in 'allLicensedUsers', 'AllDevices', 'AllDevicesAndUsers' } {
                 # How a broad target is expressed depends on the policy type - the MAM service
                 # behind App Protection takes only group targets. Both this and the assignment
