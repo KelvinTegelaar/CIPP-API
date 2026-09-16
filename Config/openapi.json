@@ -16853,19 +16853,71 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "ID",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
             }
           },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
           {
-            "$ref": "#/components/parameters/tenantFilter"
+            "bearerAuth": []
           }
         ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
+    "/api/ExecClrOnPremAttributes": {
+      "post": {
+        "summary": "ExecClrOnPremAttributes",
+        "operationId": "ExecClrOnPremAttributes",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Attributes": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "On-premises attributes to clear (onPremisesImmutableId, onPremisesDistinguishedName, ...), as plain names or {label,value} objects. Omit to clear every clearable attribute."
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "Object ID of the cloud-only user whose on-premises attributes should be cleared"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success",

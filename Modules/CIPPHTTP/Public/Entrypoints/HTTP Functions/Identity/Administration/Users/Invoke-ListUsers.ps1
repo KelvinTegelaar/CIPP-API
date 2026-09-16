@@ -25,8 +25,9 @@ Function Invoke-ListUsers {
             'consentProvidedForMinor', 'country', 'createdDateTime', 'department', 'displayName',
             'employeeHireDate', 'employeeId', 'employeeLeaveDateTime', 'employeeType', 'faxNumber',
             'givenName', 'jobTitle', 'lastPasswordChangeDateTime', 'legalAgeGroupClassification', 'mail',
-            'mailNickname', 'mobilePhone', 'officeLocation', 'onPremisesDistinguishedName',
-            'onPremisesImmutableId', 'onPremisesLastSyncDateTime', 'onPremisesSyncEnabled', 'otherMails', 'postalCode',
+            'mailNickname', 'mobilePhone', 'officeLocation', 'onPremisesDistinguishedName', 'onPremisesDomainName',
+            'onPremisesImmutableId', 'onPremisesLastSyncDateTime', 'onPremisesSamAccountName', 'onPremisesSecurityIdentifier',
+            'onPremisesSyncEnabled', 'onPremisesUserPrincipalName', 'otherMails', 'postalCode',
             'preferredLanguage', 'proxyAddresses', 'showInAddressList', 'state', 'streetAddress',
             'surname', 'usageLocation', 'userPrincipalName', 'userType'
         )
