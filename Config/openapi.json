@@ -56794,6 +56794,14 @@
         "description": "Retrieves SharePoint Online storage quota usage for a tenant, showing used and total storage.",
         "parameters": [
           {
+            "name": "live",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           }
         ],
@@ -56806,7 +56814,24 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "Dashboard": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "GeoLocations": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "GeoUsedStorageMB": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Percentage": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "TenantStorageMB": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
                   }
                 }
               }
@@ -56817,6 +56842,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
