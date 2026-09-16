@@ -18056,6 +18056,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "generatePwPushLink": {
+                    "type": "boolean",
+                    "description": "Opt-in: most TAPs are used directly by the admin, so the pass is returned in plain text unless the caller asks for a PwPush link. Same string-to-bool normalisation as above."
+                  },
                   "ID": {
                     "type": "string"
                   },
@@ -18082,6 +18086,15 @@
           }
         },
         "parameters": [
+          {
+            "name": "generatePwPushLink",
+            "in": "query",
+            "description": "Opt-in: most TAPs are used directly by the admin, so the pass is returned in plain text unless the caller asks for a PwPush link. Same string-to-bool normalisation as above.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
           {
             "name": "ID",
             "in": "query",
