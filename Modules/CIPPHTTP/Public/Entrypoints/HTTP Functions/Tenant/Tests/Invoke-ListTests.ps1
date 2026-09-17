@@ -209,7 +209,7 @@ function Invoke-ListTests {
                 Failed         = @($IdentityResults | Where-Object { $_.Status -in @('Failed', 'Active', 'Postponed') }).Count
                 NeedsAttention = @($IdentityResults | Where-Object { $_.Status -eq 'Investigate' }).Count
                 Skipped        = @($IdentityResults | Where-Object { $_.Status -eq 'Skipped' }).Count
-                Informational  = @($IdentityResults | Where-Object { $_.Status -eq 'Informational' }).Count
+                Informational  = @($IdentityResults | Where-Object { $_.Status -in @('Informational', 'Unlicensed') }).Count
                 Total          = $IdentityTotal
             }
             Devices  = @{
@@ -217,7 +217,7 @@ function Invoke-ListTests {
                 Failed         = @($DeviceResults | Where-Object { $_.Status -in @('Failed', 'Active', 'Postponed') }).Count
                 NeedsAttention = @($DeviceResults | Where-Object { $_.Status -eq 'Investigate' }).Count
                 Skipped        = @($DeviceResults | Where-Object { $_.Status -eq 'Skipped' }).Count
-                Informational  = @($DeviceResults | Where-Object { $_.Status -eq 'Informational' }).Count
+                Informational  = @($DeviceResults | Where-Object { $_.Status -in @('Informational', 'Unlicensed') }).Count
                 Total          = $DevicesTotal
             }
             Custom   = @{
@@ -225,7 +225,7 @@ function Invoke-ListTests {
                 Failed         = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Failed' }).Count
                 NeedsAttention = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Investigate' }).Count
                 Skipped        = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Skipped' }).Count
-                Informational  = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Informational' }).Count
+                Informational  = @($CustomResultsForCounts | Where-Object { $_.Status -in @('Informational', 'Unlicensed') }).Count
                 Total          = $CustomTotal
             }
         }

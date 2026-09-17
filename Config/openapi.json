@@ -61021,7 +61021,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "Narrow the scan to these statuses: Passed, Failed, Investigate, Skipped, Informational.",
+            "description": "Narrow the scan to these statuses: Passed, Failed, Investigate, Skipped, Informational and Unlicensed.",
             "required": false,
             "schema": {
               "type": "string"
