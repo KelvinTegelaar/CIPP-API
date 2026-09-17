@@ -553,16 +553,17 @@ function Invoke-HuduExtensionSync {
                     $CASRequest = ''
 
                     $CASRequest = $CASFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.id }
-                    $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.Id -eq $User.id }
+                    $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.id }
                     $StatsRequest = $MailboxStatsFull | Where-Object { $_.'userPrincipalName' -eq $User.userPrincipalName }
 
-                    $PermsRequest = $Permissions | Where-Object { $_.Identity -eq $User.id }
+                    $MailboxIdentities = @($User.id, $User.userPrincipalName, $MailboxDetailedRequest.id, $MailboxDetailedRequest.UPN, $MailboxDetailedRequest.primarySmtpAddress) | Where-Object { $_ }
+                    $PermsRequest = $Permissions | Where-Object { $_.Identity -in $MailboxIdentities }
 
                     $ParsedPerms = foreach ($Perm in $PermsRequest) {
-                        if ($Perm.User -ne 'NT AUTHORITY\SELF') {
+                        if ($Perm.User -ne 'NT AUTHORITY\SELF' -and $Perm.Deny -ne $true) {
                             [pscustomobject]@{
                                 User         = $Perm.User
-                                AccessRights = $Perm.PermissionList.AccessRights -join ', '
+                                AccessRights = $Perm.AccessRights -join ', '
                             }
                         }
                     }
@@ -575,7 +576,7 @@ function Invoke-HuduExtensionSync {
 
                     $UserMailSettings = [pscustomobject]@{
                         ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
-                        ForwardingAddress        = $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
+                        ForwardingAddress        = (@($MailboxDetailedRequest.InternalForwardingAddress, $MailboxDetailedRequest.ForwardingSmtpAddress) | Where-Object { $_ }) -join ' '
                         LitiationHold            = $MailboxDetailedRequest.LitigationHoldEnabled
                         HiddenFromAddressLists   = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
                         EWSEnabled               = $CASRequest.EwsEnabled
