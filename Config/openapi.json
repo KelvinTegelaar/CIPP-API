@@ -60843,6 +60843,7 @@
           {
             "name": "TriggerRefresh",
             "in": "query",
+            "description": "Re-reads the tenant given in tenantFilter, or queues a refresh of all tenants when omitted. Returns a Results message instead of the tenant list.",
             "required": false,
             "schema": {
               "type": "string"

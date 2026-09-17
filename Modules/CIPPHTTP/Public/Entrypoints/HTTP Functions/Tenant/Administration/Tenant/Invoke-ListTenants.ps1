@@ -50,9 +50,16 @@ function Invoke-ListTenants {
         #Get-Tenants -IncludeAll -TriggerRefresh
         return
     }
+    # Re-reads the tenant given in tenantFilter, or queues a refresh of all tenants when omitted. Returns a Results message instead of the tenant list.
     if ($Request.Query.TriggerRefresh) {
-        if ($Request.Query.TenantFilter -and $Request.Query.TenantFilter -ne 'AllTenants') {
-            Get-Tenants -TriggerRefresh -TenantFilter $Request.Query.TenantFilter
+        $TenantFilter = $Request.Query.TenantFilter
+        if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
+            $Refreshed = @(Get-Tenants -TriggerRefresh -TenantFilter $TenantFilter)
+            $Results = if ($Refreshed) {
+                "Refreshed tenant $($Refreshed[0].displayName) ($($Refreshed[0].defaultDomainName))."
+            } else {
+                "Tenant '$TenantFilter' not found."
+            }
         } else {
             $InputObject = [PSCustomObject]@{
                 Batch            = @(
@@ -64,7 +71,12 @@ function Invoke-ListTenants {
                 SkipLog          = $true
             }
             Start-CIPPOrchestrator -InputObject $InputObject
+            $Results = 'Refresh of all tenants queued. The list updates once it completes.'
         }
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @{ Results = $Results }
+            })
     }
     try {
         $TenantFilter = $Request.Query.tenantFilter
