@@ -807,11 +807,12 @@ function Invoke-HuduExtensionSync {
                     $UserBody = "<div>$AssignedPlansBlock<br />$UserLinksBlock<br /><div class=`"nasa__content`">$($UserOverviewBlock)$($UserMailDetailsBlock)$($OneDriveBlock)$($UserMailSettingsBlock)$($UserPoliciesBlock)</div><div class=`"nasa__content`">$($UserDevicesDetailsBlock)</div><div class=`"nasa__content`">$($UserGroupsBlock)</div></div>"
 
                     if (![string]::IsNullOrEmpty($PeopleLayoutId)) {
+                        # Hash is calculated before the timestamp is added, otherwise every asset would be rewritten on every sync
+                        $NewHash = Get-StringHash -String $UserBody
                         $UserAssetFields = @{
-                            microsoft_365 = $UserBody
+                            microsoft_365 = "$UserBody<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>"
                             email_address = $user.userPrincipalName
                         }
-                        $NewHash = Get-StringHash -String $UserBody
                         $HuduUserCount = ($HuduUser | Measure-Object).Count
 
                         if ($HuduUserCount -eq 1) {
@@ -1026,10 +1027,11 @@ function Invoke-HuduExtensionSync {
 
                     $DeviceIntuneDetailshtml = "<div><div>$DeviceLinksBlock<br /><div class=`"nasa__content`">$($DeviceOverviewBlock)$($DeviceHardwareBlock)$($DeviceEnrollmentBlock)$($DevicePolicyBlock)$($DeviceAppsBlock)$($DeviceGroupsBlock)</div></div>"
 
-                    $DeviceAssetFields = @{
-                        microsoft_365 = $DeviceIntuneDetailshtml
-                    }
+                    # Hash is calculated before the timestamp is added, otherwise every asset would be rewritten on every sync
                     $NewHash = Get-StringHash -String $DeviceIntuneDetailshtml
+                    $DeviceAssetFields = @{
+                        microsoft_365 = "$DeviceIntuneDetailshtml<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>"
+                    }
 
                     if (![string]::IsNullOrEmpty($DeviceLayoutId)) {
                         if ($HuduDevice) {
