@@ -9,6 +9,24 @@ function Get-CIPPIntunePolicy {
         $tenantFilter
     )
 
+    # Custom (OMA-URI) device configurations read back from Graph with their secret values encrypted
+    # (value 'PGEvPg==', isEncrypted, secretReferenceValueId), whereas the template captured by
+    # New-CIPPIntuneTemplate stores them decrypted. Without decrypting the read-back copy the drift
+    # compare can never converge and the template re-deploys on every standards run. Decrypt here the
+    # same way capture and the DB cache already do, but never let a decrypt failure sink the whole
+    # policy read - fall back to the undecrypted object so the rest of the policy still returns.
+    function Get-CIPPIntunePolicyOmaDecryptedValue {
+        param($DeviceConfiguration, $DeviceConfigurationId, $TenantFilter)
+        if (@($DeviceConfiguration.omaSettings | Where-Object { $_.secretReferenceValueId }).Count -gt 0) {
+            try {
+                $DeviceConfiguration = Get-CIPPOmaSettingDecryptedValue -DeviceConfiguration $DeviceConfiguration -DeviceConfigurationId $DeviceConfigurationId -TenantFilter $TenantFilter
+            } catch {
+                Write-Information "Failed to decrypt OMA settings for device configuration '$($DeviceConfiguration.displayName)': $($_.Exception.Message)"
+            }
+        }
+        return $DeviceConfiguration
+    }
+
     try {
         switch ($TemplateType) {
             'AppProtection' {
@@ -287,8 +305,12 @@ function Get-CIPPIntunePolicy {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                     $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
+                        # Capture the id before Select-Object strips it - the decrypt helper needs it to
+                        # resolve each OMA secret.
+                        $DeviceConfigurationId = $policy.id
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                        $policyDetails = Get-CIPPIntunePolicyOmaDecryptedValue -DeviceConfiguration $policyDetails -DeviceConfigurationId $DeviceConfigurationId -TenantFilter $tenantFilter
                         $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
@@ -296,7 +318,11 @@ function Get-CIPPIntunePolicy {
                 } elseif ($PolicyId) {
                     $policy = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')" -tenantid $tenantFilter
                     if ($policy) {
+                        # Capture the id before Select-Object strips it - the decrypt helper needs it to
+                        # resolve each OMA secret.
+                        $DeviceConfigurationId = $policy.id
                         $policyDetails = $policy | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                        $policyDetails = Get-CIPPIntunePolicyOmaDecryptedValue -DeviceConfiguration $policyDetails -DeviceConfigurationId $DeviceConfigurationId -TenantFilter $tenantFilter
                         $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
@@ -304,8 +330,12 @@ function Get-CIPPIntunePolicy {
                 } else {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                     foreach ($policy in $policies) {
+                        # Capture the id before Select-Object strips it - the decrypt helper needs it to
+                        # resolve each OMA secret.
+                        $DeviceConfigurationId = $policy.id
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                        $policyDetails = Get-CIPPIntunePolicyOmaDecryptedValue -DeviceConfiguration $policyDetails -DeviceConfigurationId $DeviceConfigurationId -TenantFilter $tenantFilter
                         $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }

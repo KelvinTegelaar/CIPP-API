@@ -417,6 +417,30 @@ function Set-CIPPIntunePolicy {
         return "Successfully $($PostType) policy for $($TenantFilter) with display name $($DisplayName)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
+
+        # Microsoft has tightened Intune DCV2 (settings catalog / configurationPolicies) and device
+        # compliance model validation to reject null values on required properties that older template
+        # captures left null. CIPP re-sends the stored template verbatim, so the write now fails on a
+        # value the operator cannot see in the UI. Turn that specific rejection into an actionable
+        # message that names the offending property - patching only the live policy does not help,
+        # because the stored template still carries the null and every later run resends it. We do not
+        # guess a replacement value: many of these (e.g. bitLockerEnabled) are security-relevant.
+        $ErrorText = @($ErrorMessage.NormalizedError, $ErrorMessage.Message, [string]$ErrorMessage.RawError) -join ' '
+        $NullProperty = $null
+        if ($ErrorText -match "A null value was found for the property named '([^']+)'") {
+            $NullProperty = $Matches[1]
+        } elseif ($ErrorText -match '([A-Za-z0-9_]+)\s*:\s*value cannot be null') {
+            $NullProperty = $Matches[1]
+        } elseif ($ErrorText -match 'value cannot be null' -or $ErrorText -match 'ModelValidationFailure') {
+            $NullProperty = 'a required property'
+        }
+
+        if ($NullProperty) {
+            $NullMessage = "Failed to $($PostType ?? 'deploy') Intune policy '$DisplayName' for $TenantFilter. Microsoft now rejects the null value stored for '$NullProperty' on this policy - it no longer allows null on this required property. The stored template carries this null, so re-deploying or patching only the live policy will not fix it: edit or re-capture the template to set a value for '$NullProperty', then deploy again. Underlying error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $NullMessage -Sev 'Error' -LogData $ErrorMessage
+            throw $NullMessage
+        }
+
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Failed $($PostType) policy $($DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         throw "Failed to add or set policy for $($TenantFilter) with display name $($DisplayName): $($ErrorMessage.NormalizedError)"
     }
