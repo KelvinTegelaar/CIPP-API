@@ -99,6 +99,20 @@ function Invoke-CIPPStandardIntuneTemplate {
     # that only ever existed in the template.
     $RawJSON = Get-CIPPTextReplacement -Text $rawJsonFromTemplate -TenantFilter $Tenant -EscapeForJson
 
+    # The Displayname and Description columns carry the same %variables%. For column-named types
+    # (Device, deviceCompliancePolicies, ...) Set-CIPPIntunePolicy both searches for the existing
+    # policy by this name and forces it onto the policy it creates, so leaving it raw makes the
+    # lookup hunt for a name the tenant never had while remediation keeps creating the resolved-name
+    # policy - a fresh duplicate on every run. Resolve them once here, as plain text rather than
+    # JSON-escaped (these fill bare string slots, not a serialized payload), so the lookup, the
+    # compare identity and the created name all agree. Names without a variable are left untouched.
+    if ($displayname -match '%') {
+        $displayname = Get-CIPPTextReplacement -Text $displayname -TenantFilter $Tenant
+    }
+    if ($description -match '%') {
+        $description = Get-CIPPTextReplacement -Text $description -TenantFilter $Tenant
+    }
+
     # Catalog and the Windows update profile types are deployed under the name in their payload
     # rather than the template's Displayname, so find them under the name they were created with.
     $PolicyName = Get-CIPPIntunePolicyName -TemplateType $TemplateType -RawJSON $RawJSON -DisplayName $displayname
