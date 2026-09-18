@@ -251,8 +251,8 @@
   },
   {
     "type": "ExoProtectionAlert",
-    "friendlyName": "Exchange Protection Alerts",
-    "description": "Microsoft 365 protection alert policies (Security & Compliance endpoint)"
+    "friendlyName": "Exchange Protection Alert Policies",
+    "description": "Microsoft 365 protection alert policy definitions (Security & Compliance endpoint) - the configured alert rules, NOT alerts that have fired"
   },
   {
     "type": "Mailboxes",

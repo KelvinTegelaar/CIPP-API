@@ -5,7 +5,7 @@ function Invoke-ListLogs {
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION
-        Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories, fetching a single entry, and server-side pagination via manualPagination/nextLink.
+        Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories, fetching a single entry, and server-side pagination via manualPagination/nextLink. Pass Search to filter rows by a case-insensitive substring of the log Message. Pass summaryOnly=true (or countsOnly=true) to get per-API and per-severity counts across the requested range with the heavy LogData dropped, instead of the full rows.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -179,6 +179,10 @@ function Invoke-ListLogs {
         Get-CIPPAzDataTableEntity @TemplatesTable
     } else { $null }
 
+    # Free-text search over the log Message (case-insensitive literal substring). Applied client-side
+    # per partition alongside the other row filters, and independent of the Filter flag.
+    $SearchFilter = $Request.Query.Search
+
     # The row-level filters that cannot (or should not) go into the table query.
     $RowFilter = {
         param($Row)
@@ -186,7 +190,38 @@ function Invoke-ListLogs {
         ($Username -eq '*' -or $Row.Username -like $Username) -and
         ([string]::IsNullOrEmpty($TenantFilter) -or $TenantFilter -eq 'AllTenants' -or $Row.Tenant -like "*$TenantFilter*" -or $Row.TenantID -eq $TenantFilter) -and
         ([string]::IsNullOrEmpty($ApiFilter) -or $Row.API -match "$ApiFilter") -and
+        ([string]::IsNullOrEmpty($SearchFilter) -or $Row.Message -match [regex]::Escape($SearchFilter)) -and
         ($AllowedTenants -contains 'AllTenants' -or $TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)
+    }
+
+    # summaryOnly/countsOnly: return per-API and per-severity counts for the matching rows across the
+    # requested date range, dropping the (often huge) LogData payloads entirely. Ignores pagination.
+    $CountsOnly = ($Request.Query.summaryOnly -eq $true) -or ($Request.Query.countsOnly -eq $true)
+    if ($CountsOnly) {
+        if ($StartDate -and $EndDate) {
+            $Filter = "PartitionKey ge '$StartDate' and PartitionKey le '$EndDate'"
+        } elseif ($StartDate) {
+            $Filter = "PartitionKey eq '{0}'" -f $StartDate
+        } else {
+            $Filter = "PartitionKey eq '{0}'" -f $LocalNow.ToString('yyyyMMdd')
+        }
+        foreach ($Clause in $ServerSideFilter) { $Filter = "$Filter and $Clause" }
+
+        $Matching = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { & $RowFilter $_ })
+        $ByApi = @($Matching | Group-Object -Property API | Sort-Object -Property Count -Descending | ForEach-Object {
+                [PSCustomObject]@{ API = $_.Name; Count = $_.Count }
+            })
+        $BySeverity = @($Matching | Group-Object -Property Severity | Sort-Object -Property Count -Descending | ForEach-Object {
+                [PSCustomObject]@{ Severity = $_.Name; Count = $_.Count }
+            })
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = [PSCustomObject]@{
+                Total      = $Matching.Count
+                ByAPI      = $ByApi
+                BySeverity = $BySeverity
+            }
+        }
     }
 
     # Return one page per request plus a continuation token in Metadata.nextLink, which the

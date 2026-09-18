@@ -5,7 +5,7 @@ function Invoke-ListTenants {
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION
-        Lists all managed tenants accessible to the current user, with support for cache clearing and tenant filtering. This is the primary endpoint for tenant enumeration.
+        Lists all managed tenants accessible to the current user, with support for cache clearing and tenant filtering. This is the primary endpoint for tenant enumeration. Pass Search for a fuzzy, case-insensitive substring lookup across displayName, defaultDomainName, initialDomainName and customerId when the exact domain is unknown.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -21,6 +21,11 @@ function Invoke-ListTenants {
     $AllTenantSelector = $Request.Query.AllTenantSelector
 
     $IncludeOffboardingDefaults = $Request.Query.IncludeOffboardingDefaults
+
+    # Fuzzy tenant lookup: case-insensitive substring match over displayName, defaultDomainName,
+    # initialDomainName and customerId. Arbitrary verified domains are not indexed by Get-Tenants and
+    # cannot be matched here. Supports '*' wildcards. Use this when you don't know the exact domain.
+    $Search = $Request.Query.Search
 
     # Clear Cache
     if ($Request.Body.ClearCache -eq $true) {
@@ -92,6 +97,15 @@ function Invoke-ListTenants {
 
         if ($TenantAccess -notcontains 'AllTenants') {
             $Tenants = $Tenants | Where-Object -Property customerId -In $TenantAccess
+        }
+
+        if ($Search) {
+            $Tenants = @($Tenants | Where-Object {
+                    $_.displayName -like "*$Search*" -or
+                    $_.defaultDomainName -like "*$Search*" -or
+                    $_.initialDomainName -like "*$Search*" -or
+                    $_.customerId -like "*$Search*"
+                })
         }
 
         # If offboarding defaults are requested, fetch them

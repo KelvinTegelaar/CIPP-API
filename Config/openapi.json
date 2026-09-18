@@ -44012,7 +44012,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Retrieves cached tenant data from the CIPP reporting database (CippReportingDB). This is the fastest\nand most efficient way to query tenant data across single or multiple tenants. The database is populated\nnightly by background cache jobs, so data is typically at most 24 hours old.\n\nRequired query parameters:\n  - tenantFilter: The tenant domain or 'AllTenants' to query all managed tenants.\n  - type: The cache collection to retrieve (e.g. Users, Groups, Mailboxes, Devices, etc.).\n          Not required when countsOnly=true.\n\nOptional query parameters:\n  - countsOnly: When 'true', returns one row per tenant per collection containing only the record\n                count and the time that collection was last cached. This reads the pre-computed\n                '<Type>-Count' rows, so it is a single table query regardless of tenant count and\n                never materializes the underlying records. Combine with tenantFilter=AllTenants to\n                get an estate-wide inventory and per-tenant cache freshness in one call. Pass a\n                type alongside it to restrict the result to a single collection.\n\nUse type=_availableTypes to discover which cache collections exist for a given tenant. Omitting the\ntype parameter also returns the available types.\n\nPERFORMANCE GUIDANCE: For AllTenants queries or any bulk/cross-tenant data retrieval, prefer\nListDBCache over calling individual endpoints (e.g. ListUsers, ListGroups, ListMailboxes) directly.\nIndividual endpoints make live API calls per tenant which is significantly slower and may hit\nthrottling limits. ListDBCache reads pre-cached data from Azure Table Storage and returns results\nin seconds regardless of tenant count.\n\nNote that tenantFilter=AllTenants WITH a type performs a cross-partition scan and materializes every\nrecord of that collection across every tenant, so it grows with the size of the estate. Where only\ntotals are needed, countsOnly=true is dramatically cheaper and should always be preferred.\n\nRecommended workflow for MCP tool selection:\n  1. Call ListDBCache with type=_availableTypes to discover available cache collections.\n  2. If the data you need exists as a cache type, use ListDBCache with that type.\n  3. Only fall back to individual List* endpoints when you need real-time data for a single tenant\n     or when the data is not available in the cache.\n\nCommon cache types include: Users, Groups, Mailboxes, Devices, ConditionalAccess, Applications,\nIntunePolicy, CompliancePolicy, and many more. The exact set depends on what has been configured.",
+        "description": "Retrieves cached tenant data from the CIPP reporting database (CippReportingDB). This is the fastest\nand most efficient way to query tenant data across single or multiple tenants. The database is populated\nnightly by background cache jobs, so data is typically at most 24 hours old.\n\nRequired query parameters:\n  - tenantFilter: The tenant domain or 'AllTenants' to query all managed tenants.\n\nOptional query parameters:\n  - type: The cache collection to retrieve (e.g. Users, Groups, Mailboxes, Devices, etc.).\n          Omit it (or pass type=_availableTypes) to get the list of collections for the tenant\n          instead of records; it is also not needed when countsOnly=true.\n  - countsOnly: When 'true', returns one row per tenant per collection containing only the record\n                count and the time that collection was last cached. This reads the pre-computed\n                '<Type>-Count' rows, so it is a single table query regardless of tenant count and\n                never materializes the underlying records. Combine with tenantFilter=AllTenants to\n                get an estate-wide inventory and per-tenant cache freshness in one call. Pass a\n                type alongside it to restrict the result to a single collection.\n  - select: Comma-separated list of top-level fields to keep on each record (e.g.\n            select=id,displayName,userPrincipalName). Everything else is dropped during parse,\n            shrinking the response. A kept field keeps its ENTIRE subtree, so select=conditions\n            keeps conditions.users.includeRoles too; projection never reaches inside a kept\n            value. The owning Tenant is always stamped on each record regardless of select.\n  - top: Return at most this many records. For tenantFilter=AllTenants this is a GLOBAL cap\n         across all tenants when ungrouped, so use it to sample rather than to page. When\n         groupBy=Tenant is also set, top instead caps the records within each tenant bucket.\n  - latestOnly: When 'true', keep only the newest record per tenant, ranked by dateField (or\n                an auto-detected date field such as createdDateTime). Collapses per-day\n                snapshot types like SecureScore to one current row per tenant.\n  - groupBy: Set to 'Tenant' to return one bucket per tenant as\n             { Tenant, Count, Records } objects instead of a flat record list.\n  - dateField: The record field latestOnly ranks by. Omit to auto-detect.\n\nUse type=_availableTypes to discover which cache collections exist for a given tenant. Omitting the\ntype parameter also returns the available types.\n\nPERFORMANCE GUIDANCE: For AllTenants queries or any bulk/cross-tenant data retrieval, prefer\nListDBCache over calling individual endpoints (e.g. ListUsers, ListGroups, ListMailboxes) directly.\nIndividual endpoints make live API calls per tenant which is significantly slower and may hit\nthrottling limits. ListDBCache reads pre-cached data from Azure Table Storage and returns results\nin seconds regardless of tenant count.\n\nNote that tenantFilter=AllTenants WITH a type performs a cross-partition scan and materializes every\nrecord of that collection across every tenant, so it grows with the size of the estate. Where only\ntotals are needed, countsOnly=true is dramatically cheaper and should always be preferred.\n\nRecommended workflow for MCP tool selection:\n  1. Call ListDBCache with type=_availableTypes to discover available cache collections.\n  2. If the data you need exists as a cache type, use ListDBCache with that type.\n  3. Only fall back to individual List* endpoints when you need real-time data for a single tenant\n     or when the data is not available in the cache.\n\nCommon cache types include: Users, Groups, Mailboxes, Devices, ConditionalAccess, Applications,\nIntunePolicy, CompliancePolicy, and many more. The exact set depends on what has been configured.",
         "parameters": [
           {
             "name": "countsOnly",
@@ -44020,6 +44020,42 @@
             "required": false,
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "dateField",
+            "in": "query",
+            "description": "The record date field latestOnly ranks by. Omit to auto-detect (createdDateTime, lastRefresh, etc).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupBy",
+            "in": "query",
+            "description": "Group the result into one bucket per tenant. Only 'Tenant' is supported.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "latestOnly",
+            "in": "query",
+            "description": "When true, keep only the newest record per tenant (by dateField, or an auto-detected date field). Collapses e.g. SecureScore's per-day snapshots to one current row per tenant.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "select",
+            "in": "query",
+            "description": "Comma-separated list of top-level fields to keep on each record; everything else is dropped during parse. A kept field keeps its ENTIRE subtree (e.g. select=conditions keeps conditions.users.includeRoles). The Tenant stamp is always preserved. Omit to return all fields.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -44031,9 +44067,18 @@
             }
           },
           {
+            "name": "top",
+            "in": "query",
+            "description": "Return at most this many records. For AllTenants this is a global cap across all tenants, unless groupBy=Tenant is set, in which case it caps records within each tenant bucket.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "name": "type",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -50788,7 +50833,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories, fetching a single entry, and server-side pagination via manualPagination/nextLink.",
+        "description": "Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories, fetching a single entry, and server-side pagination via manualPagination/nextLink. Pass Search to filter rows by a case-insensitive substring of the log Message. Pass summaryOnly=true (or countsOnly=true) to get per-API and per-severity counts across the requested range with the heavy LogData dropped, instead of the full rows.",
         "parameters": [
           {
             "name": "API",
@@ -50804,6 +50849,15 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "countsOnly",
+            "in": "query",
+            "description": "summaryOnly/countsOnly: return per-API and per-severity counts for the matching rows across the requested date range, dropping the (often huge) LogData payloads entirely. Ignores pagination.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -50893,6 +50947,15 @@
             }
           },
           {
+            "name": "Search",
+            "in": "query",
+            "description": "Free-text search over the log Message (case-insensitive literal substring). Applied client-side per partition alongside the other row filters, and independent of the Filter flag.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "Severity",
             "in": "query",
             "required": false,
@@ -50914,6 +50977,15 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "summaryOnly",
+            "in": "query",
+            "description": "summaryOnly/countsOnly: return per-API and per-severity counts for the matching rows across the requested date range, dropping the (often huge) LogData payloads entirely. Ignores pagination.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -60794,7 +60866,7 @@
         "tags": [
           "Tenant > Administration > Tenant"
         ],
-        "description": "Lists all managed tenants accessible to the current user, with support for cache clearing and tenant filtering. This is the primary endpoint for tenant enumeration.",
+        "description": "Lists all managed tenants accessible to the current user, with support for cache clearing and tenant filtering. This is the primary endpoint for tenant enumeration. Pass Search for a fuzzy, case-insensitive substring lookup across displayName, defaultDomainName, initialDomainName and customerId when the exact domain is unknown.",
         "requestBody": {
           "required": false,
           "content": {
@@ -60834,6 +60906,15 @@
           {
             "name": "Mode",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Search",
+            "in": "query",
+            "description": "Fuzzy tenant lookup: case-insensitive substring match over displayName, defaultDomainName, initialDomainName and customerId. Arbitrary verified domains are not indexed by Get-Tenants and cannot be matched here. Supports '*' wildcards. Use this when you don't know the exact domain.",
             "required": false,
             "schema": {
               "type": "string"
@@ -61123,6 +61204,15 @@
             }
           },
           {
+            "name": "summaryOnly",
+            "in": "query",
+            "description": "When true, return only the aggregated TestCounts (per-type pass/fail/etc totals) and skip the per-result markdown/metadata enrichment and the SecureScore/MFAState/License DB reads.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           }
         ],
@@ -61135,7 +61225,15 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "TenantFilter": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "TestCounts": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
                   }
                 }
               }
