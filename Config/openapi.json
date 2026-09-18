@@ -5894,7 +5894,7 @@
           "Security > Compliance-SensitivityLabel"
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -5902,8 +5902,15 @@
                 "properties": {
                   "PowerShellCommand": {
                     "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Encryption rights granted to the source tenant's own domain would follow the template into every other tenant. Swap them for %defaultdomain% so each deploy resolves to the target tenant instead."
                   }
                 },
+                "required": [
+                  "tenantFilter"
+                ],
                 "additionalProperties": true,
                 "x-cipp-passthrough": true,
                 "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
