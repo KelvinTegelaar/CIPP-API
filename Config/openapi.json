@@ -37858,7 +37858,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Returns the CIPP dashboard banner notifications: any hosted maintenance notice, today's most recent entries from the alert log, and warnings for an out-of-date or misconfigured deployment.",
+        "description": "Returns the CIPP dashboard banner notifications: any hosted maintenance notice, a legacy infrastructure warning for instances still on Function Apps, today's most recent entries from the alert log, and warnings for an out-of-date or misconfigured deployment.",
         "parameters": [
           {
             "name": "localversion",

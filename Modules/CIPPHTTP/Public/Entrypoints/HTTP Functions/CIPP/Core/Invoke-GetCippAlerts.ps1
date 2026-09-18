@@ -5,7 +5,7 @@ function Invoke-GetCippAlerts {
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION
-        Returns the CIPP dashboard banner notifications: any hosted maintenance notice, today's most recent entries from the alert log, and warnings for an out-of-date or misconfigured deployment.
+        Returns the CIPP dashboard banner notifications: any hosted maintenance notice, a legacy infrastructure warning for instances still on Function Apps, today's most recent entries from the alert log, and warnings for an out-of-date or misconfigured deployment.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,6 +15,8 @@ function Invoke-GetCippAlerts {
     # sorts to the top of the banner stack. Self-suppresses once its end time has passed.
     $MaintenanceNotice = Get-CIPPMaintenanceNotice
     if ($MaintenanceNotice) { $Alerts.Add($MaintenanceNotice) }
+    $LegacyNotice = Get-CIPPLegacyInfrastructureNotice
+    if ($LegacyNotice) { $Alerts.Add($LegacyNotice) }
 
     $Table = Get-CippTable -tablename CippAlerts
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
