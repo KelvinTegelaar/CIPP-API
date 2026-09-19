@@ -1,0 +1,2585 @@
+{
+  "$comment": "License catalog for the license optimization report. SKU names and part numbers are NOT stored here: Config/ConversionTable.csv (the shipped Microsoft SKU list) is the single SKU database and products are keyed by its GUID. Each product carries: prices = public per-user/month list price on an annual commitment per ISO currency (Update-LicensePricingDefaults.ps1 refreshes them from Microsoft); family/tier = position on the product ladder; eligibleTarget=false = never recommended outside its own family (frontline terms, regional no-Teams variants, add-ons). capabilities map plain-language features to service plan ids so any SKU can be compared.",
+  "meta": {
+    "currencyNote": "Prices are per user per month with an annual commitment, in the currency listed.",
+    "monthlyCommitmentUplift": 0.2,
+    "upliftNote": "Microsoft NCE month-to-month subscriptions cost 20% more than an annual commitment. Used to value moving stable seats to annual terms.",
+    "seatLimits": {
+      "business": 300
+    },
+    "priceSources": {
+      "CAD": "Microsoft public list price where published; otherwise Sherweb SRP price list 2026-09-19 (yearly commitment / 12), matched to the SKU list by product name",
+      "EUR": "Microsoft public list price where published; otherwise CAD list price x 0,6388, the median EUR/CAD ratio across the 45 SKUs Microsoft prices in both currencies (2026-09-19)",
+      "USD": "Microsoft public list price where published; otherwise CAD list price x 0,7366, the median USD/CAD ratio across the 48 SKUs Microsoft prices in both currencies (2026-09-19)"
+    }
+  },
+  "capabilities": [
+    {
+      "id": "email",
+      "label": "Email and calendar",
+      "description": "A business mailbox with calendar and contacts.",
+      "signal": "exchange",
+      "servicePlanIds": [
+        "9aaf7827-d63c-4b61-89c3-182f06f82e5c",
+        "efb87545-963c-4e0d-99df-69c6916d9eb0",
+        "4a82b400-a79f-41a4-b4e2-e94f5787b113"
+      ]
+    },
+    {
+      "id": "largeMailbox",
+      "label": "Large mailbox and archive",
+      "description": "A 100 GB mailbox with an unlimited email archive. Only needed when a mailbox is near the 50 GB limit or uses an archive.",
+      "signal": "mailboxStorage",
+      "servicePlanIds": [
+        "efb87545-963c-4e0d-99df-69c6916d9eb0"
+      ]
+    },
+    {
+      "id": "desktopApps",
+      "label": "Office desktop apps",
+      "description": "Word, Excel, PowerPoint and Outlook installed on a PC or Mac.",
+      "signal": "desktopApps",
+      "servicePlanIds": [
+        "43de0ff5-c92c-492b-9116-175376d08c38",
+        "094e7854-93fc-4d55-b2c0-3ab5369ebdc1"
+      ]
+    },
+    {
+      "id": "teams",
+      "label": "Teams chat and meetings",
+      "description": "Microsoft Teams for chat, calls and online meetings.",
+      "signal": "teams",
+      "servicePlanIds": [
+        "57ff2da0-773e-42df-b2af-ffb7a2317929",
+        "f4f2f6de-6830-442b-a433-e92249faebe2"
+      ]
+    },
+    {
+      "id": "files",
+      "label": "File storage and sharing",
+      "description": "OneDrive and SharePoint for storing and sharing documents.",
+      "signal": "files",
+      "servicePlanIds": [
+        "c7699d2e-19aa-44de-8edf-1736da088ca1",
+        "5dbe027f-2339-4123-9542-606e4d348a72",
+        "902b47e5-dcb2-4fdc-858b-c63a90a2bdb9",
+        "13696edf-5a08-49f6-8134-03083ed8ba30",
+        "da792a53-cbc0-4184-a10d-e544dd34b3c1"
+      ]
+    },
+    {
+      "id": "copilot",
+      "label": "Microsoft 365 Copilot",
+      "description": "The AI assistant inside Word, Excel, Outlook and Teams.",
+      "signal": "copilot",
+      "servicePlanIds": [
+        "a62f8878-de10-42f3-b68f-6149a25ceb97",
+        "b95945de-b3bd-46db-8437-f2beb6ea2347"
+      ]
+    },
+    {
+      "id": "deviceManagement",
+      "label": "Device management",
+      "description": "Intune: enrolling, securing and wiping company laptops and phones.",
+      "signal": null,
+      "servicePlanIds": [
+        "c1ec4a95-1f05-45b3-a911-aa3fa01094f5"
+      ]
+    },
+    {
+      "id": "signInSecurity",
+      "label": "Advanced sign-in security",
+      "description": "Entra ID P1: Conditional Access rules that decide who can sign in from where.",
+      "signal": null,
+      "servicePlanIds": [
+        "41781fb2-bc02-4b7c-bd55-b576c07bb09d"
+      ]
+    },
+    {
+      "id": "identityRisk",
+      "label": "Identity risk protection",
+      "description": "Entra ID P2: automatic detection of risky sign-ins and privileged access controls.",
+      "signal": null,
+      "servicePlanIds": [
+        "eec0eb4f-6444-4f95-aba0-50c24d67f998"
+      ]
+    },
+    {
+      "id": "identityGovernance",
+      "label": "Identity governance",
+      "description": "Access reviews and lifecycle workflows for user access.",
+      "signal": null,
+      "servicePlanIds": [
+        "e866a266-3cff-43a3-acca-0c90a7e00c8b"
+      ]
+    },
+    {
+      "id": "endpointSecurity",
+      "label": "Device threat protection",
+      "description": "Microsoft Defender for Business or Endpoint: antivirus and attack detection on devices.",
+      "signal": null,
+      "servicePlanIds": [
+        "bfc1bbd9-981b-4f71-9b82-17c35fd0e2a4",
+        "871d91ec-ec1a-452b-a83f-bd76c7d770ef",
+        "292cc034-7b7c-4950-aaf5-943befd3f1d4"
+      ]
+    },
+    {
+      "id": "emailSecurity",
+      "label": "Advanced email threat protection",
+      "description": "Defender for Office 365: safe links, safe attachments and phishing protection.",
+      "signal": null,
+      "servicePlanIds": [
+        "f20fedf3-f3c3-43c3-8267-2bfdd51c0939",
+        "8e0c0a52-6a6c-4d40-8370-dd62790dcd70"
+      ]
+    },
+    {
+      "id": "cloudAppSecurity",
+      "label": "Cloud app security",
+      "description": "Defender for Cloud Apps: visibility and control over cloud services staff use.",
+      "signal": null,
+      "servicePlanIds": [
+        "2e2ddb96-6af9-4b1d-a3f0-d6ecfd22edb2",
+        "8c098270-9dd4-4350-9b30-ba4703f3b36b"
+      ]
+    },
+    {
+      "id": "informationProtection",
+      "label": "Data protection and labelling",
+      "description": "Purview sensitivity labels and rights management for confidential documents.",
+      "signal": null,
+      "servicePlanIds": [
+        "5136a095-5cf0-4aff-bec3-e84448b38ea5",
+        "efb0351d-3b08-4503-993d-383af8de41e3",
+        "6c57d4b6-3b23-47a5-9bc9-69f17b4947b3"
+      ]
+    },
+    {
+      "id": "compliance",
+      "label": "Advanced compliance",
+      "description": "eDiscovery, advanced audit, insider risk and customer lockbox.",
+      "signal": null,
+      "servicePlanIds": [
+        "4de31727-a228-4ec3-a5bf-8e45b5ca48cc",
+        "2f442157-a11c-46b9-ae5b-6e39ff4e5849",
+        "d587c7a3-bda9-4f99-8776-9bcf59c84f75",
+        "9f431833-0334-42de-a7dc-70aa40db46db"
+      ]
+    },
+    {
+      "id": "phone",
+      "label": "Teams Phone",
+      "description": "Making and receiving regular phone calls through Teams.",
+      "signal": null,
+      "servicePlanIds": [
+        "4828c8ec-dc2e-4779-b502-87ac9ce28ab7"
+      ]
+    },
+    {
+      "id": "audioConferencing",
+      "label": "Dial-in meetings",
+      "description": "Phone dial-in numbers for Teams meetings.",
+      "signal": null,
+      "servicePlanIds": [
+        "3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40"
+      ]
+    },
+    {
+      "id": "analytics",
+      "label": "Power BI reporting",
+      "description": "Building and sharing interactive business reports.",
+      "signal": null,
+      "servicePlanIds": [
+        "70d33638-9c74-4d01-bfd3-562de28bd4ba",
+        "0bf3c642-7bb5-4ccc-884e-59d09df0266c"
+      ]
+    },
+    {
+      "id": "windows",
+      "label": "Windows upgrade rights",
+      "description": "Upgrading Windows Pro to Enterprise or Business edition.",
+      "signal": null,
+      "servicePlanIds": [
+        "21b439ba-a0ca-424f-a6cc-52f954a5b111",
+        "8e229017-d77b-43d5-9305-903395523b99"
+      ]
+    }
+  ],
+  "families": [
+    {
+      "id": "business",
+      "label": "Microsoft 365 Business",
+      "note": "Limited to 300 users per plan."
+    },
+    {
+      "id": "enterprise",
+      "label": "Microsoft 365 / Office 365 Enterprise",
+      "note": null
+    },
+    {
+      "id": "frontline",
+      "label": "Microsoft 365 Frontline",
+      "note": "Licensing terms restrict these plans to frontline workers, so they are only recommended to people already on a frontline plan."
+    },
+    {
+      "id": "apps",
+      "label": "Microsoft 365 Apps",
+      "note": null
+    },
+    {
+      "id": "exchange",
+      "label": "Exchange Online",
+      "note": null
+    },
+    {
+      "id": "teams",
+      "label": "Microsoft Teams",
+      "note": null
+    },
+    {
+      "id": "security",
+      "label": "Security add-ons",
+      "note": null
+    },
+    {
+      "id": "analytics",
+      "label": "Analytics",
+      "note": null
+    },
+    {
+      "id": "addon",
+      "label": "Other add-ons",
+      "note": null
+    }
+  ],
+  "products": [
+    {
+      "skuId": "00e1ec7b-e4a3-40d1-9441-b69b597ab222",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 25.5,
+        "EUR": 16.29,
+        "USD": 18.78
+      }
+    },
+    {
+      "skuId": "05735051-46c0-4c84-9107-bb13d77d0b88",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 678.4,
+        "EUR": 433.36,
+        "USD": 499.71
+      }
+    },
+    {
+      "skuId": "05e9a617-0261-4cee-bb44-138d3ef5d965",
+      "family": "enterprise",
+      "tier": 3,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 58.4,
+        "BRL": 223.3,
+        "CAD": 52.9,
+        "CHF": 35.32,
+        "DKK": 281.97,
+        "EUR": 37.78,
+        "GBP": 33.5,
+        "INR": 3245.0,
+        "JPY": 5847.0,
+        "KRW": 52700.0,
+        "NOK": 442.03,
+        "NZD": 63.1,
+        "SEK": 416.77,
+        "TWD": 1255.0,
+        "USD": 39.0
+      }
+    },
+    {
+      "skuId": "061f9ace-7d42-4136-88ac-31dc755f143f",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 10.9,
+        "EUR": 6.96,
+        "USD": 8.03
+      }
+    },
+    {
+      "skuId": "0666269f-b167-4c5b-a76f-fc574f2b1118",
+      "family": "frontline",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 3.52,
+        "CHF": 2.02,
+        "DKK": 16.16,
+        "EUR": 2.16,
+        "NOK": 25.41,
+        "SEK": 23.89,
+        "USD": 2.59
+      }
+    },
+    {
+      "skuId": "06ebc4ee-1bb5-47dd-8120-11324bc54e06",
+      "family": "enterprise",
+      "tier": 5,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 89.8,
+        "BRL": 343.5,
+        "CAD": 81.4,
+        "CHF": 54.33,
+        "DKK": 433.8,
+        "EUR": 58.13,
+        "GBP": 51.6,
+        "INR": 4990.0,
+        "JPY": 8995.0,
+        "KRW": 81100.0,
+        "NOK": 680.04,
+        "NZD": 97.1,
+        "SEK": 641.18,
+        "TWD": 1930.0,
+        "USD": 60.0
+      }
+    },
+    {
+      "skuId": "078d2b04-f1bd-4111-bbd4-b4b1b354cef4",
+      "family": "security",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 10.5,
+        "BRL": 40.1,
+        "CAD": 9.5,
+        "CHF": 5.7,
+        "DKK": 45.3,
+        "EUR": 6.1,
+        "GBP": 5.4,
+        "INR": 580.0,
+        "JPY": 1049.0,
+        "KRW": 9500.0,
+        "NOK": 71.2,
+        "NZD": 11.3,
+        "SEK": 66.9,
+        "TWD": 225.0,
+        "USD": 7.0
+      }
+    },
+    {
+      "skuId": "08e18479-4483-4f70-8f17-6f92156d8ea9",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 339.2,
+        "EUR": 216.68,
+        "USD": 249.85
+      }
+    },
+    {
+      "skuId": "0c266dff-15dd-4b49-8397-2bb16070ed52",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 3.4,
+        "EUR": 2.17,
+        "USD": 2.5
+      }
+    },
+    {
+      "skuId": "0da63026-e422-4390-89e8-b14520d7e699",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 139.41,
+        "EUR": 89.06,
+        "USD": 102.69
+      }
+    },
+    {
+      "skuId": "0fe440c5-f2bf-442b-a4f4-9a7af77a200b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 9.5,
+        "EUR": 6.07,
+        "USD": 7.0
+      }
+    },
+    {
+      "skuId": "111046dd-295b-4d6d-9724-d52ac90bd1f2",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 7.1,
+        "EUR": 4.54,
+        "USD": 5.23
+      }
+    },
+    {
+      "skuId": "11dee6af-eca8-419f-8061-6864517c1875",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 8.1,
+        "EUR": 5.17,
+        "USD": 5.97
+      }
+    },
+    {
+      "skuId": "135bee78-485b-4181-ad6e-40286e311850",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 38.61,
+        "EUR": 24.66,
+        "USD": 28.44
+      }
+    },
+    {
+      "skuId": "1439b6e2-5d59-4873-8c59-d60e2a196e92",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 67.8,
+        "EUR": 43.31,
+        "USD": 49.94
+      }
+    },
+    {
+      "skuId": "16a55f2f-ff35-4cd5-9146-fb784e3761a5",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 4.1,
+        "EUR": 2.62,
+        "USD": 3.02
+      }
+    },
+    {
+      "skuId": "18181a46-0d4e-45cd-891e-60aabd171b4e",
+      "family": "enterprise",
+      "tier": 1,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 15.0,
+        "BRL": 57.3,
+        "CAD": 13.6,
+        "CHF": 8.1,
+        "DKK": 64.67,
+        "EUR": 8.66,
+        "GBP": 7.7,
+        "INR": 830.0,
+        "JPY": 1499.0,
+        "KRW": 13500.0,
+        "NOK": 101.65,
+        "NZD": 16.2,
+        "SEK": 95.59,
+        "TWD": 320.0,
+        "USD": 10.0
+      }
+    },
+    {
+      "skuId": "18a4bd3f-0b5b-4887-b04f-61dd0ee15f5e",
+      "family": "enterprise",
+      "tier": 5,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 77.0,
+        "BRL": 294.6,
+        "CAD": 69.8,
+        "EUR": 44.59,
+        "GBP": 45.0,
+        "INR": 4280.0,
+        "JPY": 7713.0,
+        "KRW": 69500.0,
+        "NZD": 83.2,
+        "TWD": 1655.0,
+        "USD": 51.45
+      }
+    },
+    {
+      "skuId": "1925967e-8013-495f-9644-c99f8b463748",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 4.1,
+        "EUR": 2.62,
+        "USD": 3.02
+      }
+    },
+    {
+      "skuId": "19ec0d23-8335-4cbd-94ac-6050e30712fa",
+      "family": "exchange",
+      "tier": 2,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 12.0,
+        "BRL": 45.8,
+        "CAD": 10.9,
+        "CHF": 6.5,
+        "DKK": 51.7,
+        "EUR": 6.9,
+        "GBP": 6.2,
+        "INR": 665.0,
+        "JPY": 1199.0,
+        "KRW": 10800.0,
+        "NOK": 81.3,
+        "NZD": 12.9,
+        "SEK": 76.5,
+        "TWD": 255.0,
+        "USD": 8.0
+      }
+    },
+    {
+      "skuId": "1b3043ad-dfc6-427e-a2c0-5ca7a6c94a2b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 115.92,
+        "EUR": 74.05,
+        "USD": 85.39
+      }
+    },
+    {
+      "skuId": "1c79494f-e170-431f-a409-428f6053fa35",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 69.03,
+        "EUR": 44.1,
+        "USD": 50.85
+      }
+    },
+    {
+      "skuId": "1d506c23-1702-46f1-b940-160c55f98d05",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 27.1,
+        "EUR": 17.31,
+        "USD": 19.96
+      }
+    },
+    {
+      "skuId": "1fc08a02-8b3d-43b9-831e-f76859e04e1a",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 6.8,
+        "EUR": 4.34,
+        "USD": 5.01
+      }
+    },
+    {
+      "skuId": "21502a13-c8dc-4744-be9c-177fd9d2eafc",
+      "family": "business",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 8.1,
+        "CAD": 7.3,
+        "EUR": 4.66,
+        "GBP": 4.2,
+        "NZD": 8.7,
+        "USD": 5.4
+      }
+    },
+    {
+      "skuId": "21943e3a-2429-4f83-84c1-02735cd49e78",
+      "family": "addon",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 59.9,
+        "CAD": 54.3,
+        "EUR": 34.7,
+        "GBP": 30.8,
+        "NZD": 64.7,
+        "USD": 40.0
+      }
+    },
+    {
+      "skuId": "226ca751-f0a4-4232-9be5-73c02a92555e",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 42.75,
+        "EUR": 27.31,
+        "USD": 31.49
+      }
+    },
+    {
+      "skuId": "245e6bf9-411e-481e-8611-5c08595e2988",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 27.1,
+        "EUR": 17.31,
+        "USD": 19.96
+      }
+    },
+    {
+      "skuId": "24be3cd7-82ca-41a5-94a7-4903373cdcae",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 352.17,
+        "EUR": 224.97,
+        "USD": 259.41
+      }
+    },
+    {
+      "skuId": "253ce8d3-6122-4240-8b04-f434a8fa831f",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 203.5,
+        "EUR": 130.0,
+        "USD": 149.9
+      }
+    },
+    {
+      "skuId": "26d45bd9-adf1-46cd-a9e1-51e9a5524128",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 55.6,
+        "EUR": 35.52,
+        "USD": 40.95
+      }
+    },
+    {
+      "skuId": "2880026b-2b0c-4251-8656-5d41ff11e3aa",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 108.5,
+        "EUR": 69.31,
+        "USD": 79.92
+      }
+    },
+    {
+      "skuId": "295a8eb0-f78d-45c7-8b5b-1eed5ed02dff",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 10.9,
+        "EUR": 6.96,
+        "USD": 8.03
+      }
+    },
+    {
+      "skuId": "2b317a4a-77a6-4188-9437-b68a77b4e2c6",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 3.6,
+        "EUR": 2.3,
+        "USD": 2.65
+      }
+    },
+    {
+      "skuId": "2e3c4023-80f6-4711-aa5d-29e0ecb46835",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 10.9,
+        "EUR": 6.96,
+        "USD": 8.03
+      }
+    },
+    {
+      "skuId": "2edaa1dc-966d-4475-93d6-8ee8dfd96877",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 203.5,
+        "EUR": 130.0,
+        "USD": 149.9
+      }
+    },
+    {
+      "skuId": "2ef3064c-c95c-426c-96dd-9ffeaa2f2c37",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 12.2,
+        "EUR": 7.79,
+        "USD": 8.99
+      }
+    },
+    {
+      "skuId": "3271cf8e-2be5-4a09-a549-70fd05baaa17",
+      "family": "enterprise",
+      "tier": 5,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 82.67,
+        "CHF": 47.4,
+        "DKK": 378.5,
+        "EUR": 50.71,
+        "NOK": 593.13,
+        "SEK": 559.44,
+        "USD": 60.89
+      }
+    },
+    {
+      "skuId": "3539d28c-6e35-4a30-b3a9-cd43d5d3e0e2",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 203.5,
+        "EUR": 130.0,
+        "USD": 149.9
+      }
+    },
+    {
+      "skuId": "359ea3e6-8130-4a57-9f8f-ad897a0342f1",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 271.4,
+        "EUR": 173.37,
+        "USD": 199.91
+      }
+    },
+    {
+      "skuId": "38b434d2-a15e-4cde-9a98-e737c75623e1",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 20.4,
+        "EUR": 13.03,
+        "USD": 15.03
+      }
+    },
+    {
+      "skuId": "39a78eb6-3a8a-4e1e-878a-575a5c8984e7",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 122.1,
+        "EUR": 78.0,
+        "USD": 89.94
+      }
+    },
+    {
+      "skuId": "3b555118-da6a-4418-894f-7df1e2096870",
+      "family": "business",
+      "tier": 1,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 10.5,
+        "BRL": 33.4,
+        "CAD": 9.5,
+        "CHF": 5.67,
+        "DKK": 45.27,
+        "EUR": 6.07,
+        "GBP": 5.4,
+        "INR": 170.0,
+        "JPY": 1049.0,
+        "KRW": 9500.0,
+        "NOK": 71.16,
+        "NZD": 11.3,
+        "SEK": 66.91,
+        "TWD": 225.0,
+        "USD": 7.0
+      }
+    },
+    {
+      "skuId": "3bbd44ed-8a70-4c07-9088-6232ddbd5ddd",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 115.3,
+        "EUR": 73.65,
+        "USD": 84.93
+      }
+    },
+    {
+      "skuId": "3cb45fab-ae53-4ff6-af40-24c1915ca07b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 140.22,
+        "EUR": 89.57,
+        "USD": 103.29
+      }
+    },
+    {
+      "skuId": "3dc7332d-f0fa-40a3-81d3-dd6b84469b78",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 2.7,
+        "EUR": 1.72,
+        "USD": 1.99
+      }
+    },
+    {
+      "skuId": "3dd6cf57-d688-4eed-ba52-9e40b5468c3e",
+      "family": "security",
+      "tier": 2,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 7.5,
+        "CAD": 6.8,
+        "EUR": 4.3,
+        "GBP": 3.8,
+        "NZD": 8.1,
+        "USD": 5.0
+      }
+    },
+    {
+      "skuId": "42e6818f-8966-444b-b7ac-0027c83fa8b5",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 35.28,
+        "EUR": 22.54,
+        "USD": 25.99
+      }
+    },
+    {
+      "skuId": "446a86f8-a0cb-4095-83b3-d100eb050e3d",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 135.7,
+        "EUR": 86.69,
+        "USD": 99.96
+      }
+    },
+    {
+      "skuId": "45a2423b-e884-448d-a831-d9e139c52d2f",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 1.36,
+        "EUR": 0.87,
+        "USD": 1.0
+      }
+    },
+    {
+      "skuId": "46c3a859-c90d-40b3-9551-6178a48d5c18",
+      "family": "enterprise",
+      "tier": 2,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 26.1,
+        "BRL": 99.9,
+        "CAD": 23.7,
+        "EUR": 15.14,
+        "GBP": 16.7,
+        "INR": 1450.0,
+        "JPY": 2616.0,
+        "KRW": 23600.0,
+        "NZD": 30.6,
+        "TWD": 635.0,
+        "USD": 17.45
+      }
+    },
+    {
+      "skuId": "481f3bc2-5756-4b28-9375-5c8c86b99e6b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 4.1,
+        "EUR": 2.62,
+        "USD": 3.02
+      }
+    },
+    {
+      "skuId": "488ba24a-39a9-4473-8ee5-19291e71b002",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 17.4,
+        "EUR": 11.12,
+        "USD": 12.82
+      }
+    },
+    {
+      "skuId": "4a51bf65-409c-4a91-b845-1121b571cc9d",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 20.4,
+        "EUR": 13.03,
+        "USD": 15.03
+      }
+    },
+    {
+      "skuId": "4b244418-9658-4451-a2b8-b5e2b364e9bd",
+      "family": "addon",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 7.5,
+        "CAD": 6.8,
+        "EUR": 4.3,
+        "GBP": 3.8,
+        "NZD": 8.1,
+        "USD": 5.0
+      }
+    },
+    {
+      "skuId": "4b2c20e4-939d-4bf4-9dd8-6870240cfe19",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 6.8,
+        "EUR": 4.34,
+        "USD": 5.01
+      }
+    },
+    {
+      "skuId": "4b585984-651b-448a-9e53-3b10f069cf7f",
+      "family": "frontline",
+      "tier": 2,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 5.4,
+        "EUR": 3.45,
+        "USD": 4.0
+      }
+    },
+    {
+      "skuId": "4b9405b0-7788-4568-add1-99614e613b69",
+      "family": "exchange",
+      "tier": 1,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 6.0,
+        "BRL": 22.9,
+        "CAD": 5.4,
+        "CHF": 3.2,
+        "DKK": 25.9,
+        "EUR": 3.5,
+        "GBP": 3.1,
+        "INR": 335.0,
+        "JPY": 599.0,
+        "KRW": 5400.0,
+        "NOK": 40.7,
+        "NZD": 6.5,
+        "SEK": 38.2,
+        "TWD": 130.0,
+        "USD": 4.0
+      }
+    },
+    {
+      "skuId": "4cde982a-ede4-4409-9ae6-b003453c8ea6",
+      "family": "addon",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 59.9,
+        "BRL": 229.0,
+        "CAD": 54.3,
+        "CHF": 32.4,
+        "DKK": 258.7,
+        "EUR": 34.7,
+        "GBP": 30.8,
+        "JPY": 5997.0,
+        "KRW": 54100.0,
+        "NOK": 406.6,
+        "NZD": 64.7,
+        "SEK": 382.3,
+        "TWD": 1285.0,
+        "USD": 40.0
+      }
+    },
+    {
+      "skuId": "4ef96642-f096-40de-a3e9-d83fb2f90211",
+      "family": "security",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 3.0,
+        "CAD": 2.7,
+        "EUR": 1.73,
+        "GBP": 1.54,
+        "NZD": 3.2,
+        "USD": 2.0
+      }
+    },
+    {
+      "skuId": "509e8ab6-0274-4cda-bcbd-bd164fd562c4",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 7.1,
+        "EUR": 4.54,
+        "USD": 5.23
+      }
+    },
+    {
+      "skuId": "50f60901-3181-4b75-8a2c-4c8e4c1d5a72",
+      "family": "frontline",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 4.5,
+        "BRL": 17.2,
+        "CAD": 4.1,
+        "CHF": 2.43,
+        "DKK": 19.4,
+        "EUR": 2.6,
+        "GBP": 2.3,
+        "INR": 250.0,
+        "JPY": 449.0,
+        "KRW": 4100.0,
+        "NOK": 30.5,
+        "NZD": 4.9,
+        "SEK": 28.68,
+        "TWD": 96.5,
+        "USD": 3.0
+      }
+    },
+    {
+      "skuId": "5265a84e-8def-4fa2-ab4b-5dc278df5025",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 55.17,
+        "EUR": 35.24,
+        "USD": 40.64
+      }
+    },
+    {
+      "skuId": "52cdf00e-8303-4223-a749-ff69a13e2dd0",
+      "family": "security",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 4.5,
+        "CAD": 4.1,
+        "EUR": 2.6,
+        "GBP": 2.3,
+        "NZD": 4.9,
+        "USD": 3.0
+      }
+    },
+    {
+      "skuId": "53818b1b-4a27-454b-8896-0dba576410e6",
+      "family": "addon",
+      "tier": 2,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 44.9,
+        "CAD": 40.7,
+        "EUR": 26.0,
+        "GBP": 23.1,
+        "NZD": 48.5,
+        "USD": 30.0
+      }
+    },
+    {
+      "skuId": "55c9eb4e-c746-45b4-b255-9ab6b19d5c62",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 284.9,
+        "EUR": 181.99,
+        "USD": 209.86
+      }
+    },
+    {
+      "skuId": "59d3d0bf-df39-4b8b-8601-ea6c09a7fd66",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 128.9,
+        "EUR": 82.34,
+        "USD": 94.95
+      }
+    },
+    {
+      "skuId": "5a1c7b8d-0739-4ca8-bf69-ec87e69133ac",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 14.6,
+        "EUR": 9.33,
+        "USD": 10.75
+      }
+    },
+    {
+      "skuId": "5b22585d-1b71-4c6b-b6ec-160b1a9c2323",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 27.1,
+        "EUR": 17.31,
+        "USD": 19.96
+      }
+    },
+    {
+      "skuId": "5e1e7702-a2b7-4360-8d07-2f515792896f",
+      "family": "security",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 4.5,
+        "BRL": 13.7,
+        "CAD": 4.1,
+        "CHF": 2.4,
+        "DKK": 19.4,
+        "EUR": 2.6,
+        "GBP": 2.3,
+        "INR": 250.0,
+        "JPY": 449.0,
+        "KRW": 4100.0,
+        "NOK": 30.5,
+        "NZD": 4.9,
+        "SEK": 28.7,
+        "TWD": 96.5,
+        "USD": 3.0
+      }
+    },
+    {
+      "skuId": "5e36d0d4-e9e5-4052-aba0-0257465c9b86",
+      "family": "security",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 7.5,
+        "CAD": 6.8,
+        "EUR": 4.3,
+        "GBP": 3.8,
+        "NZD": 8.1,
+        "USD": 5.0
+      }
+    },
+    {
+      "skuId": "61902246-d7cb-453e-85cd-53ee28eec138",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 16.3,
+        "EUR": 10.41,
+        "USD": 12.01
+      }
+    },
+    {
+      "skuId": "639dec6b-bb19-468b-871c-c5c441c4b0cb",
+      "family": "addon",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 44.9,
+        "BRL": 171.8,
+        "CAD": 40.7,
+        "CHF": 24.3,
+        "DKK": 194.0,
+        "EUR": 26.0,
+        "GBP": 23.1,
+        "INR": 2495.0,
+        "JPY": 4497.0,
+        "KRW": 40500.0,
+        "NOK": 305.0,
+        "NZD": 48.5,
+        "SEK": 286.8,
+        "TWD": 965.0,
+        "USD": 30.0
+      }
+    },
+    {
+      "skuId": "6432c818-bcef-43b6-9290-aec052964950",
+      "family": "addon",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 15.0,
+        "CAD": 13.6,
+        "EUR": 8.7,
+        "GBP": 7.7,
+        "NZD": 16.2,
+        "USD": 10.0
+      }
+    },
+    {
+      "skuId": "66b55226-6b4f-492c-910c-a3b7a3c9d993",
+      "family": "frontline",
+      "tier": 3,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 15.0,
+        "BRL": 57.3,
+        "CAD": 13.6,
+        "CHF": 8.1,
+        "DKK": 64.67,
+        "EUR": 8.66,
+        "GBP": 7.7,
+        "INR": 830.0,
+        "JPY": 1499.0,
+        "KRW": 13500.0,
+        "NOK": 101.65,
+        "NZD": 16.2,
+        "SEK": 95.59,
+        "TWD": 320.0,
+        "USD": 10.0
+      }
+    },
+    {
+      "skuId": "673afb9d-d85b-40c2-914e-7bf46cd5cd75",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 135.7,
+        "EUR": 86.69,
+        "USD": 99.96
+      }
+    },
+    {
+      "skuId": "67ffe999-d9ca-49e1-9d2c-03fb28aa7a48",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 10.9,
+        "EUR": 6.96,
+        "USD": 8.03
+      }
+    },
+    {
+      "skuId": "6a0f6da5-0b87-4190-a6ae-9bb5a2b9546a",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 10.4,
+        "EUR": 6.64,
+        "USD": 7.66
+      }
+    },
+    {
+      "skuId": "6fd2c87f-b296-42f0-b197-1e91e994b900",
+      "family": "enterprise",
+      "tier": 2,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 38.9,
+        "BRL": 148.9,
+        "CAD": 35.3,
+        "CHF": 24.56,
+        "DKK": 195.65,
+        "EUR": 26.27,
+        "GBP": 23.3,
+        "INR": 2165.0,
+        "JPY": 3898.0,
+        "KRW": 35100.0,
+        "NOK": 305.29,
+        "NZD": 44.4,
+        "SEK": 289.81,
+        "TWD": 905.0,
+        "USD": 26.0
+      }
+    },
+    {
+      "skuId": "6fe1e61a-91e5-40d7-a547-0d2dcc81bce8",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 101.8,
+        "EUR": 65.03,
+        "USD": 74.99
+      }
+    },
+    {
+      "skuId": "71f21848-f89b-4aaa-a2dc-780c8e8aac5b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 49.68,
+        "EUR": 31.74,
+        "USD": 36.59
+      }
+    },
+    {
+      "skuId": "73e8b747-20bf-463d-8ffd-274a7d65d0bc",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 101.8,
+        "EUR": 65.03,
+        "USD": 74.99
+      }
+    },
+    {
+      "skuId": "750d9542-a2f8-41c7-8c81-311352173432",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 59.58,
+        "EUR": 38.06,
+        "USD": 43.89
+      }
+    },
+    {
+      "skuId": "75564b9c-51e8-431c-b8fe-d472d5a545c8",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 271.4,
+        "EUR": 173.37,
+        "USD": 199.91
+      }
+    },
+    {
+      "skuId": "7818ca3e-73c8-4e49-bc34-1276a2d27918",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 182.16,
+        "EUR": 116.36,
+        "USD": 134.18
+      }
+    },
+    {
+      "skuId": "796a6fb4-740b-4d36-bf56-9c12ca7fa069",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 20.4,
+        "EUR": 13.03,
+        "USD": 15.03
+      }
+    },
+    {
+      "skuId": "79909bd8-4c69-4202-939e-11bc4385b134",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 284.9,
+        "EUR": 181.99,
+        "USD": 209.86
+      }
+    },
+    {
+      "skuId": "79e2368c-4568-48d5-a352-b0344afabcf8",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 128.9,
+        "EUR": 82.34,
+        "USD": 94.95
+      }
+    },
+    {
+      "skuId": "7ac9fe77-66b7-4e5e-9e46-10eed1cff547",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 10.9,
+        "EUR": 6.96,
+        "USD": 8.03
+      }
+    },
+    {
+      "skuId": "7bb14422-3b90-4389-a7be-f1b745fc037f",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 38.61,
+        "EUR": 24.66,
+        "USD": 28.44
+      }
+    },
+    {
+      "skuId": "7d0d4f9a-2686-4cb8-814c-eff3fdab6d74",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 13.6,
+        "EUR": 8.69,
+        "USD": 10.02
+      }
+    },
+    {
+      "skuId": "7e31c0d9-9551-471d-836f-32ee72be4a01",
+      "family": "teams",
+      "tier": 2,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 12.8,
+        "BRL": 49.0,
+        "CAD": 11.6,
+        "EUR": 7.41,
+        "GBP": 6.6,
+        "INR": 710.0,
+        "JPY": 1281.0,
+        "KRW": 11600.0,
+        "NZD": 13.8,
+        "TWD": 275.0,
+        "USD": 8.55
+      }
+    },
+    {
+      "skuId": "7e6e6091-1680-4532-9370-6cd4598483ac",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 101.8,
+        "EUR": 65.03,
+        "USD": 74.99
+      }
+    },
+    {
+      "skuId": "7e74bd05-2c47-404e-829a-ba95c66fe8e5",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 12.08,
+        "EUR": 7.72,
+        "USD": 8.9
+      }
+    },
+    {
+      "skuId": "805d57c3-a97d-4c12-a1d0-858ffe5015d0",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 48.6,
+        "EUR": 31.05,
+        "USD": 35.8
+      }
+    },
+    {
+      "skuId": "80b2d799-d2ba-4d2a-8842-fb0d0f3a4b82",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 2.7,
+        "EUR": 1.72,
+        "USD": 1.99
+      }
+    },
+    {
+      "skuId": "83c489a4-94b6-4dcc-9fdc-ff9b107a4621",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 40.7,
+        "EUR": 26.0,
+        "USD": 29.98
+      }
+    },
+    {
+      "skuId": "84951599-62b7-46f3-9c9d-30551b2ad607",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 2.7,
+        "EUR": 1.72,
+        "USD": 1.99
+      }
+    },
+    {
+      "skuId": "84a661c4-e949-4bd2-a560-ed7766fcaf2b",
+      "family": "security",
+      "tier": 2,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 15.0,
+        "BRL": 57.3,
+        "CAD": 13.6,
+        "CHF": 8.1,
+        "DKK": 64.7,
+        "EUR": 8.7,
+        "GBP": 7.7,
+        "INR": 830.0,
+        "JPY": 1499.0,
+        "KRW": 13500.0,
+        "NOK": 101.7,
+        "NZD": 16.2,
+        "SEK": 95.6,
+        "TWD": 320.0,
+        "USD": 10.0
+      }
+    },
+    {
+      "skuId": "878b8bbd-3cd0-4b44-9a56-3406741e65e0",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 67.8,
+        "EUR": 43.31,
+        "USD": 49.94
+      }
+    },
+    {
+      "skuId": "8a5fbbed-8b8c-41e5-907e-c50c471340fd",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 678.4,
+        "EUR": 433.36,
+        "USD": 499.71
+      }
+    },
+    {
+      "skuId": "8ee402cd-e6a8-4b67-a411-54d1f37a2049",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 178.83,
+        "EUR": 114.24,
+        "USD": 131.73
+      }
+    },
+    {
+      "skuId": "90277bc7-a6fe-4181-99d8-712b08b8d32b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 84.28,
+        "EUR": 53.84,
+        "USD": 62.08
+      }
+    },
+    {
+      "skuId": "90b5e015-709a-4b8b-b08e-3200f994494c",
+      "family": "exchange",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 4.5,
+        "CAD": 4.1,
+        "EUR": 2.6,
+        "GBP": 2.3,
+        "NZD": 4.9,
+        "USD": 3.0
+      }
+    },
+    {
+      "skuId": "93d9955a-ec70-44d5-8faa-a194492390f7",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 310.23,
+        "EUR": 198.17,
+        "USD": 228.52
+      }
+    },
+    {
+      "skuId": "9467fd84-2758-4287-b1fa-6a908c441b8a",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 407.0,
+        "EUR": 259.99,
+        "USD": 299.8
+      }
+    },
+    {
+      "skuId": "96d2951e-cb42-4481-9d6d-cad3baac177e",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 103.5,
+        "EUR": 66.12,
+        "USD": 76.24
+      }
+    },
+    {
+      "skuId": "98619618-9dc8-48c6-8f0c-741890ba5f93",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 183.2,
+        "EUR": 117.03,
+        "USD": 134.95
+      }
+    },
+    {
+      "skuId": "98defdf7-f6c1-44f5-a1f6-943b6764e7a5",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 7.5,
+        "EUR": 4.79,
+        "USD": 5.52
+      }
+    },
+    {
+      "skuId": "99049c9c-6011-4908-bf17-15f496e6519d",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 0.27,
+        "EUR": 0.17,
+        "USD": 0.2
+      }
+    },
+    {
+      "skuId": "9a18296a-025f-4e37-9ffa-30bf8d1ce775",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 134.3,
+        "EUR": 85.79,
+        "USD": 98.93
+      }
+    },
+    {
+      "skuId": "9ea4bdef-a20b-4668-b4a7-73e1f7696e0a",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 2035.2,
+        "EUR": 1300.09,
+        "USD": 1499.13
+      }
+    },
+    {
+      "skuId": "9f3d9c1d-25a5-4aaa-8e59-23a1e6450a67",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 5.4,
+        "EUR": 3.45,
+        "USD": 3.98
+      }
+    },
+    {
+      "skuId": "9fb0ba5f-4825-4e84-b239-5167a3a5d4dc",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 217.98,
+        "EUR": 139.25,
+        "USD": 160.56
+      }
+    },
+    {
+      "skuId": "a23dbafb-3396-48b3-ad9c-a304fe206043",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 49.5,
+        "EUR": 31.62,
+        "USD": 36.46
+      }
+    },
+    {
+      "skuId": "a3f586b6-8cce-4d9b-99d6-55238397f77a",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 26.54,
+        "EUR": 16.95,
+        "USD": 19.55
+      }
+    },
+    {
+      "skuId": "a58f5506-b382-44d4-bfab-225b2fbf8390",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 407.0,
+        "EUR": 259.99,
+        "USD": 299.8
+      }
+    },
+    {
+      "skuId": "a809996b-059e-42e2-9866-db24b99a9782",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 40.7,
+        "EUR": 26.0,
+        "USD": 29.98
+      }
+    },
+    {
+      "skuId": "a929cd4d-8672-47c9-8664-159c1f322ba8",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 13.6,
+        "EUR": 8.69,
+        "USD": 10.02
+      }
+    },
+    {
+      "skuId": "ad7a56e0-6903-4d13-94f3-5ad491e78960",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 2.7,
+        "EUR": 1.72,
+        "USD": 1.99
+      }
+    },
+    {
+      "skuId": "ad83ac17-4a5a-4ebb-adb2-079fb277e8b9",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 77.31,
+        "EUR": 49.39,
+        "USD": 56.95
+      }
+    },
+    {
+      "skuId": "ae2343d1-0999-43f6-ae18-d816516f6e78",
+      "family": "addon",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 32.9,
+        "CAD": 23.1,
+        "EUR": 19.1,
+        "GBP": 13.1,
+        "NZD": 35.6,
+        "USD": 17.0
+      }
+    },
+    {
+      "skuId": "aecb477b-2f56-4e38-b711-b752c24fc19b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 16281.6,
+        "EUR": 10400.69,
+        "USD": 11993.03
+      }
+    },
+    {
+      "skuId": "af739e8e-dd11-4eb5-a986-5908f595c603",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 40.7,
+        "EUR": 26.0,
+        "USD": 29.98
+      }
+    },
+    {
+      "skuId": "b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+      "family": "security",
+      "tier": 2,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 27.0,
+        "BRL": 103.3,
+        "CAD": 24.5,
+        "CHF": 14.6,
+        "DKK": 116.7,
+        "EUR": 15.6,
+        "GBP": 13.9,
+        "INR": 1500.0,
+        "JPY": 2704.0,
+        "KRW": 24400.0,
+        "NOK": 183.4,
+        "NZD": 29.2,
+        "SEK": 172.4,
+        "TWD": 580.0,
+        "USD": 18.0
+      }
+    },
+    {
+      "skuId": "b1f3042b-a390-4b56-ab61-b88e7e767a97",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 7.61,
+        "EUR": 4.86,
+        "USD": 5.61
+      }
+    },
+    {
+      "skuId": "b30411f5-fea1-4a59-9ad9-3db7c7ead579",
+      "family": "addon",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 29.9,
+        "CAD": 27.1,
+        "EUR": 17.3,
+        "GBP": 15.4,
+        "NZD": 32.4,
+        "USD": 20.0
+      }
+    },
+    {
+      "skuId": "b3891a9f-c7d9-463c-a2ec-0b2321bda6f9",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 87.21,
+        "EUR": 55.71,
+        "USD": 64.24
+      }
+    },
+    {
+      "skuId": "b3a42176-0a8c-4c3f-ba4e-f2b37fe5be6b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 135.7,
+        "EUR": 86.69,
+        "USD": 99.96
+      }
+    },
+    {
+      "skuId": "b57282e3-65bd-4252-9502-c0eae1e5ab7f",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 9.59,
+        "EUR": 6.13,
+        "USD": 7.06
+      }
+    },
+    {
+      "skuId": "b75074f1-4c54-41bf-970f-c9ac871567f5",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 67.8,
+        "EUR": 43.31,
+        "USD": 49.94
+      }
+    },
+    {
+      "skuId": "beb6439c-caad-48d3-bf46-0c82871e12be",
+      "family": "addon",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 15.0,
+        "CAD": 13.6,
+        "EUR": 8.7,
+        "GBP": 7.7,
+        "NZD": 16.2,
+        "USD": 10.0
+      }
+    },
+    {
+      "skuId": "c1d032e0-5619-4761-9b5c-75b6831e1711",
+      "family": "analytics",
+      "tier": 2,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 35.9,
+        "BRL": 137.4,
+        "CAD": 32.6,
+        "CHF": 19.4,
+        "DKK": 155.2,
+        "EUR": 20.8,
+        "GBP": 18.5,
+        "INR": 1995.0,
+        "JPY": 3598.0,
+        "KRW": 32400.0,
+        "NOK": 244.0,
+        "NZD": 38.8,
+        "SEK": 229.4,
+        "TWD": 770.0,
+        "USD": 24.0
+      }
+    },
+    {
+      "skuId": "c1f79c29-5d7a-4bec-a2c1-1a76774864c0",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 15.23,
+        "EUR": 9.73,
+        "USD": 11.22
+      }
+    },
+    {
+      "skuId": "c2273bd0-dff7-4215-9ef5-2c7bcfb06425",
+      "family": "apps",
+      "tier": 2,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 22.1,
+        "BRL": 80.2,
+        "CAD": 19.8,
+        "CHF": 14.2,
+        "DKK": 114.7,
+        "EUR": 15.4,
+        "GBP": 13.7,
+        "INR": 1165.0,
+        "JPY": 2098.0,
+        "KRW": 18500.0,
+        "NOK": 178.6,
+        "NZD": 26.9,
+        "SEK": 168.0,
+        "TWD": 515.0,
+        "USD": 14.0
+      }
+    },
+    {
+      "skuId": "c2ac2ee4-9bb1-47e4-8541-d689c7e83371",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 52.9,
+        "EUR": 33.79,
+        "USD": 38.97
+      }
+    },
+    {
+      "skuId": "c2e41e49-e2a2-4c55-832a-cf13ffba1d6a",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 2.7,
+        "EUR": 1.72,
+        "USD": 1.99
+      }
+    },
+    {
+      "skuId": "c2fe850d-fbbb-4858-b67d-bd0c6e746da3",
+      "family": "enterprise",
+      "tier": 3,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 49.5,
+        "CHF": 28.38,
+        "DKK": 226.68,
+        "EUR": 30.36,
+        "NOK": 355.12,
+        "SEK": 335.04,
+        "USD": 36.46
+      }
+    },
+    {
+      "skuId": "c5928f49-12ba-48f7-ada3-0d743a3601d5",
+      "family": "addon",
+      "tier": 2,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 22.4,
+        "CAD": 20.4,
+        "EUR": 13.0,
+        "GBP": 11.5,
+        "NZD": 24.3,
+        "USD": 15.0
+      }
+    },
+    {
+      "skuId": "c7df2760-2c81-4ef7-b578-5b5392b571df",
+      "family": "enterprise",
+      "tier": 4,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 61.4,
+        "BRL": 234.8,
+        "CAD": 55.6,
+        "CHF": 38.72,
+        "DKK": 308.53,
+        "EUR": 41.42,
+        "GBP": 36.8,
+        "INR": 3410.0,
+        "JPY": 6146.0,
+        "KRW": 55400.0,
+        "NOK": 481.41,
+        "NZD": 70.1,
+        "SEK": 457.0,
+        "TWD": 1425.0,
+        "USD": 41.0
+      }
+    },
+    {
+      "skuId": "c97d00e4-0c4c-4ec2-a016-9448c65de986",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 169.74,
+        "EUR": 108.43,
+        "USD": 125.03
+      }
+    },
+    {
+      "skuId": "cb10e6cd-9da4-4992-867b-67546b1db821",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 10.4,
+        "EUR": 6.64,
+        "USD": 7.66
+      }
+    },
+    {
+      "skuId": "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46",
+      "family": "business",
+      "tier": 3,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 32.9,
+        "BRL": 126.0,
+        "CAD": 29.8,
+        "CHF": 17.82,
+        "DKK": 142.27,
+        "EUR": 19.06,
+        "GBP": 16.9,
+        "INR": 1830.0,
+        "JPY": 3298.0,
+        "KRW": 29700.0,
+        "NOK": 223.63,
+        "NZD": 35.6,
+        "SEK": 210.29,
+        "TWD": 705.0,
+        "USD": 22.0
+      }
+    },
+    {
+      "skuId": "cd2925a3-5076-4233-8931-638a8c94f773",
+      "family": "enterprise",
+      "tier": 5,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 89.8,
+        "BRL": 343.5,
+        "CAD": 81.4,
+        "CHF": 54.33,
+        "DKK": 433.8,
+        "EUR": 58.13,
+        "GBP": 51.6,
+        "INR": 4990.0,
+        "JPY": 8995.0,
+        "KRW": 81100.0,
+        "NOK": 680.04,
+        "NZD": 97.1,
+        "SEK": 641.18,
+        "TWD": 1930.0,
+        "USD": 60.0
+      }
+    },
+    {
+      "skuId": "cdd28e44-67e3-425e-be4c-737fab2899d3",
+      "family": "apps",
+      "tier": 1,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 15.8,
+        "BRL": 57.3,
+        "CAD": 14.2,
+        "CHF": 10.1,
+        "DKK": 81.9,
+        "EUR": 11.0,
+        "GBP": 9.8,
+        "INR": 830.0,
+        "JPY": 1499.0,
+        "KRW": 13200.0,
+        "NOK": 127.6,
+        "NZD": 19.2,
+        "SEK": 120.0,
+        "TWD": 370.0,
+        "USD": 10.0
+      }
+    },
+    {
+      "skuId": "cf6b0d46-4093-4546-a0ab-0b1546dcc10e",
+      "family": "security",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 10.5,
+        "BRL": 40.1,
+        "CAD": 9.5,
+        "CHF": 5.7,
+        "DKK": 45.3,
+        "EUR": 6.1,
+        "GBP": 5.4,
+        "INR": 580.0,
+        "JPY": 1049.0,
+        "KRW": 9500.0,
+        "NOK": 71.2,
+        "NZD": 11.3,
+        "SEK": 66.9,
+        "TWD": 225.0,
+        "USD": 7.0
+      }
+    },
+    {
+      "skuId": "d13ef257-988a-46f3-8fce-f47484dd4550",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 19.3,
+        "EUR": 12.33,
+        "USD": 14.22
+      }
+    },
+    {
+      "skuId": "d201f153-d3b2-4057-be2f-fe25c8983e6f",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 91.08,
+        "EUR": 58.18,
+        "USD": 67.09
+      }
+    },
+    {
+      "skuId": "d711d25a-a21c-492f-bd19-aae1e8ebaf30",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 30.73,
+        "EUR": 19.63,
+        "USD": 22.64
+      }
+    },
+    {
+      "skuId": "dab7782a-93b1-4074-8bb1-0e61318bea0b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 9.5,
+        "EUR": 6.07,
+        "USD": 7.0
+      }
+    },
+    {
+      "skuId": "dbd31205-338e-4dec-903d-44402e305e32",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 2.7,
+        "EUR": 1.72,
+        "USD": 1.99
+      }
+    },
+    {
+      "skuId": "dcf0408c-aaec-446c-afd4-43e3683943ea",
+      "family": "enterprise",
+      "tier": 3,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 45.6,
+        "BRL": 174.3,
+        "CAD": 41.3,
+        "EUR": 26.38,
+        "GBP": 27.0,
+        "INR": 2535.0,
+        "JPY": 4565.0,
+        "KRW": 41100.0,
+        "NZD": 49.3,
+        "TWD": 980.0,
+        "USD": 30.45
+      }
+    },
+    {
+      "skuId": "de376a03-6e5b-42ec-855f-093fb50b8ca5",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 13.6,
+        "EUR": 8.69,
+        "USD": 10.02
+      }
+    },
+    {
+      "skuId": "debc9e58-f2d7-412c-a0b6-575608564228",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 271.4,
+        "EUR": 173.37,
+        "USD": 199.91
+      }
+    },
+    {
+      "skuId": "dfb1700c-013e-4132-8bce-0d319c43a95d",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 149.2,
+        "EUR": 95.31,
+        "USD": 109.9
+      }
+    },
+    {
+      "skuId": "e2aebe6c-897d-480f-9d62-fff1381581f7",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 56.61,
+        "EUR": 36.16,
+        "USD": 41.7
+      }
+    },
+    {
+      "skuId": "e42bc969-759a-4820-9283-6b73085b68e6",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 6.8,
+        "EUR": 4.34,
+        "USD": 5.01
+      }
+    },
+    {
+      "skuId": "e430a580-c37b-4d16-adba-d881d7cd0364",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 4.7,
+        "EUR": 3.0,
+        "USD": 3.46
+      }
+    },
+    {
+      "skuId": "e43b5b99-8dfb-405f-9987-dc307f34bcbd",
+      "family": "addon",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 15.0,
+        "BRL": 57.3,
+        "CAD": 13.6,
+        "CHF": 8.1,
+        "DKK": 64.7,
+        "EUR": 8.7,
+        "GBP": 7.7,
+        "INR": 830.0,
+        "JPY": 1499.0,
+        "KRW": 13500.0,
+        "NOK": 101.7,
+        "NZD": 16.2,
+        "SEK": 95.6,
+        "TWD": 320.0,
+        "USD": 10.0
+      }
+    },
+    {
+      "skuId": "e4654015-5daf-4a48-9b37-4f309dddd88b",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 16.3,
+        "EUR": 10.41,
+        "USD": 12.01
+      }
+    },
+    {
+      "skuId": "e485d696-4c87-4aac-bf4a-91b2fb6f0fa7",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 1831.7,
+        "EUR": 1170.09,
+        "USD": 1349.23
+      }
+    },
+    {
+      "skuId": "eda1941c-3c4f-4995-b5eb-e85a42175ab9",
+      "family": "addon",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 22.4,
+        "CAD": 20.4,
+        "EUR": 13.0,
+        "GBP": 11.5,
+        "NZD": 24.3,
+        "USD": 15.0
+      }
+    },
+    {
+      "skuId": "ee02fd1b-340e-4a4b-b355-4a514e4c8943",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 4.1,
+        "EUR": 2.62,
+        "USD": 3.02
+      }
+    },
+    {
+      "skuId": "efccb6f7-5641-4e0e-bd10-b4976e1bf68e",
+      "family": "security",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 18.0,
+        "BRL": 68.9,
+        "CAD": 16.3,
+        "CHF": 9.8,
+        "DKK": 77.9,
+        "EUR": 10.4,
+        "GBP": 9.3,
+        "INR": 1000.0,
+        "JPY": 1805.0,
+        "KRW": 16300.0,
+        "NOK": 122.4,
+        "NZD": 19.5,
+        "SEK": 115.1,
+        "TWD": 385.0,
+        "USD": 12.0
+      }
+    },
+    {
+      "skuId": "f245ecc8-75af-4f8e-b61f-27d8114de5f3",
+      "family": "business",
+      "tier": 2,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 21.0,
+        "BRL": 80.2,
+        "CAD": 19.0,
+        "CHF": 11.34,
+        "DKK": 90.54,
+        "EUR": 12.13,
+        "GBP": 10.8,
+        "INR": 860.0,
+        "JPY": 2098.0,
+        "KRW": 18900.0,
+        "NOK": 142.31,
+        "NZD": 22.6,
+        "SEK": 133.82,
+        "TWD": 450.0,
+        "USD": 14.0
+      }
+    },
+    {
+      "skuId": "f7ad4bca-7221-452c-bdb6-3e6089f25e06",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 10718.7,
+        "EUR": 6847.11,
+        "USD": 7895.39
+      }
+    },
+    {
+      "skuId": "f7ee79a7-7aec-4ca4-9fb9-34d6b930ad87",
+      "family": "frontline",
+      "tier": 3,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 12.6,
+        "CHF": 7.23,
+        "DKK": 57.74,
+        "EUR": 7.73,
+        "NOK": 90.77,
+        "SEK": 85.35,
+        "USD": 9.28
+      }
+    },
+    {
+      "skuId": "f8a1db68-be16-40ed-86d5-cb42ce701560",
+      "family": "analytics",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 21.0,
+        "BRL": 80.2,
+        "CAD": 19.0,
+        "CHF": 11.3,
+        "DKK": 90.5,
+        "EUR": 12.1,
+        "GBP": 10.8,
+        "INR": 1165.0,
+        "JPY": 2098.0,
+        "KRW": 18900.0,
+        "NOK": 142.3,
+        "NZD": 22.6,
+        "SEK": 133.8,
+        "TWD": 450.0,
+        "USD": 14.0
+      }
+    },
+    {
+      "skuId": "f8ced641-8e17-4dc5-b014-f5a2d53f6ac8",
+      "family": "enterprise",
+      "tier": 1,
+      "eligibleTarget": false,
+      "prices": {
+        "AUD": 10.2,
+        "BRL": 38.9,
+        "CAD": 9.2,
+        "EUR": 5.88,
+        "GBP": 5.2,
+        "INR": 565.0,
+        "JPY": 1017.0,
+        "KRW": 9200.0,
+        "NZD": 11.0,
+        "TWD": 220.0,
+        "USD": 6.79
+      }
+    },
+    {
+      "skuId": "f991cecc-3f91-4cd0-a9a8-bf1c8167e029",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 149.2,
+        "EUR": 95.31,
+        "USD": 109.9
+      }
+    },
+    {
+      "skuId": "fbc79df2-da01-4c17-8d88-17f8c9493d8f",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 150.12,
+        "EUR": 95.9,
+        "USD": 110.58
+      }
+    },
+    {
+      "skuId": "fde42873-30b6-436b-b361-21af5a6b84ae",
+      "family": "teams",
+      "tier": 1,
+      "eligibleTarget": true,
+      "prices": {
+        "AUD": 6.0,
+        "BRL": 22.9,
+        "CAD": 5.4,
+        "CHF": 3.2,
+        "DKK": 25.9,
+        "EUR": 3.5,
+        "GBP": 3.1,
+        "INR": 115.0,
+        "JPY": 599.0,
+        "KRW": 5400.0,
+        "NOK": 40.7,
+        "NZD": 6.5,
+        "SEK": 38.2,
+        "TWD": 130.0,
+        "USD": 4.0
+      }
+    },
+    {
+      "skuId": "ff22b8d4-5073-4b24-ba45-84ad5d9b6642",
+      "family": "other",
+      "tier": 0,
+      "eligibleTarget": false,
+      "prices": {
+        "CAD": 1356.8,
+        "EUR": 866.72,
+        "USD": 999.42
+      }
+    }
+  ]
+}

@@ -71,6 +71,7 @@ function Invoke-CIPPDBCacheCollection {
             'AppRoleAssignments'
             'LicenseOverview'
             'ActiveUserDetail'
+            'M365AppUserDetail'
             'BitlockerKeys'
             'AdminReportSettings'
             'PeopleInsights'

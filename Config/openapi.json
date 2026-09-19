@@ -50654,6 +50654,108 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListLicenseRecommendations": {
+      "get": {
+        "summary": "ListLicenseRecommendations",
+        "operationId": "ListLicenseRecommendations",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "License recommendation report for a tenant: the waste tiers from ListLicenseOptimization\nplus evidence-based downgrade targets (from 90-day usage reports against the license\ncatalog), consolidation and protection upgrades, and the recommended annual/monthly\ncommitment split per SKU. Feeds the License Optimization page and the client PDF.",
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "query",
+            "description": "Currency the money figures are resolved in (ISO code); defaults to USD",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "inactiveDays",
+            "in": "query",
+            "description": "Sign-in / activity age in days past which a user counts as inactive (default 90)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "protectSecurityFeatures",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recommendDowngrades",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recommendTerms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recommendUpgrades",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "tenureMonths",
+            "in": "query",
+            "description": "Months a seat must have been assigned to count as stable for an annual commitment (default 6)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Directory.Read"
+      }
+    },
     "/api/ListLicenses": {
       "get": {
         "summary": "ListLicenses",
