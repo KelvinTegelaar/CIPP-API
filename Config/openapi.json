@@ -28433,6 +28433,9 @@
                   },
                   "standardsExcludeAllTenants": {
                     "type": "boolean"
+                  },
+                  "tenantGroups": {
+                    "type": "string"
                   }
                 }
               }
@@ -28482,6 +28485,9 @@
                       "x-cipp-field-source": "storage,backend"
                     },
                     "Status": {
+                      "x-cipp-field-source": "storage,backend"
+                    },
+                    "TenantGroups": {
                       "x-cipp-field-source": "storage,backend"
                     },
                     "Timestamp": {
@@ -60929,6 +60935,9 @@
                       },
                       "Status": {
                         "x-cipp-field-source": "storage,frontend"
+                      },
+                      "TenantGroups": {
+                        "x-cipp-field-source": "storage"
                       },
                       "Timestamp": {
                         "type": "string",
