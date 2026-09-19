@@ -332,6 +332,18 @@ function Get-CIPPLicenseRecommendation {
 
     # ------------------------------------------------------------------ waste tiers (existing engine)
     $Optimization = Get-CIPPLicenseOptimization -TenantFilter $TenantFilter -Licenses $Licenses -Users $Users -ActivityDetail $ActivityDetail -InactiveDays $InactiveDays -Currency $Currency
+
+    # Tenant-level SKUs (extra file storage, server protection, capacity) are consumed without a
+    # user assignment, so their unassigned seats are not waste. Drop those findings and recount.
+    $TenantLevel = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Id in @($Catalog.meta.tenantLevelSkus)) { if ($Id) { $null = $TenantLevel.Add([string]$Id) } }
+    $Opportunities = @($Optimization.Opportunities | Where-Object { -not ($_.Tier -eq 'UnassignedSeats' -and $TenantLevel.Contains([string]$_.skuId)) })
+    $OptReclaimableMonthly = 0.0; $OptReclaimableSeats = 0
+    foreach ($Opp in $Opportunities) {
+        $OptReclaimableMonthly += [double]$Opp.MonthlySaving
+        if ($Opp.Tier -in @('UnassignedSeats', 'DisabledAccount', 'Inactive')) { $OptReclaimableSeats += [int]$Opp.Seats }
+    }
+    $Optimization = [pscustomobject]@{ Summary = $Optimization.Summary; Opportunities = $Opportunities }
     $OverlapUpns = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($Opp in @($Optimization.Opportunities)) {
         if ($Opp.Tier -eq 'Overlap') { foreach ($U in @($Opp.Users)) { $null = $OverlapUpns.Add([string]$U) } }
@@ -577,6 +589,7 @@ function Get-CIPPLicenseRecommendation {
         }
         foreach ($Sku in $SkuInfo.Values) {
             if ($Sku.Used -le 0 -and $Sku.Total -le 0) { continue }
+            if ($TenantLevel.Contains($Sku.skuId)) { continue }
             $UnitPrice = & $PriceOf $Sku.skuId
             $MonthlySeats = 0; $YearlySeats = 0; $UnknownSeats = 0; $NextRenewal = $null
             foreach ($Term in @($Sku.TermInfo)) {
@@ -634,7 +647,8 @@ function Get-CIPPLicenseRecommendation {
                 Family       = if ($ProductBySku.ContainsKey($Sku.skuId)) { $ProductBySku[$Sku.skuId].family } else { $null }
                 TotalSeats   = [int]$Sku.Total
                 AssignedSeats = [int]$Sku.Used
-                UnusedSeats  = [math]::Max(0, [int]$Sku.Total - [int]$Sku.Used)
+                UnusedSeats  = if ($TenantLevel.Contains($Sku.skuId)) { 0 } else { [math]::Max(0, [int]$Sku.Total - [int]$Sku.Used) }
+                TenantLevel  = $TenantLevel.Contains($Sku.skuId)
                 UnitCost     = $UnitPrice
                 MonthlySpend = if ($null -ne $UnitPrice) { [math]::Round($UnitPrice * [int]$Sku.Used, 2) } else { $null }
                 PriceKnown   = ($null -ne $UnitPrice)
@@ -746,7 +760,7 @@ function Get-CIPPLicenseRecommendation {
         if ($U.Type -eq 'Consolidate') { $ConsolidateMonthly += -1 * [double]$U.MonthlyDelta } else { $ProtectMonthly += [double]$U.MonthlyDelta; $ProtectSeats += [int]$U.Seats }
     }
     $TermMonthly = 0.0; foreach ($T in $Terms) { $TermMonthly += [double]$T.MonthlySaving }
-    $Reclaimable = [double]$Optimization.Summary.ReclaimableMonthly + $NoActivityMonthly
+    $Reclaimable = $OptReclaimableMonthly + $NoActivityMonthly
     $TotalSeats = 0; foreach ($Sku in $SkuInfo.Values) { $TotalSeats += [int]$Sku.Total }
     $TotalMonthly = $Reclaimable + $DowngradeMonthly + $ConsolidateMonthly + $TermMonthly
 
@@ -767,7 +781,7 @@ function Get-CIPPLicenseRecommendation {
         LicensedUsers             = $LicensedUserCount
         PriceCoverage             = $Optimization.Summary.PriceCoverage
         ReclaimableMonthly        = [math]::Round($Reclaimable, 2)
-        ReclaimableSeats          = [int]$Optimization.Summary.ReclaimableSeats + $NoActivitySeats
+        ReclaimableSeats          = $OptReclaimableSeats + $NoActivitySeats
         SignInDataAvailable       = [bool](@($RealUsers | Where-Object { $null -ne (& $LastSignInOf $_) }).Count -gt 0)
         DowngradeMonthly          = [math]::Round($DowngradeMonthly, 2)
         DowngradeSeats            = $DowngradeUserCount

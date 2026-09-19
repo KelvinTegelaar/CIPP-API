@@ -11,7 +11,15 @@
       "CAD": "Microsoft public list price where published; otherwise Sherweb SRP price list 2026-09-19 (yearly commitment / 12), matched to the SKU list by product name",
       "EUR": "Microsoft public list price where published; otherwise CAD list price x 0,6388, the median EUR/CAD ratio across the 45 SKUs Microsoft prices in both currencies (2026-09-19)",
       "USD": "Microsoft public list price where published; otherwise CAD list price x 0,7366, the median USD/CAD ratio across the 48 SKUs Microsoft prices in both currencies (2026-09-19)"
-    }
+    },
+    "tenantLevelSkusNote": "SKUs that are consumed by the tenant without being assigned to a user (storage, server protection, capacity). Unassigned seats of these are never reported as waste.",
+    "tenantLevelSkus": [
+      "99049c9c-6011-4908-bf17-15f496e6519d",
+      "509e8ab6-0274-4cda-bcbd-bd164fd562c4",
+      "328dc228-00bc-48c6-8b09-1fbc8bc3435d",
+      "9bd7c846-9556-4453-a542-191d527209e8",
+      "7b26f5ab-a763-4c00-a1ac-f6c4b5506945"
+    ]
   },
   "capabilities": [
     {

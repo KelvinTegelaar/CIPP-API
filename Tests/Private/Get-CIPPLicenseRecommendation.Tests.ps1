@@ -114,7 +114,10 @@ Describe 'Get-CIPPLicenseRecommendation' {
         Mock -CommandName Get-CIPPLicenseOptimization -MockWith {
             [pscustomobject]@{
                 Summary       = [pscustomobject]@{ MonthlySpend = 100.0; ReclaimableMonthly = 10.0; ReclaimableSeats = 1; AssignedSeats = 5; PriceCoverage = 1; AnonymizedReports = $false; DataAvailable = $true }
-                Opportunities = @()
+                # The reclaimable money is recounted from the findings, so the summary and the list agree
+                Opportunities = @(
+                    [pscustomobject]@{ Tier = 'UnassignedSeats'; FindingLabel = 'Unassigned'; License = 'Apps for Business'; skuId = $script:AppsBiz; Seats = 1; UnitCost = 10.0; MonthlySaving = 10.0; SuggestedAction = 'Reduce seat count'; Users = @(); PriceKnown = $true }
+                )
             }
         }
 
@@ -322,6 +325,38 @@ Describe 'Get-CIPPLicenseRecommendation' {
         @($Report.Suggestions | Where-Object { $_.User -eq 'mailonly@contoso.com' -and $_.Type -eq 'Change license' }).Count | Should -Be 1
         @($Report.Suggestions | Where-Object { $_.User -eq 'unknown@contoso.com' -and $_.Type -eq 'Remove license' }).Count | Should -Be 0
         $Report.Summary.ReclaimableMonthly | Should -Be 24.0
+    }
+
+    It 'never reports unassigned seats of tenant-level SKUs (storage, server protection) as waste' {
+        $Storage = '99049c9c-6011-4908-bf17-15f496e6519d'
+        Mock -CommandName Get-CIPPLicenseCatalog -MockWith {
+            [pscustomobject]@{
+                meta         = [pscustomobject]@{ monthlyCommitmentUplift = 0.2; seatLimits = [pscustomobject]@{ business = 300 }; tenantLevelSkus = @($Storage) }
+                capabilities = @()
+                families     = @()
+                products     = @([pscustomobject]@{ skuId = $script:Standard; family = 'business'; tier = 2; eligibleTarget = $true })
+            }
+        }
+        Mock -CommandName Get-CIPPLicenseOptimization -MockWith {
+            [pscustomobject]@{
+                Summary       = [pscustomobject]@{ MonthlySpend = 100.0; ReclaimableMonthly = 100.0; ReclaimableSeats = 7; AssignedSeats = 5; PriceCoverage = 1; AnonymizedReports = $false; DataAvailable = $true }
+                Opportunities = @(
+                    [pscustomobject]@{ Tier = 'UnassignedSeats'; FindingLabel = 'Unassigned'; License = 'Office 365 Extra File Storage'; skuId = $Storage; Seats = 5; UnitCost = 0.2; MonthlySaving = 1.0; SuggestedAction = 'Reduce seat count'; Users = @(); PriceKnown = $true }
+                    [pscustomobject]@{ Tier = 'UnassignedSeats'; FindingLabel = 'Unassigned'; License = 'Business Standard'; skuId = $script:Standard; Seats = 2; UnitCost = 14.0; MonthlySaving = 28.0; SuggestedAction = 'Reduce seat count'; Users = @(); PriceKnown = $true }
+                )
+            }
+        }
+        $Licenses = @($script:Licenses) + (New-Lic $Storage 'Office 365 Extra File Storage' 500 0)
+
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -RecommendDowngrades $false -RecommendUpgrades $false -Licenses $Licenses -Users $script:Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $script:PlanIds
+
+        @($Report.Suggestions | Where-Object { $_.skuId -eq $Storage }).Count | Should -Be 0
+        @($Report.Suggestions | Where-Object { $_.Type -eq 'Reduce seats' }).Count | Should -Be 1
+        $Report.Summary.ReclaimableMonthly | Should -Be 28.0
+        $Report.Summary.ReclaimableSeats | Should -Be 2
+        ($Report.Products | Where-Object { $_.skuId -eq $Storage }).UnusedSeats | Should -Be 0
+        ($Report.Products | Where-Object { $_.skuId -eq $Storage }).TenantLevel | Should -BeTrue
+        @($Report.Terms | Where-Object { $_.skuId -eq $Storage }).Count | Should -Be 0
     }
 
     It 'sums the potential into the summary and lists what is paid for' {
