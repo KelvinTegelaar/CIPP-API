@@ -5,7 +5,7 @@ function Invoke-ExecSetSharePointMember {
     .ROLE
         Sharepoint.Site.ReadWrite
     .DESCRIPTION
-        Adds or removes a user in a SharePoint site role (Owners, Members or Visitors).
+        Adds one or more users to, or removes a user from, a SharePoint site role (Owners, Members or Visitors).
         Group-connected sites manage Owners/Members through the backing M365 group via Graph;
         Visitors (and classic/communication sites entirely) are managed through the site's
         associated SharePoint role groups via the SharePoint REST API using certificate
@@ -19,20 +19,21 @@ function Invoke-ExecSetSharePointMember {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     $TenantFilter = $Request.Body.tenantFilter
-    $UPN = $Request.Body.user.value
+    $UPNs = @($Request.Body.user.value | Where-Object { $_ })
     $Add = $Request.Body.Add -eq $true
 
     # Role comes from the removal picker's selected entry when present, else from the form.
-    $Role = $Request.Body.user.addedFields.Group ?? $Request.Body.Role ?? 'Members'
-    $MemberType = $Request.Body.user.addedFields.Type
+    $Role = @($Request.Body.user.addedFields.Group)[0] ?? $Request.Body.Role ?? 'Members'
+    $MemberType = @($Request.Body.user.addedFields.Type)[0]
     $AssociatedGroups = @{
         'Owners'   = 'associatedownergroup'
         'Members'  = 'associatedmembergroup'
         'Visitors' = 'associatedvisitorgroup'
     }
 
+    $FailedCount = 0
     try {
-        if (-not $UPN) { throw 'No user was selected.' }
+        if ($UPNs.Count -eq 0) { throw 'No user was selected.' }
         if (-not $AssociatedGroups.ContainsKey([string]$Role)) {
             throw "Invalid role '$Role'. Valid roles are: $($AssociatedGroups.Keys -join ', ')."
         }
@@ -51,25 +52,33 @@ function Invoke-ExecSetSharePointMember {
             }
 
             if ($Role -eq 'Owners') {
-                $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$UPN`?`$select=id" -tenantid $TenantFilter).id
-                if ($Add) {
-                    $OwnerBody = ConvertTo-Json -Compress -InputObject @{ '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$UserID" }
-                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/groups/$GroupId/owners/`$ref" -tenantid $TenantFilter -type POST -body $OwnerBody
-                    $Results = "Successfully added $UPN as an owner of the M365 group backing the site."
-                } else {
-                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/groups/$GroupId/owners/$UserID/`$ref" -tenantid $TenantFilter -type DELETE -body ''
-                    $Results = "Successfully removed $UPN as an owner of the M365 group backing the site."
+                $Results = foreach ($UPN in $UPNs) {
+                    try {
+                        $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$UPN`?`$select=id" -tenantid $TenantFilter).id
+                        if ($Add) {
+                            $OwnerBody = ConvertTo-Json -Compress -InputObject @{ '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$UserID" }
+                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/groups/$GroupId/owners/`$ref" -tenantid $TenantFilter -type POST -body $OwnerBody
+                            $Message = "Successfully added $UPN as an owner of the M365 group backing the site."
+                        } else {
+                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/groups/$GroupId/owners/$UserID/`$ref" -tenantid $TenantFilter -type DELETE -body ''
+                            $Message = "Successfully removed $UPN as an owner of the M365 group backing the site."
+                        }
+                        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev Info
+                    } catch {
+                        $ErrorMessage = Get-CippException -Exception $_
+                        $Message = "Failed to $(if ($Add) { 'add' } else { 'remove' }) $UPN as an owner. Error: $($ErrorMessage.NormalizedError)"
+                        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev Error -LogData $ErrorMessage
+                        $FailedCount++
+                    }
+                    $Message
                 }
-                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Info
             } else {
                 if ($Add) {
-                    $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UPN -TenantFilter $TenantFilter -Headers $Headers
+                    $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UPNs -TenantFilter $TenantFilter -Headers $Headers
                 } else {
-                    $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$UPN`?`$select=id" -tenantid $TenantFilter).id
-                    $Results = Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UserID -TenantFilter $TenantFilter -Headers $Headers
+                    $Results = Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UPNs -TenantFilter $TenantFilter -Headers $Headers
                 }
             }
-            $StatusCode = [HttpStatusCode]::OK
         } else {
             # SharePoint role group management via REST with certificate auth.
             $SiteUrl = $Request.Body.URL
@@ -83,43 +92,53 @@ function Invoke-ExecSetSharePointMember {
             $RoleLabel = ([string]$Role).ToLower().TrimEnd('s')
             $Article = if ($RoleLabel -match '^[aeiou]') { 'an' } else { 'a' }
 
-            try {
-                $EnsureBody = ConvertTo-Json -Compress -InputObject @{ logonName = "i:0#.f|membership|$UPN" }
-                $EnsuredUser = New-GraphPostRequest -uri "$BaseUri/web/ensureuser" -tenantid $TenantFilter -scope $Scope -type POST -body $EnsureBody -contentType 'application/json;odata=nometadata' -AddedHeaders $JsonAccept -UseCertificate -AsApp $true
-            } catch {
-                throw "Could not resolve $UPN on the site (ensureuser): $($_.Exception.Message)"
-            }
-            if (-not $EnsuredUser.Id) {
-                throw "Could not resolve $UPN on the site."
-            }
-
-            if ($Add) {
-                # Same shape PnP sends: an SP.User entity posted to the group's users
-                # collection, which requires the odata=verbose content type.
-                $AddBody = ConvertTo-Json -Compress -Depth 5 -InputObject @{
-                    '__metadata' = @{ 'type' = 'SP.User' }
-                    'LoginName'  = $EnsuredUser.LoginName
-                }
+            $Results = foreach ($UPN in $UPNs) {
                 try {
-                    $null = New-GraphPostRequest -uri "$BaseUri/web/$RoleGroup/users" -tenantid $TenantFilter -scope $Scope -type POST -body $AddBody -contentType 'application/json;odata=verbose' -AddedHeaders $JsonAccept -UseCertificate -AsApp $true
-                } catch {
-                    throw "Could not add $UPN to the site $Role group: $($_.Exception.Message)"
-                }
-                $Results = "Successfully added $UPN as $Article $RoleLabel of $SiteUrl."
-            } else {
-                try {
-                    $null = New-GraphPostRequest -uri "$BaseUri/web/$RoleGroup/users/removebyid($($EnsuredUser.Id))" -tenantid $TenantFilter -scope $Scope -type POST -body '{}' -contentType 'application/json;odata=nometadata' -AddedHeaders $JsonAccept -UseCertificate -AsApp $true
-                } catch {
-                    if ($_.Exception.Message -match 'Can not find the user') {
-                        throw "$UPN is not in the site's $Role group."
+                    try {
+                        $EnsureBody = ConvertTo-Json -Compress -InputObject @{ logonName = "i:0#.f|membership|$UPN" }
+                        $EnsuredUser = New-GraphPostRequest -uri "$BaseUri/web/ensureuser" -tenantid $TenantFilter -scope $Scope -type POST -body $EnsureBody -contentType 'application/json;odata=nometadata' -AddedHeaders $JsonAccept -UseCertificate -AsApp $true
+                    } catch {
+                        throw "Could not resolve $UPN on the site (ensureuser): $($_.Exception.Message)"
                     }
-                    throw "Could not remove $UPN from the site $Role group: $($_.Exception.Message)"
+                    if (-not $EnsuredUser.Id) {
+                        throw "Could not resolve $UPN on the site."
+                    }
+
+                    if ($Add) {
+                        # Same shape PnP sends: an SP.User entity posted to the group's users
+                        # collection, which requires the odata=verbose content type.
+                        $AddBody = ConvertTo-Json -Compress -Depth 5 -InputObject @{
+                            '__metadata' = @{ 'type' = 'SP.User' }
+                            'LoginName'  = $EnsuredUser.LoginName
+                        }
+                        try {
+                            $null = New-GraphPostRequest -uri "$BaseUri/web/$RoleGroup/users" -tenantid $TenantFilter -scope $Scope -type POST -body $AddBody -contentType 'application/json;odata=verbose' -AddedHeaders $JsonAccept -UseCertificate -AsApp $true
+                        } catch {
+                            throw "Could not add $UPN to the site $Role group: $($_.Exception.Message)"
+                        }
+                        $Message = "Successfully added $UPN as $Article $RoleLabel of $SiteUrl."
+                    } else {
+                        try {
+                            $null = New-GraphPostRequest -uri "$BaseUri/web/$RoleGroup/users/removebyid($($EnsuredUser.Id))" -tenantid $TenantFilter -scope $Scope -type POST -body '{}' -contentType 'application/json;odata=nometadata' -AddedHeaders $JsonAccept -UseCertificate -AsApp $true
+                        } catch {
+                            if ($_.Exception.Message -match 'Can not find the user') {
+                                throw "$UPN is not in the site's $Role group."
+                            }
+                            throw "Could not remove $UPN from the site $Role group: $($_.Exception.Message)"
+                        }
+                        $Message = "Successfully removed $UPN as $Article $RoleLabel of $SiteUrl."
+                    }
+                    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev Info
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    $Message = "Failed to $(if ($Add) { 'add' } else { 'remove' }) $UPN. Error: $($ErrorMessage.NormalizedError)"
+                    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev Error -LogData $ErrorMessage
+                    $FailedCount++
                 }
-                $Results = "Successfully removed $UPN as $Article $RoleLabel of $SiteUrl."
+                $Message
             }
-            Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Info
-            $StatusCode = [HttpStatusCode]::OK
         }
+        $StatusCode = if ($FailedCount -eq $UPNs.Count) { [HttpStatusCode]::BadRequest } else { [HttpStatusCode]::OK }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to modify $Role for $($Request.Body.URL ?? $Request.Body.GroupID). Error: $($ErrorMessage.NormalizedError)"

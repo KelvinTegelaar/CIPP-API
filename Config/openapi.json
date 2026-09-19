@@ -35042,7 +35042,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Adds or removes a user in a SharePoint site role (Owners, Members or Visitors).\nGroup-connected sites manage Owners/Members through the backing M365 group via Graph;\nVisitors (and classic/communication sites entirely) are managed through the site's\nassociated SharePoint role groups via the SharePoint REST API using certificate\nauthentication. Removals sourced from ListSiteMembers carry the group and type of the\nselected entry, so users directly added to a role group on a group-connected site are\nremoved from that group rather than from the M365 group.",
+        "description": "Adds one or more users to, or removes a user from, a SharePoint site role (Owners, Members or Visitors).\nGroup-connected sites manage Owners/Members through the backing M365 group via Graph;\nVisitors (and classic/communication sites entirely) are managed through the site's\nassociated SharePoint role groups via the SharePoint REST API using certificate\nauthentication. Removals sourced from ListSiteMembers carry the group and type of the\nselected entry, so users directly added to a role group on a group-connected site are\nremoved from that group rather than from the M365 group.",
         "requestBody": {
           "required": true,
           "content": {
@@ -35090,9 +35090,6 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "value"
-                    ],
                     "description": "Role comes from the removal picker's selected entry when present, else from the form."
                   }
                 },
