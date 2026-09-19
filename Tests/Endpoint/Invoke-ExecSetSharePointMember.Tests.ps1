@@ -1,11 +1,15 @@
 # Pester tests for Invoke-ExecSetSharePointMember
 # Covers adding several users at once on each path, partial failures and the single-entry removal picker.
+# The endpoint delegates to Set-CIPPSharePointSiteMember, which is loaded too so both are exercised together.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ExecSetSharePointMember.ps1' -File -ErrorAction SilentlyContinue |
         Select-Object -First 1 -ExpandProperty FullName
     if (-not $FunctionPath) { throw 'Could not locate Invoke-ExecSetSharePointMember.ps1 under Modules/' }
+    $HelperPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Set-CIPPSharePointSiteMember.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $HelperPath) { throw 'Could not locate Set-CIPPSharePointSiteMember.ps1 under Modules/' }
 
     class HttpResponseContext {
         [int]$StatusCode
@@ -18,13 +22,14 @@ BeforeAll {
 
     function Add-CIPPGroupMember { param($GroupType, $GroupID, $Member, $TenantFilter, $Headers) }
     function Get-CippException { param($Exception) }
-    function New-GraphGetRequest { param($uri, $tenantid, [switch]$ComplexFilter) }
+    function New-GraphGetRequest { param($uri, $tenantid, $scope, $extraHeaders, [switch]$ComplexFilter, [switch]$UseCertificate, $AsApp) }
     function New-GraphPostRequest { param($uri, $tenantid, $scope, $type, $body, $contentType, $AddedHeaders, [switch]$UseCertificate, $AsApp) }
     function Remove-CIPPGroupMember { param($GroupType, $GroupID, $Member, $TenantFilter, $Headers) }
     function Resolve-CIPPSharePointRestContext { param($TenantFilter, $SiteUrl) }
     function Write-LogMessage { param($Headers, $API, $tenant, $message, $sev, $LogData) }
 
     . $FunctionPath
+    . $HelperPath
 
     function New-TestRequest {
         param($Body)
@@ -100,7 +105,7 @@ Describe 'Invoke-ExecSetSharePointMember' {
         $Response = Invoke-ExecSetSharePointMember -Request $Request -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::BadRequest)
-        @($Response.Body.Results).Count | Should -Be 2
+        $Response.Body.Results | Should -BeLike '*Failed to add x@contoso.com*Failed to add y@contoso.com*'
     }
 
     It 'passes all users to Add-CIPPGroupMember for members of a group-connected site' {
@@ -116,6 +121,21 @@ Describe 'Invoke-ExecSetSharePointMember' {
         Should -Invoke Add-CIPPGroupMember -Times 1 -Exactly -ParameterFilter {
             ($Member -join ',') -eq 'a@contoso.com,b@contoso.com' -and $GroupID -eq '11111111-2222-3333-4444-555555555555'
         }
+    }
+
+    It 'asks the site for its backing group when no group is supplied' {
+        Mock -CommandName New-GraphGetRequest -MockWith { [pscustomobject]@{ GroupId = '11111111-2222-3333-4444-555555555555' } } -ParameterFilter { $uri -like '*/_api/site?*' }
+        $Request = New-TestRequest @{
+            tenantFilter = 'contoso.onmicrosoft.com'; Add = $true; Role = 'Members'; SharePointType = 'Group'
+            URL = 'https://contoso.sharepoint.com/sites/team'; GroupID = ''
+            user = @((New-UserOption 'a@contoso.com'))
+        }
+
+        $Response = Invoke-ExecSetSharePointMember -Request $Request -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::OK)
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -eq 'https://contoso.sharepoint.com/sites/team/_api/site?$select=GroupId' }
+        Should -Invoke Add-CIPPGroupMember -Times 1 -Exactly -ParameterFilter { $GroupID -eq '11111111-2222-3333-4444-555555555555' }
     }
 
     It 'adds each user as an owner of the M365 group on a group-connected site' {

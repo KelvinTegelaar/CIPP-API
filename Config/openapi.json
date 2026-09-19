@@ -7325,6 +7325,13 @@
                     "type": "string",
                     "description": "Set-CIPPMailboxPermission takes a single level, so Full Access plus Send As means one task per level. They are separate Exchange operations anyway."
                   },
+                  "sharePointSiteRole": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "sharePointSites": {
+                    "type": "string",
+                    "description": "SharePoint site membership is scheduled instead of run inline: a freshly created account cannot be resolved on a site (ensureuser) until it has replicated to SharePoint."
+                  },
                   "sherwebLicense": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
@@ -7612,6 +7619,13 @@
                   },
                   "sharedMailboxPermission": {
                     "type": "string"
+                  },
+                  "sharePointSiteRole": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "sharePointSites": {
+                    "type": "string",
+                    "description": "SharePoint sites new users are added to, with one role for all of them"
                   },
                   "state": {
                     "type": "string"
@@ -35063,8 +35077,7 @@
                     "type": "string"
                   },
                   "Role": {
-                    "type": "string",
-                    "description": "Role comes from the removal picker's selected entry when present, else from the form."
+                    "type": "string"
                   },
                   "SharePointType": {
                     "type": "string"
@@ -35073,8 +35086,7 @@
                     "type": "string"
                   },
                   "URL": {
-                    "type": "string",
-                    "description": "SharePoint role group management via REST with certificate auth."
+                    "type": "string"
                   },
                   "user": {
                     "type": "object",
@@ -35083,25 +35095,21 @@
                         "type": "object",
                         "properties": {
                           "Group": {
-                            "type": "string",
-                            "description": "Role comes from the removal picker's selected entry when present, else from the form."
+                            "type": "string"
                           },
                           "Type": {
                             "type": "string"
                           }
-                        },
-                        "description": "Role comes from the removal picker's selected entry when present, else from the form."
+                        }
                       },
                       "value": {
                         "type": "string"
                       }
-                    },
-                    "description": "Role comes from the removal picker's selected entry when present, else from the form."
+                    }
                   }
                 },
                 "required": [
-                  "tenantFilter",
-                  "URL"
+                  "tenantFilter"
                 ]
               }
             }
