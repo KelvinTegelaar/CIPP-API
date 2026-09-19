@@ -39,6 +39,97 @@ function New-CIPPAlertTemplate {
         $AfterButtonText = 'Click the button above to go to the logbook and investigate the deviations. You can also use the standards page to remediate the deviations.'
     }
 
+    if ($InputObject -eq 'baseline') {
+        $Alerts = @($Data)
+        $DriftAlerts = @($Alerts | Where-Object { $_.Event -eq 'Drift' })
+        $RemediatedAlerts = @($Alerts | Where-Object { $_.Event -eq 'Remediated' })
+        $ConflictAlerts = @($Alerts | Where-Object { $_.Event -eq 'Conflict' })
+
+        $Title = if ($Alerts.Count -eq 1) {
+            switch ($Alerts[0].Event) {
+                'Remediated' { "$($Tenant) - Baseline: fixed automatically - $($Alerts[0].Label)" }
+                'Conflict' { "$($Tenant) - Baseline conflict: $($Alerts[0].Label)" }
+                default { "$($Tenant) - Baseline change detected: $($Alerts[0].Label)" }
+            }
+        } else {
+            $TitleParts = [System.Collections.Generic.List[string]]::new()
+            if ($DriftAlerts.Count -gt 0) { $TitleParts.Add("$($DriftAlerts.Count) need$(if ($DriftAlerts.Count -eq 1) { 's' }) review") }
+            if ($RemediatedAlerts.Count -gt 0) { $TitleParts.Add("$($RemediatedAlerts.Count) fixed automatically") }
+            if ($ConflictAlerts.Count -gt 0) { $TitleParts.Add("$($ConflictAlerts.Count) in conflict") }
+            "$($Tenant) - Baseline: $($TitleParts -join ', ')"
+        }
+
+        $Encode = { param($Value) [System.Net.WebUtility]::HtmlEncode("$Value") }
+        $MutedStyle = 'color:#6b7280;font-size:13px'
+
+        # Status is the one thing every reader scans for, so it carries color: red needs a
+        # decision, green is already handled, amber cannot run.
+        $StatusCell = @{
+            'Drift'      = '<strong style="color:#b42318">Needs review</strong>'
+            'Remediated' = '<strong style="color:#067647">Fixed automatically</strong>'
+            'Conflict'   = '<strong style="color:#b54708">Conflict</strong>'
+        }
+        $SummaryHTML = '<table class="table-modern"><tr><th>Standard</th><th>Status</th></tr>'
+        foreach ($Alert in $Alerts) {
+            $BaselineNote = "$($Alert.Baseline)$(if ($Alert.Stage) { " · stage $($Alert.Stage)" })"
+            $SummaryHTML += ('<tr><td><strong>{0}</strong><br /><span style="{1}">{2}</span></td><td>{3}</td></tr>' -f `
+                (& $Encode $Alert.Label), $MutedStyle, (& $Encode $BaselineNote), ($StatusCell[[string]$Alert.Event] ?? (& $Encode $Alert.Event)))
+        }
+        $SummaryHTML += '</table>'
+        $IntroText = "<p>You've set your baseline to alert when a tenant moves away from it. Here is what changed on <strong>$(& $Encode $Tenant)</strong>:</p>$SummaryHTML"
+
+        if ($RemediatedAlerts.Count -gt 0) {
+            $IntroText += "<p>CIPP has already put the automatically fixed standard$(if ($RemediatedAlerts.Count -ne 1) { 's' }) back to the agreed value - those need no action.</p>"
+        }
+        $FormatDiffValue = {
+            param($Value)
+            if ($null -eq $Value -or "$Value" -eq '') { return '(not set)' }
+            if ($Value -is [bool]) { return $(if ($Value) { 'On' } else { 'Off' }) }
+            $Text = "$Value"
+            if ($Text.Length -gt 120) { $Text = "$($Text.Substring(0, 117))..." }
+            & $Encode $Text
+        }
+        $DetailAlerts = @($DriftAlerts + $ConflictAlerts)
+        $DetailShown = 0
+        foreach ($Alert in $DetailAlerts) {
+            if ($DetailShown -eq 0) {
+                $IntroText += '<h2 style="margin-bottom:0">What needs your attention</h2>'
+            }
+            if ($DetailShown -ge 6) {
+                $IntroText += "<p>...and $($DetailAlerts.Count - $DetailShown) more - the alignment page shows every difference.</p>"
+                break
+            }
+            $IntroText += "<h3 style=`"margin-bottom:2px`">$(& $Encode $Alert.Label)</h3>"
+            if (![string]::IsNullOrWhiteSpace($Alert.Description)) {
+                $IntroText += "<p style=`"$MutedStyle;margin:2px 0 8px 0`">$(& $Encode $Alert.Description)</p>"
+            }
+            if ($Alert.Event -eq 'Conflict') {
+                $IntroText += "<p>Two baselines configure this standard with different settings ($(& $Encode (@($Alert.ConflictWith) -join ' and '))). CIPP cannot pick a side, so nothing runs for it until one of them changes.</p>"
+                $DetailShown++
+                continue
+            }
+            $Differences = @($Alert.Differences)
+            if ($Differences.Count -gt 0) {
+                $DiffHTML = '<table class="table-modern"><tr><th>Setting</th><th>Should be</th><th>Is now</th></tr>'
+                foreach ($Difference in ($Differences | Select-Object -First 8)) {
+                    $DiffHTML += ('<tr><td>{0}</td><td><strong>{1}</strong></td><td>{2}</td></tr>' -f `
+                        (& $Encode $Difference.Property), (& $FormatDiffValue $Difference.ExpectedValue), (& $FormatDiffValue $Difference.ReceivedValue))
+                }
+                $DiffHTML += '</table>'
+                $IntroText += $DiffHTML
+                if ($Differences.Count -gt 8) {
+                    $IntroText += "<p>...and $($Differences.Count - 8) more difference$(if (($Differences.Count - 8) -ne 1) { 's' }) on this standard.</p>"
+                }
+            } else {
+                $IntroText += '<p>This standard no longer matches its agreed configuration.</p>'
+            }
+            $DetailShown++
+        }
+
+        $ButtonUrl = "$CIPPURL/tenant/baselines/alignment?tenantFilter=$($Tenant)"
+        $ButtonText = 'Review baseline alignment'
+        $AfterButtonText = '<p>From the alignment page you can remediate a deviation, accept it as an agreed exception with a reason, or inspect every value that differs.</p>'
+    }
     if ($InputObject -eq 'sherwebmig') {
         $DataHTML = ($Data | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
         $IntroText = "<p>The following licenses have not yet been found at Sherweb, and are expiring within 7 days:</p>$dataHTML"
