@@ -50738,7 +50738,24 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "License": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Reason": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Suggestion": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Type": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "User": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
                   }
                 }
               }
