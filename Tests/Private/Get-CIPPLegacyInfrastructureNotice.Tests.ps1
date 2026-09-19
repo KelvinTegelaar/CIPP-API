@@ -1,5 +1,6 @@
 # Get-CIPPLegacyInfrastructureNotice runs on every page load, so it has to be cheap, never throw,
-# and stay silent on the new infrastructure and on local dev. The alert it emits has to carry the
+# and stay silent on the new infrastructure, on CyberDrain-hosted instances (all migrated) and on
+# local dev. The alert it emits has to carry the
 # same fields Get-CIPPMaintenanceNotice does, because the frontend renders both through the same
 # banner and picks the alert by its "maintenance" flag.
 
@@ -53,15 +54,9 @@ Describe 'Get-CIPPLegacyInfrastructureNotice' {
         $Notice.linkText | Should -Be 'Migration guide'
     }
 
-    It 'warns a CyberDrain-hosted instance without the self-service guide' {
+    It 'returns nothing for a CyberDrain-hosted instance because hosted is fully migrated' {
         $env:CIPP_HOSTED = 'true'
-        $Notice = Get-CIPPLegacyInfrastructureNotice
-
-        $Notice | Should -Not -BeNullOrEmpty
-        $Notice.type | Should -Be 'warning'
-        $Notice.link | Should -BeNullOrEmpty
-        $Notice.Alert | Should -BeLike '*CyberDrain will migrate hosted instances*'
-        $Notice.Alert | Should -BeLike '*No action is needed*'
+        Get-CIPPLegacyInfrastructureNotice | Should -BeNullOrEmpty
     }
 
     It 'is shaped like a maintenance notice so the banner can render it' {

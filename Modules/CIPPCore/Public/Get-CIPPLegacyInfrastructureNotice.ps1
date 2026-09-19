@@ -8,12 +8,7 @@ function Get-CIPPLegacyInfrastructureNotice {
     Function App and Static Web App deployment are on legacy infrastructure that will stop receiving
     updates. This returns a warning shaped as a GetCippAlerts maintenance alert so the frontend
     renders it in the same full-width banner as a hosted maintenance notice, or $null when the
-    instance is already on the new infrastructure (CIPPNG) or is running locally.
-
-    Self-hosted instances get a link to the migration guide. CyberDrain-hosted instances are migrated
-    by CyberDrain, so they get the same warning without the self-service guide.
-
-    This runs on every page load for every user, so it never throws and never touches Graph or table
+    instance is already on the new infrastructure (CIPPNG) or is running locally   This runs on every page load for every user, so it never throws and never touches Graph or table
     storage.
 
     .EXAMPLE
@@ -21,20 +16,17 @@ function Get-CIPPLegacyInfrastructureNotice {
     #>
     [CmdletBinding()]
     param()
-    if ($env:CIPPNG -eq 'true') { return $null }
+    if ($env:CIPPNG -eq 'true' -or $env:CIPP_HOSTED -eq 'true') { return $null }
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') { return $null }
-    $Hosted = $env:CIPP_HOSTED -eq 'true'
     $Message = 'This CIPP instance is running on the legacy Function App infrastructure, which will soon stop receiving updates. Migrate to the new infrastructure to keep receiving new features and fixes. The migration keeps your storage account and Key Vault, so your configuration carries across.'
 
     return @{
         title       = 'Legacy infrastructure'
         Alert       = $Message
-        link        = if ($Hosted) { $null } else { 'https://docs.cipp.app/setup/maintaining-cipp/migrating-to-the-new-infrastructure' }
+        link        = 'https://docs.cipp.app/setup/maintaining-cipp/migrating-to-the-new-infrastructure'
         linkText    = 'Migration guide'
         type        = 'warning'
         maintenance = $true
-        # Fixed id: the frontend dismisses per notice id for 24 hours, so this comes back daily
-        # until the instance is migrated rather than staying hidden for good.
         noticeId    = 'legacy-function-app-infrastructure'
         startTime   = $null
         endTime     = $null
