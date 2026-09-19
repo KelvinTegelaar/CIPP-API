@@ -21,6 +21,19 @@ function Get-CIPPAlertMFAAlertUsers {
             Where-Object { $_.userDisplayName -ne 'On-Premises Directory Synchronization Service Account' -and $_.userPrincipalName -notmatch '^package_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@' } |
             Select-Object @{n = 'UPN'; e = { $_.userPrincipalName } }, @{n = 'DisplayName'; e = { $_.userDisplayName } }
         }
+
+        # Give new accounts a grace period to register MFA before they are alerted on
+        $NewUserGraceDays = [int]($InputValue ?? 0)
+        if ($Users -and $NewUserGraceDays -gt 0) {
+            $CreatedByUpn = @{}
+            foreach ($CachedUser in (New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' -Fields 'userPrincipalName', 'createdDateTime')) {
+                $CreatedByUpn[$CachedUser.userPrincipalName] = $CachedUser.createdDateTime
+            }
+            if ($CreatedByUpn.Count -gt 0) {
+                $Cutoff = (Get-Date).ToUniversalTime().AddDays(-$NewUserGraceDays)
+                $Users = $Users | Where-Object { $CreatedByUpn.ContainsKey($_.UPN) -and ([datetime]$CreatedByUpn[$_.UPN]).ToUniversalTime() -lt $Cutoff }
+            }
+        }
         Write-Host "Completed MFA status check for tenant '$TenantFilter'. Found $($Users.Count) users without MFA registered."
 
         if ($Users) {
