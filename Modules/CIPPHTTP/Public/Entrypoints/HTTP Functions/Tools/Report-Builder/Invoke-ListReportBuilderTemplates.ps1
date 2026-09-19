@@ -3,7 +3,7 @@ function Invoke-ListReportBuilderTemplates {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Core.Read
+        CIPP.ReportBuilder.Read
     .DESCRIPTION
         Lists saved Report Builder templates that define custom report configurations with data blocks and formatting.
     #>

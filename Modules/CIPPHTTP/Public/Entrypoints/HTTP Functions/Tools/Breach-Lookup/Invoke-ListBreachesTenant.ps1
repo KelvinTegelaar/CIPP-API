@@ -3,7 +3,7 @@ function Invoke-ListBreachesTenant {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Core.Read
+        CIPP.BreachLookup.Read
     .DESCRIPTION
         Lists cached data breach results for user accounts in a tenant from the CIPP breach monitoring cache.
     #>

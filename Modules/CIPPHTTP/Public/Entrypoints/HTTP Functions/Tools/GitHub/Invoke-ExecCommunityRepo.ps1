@@ -7,7 +7,7 @@ function Invoke-ExecCommunityRepo {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.ReadWrite
+        CIPP.TemplateLibrary.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

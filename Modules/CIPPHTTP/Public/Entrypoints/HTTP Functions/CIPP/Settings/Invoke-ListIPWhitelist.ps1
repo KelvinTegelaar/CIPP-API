@@ -3,7 +3,7 @@ Function Invoke-ListIPWhitelist {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.Read
+        CIPP.IPDatabase.Read
     .DESCRIPTION
         Lists trusted IP addresses configured in CIPP for IP-based access control.
     #>

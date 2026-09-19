@@ -3,7 +3,7 @@ function Invoke-ListLogs {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.Read
+        CIPP.Logs.Read
     .DESCRIPTION
         Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories, fetching a single entry, and server-side pagination via manualPagination/nextLink. Pass Search to filter rows by a case-insensitive substring of the log Message. Pass summaryOnly=true (or countsOnly=true) to get per-API and per-severity counts across the requested range with the heavy LogData dropped, instead of the full rows.
     #>

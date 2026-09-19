@@ -9,7 +9,7 @@ function Invoke-ListCommunityRepoTemplates {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.Read
+        CIPP.TemplateLibrary.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -15826,7 +15826,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read"
+        "x-cipp-role": "CIPP.BreachLookup.Read"
       }
     },
     "/api/ExecBulkLicense": {
@@ -17181,7 +17181,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.ReadWrite",
+        "x-cipp-role": "CIPP.TemplateLibrary.ReadWrite",
         "x-cipp-any-tenant": true
       }
     },
@@ -22762,7 +22762,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.ReadWrite"
+        "x-cipp-role": "CIPP.ReportBuilder.ReadWrite"
       }
     },
     "/api/ExecGeoIPLookup": {
@@ -28553,7 +28553,10 @@
                     "type": "string"
                   },
                   "UserPrincipalName": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 },
                 "required": [
@@ -30884,7 +30887,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.ReadWrite"
+        "x-cipp-role": "CIPP.ReportBuilder.ReadWrite"
       }
     },
     "/api/ExecReprocessUserLicenses": {
@@ -41451,7 +41454,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-role": "CIPP.BreachLookup.Read",
         "x-cipp-any-tenant": true
       }
     },
@@ -41526,7 +41529,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read"
+        "x-cipp-role": "CIPP.BreachLookup.Read"
       }
     },
     "/api/ListCalendarPermissions": {
@@ -42281,7 +42284,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-role": "CIPP.TemplateLibrary.Read",
         "x-cipp-any-tenant": true
       }
     },
@@ -42347,7 +42350,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-role": "CIPP.TemplateLibrary.Read",
         "x-cipp-any-tenant": true
       }
     },
@@ -47590,7 +47593,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read"
+        "x-cipp-role": "CIPP.ReportBuilder.Read"
       }
     },
     "/api/ListGenericTestFunction": {
@@ -50083,7 +50086,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-role": "CIPP.IPDatabase.Read",
         "x-cipp-any-tenant": true
       }
     },
@@ -50520,7 +50523,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-role": "CIPP.IPDatabase.Read",
         "x-cipp-any-tenant": true
       }
     },
@@ -51242,7 +51245,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-role": "CIPP.Logs.Read",
         "x-cipp-any-tenant": true
       }
     },
@@ -54345,7 +54348,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read"
+        "x-cipp-role": "CIPP.ReportBuilder.Read"
       }
     },
     "/api/ListResellerRelationshipLink": {
