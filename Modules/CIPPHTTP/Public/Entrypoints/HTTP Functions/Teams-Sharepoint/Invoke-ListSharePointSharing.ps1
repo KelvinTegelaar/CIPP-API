@@ -48,14 +48,14 @@ function Invoke-ListSharePointSharing {
     }
     $LastDataRefresh = $CacheTimestamps | Sort-Object | Select-Object -First 1
 
-    # --- Environment summaries per workload. Teams-connected sites (rootWebTemplate 'Group')
-    #     are reported separately from the remaining SharePoint sites; OneDrive is per account. ---
+    # --- Environment summaries per workload. Teams-connected sites (rootWebTemplate 'Group' and
+    #     'Team Channel') are reported separately from the remaining SharePoint sites; OneDrive is per account. ---
     $SharePointSites = 0; $SharePointFiles = [int64]0; $SharePointStorage = [double]0
     $TeamsSites = 0; $TeamsFiles = [int64]0; $TeamsStorage = [double]0
     foreach ($Site in $CacheData['SharePointSiteUsage']) {
         $Files = [int64](ConvertTo-SafeDouble -Value $Site.fileCount)
         $Storage = ConvertTo-SafeDouble -Value $Site.storageUsedInBytes
-        if ($Site.rootWebTemplate -eq 'Group') {
+        if ($Site.rootWebTemplate -in @('Group', 'Team Channel')) {
             $TeamsSites++; $TeamsFiles += $Files; $TeamsStorage += $Storage
         } else {
             $SharePointSites++; $SharePointFiles += $Files; $SharePointStorage += $Storage

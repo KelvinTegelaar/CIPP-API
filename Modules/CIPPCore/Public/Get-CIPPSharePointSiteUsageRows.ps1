@@ -63,6 +63,25 @@ function Get-CIPPSharePointSiteUsageRows {
         }
     }
 
+    $RequestId = 0
+    $MissingSiteRequests = foreach ($Row in $AdminRows) {
+        $RowUrl = ([string]$Row.SiteUrl).TrimEnd('/')
+        $RowSiteId = ([string]$Row.SiteId).Trim('{}')
+        if ([string]::IsNullOrWhiteSpace($RowUrl) -or $GraphByWebUrl.ContainsKey($RowUrl) -or ($RowSiteId -and $GraphBySiteId.ContainsKey($RowSiteId))) { continue }
+        $SiteUri = [System.Uri]$RowUrl
+        @{
+            id     = [string]$RequestId++
+            method = 'GET'
+            url    = "sites/$($SiteUri.Host):$($SiteUri.AbsolutePath)?`$select=id,createdDateTime,description,name,displayName,webUrl,sharepointIds"
+        }
+    }
+    if (@($MissingSiteRequests).Count -gt 0) {
+        foreach ($Response in @(New-GraphBulkRequest -tenantid $TenantFilter -Requests @($MissingSiteRequests) -asapp $true | Where-Object { $_.status -eq 200 })) {
+            $GraphBySiteId[([string]$Response.body.sharepointIds.siteId).Trim('{}').ToLowerInvariant()] = $Response.body
+            $GraphByWebUrl[$Response.body.webUrl.TrimEnd('/').ToLowerInvariant()] = $Response.body
+        }
+    }
+
     $ArchiveByUrl = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
     if ($IncludeArchive) {
         try {
