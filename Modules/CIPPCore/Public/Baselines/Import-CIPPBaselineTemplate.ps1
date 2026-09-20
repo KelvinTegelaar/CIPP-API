@@ -83,6 +83,7 @@ function Import-CIPPBaselineTemplate {
         excludedTenants = @()
         alertEmails     = ''
         alertWebhookUrl = ''
+        disableAlerts   = $false
         stages          = @($Baseline.stages)
     }
     $Saved = New-CIPPBaseline -Baseline $Payload -User ("$User" ? "$User" : 'GitHub Import') -Source "$FullName" -SHA "$SHA"

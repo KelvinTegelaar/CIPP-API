@@ -65,6 +65,10 @@ function New-CIPPBaseline {
         excludedTenants = (ConvertTo-Json -Compress -Depth 10 -InputObject $ExcludedValues)
         alertEmails     = "$($Baseline.alertEmails)"
         alertWebhookUrl = "$($Baseline.alertWebhookUrl)"
+        # 'Disable Alerts': deviations are still detected and shown, but no email, webhook
+        # or PSA notification fires for this baseline. Negative flag on purpose: rows saved
+        # before the column existed keep alerting, exactly right.
+        disableAlerts   = [bool]$Baseline.disableAlerts
         # 'Disable Scheduled Runs': the baseline only executes when an operator runs it.
         # Negative flag on purpose: rows saved before the column existed default to
         # scheduled, exactly right.

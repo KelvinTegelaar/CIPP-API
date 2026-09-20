@@ -268,6 +268,7 @@ function Get-CIPPBaseline {
                 excludedTenants    = $ExcludedTenants
                 alertEmails        = $RolloutRow.alertEmails
                 alertWebhookUrl    = $RolloutRow.alertWebhookUrl
+                disableAlerts      = [bool]$RolloutRow.disableAlerts
                 disableScheduledRuns = [bool]$RolloutRow.disableScheduledRuns
                 standardsCount     = $UniqueStandards.Count
                 stageNames         = @($Stages.name)

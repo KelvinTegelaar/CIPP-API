@@ -150,8 +150,10 @@ function Get-CIPPBaselineWorkItems {
                         TemplateName     = $Baseline.templateName
                         Variables        = ($Config.variables ?? [PSCustomObject]@{})
                         RemediateEnabled = [bool]$Config.remediateEnabled
-                        AlertEnabled     = [bool]$Config.alertEnabled
-                        AlertOnRemediate = [bool]$Config.alertOnRemediate
+                        # 'Disable Alerts' on the baseline silences every standard in it,
+                        # regardless of the per-standard alert switches.
+                        AlertEnabled     = [bool]$Config.alertEnabled -and -not [bool]$Baseline.disableAlerts
+                        AlertOnRemediate = [bool]$Config.alertOnRemediate -and -not [bool]$Baseline.disableAlerts
                         SourceScope      = $Scope
                         # Package members attribute their origin so the alignment view
                         # reads 'Baseline X (PackageName)' instead of hiding the bundle.
