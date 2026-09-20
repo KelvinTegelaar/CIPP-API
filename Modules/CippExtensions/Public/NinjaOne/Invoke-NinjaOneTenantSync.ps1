@@ -462,6 +462,21 @@ function Invoke-NinjaOneTenantSync {
 
         $DevicesToProcess = $Devices | Where-Object { $_.id -notin $ParsedDevices.id }
 
+        # Look up the compliance policy settings each non-compliant device fails in one Graph batch for the tenant.
+        # If the lookup fails the field is left untouched this run rather than being cleared.
+        $NonCompliantSettings = @{}
+        $NonCompliantSettingsAvailable = $false
+        if ($MappedFields.DeviceNonCompliantSettings) {
+            $NonCompliantDeviceIds = @($DevicesToProcess | Where-Object { $_.complianceState -ne 'compliant' -and $_.id } | Select-Object -ExpandProperty id)
+            try {
+                $NonCompliantSettings = Get-NinjaOneDeviceNonCompliantSettings -TenantFilter $Customer.defaultDomainName -ManagedDeviceIds $NonCompliantDeviceIds
+                $NonCompliantSettingsAvailable = $true
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -tenant $TenantFilter -API 'NinjaOneSync' -message "Failed to retrieve the non-compliant settings for $($NonCompliantDeviceIds.Count) devices, the Intune Non-Compliant Settings field will not be updated this run: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
+            }
+        }
+
         # Parse Devices
         foreach ($Device in $DevicesToProcess) {
 
@@ -550,6 +565,9 @@ function Invoke-NinjaOneTenantSync {
                 }
             }
 
+            # Only non-compliant devices carry failing settings; compliant devices get the field cleared.
+            $DeviceNonCompliantSettings = if ($Device.complianceState -ne 'compliant') { $NonCompliantSettings["$($Device.id)"] } else { $null }
+
             $ParsedDevice = [PSCustomObject]@{
                 PartitionKey        = $Customer.CustomerId
                 RowKey              = $device.AzureADDeviceId
@@ -578,6 +596,7 @@ function Invoke-NinjaOneTenantSync {
                 UserIDs             = $DeviceUserIDs
                 UserDetails         = $DeviceUsersDetail
                 CompliancePolicies  = $DevicePolcies
+                NonCompliantSettings = $DeviceNonCompliantSettings
                 Groups              = $DeviceGroups
                 NinjaDevice         = $MatchedNinjaDevice
                 DeviceLink          = $ParsedDeviceName
@@ -705,9 +724,14 @@ function Invoke-NinjaOneTenantSync {
 
             }
 
+            if ($MappedFields.DeviceNonCompliantSettings -and $NonCompliantSettingsAvailable) {
+                # A null value clears the field, so a NinjaOne condition on 'is not empty' only fires for devices with a real failure.
+                $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceNonCompliantSettings -NotePropertyValue $DeviceNonCompliantSettings
+            }
+
             # Update Device. Default to success so devices with no mapped fields are still cached.
             $DeviceFieldsUpdated = $true
-            if ($MappedFields.DeviceSummary -or $MappedFields.DeviceLinks -or $MappedFields.DeviceCompliance) {
+            if ($MappedFields.DeviceSummary -or $MappedFields.DeviceLinks -or $MappedFields.DeviceCompliance -or $MappedFields.DeviceNonCompliantSettings) {
                 $DeviceFieldsUpdated = $false
                 try {
                     $UpdateBody = $NinjaDeviceUpdate | ConvertTo-Json -Depth 100
@@ -732,7 +756,7 @@ function Invoke-NinjaOneTenantSync {
         }
 
         # Enable Device Updates Subscription if needed.
-        if ($MappedFields.DeviceCompliance) {
+        if ($MappedFields.DeviceCompliance -or $MappedFields.DeviceNonCompliantSettings) {
             New-CIPPGraphSubscription -TenantFilter $TenantFilter -TypeofSubscription 'updated' -BaseURL $CIPPUrl -Resource 'devices' -EventType 'DeviceUpdate' -Headers 'NinjaOneSync'
         }
 
