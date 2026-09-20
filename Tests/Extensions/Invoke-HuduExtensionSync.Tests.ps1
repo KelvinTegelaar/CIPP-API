@@ -12,7 +12,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Filter) }
     function Get-CippExtensionReportingData { param($TenantFilter, [switch]$IncludeMailboxes) }
     function Get-HuduCompanies { param($Id) }
-    function Add-HuduAssetLayoutField { param($AssetLayoutId, $Label, $FieldType, $Position) }
+    function Add-HuduAssetLayoutField { param($AssetLayoutId, $Label, $FieldType, $Position, $ShowInList) }
     function Get-HuduAssetLayouts { param($Id, $LayoutId) }
     function Get-HuduAssets { param($CompanyId, $AssetLayoutId) }
     function Get-HuduRelations { }
@@ -171,5 +171,105 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
         Should -Invoke Find-HuduDeviceMatch -Times 2 -Exactly -ParameterFilter {
             'SystemSerialNumber' -in $ExcludeSerials -and 'CUSTOM-PLACEHOLDER' -in $ExcludeSerials
         }
+    }
+}
+
+Describe 'Invoke-HuduExtensionSync user license sync' {
+    BeforeEach {
+        $env:CIPPRootPath = (Resolve-Path "$PSScriptRoot/../..").Path
+        $script:ObservedUserFields = $null
+        $script:LicenseCache = @(
+            [PSCustomObject]@{ skuId = 'CBDC14AB-D96C-4C30-B9F4-6ADA7CDC1D46'; skuPartNumber = 'Microsoft 365 Business Premium'; consumedUnits = 1; prepaidUnits = @{ enabled = 5 } }
+            [PSCustomObject]@{ skuId = '4ef96642-f096-40de-a3e9-d83fb2f90211'; skuPartNumber = 'Microsoft Defender for Office 365 (Plan 1)'; consumedUnits = 1; prepaidUnits = @{ enabled = 5 } }
+        )
+        $script:PeopleLayout = [PSCustomObject]@{
+            id     = 30
+            fields = @(
+                [PSCustomObject]@{ label = 'Microsoft 365'; position = 0; field_type = 'RichText' }
+                [PSCustomObject]@{ label = 'Email Address'; position = 1; field_type = 'Text' }
+                [PSCustomObject]@{ label = 'Licenses'; position = 2; field_type = 'Text' }
+            )
+        }
+        $script:HuduPerson = [PSCustomObject]@{
+            id = 201; name = 'Jane Doe'; primary_mail = 'jane@contoso.onmicrosoft.com'; url = 'https://hudu.example.test/a/201'
+            asset_layout_id = 30; cards = @(); fields = @()
+        }
+        $Configuration = [PSCustomObject]@{
+            Hudu = [PSCustomObject]@{
+                IncludeLAPS = $false; IncludeBitLocker = $false
+                CreateMissingUsers = $false; CreateMissingDevices = $false
+                ImportDomains = $false; MonitorDomains = $false; HideEmptyRoles = $false
+                IncludeDefenderLink = $false; IncludeComplianceLink = $false; IncludeParterCenterLink = $false
+            }
+        }
+
+        Mock Connect-HuduAPI { }
+        Mock Get-Tenants {
+            [PSCustomObject]@{ displayName = 'Contoso'; defaultDomainName = 'contoso.onmicrosoft.com'; initialDomainName = 'contoso.onmicrosoft.com'; customerId = 'tenant-1' }
+        }
+        Mock Get-AssignedNameMap { [PSCustomObject]@{} }
+        Mock Get-AssignedMap { [PSCustomObject]@{} }
+        Mock Get-CIPPTable { @{} }
+        Mock Get-CIPPAzDataTableEntity {
+            if ($Filter -like "*PartitionKey eq 'HuduMapping'*") {
+                return @(
+                    [PSCustomObject]@{ PartitionKey = 'HuduMapping'; RowKey = 'tenant-1'; IntegrationId = 20; IntegrationName = 'Contoso' }
+                    [PSCustomObject]@{ PartitionKey = 'HuduMapping'; RowKey = 'Users'; IntegrationId = 30; IntegrationName = 'People' }
+                )
+            }
+            if ($Filter -like "*InstanceProperties*") { return [PSCustomObject]@{ Value = 'cipp.example.test' } }
+            if ($Filter -like "*CacheMetadata*") { return [PSCustomObject]@{ LastRefresh = (Get-Date).ToUniversalTime().ToString('o') } }
+            return $null
+        }
+        Mock Get-CippExtensionReportingData {
+            [PSCustomObject]@{
+                Users    = @([PSCustomObject]@{
+                        id = 'user-1'; displayName = 'Jane Doe'; userPrincipalName = 'jane@contoso.onmicrosoft.com'; accountEnabled = $true
+                        proxyAddresses = @('SMTP:jane@contoso.onmicrosoft.com'); businessPhones = @()
+                        assignedLicenses = @(
+                            [PSCustomObject]@{ skuId = 'cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46' }
+                            [PSCustomObject]@{ skuId = 'f30db892-07e9-47e9-837c-80727f46fd3d' }
+                            [PSCustomObject]@{ skuId = '4ef96642-f096-40de-a3e9-d83fb2f90211' }
+                        )
+                    })
+                AllRoles = @(); Domains = @(); Licenses = $script:LicenseCache; Devices = @()
+                DeviceCompliancePolicies = @(); Groups = @(); ConditionalAccess = @()
+                OneDriveUsage = @(); CASMailbox = @(); Mailboxes = @(); MailboxUsage = @(); MailboxPermissions = @()
+            }
+        }
+        Mock Get-HuduCompanies { [PSCustomObject]@{ id = 20; name = 'Contoso'; archived = $false } }
+        Mock Add-HuduAssetLayoutField { }
+        Mock Get-HuduAssetLayouts { $script:PeopleLayout }
+        Mock Get-HuduAssets { @($script:HuduPerson) }
+        Mock Get-HuduRelations { @() }
+        Mock Get-HuduLinkBlock { [PSCustomObject]@{ html = $Title } }
+        Mock Get-CIPPDbItem { @() }
+        Mock Get-HuduFormattedField { [PSCustomObject]@{ title = $Title; value = $Value } }
+        Mock Get-HuduFormattedBlock { "<$Heading>$Body</$Heading>" }
+        Mock Get-StringHash { 'user-hash' }
+        Mock Get-HuduFormattedField { "<p>$Title`: $Value</p>" }
+        Mock Add-CIPPAzDataTableEntity { }
+        Mock Set-HuduAsset { $script:ObservedUserFields = $Fields }
+        Mock Set-HuduMagicDash { }
+        Mock Write-LogMessage { }
+    }
+
+    It 'writes friendly license names to a dedicated Licenses field and drops excluded SKUs' {
+        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+
+        $Result.Users | Should -Be 1
+        $Result.Errors | Where-Object { $_ -like 'User *' } | Should -BeNullOrEmpty
+        Should -Invoke Add-HuduAssetLayoutField -Times 1 -Exactly -ParameterFilter { $AssetLayoutId -eq 30 -and $Label -eq 'Licenses' -and $FieldType -eq 'Text' }
+        Should -Invoke Set-HuduAsset -Times 1 -Exactly
+        $script:ObservedUserFields.licenses | Should -Be 'Microsoft 365 Business Premium, Microsoft Defender for Office 365 (Plan 1)'
+        $script:ObservedUserFields.email_address | Should -Be 'jane@contoso.onmicrosoft.com'
+        $script:ObservedUserFields.microsoft_365 | Should -Match 'Microsoft 365 Business Premium'
+    }
+
+    It 'falls back to the raw SKU IDs when the license cache is empty' {
+        $script:LicenseCache = @()
+        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+
+        $script:ObservedUserFields.licenses | Should -Be '4ef96642-f096-40de-a3e9-d83fb2f90211, cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46, f30db892-07e9-47e9-837c-80727f46fd3d'
     }
 }

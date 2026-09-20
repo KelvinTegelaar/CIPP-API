@@ -81,6 +81,7 @@ function Invoke-HuduExtensionSync {
                 # Add required fields to People Layout
                 $null = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -Label 'Microsoft 365'
                 $null = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -Label 'Email Address' -Position 1 -ShowInList $true -FieldType 'Text'
+                $null = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -Label 'Licenses' -Position 2 -FieldType 'Text'
                 $CreateUsers = $Configuration.CreateMissingUsers
                 $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
                 if ($PeopleLayout.id) {
@@ -603,6 +604,12 @@ function Invoke-HuduExtensionSync {
 
             $post = '</div>'
             $CompanyResult.Logs.Add('Starting User Processing')
+            $LicenseNamesBySku = @{}
+            foreach ($License in $Licenses) {
+                if ($License.skuId -and $License.skuPartNumber) {
+                    $LicenseNamesBySku[([string]$License.skuId).ToLowerInvariant()] = [string]$License.skuPartNumber
+                }
+            }
             $OutputUsers = foreach ($user in $licensedUsers) {
                 try {
                     $HuduUser = $null
@@ -690,14 +697,16 @@ function Invoke-HuduExtensionSync {
 
                     $aliases = (($user.proxyAddresses | Where-Object { $_ -cnotmatch 'SMTP' -and $_ -notmatch '.onmicrosoft.com' }) -replace 'SMTP:', ' ') -join ', '
 
+                    # The license cache already carries the admin-portal display name and has excluded SKUs removed,
+                    # so SKUs missing from it are excluded and dropped. Fall back to the raw SKU ID only when there is no cache.
                     $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
-                            $UserLic = $_
-                            $SkuPartNumber = ($Licenses | Where-Object { $_.SkuId -eq $UserLic }).SkuPartNumber
-                            if (!$SkuPartNumber) {
-                                $SkuPartNumber = 'Unknown License'
+                            $UserLic = ([string]$_).ToLowerInvariant()
+                            if ($LicenseNamesBySku.Count -eq 0) {
+                                $UserLic
+                            } elseif ($LicenseNamesBySku.ContainsKey($UserLic)) {
+                                $LicenseNamesBySku[$UserLic]
                             }
-                            $SkuPartNumber
-                        }) -join ', '
+                        } | Where-Object { $_ } | Sort-Object -Unique) -join ', '
 
                     $UserOneDriveDetails = $OneDriveDetails | Where-Object { $_.ownerPrincipalName -eq $user.userPrincipalName }
 
@@ -895,6 +904,7 @@ function Invoke-HuduExtensionSync {
                         $UserAssetFields = @{
                             microsoft_365 = "$UserBody<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>"
                             email_address = $user.userPrincipalName
+                            licenses      = $userLicenses
                         }
                         $HuduUserCount = ($HuduUser | Measure-Object).Count
 
