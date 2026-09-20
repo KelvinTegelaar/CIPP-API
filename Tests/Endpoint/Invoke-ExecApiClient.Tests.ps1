@@ -1,9 +1,9 @@
-# Pester tests for single-holder MCP enforcement in Invoke-ExecApiClient (AddUpdate).
+# Pester tests for MCP client handling in Invoke-ExecApiClient (AddUpdate).
 #
-# Issue #619: several API clients ended up with MCPAllowed set at once because each failed MCP setup
-# left a record behind and nothing cleared the flag on the others. Only one client per instance may
-# hold MCP Access, since the connector flow advertises exactly one app registration. Saving a client
-# with MCP Access enabled must now clear the flag on every other client.
+# Split-app model: an MCPAllowed API client is an OAuth *client* (the app a connector signs in as),
+# and the dedicated CIPP-MCP app is the shared resource. Several MCPAllowed clients may coexist, each
+# with its own role/IP/redirects/CA, so saving one must NOT clear MCP Access on the others. Enabling
+# MCP on a client configures it via Set-CIPPMCPClientApp.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -24,7 +24,7 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Test-CippApiClientRoleGrant { param($Request, $Role) @{ Allowed = $true; Message = '' } }
     function New-CIPPAPIConfig { param($Headers, $ClientId, $AppName, [switch]$ResetSecret) [pscustomobject]@{ ApplicationID = 'new-app'; AppName = 'New Client'; Results = 'ok' } }
-    function Set-CIPPMCPClientApp { param($AppId, $Headers) }
+    function Set-CIPPMCPClientApp { param($AppId, $Headers) @{ Success = $true; ClientAppId = $AppId; ResourceAppId = 'resource-app' } }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
@@ -47,17 +47,17 @@ BeforeAll {
     }
 }
 
-Describe 'Invoke-ExecApiClient - single MCP holder enforcement' {
+Describe 'Invoke-ExecApiClient - MCP client configuration' {
     BeforeEach {
         Mock -CommandName Write-LogMessage -MockWith { }
-        Mock -CommandName Set-CIPPMCPClientApp -MockWith { }
+        Mock -CommandName Set-CIPPMCPClientApp -MockWith { @{ Success = $true; ClientAppId = $AppId; ResourceAppId = 'resource-app' } }
 
         # The new client's RowKey lookup finds nothing (it's new); the unfiltered roster scan returns
-        # the two existing clients, one of which already (wrongly) holds MCP Access.
+        # an existing client that already holds MCP Access.
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { $null } -ParameterFilter { $Filter -like 'RowKey eq*' }
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
             @(
-                [pscustomobject]@{ PartitionKey = 'ApiClients'; RowKey = 'other-mcp'; AppName = 'Stale'; Role = 'readonly'; MCPAllowed = $true; Enabled = $true }
+                [pscustomobject]@{ PartitionKey = 'ApiClients'; RowKey = 'other-mcp'; AppName = 'Other MCP'; Role = 'readonly'; MCPAllowed = $true; Enabled = $true }
                 [pscustomobject]@{ PartitionKey = 'ApiClients'; RowKey = 'plain'; AppName = 'Plain'; Role = 'readonly'; MCPAllowed = $false; Enabled = $true }
             )
         } -ParameterFilter { -not $Filter }
@@ -68,30 +68,21 @@ Describe 'Invoke-ExecApiClient - single MCP holder enforcement' {
         }
     }
 
-    It 'clears MCP Access on other clients when saving an MCP-enabled client' {
+    It 'allows multiple MCP clients - saving one does not clear MCP Access on others' {
         $null = Invoke-ExecApiClient -Request (New-AddUpdateRequest -McpAllowed $true)
 
-        $Cleared = $script:SavedEntities | Where-Object { $_.RowKey -eq 'other-mcp' }
-        $Cleared | Should -Not -BeNullOrEmpty
-        [bool]$Cleared.MCPAllowed | Should -BeFalse
+        ($script:SavedEntities | Where-Object { $_.RowKey -eq 'other-mcp' }) | Should -BeNullOrEmpty
     }
 
-    It 'configures the saved client as the MCP resource app' {
+    It 'configures the saved client as an MCP OAuth client' {
         $null = Invoke-ExecApiClient -Request (New-AddUpdateRequest -McpAllowed $true)
 
         Should -Invoke Set-CIPPMCPClientApp -Times 1 -Exactly -ParameterFilter { $AppId -eq 'new-app' }
     }
 
-    It 'never rewrites the client that already had MCP Access disabled' {
-        $null = Invoke-ExecApiClient -Request (New-AddUpdateRequest -McpAllowed $true)
-
-        ($script:SavedEntities | Where-Object { $_.RowKey -eq 'plain' }) | Should -BeNullOrEmpty
-    }
-
-    It 'leaves other clients alone when the saved client is not MCP-enabled' {
+    It 'does not configure MCP when the saved client is not MCP-enabled' {
         $null = Invoke-ExecApiClient -Request (New-AddUpdateRequest -McpAllowed $false)
 
-        ($script:SavedEntities | Where-Object { $_.RowKey -eq 'other-mcp' }) | Should -BeNullOrEmpty
         Should -Invoke Set-CIPPMCPClientApp -Times 0 -Exactly
     }
 }

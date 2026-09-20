@@ -12822,7 +12822,10 @@
                   },
                   "MCPAllowed": {
                     "type": "string",
-                    "description": "When this client is MCP-enabled it becomes the instance's single MCP resource. Only one client may hold MCP Access at a time - the connector flow advertises exactly one app registration - so clear the flag on every other client first. This stops stale holders left behind by failed setup attempts from accumulating and one of them being advertised (see issue #619)."
+                    "description": "When this client is MCP-enabled it becomes one of the OAuth client apps that AI connectors sign in as. Several MCPAllowed clients may coexist (each with its own role/IP/redirects/CA); the dedicated CIPP-MCP app is the shared protected resource. Configure this client (callbacks, public client flows, resource permissions + consent) and ensure the resource app exists (Set-CIPPMCPClientApp -> New-CIPPMcpResourceApp)."
+                  },
+                  "RedirectUris": {
+                    "type": "string"
                   },
                   "RemoveAppReg": {
                     "type": "boolean"
@@ -12851,11 +12854,13 @@
                 "AddUpdate",
                 "Delete",
                 "GetAzureConfiguration",
+                "GetMcpAuth",
                 "List",
                 "ListAvailable",
                 "RepairUri",
                 "ResetSecret",
-                "SaveToAzure"
+                "SaveToAzure",
+                "SetMcpRedirectUris"
               ]
             }
           }
@@ -12867,7 +12872,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the Microsoft Graph entity it queries, and the fields written into the storage table it reads. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                  "description": "Derived from the Microsoft Graph entity it queries. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
                   "properties": {
                     "addIns": {
                       "type": "array",
@@ -12884,9 +12889,6 @@
                     "applicationTemplateId": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "AppName": {
-                      "x-cipp-field-source": "storage"
                     },
                     "appRoles": {
                       "type": "array",
@@ -12928,13 +12930,6 @@
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "Enabled": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "groupMembershipClaims": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
@@ -12950,9 +12945,6 @@
                     "info": {
                       "type": "object",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "IPRange": {
-                      "x-cipp-field-source": "storage"
                     },
                     "isDeviceOnlyAuthSupported": {
                       "type": "boolean",
@@ -12978,10 +12970,6 @@
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "MCPAllowed": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "storage"
-                    },
                     "nativeAuthenticationApisEnabled": {
                       "type": "object",
                       "x-cipp-field-source": "graph-entity"
@@ -13002,9 +12990,6 @@
                       "type": "object",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "passwordCredentials": {
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
@@ -13024,13 +13009,6 @@
                     "requiredResourceAccess": {
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "Role": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "RowKey": {
-                      "x-cipp-field-source": "storage"
                     },
                     "samlMetadataUrl": {
                       "type": "string",
@@ -13055,10 +13033,6 @@
                     "tags": {
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     },
                     "tokenEncryptionKeyId": {
                       "type": "string",
@@ -64434,6 +64408,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "client",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",

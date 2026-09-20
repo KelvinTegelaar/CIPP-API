@@ -68,7 +68,7 @@ Describe 'Invoke-PublicMcpRegister - advertising a live MCP resource client' {
         $Response = Invoke-PublicMcpRegister -Request (New-RegisterRequest)
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
-        ($Response.Body | ConvertFrom-Json).error_description | Should -BeLike '*No MCP resource client is configured*'
+        ($Response.Body | ConvertFrom-Json).error_description | Should -BeLike '*No MCP client is configured*'
         Should -Invoke New-GraphGetRequest -Times 0 -Exactly
     }
 
@@ -124,5 +124,38 @@ Describe 'Invoke-PublicMcpRegister - advertising a live MCP resource client' {
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::Created)
         ($Response.Body | ConvertFrom-Json).client_id | Should -Be 'unverified-app'
+    }
+
+    It 'pins the client app when ?client= scopes the request to a specific MCPAllowed client' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            @(
+                [pscustomobject]@{ RowKey = 'client-a'; MCPAllowed = $true; Enabled = $true }
+                [pscustomobject]@{ RowKey = 'client-b'; MCPAllowed = $true; Enabled = $true }
+            )
+        }
+        Mock -CommandName New-GraphGetRequest -MockWith { [pscustomobject]@{ appId = 'client-b' } }
+
+        $Request = New-RegisterRequest
+        $Request.Params.client = 'client-b'
+        $Request | Add-Member -NotePropertyName Query -NotePropertyValue ([pscustomobject]@{ client = 'client-b' }) -Force
+
+        $Response = Invoke-PublicMcpRegister -Request $Request
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::Created)
+        ($Response.Body | ConvertFrom-Json).client_id | Should -Be 'client-b'
+    }
+
+    It 'errors when ?client= matches no enabled MCP client' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            @([pscustomobject]@{ RowKey = 'client-a'; MCPAllowed = $true; Enabled = $true })
+        }
+        Mock -CommandName New-GraphGetRequest -MockWith { [pscustomobject]@{ appId = 'client-a' } }
+
+        $Request = New-RegisterRequest
+        $Request | Add-Member -NotePropertyName Query -NotePropertyValue ([pscustomobject]@{ client = 'does-not-exist' }) -Force
+
+        $Response = Invoke-PublicMcpRegister -Request $Request
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
     }
 }
