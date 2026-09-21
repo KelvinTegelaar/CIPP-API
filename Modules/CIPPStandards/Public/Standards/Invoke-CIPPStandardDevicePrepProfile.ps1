@@ -288,7 +288,6 @@ function Invoke-CIPPStandardDevicePrepProfile {
     $SimpleSettingMap = @{
         'enrollment_autopilot_dpp_timeout'                = 'Timeout'
         'enrollment_autopilot_dpp_customerrormessage'     = 'CustomErrorMessage'
-        'enrollment_autopilot_dpp_devicesecuritygroupids' = 'DeviceGroupId'
     }
 
     # Check existing policies
@@ -324,6 +323,14 @@ function Invoke-CIPPStandardDevicePrepProfile {
         }
     }
 
+    # Intune enrols devices through the membership target action, not the settings string the
+    # portal displays, so the applied group is read back through the helper rather than parsed
+    # out of the policy body.
+    $MembershipTarget = $null
+    if ($PolicyExists) {
+        $MembershipTarget = Get-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId $ExistingPolicy.id -TenantFilter $Tenant
+    }
+
     # Read the assignment state alongside the settings. A profile whose settings match but whose
     # assignment is missing is half-deployed - nobody gets it - and without this read that state
     # is invisible, so no run could ever detect or repair it.
@@ -351,7 +358,6 @@ function Invoke-CIPPStandardDevicePrepProfile {
         CustomErrorMessage = [string]($CurrentParsed.CustomErrorMessage ?? '')
         AllowSkip          = [string]($CurrentParsed.AllowSkip ?? '')
         AllowDiagnostics   = [string]($CurrentParsed.AllowDiagnostics ?? '')
-        DeviceGroupId      = [string]($CurrentParsed.DeviceGroupId ?? '')
     }
 
     $ExpectedValue = [PSCustomObject]@{
@@ -364,7 +370,15 @@ function Invoke-CIPPStandardDevicePrepProfile {
         CustomErrorMessage = $CustomErrorMessage
         AllowSkip          = $AllowSkip
         AllowDiagnostics   = $AllowDiagnostics
-        DeviceGroupId      = $DeviceGroupId
+    }
+
+    # An expected group that resolved to nothing - not configured, missing and not creatable, or
+    # a failed lookup - is a deviation nothing in CIPP could clear, so the dimension stays out.
+    $MembershipMatches = $null
+    if ($PolicyExists -and -not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
+        $MembershipMatches = ([string]$MembershipTarget.GroupId -eq [string]$DeviceGroupId)
+        $CurrentValue | Add-Member -NotePropertyName 'DeviceGroupId' -NotePropertyValue ([string]$MembershipTarget.GroupId)
+        $ExpectedValue | Add-Member -NotePropertyName 'DeviceGroupId' -NotePropertyValue ([string]$DeviceGroupId)
     }
 
     # A failed assignment lookup is unknown, not a deviation: leave the dimension out of the
@@ -395,9 +409,10 @@ function Invoke-CIPPStandardDevicePrepProfile {
         }
         if ($SettingsAreCorrect -and [int]$CurrentValue.Timeout -ne $ExpectedValue.Timeout) { $SettingsAreCorrect = $false }
         if ($SettingsAreCorrect -and $CurrentValue.CustomErrorMessage -ne $ExpectedValue.CustomErrorMessage) { $SettingsAreCorrect = $false }
-        if ($SettingsAreCorrect -and $CurrentValue.DeviceGroupId -ne $ExpectedValue.DeviceGroupId) { $SettingsAreCorrect = $false }
     }
-    $StateIsCorrect = $SettingsAreCorrect -and $AssignmentsMatch -ne $false
+    # The membership target stays out of the settings verdict: it is a separate action on the
+    # existing policy, so recreating the profile over it would destroy more than it repairs.
+    $StateIsCorrect = $SettingsAreCorrect -and $AssignmentsMatch -ne $false -and $MembershipMatches -ne $false
 
     # Remediate
     if ($Settings.remediate -eq $true) {
@@ -407,9 +422,13 @@ function Invoke-CIPPStandardDevicePrepProfile {
             # Only the assignment differs. Repair it in place - recreating the profile would sever
             # the enrollment-time device group linkage over a delta the /assign endpoint can fix.
             try {
-                if ($AssignmentBody) {
+                if ($AssignmentBody -and $AssignmentsMatch -eq $false) {
                     $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ExistingPolicy.id)')/assign" -tenantid $Tenant -body $AssignmentBody -type POST
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Repaired assignment for profile '$ProfileName' ($(@($AssignmentDetail.Reasons) -join '; '))" -sev Info
+                }
+                if ($MembershipMatches -eq $false -and -not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
+                    $null = Set-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId $ExistingPolicy.id -GroupId $DeviceGroupId -TenantFilter $Tenant
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Applied the enrollment time device membership target for profile '$ProfileName'" -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
@@ -420,6 +439,8 @@ function Invoke-CIPPStandardDevicePrepProfile {
                 # Delete drifted policy before recreating
                 if ($PolicyExists) {
                     $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ExistingPolicy.id)')" -tenantid $Tenant -type DELETE
+                    # The recreated profile gets a new id, so the old marker must not survive it.
+                    Remove-CIPPEnrollmentTimeDeviceMembershipMarker -PolicyId $ExistingPolicy.id -TenantFilter $Tenant
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Deleted existing profile '$ProfileName' for recreation" -sev Info
                 }
 
@@ -429,6 +450,11 @@ function Invoke-CIPPStandardDevicePrepProfile {
                 # Assign the policy if requested
                 if ($NewPolicy.id -and $AssignmentBody) {
                     $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($NewPolicy.id)')/assign" -tenantid $Tenant -body $AssignmentBody -type POST
+                }
+
+                # The settings string alone leaves the profile with no group applied.
+                if ($NewPolicy.id -and -not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
+                    $null = Set-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId $NewPolicy.id -GroupId $DeviceGroupId -TenantFilter $Tenant
                 }
 
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Successfully deployed profile '$ProfileName'" -sev Info

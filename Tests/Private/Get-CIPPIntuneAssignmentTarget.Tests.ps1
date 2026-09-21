@@ -89,6 +89,11 @@ Describe 'Get-CIPPIntuneAssignmentTarget' {
             $Result.Dropped | Should -Be @('All Devices')
         }
 
+        It 'declares no equivalent type - the MAM service rejects allLicensedUsersAssignmentTarget' {
+            (Get-CIPPIntuneAssignmentTarget -AssignTo 'allLicensedUsers' -PolicyType 'iosManagedAppProtections').Equivalents.Count |
+                Should -Be 0
+        }
+
         It 'emits no allLicensedUsers or allDevices target for any option' {
             foreach ($AssignTo in 'allLicensedUsers', 'AllDevices', 'AllDevicesAndUsers') {
                 $Result = Get-CIPPIntuneAssignmentTarget -AssignTo $AssignTo -PolicyType 'iosManagedAppProtections'
@@ -131,6 +136,22 @@ Describe 'Get-CIPPIntuneAssignmentTarget' {
         It 'is not treated as MAM' {
             (Get-CIPPIntuneAssignmentTarget -AssignTo 'allLicensedUsers' -PolicyType 'DevicePrepProfile').IsMam |
                 Should -BeFalse
+        }
+
+        It 'accepts allLicensedUsersAssignmentTarget as an equivalent of the All Users group' {
+            # A working All users assignment is reported back under that type, so a comparison
+            # that only accepts the group target flags it as a deviation on every run.
+            $Result = Get-CIPPIntuneAssignmentTarget -AssignTo 'allLicensedUsers' -PolicyType 'DevicePrepProfile'
+
+            $Result.Equivalents[$script:AllUsersGroupId] | Should -Be @('#microsoft.graph.allLicensedUsersAssignmentTarget')
+        }
+
+        It 'declares no equivalents when no broad target was produced' -ForEach @(
+            @{ AssignTo = 'customGroup' }
+            @{ AssignTo = 'AllDevices' }
+        ) {
+            (Get-CIPPIntuneAssignmentTarget -AssignTo $AssignTo -PolicyType 'DevicePrepProfile').Equivalents.Count |
+                Should -Be 0
         }
     }
 }

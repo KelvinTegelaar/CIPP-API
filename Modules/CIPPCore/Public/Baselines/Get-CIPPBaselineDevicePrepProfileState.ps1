@@ -7,7 +7,10 @@ function Get-CIPPBaselineDevicePrepProfileState {
         parses the enrollment_autopilot_dpp settings back into the classic's property set.
         The device security group resolves by name LIVE (the classic did the same lookup for
         its expected value); a group that does not exist yet grades as an empty id - the
-        executor creates it when CreateNewGroup allows.
+        executor creates it when CreateNewGroup allows. The group Intune actually enrols devices
+        into is read LIVE too, from the marker CIPP wrote when it applied one or from the
+        membership target action - never from the settings string the portal displays, which
+        every create writes whether or not the group was ever applied.
 
         The assignment grades separately through Compare-CIPPIntuneAssignments off the cached
         assignments; a failed or unknown lookup leaves the dimension out entirely, because a
@@ -70,7 +73,6 @@ function Get-CIPPBaselineDevicePrepProfileState {
     $SimpleSettingMap = @{
         'enrollment_autopilot_dpp_timeout'                = 'timeout'
         'enrollment_autopilot_dpp_customerrormessage'     = 'customErrorMessage'
-        'enrollment_autopilot_dpp_devicesecuritygroupids' = 'deviceGroupId'
     }
     $Parsed = @{}
     foreach ($Setting in @($Policy.settings)) {
@@ -93,7 +95,6 @@ function Get-CIPPBaselineDevicePrepProfileState {
         customErrorMessage = $CustomErrorMessage
         allowSkip          = $AllowSkip
         allowDiagnostics   = $AllowDiagnostics
-        deviceGroupId      = $DeviceGroupId
     }
     $Current = [PSCustomObject]@{
         profileExists      = ($null -ne $Policy)
@@ -105,7 +106,17 @@ function Get-CIPPBaselineDevicePrepProfileState {
         customErrorMessage = [string]($Parsed.customErrorMessage ?? '')
         allowSkip          = [string]($Parsed.allowSkip ?? '')
         allowDiagnostics   = [string]($Parsed.allowDiagnostics ?? '')
-        deviceGroupId      = [string]($Parsed.deviceGroupId ?? '')
+    }
+
+    # The applied group comes from the marker CIPP wrote, or from the membership target action
+    # where it routes. The cached settings string is not consulted: every create writes it while
+    # the group itself stays unapplied, so it would report a half-deployed profile as healthy.
+    # An expected group that resolved to nothing is a deviation nothing here could clear - the
+    # prepare hook never writes - so the dimension stays out until it exists.
+    if ($null -ne $Policy -and -not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
+        $MembershipTarget = Get-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId "$($Policy.id)" -TenantFilter $TenantFilter
+        $Expected | Add-Member -NotePropertyName 'deviceGroupId' -NotePropertyValue $DeviceGroupId
+        $Current | Add-Member -NotePropertyName 'deviceGroupId' -NotePropertyValue ([string]$MembershipTarget.GroupId)
     }
 
     # Assignment dimension: graded only when requested AND readable.
@@ -125,7 +136,9 @@ function Get-CIPPBaselineDevicePrepProfileState {
     # Carried for the executor: repair-in-place needs to know the settings verdict alone.
     $SettingsCorrect = $null -ne $Policy
     if ($SettingsCorrect) {
-        foreach ($Prop in @('deploymentMode', 'deploymentType', 'joinType', 'accountType', 'allowSkip', 'allowDiagnostics', 'customErrorMessage', 'deviceGroupId')) {
+        # deviceGroupId stays out: the executor applies it to the existing policy, so grading it
+        # here would send a present-but-unassigned group down the delete-and-recreate path.
+        foreach ($Prop in @('deploymentMode', 'deploymentType', 'joinType', 'accountType', 'allowSkip', 'allowDiagnostics', 'customErrorMessage')) {
             if ("$($Current.$Prop)" -ne "$($Expected.$Prop)") { $SettingsCorrect = $false; break }
         }
         if ($SettingsCorrect -and [int]$Current.timeout -ne [int]$Expected.timeout) { $SettingsCorrect = $false }

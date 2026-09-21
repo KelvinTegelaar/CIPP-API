@@ -278,6 +278,48 @@ Describe 'Compare-CIPPIntuneAssignments' {
         }
     }
 
+    Context 'broad targets on a Device Preparation profile' {
+        # Remediation writes the All Users group target, but Intune reports a working "All users"
+        # assignment back as allLicensedUsersAssignmentTarget. Accepting only the written shape
+        # flags the profile as deviated on every run and loops remediation.
+        BeforeAll {
+            $script:AllUsersGroupId = 'acacacac-9df4-4c7d-9d50-4ef0226f57a9'
+        }
+
+        It 'accepts the allLicensedUsers target as the All Users assignment' {
+            $Existing = @(New-BroadAssignment -ODataType '#microsoft.graph.allLicensedUsersAssignmentTarget')
+
+            $Result = Compare-CIPPIntuneAssignments -ExistingAssignments $Existing -ExpectedAssignTo 'allLicensedUsers' -PolicyType 'DevicePrepProfile' -TenantFilter $script:Tenant
+
+            $Result.Matched | Should -BeTrue
+            $Result.MissingIncludeGroups | Should -BeNullOrEmpty
+            $Result.Reasons | Should -BeNullOrEmpty
+        }
+
+        It 'still accepts the group target remediation writes' {
+            $Existing = @(New-GroupAssignment -GroupId $script:AllUsersGroupId)
+
+            (Compare-CIPPIntuneAssignments -ExistingAssignments $Existing -ExpectedAssignTo 'AllDevicesAndUsers' -PolicyType 'DevicePrepProfile' -TenantFilter $script:Tenant).Matched |
+                Should -BeTrue
+        }
+
+        It 'still reports a profile with no assignment at all' {
+            $Result = Compare-CIPPIntuneAssignments -ExistingAssignments @() -ExpectedAssignTo 'allLicensedUsers' -PolicyType 'DevicePrepProfile' -TenantFilter $script:Tenant
+
+            $Result.Matched | Should -BeFalse
+            $Result.MissingIncludeGroups.displayName | Should -Be 'All Users'
+        }
+
+        It 'rejects the same target on a MAM policy, which the service refuses to accept' {
+            $Existing = @(New-BroadAssignment -ODataType '#microsoft.graph.allLicensedUsersAssignmentTarget')
+
+            $Result = Compare-CIPPIntuneAssignments -ExistingAssignments $Existing -ExpectedAssignTo 'allLicensedUsers' -PolicyType 'iosManagedAppProtections' -TenantFilter $script:Tenant
+
+            $Result.Matched | Should -BeFalse
+            $Result.MissingIncludeGroups.displayName | Should -Be 'All Users'
+        }
+    }
+
     Context 'exclusion groups' {
         It 'matches when the configured exclusion is present' {
             $Existing = @(
