@@ -141,6 +141,11 @@ function Set-CIPPIntunePolicy {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'groupPolicyConfigurations'
                 $CreateBody = '{"description":"' + $Description + '","displayName":"' + $DisplayName + '","roleScopeTagIds":["0"]}'
+                # Settings from an imported ADMX file bind to definition ids that differ per tenant.
+                # Rewrite the template's binds to this tenant's ids before anything is created, so a
+                # template whose ADMX is missing here fails by name instead of leaving an empty policy
+                # behind after Graph rejects updateDefinitionValues.
+                $RawJSON = Resolve-CIPPIntuneAdminTemplateBinding -RawJSON $RawJSON -TenantFilter $TenantFilter -DisplayName $DisplayName -Headers $Headers -APIName $APIName
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance
                 if ($FuzzyResult) {

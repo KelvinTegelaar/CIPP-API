@@ -174,6 +174,17 @@ function Invoke-CIPPStandardIntuneTemplate {
                 }
             }
 
+            if ($TemplateType -eq 'Admin') {
+                # Compare against the binds deployment would write: settings from an imported ADMX
+                # file have a different definition id in every tenant, so the stored binds only ever
+                # match the tenant the template was captured from.
+                try {
+                    $JSONTemplate = Resolve-CIPPIntuneAdminTemplateBinding -RawJSON (ConvertTo-Json -InputObject $JSONTemplate -Depth 100 -Compress) -TenantFilter $Tenant -DisplayName $PolicyName | ConvertFrom-Json
+                } catch {
+                    Write-Information "[IntuneTemplate][$Tenant] Could not resolve the administrative template settings for '$PolicyName' in this tenant, comparing against the stored template: $($_.Exception.Message)"
+                }
+            }
+
             $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $TemplateType -ErrorAction SilentlyContinue
         } catch {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to compare Intune Template $displayname against the existing policy: $($_.Exception.Message)" -sev 'Error'

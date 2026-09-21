@@ -136,35 +136,10 @@ function New-CIPPIntuneTemplate {
             $Type = 'Admin'
             $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')" -tenantid $TenantFilter
             $DisplayName = $Template.displayName
-            $TemplateJsonItems = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues?`$expand=definition" -tenantid $TenantFilter
-            $TemplateJsonSource = foreach ($TemplateJsonItem in $TemplateJsonItems) {
-                $presentationValues = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues('$($TemplateJsonItem.id)')/presentationValues?`$expand=presentation" -tenantid $TenantFilter | ForEach-Object {
-                    $obj = $_
-                    if ($obj.id) {
-                        $PresObj = @{
-                            id                        = $obj.id
-                            'presentation@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')/presentations('$($obj.presentation.id)')"
-                        }
-                        if ($obj.values) { $PresObj['values'] = $obj.values }
-                        if ($obj.value) { $PresObj['value'] = $obj.value }
-                        if ($obj.'@odata.type') { $PresObj['@odata.type'] = $obj.'@odata.type' }
-                        [pscustomobject]$PresObj
-                    }
-                }
-                [PSCustomObject]@{
-                    'definition@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')"
-                    enabled                 = $TemplateJsonItem.enabled
-                    presentationValues      = @($presentationValues)
-                }
-            }
-            $inputvar = [pscustomobject]@{
-                added      = @($TemplateJsonSource)
-                updated    = @()
-                deletedIds = @()
-
-            }
-
-
+            # Each setting's identity (name, category, class, presentation position) is recorded next
+            # to its bind: a definition from an imported ADMX file has a different id in every tenant,
+            # and the identity is what Resolve-CIPPIntuneAdminTemplateBinding matches on at deployment.
+            $inputvar = Get-CIPPIntuneAdminTemplateDefinitionValue -PolicyId $ID -TenantFilter $TenantFilter -IncludeIdentity
             $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 100 -Compress)
         }
         'windowsFeatureUpdateProfiles' {
