@@ -43,13 +43,7 @@
           }
         ],
         "stopsChainWhen": "blocked",
-        "whenFixed": "Blocked: administrators must use a compliant device, so the unmanaged machine cannot hold the session.",
-        "standards": [
-          {
-            "name": "SecurityDefaults",
-            "role": "prevents"
-          }
-        ]
+        "whenFixed": "Blocked: administrators must use a compliant device, so the unmanaged machine cannot hold the session."
       },
       {
         "id": "PortalAccess",
@@ -107,12 +101,6 @@
         "id": "CreateLink",
         "title": "Anyone link created",
         "text": "The attacker creates an Anyone link that grants access to files without any sign-in. The link can be shared or sold freely.",
-        "alerts": [
-          {
-            "operation": "AnonymousLinkCreated",
-            "logbook": "Audit.SharePoint"
-          }
-        ],
         "whenFixed": "Anonymous sharing is disabled, so no Anyone link can be created, and the attempt is recorded.",
         "standards": [
           {
@@ -276,10 +264,6 @@
         "whenFixed": "The sync button is disabled and the copied data is limited by sync restrictions.",
         "standards": [
           {
-            "name": "DisableAddShortcutsToOneDrive",
-            "role": "limits"
-          },
-          {
             "name": "ExcludedfileExt",
             "role": "limits"
           },
@@ -351,17 +335,7 @@
         "id": "TokenUse",
         "title": "Token used to read mail and files",
         "text": "The attacker uses the token to read the user's mailbox and documents. The traffic looks like a normal signed-in app.",
-        "whenFixed": "Mailbox auditing records the access even though the sign-in looked legitimate.",
-        "standards": [
-          {
-            "name": "EnableMailboxAuditing",
-            "role": "detects"
-          },
-          {
-            "name": "ActivityBasedTimeout",
-            "role": "limits"
-          }
-        ]
+        "whenFixed": "Mailbox auditing records the access even though the sign-in looked legitimate."
       },
       {
         "id": "Persistence",
@@ -412,12 +386,6 @@
         "id": "Reshare",
         "title": "Files re-shared to more outsiders",
         "text": "The guest shares the files onward to additional external people. Access now reaches people the owner never approved.",
-        "alerts": [
-          {
-            "operation": "SharingSet",
-            "logbook": "Audit.SharePoint"
-          }
-        ],
         "whenFixed": "External users cannot re-share, so access does not spread beyond the owner's intent.",
         "standards": [
           {
@@ -638,61 +606,6 @@
     }
   },
   {
-    "id": "MailboxPermissionGrab",
-    "title": "Mailbox permission grab",
-    "category": "Exchange & Email",
-    "severity": "High",
-    "summary": "An attacker with admin rights grants itself full access to other users' mailboxes and reads them directly.",
-    "requiredCapabilities": [
-      "EXCHANGE_S_ENTERPRISE"
-    ],
-    "steps": [
-      {
-        "id": "Assumption",
-        "title": "Starting assumption",
-        "text": "The attacker controls an account that can manage mailbox permissions and targets executive mailboxes."
-      },
-      {
-        "id": "GrantPermission",
-        "title": "Full access granted to a mailbox",
-        "text": "The attacker gives its own account full access to a target mailbox. No password reset is needed and the owner is not notified.",
-        "alerts": [
-          {
-            "operation": "Add-MailboxPermission",
-            "logbook": "Audit.Exchange"
-          }
-        ],
-        "whenFixed": "The permission change is written to the audit log and surfaces for review.",
-        "standards": [
-          {
-            "name": "DisableExchangeOnlinePowerShell",
-            "role": "limits"
-          },
-          {
-            "name": "AuditLog",
-            "role": "detects"
-          }
-        ]
-      },
-      {
-        "id": "MailboxAccess",
-        "title": "Mailbox opened as a delegate",
-        "text": "The attacker opens the target mailbox using the new access and reads sensitive mail. The activity looks like normal delegate access.",
-        "whenFixed": "Mailbox auditing records the delegate access so it can be spotted.",
-        "standards": [
-          {
-            "name": "EnableMailboxAuditing",
-            "role": "detects"
-          }
-        ]
-      }
-    ],
-    "outcome": {
-      "prevented": "The permission change is recorded and reviewed before sensitive mail is exposed.",
-      "notPrevented": "The attacker reads executive mailboxes directly through delegated access."
-    }
-  },
-  {
     "id": "MailboxRuleExfiltration",
     "title": "Mailbox rule exfiltration",
     "category": "Exchange & Email",
@@ -822,186 +735,6 @@
     "outcome": {
       "prevented": "The consent request is held for admin approval, so the malicious app never gains access.",
       "notPrevented": "The attacker's app reads mail and files quietly for as long as the grant remains."
-    }
-  },
-  {
-    "id": "MassFileDeletion",
-    "title": "Mass file deletion",
-    "category": "SharePoint & Data",
-    "severity": "High",
-    "summary": "A compromised user deletes files across SharePoint and OneDrive at scale to disrupt the business or force a ransom.",
-    "requiredCapabilities": [
-      "SHAREPOINTENTERPRISE"
-    ],
-    "persona": "user",
-    "steps": [
-      {
-        "id": "Assumption",
-        "title": "Starting assumption",
-        "text": "The attacker controls a user's account with broad access to document libraries and intends to destroy data."
-      },
-      {
-        "id": "SignIn",
-        "title": "Sign-in evaluated by Conditional Access",
-        "text": "The attacker signs in from an unmanaged machine before the deletions begin. Strong sign-in controls are the last chance to stop it.",
-        "whatIf": {
-          "clientAppType": "browser",
-          "devicePlatform": "windows",
-          "deviceInfo": {
-            "isCompliant": false
-          },
-          "country": "NL",
-          "ipAddress": "185.220.101.72"
-        },
-        "gaps": [
-          {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
-            "text": "MFA is not enforced, so a stolen password reaches the user's files.",
-            "role": "prevents",
-            "fix": {
-              "caTemplate": "Require multifactor authentication for all users"
-            }
-          }
-        ],
-        "stopsChainWhen": "blocked",
-        "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach the files.",
-        "standards": [
-          {
-            "name": "PerUserMFA",
-            "role": "prevents"
-          },
-          {
-            "name": "SecurityDefaults",
-            "role": "prevents"
-          }
-        ]
-      },
-      {
-        "id": "DeleteFiles",
-        "title": "Files deleted at scale",
-        "text": "The attacker deletes large numbers of files across libraries in a short time. Shared workspaces suddenly lose their content.",
-        "alerts": [
-          {
-            "operation": "FileDeleted",
-            "logbook": "Audit.SharePoint"
-          }
-        ],
-        "whenFixed": "A mass-deletion alert fires on the burst and each deletion is written to the audit log.",
-        "standards": [
-          {
-            "name": "SharePointMassDeletionAlert",
-            "role": "detects"
-          },
-          {
-            "name": "AuditLog",
-            "role": "detects"
-          }
-        ]
-      },
-      {
-        "id": "Recover",
-        "title": "Recovery from versions and retention",
-        "text": "Deleted files and previous versions can be restored for a limited time. Quick detection means most content comes back.",
-        "whenFixed": "Version history keeps prior copies, so the deleted files can be restored.",
-        "standards": [
-          {
-            "name": "SPOVersionControl",
-            "role": "recovers"
-          }
-        ]
-      }
-    ],
-    "outcome": {
-      "prevented": "MFA stops the takeover, so no files are deleted.",
-      "notPrevented": "Large numbers of files are deleted, and recovery depends on versioning and retention."
-    }
-  },
-  {
-    "id": "MassGroupDeletion",
-    "title": "Mass group deletion",
-    "category": "Audit & Detection",
-    "severity": "High",
-    "summary": "A compromised administrator deletes many groups, breaking access, mail flow and team membership across the tenant.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM"
-    ],
-    "persona": "admin",
-    "attackerCanSatisfy": [
-      "mfa"
-    ],
-    "steps": [
-      {
-        "id": "Assumption",
-        "title": "Starting assumption",
-        "text": "The attacker controls an account that can manage groups and wants to disrupt access broadly."
-      },
-      {
-        "id": "SignIn",
-        "title": "Sign-in evaluated by Conditional Access",
-        "text": "The account signs in from an unfamiliar address before the deletions begin. Strong sign-in controls are the last chance to stop it.",
-        "whatIf": {
-          "clientAppType": "browser",
-          "devicePlatform": "windows",
-          "country": "NL",
-          "ipAddress": "185.220.101.61"
-        },
-        "gaps": [
-          {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
-            "text": "MFA is not enforced, so a stolen password reaches group management.",
-            "role": "prevents",
-            "fix": {
-              "caTemplate": "Require multifactor authentication for all users"
-            }
-          }
-        ],
-        "stopsChainWhen": "blocked",
-        "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach group management.",
-        "standards": [
-          {
-            "name": "PerUserMFA",
-            "role": "prevents"
-          },
-          {
-            "name": "SecurityDefaults",
-            "role": "prevents"
-          }
-        ]
-      },
-      {
-        "id": "DeleteGroups",
-        "title": "Groups deleted in bulk",
-        "text": "The attacker deletes many groups, removing the access, distribution lists and teams that depend on them. Users suddenly lose shared resources.",
-        "alerts": [
-          {
-            "operation": "Delete group",
-            "logbook": "Audit.AzureActiveDirectory"
-          }
-        ],
-        "whenFixed": "Each deletion is written to the audit log, so the burst is detected quickly.",
-        "standards": [
-          {
-            "name": "AuditLog",
-            "role": "detects"
-          }
-        ]
-      },
-      {
-        "id": "Impact",
-        "title": "Access lost across services",
-        "text": "Membership-based access to mail, files and teams disappears with the groups. Microsoft 365 groups can be restored for a limited time.",
-        "whenFixed": "Prompt detection shortens the outage and allows recovery within the retention window."
-      }
-    ],
-    "outcome": {
-      "prevented": "MFA stops the takeover, so no groups are deleted.",
-      "notPrevented": "Access breaks across the tenant until the groups are restored."
     }
   },
   {

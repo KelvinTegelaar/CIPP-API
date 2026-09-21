@@ -32665,65 +32665,6 @@
         "x-cipp-role": "Scheduler.Billing.ReadWrite"
       }
     },
-    "/api/ExecSecuritySimulation": {
-      "post": {
-        "summary": "ExecSecuritySimulation",
-        "operationId": "ExecSecuritySimulation",
-        "tags": [
-          "Tenant > SecuritySimulations"
-        ],
-        "description": "Plays one security scenario against a tenant: grades the standards each step relies on, evaluates\nthe scenario's sign-in live through the Conditional Access What If API, and checks whether an\naudit-log alert would fire. The result is stored so the catalog shows it. With scenarioId 'All'\nevery scenario is played in one go, sharing the graded standards and resolved identities.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "scenarioId": {
-                    "$ref": "#/components/schemas/LabelValue"
-                  },
-                  "tenantFilter": {
-                    "$ref": "#/components/schemas/LabelValue"
-                  }
-                },
-                "required": [
-                  "tenantFilter"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Tenant.SecuritySimulations.Read"
-      }
-    },
     "/api/ExecSendOrgMessage": {
       "post": {
         "summary": "ExecSendOrgMessage",
@@ -56080,68 +56021,6 @@
         ],
         "x-cipp-role": "Tenant.Reports.Read",
         "x-cipp-any-tenant": true
-      }
-    },
-    "/api/ListSecuritySimulations": {
-      "get": {
-        "summary": "ListSecuritySimulations",
-        "operationId": "ListSecuritySimulations",
-        "tags": [
-          "Tenant > SecuritySimulations"
-        ],
-        "description": "Lists the security scenarios that can be simulated with the outcome and time of each scenario's\nlast stored run for the tenant. With scenarioId it returns that scenario's last stored run in full\n(cached true/false plus the result), so the run view can show it without evaluating again.",
-        "parameters": [
-          {
-            "name": "scenarioId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/tenantFilter"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                    "properties": {
-                      "cached": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "result": {
-                        "x-cipp-field-source": "backend"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Tenant.SecuritySimulations.Read"
       }
     },
     "/api/ListSensitiveInfoType": {
