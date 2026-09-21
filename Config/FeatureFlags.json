@@ -106,6 +106,18 @@
     "Hidden": false
   },
   {
+    "Id": "SecuritySimulations",
+    "Name": "Security Simulations",
+    "Description": "This is currently in public beta. Play security events (a stolen token, an admin on an unmanaged device, a mass deletion, an anonymous sharing link) against a tenant to see what an attacker would experience today and which standards close each gap, plus a live Conditional Access gap analysis. Read-only: nothing is changed in the tenant.",
+    "Enabled": false,
+    "AllowUserToggle": true,
+    "Timers": [],
+    "Endpoints": [],
+    "Pages": ["/tenant/security-simulator"],
+    "HidesPages": [],
+    "Hidden": false
+  },
+  {
     "Id": "CertificateAuthentication",
     "Name": "Certificate Authentication",
     "Description": "Authenticate CIPP's SAM application with the SAM certificate instead of the client secret for every Graph and Exchange Online call (app-only and delegated). Managed from the Setup Wizard - enable it for an existing install (the client secret is kept as a rollback) or provision a secret-less install from scratch.",

@@ -1,0 +1,29 @@
+{
+  "name": "Security Simulations",
+  "description": "Attack scenarios played against the tenant: each test walks one event (a stolen token, a password spray, a malicious inbox rule) step by step and reports whether the tenant prevents it, detects it, or neither, and which standard, Conditional Access policy or alert closes each gap.",
+  "version": "1.0",
+  "source": "CyberDrain",
+  "category": "Security Simulations",
+  "IdentityTests": [
+    "SecuritySimulation_AdminNonCompliantDevice",
+    "SecuritySimulation_AnonymousLinkSensitiveSite",
+    "SecuritySimulation_AuditingOff",
+    "SecuritySimulation_BulkSyncUnmanagedDevice",
+    "SecuritySimulation_DeviceCodePhishing",
+    "SecuritySimulation_GuestReshareSprawl",
+    "SecuritySimulation_GuestWithDirectoryRole",
+    "SecuritySimulation_LegacyAuthMailboxAccess",
+    "SecuritySimulation_MailboxPermissionGrab",
+    "SecuritySimulation_MailboxRuleExfiltration",
+    "SecuritySimulation_MaliciousOAuthConsent",
+    "SecuritySimulation_MassFileDeletion",
+    "SecuritySimulation_MassGroupDeletion",
+    "SecuritySimulation_MassUserDeletion",
+    "SecuritySimulation_MfaTampering",
+    "SecuritySimulation_PasswordSprayNoMfa",
+    "SecuritySimulation_RoleAssignmentEscalation",
+    "SecuritySimulation_SignInOutsideAllowedCountries",
+    "SecuritySimulation_StolenTokenReplay",
+    "SecuritySimulation_TransportRuleExfiltration"
+  ]
+}
