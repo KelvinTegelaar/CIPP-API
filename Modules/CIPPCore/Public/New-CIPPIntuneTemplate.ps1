@@ -7,6 +7,18 @@ function New-CIPPIntuneTemplate {
         $CIPPURL,
         $ODataType
     )
+    # App Protection and MAM App Configuration list rows (Invoke-ListAppProtectionPolicies) carry the
+    # concrete @odata.type as their URLName. Map it into the managedAppPolicies bucket and derive
+    # $ODataType so that branch fetches from the correct concrete collection - the generic
+    # managedAppPolicies collection rejects a fetch-by-id for an app configuration policy ("Invalid Id").
+    $ManagedAppPolicyTypes = @(
+        'androidManagedAppProtection', 'iosManagedAppProtection', 'windowsManagedAppProtection',
+        'mdmWindowsInformationProtectionPolicy', 'targetedManagedAppConfiguration', 'defaultManagedAppProtection'
+    )
+    if ($URLName -in $ManagedAppPolicyTypes) {
+        if (-not $ODataType) { $ODataType = "#microsoft.graph.$URLName" }
+        $URLName = 'managedAppPolicies'
+    }
     if ($ODataType) {
         switch -wildcard ($ODataType) {
             '*CompliancePolicy' {

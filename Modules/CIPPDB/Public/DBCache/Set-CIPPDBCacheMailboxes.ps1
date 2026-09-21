@@ -32,7 +32,10 @@ function Set-CIPPDBCacheMailboxes {
             @{ CmdletInput = @{ CmdletName = 'Get-Mailbox'; Parameters = @{} } }
             @{ CmdletInput = @{ CmdletName = 'Get-User'; Parameters = @{} } }
         )
-        $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $BulkRequests -useSystemMailbox $true -Select $Select -ReturnWithCommand $true
+        # Full-tenant Get-Mailbox/Get-User enumeration is a single batch that legitimately exceeds the
+        # 100s default on large tenants (measured ~114s at 1200 mailboxes); give it headroom so a slow
+        # (but valid) enumeration is not killed and mis-reported as a timeout.
+        $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $BulkRequests -useSystemMailbox $true -Select $Select -ReturnWithCommand $true -TimeoutSec 300
 
         # Separate OrgConfig call (avoid shared mailbox $Select on Get-OrganizationConfig).
         # On failure, fall back to mailbox-only resolution and log so live/cache skew is diagnosable.
@@ -160,7 +163,7 @@ function Set-CIPPDBCacheMailboxes {
                     }
                 })
 
-            $ArchiveStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $ArchiveStatsRequests -useSystemMailbox $true
+            $ArchiveStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $ArchiveStatsRequests -useSystemMailbox $true -MaxConcurrency 5
             foreach ($ArchiveStat in @($ArchiveStatsResults)) {
                 if ($ArchiveStat.OperationGuid -and $MailboxUPNByArchiveStatsRequestId.ContainsKey($ArchiveStat.OperationGuid) -and -not $ArchiveStat.error) {
                     $ArchiveMailboxUPN = $MailboxUPNByArchiveStatsRequestId[$ArchiveStat.OperationGuid]
