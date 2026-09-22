@@ -7553,6 +7553,9 @@
                   "country": {
                     "type": "string"
                   },
+                  "defaultAttributes": {
+                    "type": "string"
+                  },
                   "defaultForTenant": {
                     "type": "string"
                   },
