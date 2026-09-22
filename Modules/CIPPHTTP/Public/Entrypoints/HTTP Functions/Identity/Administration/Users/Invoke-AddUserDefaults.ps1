@@ -153,6 +153,7 @@ function Invoke-AddUserDefaults {
             sharedMailboxPermission  = $SharedMailboxPermission
             sharePointSites          = $SharePointSites
             sharePointSiteRole       = $SharePointSiteRole
+            defaultAttributes        = $Request.Body.defaultAttributes
         }
 
         # Use existing GUID if editing, otherwise generate new one
