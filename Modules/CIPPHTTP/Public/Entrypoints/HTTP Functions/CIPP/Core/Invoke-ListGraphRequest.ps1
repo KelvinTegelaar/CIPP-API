@@ -81,8 +81,18 @@ function Invoke-ListGraphRequest {
         $GraphRequestParams.QueueId = $Request.Query.QueueId
     }
 
-    if ($Request.Query.Version) {
-        $GraphRequestParams.Version = $Request.Query.Version
+    # Graph API version to call: v1.0 or beta. Defaults to beta when omitted.
+    switch ($Request.Query.Version) {
+        'v1.0' { $GraphRequestParams.Version = 'v1.0' }
+        'beta' { $GraphRequestParams.Version = 'beta' }
+        default {
+            if ($Request.Query.Version) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = 'Version must be v1.0 or beta.'
+                    })
+            }
+        }
     }
 
     # Return only the first page and stop. The default follows every @odata.nextLink until

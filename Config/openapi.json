@@ -40851,9 +40851,14 @@
           {
             "name": "DataToReturn",
             "in": "query",
+            "description": "Optional. Which section to return: 'AzureADConnectSettings' for the sync status and configuration, or 'AzureADObjectsInError' for objects that failed to sync. Omit to return both.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "AzureADConnectSettings",
+                "AzureADObjectsInError"
+              ]
             }
           },
           {
@@ -40912,6 +40917,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -48099,14 +48107,22 @@
           {
             "name": "period",
             "in": "query",
+            "description": "Reporting window for Graph reports: 'D7', 'D30' (default), 'D90' or 'D180'.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "D180",
+                "D30",
+                "D7",
+                "D90"
+              ]
             }
           },
           {
             "name": "report",
             "in": "query",
+            "description": "The report name to fetch (e.g. 'getEmailActivityUserDetail'). Omit to enumerate the reports available for the selected Type instead of fetching one.",
             "required": false,
             "schema": {
               "type": "string"
@@ -48118,9 +48134,14 @@
           {
             "name": "type",
             "in": "query",
+            "description": "Report source: 'graph' (default) for Microsoft Graph usage reports, or 'office' for the reports.office.com service.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "graph",
+                "office"
+              ]
             }
           }
         ],
@@ -48396,9 +48417,14 @@
           {
             "name": "Version",
             "in": "query",
+            "description": "Graph API version to call: v1.0 or beta. Defaults to beta when omitted.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "beta",
+                "v1.0"
+              ]
             }
           }
         ],
@@ -58149,9 +58175,14 @@
           {
             "name": "Type",
             "in": "query",
+            "description": "Optional site-type filter: 'SharePoint' or 'TeamsSite'. Omit to return both.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "SharePoint",
+                "TeamsSite"
+              ]
             }
           }
         ],
@@ -58779,9 +58810,14 @@
           {
             "name": "Type",
             "in": "query",
+            "description": "Required. Which usage set to list: SharePointSiteUsage or OneDriveUsageAccount.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "OneDriveUsageAccount",
+                "SharePointSiteUsage"
+              ]
             }
           },
           {
