@@ -396,14 +396,16 @@ function Invoke-ExecApiClient {
             $ResourceObjectId = ''
             $ResourceDisplayName = ''
             $ResourceIdentifierUris = @()
+            $PreAuthorizedClientIds = @()
             if (-not [string]::IsNullOrWhiteSpace($McpResRow.AppId)) {
                 try {
-                    $ResApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($McpResRow.AppId)')?`$select=id,appId,displayName,identifierUris" -NoAuthCheck $true -asapp $true
+                    $ResApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($McpResRow.AppId)')?`$select=id,appId,displayName,identifierUris,api" -NoAuthCheck $true -asapp $true
                     $ResourceConfigured = [bool]$ResApp.appId
                     $ResourceAppId = "$($ResApp.appId)"
                     $ResourceObjectId = "$($ResApp.id)"
                     $ResourceDisplayName = "$($ResApp.displayName)"
                     $ResourceIdentifierUris = @($ResApp.identifierUris)
+                    $PreAuthorizedClientIds = @(@($ResApp.api.preAuthorizedApplications) | ForEach-Object { $_.appId })
                 } catch {
                     $ResourceConfigured = $false
                 }
@@ -435,14 +437,26 @@ function Invoke-ExecApiClient {
             $McpClients = @(Get-CIPPAzDataTableEntity @Table | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) -and "$($_.MCPAllowed)" -eq 'True' })
             $ClientInfo = [System.Collections.Generic.List[object]]::new()
             foreach ($C in $McpClients) {
-                $Custom = @()
+                # Custom redirect URIs are surfaced per platform: 'public' (mobile & desktop, PKCE -
+                # Claude/ChatGPT/CLI) and 'web' (confidential, secret - Copilot Studio). Which bucket a
+                # URI is in decides whether the token exchange succeeds, so the UI edits them separately.
+                $CustomPublic = @()
+                $CustomWeb = @()
                 try {
-                    $CApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($C.RowKey)')?`$select=publicClient" -NoAuthCheck $true -asapp $true
-                    $Custom = @(@($CApp.publicClient.redirectUris) | Where-Object { $_ -notin $KnownClients.PublicClientRedirectUris })
+                    $CApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($C.RowKey)')?`$select=publicClient,web" -NoAuthCheck $true -asapp $true
+                    $CustomPublic = @(@($CApp.publicClient.redirectUris) | Where-Object { $_ -notin $KnownClients.PublicClientRedirectUris })
+                    $CustomWeb = @(@($CApp.web.redirectUris) | Where-Object { $_ -notin $KnownClients.ConfidentialRedirectUris -and $_ -notlike "*/.auth/login/aad/callback" })
                 } catch {
-                    $Custom = @()
+                    $CustomPublic = @()
+                    $CustomWeb = @()
                 }
-                $ClientInfo.Add(@{ AppId = "$($C.RowKey)"; AppName = "$($C.AppName)"; CustomRedirectUris = $Custom })
+                $ClientInfo.Add(@{
+                        AppId                          = "$($C.RowKey)"
+                        AppName                        = "$($C.AppName)"
+                        PublicRedirectUris             = @($CustomPublic)
+                        WebRedirectUris                = @($CustomWeb)
+                        UserImpersonationPreAuthorized = ($PreAuthorizedClientIds -contains "$($C.RowKey)")
+                    })
             }
             $Body = @{ Results = @{
                     ResourceConfigured     = $ResourceConfigured
@@ -452,41 +466,63 @@ function Invoke-ExecApiClient {
                     ResourceIdentifierUris = @($ResourceIdentifierUris)
                     ResourceConflict       = $ResourceConflict
                     DefaultRedirectUris    = @($KnownClients.PublicClientRedirectUris)
+                    DefaultWebRedirectUris = @($KnownClients.ConfidentialRedirectUris)
                     Clients                = @($ClientInfo)
                 } }
         }
         'SetMcpRedirectUris' {
-            # Replace the CUSTOM public redirect URIs on a specific MCP client app; the built-in
-            # provider callbacks are always kept. Body.ClientId picks the client, Body.RedirectUris is
-            # its user-managed custom list.
+            # Replace the CUSTOM redirect URIs on a specific MCP client app, per platform. The built-in
+            # provider callbacks are always kept. Body.ClientId picks the client; Body.PublicRedirectUris
+            # go under 'publicClient' (mobile & desktop / PKCE - Claude, ChatGPT, CLI) and
+            # Body.WebRedirectUris under 'web' (confidential / secret - Copilot Studio). A URI under the
+            # wrong platform fails at the token exchange, which is why they are edited separately.
+            # Back-compat: a lone Body.RedirectUris is treated as the public list.
             $KnownClients = Get-CippMcpKnownClients
             $TargetClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
             if ([string]::IsNullOrWhiteSpace($TargetClientId)) {
                 $Body = @{ Results = @{ resultText = 'No ClientId provided.'; state = 'error' } }
                 break
             }
-            $CustomUris = [System.Collections.Generic.List[string]]::new()
-            $Invalid = [System.Collections.Generic.List[string]]::new()
-            foreach ($Uri in @($Request.Body.RedirectUris)) {
-                $U = "$Uri".Trim()
-                if ([string]::IsNullOrWhiteSpace($U)) { continue }
-                $Parsed = $null
-                if ([System.Uri]::TryCreate($U, [System.UriKind]::Absolute, [ref]$Parsed)) {
-                    if ($CustomUris -notcontains $U) { $CustomUris.Add($U) }
-                } else {
-                    $Invalid.Add($U)
-                }
+            # Only ever patch an app registration that is a CIPP-managed, MCP-enabled API client -
+            # never an arbitrary appId, which would let a caller rewrite the redirect URIs of any app
+            # in the tenant via CIPP's app-only Graph rights.
+            $ManagedClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$TargetClientId'"
+            if (-not $ManagedClient.RowKey -or "$($ManagedClient.MCPAllowed)" -ne 'True') {
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked MCP redirect URI update for $TargetClientId : not an MCP-enabled CIPP API client." -Sev 'Warning'
+                $Body = @{ Results = @{ resultText = 'That app is not an MCP-enabled CIPP API client.'; state = 'error' } }
+                break
             }
+            $Invalid = [System.Collections.Generic.List[string]]::new()
+            $ParseUris = {
+                param($Raw)
+                $Out = [System.Collections.Generic.List[string]]::new()
+                foreach ($Uri in @($Raw)) {
+                    $U = "$Uri".Trim()
+                    if ([string]::IsNullOrWhiteSpace($U)) { continue }
+                    $Parsed = $null
+                    if ([System.Uri]::TryCreate($U, [System.UriKind]::Absolute, [ref]$Parsed)) {
+                        if ($Out -notcontains $U) { $Out.Add($U) }
+                    } else {
+                        $Invalid.Add($U)
+                    }
+                }
+                $Out
+            }
+            $CustomPublic = & $ParseUris ($Request.Body.PublicRedirectUris ?? $Request.Body.RedirectUris)
+            $CustomWeb = & $ParseUris $Request.Body.WebRedirectUris
             if ($Invalid.Count -gt 0) {
                 $Body = @{ Results = @{ resultText = "These are not valid absolute URIs: $($Invalid -join ', ')"; state = 'error' } }
                 break
             }
             try {
-                $DesiredPublic = @($KnownClients.PublicClientRedirectUris) + @($CustomUris) | Where-Object { $_ } | Select-Object -Unique
-                $CApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$TargetClientId')?`$select=id" -NoAuthCheck $true -asapp $true
-                $PatchBody = @{ publicClient = @{ redirectUris = @($DesiredPublic) } } | ConvertTo-Json -Depth 6 -Compress
+                $CApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$TargetClientId')?`$select=id,web" -NoAuthCheck $true -asapp $true
+                # Preserve the EasyAuth login callback if this app carries one; it is not ours to drop.
+                $KeepWeb = @(@($CApp.web.redirectUris) | Where-Object { $_ -like "*/.auth/login/aad/callback" })
+                $DesiredPublic = @(@($KnownClients.PublicClientRedirectUris) + @($CustomPublic) | Where-Object { $_ } | Select-Object -Unique)
+                $DesiredWeb = @(@($KnownClients.ConfidentialRedirectUris) + @($KeepWeb) + @($CustomWeb) | Where-Object { $_ } | Select-Object -Unique)
+                $PatchBody = @{ publicClient = @{ redirectUris = @($DesiredPublic) }; web = @{ redirectUris = @($DesiredWeb) } } | ConvertTo-Json -Depth 6 -Compress
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($CApp.id)" -type PATCH -body $PatchBody -NoAuthCheck $true -asapp $true
-                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated MCP client $TargetClientId redirect URIs ($($CustomUris.Count) custom)." -Sev 'Info'
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated MCP client $TargetClientId redirect URIs ($($CustomPublic.Count) public, $($CustomWeb.Count) web)." -Sev 'Info'
                 $Body = @{ Results = @{ resultText = 'MCP connector redirect URIs updated.'; state = 'success' } }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_

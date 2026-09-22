@@ -9,6 +9,7 @@ BeforeAll {
     function New-GraphPOSTRequest { param($uri, $body, $type, $NoAuthCheck, $asapp) }
     function Get-CippMcpKnownClients { }
     function Grant-CippAppGraphConsent { param($AppId, $Scopes, $ResourceAppId) }
+    function Set-CippMcpResourcePreAuth { param($ResourceObjectId, $ClientAppId, $ScopeId) }
     function Write-LogMessage { param($headers, $API, $message, $Sev) }
     function New-CIPPMcpResourceApp { param($Headers) }
 
@@ -37,6 +38,7 @@ Describe 'Set-CIPPMCPClientApp' {
         }
         Mock -CommandName Write-LogMessage -MockWith { }
         Mock -CommandName Grant-CippAppGraphConsent -MockWith { [PSCustomObject]@{ AppId = $AppId; Action = 'created'; Scopes = $Scopes } }
+        Mock -CommandName Set-CippMcpResourcePreAuth -MockWith { $true }
         Mock -CommandName New-CIPPMcpResourceApp -MockWith { @{ AppId = $script:ResourceAppId; ObjectId = 'res-obj'; ScopeId = $script:ScopeId } }
         Mock -CommandName New-GraphPOSTRequest -MockWith { }
         Mock -CommandName New-GraphGetRequest -MockWith {
@@ -92,10 +94,17 @@ Describe 'Set-CIPPMCPClientApp' {
         }
     }
 
-    It 'admin-consents the client on the resource user_impersonation scope' {
+    It 'pre-authorizes the client on the resource user_impersonation scope (no consent grant needed)' {
+        Set-CIPPMCPClientApp -AppId $script:AppId -Headers @{}
+        Should -Invoke -CommandName Set-CippMcpResourcePreAuth -ParameterFilter {
+            $ClientAppId -eq $script:AppId -and $ResourceObjectId -eq 'res-obj' -and $ScopeId -eq $script:ScopeId
+        }
+    }
+
+    It 'admin-consents the client on Graph offline_access' {
         Set-CIPPMCPClientApp -AppId $script:AppId -Headers @{}
         Should -Invoke -CommandName Grant-CippAppGraphConsent -ParameterFilter {
-            $AppId -eq $script:AppId -and $ResourceAppId -eq $script:ResourceAppId -and ($Scopes -contains 'user_impersonation')
+            $AppId -eq $script:AppId -and ($Scopes -contains 'offline_access')
         }
     }
 

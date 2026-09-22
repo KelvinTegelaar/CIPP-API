@@ -40,6 +40,7 @@ function Set-CIPPMCPClientApp {
     # Ensure the dedicated CIPP-MCP resource app exists; we consent this client on its scope.
     $Resource = New-CIPPMcpResourceApp -Headers $Headers
     $ResourceAppId = $Resource.AppId
+    $ResourceObjectId = $Resource.ObjectId
     $ScopeId = $Resource.ScopeId
 
     $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')" -NoAuthCheck $true -AsApp $true
@@ -111,13 +112,19 @@ function Set-CIPPMCPClientApp {
         $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($App.id)" -type PATCH -body $PatchBody -NoAuthCheck $true -asapp $true
         Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "Configured API client $AppId as an MCP OAuth client (callbacks, public client flows, resource permissions) against resource $ResourceAppId." -Sev 'Info'
 
-        # Admin-consent (tenant-wide) so no user is prompted: OIDC + offline_access on Graph and
-        # user_impersonation on the resource. Best-effort / non-fatal.
+        # OIDC + offline_access on Graph are admin-consented tenant-wide (they can't be
+        # pre-authorized). The resource's user_impersonation is handled by pre-authorizing this
+        # client on the CIPP-MCP resource app instead of a consent grant - that needs no consent at
+        # all, so it works even where user consent to apps is disabled. Both best-effort / non-fatal.
         try {
             $null = Grant-CippAppGraphConsent -AppId $AppId -Scopes @('openid', 'profile', 'offline_access')
-            if ($ScopeId) { $null = Grant-CippAppGraphConsent -AppId $AppId -Scopes @('user_impersonation') -ResourceAppId $ResourceAppId }
         } catch {
-            Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "MCP client $AppId configured, but admin-consent could not be written (users may see a one-time prompt on first connect): $($_.Exception.Message)" -Sev 'Warning'
+            Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "Failed to admin-consent Graph openid/profile/offline_access for MCP client ${AppId}: $($_.Exception.Message)" -Sev 'Warning'
+        }
+        try {
+            if ($ScopeId -and $ResourceObjectId) { $null = Set-CippMcpResourcePreAuth -ResourceObjectId $ResourceObjectId -ClientAppId $AppId -ScopeId $ScopeId }
+        } catch {
+            Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "Failed to pre-authorize MCP client $AppId on the CIPP-MCP resource user_impersonation scope: $($_.Exception.Message)" -Sev 'Warning'
         }
 
         return @{ Success = $true; ClientAppId = $AppId; ResourceAppId = $ResourceAppId; RedirectUris = @($PublicRedirectUris) }

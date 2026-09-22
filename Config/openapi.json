@@ -12905,6 +12905,9 @@
                     "type": "string",
                     "description": "When this client is MCP-enabled it becomes one of the OAuth client apps that AI connectors sign in as. Several MCPAllowed clients may coexist (each with its own role/IP/redirects/CA); the dedicated CIPP-MCP app is the shared protected resource. Configure this client (callbacks, public client flows, resource permissions + consent) and ensure the resource app exists (Set-CIPPMCPClientApp -> New-CIPPMcpResourceApp)."
                   },
+                  "PublicRedirectUris": {
+                    "type": "string"
+                  },
                   "RedirectUris": {
                     "type": "string"
                   },
@@ -12918,6 +12921,9 @@
                       }
                     ],
                     "description": "Authorize the role assignment BEFORE any side effects (app registration / secret creation). A caller may only assign a role whose effective permissions are a subset of their own, and may only modify an existing client whose current role is likewise within their grant. This blocks privilege escalation via the ApiClients table (e.g. editor -> superadmin)."
+                  },
+                  "WebRedirectUris": {
+                    "type": "string"
                   }
                 }
               }
@@ -40557,6 +40563,9 @@
                       },
                       "ETag": {
                         "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "EventCreationTime": {
                         "x-cipp-field-source": "storage"
                       },
                       "LogId": {

@@ -254,12 +254,14 @@ function Initialize-CIPPAuth {
                     # Resolve the dedicated CIPP-MCP resource app so we can also reconcile the
                     # client -> resource user_impersonation consent (it can fail on the first Save if
                     # the freshly created resource SP hasn't replicated yet).
-                    $McpResourceAppId = $null
+                    $McpResourceObjectId = $null
+                    $McpResourceScopeId = $null
                     try {
                         $McpResRow = Get-CIPPAzDataTableEntity @(Get-CippTable -tablename 'CippMcpResource') -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
-                        if (-not [string]::IsNullOrWhiteSpace($McpResRow.AppId)) { $McpResourceAppId = "$($McpResRow.AppId)" }
+                        if (-not [string]::IsNullOrWhiteSpace($McpResRow.ObjectId)) { $McpResourceObjectId = "$($McpResRow.ObjectId)" }
+                        if (-not [string]::IsNullOrWhiteSpace($McpResRow.ScopeId)) { $McpResourceScopeId = "$($McpResRow.ScopeId)" }
                     } catch {
-                        Write-Information "[Auth-Init] Could not resolve CIPP-MCP resource app id for consent reconcile: $_"
+                        Write-Information "[Auth-Init] Could not resolve CIPP-MCP resource app for consent reconcile: $_"
                     }
                     foreach ($McpId in $McpClientIds) {
                         if ([string]::IsNullOrEmpty($McpId)) { continue }
@@ -268,10 +270,10 @@ function Initialize-CIPPAuth {
                             if ($McpConsent.Action -ne 'nochange') {
                                 Write-Information "[Auth-Init] MCP client $McpId offline_access consent: $($McpConsent.Action)"
                             }
-                            if ($McpResourceAppId) {
-                                $McpResConsent = Grant-CippAppGraphConsent -AppId $McpId -Scopes @('user_impersonation') -ResourceAppId $McpResourceAppId
-                                if ($McpResConsent.Action -ne 'nochange') {
-                                    Write-Information "[Auth-Init] MCP client $McpId user_impersonation consent on resource ${McpResourceAppId}: $($McpResConsent.Action)"
+                            if ($McpResourceObjectId -and $McpResourceScopeId) {
+                                $PreAuthChanged = Set-CippMcpResourcePreAuth -ResourceObjectId $McpResourceObjectId -ClientAppId $McpId -ScopeId $McpResourceScopeId
+                                if ($PreAuthChanged) {
+                                    Write-Information "[Auth-Init] MCP client $McpId pre-authorized on CIPP-MCP resource user_impersonation scope"
                                 }
                             }
                         } catch {
