@@ -11666,77 +11666,6 @@
         "x-cipp-any-tenant": true
       }
     },
-    "/api/ExecAcknowledgeAlert": {
-      "post": {
-        "summary": "ExecAcknowledgeAlert",
-        "operationId": "ExecAcknowledgeAlert",
-        "tags": [
-          "CIPP > Core"
-        ],
-        "description": "Acknowledges or un-acknowledges one tracked alert item in the AlertLifecycle table.\nBody: TenantFilter, RowKey (from ListAlertResults), Action (Acknowledge or\nUnacknowledge, default Acknowledge) and an optional Note. An acknowledged item stays\non the dashboard, marked as known, until the alert stops reporting it. Only Open\nitems can be acknowledged; un-acknowledging returns the item to Open.",
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "Action": {
-                    "type": "string"
-                  },
-                  "Note": {
-                    "type": "string"
-                  },
-                  "RowKey": {
-                    "type": "string"
-                  },
-                  "Tenant": {
-                    "type": "string"
-                  },
-                  "TenantFilter": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardResults"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "404": {
-            "description": "Not found"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "CIPP.Alert.ReadWrite",
-        "x-cipp-any-tenant": true
-      }
-    },
     "/api/ExecAddAlert": {
       "post": {
         "summary": "ExecAddAlert",
@@ -36064,6 +35993,7 @@
         "tags": [
           "CIPP > Core"
         ],
+        "description": "Snoozes one alert item so it stops notifying. Body: CmdletName, TenantFilter, AlertItem,\nand either Duration (7, 14, 30 or 90 days) or UntilResolved=true, which keeps the snooze\nuntil the alert stops reporting the item and is then removed automatically. KeepVisible=true\nleaves the item on the dashboard, marked as snoozed, rather than hiding it. Reason is an\noptional note. There is no indefinite snooze.",
         "requestBody": {
           "required": false,
           "content": {
@@ -36078,12 +36008,18 @@
                     "type": "string"
                   },
                   "Duration": {
-                    "type": "integer"
+                    "type": "string"
+                  },
+                  "KeepVisible": {
+                    "type": "string"
                   },
                   "Reason": {
                     "type": "string"
                   },
                   "TenantFilter": {
+                    "type": "string"
+                  },
+                  "UntilResolved": {
                     "type": "string"
                   }
                 }
@@ -38637,7 +38573,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Lists the tracked alert items for a tenant from the AlertLifecycle table, which\nWrite-AlertTrace maintains: one row per alert item with its Status (Open,\nAcknowledged, Snoozed or Resolved), when it was first and last seen, when it was\nlast checked, how often it reopened and who acknowledged it. Pass tenantFilter\n(or AllTenants for every tenant the caller may see). Open, Acknowledged and\nSnoozed items are always returned; Resolved items are included when\nIncludeResolved=true, limited to those resolved within the last Days days\n(default 2, at most 366). Each item carries the raw alert item and the keys\nneeded to snooze, unsnooze or acknowledge it.",
+        "description": "Lists the tracked alert items for a tenant from the AlertLifecycle table, which\nWrite-AlertTrace maintains: one row per alert item with its Status (Open, Snoozed or\nResolved), when it was first and last seen, when it was last checked, how often it\nreopened and the snooze details when one applies. Pass tenantFilter (or AllTenants for\nevery tenant the caller may see). Open and Snoozed items are always returned; Resolved\nitems are included when IncludeResolved=true, limited to those resolved within the last\nDays days (default 2, at most 366). Each item carries the raw alert item and the keys\nneeded to snooze or unsnooze it.",
         "parameters": [
           {
             "name": "Days",
@@ -38675,15 +38611,11 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
-                      "AcknowledgedAt": {
-                        "x-cipp-field-source": "storage"
-                      },
                       "AcknowledgedBy": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "AcknowledgeNote": {
-                        "x-cipp-field-source": "storage,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "CmdletName": {
                         "x-cipp-field-source": "frontend"
@@ -38713,10 +38645,19 @@
                       "SnoozedBy": {
                         "x-cipp-field-source": "storage,frontend"
                       },
+                      "SnoozeReason": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "SnoozeRowKey": {
                         "x-cipp-field-source": "storage"
                       },
                       "SnoozeUntil": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SnoozeUntilResolved": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SnoozeVisible": {
                         "x-cipp-field-source": "storage"
                       },
                       "Status": {
@@ -59233,7 +59174,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Lists alerts that have been snoozed (temporarily suppressed), filterable by cmdlet name. Returns snooze duration and scope details.",
+        "description": "Lists alerts that have been snoozed (temporarily suppressed), filterable by cmdlet name. Returns the snooze duration, whether it runs until the item resolves, whether the item stays visible on the dashboard, and who set it.",
         "parameters": [
           {
             "name": "CmdletName",
@@ -59272,6 +59213,10 @@
                       },
                       "IsExpired": {
                         "x-cipp-field-source": "backend"
+                      },
+                      "KeepVisible": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend"
                       },
                       "PartitionKey": {
                         "x-cipp-field-source": "storage,backend"
@@ -59312,6 +59257,10 @@
                       "Timestamp": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
+                      },
+                      "UntilResolved": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend"
                       }
                     }
                   }

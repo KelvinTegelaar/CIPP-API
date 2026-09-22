@@ -1,9 +1,9 @@
 # Pester tests for Invoke-ListAlertResults
 #
-# The endpoint reads the AlertLifecycle table. Open, Acknowledged and Snoozed rows always
-# come back; Resolved rows only with IncludeResolved=true and only when resolved within
-# the last Days days. Every row carries the keys the frontend needs to snooze, unsnooze
-# or acknowledge it, and rows are narrowed to the caller's tenants.
+# The endpoint reads the AlertLifecycle table. Open and Snoozed rows always come back;
+# Resolved rows only with IncludeResolved=true and only when resolved within the last Days
+# days. Every row carries the keys the frontend needs to snooze or unsnooze it plus the
+# snooze details, and rows are narrowed to the caller's tenants.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -50,26 +50,26 @@ BeforeAll {
     function New-Row {
         param($Tenant = 'contoso.onmicrosoft.com', $Hash, $Status = 'Open', $ResolvedAt = '', $LastSeen = '2026-09-22T10:00:00.0000000Z')
         [pscustomobject]@{
-            PartitionKey    = $Tenant
-            RowKey          = "Get-CIPPAlertSomething-$Hash"
-            CmdletName      = 'Get-CIPPAlertSomething'
-            Tenant          = $Tenant
-            ContentHash     = $Hash
-            ContentPreview  = "item $Hash"
-            AlertItem       = '{"Message":"item"}'
-            AlertComment    = ''
-            Status          = $Status
-            FirstSeen       = '2026-09-20T10:00:00.0000000Z'
-            LastSeen        = $LastSeen
-            LastChecked     = $LastSeen
-            ResolvedAt      = $ResolvedAt
-            ReopenCount     = '2'
-            AcknowledgedBy  = ''
-            AcknowledgedAt  = ''
-            AcknowledgeNote = ''
-            SnoozeUntil     = ''
-            SnoozedBy       = ''
-            SnoozeRowKey    = ''
+            PartitionKey        = $Tenant
+            RowKey              = "Get-CIPPAlertSomething-$Hash"
+            CmdletName          = 'Get-CIPPAlertSomething'
+            Tenant              = $Tenant
+            ContentHash         = $Hash
+            ContentPreview      = "item $Hash"
+            AlertItem           = '{"Message":"item"}'
+            AlertComment        = ''
+            Status              = $Status
+            FirstSeen           = '2026-09-20T10:00:00.0000000Z'
+            LastSeen            = $LastSeen
+            LastChecked         = $LastSeen
+            ResolvedAt          = $ResolvedAt
+            ReopenCount         = '2'
+            SnoozeUntil         = ''
+            SnoozedBy           = ''
+            SnoozeRowKey        = ''
+            SnoozeReason        = ''
+            SnoozeVisible       = ''
+            SnoozeUntilResolved = ''
         }
     }
 }
@@ -89,10 +89,9 @@ Describe 'Invoke-ListAlertResults' {
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
     }
 
-    It 'returns open, acknowledged and snoozed rows but hides resolved ones by default' {
+    It 'returns open and snoozed rows but hides resolved ones by default' {
         $script:Rows = @(
             (New-Row -Hash 'a' -Status 'Open'),
-            (New-Row -Hash 'b' -Status 'Acknowledged'),
             (New-Row -Hash 'c' -Status 'Snoozed'),
             (New-Row -Hash 'd' -Status 'Resolved' -ResolvedAt ([datetime]::UtcNow.AddHours(-1).ToString('o')))
         )
@@ -100,7 +99,7 @@ Describe 'Invoke-ListAlertResults' {
         $Response = Invoke-ListAlertResults -Request (New-ListRequest) -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
-        @($Response.Body).Count | Should -Be 3
+        @($Response.Body).Count | Should -Be 2
         @($Response.Body).Status | Should -Not -Contain 'Resolved'
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Filter -eq "PartitionKey eq 'contoso.onmicrosoft.com'" }
     }
@@ -130,16 +129,25 @@ Describe 'Invoke-ListAlertResults' {
         $Row.AlertItem.Message | Should -Be 'item'
         $Row.ReopenCount | Should -Be 2
         $Row.RowKey | Should -Be 'Get-CIPPAlertSomething-abc/def'
+        $Row.SnoozeVisible | Should -BeFalse
+        $Row.SnoozeUntilResolved | Should -BeFalse
     }
 
-    It 'prefers the stored snooze row key when the reconciler recorded one' {
+    It 'exposes the snooze details of a snoozed row as booleans' {
         $Row = New-Row -Hash 'abc' -Status 'Snoozed'
         $Row.SnoozeRowKey = 'stored-key'
+        $Row.SnoozeVisible = 'True'
+        $Row.SnoozeUntilResolved = 'True'
+        $Row.SnoozeReason = 'ticket 42'
         $script:Rows = @($Row)
 
         $Response = Invoke-ListAlertResults -Request (New-ListRequest) -TriggerMetadata $null
 
-        @($Response.Body)[0].SnoozeRowKey | Should -Be 'stored-key'
+        $Out = @($Response.Body)[0]
+        $Out.SnoozeRowKey | Should -Be 'stored-key'
+        $Out.SnoozeVisible | Should -BeTrue
+        $Out.SnoozeUntilResolved | Should -BeTrue
+        $Out.SnoozeReason | Should -Be 'ticket 42'
     }
 
     It 'reads the whole table for AllTenants and narrows it to allowed tenants' {

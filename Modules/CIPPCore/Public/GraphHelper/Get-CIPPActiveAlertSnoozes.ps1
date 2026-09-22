@@ -4,9 +4,9 @@ function Get-CIPPActiveAlertSnoozes {
         Return the active snooze records for one alert cmdlet in one tenant, keyed by content hash.
     .DESCRIPTION
         Reads the AlertSnooze table for the cmdlet and tenant, keeps the snoozes that are still in
-        effect (forever, or not yet expired) and returns them as a hashtable of ContentHash to
-        snooze record. Snoozes that expired more than 30 days ago are removed while we are here,
-        so the table does not grow without bound.
+        effect (timed ones that have not expired, and "until resolved" ones) and returns them as a
+        hashtable of ContentHash to snooze record. Timed snoozes that expired more than 30 days ago
+        are removed while we are here, so the table does not grow without bound.
     .FUNCTIONALITY
         Internal
     #>
@@ -39,8 +39,15 @@ function Get-CIPPActiveAlertSnoozes {
     $RecordsToCleanup = [System.Collections.Generic.List[object]]::new()
 
     foreach ($Record in @($SnoozeRecords)) {
-        $SnoozeUntil = [int64]$Record.SnoozeUntil
-        if ($SnoozeUntil -eq -1 -or $SnoozeUntil -gt $CurrentUnixTime) {
+        if ([string]$Record.UntilResolved -eq 'True') {
+            $Active[[string]$Record.ContentHash] = $Record
+            continue
+        }
+        $SnoozeUntil = ([string]$Record.SnoozeUntil) -as [int64]
+        if ($null -eq $SnoozeUntil -or $SnoozeUntil -le 0) {
+            # Legacy or malformed row with no usable expiry: treat as lapsed rather than silently muting forever.
+            $RecordsToCleanup.Add($Record)
+        } elseif ($SnoozeUntil -gt $CurrentUnixTime) {
             $Active[[string]$Record.ContentHash] = $Record
         } elseif ($SnoozeUntil -lt $ThirtyDaysAgo) {
             $RecordsToCleanup.Add($Record)

@@ -66,6 +66,9 @@ function Invoke-ExecRemoveSnooze {
                     $Update.SnoozeUntil = ''
                     $Update.SnoozedBy = ''
                     $Update.SnoozeRowKey = ''
+                    $Update.SnoozeReason = ''
+                    $Update.SnoozeVisible = ''
+                    $Update.SnoozeUntilResolved = ''
                     Add-CIPPAzDataTableEntity @LifecycleTable -Entity $Update -Force | Out-Null
                 }
             } catch {

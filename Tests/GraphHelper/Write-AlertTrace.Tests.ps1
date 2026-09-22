@@ -4,7 +4,8 @@
 # compared with the AlertLifecycle rows for that cmdlet and tenant: unknown items become
 # Open and are returned for notification, known items are refreshed silently, absent
 # items are resolved, resolved items that come back are reopened and returned again, and
-# snoozed items are tracked but never returned. -Append never resolves by absence.
+# snoozed items are tracked but never returned. An "until resolved" snooze is deleted when
+# its item resolves; a timed snooze outlives the resolution. -Append never resolves by absence.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -22,32 +23,32 @@ BeforeAll {
     . (Join-Path $Helper 'Write-AlertTrace.ps1')
 
     function New-StoredRow {
-        param($Message, $Status = 'Open', $ReopenCount = '0', $ResolvedAt = '', $LastSeen = '2026-09-20T10:00:00.0000000Z')
+        param($Message, $Status = 'Open', $ReopenCount = '0', $ResolvedAt = '', $LastSeen = '2026-09-20T10:00:00.0000000Z', $SnoozeUntilResolved = '', $SnoozeRowKey = '')
         $Hash = Get-AlertContentHash -AlertItem @{ Message = $Message }
         $Keys = Get-CIPPAlertLifecycleKey -CmdletName 'Get-CIPPAlertSomething' -TenantFilter 'contoso.onmicrosoft.com' -ContentHash $Hash.ContentHash
         [pscustomobject]@{
-            PartitionKey    = $Keys.PartitionKey
-            RowKey          = $Keys.RowKey
-            CmdletName      = 'Get-CIPPAlertSomething'
-            Tenant          = 'contoso.onmicrosoft.com'
-            ContentHash     = $Hash.ContentHash
-            ContentPreview  = $Hash.ContentPreview
-            AlertItem       = (ConvertTo-Json -InputObject @{ Message = $Message } -Compress)
-            AlertComment    = ''
-            Status          = $Status
-            FirstSeen       = '2026-09-18T10:00:00.0000000Z'
-            LastSeen        = $LastSeen
-            LastChecked     = $LastSeen
-            ResolvedAt      = $ResolvedAt
-            ReopenCount     = $ReopenCount
-            AcknowledgedBy  = ''
-            AcknowledgedAt  = ''
-            AcknowledgeNote = ''
-            SnoozeUntil     = ''
-            SnoozedBy       = ''
-            SnoozeRowKey    = ''
-            ETag            = 'W/"1"'
-            Timestamp       = [datetimeoffset]::UtcNow
+            PartitionKey        = $Keys.PartitionKey
+            RowKey              = $Keys.RowKey
+            CmdletName          = 'Get-CIPPAlertSomething'
+            Tenant              = 'contoso.onmicrosoft.com'
+            ContentHash         = $Hash.ContentHash
+            ContentPreview      = $Hash.ContentPreview
+            AlertItem           = (ConvertTo-Json -InputObject @{ Message = $Message } -Compress)
+            AlertComment        = ''
+            Status              = $Status
+            FirstSeen           = '2026-09-18T10:00:00.0000000Z'
+            LastSeen            = $LastSeen
+            LastChecked         = $LastSeen
+            ResolvedAt          = $ResolvedAt
+            ReopenCount         = $ReopenCount
+            SnoozeUntil         = ''
+            SnoozedBy           = ''
+            SnoozeRowKey        = $SnoozeRowKey
+            SnoozeReason        = ''
+            SnoozeVisible       = ''
+            SnoozeUntilResolved = $SnoozeUntilResolved
+            ETag                = 'W/"1"'
+            Timestamp           = [datetimeoffset]::UtcNow
         }
     }
 
@@ -76,7 +77,7 @@ Describe 'Write-AlertTrace' {
         Mock Add-CIPPAzDataTableEntity {
             foreach ($Row in @($Entity)) { $script:Writes.Add($Row) }
         }
-        Mock Remove-CIPPAzDataTableEntity { $script:Removed.Add($Entity) }
+        Mock Remove-CIPPAzDataTableEntity { $script:Removed.Add(@{ Table = $TableName; Entity = $Entity }) }
     }
 
     It 'stores unknown items as Open and returns them for notification' {
@@ -105,19 +106,10 @@ Describe 'Write-AlertTrace' {
         $Written.LastSeen | Should -Not -Be '2026-09-20T10:00:00.0000000Z'
     }
 
-    It 'keeps an acknowledged item acknowledged while it persists' {
-        $script:Existing = @(New-StoredRow -Message 'first' -Status 'Acknowledged')
-
-        $Result = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @([pscustomobject]@{ Message = 'first' })
-
-        $Result | Should -BeNullOrEmpty
-        (Get-WrittenRow -Message 'first').Status | Should -Be 'Acknowledged'
-    }
-
     It 'resolves items missing from the run and returns nothing for an empty run' {
         $script:Existing = @(
             (New-StoredRow -Message 'first'),
-            (New-StoredRow -Message 'second' -Status 'Acknowledged')
+            (New-StoredRow -Message 'second')
         )
 
         $Result = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $null
@@ -145,9 +137,9 @@ Describe 'Write-AlertTrace' {
         $Written.FirstSeen | Should -Not -Be '2026-09-18T10:00:00.0000000Z'
     }
 
-    It 'tracks a snoozed item as Snoozed without returning it' {
+    It 'tracks a snoozed item as Snoozed with its snooze details, without returning it' {
         $Hash = (Get-AlertContentHash -AlertItem @{ Message = 'first' }).ContentHash
-        $script:Snoozes = @{ $Hash = [pscustomobject]@{ SnoozeUntil = '-1'; SnoozedBy = 'ops@contoso.com'; RowKey = 'contoso.onmicrosoft.com-hash' } }
+        $script:Snoozes = @{ $Hash = [pscustomobject]@{ SnoozeUntil = '0'; UntilResolved = 'True'; KeepVisible = 'True'; SnoozeReason = 'ticket 42'; SnoozedBy = 'ops@contoso.com'; RowKey = 'contoso.onmicrosoft.com-hash' } }
 
         $Result = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @([pscustomobject]@{ Message = 'first' })
 
@@ -156,6 +148,9 @@ Describe 'Write-AlertTrace' {
         $Written.Status | Should -Be 'Snoozed'
         $Written.SnoozedBy | Should -Be 'ops@contoso.com'
         $Written.SnoozeRowKey | Should -Be 'contoso.onmicrosoft.com-hash'
+        $Written.SnoozeReason | Should -Be 'ticket 42'
+        $Written.SnoozeVisible | Should -Be 'True'
+        $Written.SnoozeUntilResolved | Should -Be 'True'
     }
 
     It 'fires again when a snooze has lapsed but the condition persists' {
@@ -165,6 +160,24 @@ Describe 'Write-AlertTrace' {
 
         @($Result).Count | Should -Be 1
         (Get-WrittenRow -Message 'first').Status | Should -Be 'Open'
+    }
+
+    It 'drops an until-resolved snooze when its item resolves, but keeps a timed one' {
+        $script:Existing = @(
+            (New-StoredRow -Message 'untilresolved' -Status 'Snoozed' -SnoozeUntilResolved 'True' -SnoozeRowKey 'contoso.onmicrosoft.com-ur'),
+            (New-StoredRow -Message 'timed' -Status 'Snoozed' -SnoozeUntilResolved 'False' -SnoozeRowKey 'contoso.onmicrosoft.com-timed')
+        )
+
+        $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $null
+
+        (Get-WrittenRow -Message 'untilresolved').Status | Should -Be 'Resolved'
+        (Get-WrittenRow -Message 'untilresolved').SnoozeRowKey | Should -Be ''
+        (Get-WrittenRow -Message 'timed').Status | Should -Be 'Resolved'
+        (Get-WrittenRow -Message 'timed').SnoozeRowKey | Should -Be 'contoso.onmicrosoft.com-timed'
+        $Dropped = @($script:Removed | Where-Object { $_.Table -eq 'AlertSnooze' })
+        $Dropped.Count | Should -Be 1
+        $Dropped[0].Entity.PartitionKey | Should -Be 'Get-CIPPAlertSomething'
+        $Dropped[0].Entity.RowKey | Should -Be 'contoso.onmicrosoft.com-ur'
     }
 
     It 'does not resolve by absence in append mode, but does retire stale rows' {
@@ -189,7 +202,7 @@ Describe 'Write-AlertTrace' {
         $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $null
 
         $script:Removed.Count | Should -Be 1
-        $script:Removed[0].RowKey | Should -Be (New-StoredRow -Message 'old').RowKey
+        $script:Removed[0].Entity.RowKey | Should -Be (New-StoredRow -Message 'old').RowKey
         $script:Writes.Count | Should -Be 0
     }
 

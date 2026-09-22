@@ -3,6 +3,10 @@
 # The endpoint is AnyTenant, so the framework's per-tenant check is skipped and the
 # endpoint gates the caller-supplied TenantFilter itself: restricted callers may only
 # snooze alerts for tenants the scope-narrowed Get-Tenants can resolve.
+#
+# A snooze is either timed (7, 14, 30 or 90 days) or "until resolved"; there is no
+# indefinite snooze. KeepVisible leaves the item on the dashboard. The tracked
+# AlertLifecycle row, when one exists and is not resolved, flips to Snoozed straight away.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -35,18 +39,26 @@ BeforeAll {
     . $FunctionPath
 
     function New-SnoozeRequest {
-        param($TenantFilter = 'contoso.onmicrosoft.com')
+        param($TenantFilter = 'contoso.onmicrosoft.com', $Duration = 7, $UntilResolved, $KeepVisible, $Reason = 'test')
+        $Body = @{
+            CmdletName   = 'Get-CIPPAlertSomething'
+            TenantFilter = $TenantFilter
+            AlertItem    = @{ Message = 'alert text' }
+            Reason       = $Reason
+        }
+        if ($null -ne $Duration) { $Body.Duration = $Duration }
+        if ($null -ne $UntilResolved) { $Body.UntilResolved = $UntilResolved }
+        if ($null -ne $KeepVisible) { $Body.KeepVisible = $KeepVisible }
         [pscustomobject]@{
             Params  = @{ CIPPEndpoint = 'ExecSnoozeAlert' }
             Headers = @{ }
-            Body    = [pscustomobject]@{
-                CmdletName   = 'Get-CIPPAlertSomething'
-                TenantFilter = $TenantFilter
-                AlertItem    = @{ Message = 'alert text' }
-                Duration     = 7
-                Reason       = 'test'
-            }
+            Body    = [pscustomobject]$Body
         }
+    }
+
+    function Get-Written {
+        param($Table)
+        ($script:Written | Where-Object { $_.Table -eq $Table } | Select-Object -Last 1).Entity
     }
 }
 
@@ -67,14 +79,41 @@ Describe 'Invoke-ExecSnoozeAlert' {
         }
     }
 
-    It 'writes the snooze row for an unrestricted caller' {
-        $Response = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest) -TriggerMetadata $null
+    It 'writes a timed snooze row for an unrestricted caller' {
+        $Response = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest -Duration 14) -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $TableName -eq 'AlertSnooze' }
-        $Snooze = ($script:Written | Where-Object { $_.Table -eq 'AlertSnooze' }).Entity
+        $Snooze = Get-Written -Table 'AlertSnooze'
         $Snooze.PartitionKey | Should -Be 'Get-CIPPAlertSomething'
         $Snooze.RowKey | Should -Be 'contoso.onmicrosoft.com-hash123'
+        $Snooze.UntilResolved | Should -Be 'False'
+        $Snooze.KeepVisible | Should -Be 'False'
+        $Now = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+        ([int64]$Snooze.SnoozeUntil) | Should -BeGreaterThan ($Now + 13 * 86400)
+        ([int64]$Snooze.SnoozeUntil) | Should -BeLessOrEqual ($Now + 14 * 86400)
+    }
+
+    It 'writes an until-resolved snooze that keeps the item visible' {
+        $Response = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest -Duration $null -UntilResolved $true -KeepVisible $true) -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $Response.Body.UntilResolved | Should -BeTrue
+        $Response.Body.KeepVisible | Should -BeTrue
+        $Snooze = Get-Written -Table 'AlertSnooze'
+        $Snooze.UntilResolved | Should -Be 'True'
+        $Snooze.KeepVisible | Should -Be 'True'
+        $Snooze.SnoozeUntil | Should -Be '0'
+    }
+
+    It 'rejects durations outside 7/14/30/90, including the old forever value' {
+        foreach ($Bad in @(-1, 0, 3, 365)) {
+            $Response = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest -Duration $Bad) -TriggerMetadata $null
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+        }
+        $Response = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest -Duration $null) -TriggerMetadata $null
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
     }
 
     It 'marks the tracked alert item as snoozed when one exists' {
@@ -88,14 +127,16 @@ Describe 'Invoke-ExecSnoozeAlert' {
             }
         }
 
-        $Response = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest) -TriggerMetadata $null
+        $Response = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest -Duration $null -UntilResolved $true -KeepVisible $true -Reason 'ticket 42') -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $TableName -eq 'AlertLifecycle' -and $Filter -eq "PartitionKey eq 'contoso.onmicrosoft.com' and RowKey eq 'Get-CIPPAlertSomething-hash123'" }
-        $Tracked = ($script:Written | Where-Object { $_.Table -eq 'AlertLifecycle' }).Entity
+        $Tracked = Get-Written -Table 'AlertLifecycle'
         $Tracked.Status | Should -Be 'Snoozed'
         $Tracked.SnoozeRowKey | Should -Be 'contoso.onmicrosoft.com-hash123'
-        $Tracked.SnoozeUntil | Should -Not -BeNullOrEmpty
+        $Tracked.SnoozeReason | Should -Be 'ticket 42'
+        $Tracked.SnoozeVisible | Should -Be 'True'
+        $Tracked.SnoozeUntilResolved | Should -Be 'True'
         $Tracked.Keys | Should -Not -Contain 'ETag'
     }
 

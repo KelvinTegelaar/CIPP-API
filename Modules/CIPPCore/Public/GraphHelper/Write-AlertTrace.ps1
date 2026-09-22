@@ -7,15 +7,19 @@ function Write-AlertTrace {
         including an empty result when it found nothing. Each item is hashed with
         Get-AlertContentHash and compared with the rows already stored for this cmdlet and tenant:
 
-          - not stored yet                -> New       (Open, or Snoozed when a snooze covers it)
-          - stored and Resolved           -> Reopened  (ReopenCount + 1)
-          - stored and still present      -> Continuing (LastSeen refreshed, no notification)
-          - stored but absent this run    -> Resolved
+          - not stored yet                 -> New       (Open, or Snoozed when a snooze covers it)
+          - stored and Resolved            -> Reopened  (ReopenCount + 1)
+          - stored and still present       -> Continuing (LastSeen refreshed, no notification)
+          - stored but absent this run     -> Resolved
           - stored as Snoozed, snooze gone -> back to Open and notified again
 
         Only New and Reopened items that are not snoozed are returned, so the scheduled-task
         post-execution step notifies once per state change instead of once per run. A run that
         finds nothing returns nothing and resolves whatever was still open.
+
+        A snooze set "until resolved" is deleted when its item resolves, so the item notifies
+        again if it ever comes back. Timed snoozes outlive a resolution and keep suppressing
+        the item until they expire.
 
         Alerts that fail part-way must not call this, since "could not check" is not "clear".
 
@@ -70,26 +74,26 @@ function Write-AlertTrace {
                     if ($ByHash.ContainsKey($SeedHash.ContentHash)) { continue }
                     $SeedKeys = Get-CIPPAlertLifecycleKey -CmdletName $CmdletName -TenantFilter $TenantFilter -ContentHash $SeedHash.ContentHash
                     $ByHash[$SeedHash.ContentHash] = [PSCustomObject]@{
-                        PartitionKey   = $SeedKeys.PartitionKey
-                        RowKey         = $SeedKeys.RowKey
-                        CmdletName     = $CmdletName
-                        Tenant         = $TenantFilter
-                        ContentHash    = $SeedHash.ContentHash
-                        ContentPreview = $SeedHash.ContentPreview
-                        AlertItem      = [string](ConvertTo-Json -InputObject $SeedItem -Compress -Depth 10)
-                        AlertComment   = [string]$LastRun.AlertComment
-                        Status         = 'Open'
-                        FirstSeen      = $SeedSeen
-                        LastSeen       = $SeedSeen
-                        LastChecked    = $SeedSeen
-                        ResolvedAt     = ''
-                        ReopenCount    = '0'
-                        AcknowledgedBy = ''
-                        AcknowledgedAt = ''
-                        AcknowledgeNote = ''
-                        SnoozeUntil    = ''
-                        SnoozedBy      = ''
-                        SnoozeRowKey   = ''
+                        PartitionKey        = $SeedKeys.PartitionKey
+                        RowKey              = $SeedKeys.RowKey
+                        CmdletName          = $CmdletName
+                        Tenant              = $TenantFilter
+                        ContentHash         = $SeedHash.ContentHash
+                        ContentPreview      = $SeedHash.ContentPreview
+                        AlertItem           = [string](ConvertTo-Json -InputObject $SeedItem -Compress -Depth 10)
+                        AlertComment        = [string]$LastRun.AlertComment
+                        Status              = 'Open'
+                        FirstSeen           = $SeedSeen
+                        LastSeen            = $SeedSeen
+                        LastChecked         = $SeedSeen
+                        ResolvedAt          = ''
+                        ReopenCount         = '0'
+                        SnoozeUntil         = ''
+                        SnoozedBy           = ''
+                        SnoozeRowKey        = ''
+                        SnoozeReason        = ''
+                        SnoozeVisible       = ''
+                        SnoozeUntilResolved = ''
                     }
                 }
                 Write-Information "Seeded $($ByHash.Count) open alert items for $CmdletName / $TenantFilter from AlertLastRun"
@@ -117,45 +121,39 @@ function Write-AlertTrace {
         $Row = $ByHash[$Hash.ContentHash]
 
         $Entity = @{
-            PartitionKey    = $Keys.PartitionKey
-            RowKey          = $Keys.RowKey
-            CmdletName      = $CmdletName
-            Tenant          = $TenantFilter
-            ContentHash     = [string]$Hash.ContentHash
-            ContentPreview  = [string]$Hash.ContentPreview
-            AlertItem       = $ItemJson
-            AlertComment    = [string]$AlertComment
-            LastSeen        = $NowIso
-            LastChecked     = $NowIso
-            ResolvedAt      = ''
-            SnoozeUntil     = if ($Snooze) { [string]$Snooze.SnoozeUntil } else { '' }
-            SnoozedBy       = if ($Snooze) { [string]$Snooze.SnoozedBy } else { '' }
-            SnoozeRowKey    = if ($Snooze) { [string]$Snooze.RowKey } else { '' }
+            PartitionKey        = $Keys.PartitionKey
+            RowKey              = $Keys.RowKey
+            CmdletName          = $CmdletName
+            Tenant              = $TenantFilter
+            ContentHash         = [string]$Hash.ContentHash
+            ContentPreview      = [string]$Hash.ContentPreview
+            AlertItem           = $ItemJson
+            AlertComment        = [string]$AlertComment
+            LastSeen            = $NowIso
+            LastChecked         = $NowIso
+            ResolvedAt          = ''
+            SnoozeUntil         = if ($Snooze) { [string]$Snooze.SnoozeUntil } else { '' }
+            SnoozedBy           = if ($Snooze) { [string]$Snooze.SnoozedBy } else { '' }
+            SnoozeRowKey        = if ($Snooze) { [string]$Snooze.RowKey } else { '' }
+            SnoozeReason        = if ($Snooze) { [string]$Snooze.SnoozeReason } else { '' }
+            SnoozeVisible       = if ($Snooze) { [string]([string]$Snooze.KeepVisible -eq 'True') } else { '' }
+            SnoozeUntilResolved = if ($Snooze) { [string]([string]$Snooze.UntilResolved -eq 'True') } else { '' }
         }
 
         if (-not $Row) {
             $Entity.Status = if ($Snooze) { 'Snoozed' } else { 'Open' }
             $Entity.FirstSeen = $NowIso
             $Entity.ReopenCount = '0'
-            $Entity.AcknowledgedBy = ''
-            $Entity.AcknowledgedAt = ''
-            $Entity.AcknowledgeNote = ''
             if ($Snooze) { $Counts.Snoozed++ } else { $Counts.New++; $Notify.Add($Item) }
         } else {
             $PriorStatus = [string]$Row.Status
             $Entity.FirstSeen = [string]$Row.FirstSeen
             $Entity.ReopenCount = [string]([int]($Row.ReopenCount ?? 0))
-            $Entity.AcknowledgedBy = [string]$Row.AcknowledgedBy
-            $Entity.AcknowledgedAt = [string]$Row.AcknowledgedAt
-            $Entity.AcknowledgeNote = [string]$Row.AcknowledgeNote
 
             if ($PriorStatus -eq 'Resolved') {
                 $Entity.Status = if ($Snooze) { 'Snoozed' } else { 'Open' }
                 $Entity.FirstSeen = $NowIso
                 $Entity.ReopenCount = [string]([int]($Row.ReopenCount ?? 0) + 1)
-                $Entity.AcknowledgedBy = ''
-                $Entity.AcknowledgedAt = ''
-                $Entity.AcknowledgeNote = ''
                 if ($Snooze) { $Counts.Snoozed++ } else { $Counts.Reopened++; $Notify.Add($Item) }
             } elseif ($Snooze) {
                 $Entity.Status = 'Snoozed'
@@ -166,7 +164,7 @@ function Write-AlertTrace {
                 $Counts.New++
                 $Notify.Add($Item)
             } else {
-                $Entity.Status = if ($PriorStatus -eq 'Acknowledged') { 'Acknowledged' } else { 'Open' }
+                $Entity.Status = 'Open'
                 $Counts.Continuing++
             }
         }
@@ -175,6 +173,7 @@ function Write-AlertTrace {
     }
 
     $Removals = [System.Collections.Generic.List[object]]::new()
+    $SnoozesToDrop = [System.Collections.Generic.List[object]]::new()
     foreach ($Row in $Existing) {
         if ($Seen.Contains([string]$Row.ContentHash)) { continue }
         $Status = [string]$Row.Status
@@ -203,6 +202,16 @@ function Write-AlertTrace {
         $Resolved.Status = 'Resolved'
         $Resolved.ResolvedAt = $NowIso
         $Resolved.LastChecked = $NowIso
+        if ($Status -eq 'Snoozed' -and [string]$Row.SnoozeUntilResolved -eq 'True') {
+            # An "until resolved" snooze has done its job; drop it so a comeback notifies again.
+            $SnoozesToDrop.Add([string]$Row.SnoozeRowKey)
+            $Resolved.SnoozeUntil = ''
+            $Resolved.SnoozedBy = ''
+            $Resolved.SnoozeRowKey = ''
+            $Resolved.SnoozeReason = ''
+            $Resolved.SnoozeVisible = ''
+            $Resolved.SnoozeUntilResolved = ''
+        }
         $Writes.Add($Resolved)
         $Counts.Resolved++
     }
@@ -221,6 +230,21 @@ function Write-AlertTrace {
             }
         } catch {
             Write-Information "Could not purge resolved alert rows for $CmdletName / $TenantFilter : $($_.Exception.Message)"
+        }
+    }
+    if ($SnoozesToDrop.Count -gt 0) {
+        try {
+            $SnoozeTable = Get-CIPPTable -tablename 'AlertSnooze'
+            foreach ($SnoozeKey in $SnoozesToDrop) {
+                if ([string]::IsNullOrWhiteSpace($SnoozeKey)) { continue }
+                Remove-CIPPAzDataTableEntity @SnoozeTable -Entity @{
+                    PartitionKey = $CmdletName
+                    RowKey       = $SnoozeKey
+                    ETag         = '*'
+                } | Out-Null
+            }
+        } catch {
+            Write-Information "Could not drop until-resolved snoozes for $CmdletName / $TenantFilter : $($_.Exception.Message)"
         }
     }
 

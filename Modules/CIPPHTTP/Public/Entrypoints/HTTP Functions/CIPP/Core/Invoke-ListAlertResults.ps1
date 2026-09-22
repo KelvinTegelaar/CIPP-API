@@ -6,14 +6,13 @@ function Invoke-ListAlertResults {
         CIPP.Alert.Read
     .DESCRIPTION
         Lists the tracked alert items for a tenant from the AlertLifecycle table, which
-        Write-AlertTrace maintains: one row per alert item with its Status (Open,
-        Acknowledged, Snoozed or Resolved), when it was first and last seen, when it was
-        last checked, how often it reopened and who acknowledged it. Pass tenantFilter
-        (or AllTenants for every tenant the caller may see). Open, Acknowledged and
-        Snoozed items are always returned; Resolved items are included when
-        IncludeResolved=true, limited to those resolved within the last Days days
-        (default 2, at most 366). Each item carries the raw alert item and the keys
-        needed to snooze, unsnooze or acknowledge it.
+        Write-AlertTrace maintains: one row per alert item with its Status (Open, Snoozed or
+        Resolved), when it was first and last seen, when it was last checked, how often it
+        reopened and the snooze details when one applies. Pass tenantFilter (or AllTenants for
+        every tenant the caller may see). Open and Snoozed items are always returned; Resolved
+        items are included when IncludeResolved=true, limited to those resolved within the last
+        Days days (default 2, at most 366). Each item carries the raw alert item and the keys
+        needed to snooze or unsnooze it.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -63,27 +62,27 @@ function Invoke-ListAlertResults {
             $Keys = Get-CIPPAlertLifecycleKey -CmdletName ([string]$Row.CmdletName) -TenantFilter ([string]$Row.Tenant) -ContentHash ([string]$Row.ContentHash)
 
             $Results.Add([PSCustomObject]@{
-                    PartitionKey       = $Row.PartitionKey
-                    RowKey             = $Row.RowKey
-                    CmdletName         = $Row.CmdletName
-                    AlertComment       = $Row.AlertComment
-                    Tenant             = $Row.Tenant
-                    ContentHash        = $Row.ContentHash
-                    ContentPreview     = $Row.ContentPreview
-                    AlertItem          = $AlertItem
-                    Status             = $Status
-                    FirstSeen          = $Row.FirstSeen
-                    LastSeen           = $Row.LastSeen
-                    LastChecked        = $Row.LastChecked
-                    ResolvedAt         = $Row.ResolvedAt
-                    ReopenCount        = [int]($Row.ReopenCount ?? 0)
-                    AcknowledgedBy     = $Row.AcknowledgedBy
-                    AcknowledgedAt     = $Row.AcknowledgedAt
-                    AcknowledgeNote    = $Row.AcknowledgeNote
-                    SnoozeUntil        = $Row.SnoozeUntil
-                    SnoozedBy          = $Row.SnoozedBy
-                    SnoozePartitionKey = $Keys.SnoozePartitionKey
-                    SnoozeRowKey       = if ([string]::IsNullOrWhiteSpace($Row.SnoozeRowKey)) { $Keys.SnoozeRowKey } else { $Row.SnoozeRowKey }
+                    PartitionKey        = $Row.PartitionKey
+                    RowKey              = $Row.RowKey
+                    CmdletName          = $Row.CmdletName
+                    AlertComment        = $Row.AlertComment
+                    Tenant              = $Row.Tenant
+                    ContentHash         = $Row.ContentHash
+                    ContentPreview      = $Row.ContentPreview
+                    AlertItem           = $AlertItem
+                    Status              = $Status
+                    FirstSeen           = $Row.FirstSeen
+                    LastSeen            = $Row.LastSeen
+                    LastChecked         = $Row.LastChecked
+                    ResolvedAt          = $Row.ResolvedAt
+                    ReopenCount         = [int]($Row.ReopenCount ?? 0)
+                    SnoozeUntil         = $Row.SnoozeUntil
+                    SnoozedBy           = $Row.SnoozedBy
+                    SnoozeReason        = $Row.SnoozeReason
+                    SnoozeVisible       = ([string]$Row.SnoozeVisible -eq 'True')
+                    SnoozeUntilResolved = ([string]$Row.SnoozeUntilResolved -eq 'True')
+                    SnoozePartitionKey  = $Keys.SnoozePartitionKey
+                    SnoozeRowKey        = if ([string]::IsNullOrWhiteSpace($Row.SnoozeRowKey)) { $Keys.SnoozeRowKey } else { $Row.SnoozeRowKey }
                 })
         }
 
