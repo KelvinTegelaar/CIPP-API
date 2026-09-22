@@ -40691,7 +40691,57 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                    "description": "Derived from the Microsoft Graph entity it queries, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "properties": {
+                      "createdDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "description": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity,frontend"
+                      },
+                      "deviceEnrollmentConfigurationType": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "deviceNameTemplate": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity,frontend"
+                      },
+                      "extractHardwareHash": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "language": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "lastModifiedDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "PolicyAssignment": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "priority": {
+                        "type": "integer",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "roleScopeTagIds": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "version": {
+                        "type": "integer",
+                        "x-cipp-field-source": "graph-entity"
+                      }
+                    }
                   }
                 }
               }
