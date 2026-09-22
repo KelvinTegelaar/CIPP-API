@@ -56,9 +56,10 @@ function Invoke-ExecSnoozeAlert {
         }
 
         $SnoozeTable = Get-CIPPTable -tablename 'AlertSnooze'
+        $Keys = Get-CIPPAlertLifecycleKey -CmdletName $CmdletName -TenantFilter $TenantFilter -ContentHash $HashResult.ContentHash
         $SnoozeEntity = @{
-            PartitionKey   = [string]$CmdletName
-            RowKey         = [string]"$($TenantFilter)-$($HashResult.ContentHash)" -replace '[\\/#?\u0000-\u001f\u007f-\u009f]', '_'
+            PartitionKey   = $Keys.SnoozePartitionKey
+            RowKey         = $Keys.SnoozeRowKey
             ContentHash    = [string]$HashResult.ContentHash
             Tenant         = [string]$TenantFilter
             SnoozeUntil    = [string]$SnoozeUntil
@@ -70,6 +71,29 @@ function Invoke-ExecSnoozeAlert {
         }
 
         Add-CIPPAzDataTableEntity @SnoozeTable -Entity $SnoozeEntity -Force | Out-Null
+
+        # Reflect the snooze on the tracked item straight away, so the dashboard does not have
+        # to wait for the alert's next run to move it out of the active list.
+        try {
+            $LifecycleTable = Get-CIPPTable -tablename 'AlertLifecycle'
+            $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $Keys.PartitionKey -Type String
+            $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value $Keys.RowKey -Type String
+            $Tracked = Get-CIPPAzDataTableEntity @LifecycleTable -Filter "PartitionKey eq '$SafeTenant' and RowKey eq '$SafeRowKey'" | Select-Object -First 1
+            if ($Tracked -and [string]$Tracked.Status -ne 'Resolved') {
+                $Update = @{}
+                foreach ($Prop in $Tracked.PSObject.Properties) {
+                    if ($Prop.Name -in @('ETag', 'Timestamp')) { continue }
+                    $Update[$Prop.Name] = $Prop.Value
+                }
+                $Update.Status = 'Snoozed'
+                $Update.SnoozeUntil = [string]$SnoozeUntil
+                $Update.SnoozedBy = [string]$SnoozedBy
+                $Update.SnoozeRowKey = $Keys.SnoozeRowKey
+                Add-CIPPAzDataTableEntity @LifecycleTable -Entity $Update -Force | Out-Null
+            }
+        } catch {
+            Write-Information "Snooze stored but the tracked alert item could not be updated: $($_.Exception.Message)"
+        }
 
         $DurationLabel = if ($Duration -eq -1) { 'forever' } else { "$Duration days" }
         $ContentPreview = $HashResult.ContentPreview

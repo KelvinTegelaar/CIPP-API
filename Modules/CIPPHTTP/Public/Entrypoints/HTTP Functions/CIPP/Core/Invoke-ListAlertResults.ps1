@@ -5,12 +5,15 @@ function Invoke-ListAlertResults {
     .ROLE
         CIPP.Alert.Read
     .DESCRIPTION
-        Lists the currently-active fired alert items for a tenant, read from the
-        AlertLastRun table. AlertLastRun stores the items produced by the most recent
-        run of each scripted alert (Get-CIPPAlert*) after snoozed items have already
-        been filtered out, so this returns the active (non-snoozed) instances. Each
-        item is returned with a content preview/hash (matching the snooze format) and
-        the raw alert item so the frontend can snooze it via ExecSnoozeAlert.
+        Lists the tracked alert items for a tenant from the AlertLifecycle table, which
+        Write-AlertTrace maintains: one row per alert item with its Status (Open,
+        Acknowledged, Snoozed or Resolved), when it was first and last seen, when it was
+        last checked, how often it reopened and who acknowledged it. Pass tenantFilter
+        (or AllTenants for every tenant the caller may see). Open, Acknowledged and
+        Snoozed items are always returned; Resolved items are included when
+        IncludeResolved=true, limited to those resolved within the last Days days
+        (default 2, at most 366). Each item carries the raw alert item and the keys
+        needed to snooze, unsnooze or acknowledge it.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -26,57 +29,67 @@ function Invoke-ListAlertResults {
                 })
         }
 
-        $Table = Get-CIPPTable -tablename 'AlertLastRun'
-        # AlertLastRun: PartitionKey = run date (yyyyMMdd), RowKey = "{tenant}-{cmdlet}"
-        $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
-        # AnyTenant skips the framework's per-tenant check, so a tenant-restricted caller could
-        # otherwise read any tenant's fired-alert items by naming it. Narrowing on the row's own
-        # Tenant column keeps allowed tenants' rows and drops everything else, estate-wide rows
-        # included, for restricted callers; unrestricted callers pass through untouched.
-        $Rows = Get-CIPPAzDataTableEntity @Table -Filter "Tenant eq '$SafeTenant'" | Select-CippAllowedTenantData -TenantProperty 'Tenant'
+        $IncludeResolved = [System.Convert]::ToBoolean(($Request.Query.IncludeResolved ?? $Request.Body.IncludeResolved ?? $false))
+        $Days = ($Request.Query.Days ?? $Request.Body.Days) -as [int]
+        if (-not $Days -or $Days -lt 1) { $Days = 2 }
+        if ($Days -gt 366) { $Days = 366 }
+        $ResolvedCutoff = [datetime]::UtcNow.AddDays(-$Days)
 
-        # Keep only the most recent run (highest date partition) per alert. RowKey is
-        # "{tenant}-{cmdlet}", uniquely identifying the alert for this tenant. Write-AlertTrace
-        # only writes a new row when the data changes, so the latest row is the current state.
-        $LatestByAlert = @{}
-        foreach ($Row in @($Rows)) {
-            $Key = $Row.RowKey
-            $Existing = $LatestByAlert[$Key]
-            if (-not $Existing -or [string]$Row.PartitionKey -gt [string]$Existing.PartitionKey) {
-                $LatestByAlert[$Key] = $Row
-            }
+        $Table = Get-CIPPTable -tablename 'AlertLifecycle'
+        # AnyTenant skips the framework's per-tenant check, so narrow on the row's own Tenant
+        # column: restricted callers keep only rows for tenants in scope.
+        $Rows = if ($TenantFilter -eq 'AllTenants') {
+            Get-CIPPAzDataTableEntity @Table | Select-CippAllowedTenantData -TenantProperty 'Tenant'
+        } else {
+            $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
+            Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant'" | Select-CippAllowedTenantData -TenantProperty 'Tenant'
         }
-        $StaleCutoff = [datetime]::UtcNow.AddDays(-7).ToString('yyyyMMdd')
 
         $Results = [System.Collections.Generic.List[object]]::new()
-        foreach ($Row in $LatestByAlert.Values) {
-            if ([string]$Row.PartitionKey -lt $StaleCutoff) { continue }
-            if ([string]::IsNullOrWhiteSpace($Row.LogData)) { continue }
-            try {
-                $Items = $Row.LogData | ConvertFrom-Json -ErrorAction Stop
-            } catch {
-                Write-Information "Failed to parse AlertLastRun LogData for $($Row.RowKey): $($_.Exception.Message)"
-                continue
+        foreach ($Row in @($Rows)) {
+            if ($null -eq $Row) { continue }
+            $Status = [string]$Row.Status
+            if ($Status -eq 'Resolved') {
+                if (-not $IncludeResolved) { continue }
+                [datetime]$ResolvedAt = [datetime]::MinValue
+                if (-not [datetime]::TryParse([string]$Row.ResolvedAt, [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind, [ref]$ResolvedAt)) { continue }
+                if ($ResolvedAt -lt $ResolvedCutoff) { continue }
             }
 
-            foreach ($Item in @($Items)) {
-                if ($null -eq $Item) { continue }
-                $Hash = Get-AlertContentHash -AlertItem $Item
-                $Results.Add([PSCustomObject]@{
-                        CmdletName     = $Row.CmdletName
-                        AlertComment   = $Row.AlertComment
-                        Tenant         = $Row.Tenant
-                        LastRun        = $Row.PartitionKey
-                        ContentHash    = $Hash.ContentHash
-                        ContentPreview = $Hash.ContentPreview
-                        AlertItem      = $Item
-                    })
+            $AlertItem = $null
+            if (-not [string]::IsNullOrWhiteSpace($Row.AlertItem)) {
+                try { $AlertItem = $Row.AlertItem | ConvertFrom-Json -ErrorAction Stop } catch { $AlertItem = $null }
             }
+            $Keys = Get-CIPPAlertLifecycleKey -CmdletName ([string]$Row.CmdletName) -TenantFilter ([string]$Row.Tenant) -ContentHash ([string]$Row.ContentHash)
+
+            $Results.Add([PSCustomObject]@{
+                    PartitionKey       = $Row.PartitionKey
+                    RowKey             = $Row.RowKey
+                    CmdletName         = $Row.CmdletName
+                    AlertComment       = $Row.AlertComment
+                    Tenant             = $Row.Tenant
+                    ContentHash        = $Row.ContentHash
+                    ContentPreview     = $Row.ContentPreview
+                    AlertItem          = $AlertItem
+                    Status             = $Status
+                    FirstSeen          = $Row.FirstSeen
+                    LastSeen           = $Row.LastSeen
+                    LastChecked        = $Row.LastChecked
+                    ResolvedAt         = $Row.ResolvedAt
+                    ReopenCount        = [int]($Row.ReopenCount ?? 0)
+                    AcknowledgedBy     = $Row.AcknowledgedBy
+                    AcknowledgedAt     = $Row.AcknowledgedAt
+                    AcknowledgeNote    = $Row.AcknowledgeNote
+                    SnoozeUntil        = $Row.SnoozeUntil
+                    SnoozedBy          = $Row.SnoozedBy
+                    SnoozePartitionKey = $Keys.SnoozePartitionKey
+                    SnoozeRowKey       = if ([string]::IsNullOrWhiteSpace($Row.SnoozeRowKey)) { $Keys.SnoozeRowKey } else { $Row.SnoozeRowKey }
+                })
         }
 
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
-                Body       = @($Results)
+                Body       = @($Results | Sort-Object -Property @{ Expression = { $_.Status -eq 'Resolved' } }, @{ Expression = 'LastSeen'; Descending = $true })
             })
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

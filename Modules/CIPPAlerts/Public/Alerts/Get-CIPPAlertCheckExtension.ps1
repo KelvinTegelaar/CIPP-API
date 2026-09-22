@@ -49,9 +49,7 @@ function Get-CIPPAlertCheckExtension {
             }
         }
 
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData -Append
 
         # Advance the watermark so the next run only picks up alerts newer than
         # this run. Without this, $Since always fell back to the default window

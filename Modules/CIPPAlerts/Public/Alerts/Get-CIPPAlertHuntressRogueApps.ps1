@@ -84,8 +84,8 @@ function Get-CIPPAlertHuntressRogueApps {
                     'Listed On'   = $RogueApp.Added
                 }
             }
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         #$ErrorMessage = Get-CippException -Exception $_
         #Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check for rogue apps for $($TenantFilter): $($ErrorMessage.NormalizedError)"

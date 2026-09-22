@@ -106,11 +106,9 @@ function Get-CIPPAlertVulnerabilities {
                 $AlertData.Add($VulnerabilityAlert)
             }
 
-            # Only send alert if we have vulnerabilities that meet the criteria
-            if ($AlertData.Count -gt 0) {
-                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-            }
         }
+
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         Write-LogMessage -message "Failed to check vulnerabilities: $($_.exception.message)" -API 'Vulnerability Alerts' -tenant $TenantFilter -sev Error
     }

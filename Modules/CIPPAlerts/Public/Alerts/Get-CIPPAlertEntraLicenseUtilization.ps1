@@ -60,9 +60,7 @@ function Get-CIPPAlertEntraLicenseUtilization {
             }
         )
 
-        if ($AlertData.Count -gt 0) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

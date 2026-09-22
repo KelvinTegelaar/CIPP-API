@@ -22,11 +22,15 @@ BeforeAll {
 
     function Get-AlertContentHash { param($AlertItem) }
     function Get-CIPPTable { param($tablename) }
-    function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
+    function Get-CIPPAzDataTableEntity { param($Context, $TableName, $Filter, $Property) }
+    function Add-CIPPAzDataTableEntity { param($Context, $TableName, $Entity, [switch]$Force) }
+    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) }
     function Write-LogMessage { param($headers, $API, $message, $Sev, $tenant, $LogData) }
     function Test-CIPPAccess { param($Request, [switch]$TenantList, [switch]$GroupList) }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Get-CippException { param($Exception) }
+
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-CIPPAlertLifecycleKey.ps1')
 
     . $FunctionPath
 
@@ -48,9 +52,12 @@ BeforeAll {
 
 Describe 'Invoke-ExecSnoozeAlert' {
     BeforeEach {
+        $script:Written = [System.Collections.Generic.List[object]]::new()
         Mock -CommandName Write-LogMessage -MockWith { }
-        Mock -CommandName Get-CIPPTable -MockWith { @{ TableName = 'AlertSnooze' } }
-        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName Get-CIPPTable -MockWith { @{ TableName = $tablename } }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName ConvertTo-CIPPODataFilterValue -MockWith { $Value }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { $script:Written.Add(@{ Table = $TableName; Entity = $Entity }) }
         Mock -CommandName Get-AlertContentHash -MockWith {
             @{ ContentHash = 'hash123'; ContentPreview = 'alert text'; RawKey = 'raw' }
         }
@@ -64,7 +71,42 @@ Describe 'Invoke-ExecSnoozeAlert' {
         $Response = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest) -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
-        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $TableName -eq 'AlertSnooze' }
+        $Snooze = ($script:Written | Where-Object { $_.Table -eq 'AlertSnooze' }).Entity
+        $Snooze.PartitionKey | Should -Be 'Get-CIPPAlertSomething'
+        $Snooze.RowKey | Should -Be 'contoso.onmicrosoft.com-hash123'
+    }
+
+    It 'marks the tracked alert item as snoozed when one exists' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [pscustomobject]@{
+                PartitionKey = 'contoso.onmicrosoft.com'
+                RowKey       = 'Get-CIPPAlertSomething-hash123'
+                Status       = 'Open'
+                ContentHash  = 'hash123'
+                ETag         = 'W/"1"'
+            }
+        }
+
+        $Response = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest) -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $TableName -eq 'AlertLifecycle' -and $Filter -eq "PartitionKey eq 'contoso.onmicrosoft.com' and RowKey eq 'Get-CIPPAlertSomething-hash123'" }
+        $Tracked = ($script:Written | Where-Object { $_.Table -eq 'AlertLifecycle' }).Entity
+        $Tracked.Status | Should -Be 'Snoozed'
+        $Tracked.SnoozeRowKey | Should -Be 'contoso.onmicrosoft.com-hash123'
+        $Tracked.SnoozeUntil | Should -Not -BeNullOrEmpty
+        $Tracked.Keys | Should -Not -Contain 'ETag'
+    }
+
+    It 'leaves a resolved tracked item alone' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [pscustomobject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'Get-CIPPAlertSomething-hash123'; Status = 'Resolved' }
+        }
+
+        $null = Invoke-ExecSnoozeAlert -Request (New-SnoozeRequest) -TriggerMetadata $null
+
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly -ParameterFilter { $TableName -eq 'AlertLifecycle' }
     }
 
     It 'refuses a restricted caller naming a tenant outside their scope' {

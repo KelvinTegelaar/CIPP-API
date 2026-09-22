@@ -72,9 +72,7 @@ function Get-CIPPAlertMXRecordChanged {
             Add-CIPPAzDataTableEntity @CacheTable -Entity $CacheEntity -Force
         }
 
-        if ($ChangedDomains) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $ChangedDomains
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $ChangedDomains
     } catch {
         Write-LogMessage -message "Failed to check MX record changes: $($_.Exception.Message)" -API 'MX Record Alert' -tenant $TenantFilter -sev Error
     }
