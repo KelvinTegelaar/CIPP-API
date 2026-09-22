@@ -950,13 +950,27 @@ function Test-CIPPAuditLogRules {
 
             $FlushAlertRows = {
                 if ($PendingAlertRows.Count -eq 0) { return }
+                # Collapse rows sharing a key before the batch goes out. One pass can carry two
+                # records with the same Id - Entra sign-in records reuse them - and the table module
+                # silently keeps one of the duplicates. If that is the older event, the stored
+                # EventCreationTime regresses and the newer event is replayable as 'newer' all over
+                # again. Keep the greatest stamp; an absent stamp loses to any stamp.
+                $RowsByKey = [ordered]@{}
+                foreach ($Row in $PendingAlertRows) {
+                    $Key = '{0}|{1}' -f $Row.PartitionKey, $Row.RowKey
+                    $Kept = $RowsByKey[$Key]
+                    if ($null -eq $Kept -or [string]$Row.EventCreationTime -gt [string]$Kept.EventCreationTime) {
+                        $RowsByKey[$Key] = $Row
+                    }
+                }
+                $BatchRows = @($RowsByKey.Values)
                 try {
-                    Add-CIPPAzDataTableEntity @AuditLogTable -Entity $PendingAlertRows.ToArray() -Force
+                    Add-CIPPAzDataTableEntity @AuditLogTable -Entity $BatchRows -Force
                 } catch {
                     # Not fatal: the alerts themselves have already been dispatched, and the claim
                     # rows still prevent a retry from sending them again. What is lost is the stored
                     # copy, which shows in the UI as a row stuck at 'Processing'.
-                    Write-Warning "Could not store $($PendingAlertRows.Count) audit log row(s): $($_.Exception.Message)"
+                    Write-Warning "Could not store $($BatchRows.Count) audit log row(s): $($_.Exception.Message)"
                 }
                 $PendingAlertRows.Clear()
             }

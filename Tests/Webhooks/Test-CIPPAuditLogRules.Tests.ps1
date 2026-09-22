@@ -19,7 +19,7 @@ BeforeAll {
     function Remove-AzDataTableEntity { param($TableName, $Context, $Entity, [switch]$Force) }
     function Expand-CIPPTenantGroups { param($TenantFilter) }
     function Test-CIPPConditionFilter { param($Condition) }
-    function Invoke-CippWebhookProcessing { param($Data, $CIPPURL, $TenantFilter, $AlertComment) }
+    function Invoke-CippWebhookProcessing { param($Data, $CIPPURL, $TenantFilter, $AlertComment, $PendingAuditLogWrites) }
     function Get-CIPPGeoIPLocationBatch { param($IPs) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
@@ -40,8 +40,10 @@ BeforeAll {
     }
 
     function New-AuditRow {
-        param([string]$Id = 'rec-1', [string]$Operation = 'Set-Mailbox')
-        [pscustomobject]@{
+        # AuditId/CreationTime are opt-in: they live on auditData, which is what the record loop
+        # copies, and the shaping tests below are written against the shape without them.
+        param([string]$Id = 'rec-1', [string]$Operation = 'Set-Mailbox', [string]$AuditId, [string]$CreationTime)
+        $Row = [pscustomobject]@{
             id              = $Id
             createdDateTime = '2026-07-29T09:00:00Z'
             operation       = $Operation
@@ -63,6 +65,9 @@ BeforeAll {
                 )
             }
         }
+        if ($AuditId) { $Row.auditData | Add-Member -NotePropertyName 'Id' -NotePropertyValue $AuditId }
+        if ($CreationTime) { $Row.auditData | Add-Member -NotePropertyName 'CreationTime' -NotePropertyValue $CreationTime }
+        $Row
     }
 
     . $FunctionPath
@@ -376,6 +381,42 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         # V2 owns one cache partition per search and clears it after processing, so the engine is
         # told it may take the cheap route. Both halves of that are pinned: the plain delete for
         # processed rows, and skipping the id-resolution pass entirely.
+
+        It 'stores one audit log row per key, keeping the newest event' {
+            # Completed rows are batched, and two records of one pass can share an Id - Entra
+            # sign-in records reuse them. The table module silently keeps one of the duplicates, so
+            # a batch carrying both could store the OLDER stamp; the newer event would then be
+            # replayable as 'newer' again and re-alert on every reconciliation pass.
+            $script:StoredAuditRows = [System.Collections.Generic.List[object]]::new()
+            Mock -CommandName Add-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Entity, [switch]$Force, $OperationType)
+                if ($TableName -eq 'AuditLogs') {
+                    foreach ($e in @($Entity)) { $script:StoredAuditRows.Add($e) }
+                }
+            }
+            Mock -CommandName Invoke-CippWebhookProcessing -MockWith {
+                param($Data, $CIPPURL, $TenantFilter, $AlertComment, $PendingAuditLogWrites)
+                $Stamp = ''
+                if ($Data.CreationTime) { $Stamp = ([datetime]$Data.CreationTime).ToUniversalTime().ToString('yyyyMMddHHmmss') }
+                $null = $PendingAuditLogWrites.Add(@{
+                        PartitionKey      = $TenantFilter
+                        RowKey            = [string]$Data.Id
+                        Title             = 'alert'
+                        Data              = 'stored'
+                        Tenant            = $TenantFilter
+                        EventCreationTime = $Stamp
+                    })
+            }
+
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(
+                New-AuditRow -Id 'rec-a' -AuditId 'reused-id' -CreationTime '2026-07-01T12:00:00Z'
+                New-AuditRow -Id 'rec-b' -AuditId 'reused-id' -CreationTime '2026-09-22T10:00:00Z'
+            )
+
+            $Stored = @($script:StoredAuditRows | Where-Object { $_.RowKey -eq 'reused-id' })
+            $Stored.Count | Should -Be 1
+            $Stored[0].EventCreationTime | Should -Be '20260922100000'
+        }
 
         It 'uses the plain delete, not the part-aware one' {
             # Remove-CIPPAzDataTableEntity also removes the -partN rows of split entities and costs

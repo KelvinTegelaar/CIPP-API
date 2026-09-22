@@ -19,6 +19,32 @@ function Invoke-CippWebhookProcessing {
 
     $AuditLogTable = Get-CIPPTable -TableName 'AuditLogs'
 
+    # The record Id alone does not identify an event: Entra sign-in records reuse the same Id for
+    # the same user weeks apart, so a claim from an old sign-in would swallow every later one. The
+    # claim therefore carries the event's own time, and a key conflict only yields to a strictly
+    # newer event. Empty when the record has no CreationTime - that falls back to
+    # dedupe on the Id alone. The RowKey stays the bare Id so the audit-log link, the Saved Logs
+    # list endpoint and the split-row OriginalEntityId lookup all keep working unchanged.
+    $EventStamp = ''
+    $CreationTime = $Data.CreationTime ?? $Data.RawData.CreationTime ?? $Data.createdDateTime
+    if ($CreationTime -is [datetime]) {
+        $EventStamp = $CreationTime.ToUniversalTime().ToString('yyyyMMddHHmmss')
+    } elseif ($CreationTime) {
+        $ParsedCreation = [datetime]::MinValue
+        $CreationStyles = [System.Globalization.DateTimeStyles]::AdjustToUniversal -bor [System.Globalization.DateTimeStyles]::AssumeUniversal
+        if ([datetime]::TryParse([string]$CreationTime, [cultureinfo]::InvariantCulture, $CreationStyles, [ref]$ParsedCreation)) {
+            $EventStamp = $ParsedCreation.ToString('yyyyMMddHHmmss')
+        }
+    }
+
+    $ClaimRow = @{
+        PartitionKey      = $TenantFilter
+        RowKey            = $Data.Id
+        Title             = 'Processing'
+        Tenant            = $TenantFilter
+        EventCreationTime = $EventStamp
+    }
+
     # Claim the event ID immediately, with no read first. The claim is an Insert without -Force, so
     # a conflict already tells us another worker (or an earlier run) owns this event - the read that
     # used to precede it answered the same question a round trip earlier and could not make the
@@ -28,15 +54,31 @@ function Invoke-CippWebhookProcessing {
     # instead of a read plus an insert.
     # -ErrorAction Stop ensures non-terminating errors enter the catch block.
     try {
-        Add-CIPPAzDataTableEntity @AuditLogTable -Entity @{
-            PartitionKey = $TenantFilter
-            RowKey       = $Data.Id
-            Title        = 'Processing'
-            Tenant       = $TenantFilter
-        } -ErrorAction Stop
+        Add-CIPPAzDataTableEntity @AuditLogTable -Entity $ClaimRow -ErrorAction Stop
     } catch {
-        Write-Host "Audit log $($Data.Id) already claimed or already processed. Skipping."
-        return
+        # A conflict means the key is taken, not necessarily that this event was handled. Only now
+        # is a read worth a round trip: re-claim when the row belongs to a NEWER event, or when it
+        # is older than the reconciliation window - claims are never pruned, so a row from months
+        # ago can otherwise own the key forever. Anything else is a genuine duplicate and is dropped.
+        #
+        # Strictly newer, not merely different. There is one row per Id, so two same-Id events
+        # inside the reconciliation window would otherwise ping-pong: every 12h pass re-processes
+        # both, each one differs from whatever the other last stored, and both re-alert forever.
+        # Monotonic stamps make the older of the pair a replay. Both stamps are fixed-width
+        # yyyyMMddHHmmss, so a string compare orders them.
+        $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type 'String'
+        $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value ([string]$Data.Id) -Type 'String'
+        $ExistingClaim = Get-CIPPAzDataTableEntity @AuditLogTable -Filter "PartitionKey eq '$SafeTenant' and RowKey eq '$SafeRowKey'" | Select-Object -First 1
+        $ClaimTime = if ($ExistingClaim.Timestamp -is [datetimeoffset]) { $ExistingClaim.Timestamp.UtcDateTime } else { $ExistingClaim.Timestamp -as [datetime] }
+        $NewerEvent = $EventStamp -and $ExistingClaim.EventCreationTime -and $EventStamp -gt $ExistingClaim.EventCreationTime
+        $StaleClaim = $ClaimTime -and $ClaimTime -lt [datetime]::UtcNow.AddDays(-7)
+        if ($NewerEvent -or $StaleClaim) {
+            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Audit log $($Data.Id) matched a $(if ($NewerEvent) { 'claim for an earlier event' } else { 'claim older than 7 days' }). Treating it as a new event." -sev 'Info'
+            Add-CIPPAzDataTableEntity @AuditLogTable -Entity $ClaimRow -Force
+        } else {
+            Write-Host "Audit log $($Data.Id) already claimed or already processed. Skipping."
+            return
+        }
     }
 
     # Memoised per tenant. Get-Tenants does no in-process caching of its own: every call reads the
@@ -148,12 +190,15 @@ function Invoke-CippWebhookProcessing {
     } | ConvertTo-Json -Depth 15 -Compress
 
     # Built here, written at the very bottom - after the alerts have gone out. See the note there.
+    # EventCreationTime rides along: this row replaces the claim under the same key, so dropping it
+    # here would leave a completed row that no later event can be told apart from.
     $AuditLogRow = @{
-        PartitionKey = $TenantFilter
-        RowKey       = $Data.Id
-        Title        = $GenerateJSON.Title
-        Data         = [string]$JsonContent
-        Tenant       = $TenantFilter
+        PartitionKey      = $TenantFilter
+        RowKey            = $Data.Id
+        Title             = $GenerateJSON.Title
+        Data              = [string]$JsonContent
+        Tenant            = $TenantFilter
+        EventCreationTime = $EventStamp
     }
     $LogId = $Data.Id
 
