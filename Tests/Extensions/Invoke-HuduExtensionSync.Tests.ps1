@@ -34,6 +34,7 @@ BeforeAll {
     function New-HuduWebsite { param($Name, $Notes, $Paused, $CompanyId, $DisableDNS, $DisableSSL, $DisableWhois) }
     function Write-LogMessage { param($Tenant, $TenantId, $API, $Message, $Level) }
     function Get-CippException { param($Exception) return [PSCustomObject]@{ NormalizedError = $Exception.Exception.Message } }
+    function Get-CippDbRoleMembers { param($TenantFilter, $RoleTemplateId) }
 }
 
 Describe 'Invoke-HuduExtensionSync credential integration' {
@@ -271,5 +272,73 @@ Describe 'Invoke-HuduExtensionSync user license sync' {
         $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         $script:ObservedUserFields.licenses | Should -Be '4ef96642-f096-40de-a3e9-d83fb2f90211, cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46, f30db892-07e9-47e9-837c-80727f46fd3d'
+    }
+}
+
+Describe 'Invoke-HuduExtensionSync roles table' {
+    BeforeEach {
+        $env:CIPPRootPath = (Resolve-Path "$PSScriptRoot/../..").Path
+        $script:MagicDash = $null
+        $Configuration = [PSCustomObject]@{
+            Hudu = [PSCustomObject]@{
+                IncludeLAPS = $false; IncludeBitLocker = $false
+                CreateMissingUsers = $false; CreateMissingDevices = $false
+                ImportDomains = $false; MonitorDomains = $false; HideEmptyRoles = $true
+                IncludeDefenderLink = $false; IncludeComplianceLink = $false; IncludeParterCenterLink = $false
+            }
+        }
+
+        Mock Connect-HuduAPI { }
+        Mock Get-Tenants {
+            [PSCustomObject]@{ displayName = 'Contoso'; defaultDomainName = 'contoso.onmicrosoft.com'; initialDomainName = 'contoso.onmicrosoft.com'; customerId = 'tenant-1' }
+        }
+        Mock Get-AssignedNameMap { [PSCustomObject]@{} }
+        Mock Get-AssignedMap { [PSCustomObject]@{} }
+        Mock Get-CIPPTable { @{} }
+        Mock Get-CIPPAzDataTableEntity {
+            if ($Filter -like "*PartitionKey eq 'HuduMapping'*") {
+                return @([PSCustomObject]@{ PartitionKey = 'HuduMapping'; RowKey = 'tenant-1'; IntegrationId = 20; IntegrationName = 'Contoso' })
+            }
+            if ($Filter -like "*InstanceProperties*") { return [PSCustomObject]@{ Value = 'cipp.example.test' } }
+            if ($Filter -like "*CacheMetadata*") { return [PSCustomObject]@{ LastRefresh = (Get-Date).ToUniversalTime().ToString('o') } }
+            return $null
+        }
+        Mock Get-CippExtensionReportingData {
+            [PSCustomObject]@{
+                Users    = @(); Domains = @(); Licenses = @(); Devices = @()
+                AllRoles = @(
+                    [PSCustomObject]@{ id = 'role-instance-1'; roleTemplateId = '62e90394-69f5-4237-9190-012177145e10'; displayName = 'Global Administrator'; description = 'GA'; members = @() }
+                    [PSCustomObject]@{ id = 'role-instance-2'; roleTemplateId = 'empty-template'; displayName = 'Empty Role'; description = 'nobody'; members = @() }
+                )
+                DeviceCompliancePolicies = @(); Groups = @(); ConditionalAccess = @()
+                OneDriveUsage = @(); CASMailbox = @(); Mailboxes = @(); MailboxUsage = @(); MailboxPermissions = @()
+            }
+        }
+        Mock Get-CippDbRoleMembers {
+            if ($RoleTemplateId -ne '62e90394-69f5-4237-9190-012177145e10') { return @() }
+            @(
+                [PSCustomObject]@{ id = 'u-direct'; displayName = 'Direct Admin'; userPrincipalName = 'direct@contoso.onmicrosoft.com'; AssignmentType = 'Direct'; EndDateTime = $null; IsPermanent = $true }
+                [PSCustomObject]@{ id = 'u-eligible'; displayName = 'Eligible Admin'; userPrincipalName = 'eligible@contoso.onmicrosoft.com'; AssignmentType = 'Eligible'; EndDateTime = '2030-01-15T00:00:00Z'; IsPermanent = $false }
+                [PSCustomObject]@{ id = 'u-expired'; displayName = 'Expired Admin'; userPrincipalName = 'expired@contoso.onmicrosoft.com'; AssignmentType = 'Eligible'; EndDateTime = '2020-01-01T00:00:00Z'; IsPermanent = $false }
+            )
+        }
+        Mock Get-HuduCompanies { [PSCustomObject]@{ id = 20; name = 'Contoso'; archived = $false } }
+        Mock Get-HuduRelations { @() }
+        Mock Get-HuduLinkBlock { [PSCustomObject]@{ html = $Title } }
+        Mock Get-CIPPDbItem { @() }
+        Mock Add-CIPPAzDataTableEntity { }
+        Mock Set-HuduMagicDash { $script:MagicDash = $Content }
+        Mock Write-LogMessage { }
+    }
+
+    It 'lists PIM-eligible members in their own column, drops expired eligibilities and empty roles' {
+        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke Get-CippDbRoleMembers -ParameterFilter { $RoleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' -and $TenantFilter -eq 'contoso.onmicrosoft.com' }
+        $script:MagicDash | Should -Match '<th>EligibleMembers</th>'
+        $script:MagicDash | Should -Match 'Direct Admin'
+        $script:MagicDash | Should -Match 'Eligible Admin \(until 2030-01-15\)'
+        $script:MagicDash | Should -Not -Match 'Expired Admin'
+        $script:MagicDash | Should -Not -Match 'Empty Role'
     }
 }

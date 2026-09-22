@@ -180,12 +180,12 @@ function Invoke-HuduExtensionSync {
 
             $RelationEntities = foreach ($Relation in $HuduRelations) {
                 [PSCustomObject]@{
-                    PartitionKey  = 'HuduRelation'
-                    RowKey        = [string]$Relation.id
-                    FromableType  = [string]$Relation.fromable_type
-                    FromableId    = [string]$Relation.fromable_id
-                    ToableType    = [string]$Relation.toable_type
-                    ToableId      = [string]$Relation.toable_id
+                    PartitionKey = 'HuduRelation'
+                    RowKey       = [string]$Relation.id
+                    FromableType = [string]$Relation.fromable_type
+                    FromableId   = [string]$Relation.fromable_id
+                    ToableType   = [string]$Relation.toable_type
+                    ToableId     = [string]$Relation.toable_id
                 }
             }
             if ($RelationEntities) {
@@ -225,7 +225,7 @@ function Invoke-HuduExtensionSync {
                 URL   = 'https://admin.teams.microsoft.com/?delegatedOrg={0}' -f $Tenant.defaultDomainName
                 Icon  = 'fas fa-users'
             }
-			@{
+            @{
                 Title = 'SharePoint Portal'
                 URL   = 'https://admin.cloud.microsoft/Partner/beginclientsession.aspx?CTID={0}&CSDEST=SharePoint' -f $Tenant.customerId
                 Icon  = 'fas fa-sitemap'
@@ -272,14 +272,24 @@ function Invoke-HuduExtensionSync {
 
 
         $Roles = foreach ($Role in $AllRoles) {
-            # Members are now inline with each role object
-            $Members = $Role.members
+            # Active + Direct + PIM-eligible members, de-duplicated by principal. Tenants without
+            # PIM cache rows fall through to direct membership only, same output as before.
+            # Pass the TEMPLATE id: PIM keys on roleDefinitionId, an instance id matches nothing.
+            $AllMembers = @(Get-CippDbRoleMembers -TenantFilter $Tenant.defaultDomainName -RoleTemplateId $Role.roleTemplateId)
+            $Members = $AllMembers | Where-Object { $_.AssignmentType -ne 'Eligible' }
+            $Eligible = $AllMembers | Where-Object {
+                $_.AssignmentType -eq 'Eligible' -and
+                (-not $_.EndDateTime -or [datetime]$_.EndDateTime -gt [datetime]::UtcNow)
+            }
             [PSCustomObject]@{
-                ID            = $Role.id
-                DisplayName   = $Role.displayName
-                Description   = $Role.description
-                Members       = $Members
-                ParsedMembers = $Members.displayName -join ', '
+                ID              = $Role.id
+                DisplayName     = $Role.displayName
+                Description     = $Role.description
+                Members         = $Members
+                ParsedMembers   = $Members.displayName -join ', '
+                EligibleMembers = ($Eligible | ForEach-Object {
+                        if ($_.EndDateTime) { '{0} (until {1:yyyy-MM-dd})' -f $_.displayName, [datetime]$_.EndDateTime } else { $_.displayName }
+                    }) -join ', '
             }
         }
 
@@ -290,10 +300,10 @@ function Invoke-HuduExtensionSync {
         $post = '</div>'
 
         if ($Configuration.HideEmptyRoles) {
-            $Roles = $Roles | Where-Object { $_.ParsedMembers }
+            $Roles = $Roles | Where-Object { $_.ParsedMembers -or $_.EligibleMembers }
         }
 
-        $RolesHtml = $Roles | Select-Object DisplayName, Description, ParsedMembers | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | ForEach-Object { $tmp = $_ -replace '&lt;', '<'; $tmp -replace '&gt;', '>'; } | Out-String
+        $RolesHtml = $Roles | Select-Object DisplayName, Description, ParsedMembers, EligibleMembers | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | ForEach-Object { $tmp = $_ -replace '&lt;', '<'; $tmp -replace '&gt;', '>'; } | Out-String
 
         $AdminUsers = (($Roles | Where-Object { $_.displayName -match 'Administrator' }).Members | Where-Object { $null -ne $_.displayName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href='https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($_.Id)'>$($_.displayName) - $($_.userPrincipalName)</a>" } } -Unique).name -join '<br/>'
 
@@ -416,9 +426,9 @@ function Invoke-HuduExtensionSync {
                     $NextPosition = 1 + [int](($DesktopsLayout.fields | Measure-Object position -Maximum).Maximum)
                     foreach ($Slot in $LayoutSlots) {
                         foreach ($PairField in @(
-                            @{ Label = $Slot.IdLabel; Type = 'Text' }
-                            @{ Label = $Slot.PasswordLabel; Type = 'Password' }
-                        )) {
+                                @{ Label = $Slot.IdLabel; Type = 'Text' }
+                                @{ Label = $Slot.PasswordLabel; Type = 'Password' }
+                            )) {
                             if ($DesktopsLayout.fields.label -notcontains $PairField.Label) {
                                 $null = Add-HuduAssetLayoutField -AssetLayoutId $DeviceLayoutId -Label $PairField.Label -FieldType $PairField.Type -Position $NextPosition -ErrorAction Stop
                                 $NextPosition++
