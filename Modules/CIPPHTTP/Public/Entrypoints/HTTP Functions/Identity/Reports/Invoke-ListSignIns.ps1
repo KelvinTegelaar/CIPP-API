@@ -6,6 +6,10 @@ Function Invoke-ListSignIns {
         Identity.AuditLog.Read
     .DESCRIPTION
         Lists recent sign-in log entries for a tenant, filterable by various criteria. Supports AllTenants queries.
+
+        Deprecated: use ListGraphRequest with Endpoint=auditLogs/signIns instead, which supports $filter, $top,
+        $orderby, and manualPagination with nextLink continuation. This endpoint returns at most one page of
+        results and will be removed in a future release.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -36,7 +40,8 @@ Function Invoke-ListSignIns {
         Write-Host $Filters
         Write-LogMessage -headers $Headers -API $APINAME -message 'Retrieved sign in report' -Sev 'Debug' -tenant $TenantFilter
 
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$($Filters)" -tenantid $TenantFilter -ErrorAction Stop
+        # Single page only: full-range paging belongs to ListGraphRequest with manualPagination.
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$($Filters)" -tenantid $TenantFilter -noPagination $true -ErrorAction Stop
         $response = $GraphRequest | Select-Object *,
         @{l = 'additionalDetails'; e = { $_.status.additionalDetails } } ,
         @{l = 'errorCode'; e = { $_.status.errorCode } },
@@ -49,6 +54,7 @@ Function Invoke-ListSignIns {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @($response)
+                Headers    = @{ 'Deprecation' = 'true' }
             })
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to retrieve Sign In report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter

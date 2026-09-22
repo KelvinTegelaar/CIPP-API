@@ -26,29 +26,34 @@ BeforeAll {
         param(
             $CveId = 'CVE-2024-0001',
             $Tenant = 'contoso.onmicrosoft.com',
-            $Devices = @(@{ deviceId = 'd1'; deviceName = 'PC-1'; osVersion = '10.0.19045'; softwareVersion = '120.0.0'; diskPaths = ''; registryPaths = '' }),
-            $LastUpdated = '2026-08-12T00:00:00.000Z'
+            $Devices = @(@{ deviceId = 'd1'; deviceName = 'PC-1' }),
+            $LastUpdated = '2026-08-12T00:00:00.000Z',
+            # The collector writes a unique-device count the reader trusts; default it to the
+            # number of stored device fragments, but allow tests to force a mismatch.
+            $DeviceCount
         )
+        # Only the id and name are stored per device, whatever richer objects a caller passes.
+        $StoredDevices = @($Devices | ForEach-Object { @{ deviceId = $_.deviceId; deviceName = $_.deviceName } })
         $Payload = @{
-            PartitionKey                 = $CveId
-            RowKey                       = $Tenant
-            customerId                   = $Tenant
-            cveId                        = $CveId
-            softwareVendor               = 'microsoft'
-            softwareName                 = 'edge'
-            vulnerabilitySeverityLevel   = 'High'
-            recommendedSecurityUpdate    = 'KB5034123'
-            recommendedSecurityUpdateUrl = 'https://support.microsoft.com/kb/5034123'
-            exploitabilityLevel          = 'ExploitIsPublic'
-            deviceCount                  = @($Devices).Count
+            PartitionKey               = $CveId
+            RowKey                     = $Tenant
+            id                         = $CveId
+            customerId                 = $Tenant
+            cveId                      = $CveId
+            softwareVendor             = 'microsoft'
+            softwareName               = 'edge'
+            softwareVersion            = '120.0.0'
+            vulnerabilitySeverityLevel = 'High'
+            exploitabilityLevel        = 'ExploitIsPublic'
+            deviceCount                = if ($PSBoundParameters.ContainsKey('DeviceCount')) { $DeviceCount } else { $StoredDevices.Count }
             # Piped, not -InputObject: one device stays a bare object, several become an
             # array - the exact shape the collector writes.
-            deviceDetailsJson            = [string]($Devices | ConvertTo-Json -Compress)
-            lastUpdated                  = $LastUpdated
+            deviceDetailsJson          = [string]($StoredDevices | ConvertTo-Json -Compress)
+            lastUpdated                = $LastUpdated
         }
         [pscustomobject]@{
             PartitionKey = $Tenant
-            RowKey       = "DefenderCVEs-$([guid]::NewGuid())"
+            RowKey       = "DefenderCVEs-$CveId"
             Data         = [string]($Payload | ConvertTo-Json -Depth 100 -Compress)
             Type         = 'DefenderCVEs'
         }
@@ -81,8 +86,8 @@ Describe 'Get-CIPPCVEReport' {
         It 'returns one aggregated entry per CVE with every field the frontend reads' {
             Mock -CommandName Get-CIPPDbItem -MockWith {
                 New-CveRow -CveId 'CVE-B' -Devices @(
-                    @{ deviceId = 'd1'; deviceName = 'PC-1'; osVersion = ''; softwareVersion = ''; diskPaths = 'C:\a\edge.exe'; registryPaths = 'HKLM\SOFTWARE\X' }
-                    @{ deviceId = 'd2'; deviceName = 'PC-2'; osVersion = ''; softwareVersion = ''; diskPaths = ''; registryPaths = '' }
+                    @{ deviceId = 'd1'; deviceName = 'PC-1' }
+                    @{ deviceId = 'd2'; deviceName = 'PC-2' }
                 )
                 New-CveRow -CveId 'CVE-A'
                 New-CountRow
@@ -100,13 +105,15 @@ Describe 'Get-CIPPCVEReport' {
             $B.exploitabilityLevel | Should -Be 'ExploitIsPublic'
             $B.softwareName | Should -Be 'edge'
             $B.softwareVendor | Should -Be 'microsoft'
+            $B.softwareVersion | Should -Be '120.0.0'
             $B.deviceCount | Should -Be 2
             $B.tenantCount | Should -Be 1
             @($B.affectedTenants).customerId | Should -Be @($script:Tenant)
             (@($B.affectedDevices).deviceName | Sort-Object) | Should -Be @('PC-1', 'PC-2')
-            @($B.diskPaths).Count | Should -Be 1
-            @($B.diskPaths)[0].diskPaths | Should -Be 'C:\a\edge.exe'
-            @($B.registryPaths)[0].registryPaths | Should -Be 'HKLM\SOFTWARE\X'
+            (@($B.affectedDevices).deviceId | Sort-Object) | Should -Be @('d1', 'd2')
+            # registryPaths / diskPaths are no longer part of the response.
+            $B.PSObject.Properties.Name | Should -Not -Contain 'registryPaths'
+            $B.PSObject.Properties.Name | Should -Not -Contain 'diskPaths'
             $B.exceptionStatus | Should -Be 'None'
             $B.hasException | Should -BeFalse
             # ConvertFrom-Json turns the ISO stamp in the Data blob into a DateTime, so the
@@ -114,18 +121,20 @@ Describe 'Get-CIPPCVEReport' {
             ([datetime]$B.cacheTimeStamp).ToUniversalTime().Ticks | Should -Be ([datetime]::Parse('2026-08-12T00:00:00Z', [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal)).Ticks
         }
 
-        It 'deduplicates devices by name within a row' {
+        It 'trusts the stored unique-device count rather than recounting fragments' {
+            # Dedupe now happens at write time, so the reader takes deviceCount as authoritative
+            # even if it differs from the number of device fragments present.
             Mock -CommandName Get-CIPPDbItem -MockWith {
-                New-CveRow -CveId 'CVE-A' -Devices @(
-                    @{ deviceId = 'd1'; deviceName = 'PC-1'; osVersion = ''; softwareVersion = '1.0'; diskPaths = ''; registryPaths = '' }
-                    @{ deviceId = 'd1'; deviceName = 'PC-1'; osVersion = ''; softwareVersion = '2.0'; diskPaths = ''; registryPaths = '' }
+                New-CveRow -CveId 'CVE-A' -DeviceCount 5 -Devices @(
+                    @{ deviceId = 'd1'; deviceName = 'PC-1' }
+                    @{ deviceId = 'd2'; deviceName = 'PC-2' }
                 )
             }
 
             $Result = @(Get-CIPPCVEReport -TenantFilter $script:Tenant)
 
-            $Result[0].deviceCount | Should -Be 1
-            @($Result[0].affectedDevices).Count | Should -Be 1
+            $Result[0].deviceCount | Should -Be 5
+            @($Result[0].affectedDevices).Count | Should -Be 2
         }
 
         It 'returns a bare empty array when the cache only holds the count row' {

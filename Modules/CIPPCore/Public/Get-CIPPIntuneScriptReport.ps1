@@ -93,10 +93,12 @@ function Get-CIPPIntuneScriptReport {
                 }
             }
 
-            $script | Add-Member -NotePropertyName 'ScriptAssignment' -NotePropertyValue ($ScriptAssignment -join ', ') -Force
-            $script | Add-Member -NotePropertyName 'ScriptExclude' -NotePropertyValue ($ScriptExclude -join ', ') -Force
-            $script | Add-Member -MemberType NoteProperty -Name scriptType -Value $scriptId -Force
-            $script | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+            $script | Add-Member -NotePropertyMembers ([ordered]@{
+                    ScriptAssignment = ($ScriptAssignment -join ', ')
+                    ScriptExclude    = ($ScriptExclude -join ', ')
+                    scriptType       = $scriptId
+                    CacheTimestamp   = $CacheTimestamp
+                }) -Force
             $Results.Add($script)
         }
     }

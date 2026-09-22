@@ -45,6 +45,9 @@ function get-DefenderCVEs {
 
             try {
                 $CveId = $Vuln.cveId
+                # Skip TVM software-inventory rows with no CVE before the hashtable lookup;
+                # ContainsKey($null) throws and was logged per-record as an 'Allover Build' error.
+                if ([string]::IsNullOrWhiteSpace($CveId)) { $SkippedCount++; return }
 
                 if (-not $CveAggregator.ContainsKey($CveId)) {
                     # Establish global CVE & software properties for this specific tenant

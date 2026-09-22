@@ -7,8 +7,10 @@ function Invoke-ExecApplication {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $ValidTypes = @('applications', 'servicePrincipals')
-    $ValidActions = @('Update', 'Upsert', 'Delete', 'RemoveKey', 'RemovePassword')
+    $ValidActions = @('Update', 'Upsert', 'Delete', 'RemoveKey', 'RemovePassword', 'Hide', 'Show')
 
     $Id = $Request.Query.Id ?? $Request.Body.Id
     $Type = $Request.Query.Type ?? $Request.Body.Type
@@ -95,6 +97,7 @@ function Invoke-ExecApplication {
                     state      = 'success'
                     details    = @($Response)
                 }
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
             } else {
                 # For password credentials, use bulk removePassword requests
                 $BulkRequests = foreach ($KeyId in $KeyIds) {
@@ -123,14 +126,49 @@ function Invoke-ExecApplication {
                     state      = if ($FailureCount -eq 0) { 'success' } else { 'error' }
                     details    = @($BulkResults)
                 }
+                if ($FailureCount -eq 0) {
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
+                } else {
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Error'
+                }
             }
+        } elseif ($Action -eq 'Hide' -or $Action -eq 'Show') {
+            # MyApps portal visibility is stored as the 'HideApp' string in the service
+            # principal 'tags' collection. tags is a replace-collection on PATCH, so read the
+            # current tags and add/remove only HideApp to avoid clobbering the other tags
+            # (e.g. WindowsAzureActiveDirectoryIntegratedApp, which marks the app as SSO-integrated).
+            $Hidden = $Action -eq 'Hide'
+            $CurrentObject = New-GraphGetRequest -Uri $Uri -tenantid $TenantFilter -AsApp $true
+            # Rebuild the collection in a single @() subexpression (no in-place array growth):
+            # keep every tag except HideApp, then append HideApp only when hiding.
+            $Tags = @(
+                $CurrentObject.tags | Where-Object { $_ -ne 'HideApp' }
+                if ($Hidden) { 'HideApp' }
+            )
+            # Encode each tag individually and wrap in brackets so tags is always a JSON array:
+            # a whole-collection ConvertTo-Json collapses a single-element array to a scalar (Graph
+            # rejects it) and emits nothing for an empty array. This handles 0, 1 and many tags.
+            $TagsJson = '[' + (($Tags | ForEach-Object { ConvertTo-Json -InputObject $_ -Compress }) -join ',') + ']'
+            $PatchBody = '{{"tags":{0}}}' -f $TagsJson
+            $null = New-GraphPOSTRequest -Uri $Uri -Type 'PATCH' -Body $PatchBody -tenantid $TenantFilter -AsApp $true
+
+            $Results = @{
+                resultText = if ($Hidden) {
+                    "Hid '$($CurrentObject.displayName)' from the MyApps portal"
+                } else {
+                    "Made '$($CurrentObject.displayName)' visible in the MyApps portal"
+                }
+                state      = 'success'
+            }
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
         } else {
-            # Handle regular actions
+            # Handle regular actions (Update, Upsert, Delete)
             $null = New-GraphPOSTRequest @PostParams -tenantid $TenantFilter -AsApp $true
             $Results = @{
                 resultText = "Successfully executed $Action on $Type with Id: $Id"
                 state      = 'success'
             }
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
         }
 
         return ([HttpResponseContext]@{
@@ -138,10 +176,12 @@ function Invoke-ExecApplication {
                 Body       = @{ Results = $Results }
             })
     } catch {
+        $ErrorMessage = Get-CippException -Exception $_
         $Results = @{
-            resultText = "Failed to execute $Action on $Type with Id: $Id. Error: $($_.Exception.Message)"
+            resultText = "Failed to execute $Action on $Type with Id: $Id. Error: $($ErrorMessage.NormalizedError)"
             state      = 'error'
         }
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Error' -LogData $ErrorMessage
 
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError

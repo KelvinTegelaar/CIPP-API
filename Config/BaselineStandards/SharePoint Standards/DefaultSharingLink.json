@@ -58,6 +58,10 @@
   "read": {
     "cacheType": "SPOTenant"
   },
+  "writeTarget": "spoTenant",
+  "writeTargetProperties": {
+    "DefaultSharingLinkType": "%SharingLinkType%"
+  },
   "remediate": {
     "executor": "SPOTenant",
     "properties": {

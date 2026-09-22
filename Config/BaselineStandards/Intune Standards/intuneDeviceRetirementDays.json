@@ -28,8 +28,18 @@
   "variables": {
     "days": {
       "type": "number",
-      "label": "Maximum days of inactivity before retirement",
-      "required": true
+      "label": "Maximum days of inactivity before retirement (30-270)",
+      "required": true,
+      "validators": {
+        "min": {
+          "value": 30,
+          "message": "Intune only accepts a retirement window between 30 and 270 days"
+        },
+        "max": {
+          "value": 270,
+          "message": "Intune only accepts a retirement window between 30 and 270 days"
+        }
+      }
     }
   },
   "read": {

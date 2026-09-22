@@ -39,6 +39,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"High Confidence Spam Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Bulk Spam Action","name":"standards.SpamFilterPolicy.BulkSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"Bulk Quarantine Tag","name":"standards.SpamFilterPolicy.BulkQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"label":"Bulk moves enabled (deliver bulk mail below the threshold to the Promotions folder - Preview)","name":"standards.SpamFilterPolicy.BulkMovesEnabled","options":[{"label":"On","value":"On"},{"label":"Off","value":"Off"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
@@ -131,6 +132,10 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $PhishSpamAction = $Settings.PhishSpamAction.value ?? $Settings.PhishSpamAction
     $PhishQuarantineTag = $Settings.PhishQuarantineTag.value ?? $Settings.PhishQuarantineTag
     $HighConfidencePhishQuarantineTag = $Settings.HighConfidencePhishQuarantineTag.value ?? $Settings.HighConfidencePhishQuarantineTag
+    # BulkMovesEnabled is in Preview and not available in every organization, so it is only
+    # compared and written when explicitly configured On or Off.
+    $BulkMovesEnabled = $Settings.BulkMovesEnabled.value ?? $Settings.BulkMovesEnabled
+    $BulkMovesConfigured = $BulkMovesEnabled -in @('On', 'Off')
 
     # Normalize list settings to clean string arrays. Values may arrive as a proper array or as a
     # single comma-delimited string; splitting and trimming makes Compare-Object and remediation reliable.
@@ -186,6 +191,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         ($CurrentState.MarkAsSpamFromAddressAuthFail -eq 'Off') -and
         ($CurrentState.MarkAsSpamNdrBackscatter -eq 'Off') -and
         ($CurrentState.MarkAsSpamBulkMail -eq 'On') -and
+        ((-not $BulkMovesConfigured) -or ($CurrentState.BulkMovesEnabled -eq $BulkMovesEnabled)) -and
         ($CurrentState.InlineSafetyTipsEnabled -eq $true) -and
         ($CurrentState.PhishZapEnabled -eq $true) -and
         ($CurrentState.SpamZapEnabled -eq $true) -and
@@ -260,6 +266,9 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 $cmdParams.Add('RegionBlockList', $RegionBlockList)
             } else {
                 $cmdParams.Add('EnableRegionBlockList', $false)
+            }
+            if ($BulkMovesConfigured) {
+                $cmdParams.Add('BulkMovesEnabled', $BulkMovesEnabled)
             }
 
 
@@ -389,6 +398,10 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         if ($Settings.EnableRegionBlockList) {
             $CurrentValue['RegionBlockList'] = $CurrentState.RegionBlockList
             $ExpectedValue['RegionBlockList'] = $RegionBlockList
+        }
+        if ($BulkMovesConfigured) {
+            $CurrentValue['BulkMovesEnabled'] = "$($CurrentState.BulkMovesEnabled)"
+            $ExpectedValue['BulkMovesEnabled'] = $BulkMovesEnabled
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant

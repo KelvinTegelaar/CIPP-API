@@ -84,6 +84,7 @@ function Invoke-ExecScheduleForwardingVacation {
             }) -hidden $false
 
         $Result = "Successfully scheduled forwarding vacation mode for $UserDisplay."
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

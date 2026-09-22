@@ -26,6 +26,7 @@ BeforeAll {
     function New-CIPPUserTask { param($UserObj, $APIName, $Headers) }
     function Add-CIPPScheduledTask { param($Task, $hidden, $Headers, $DisallowDuplicateName) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
+    function Get-Tenants { param($TenantFilter, $IncludeErrors, $IncludeAll) }
 
     . $FunctionPath
 
@@ -65,6 +66,8 @@ Describe 'Invoke-AddUser' {
         Mock -CommandName Write-LogMessage -MockWith { }
         Mock -CommandName Add-CIPPScheduledTask -MockWith { }
         Mock -CommandName New-CIPPUserTask -MockWith { New-CreationResult }
+        # The endpoint refuses any tenantFilter it cannot resolve to a single tenant.
+        Mock -CommandName Get-Tenants -MockWith { [pscustomobject]@{ defaultDomainName = $TenantFilter; customerId = 'tenant-guid' } }
     }
 
     Context 'Creating the user now' {
@@ -212,6 +215,26 @@ Describe 'Invoke-AddUser' {
             $Response.Body.Results.state | Should -Be 'error'
             Should -Invoke New-CIPPUserTask -Times 0 -Exactly
             Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
+        }
+
+        It 'refuses AllTenants because user creation is single-tenant only' {
+            $Response = Invoke-AddUser -Request (New-AddUserRequest -Body @{ tenantFilter = 'AllTenants' })
+
+            $Response.StatusCode | Should -Be ([HttpStatusCode]::BadRequest)
+            $Response.Body.Results.resultText | Should -BeLike 'User creation is single-tenant only*'
+            $Response.Body.Results.state | Should -Be 'error'
+            Should -Invoke New-CIPPUserTask -Times 0 -Exactly
+        }
+
+        It 'refuses a tenantFilter that does not resolve to a known tenant' {
+            Mock -CommandName Get-Tenants -MockWith { $null }
+
+            $Response = Invoke-AddUser -Request (New-AddUserRequest -Body @{ tenantFilter = 'nobody.example' })
+
+            $Response.StatusCode | Should -Be ([HttpStatusCode]::BadRequest)
+            $Response.Body.Results.resultText | Should -BeLike 'User creation is single-tenant only*'
+            Should -Invoke Get-Tenants -Times 1 -Exactly -ParameterFilter { $TenantFilter -eq 'nobody.example' }
+            Should -Invoke New-CIPPUserTask -Times 0 -Exactly
         }
     }
 }

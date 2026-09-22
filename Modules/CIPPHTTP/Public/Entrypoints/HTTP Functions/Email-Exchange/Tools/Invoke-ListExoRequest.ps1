@@ -15,7 +15,11 @@ function Invoke-ListExoRequest {
         )
 
         $Cmdlet = $Request.Body.Cmdlet
-        $cmdParams = if ($Request.Body.cmdParams) { $Request.Body.cmdParams } else { [PSCustomObject]@{} }
+        # Parameters to splat onto the Exchange cmdlet, as an object of name/value pairs
+        # (e.g. { "Identity": "user@contoso.com" }). Cast to an object so the generated schema
+        # types cmdParams as an object rather than a string - a string-typed schema made the
+        # client reject an object body, leaving no way to pass parameters.
+        $cmdParams = if ($Request.Body.cmdParams) { [pscustomobject]$Request.Body.cmdParams } else { [PSCustomObject]@{} }
         $Verb = ($Cmdlet -split '-')[0]
 
         $TenantFilter = $Request.Body.TenantFilter

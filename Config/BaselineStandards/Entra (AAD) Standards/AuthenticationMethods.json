@@ -24,9 +24,24 @@
   "compare": "subset",
   "variables": {
     "MicrosoftAuthenticatorEnabled": {
-      "label": "Microsoft Authenticator: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "Microsoft Authenticator: state (Not Configured = leave as-is)"
     },
     "MicrosoftAuthenticatorGroup": {
       "label": "Microsoft Authenticator: target group (blank = all users)",
@@ -34,9 +49,24 @@
       "type": "textField"
     },
     "FIDO2Enabled": {
-      "label": "FIDO2 Security Keys: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "FIDO2 Security Keys: state (Not Configured = leave as-is)"
     },
     "FIDO2Group": {
       "label": "FIDO2 Security Keys: target group (blank = all users)",
@@ -44,9 +74,24 @@
       "type": "textField"
     },
     "TAPEnabled": {
-      "label": "Temporary Access Pass: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "Temporary Access Pass: state (Not Configured = leave as-is)"
     },
     "TAPGroup": {
       "label": "Temporary Access Pass: target group (blank = all users)",
@@ -54,9 +99,24 @@
       "type": "textField"
     },
     "SoftwareOathEnabled": {
-      "label": "Software OATH Tokens: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "Software OATH Tokens: state (Not Configured = leave as-is)"
     },
     "SoftwareOathGroup": {
       "label": "Software OATH Tokens: target group (blank = all users)",
@@ -64,9 +124,24 @@
       "type": "textField"
     },
     "HardwareOathEnabled": {
-      "label": "Hardware OATH Tokens: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "Hardware OATH Tokens: state (Not Configured = leave as-is)"
     },
     "HardwareOathGroup": {
       "label": "Hardware OATH Tokens: target group (blank = all users)",
@@ -74,9 +149,24 @@
       "type": "textField"
     },
     "SMSEnabled": {
-      "label": "SMS: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "SMS: state (Not Configured = leave as-is)"
     },
     "SMSGroup": {
       "label": "SMS: target group (blank = all users)",
@@ -84,9 +174,24 @@
       "type": "textField"
     },
     "VoiceEnabled": {
-      "label": "Voice Call: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "Voice Call: state (Not Configured = leave as-is)"
     },
     "VoiceGroup": {
       "label": "Voice Call: target group (blank = all users)",
@@ -94,9 +199,24 @@
       "type": "textField"
     },
     "EmailEnabled": {
-      "label": "Email OTP: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "Email OTP: state (Not Configured = leave as-is)"
     },
     "EmailGroup": {
       "label": "Email OTP: target group (blank = all users)",
@@ -104,9 +224,24 @@
       "type": "textField"
     },
     "x509CertificateEnabled": {
-      "label": "Certificate-Based Authentication: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "Certificate-Based Authentication: state (Not Configured = leave as-is)"
     },
     "x509CertificateGroup": {
       "label": "Certificate-Based Authentication: target group (blank = all users)",
@@ -114,9 +249,24 @@
       "type": "textField"
     },
     "QRCodePinEnabled": {
-      "label": "QR Code Pin: manage this method",
+      "creatable": false,
+      "options": [
+        {
+          "value": true,
+          "label": "Enabled"
+        },
+        {
+          "value": false,
+          "label": "Disabled"
+        },
+        {
+          "value": "notConfigured",
+          "label": "Not Configured"
+        }
+      ],
       "omitWhenBlank": true,
-      "type": "switch"
+      "type": "autoComplete",
+      "label": "QR Code Pin: state (Not Configured = leave as-is)"
     },
     "QRCodePinGroup": {
       "label": "QR Code Pin: target group (blank = all users)",
@@ -268,6 +418,28 @@
     "cacheType": "AuthenticationMethodsPolicy"
   },
   "prepare": "Get-CIPPBaselineAuthenticationMethodsState",
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "Sms.state": "%SMSEnabled%",
+    "Voice.state": "%VoiceEnabled%",
+    "Email.state": "%EmailEnabled%",
+    "x509Certificate.state": "%x509CertificateEnabled%",
+    "HardwareOath.state": "%HardwareOathEnabled%",
+    "SoftwareOath.state": "%SoftwareOathEnabled%",
+    "QRCodePin.state": "%QRCodePinEnabled%",
+    "Fido2.state": "%FIDO2Enabled%",
+    "MicrosoftAuthenticator.state": "%MicrosoftAuthenticatorEnabled%",
+    "MicrosoftAuthenticator.isSoftwareOathEnabled": "%MicrosoftAuthenticatorSoftwareOath%",
+    "MicrosoftAuthenticator.featureSettings.displayAppInformationRequiredState.state": "%MicrosoftAuthenticatorDisplayAppInfo%",
+    "MicrosoftAuthenticator.featureSettings.displayLocationInformationRequiredState.state": "%MicrosoftAuthenticatorDisplayLocation%",
+    "MicrosoftAuthenticator.featureSettings.companionAppAllowedState.state": "%MicrosoftAuthenticatorCompanionApp%",
+    "TemporaryAccessPass.state": "%TAPEnabled%",
+    "TemporaryAccessPass.isUsableOnce": "%TAPUsableOnce%",
+    "TemporaryAccessPass.defaultLifetimeInMinutes": "%TAPDefaultLifetime%",
+    "TemporaryAccessPass.minimumLifetimeInMinutes": "%TAPMinLifetime%",
+    "TemporaryAccessPass.maximumLifetimeInMinutes": "%TAPMaxLifetime%",
+    "TemporaryAccessPass.defaultLength": "%TAPDefaultLength%"
+  },
   "remediate": {
     "executor": "AuthenticationMethods"
   }

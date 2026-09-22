@@ -46,11 +46,16 @@ function Get-CIPPBaselineAuthenticationMethodsState {
     )
 
     $Configured = @(foreach ($Method in $AuthMethods) {
+            # Formerly a switch (raw boolean), now a three-state autoComplete whose option
+            # wrapper the pipeline already unwrapped to $true/$false/'notConfigured'. Legacy
+            # booleans and the new values both land here; 'notConfigured' skips the method
+            # exactly like an absent variable - the tenant's current setting is never graded.
             $Enabled = $V."$($Method.Key)Enabled"
-            if ($null -eq $Enabled -or "$Enabled" -eq '') { continue }
+            $Enabled = $Enabled.value ?? $Enabled
+            if ($null -eq $Enabled -or "$Enabled" -eq '' -or "$Enabled" -eq 'notConfigured') { continue }
             [PSCustomObject]@{
                 Id = $Method.Id; RemediationId = $Method.RemediationId; Key = $Method.Key; Label = $Method.Label
-                Enabled = [bool]($Enabled -eq $true -or "$Enabled" -eq 'True')
+                Enabled = [bool]($Enabled -eq $true -or "$Enabled" -eq 'True' -or "$Enabled" -eq 'enabled')
                 GroupName = "$($V."$($Method.Key)Group")"
                 ExcludeGroupName = "$($V."$($Method.Key)ExcludeGroup")"
             }

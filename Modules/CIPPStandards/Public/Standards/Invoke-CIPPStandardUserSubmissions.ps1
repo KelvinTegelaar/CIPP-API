@@ -8,7 +8,7 @@ function Invoke-CIPPStandardUserSubmissions {
         (Label) Set the state of the built-in Report button in Outlook
     .DESCRIPTION
         (Helptext) Set the state of the spam submission button in Outlook
-        (DocsDescription) Set the state of the built-in Report button in Outlook. This gives the users the ability to report emails as spam or phish.
+        (DocsDescription) Set the state of the built-in Report button in Outlook. This gives the users the ability to report emails as spam or phish. When a destination email address is set, the 'Send reported items to' setting controls whether reported messages go to Microsoft and the reporting mailbox, or to the reporting mailbox only (for third-party phishing report services).
     .NOTES
         CAT
             Exchange Standards
@@ -18,6 +18,7 @@ function Invoke-CIPPStandardUserSubmissions {
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.UserSubmissions.state","options":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
             {"type":"textField","name":"standards.UserSubmissions.email","required":false,"label":"Destination email address"}
+            {"type":"autoComplete","multiple":false,"label":"Send reported items to (when a destination email address is set)","name":"standards.UserSubmissions.reportDestination","options":[{"label":"Microsoft and my reporting mailbox","value":"Both"},{"label":"My reporting mailbox only","value":"Mailbox"}]}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -47,6 +48,11 @@ function Invoke-CIPPStandardUserSubmissions {
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
     $Email = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $Settings.email
+
+    # 'Send reported items to' only applies when a destination email address is set.
+    # Missing/blank keeps the pre-existing behavior: report to Microsoft as well as the mailbox.
+    $Destination = $Settings.reportDestination.value ?? $Settings.reportDestination
+    $ReportToMicrosoft = [string]::IsNullOrWhiteSpace($Email) -or $Destination -ne 'Mailbox'
 
     # Input validation
     if ($Settings.remediate -eq $true -or $Settings.alert -eq $true) {
@@ -82,7 +88,7 @@ function Invoke-CIPPStandardUserSubmissions {
             ($PolicyState.ReportPhishAddresses.Count -eq 0)
             $RuleIsCorrect = ($RuleState.length -eq 0) -or ($RuleState.State -ne 'Enabled')
         } else {
-            $PolicyIsCorrect = ($PolicyState.EnableReportToMicrosoft -eq $true) -and
+            $PolicyIsCorrect = ($PolicyState.EnableReportToMicrosoft -eq $ReportToMicrosoft) -and
             ($PolicyState.ReportJunkToCustomizedAddress -eq $true) -and
             ($PolicyState.ReportJunkAddresses -eq $Email) -and
             ($PolicyState.ReportNotJunkToCustomizedAddress -eq $true) -and
@@ -128,7 +134,7 @@ function Invoke-CIPPStandardUserSubmissions {
                     }
                 } else {
                     $PolicyParams = @{
-                        EnableReportToMicrosoft          = $true
+                        EnableReportToMicrosoft          = $ReportToMicrosoft
                         ReportJunkToCustomizedAddress    = $true
                         ReportJunkAddresses              = $Email
                         ReportNotJunkToCustomizedAddress = $true
@@ -209,7 +215,7 @@ function Invoke-CIPPStandardUserSubmissions {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission policy is properly configured.' -sev Info
         } else {
-            if ($Policy.EnableReportToMicrosoft -eq $true) {
+            if ($PolicyState.EnableReportToMicrosoft -eq $true) {
                 Write-StandardsAlert -message 'User Submission policy is enabled but incorrectly configured' -object $PolicyState -tenant $Tenant -standardName 'UserSubmissions' -standardId $Settings.standardId
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission policy is enabled but incorrectly configured' -sev Info
             } else {
@@ -243,7 +249,7 @@ function Invoke-CIPPStandardUserSubmissions {
             }
         }
         $ExpectedValue = @{
-            EnableReportToMicrosoft          = $state -eq 'enable'
+            EnableReportToMicrosoft          = ($state -eq 'enable') -and $ReportToMicrosoft
             ReportJunkToCustomizedAddress    = if ([string]::IsNullOrWhiteSpace($Email)) { $false } else { $true }
             ReportNotJunkToCustomizedAddress = if ([string]::IsNullOrWhiteSpace($Email)) { $false } else { $true }
             ReportPhishToCustomizedAddress   = if ([string]::IsNullOrWhiteSpace($Email)) { $false } else { $true }

@@ -6,6 +6,11 @@ function Invoke-CippTestCIS_2_1_7 {
     param($Tenant)
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName 'CIS_2_1_7' -TenantFilter $Tenant -Preset DefenderForOffice365 -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_2_1_7' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Defender for Office 365 (ATP). Required capabilities: ATP_ENTERPRISE, ATP_ENTERPRISE_GOV, THREAT_INTELLIGENCE, THREAT_INTELLIGENCE_GOV.' -Risk 'High' -Name 'An anti-phishing policy has been created' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Protection'
+            return
+        }
+
         $AntiPhish = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAntiPhishPolicies'
 
         if (-not $AntiPhish) {
@@ -13,20 +18,27 @@ function Invoke-CippTestCIS_2_1_7 {
             return
         }
 
+        $AntiPhishRules = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAntiPhishRules'
+
+        # Get-AntiPhishPolicy only populates Enabled for the built-in default policy; a custom policy's
+        # active state lives on its anti-phish rule's State, joined by AntiPhishPolicy name (mirrors
+        # Invoke-CIPPStandardAntiPhishPolicy / Invoke-ListAntiPhishingFilters).
         $Compliant = $AntiPhish | Where-Object {
-            $_.Enabled -eq $true -and
-            $_.PhishThresholdLevel -ge 2 -and
-            $_.EnableMailboxIntelligenceProtection -eq $true -and
-            $_.EnableMailboxIntelligence -eq $true -and
-            $_.EnableSpoofIntelligence -eq $true -and
-            $_.TargetedUserProtectionAction -in @('Quarantine', 'MoveToJmf') -and
-            $_.MailboxIntelligenceProtectionAction -in @('Quarantine', 'MoveToJmf') -and
-            $_.TargetedDomainProtectionAction -in @('Quarantine', 'MoveToJmf') -and
-            $_.AuthenticationFailAction -in @('Quarantine', 'MoveToJmf') -and
-            $_.EnableFirstContactSafetyTips -eq $true -and
-            $_.EnableSimilarUsersSafetyTips -eq $true -and
-            $_.EnableSimilarDomainsSafetyTips -eq $true -and
-            $_.EnableUnusualCharactersSafetyTips -eq $true
+            $Policy = $_
+            $RuleEnabled = [bool]($AntiPhishRules | Where-Object { $_.AntiPhishPolicy -eq $Policy.Name -and $_.State -eq 'Enabled' })
+            ($Policy.Enabled -eq $true -or $RuleEnabled) -and
+            $Policy.PhishThresholdLevel -ge 2 -and
+            $Policy.EnableMailboxIntelligenceProtection -eq $true -and
+            $Policy.EnableMailboxIntelligence -eq $true -and
+            $Policy.EnableSpoofIntelligence -eq $true -and
+            $Policy.TargetedUserProtectionAction -in @('Quarantine', 'MoveToJmf') -and
+            $Policy.MailboxIntelligenceProtectionAction -in @('Quarantine', 'MoveToJmf') -and
+            $Policy.TargetedDomainProtectionAction -in @('Quarantine', 'MoveToJmf') -and
+            $Policy.AuthenticationFailAction -in @('Quarantine', 'MoveToJmf') -and
+            $Policy.EnableFirstContactSafetyTips -eq $true -and
+            $Policy.EnableSimilarUsersSafetyTips -eq $true -and
+            $Policy.EnableSimilarDomainsSafetyTips -eq $true -and
+            $Policy.EnableUnusualCharactersSafetyTips -eq $true
         }
 
         if ($Compliant) {

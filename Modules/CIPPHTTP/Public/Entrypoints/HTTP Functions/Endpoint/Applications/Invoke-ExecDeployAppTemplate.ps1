@@ -57,15 +57,17 @@ function Invoke-ExecDeployAppTemplate {
                 $AppType = "$($App.appType ?? $App.AppType)"
 
                 $RequestBody = $Config | ConvertTo-Json -Depth 100 | ConvertFrom-Json -Depth 100
-                $RequestBody | Add-Member -NotePropertyName 'selectedTenants' -NotePropertyValue $SelectedTenants -Force
-                $RequestBody | Add-Member -NotePropertyName 'tenantFilter' -NotePropertyValue 'allTenants' -Force
-
+                $RequestProps = [ordered]@{
+                    selectedTenants = $SelectedTenants
+                    tenantFilter    = 'allTenants'
+                }
                 if ($OverrideAssignTo) {
-                    $RequestBody | Add-Member -NotePropertyName 'AssignTo' -NotePropertyValue $OverrideAssignTo -Force
+                    $RequestProps['AssignTo'] = $OverrideAssignTo
                     if ($OverrideAssignTo -eq 'customGroup' -and $OverrideCustomGroup) {
-                        $RequestBody | Add-Member -NotePropertyName 'CustomGroup' -NotePropertyValue $OverrideCustomGroup -Force
+                        $RequestProps['CustomGroup'] = $OverrideCustomGroup
                     }
                 }
+                $RequestBody | Add-Member -NotePropertyMembers $RequestProps -Force
 
                 $MockRequest = [PSCustomObject]@{
                     Body    = $RequestBody
@@ -80,15 +82,27 @@ function Invoke-ExecDeployAppTemplate {
                     'officeApp'      { Invoke-AddOfficeApp -Request $MockRequest -TriggerMetadata $null }
                     'win32ScriptApp' { Invoke-AddWin32ScriptApp -Request $MockRequest -TriggerMetadata $null }
                     'mspApp'         { Invoke-AddMSPApp -Request $MockRequest -TriggerMetadata $null }
+                    'edgeApp'        { Invoke-AddEdgeApp -Request $MockRequest -TriggerMetadata $null }
                     default          { throw "Unknown app type: $AppType" }
                 }
 
-                if ($HandlerResult.Body.Results) {
+                $DeployedResult = if ($HandlerResult.Body.Results) {
                     $HandlerResult.Body.Results
                 } elseif ($HandlerResult.Body) {
                     $HandlerResult.Body
                 } else {
                     "Queued '$($App.appName)'"
+                }
+
+                # Handlers signal rejection by status code, not by throwing.
+                $HandlerStatus = [int]$HandlerResult.StatusCode
+                if ($HandlerStatus -ge 200 -and $HandlerStatus -lt 300) {
+                    Write-LogMessage -headers $Headers -API $APIName -message "Deployed app '$($App.appName)' ($AppType) from template $TemplateId" -Sev 'Info'
+                    $DeployedResult
+                } else {
+                    $FailureText = "Failed to deploy app '$($App.appName)' ($AppType) from template $($TemplateId): $($DeployedResult -join '; ')"
+                    Write-LogMessage -headers $Headers -API $APIName -message $FailureText -Sev 'Error'
+                    $FailureText
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_

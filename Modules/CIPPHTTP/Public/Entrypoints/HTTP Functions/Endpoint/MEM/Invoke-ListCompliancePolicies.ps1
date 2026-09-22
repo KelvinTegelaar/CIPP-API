@@ -91,9 +91,11 @@ function Invoke-ListCompliancePolicies {
                 }
             }
 
-            $Policy | Add-Member -NotePropertyName 'PolicyTypeName' -NotePropertyValue $policyType -Force
-            $Policy | Add-Member -NotePropertyName 'PolicyAssignment' -NotePropertyValue ($PolicyAssignment -join ', ') -Force
-            $Policy | Add-Member -NotePropertyName 'PolicyExclude' -NotePropertyValue ($PolicyExclude -join ', ') -Force
+            $Policy | Add-Member -NotePropertyMembers ([ordered]@{
+                    PolicyTypeName   = $policyType
+                    PolicyAssignment = ($PolicyAssignment -join ', ')
+                    PolicyExclude    = ($PolicyExclude -join ', ')
+                }) -Force
 
             $GraphRequest.Add($Policy)
         }

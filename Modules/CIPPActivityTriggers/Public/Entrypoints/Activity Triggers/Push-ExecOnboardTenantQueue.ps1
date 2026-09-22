@@ -13,6 +13,20 @@ function Push-ExecOnboardTenantQueue {
         $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
         $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$Id'"
 
+        # Prefer Item flag; fall back to persisted onboarding row (poll/retry may omit it from Item)
+        $StandardsExcludeAllTenants = if ($Item.StandardsExcludeAllTenants -eq $true) {
+            $true
+        } else {
+            [bool]$TenantOnboarding.StandardsExcludeAllTenants
+        }
+        if ($StandardsExcludeAllTenants -eq $true) {
+            if ($TenantOnboarding.PSObject.Properties.Name -notcontains 'StandardsExcludeAllTenants') {
+                $TenantOnboarding | Add-Member -NotePropertyName 'StandardsExcludeAllTenants' -NotePropertyValue $true -Force
+            } else {
+                $TenantOnboarding.StandardsExcludeAllTenants = $true
+            }
+        }
+
         $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Starting onboarding for relationship $Id" })
         $OnboardingSteps = $TenantOnboarding.OnboardingSteps | ConvertFrom-Json
         $OnboardingSteps.Step1.Status = 'running'
@@ -358,7 +372,7 @@ function Push-ExecOnboardTenantQueue {
                             AutoMapRoles               = $Item.AutoMapRoles
                             IgnoreMissingRoles         = $Item.IgnoreMissingRoles
                             AddMissingGroups           = $Item.AddMissingGroups
-                            StandardsExcludeAllTenants = $Item.StandardsExcludeAllTenants
+                            StandardsExcludeAllTenants = $StandardsExcludeAllTenants
                         }
                     }
                     $RetryTask = [PSCustomObject]@{
@@ -487,7 +501,7 @@ function Push-ExecOnboardTenantQueue {
         }
 
         if ($OnboardingSteps.Step4.Status -eq 'succeeded') {
-            if ($Item.StandardsExcludeAllTenants -eq $true) {
+            if ($StandardsExcludeAllTenants -eq $true) {
                 $GroupTable = Get-CIPPTable -tablename 'TenantGroups'
                 $MembersTable = Get-CIPPTable -tablename 'TenantGroupMembers'
                 $ExclusionGroupName = 'Excluded onboarded tenants'
@@ -542,14 +556,10 @@ function Push-ExecOnboardTenantQueue {
                         }
                         $NewExcludedTenants.Add($GroupExclusionObj)
                         $object.excludedTenants = $NewExcludedTenants
-                        $JSON = ConvertTo-Json -InputObject $object -Compress -Depth 10
+                        # Depth 100 like every other writer; write back the row read so its other columns survive.
+                        $AllTenantsTemplate.JSON = ConvertTo-Json -InputObject $object -Compress -Depth 100
                         $TemplatesTable.Force = $true
-                        Add-CIPPAzDataTableEntity @TemplatesTable -Entity @{
-                            JSON         = "$JSON"
-                            RowKey       = $AllTenantsTemplate.RowKey
-                            GUID         = $AllTenantsTemplate.GUID
-                            PartitionKey = 'StandardsTemplateV2'
-                        }
+                        Add-CIPPAzDataTableEntity @TemplatesTable -Entity $AllTenantsTemplate
                     }
                 }
 

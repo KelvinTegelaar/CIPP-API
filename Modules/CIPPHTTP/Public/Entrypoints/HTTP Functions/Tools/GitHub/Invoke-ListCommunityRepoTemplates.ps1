@@ -93,7 +93,8 @@ function Invoke-ListCommunityRepoTemplates {
         'ExConnectorTemplate', 'AppTemplate', 'ContactTemplate', 'JITAdminTemplate',
         'UserDefaultTemplate', 'AssignmentFilterTemplate', 'IntuneReusableSettingTemplate',
         'SharePointTemplate', 'DlpCompliancePolicyTemplate', 'RetentionCompliancePolicyTemplate',
-        'SensitivityLabelTemplate', 'SensitiveInfoTypeTemplate', 'BaselineTemplate'
+        'SensitivityLabelTemplate', 'SensitiveInfoTypeTemplate', 'BaselineTemplate',
+        'PIMRoleSettingsTemplate'
     )
 
     $Warnings = [System.Collections.Generic.List[string]]::new()

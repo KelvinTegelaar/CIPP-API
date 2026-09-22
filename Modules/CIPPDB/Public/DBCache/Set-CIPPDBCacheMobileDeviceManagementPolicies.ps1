@@ -26,7 +26,7 @@ function Set-CIPPDBCacheMobileDeviceManagementPolicies {
 
         # Full entity (no $select) so isMdmEnrollmentDuringRegistrationDisabled, appliesTo and the
         # termsOfUseUrl/discoveryUrl/complianceUrl properties are all included, plus included groups
-        $MDMPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000?$expand=includedGroups($select=displayName)' -tenantid $TenantFilter
+        $MDMPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000?$expand=includedGroups($select=id,displayName)' -tenantid $TenantFilter
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MobileDeviceManagementPolicies' -Data @($MDMPolicy) -AddCount
         $MDMPolicy = $null
 

@@ -40,6 +40,7 @@
   "read": {
     "cacheType": "ExoOrganizationConfig"
   },
+  "writeTarget": "exoOrganizationConfig",
   "remediate": {
     "executor": "ExoRequest",
     "cmdlets": [

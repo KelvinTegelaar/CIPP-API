@@ -17,6 +17,9 @@ function Send-CIPPAlert {
         $RowKey = [string][guid]::NewGuid(),
         $Attachments,
         $AffectedUser,
+        $PsaTicketPriority,
+        $PSAReference,
+        $PSATicketId,
         [switch]$UseStandardizedSchema
     )
     Write-Information 'Shipping Alert'
@@ -343,8 +346,10 @@ function Send-CIPPAlert {
     if ($Type -eq 'psa') {
         Write-Information 'Trying to send to PSA'
         if (-not $config.sendtoIntegration) {
+            # The extension test button bypasses this gate, so log the skip where the operator looks.
             Write-Information 'PSA delivery skipped: sendtoIntegration is disabled in CippNotifications config. Enable it under Settings -> Notifications to route alerts to your PSA.'
-            return
+            Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "PSA delivery skipped for '$Title': 'Send to integration' is off under Settings > Notifications, so no PSA ticket was raised." -sev Warning
+            return 'Skipped: PSA delivery is disabled in the notification settings'
         }
         if ($PSCmdlet.ShouldProcess('PSA', 'Sending alert')) {
             try {
@@ -358,20 +363,40 @@ function Send-CIPPAlert {
                     AlertText  = "$HTMLContent"
                     AlertTitle = "$PsaTitle"
                 }
+                if ($PSAReference) {
+                    # Passed through verbatim - what a reference means is the PSA extension's call.
+                    $Alert.Reference = $PSAReference
+                    Write-Information "PSA alert reference: $PSAReference"
+                }
+                if ($PSATicketId) {
+                    $Alert.PsaTicketId = $PSATicketId
+                    Write-Information "PSA alert target ticket: $PSATicketId"
+                }
                 if ($AffectedUser) {
                     $Alert.AffectedUser = $AffectedUser
                     $UserLabel = if ($AffectedUser.UPN) { $AffectedUser.UPN } elseif ($AffectedUser.AzureOID) { "OID:$($AffectedUser.AzureOID)" } else { 'unknown' }
                     Write-Information "PSA alert AffectedUser: $UserLabel"
                 }
-                $PsaResult = New-CippExtAlert -Alert $Alert
-                if ($PsaResult) {
-                    Write-Information "PSA result: $PsaResult"
+                if ($PsaTicketPriority) {
+                    $Alert.PsaTicketPriority = $PsaTicketPriority
+                    Write-Information "PSA alert priority override: $PsaTicketPriority"
+                }
+                # Extensions report failure in their return value, one line per extension.
+                $PsaOutput = @(New-CippExtAlert -Alert $Alert)
+                $PsaResult = ($PsaOutput -join ' ').Trim()
+                $Failure = (@($PsaOutput | Where-Object { "$_" -match '^(Failed|Error)' }) -join ' ').Trim()
+                if ($Failure) {
+                    Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "PSA delivery failed for '$Title': $Failure" -sev Error
+                    return "Error: $Failure"
                 }
                 Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev info
+                # Same shape as the email and webhook branches; the text carries the ticket id.
+                return "Sent PSA alert: $title$(if ($PsaResult) { " - $PsaResult" })"
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-Information "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                return "Error: Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)"
             }
         }
     }

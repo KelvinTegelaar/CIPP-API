@@ -127,6 +127,31 @@ Describe 'Get-CIPPBaselineUserSubmissionsState' {
         Invoke-CIPPBaselineUserSubmissions -Remediate ([PSCustomObject]@{ state = 'disable' }) -TenantFilter $script:Tenant -Current $Current
         Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter { $cmdlet -eq 'Remove-ReportSubmissionRule' }
     }
+
+    It 'grades reporting-to-Microsoft OFF as compliant for the mailbox-only destination, and as drift without it' {
+        # Issue #409: tenants using a third-party phishing service keep EnableReportToMicrosoft
+        # off - the mailbox-only destination must not read that as drift.
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'ReportSubmissionPolicy') { @(@{ EnableReportToMicrosoft = $false; ReportJunkToCustomizedAddress = $true; ReportJunkAddresses = @('soc@contoso.com'); ReportNotJunkToCustomizedAddress = $true; ReportNotJunkAddresses = @('soc@contoso.com'); ReportPhishToCustomizedAddress = $true; ReportPhishAddresses = @('soc@contoso.com') } | ConvertTo-Cached) }
+            else { @(@{ State = 'Enabled'; SentTo = @('soc@contoso.com') } | ConvertTo-Cached) }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ state = 'enable'; email = 'soc@contoso.com'; reportDestination = 'Mailbox' } }
+        $Prepared = Get-CIPPBaselineUserSubmissionsState -Item $Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+
+        $Legacy = [PSCustomObject]@{ Variables = [PSCustomObject]@{ state = 'enable'; email = 'soc@contoso.com' } }
+        $Prepared = Get-CIPPBaselineUserSubmissionsState -Item $Legacy -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'writes EnableReportToMicrosoft false when remediating the mailbox-only destination' {
+        Mock New-ExoRequest { }
+        $Current = [PSCustomObject]@{ policyExists = $true; ruleExists = $true; ruleEnabled = $true; resolvedEmail = 'soc@contoso.com'; reportDestination = 'Mailbox' }
+        Invoke-CIPPBaselineUserSubmissions -Remediate ([PSCustomObject]@{ state = 'enable' }) -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
+            $cmdlet -eq 'Set-ReportSubmissionPolicy' -and $cmdParams.EnableReportToMicrosoft -eq $false -and $cmdParams.ReportPhishAddresses -eq 'soc@contoso.com'
+        }
+    }
 }
 
 Describe 'Get-CIPPBaselineRetentionPolicyTagState' {
@@ -298,5 +323,19 @@ Describe 'Get-CIPPBaselineSpamFilterPolicyState block-list write params' {
         $Prepared.Current.extraPolicyParams.EnableRegionBlockList | Should -BeTrue
         @($Prepared.Current.extraPolicyParams.RegionBlockList) | Should -BeExactly @('KP', 'RU')
         $Prepared.Expected.enableRegionBlockList | Should -BeTrue
+    }
+
+    It 'never grades or writes BulkMovesEnabled unless explicitly configured - the parameter is in Preview and not available in every organization' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'bulkMovesEnabled'
+        $Prepared.Current.extraPolicyParams.PSObject.Properties.Name | Should -Not -Contain 'BulkMovesEnabled'
+    }
+
+    It 'grades and writes BulkMovesEnabled when configured On, unwrapping an option wrapper if the picker saved one' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ BulkMovesEnabled = [PSCustomObject]@{ label = 'On'; value = 'On' } } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.bulkMovesEnabled | Should -BeExactly 'On'
+        $Prepared.Current.extraPolicyParams.BulkMovesEnabled | Should -BeExactly 'On'
     }
 }

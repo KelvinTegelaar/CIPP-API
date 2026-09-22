@@ -40,14 +40,17 @@ function Invoke-ExecUpdateBaselineDeviation {
             $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
             $Table.Force = $true
             foreach ($TaskEntity in $Entities) {
-                $TaskEntity | Add-Member -NotePropertyName 'Status' -NotePropertyValue 'Compliant' -Force
-                $TaskEntity | Add-Member -NotePropertyName 'Compliant' -NotePropertyValue $true -Force
-                $TaskEntity | Add-Member -NotePropertyName 'LastRemediated' -NotePropertyValue $Now -Force
+                $TaskProps = [ordered]@{
+                    Status         = 'Compliant'
+                    Compliant      = $true
+                    LastRemediated = $Now
+                }
                 if ($TaskEntity.CurrentValue) {
                     $CurrentTask = $TaskEntity.CurrentValue | ConvertFrom-Json
                     $CurrentTask | Add-Member -NotePropertyName 'completed' -NotePropertyValue $true -Force
-                    $TaskEntity | Add-Member -NotePropertyName 'CurrentValue' -NotePropertyValue (ConvertTo-Json -Compress -Depth 20 -InputObject $CurrentTask) -Force
+                    $TaskProps['CurrentValue'] = (ConvertTo-Json -Compress -Depth 20 -InputObject $CurrentTask)
                 }
+                $TaskEntity | Add-Member -NotePropertyMembers $TaskProps -Force
                 Add-CIPPAzDataTableEntity @Table -Entity $TaskEntity
                 $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TaskEntity.PartitionKey -Standard $Standard -Mode 'triage' -TriggeredBy $User -Outcome 'Task Completed' -Detail 'Marked completed for all tenants from the standard view'
             }

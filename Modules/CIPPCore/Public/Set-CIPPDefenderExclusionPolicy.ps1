@@ -90,7 +90,9 @@ function Set-CIPPDefenderExclusionPolicy {
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ExclusionRequest.id)')/assign" -tenantid $TenantFilter -type POST -body $AssignBody
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Assigned Exclusion policy to $($ExclusionAssignTo)" -Sev 'Info'
             }
-            "$($TenantFilter): Successfully set Default AV Exclusion Policy settings"
+            $Result = "$($TenantFilter): Successfully set Default AV Exclusion Policy settings"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+            $Result
         }
     }
 }

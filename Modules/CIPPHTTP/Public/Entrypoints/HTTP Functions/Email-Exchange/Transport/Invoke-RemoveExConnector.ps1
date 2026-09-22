@@ -20,7 +20,7 @@ Function Invoke-RemoveExConnector {
 
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-$($Type)Connector" -cmdParams $params -useSystemMailbox $true
         $Result = "Deleted Connector: $($Guid)"
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Deleted connector $($Guid)" -sev Debug
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Deleted connector $($Guid)" -sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

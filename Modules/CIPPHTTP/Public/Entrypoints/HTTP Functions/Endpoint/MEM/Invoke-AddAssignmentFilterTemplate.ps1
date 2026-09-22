@@ -47,16 +47,15 @@ function Invoke-AddAssignmentFilterTemplate {
             RowKey       = "$GUID"
             PartitionKey = 'AssignmentFilterTemplate'
         }
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created Assignment Filter template named $displayName with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Created Assignment Filter template named $displayName with GUID $GUID" -Sev 'Info'
 
         $body = [pscustomobject]@{'Results' = 'Successfully added template' }
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Assignment Filter Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Assignment Filter Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Assignment Filter Template Creation failed: $($_.Exception.Message)" }
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

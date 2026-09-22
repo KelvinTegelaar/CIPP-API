@@ -40,8 +40,9 @@ function Set-CIPPSAMCertificate {
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
         $Table = Get-CIPPTable -tablename 'DevSecrets'
         $Secret = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
+        # A certificate-only First Setup registers the certificate before the Secret row exists; create it.
         if (!$Secret) {
-            throw 'DevSecrets table row not found. Cannot store SAM certificate in dev mode.'
+            $Secret = [PSCustomObject]@{ PartitionKey = 'Secret'; RowKey = 'Secret' }
         }
         $Secret | Add-Member -MemberType NoteProperty -Name $Name -Value $PfxBase64 -Force
         Add-AzDataTableEntity @Table -Entity $Secret -Force

@@ -57,6 +57,10 @@
       }
     ]
   },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "Email.state": "%state%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

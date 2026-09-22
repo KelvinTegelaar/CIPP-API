@@ -29,6 +29,7 @@
   "read": {
     "cacheType": "SPOTenant"
   },
+  "writeTarget": "spoTenant",
   "remediate": {
     "executor": "SPOTenant",
     "properties": {

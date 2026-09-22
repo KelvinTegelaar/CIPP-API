@@ -17,7 +17,7 @@ function Invoke-CIPPStandardAppDeploy {
             Automatically deploys approved business applications across all company locations and users, ensuring consistent access to essential tools and maintaining standardized software configurations. This streamlines application management and reduces IT deployment overhead.
         ADDEDCOMPONENT
             {"type":"select","multiple":false,"creatable":false,"label":"App Approval Mode","name":"standards.AppDeploy.mode","options":[{"label":"Template","value":"template"},{"label":"Copy Permissions","value":"copy"}]}
-            {"type":"autoComplete","multiple":true,"creatable":false,"label":"Select Applications","name":"standards.AppDeploy.templateIds","api":{"url":"/api/ListAppApprovalTemplates","labelField":"TemplateName","valueField":"TemplateId","queryKey":"StdAppApprovalTemplateList","addedField":{"AppId":"AppId"}},"condition":{"field":"standards.AppDeploy.mode","compareType":"is","compareValue":"template"}}
+            {"type":"autoComplete","multiple":true,"creatable":false,"label":"Select Applications","name":"standards.AppDeploy.templateIds","api":{"url":"/api/ListAppApprovalTemplates","labelField":"TemplateName","valueField":"TemplateId","queryKey":"StdAppApprovalTemplateList","addedField":{"AppId":"AppId"},"templateView":{"title":"App Approval Template"}},"condition":{"field":"standards.AppDeploy.mode","compareType":"is","compareValue":"template"}}
             {"type":"textField","name":"standards.AppDeploy.appids","label":"Application IDs, comma separated","condition":{"field":"standards.AppDeploy.mode","compareType":"isNot","compareValue":"template"}}
         IMPACT
             Low Impact

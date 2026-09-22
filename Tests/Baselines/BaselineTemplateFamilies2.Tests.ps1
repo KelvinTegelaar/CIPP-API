@@ -142,16 +142,14 @@ Describe 'Get-CIPPBaselineGroupTemplateState' {
         Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'Groups-Count'; DataCount = 1 } }
     }
 
-    It 'checks a dynamic distribution template against Exchange, never against Graph groups' {
-        # A DDG lives in Exchange only. Checked against the Groups cache it would read
-        # missing forever and be re-created on every remediation run.
+    It 'does not grade a dynamic distribution template: DDLs are not supported by CIPP' {
+        # A DDG lives in Exchange only and CIPP no longer supports it - EXO canonicalises the
+        # recipient filter (permanent drift) and the executor write throws. The state must return
+        # not-applicable (Current = $null) instead of grading it against any cache.
         Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ RowKey = 'tpl-g'; JSON = '{"displayName":"All Sales","groupType":"dynamicDistribution","membershipRules":"Department -eq ''Sales''"}' } }
-        Mock New-CIPPDbRequest {
-            if ($Type -eq 'ExoDynamicDistributionGroup') { @(@{ Name = 'All Sales'; Identity = 'All Sales'; RecipientFilter = "Department -eq 'Sales'" } | ConvertTo-Cached) }
-            else { @() }
-        }
+        Mock New-CIPPDbRequest { @() }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ groupTemplate = 'tpl-g' } }
-        (Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant).Current.deployed | Should -BeTrue
+        (Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
     }
 
     It 'checks every other group type against the Groups cache' {

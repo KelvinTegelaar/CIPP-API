@@ -105,7 +105,7 @@ Describe 'Update-CIPPSSOPreconsent' {
                 ($body | ConvertFrom-Json).consentType -eq 'AllPrincipals' -and
                 ($body | ConvertFrom-Json).clientId -eq $script:SsoSpId -and
                 ($body | ConvertFrom-Json).resourceId -eq $script:GraphSpId -and
-                ($body | ConvertFrom-Json).scope -eq 'openid profile email'
+                ($body | ConvertFrom-Json).scope -eq 'openid profile email offline_access'
             }
         }
 
@@ -145,7 +145,7 @@ Describe 'Update-CIPPSSOPreconsent' {
                         id          = 'grant-1'
                         resourceId  = $script:GraphSpId
                         consentType = 'AllPrincipals'
-                        scope       = 'email openid profile User.Read'
+                        scope       = 'email offline_access openid profile User.Read'
                     })
             }
 
@@ -172,7 +172,7 @@ Describe 'Update-CIPPSSOPreconsent' {
             Should -Invoke -CommandName New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
                 $type -eq 'PATCH' -and
                 $uri -eq 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants/grant-1' -and
-                ($body | ConvertFrom-Json).scope -eq 'email openid profile User.Read'
+                ($body | ConvertFrom-Json).scope -eq 'email offline_access openid profile User.Read'
             }
         }
 

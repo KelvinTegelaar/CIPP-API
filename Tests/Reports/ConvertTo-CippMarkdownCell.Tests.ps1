@@ -26,6 +26,16 @@ Describe 'ConvertTo-CippMarkdownCell' {
         }
     }
 
+    Context 'Backslash escaping' {
+        It 'doubles a literal backslash so the parser does not treat it as an escape' {
+            ConvertTo-CippMarkdownCell -Value 'CONTOSO\jdoe' | Should -Be 'CONTOSO\\jdoe'
+        }
+
+        It 'keeps a backslash before a pipe from swallowing the pipe escape' {
+            ConvertTo-CippMarkdownCell -Value 'C:\|x' | Should -Be 'C:\\\|x'
+        }
+    }
+
     Context 'Newline handling' {
         It 'collapses a newline that would split the row in two' {
             ConvertTo-CippMarkdownCell -Value "Line1`nLine2" | Should -Be 'Line1 Line2'

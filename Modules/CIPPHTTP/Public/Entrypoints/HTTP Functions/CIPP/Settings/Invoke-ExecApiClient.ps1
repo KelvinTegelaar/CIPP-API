@@ -221,32 +221,20 @@ function Invoke-ExecApiClient {
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds -McpClientIds $McpClientIds
 
                 if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
-                    if ($env:CIPPNG) {
-                        $TenantedLogin = "https://login.microsoftonline.com/$($env:TenantID)"
-                        $McpScope = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation"
-                        $PrmDocument = [ordered]@{
-                            resource                 = '{origin}/api/ExecMcp'
-                            authorization_servers    = @('{origin}')
-                            scopes_supported         = @($McpScope)
-                            bearer_methods_supported = @('header')
-                        } | ConvertTo-Json -Compress
-                        $AsDocument = [ordered]@{
-                            issuer                                = '{origin}'
-                            authorization_endpoint                = "$TenantedLogin/oauth2/v2.0/authorize"
-                            token_endpoint                        = "$TenantedLogin/oauth2/v2.0/token"
-                            jwks_uri                              = "$TenantedLogin/discovery/v2.0/keys"
-                            registration_endpoint                 = '{origin}/api/PublicMcpRegister'
-                            response_types_supported              = @('code')
-                            response_modes_supported              = @('query', 'form_post')
-                            grant_types_supported                 = @('authorization_code', 'refresh_token')
-                            code_challenge_methods_supported      = @('S256')
-                            token_endpoint_auth_methods_supported = @('none', 'client_secret_post', 'client_secret_basic')
-                            scopes_supported                      = @('openid', 'profile', 'offline_access', $McpScope)
-                        } | ConvertTo-Json -Compress
-                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'CRAFT_PRM' = "$PrmDocument"; 'CRAFT_PRM_AS' = "$AsDocument"; 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = $McpScope }
-                    } else {
-                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation" }
-                    }
+                    # Advertise the OIDC + offline_access scopes alongside the resource scope so
+                    # discovery-based MCP clients (ChatGPT, VS Code, Copilot CLI) request a refresh
+                    # token. offline_access is what makes Entra issue one; without it the client
+                    # re-consents every ~hour. Claude appends offline_access itself, but stricter
+                    # clients only request what the metadata advertises, so it has to be in the
+                    # challenge header and the discovery docs, not just one of them. The values come
+                    # from Get-CippMcpScopeAppSettings so the Initialize-CIPPAuth warmup reconcile
+                    # writes byte-identical settings and the two paths never fight each other.
+                    # NOTE: Copilot Studio does NOT read any of this. Entra has no RFC 7591 DCR, so
+                    # Copilot Studio uses Manual OAuth with a maker-typed scope; its refresh token
+                    # depends on offline_access being consented on the MCP client app registration
+                    # (Set-CIPPMCPClientApp / Grant-CippAppGraphConsent), not on these documents.
+                    $McpAppSettings = Get-CippMcpScopeAppSettings -Hostname $env:WEBSITE_HOSTNAME -TenantId $env:TenantID -IsCippNg:([bool]$env:CIPPNG)
+                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting $McpAppSettings
                 } else {
                     $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES', 'CRAFT_PRM', 'CRAFT_PRM_AS')
                 }

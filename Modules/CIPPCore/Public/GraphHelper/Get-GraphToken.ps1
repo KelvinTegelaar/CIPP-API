@@ -18,6 +18,12 @@ function Get-GraphToken {
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
     if (!$tenantid) { $tenantid = $env:TenantID }
 
+    # Certificate-exclusive auth: force the SAM certificate for CIPP's own SAM app tokens (app-only and
+    # delegated). Scoped to the SAM app - explicit $AppID/$AppSecret callers use their own credentials.
+    if ($env:CertificateAuthMode -and -not $AppID -and -not $AppSecret) {
+        $UseCertificate = $true
+    }
+
     $UseSharedTokenCache = ($SkipCache -ne $true) -and ($null -ne ('CIPP.CIPPTokenCache' -as [type]))
 
     # ── Fast path: check shared .NET token cache before any table lookups ──

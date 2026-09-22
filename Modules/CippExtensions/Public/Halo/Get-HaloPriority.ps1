@@ -36,23 +36,15 @@ function Get-HaloPriority {
         }
 
         $Headers = @{ Authorization = "Bearer $($Token.access_token)" }
-        $TicketTypeRecord = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/tickettype/$TicketType" -ContentType 'application/json' -Method GET -Headers $Headers
-
-        # Halo's /tickettype/{id} response uses different field names for the linked SLA across
-        # versions. Check the known variants in priority order, take the first non-zero match.
-        $SlaIdCandidates = @('default_sla', 'default_sla_id', 'sla_id', 'slaid', 'sla')
-        $SlaId = $null
-        foreach ($Field in $SlaIdCandidates) {
-            $Value = $TicketTypeRecord.$Field
-            if ($Value -and ([int]$Value) -gt 0) {
-                $SlaId = [int]$Value
-                break
-            }
-        }
+        $UserAgent = Get-CippUserAgent
+        $SlaId = Get-HaloTicketTypeSlaId -TicketType $TicketType -Configuration $Configuration -Token $Token
 
         if (-not $SlaId) {
+            # New-HaloPSATicket applies the same test and omits priority_id entirely for this
+            # ticket type, so the message describes what will actually happen rather than just
+            # explaining an empty list.
             return @(@{
-                    name       = 'The selected Ticket Type has no SLA attached, so there are no priorities to pick from. Attach an SLA to the ticket type in HaloPSA, or leave this blank.'
+                    name       = 'The selected Ticket Type has no SLA attached, so there are no priorities to pick from. Tickets will be created without a priority and HaloPSA will apply its own. Attach an SLA to the ticket type in HaloPSA to choose one here.'
                     priorityid = -1
                 })
         }
@@ -60,7 +52,7 @@ function Get-HaloPriority {
         # The /SLA/{id} response shape varies between Halo versions: some return full priority
         # objects under .priorities, some only IDs. Resolve both by fetching the canonical
         # priority list and filtering by ID, which works regardless of the SLA payload shape.
-        $Sla = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/SLA/$SlaId" -ContentType 'application/json' -Method GET -Headers $Headers
+        $Sla = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/SLA/$SlaId" -ContentType 'application/json' -Method GET -Headers $Headers
 
         $SlaPriorityIds = @()
         if ($Sla.priorities) {
@@ -69,7 +61,7 @@ function Get-HaloPriority {
             }
         }
 
-        $AllPriorities = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Priority" -ContentType 'application/json' -Method GET -Headers $Headers
+        $AllPriorities = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/Priority" -ContentType 'application/json' -Method GET -Headers $Headers
 
         if ($SlaPriorityIds.Count -gt 0) {
             $AllPriorities | Where-Object { $_.id -in $SlaPriorityIds } | Sort-Object -Property priorityorder, name

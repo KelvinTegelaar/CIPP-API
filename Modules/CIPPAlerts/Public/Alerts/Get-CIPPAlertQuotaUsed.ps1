@@ -26,7 +26,8 @@ function Get-CIPPAlertQuotaUsed {
     }
 
     $OverQuota = $AlertData | ForEach-Object {
-        if (!$_.StorageUsedInBytes -or !$_.prohibitSendReceiveQuotaInBytes) { return }
+        if (!$_.storageUsedInBytes -or !$_.prohibitSendReceiveQuotaInBytes) { return }
+        if ("$($_.isDeleted)" -eq 'True') { return }
         if ($Excluded -contains $_.userPrincipalName.ToLower()) { return }
         # Report returns 'User'/'Shared' or 'UserMailbox'/'SharedMailbox' depending on tenant; normalize before matching
         if ($MailboxTypes.Count -gt 0 -and ($_.recipientType -replace 'Mailbox$') -notin $MailboxTypes) { return }

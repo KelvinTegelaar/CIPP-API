@@ -43,13 +43,13 @@ function Get-CIPPAlertVulnerabilities {
     }
 
     try {
-        $VulnerabilityRequest = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine' -scope 'https://api.securitycenter.microsoft.com/.default'
+        $VulnerabilityGroups = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine' -scope 'https://api.securitycenter.microsoft.com/.default' |
+            Where-Object { $_.cveId } |
+            Select-Object cveId, vulnerabilitySeverityLevel, firstSeenTimestamp, lastSeenTimestamp, cvssScore, exploitabilityLevel, softwareName, softwareVendor, softwareVersion, recommendedSecurityUpdate, recommendedSecurityUpdateId, recommendedSecurityUpdateUrl, deviceName, deviceId, osPlatform, osVersion, osArchitecture |
+            Group-Object cveId
 
-        if ($VulnerabilityRequest) {
+        if ($VulnerabilityGroups) {
             $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
-
-            # Group by CVE ID and create objects for each vulnerability
-            $VulnerabilityGroups = $VulnerabilityRequest | Where-Object { $_.cveId } | Group-Object cveId
 
             foreach ($Group in $VulnerabilityGroups) {
                 $FirstVuln = $Group.Group | Sort-Object firstSeenTimestamp | Select-Object -First 1

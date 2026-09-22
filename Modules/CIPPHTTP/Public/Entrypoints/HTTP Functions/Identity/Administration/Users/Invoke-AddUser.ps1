@@ -26,6 +26,21 @@ function Invoke-AddUser {
             })
     }
 
+    # User creation is single-tenant only. Without this guard an 'AllTenants' (or otherwise
+    # unresolvable) tenantFilter fails Get-AuthorisedRequest, the Graph write helpers return
+    # $null non-terminating, and the endpoint reports success while creating nothing.
+    if ($UserObj.tenantFilter -eq 'AllTenants' -or -not (Get-Tenants -TenantFilter $UserObj.tenantFilter)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{
+                    'Results' = @{
+                        resultText = 'User creation is single-tenant only. Select a specific tenant before creating a user.'
+                        state      = 'error'
+                    }
+                }
+            })
+    }
+
     if ($UserObj.Scheduled.Enabled) {
         try {
             $Username = $UserObj.username ?? $UserObj.mailNickname
@@ -39,6 +54,7 @@ function Invoke-AddUser {
                 Parameters    = [pscustomobject]@{ UserObj = $UserObj }
                 ScheduledTime = $UserObj.Scheduled.date
                 Reference     = $UserObj.reference ?? $null
+                PsaTicketId   = $UserObj.PsaTicketId ?? $null
                 PostExecution = @{
                     Webhook = [bool]$Request.Body.PostExecution.Webhook
                     Email   = [bool]$Request.Body.PostExecution.Email

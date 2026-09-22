@@ -4,6 +4,22 @@ function Push-ExecScheduledCommand {
         Entrypoint
     #>
     param($Item)
+
+    function Write-CippResultLog {
+        param([string]$Prefix, $Value, [int]$MaxItems = 25, [int]$MaxChars = 4096)
+        $Items = @($Value)
+        $ToLog = $Value
+        $Suffix = ''
+        if ($Items.Count -gt $MaxItems) {
+            $ToLog = $Items[0..($MaxItems - 1)]
+            $Suffix = " ...[$($Items.Count) items total, first $MaxItems logged]"
+        }
+        try { $Json = $ToLog | ConvertTo-Json -Depth 10 -Compress } catch { $Json = "$ToLog" }
+        if (-not $Json) { $Json = '' }
+        if ($Json.Length -gt $MaxChars) { $Json = $Json.Substring(0, $MaxChars) + '...[truncated]' }
+        Write-Information "${Prefix}: $Json$Suffix"
+    }
+
     $item = $Item | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Write-Information "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
 
@@ -227,6 +243,24 @@ function Push-ExecScheduledCommand {
         Write-Information "Failed to remove parameters: $($_.Exception.Message)"
     }
 
+    # Stored parameters are user input: the command's tenant parameter is forced to the authorized
+    # task tenant so a stored value can never target another tenant. When a command declares more
+    # than one tenant-identifying name, only the most specific one is injected and the others are
+    # dropped so the command resolves them itself.
+    $DeclaredTenantParams = [array](@('TenantFilter', 'Tenant', 'TenantId') | Where-Object { $Function.Parameters.ContainsKey($_) })
+    foreach ($TenantParamName in $DeclaredTenantParams) {
+        $StoredTenantValue = $commandParameters[$TenantParamName]
+        $StoredTenantString = [string]($StoredTenantValue.value ?? $StoredTenantValue)
+        if (![string]::IsNullOrWhiteSpace($StoredTenantString) -and $StoredTenantString -ne [string]$Tenant) {
+            Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Task $($task.Name): stored parameter -$TenantParamName value '$StoredTenantString' does not match the authorized tenant '$Tenant' and was overridden." -sev Error
+        }
+        if ($TenantParamName -eq $DeclaredTenantParams[0]) {
+            $commandParameters[$TenantParamName] = $Tenant
+        } else {
+            $commandParameters.Remove($TenantParamName)
+        }
+    }
+
     if ($IsTriggerTask -eq $true -and $Trigger.ExecutePerResource -ne $true) {
         # iterate through paramters looking for %variables% and replace them with matched data from the delta query
         # examples would be %id% to be the id of the result
@@ -275,7 +309,7 @@ function Push-ExecScheduledCommand {
             try {
                 Write-Information "Executing command $($Item.Command) for individual matched data item with parameters: $($individualCommandParameters | ConvertTo-Json -Depth 10)"
                 & $Item.Command @individualCommandParameters
-                Write-Information "Results for individual execution: $($results | ConvertTo-Json -Depth 10)"
+                Write-CippResultLog -Prefix 'Results for individual execution' -Value $results
             } catch {
                 Write-Information "Failed to execute command for individual matched data item: $($_.Exception.Message)"
             }
@@ -310,7 +344,7 @@ function Push-ExecScheduledCommand {
             $results = $results.Results
         }
 
-        Write-Information "Results: $($results | ConvertTo-Json -Depth 10)"
+        Write-CippResultLog -Prefix 'Results' -Value $results
         if ($item.command -like 'Get-CIPPAlert*') {
             Write-Information 'This is an alert task. Processing results as alerts.'
             $results = @($results)
@@ -332,7 +366,7 @@ function Push-ExecScheduledCommand {
                     @{ Results = $Message }
                 }
             }
-            Write-Information "Results after processing: $($results | ConvertTo-Json -Depth 10)"
+            Write-CippResultLog -Prefix 'Results after processing' -Value $results
             Write-Information 'Moving onto storing results'
             if ($results -is [string]) {
                 $StoredResults = $results
@@ -341,7 +375,7 @@ function Push-ExecScheduledCommand {
                 $StoredResults = $results | ConvertTo-Json -Compress -Depth 20 | Out-String
             }
         }
-        Write-Information "Results: $($results | ConvertTo-Json -Depth 10)"
+        Write-CippResultLog -Prefix 'Results' -Value $results
         if ($StoredResults.Length -gt 64000 -or $IsMultiTenantTask) {
             $TaskResultsTable = Get-CippTable -tablename 'ScheduledTaskResults'
             $TaskResults = @{
@@ -404,7 +438,18 @@ function Push-ExecScheduledCommand {
         if ($TaskAttachments) {
             $AlertParams.Attachments = $TaskAttachments
         }
-        Send-CIPPScheduledTaskAlert @AlertParams
+        $PostExecutionResults = @(Send-CIPPScheduledTaskAlert @AlertParams)
+        # Keep the delivery outcomes with the task, so a failed webhook, email or PSA note shows on the task page.
+        try {
+            $TaskTable = Get-CippTable -tablename 'ScheduledTasks'
+            $null = Update-AzDataTableEntity -Force @TaskTable -Entity @{
+                PartitionKey         = $task.PartitionKey
+                RowKey               = $task.RowKey
+                PostExecutionResults = [string](ConvertTo-Json -Compress -Depth 5 -InputObject $PostExecutionResults)
+            }
+        } catch {
+            Write-Information "Could not store the post-execution results: $($_.Exception.Message)"
+        }
     }
 
     try {

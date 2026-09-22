@@ -10,8 +10,8 @@ function Push-ExecMdoAlertsListAllTenants {
     $Table = Get-CIPPTable -TableName 'cachealertsandincidents'
 
     try {
-        # Get MDO alerts using the specific endpoint and filter
-        $Alerts = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/security/alerts_v2?`$filter=serviceSource eq 'microsoftDefenderForOffice365'" -tenantid $domainName
+        # Get MDO and MDE alerts using the specific endpoint and filter
+        $Alerts = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/security/alerts_v2?`$filter=serviceSource eq 'microsoftDefenderForOffice365' or serviceSource eq 'microsoftDefenderForEndpoint'" -tenantid $domainName
 
         foreach ($Alert in $Alerts) {
             $GUID = (New-Guid).Guid

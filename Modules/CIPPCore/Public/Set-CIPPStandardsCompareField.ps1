@@ -123,10 +123,12 @@ function Set-CIPPStandardsCompareField {
             if ($ExistingHash.ContainsKey($Field.FieldName)) {
                 $Entity = $ExistingHash[$Field.FieldName]
                 $Entity.Value = $NormalizedValue
-                $Entity | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$script:CippStandardInfoStorage.Value.StandardTemplateId) -Force
-                $Entity | Add-Member -NotePropertyName LicenseAvailable -NotePropertyValue ([bool]$Field.LicenseAvailable) -Force
-                $Entity | Add-Member -NotePropertyName CurrentValue -NotePropertyValue ([string]$Field.CurrentValue) -Force
-                $Entity | Add-Member -NotePropertyName ExpectedValue -NotePropertyValue ([string]$Field.ExpectedValue) -Force
+                $Entity | Add-Member -NotePropertyMembers ([ordered]@{
+                        TemplateId       = ([string]$script:CippStandardInfoStorage.Value.StandardTemplateId)
+                        LicenseAvailable = ([bool]$Field.LicenseAvailable)
+                        CurrentValue     = ([string]$Field.CurrentValue)
+                        ExpectedValue    = ([string]$Field.ExpectedValue)
+                    }) -Force
             } else {
                 $Entity = [PSCustomObject]@{
                     PartitionKey     = [string]$TenantName.defaultDomainName

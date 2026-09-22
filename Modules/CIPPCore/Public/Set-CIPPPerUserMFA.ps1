@@ -36,7 +36,7 @@ function Set-CIPPPerUserMFA {
     try {
         $int = 0
         $Body = @{
-            perUserMFAstate = $State
+            perUserMfaState = $State
         }
         $Requests = foreach ($id in $userId) {
             @{

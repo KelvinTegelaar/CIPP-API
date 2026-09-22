@@ -302,6 +302,26 @@
       "required": true,
       "default": 7
     },
+    "BulkMovesEnabled": {
+      "type": "select",
+      "multiple": false,
+      "label": "Bulk moves enabled (deliver bulk mail below the threshold to the Promotions folder - Preview)",
+      "options": [
+        {
+          "label": "Do not configure",
+          "value": ""
+        },
+        {
+          "label": "On",
+          "value": "On"
+        },
+        {
+          "label": "Off",
+          "value": "Off"
+        }
+      ],
+      "default": ""
+    },
     "IncreaseScoreWithImageLinks": {
       "type": "switch",
       "label": "Increase score with image links",

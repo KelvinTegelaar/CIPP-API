@@ -44,6 +44,10 @@
   "read": {
     "cacheType": "AuthenticationMethodsPolicy"
   },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "policyMigrationState": "%migrationState%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

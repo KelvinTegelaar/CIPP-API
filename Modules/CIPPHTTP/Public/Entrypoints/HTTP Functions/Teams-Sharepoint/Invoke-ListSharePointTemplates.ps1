@@ -40,8 +40,10 @@ function Invoke-ListSharePointTemplates {
                 # Surface scalar counts so the list can show/sort them without inspecting the nested arrays.
                 $SiteTemplates = @($TemplateData.siteTemplates | Where-Object { $_ })
                 $LibraryCount = ($SiteTemplates | ForEach-Object { @($_.libraries | Where-Object { $_ }).Count } | Measure-Object -Sum).Sum
-                $TemplateObject | Add-Member -NotePropertyName 'SiteTemplateCount' -NotePropertyValue ([int]$SiteTemplates.Count) -Force
-                $TemplateObject | Add-Member -NotePropertyName 'LibraryCount' -NotePropertyValue ([int]$LibraryCount) -Force
+                $TemplateObject | Add-Member -NotePropertyMembers ([ordered]@{
+                        SiteTemplateCount = ([int]$SiteTemplates.Count)
+                        LibraryCount      = ([int]$LibraryCount)
+                    }) -Force
 
                 return $TemplateObject
             } catch {

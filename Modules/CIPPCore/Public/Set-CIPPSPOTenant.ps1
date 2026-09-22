@@ -68,10 +68,19 @@ function Set-CIPPSPOTenant {
         [string]$SharepointPrefix,
         [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Properties')]
         [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Method')]
-        [string]$SharepointDomain
+        [string]$SharepointDomain,
+        # SharePoint app-only auth requires a certificate (secret app-only is rejected by SPO). When
+        # set, authenticate app-only with the SAM certificate instead of the delegated context.
+        [Parameter(ParameterSetName = 'Properties')]
+        [Parameter(ParameterSetName = 'Method')]
+        [switch]$UseCertificate
     )
 
     process {
+        # Threaded onto the ProcessQuery call below; empty = unchanged delegated behaviour.
+        $AuthSplat = @{}
+        if ($UseCertificate) { $AuthSplat['AsApp'] = $true; $AuthSplat['UseCertificate'] = $true }
+
         if (!$SharepointPrefix) {
             # get sharepoint admin site
             $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
@@ -135,7 +144,7 @@ function Set-CIPPSPOTenant {
         }
 
         if ($PSCmdlet.ShouldProcess($Description, 'Set Tenant Properties')) {
-            New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
+            New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders @AuthSplat
 
             # Invalidate cached tenant data so subsequent reads reflect the change
             $Table = Get-CIPPTable -tablename 'cachespotenant'

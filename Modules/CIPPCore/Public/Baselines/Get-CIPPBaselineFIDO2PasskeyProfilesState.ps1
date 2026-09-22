@@ -31,6 +31,9 @@ function Get-CIPPBaselineFIDO2PasskeyProfilesState {
     $EnforcementType = "$($V.EnforcementType.value ?? $V.EnforcementType)"
     if ([string]::IsNullOrWhiteSpace($EnforcementType)) { $EnforcementType = 'allow' }
     $AAGUIDs = @("$($V.AAGUIDs)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object)
+    # Supplying AAGUIDs implies enforcement - the list only takes effect while isEnforced = $true, so
+    # the expected state must enforce whenever AAGUIDs are present to match what the executor writes.
+    if ($AAGUIDs.Count -gt 0) { $EnforceRestrictions = $true }
     if ($EnforceRestrictions -and $AAGUIDs.Count -eq 0) { return @{ Current = $null } }
 
     $DefaultProfile = @($Config.passkeyProfiles) | Where-Object { "$($_.id)" -eq "$($Config.defaultPasskeyProfile)" } | Select-Object -First 1

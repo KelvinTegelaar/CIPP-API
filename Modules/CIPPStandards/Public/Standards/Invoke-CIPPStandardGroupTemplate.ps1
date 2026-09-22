@@ -47,7 +47,35 @@ function Invoke-CIPPStandardGroupTemplate {
 
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'GroupTemplate' and (RowKey eq '$($Settings.TemplateList.value -join "' or RowKey eq '")')"
-    $GroupTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+    # Resolve %variables% (e.g. %tenantname%) in the template body before any comparison. Groups are
+    # created through New-GraphPostRequest, which substitutes these tokens, so the tenant's actual
+    # group ends up named with the resolved value. Comparing the raw token-bearing name against it
+    # never matched, which recreated the group on every run and left the report permanently
+    # non-compliant. Replacement runs against the serialized JSON (escaped for that context), exactly
+    # as Push-CIPPStandard does for the settings.
+    $TemplateRows = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+    $GroupTemplates = foreach ($TemplateJSON in $TemplateRows.JSON) {
+        if ($TemplateJSON -match '%') {
+            $TemplateJSON = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $TemplateJSON -EscapeForJson
+        }
+        $TemplateJSON | ConvertFrom-Json
+    }
+
+    # Referenced ids may no longer exist (deleted, or recreated by the library sync); report that instead of passing.
+    $RequestedIds = @(@($Settings.TemplateList.value) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $ResolvedIds = @(@($TemplateRows.RowKey) + @($GroupTemplates.GUID) | Where-Object { $_ } | Select-Object -Unique)
+    $MissingIds = @($RequestedIds | Where-Object { $_ -notin $ResolvedIds })
+
+    # Dynamic Distribution Groups are no longer supported by CIPP: EXO canonicalises RecipientFilter
+    # so it never matches the template's raw filter (permanent drift), and Set-DynamicDistributionGroup
+    # -RecipientFilter throws. Drop them from normal processing but keep the skip visible - a Warn in the
+    # logs and a matching note on both sides of the report (identical, so it shows without reading as drift).
+    $SkippedDynamicGroups = @($GroupTemplates | Where-Object { "$($_.groupType)" -eq 'dynamicDistribution' })
+    $GroupTemplates = @($GroupTemplates | Where-Object { "$($_.groupType)" -ne 'dynamicDistribution' })
+    if ($SkippedDynamicGroups.Count -gt 0) {
+        $SkippedNames = @($SkippedDynamicGroups.displayName) -join ', '
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Group Template: skipped $($SkippedDynamicGroups.Count) Dynamic Distribution Group template(s) ($SkippedNames) - Dynamic Distribution Groups are not supported by CIPP." -sev 'Warn'
+    }
 
     if ('dynamicDistribution' -in $GroupTemplates.groupType) {
         try {
@@ -57,6 +85,10 @@ function Invoke-CIPPStandardGroupTemplate {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Group Template: could not read the tenant's existing dynamic distribution groups, skipping this run to avoid creating duplicate groups. Error: $ErrorMessage" -sev 'Error'
             return
         }
+    }
+
+    if ($MissingIds.Count -gt 0) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Group Template: $($MissingIds.Count) of $($RequestedIds.Count) selected group templates no longer exist (ids: $($MissingIds -join ', ')). Re-select them in the standards template." -sev 'Error'
     }
 
     if ($Settings.remediate -eq $true) {
@@ -127,8 +159,10 @@ function Invoke-CIPPStandardGroupTemplate {
                         # Only update if the template specifies this should be a dynamic group
                         if ($NormalizedGroupType -eq 'Dynamic' -and $groupobj.membershipRules) {
                             if ($CheckExisting.membershipRule -ne $groupobj.membershipRules) {
-                                $PatchBody | Add-Member -NotePropertyName 'membershipRule' -NotePropertyValue $groupobj.membershipRules
-                                $PatchBody | Add-Member -NotePropertyName 'membershipRuleProcessingState' -NotePropertyValue 'On'
+                                $PatchBody | Add-Member -NotePropertyMembers ([ordered]@{
+                                        membershipRule                = $groupobj.membershipRules
+                                        membershipRuleProcessingState = 'On'
+                                    })
                                 $ChangesNeeded.Add("membershipRule: '$($CheckExisting.membershipRule)' → '$($groupobj.membershipRules)'")
                             }
                         }
@@ -257,10 +291,19 @@ function Invoke-CIPPStandardGroupTemplate {
         }
 
         $CurrentValue = @{
-            MissingGroups = $MissingGroups ? @($MissingGroups) : @()
+            MissingGroups    = $MissingGroups ? @($MissingGroups) : @()
+            MissingTemplates = @($MissingIds)
         }
         $ExpectedValue = @{
-            MissingGroups = @()
+            MissingGroups    = @()
+            MissingTemplates = @()
+        }
+
+        if ($SkippedDynamicGroups.Count -gt 0) {
+            # Identical on both sides: visible to the user as "skipped / not supported", never graded as drift.
+            $SkippedNote = "Dynamic Distribution Groups are not supported by CIPP and were skipped: $(@($SkippedDynamicGroups.displayName) -join ', ')"
+            $CurrentValue.SkippedDynamicDistributionGroups = $SkippedNote
+            $ExpectedValue.SkippedDynamicDistributionGroups = $SkippedNote
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.GroupTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant

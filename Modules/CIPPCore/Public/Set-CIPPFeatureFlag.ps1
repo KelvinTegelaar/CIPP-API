@@ -8,6 +8,9 @@ function Set-CIPPFeatureFlag {
         The ID of the feature flag to update
     .PARAMETER Enabled
         The new enabled state for the feature flag (true/false)
+    .PARAMETER Force
+        Set the flag even when AllowUserToggle is false. For system-driven flags that are
+        managed by a specific flow (e.g. the Setup Wizard) rather than the user settings page.
     .FUNCTIONALITY
         Internal
     #>
@@ -17,7 +20,9 @@ function Set-CIPPFeatureFlag {
         [string]$Id,
 
         [Parameter(Mandatory = $true)]
-        [bool]$Enabled
+        [bool]$Enabled,
+
+        [switch]$Force
     )
 
     try {
@@ -32,8 +37,8 @@ function Set-CIPPFeatureFlag {
             return $false
         }
 
-        # Check if user toggle is allowed
-        if (-not $FeatureFlag.AllowUserToggle) {
+        # -Force bypasses the user-toggle guard for system-managed flags (e.g. set by the Setup Wizard).
+        if (-not $FeatureFlag.AllowUserToggle -and -not $Force) {
             Write-Warning "Feature flag '$Id' does not allow user toggling"
             return $false
         }

@@ -509,10 +509,12 @@ function Invoke-EditGroup {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)" -type PATCH -tenantid $TenantId -body (@{'visibility' = $VisibilityValue } | ConvertTo-Json)
 
             $Results.Add("Set group visibility to $VisibilityValue for $($GroupName).")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Set group visibility to $VisibilityValue for $($GroupName)." -Sev 'Info'
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Warning "Error in visibility: $($ErrorMessage.NormalizedError) - $($_.InvocationInfo.ScriptLineNumber)"
             $Results.Add("Failed to set group visibility for $($GroupName): $($ErrorMessage.NormalizedError)")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to set group visibility for $($GroupName). Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 

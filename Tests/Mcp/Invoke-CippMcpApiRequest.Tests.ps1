@@ -9,18 +9,33 @@
 BeforeAll {
     $BackendRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $McpRoot = Join-Path $BackendRoot 'Modules/CIPPCore/Public/MCP'
-    foreach ($Leaf in 'ConvertTo-CippMcpHashtable.ps1', 'Invoke-CippMcpApiRequest.ps1') {
+    foreach ($Leaf in 'ConvertTo-CippMcpHashtable.ps1', 'ConvertTo-CippMcpArgumentShape.ps1', 'Invoke-CippMcpApiRequest.ps1') {
         . (Join-Path $McpRoot $Leaf)
     }
 
     # The router is stubbed: these tests are about how a response is shaped for the model,
-    # not about routing, RBAC or the endpoint behind it.
-    function New-CippCoreRequest { return $script:StubResponse }
+    # not about routing, RBAC or the endpoint behind it. The request it receives is captured so
+    # the argument-shaping tests can assert what the endpoint would have seen.
+    function New-CippCoreRequest {
+        param($Request, $TriggerMetadata)
+        $script:CapturedRequest = $Request
+        return $script:StubResponse
+    }
 
     function Invoke-ToolResult {
         param($Body, $StatusCode = 200)
         $script:StubResponse = [pscustomobject]@{ Body = $Body; StatusCode = $StatusCode }
         return Invoke-CippMcpApiRequest -Request ([pscustomobject]@{ Headers = @{} }) -ToolName 'ListThings' -Arguments @{}
+    }
+
+    # Dispatches with a schema and returns the request the router would have received, so a test
+    # can inspect the coerced Query/Body the endpoint sees.
+    function Get-DispatchedRequest {
+        param($Arguments, $InputSchema, $Method = 'GET')
+        $script:StubResponse = [pscustomobject]@{ Body = @(); StatusCode = 200 }
+        $script:CapturedRequest = $null
+        $null = Invoke-CippMcpApiRequest -Request ([pscustomobject]@{ Headers = @{} }) -ToolName 'ListThings' -Arguments $Arguments -Method $Method -InputSchema $InputSchema
+        return $script:CapturedRequest
     }
 }
 
@@ -136,5 +151,68 @@ Describe 'MCP tool result normalisation' {
             (Invoke-ToolResult -Body @{ Results = 'x' } -StatusCode 500).isError | Should -BeTrue
             (Invoke-ToolResult -Body @{ Results = 'x' } -StatusCode 200).isError | Should -BeFalse
         }
+    }
+}
+
+Describe 'MCP argument shaping (LabelValue coercion)' {
+    # An autocomplete/select field is read by the endpoint as $Field.value, so the spec documents
+    # it as a LabelValue object. A caller that sends a bare string used to reach the endpoint
+    # unchanged, .value resolved to $null, and a field that scopes the query silently dropped the
+    # scope - an unscoped 200 instead of an error. The dispatch path now reshapes it to { value }.
+    BeforeAll {
+        $script:UserSchema = @{
+            type       = 'object'
+            properties = @{
+                user = @{ type = 'object'; properties = @{ value = @{ type = 'string' }; label = @{ type = 'string' } }; required = @('value') }
+            }
+        }
+        $script:UsersArraySchema = @{
+            type       = 'object'
+            properties = @{
+                users = @{ type = 'array'; items = @{ type = 'object'; properties = @{ value = @{ type = 'string' } }; required = @('value') } }
+            }
+        }
+    }
+
+    It 'wraps a bare string for a LabelValue field into { value }, on a POST body' {
+        $Request = Get-DispatchedRequest -Arguments @{ user = 'user@contoso.com' } -InputSchema $script:UserSchema -Method 'POST'
+        $Request.Body.user | Should -BeOfType [hashtable]
+        $Request.Body.user.value | Should -Be 'user@contoso.com'
+    }
+
+    It 'wraps a bare string for a LabelValue field into { value }, on a GET query' {
+        $Request = Get-DispatchedRequest -Arguments @{ user = 'user@contoso.com' } -InputSchema $script:UserSchema -Method 'GET'
+        $Request.Query.user.value | Should -Be 'user@contoso.com'
+    }
+
+    It 'leaves an already-correct { value } object untouched' {
+        $Request = Get-DispatchedRequest -Arguments @{ user = @{ value = 'user@contoso.com'; label = 'User' } } -InputSchema $script:UserSchema -Method 'POST'
+        $Request.Body.user.value | Should -Be 'user@contoso.com'
+        $Request.Body.user.label | Should -Be 'User'
+    }
+
+    It 'wraps each bare string in an array-of-LabelValue field' {
+        $Request = Get-DispatchedRequest -Arguments @{ users = @('a@contoso.com', 'b@contoso.com') } -InputSchema $script:UsersArraySchema -Method 'POST'
+        @($Request.Body.users).Count | Should -Be 2
+        $Request.Body.users[0].value | Should -Be 'a@contoso.com'
+        $Request.Body.users[1].value | Should -Be 'b@contoso.com'
+    }
+
+    It 'wraps a single bare string into a one-element array for an array-of-LabelValue field' {
+        $Request = Get-DispatchedRequest -Arguments @{ users = 'only@contoso.com' } -InputSchema $script:UsersArraySchema -Method 'POST'
+        @($Request.Body.users).Count | Should -Be 1
+        $Request.Body.users[0].value | Should -Be 'only@contoso.com'
+    }
+
+    It 'leaves a field the schema does not describe exactly as sent' {
+        $Request = Get-DispatchedRequest -Arguments @{ tenantFilter = 'contoso.com' } -InputSchema $script:UserSchema -Method 'POST'
+        $Request.Body.tenantFilter | Should -Be 'contoso.com'
+    }
+
+    It 'passes a bare string through when no schema is supplied (back-compat)' {
+        $script:StubResponse = [pscustomobject]@{ Body = @(); StatusCode = 200 }
+        $script:CapturedRequest = $null
+        $null = Invoke-CippMcpApiRequest -Request ([pscustomobject]@{ Headers = @{} }) -ToolName 'ListThings' -Arguments @{ user = 'user@contoso.com' } -Method 'POST'
+        $script:CapturedRequest.Body.user | Should -Be 'user@contoso.com'
     }
 }

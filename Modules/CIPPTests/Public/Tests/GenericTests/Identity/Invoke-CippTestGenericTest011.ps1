@@ -43,8 +43,10 @@ function Invoke-CippTestGenericTest011 {
             $AllIntuneTemplates = @($RawIntuneTemplates | ForEach-Object {
                 $JSONData = $_.JSON | ConvertFrom-Json -Depth 10
                 $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 10
-                $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
-                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
+                $data | Add-Member -NotePropertyMembers ([ordered]@{
+                        displayName = $JSONData.Displayname
+                        GUID        = $_.RowKey
+                    }) -Force
                 $data
             })
         } catch { $AllIntuneTemplates = @() }

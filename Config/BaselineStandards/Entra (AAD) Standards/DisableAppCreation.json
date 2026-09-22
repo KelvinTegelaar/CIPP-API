@@ -38,6 +38,10 @@
     "cacheType": "AuthorizationPolicy",
     "object": "defaultUserRolePermissions"
   },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "defaultUserRolePermissions.allowedToCreateApps": "%allowAppCreation%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

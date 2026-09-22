@@ -53,6 +53,9 @@ function Set-CIPPDBCacheOneDriveRootPermissions {
         $LicenseCheck = Test-CIPPStandardLicense -StandardName 'OneDriveRootPermissionsCache' -TenantFilter $TenantFilter -Preset SharePoint -SkipLog
         if ($LicenseCheck -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have SharePoint/OneDrive license, skipping OneDrive root permissions cache' -sev Debug
+            # A license skip is still a completed collection: record the authoritative empty set
+            # so collect-on-miss does not re-run this collector forever on unlicensed tenants.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveRootPermissions' -Data @() -AddCount -ClearOnEmpty
             return
         }
 

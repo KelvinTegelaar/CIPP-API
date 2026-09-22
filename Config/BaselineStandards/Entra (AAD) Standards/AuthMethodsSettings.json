@@ -81,6 +81,11 @@
   "read": {
     "cacheType": "AuthenticationMethodsPolicy"
   },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "reportSuspiciousActivitySettings.state": "%reportSuspiciousActivity%",
+    "systemCredentialPreferences.state": "%systemCredential%"
+  },
   "remediate": {
     "executor": "GraphRequest",
     "requests": [

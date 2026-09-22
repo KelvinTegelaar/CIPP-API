@@ -18,7 +18,13 @@ function Get-CIPPLapsPassword {
                 state      = 'success'
             }
         }
-        if ($GraphRequest) { return $GraphRequest } else { return "No LAPS password found for $device" }
+        if ($GraphRequest) {
+            Write-LogMessage -headers $Headers -API $APIName -message "Retrieved LAPS password for $device" -Sev 'Info' -tenant $TenantFilter
+            return $GraphRequest
+        } else {
+            Write-LogMessage -headers $Headers -API $APIName -message "No LAPS password found for $device" -Sev 'Info' -tenant $TenantFilter
+            return "No LAPS password found for $device"
+        }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -message "Could not retrieve LAPS password for $($device). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage

@@ -12,6 +12,21 @@ function Invoke-AddUserBulk {
     # Interact with body parameters or the body of the request.
     $TenantFilter = $Request.Body.tenantFilter
 
+    # Bulk user creation is single-tenant only. Without this guard an 'AllTenants' (or otherwise
+    # unresolvable) tenantFilter makes New-GraphBulkRequest return $null non-terminating, so the
+    # results loop runs zero times and the endpoint reports success while creating nothing.
+    if (-not $TenantFilter -or $TenantFilter -eq 'AllTenants' -or -not (Get-Tenants -TenantFilter $TenantFilter)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{
+                    Results = @{
+                        resultText = 'Bulk user creation is single-tenant only. Select a specific tenant before creating users.'
+                        state      = 'error'
+                    }
+                }
+            })
+    }
+
     $BulkUsers = $Request.Body.BulkUser
     $AssignedLicenses = $Request.Body.licenses
     $UsageLocation = $Request.Body.usageLocation
@@ -128,6 +143,7 @@ function Invoke-AddUserBulk {
                         $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
                         Set-CIPPUserLicense -UserId $BulkResult.id -AddLicenses $LicenseSkus -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
                     }
+                    Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Message.resultText -Sev 'Info'
                     $Results.Add(@{
                             resultText = $Message.resultText
                             state      = 'success'

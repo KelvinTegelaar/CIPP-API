@@ -23,8 +23,10 @@ function Invoke-CIPPBaselineUserSubmissions {
     $Email = "$($Current.resolvedEmail)"
 
     if ($State -eq 'enable' -and -not [string]::IsNullOrWhiteSpace($Email)) {
+        # 'Mailbox' routes reports to the reporting mailbox only (third-party phishing
+        # services); anything else keeps the original Microsoft-as-well posture.
         $PolicyParams = @{
-            EnableReportToMicrosoft = $true
+            EnableReportToMicrosoft = "$($Current.reportDestination)" -ne 'Mailbox'
             ReportJunkToCustomizedAddress = $true; ReportJunkAddresses = $Email
             ReportNotJunkToCustomizedAddress = $true; ReportNotJunkAddresses = $Email
             ReportPhishToCustomizedAddress = $true; ReportPhishAddresses = $Email

@@ -35,7 +35,11 @@
     "days": {
       "type": "number",
       "label": "Days until expiration (Default 60)",
-      "default": 60
+      "default": 60,
+      "validators": {
+        "min": { "value": 30, "message": "SharePoint accepts 30 to 730 days - lower values are silently ignored" },
+        "max": { "value": 730, "message": "SharePoint accepts 30 to 730 days" }
+      }
     }
   },
   "expected": {
@@ -45,6 +49,7 @@
   "read": {
     "cacheType": "SPOTenant"
   },
+  "writeTarget": "spoTenant",
   "remediate": {
     "executor": "SPOTenant",
     "properties": {

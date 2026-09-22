@@ -182,6 +182,8 @@ function Set-CIPPDefenderAVPolicy {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyRequest.id)')/assign" -tenantid $TenantFilter -type POST -body $AssignBody
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Assigned AV policy to $($PolicySettings.AssignTo)" -Sev 'Info'
         }
-        "$($TenantFilter): Successfully set Default AV Policy settings"
+        $Result = "$($TenantFilter): Successfully set Default AV Policy settings"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+        $Result
     }
 }

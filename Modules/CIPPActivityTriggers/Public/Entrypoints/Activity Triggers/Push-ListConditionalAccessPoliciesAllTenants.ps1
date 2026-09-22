@@ -103,7 +103,8 @@
         $AllServicePrincipals = ($BulkResults | Where-Object { $_.id -eq 'servicePrincipals' }).body.value
 
         foreach ($cap in $ConditionalAccessPolicyOutput) {
-            $GUID = (New-Guid).Guid
+            # Deterministic key so overlapping fan-outs upsert instead of appending duplicates.
+            $RowKey = ('{0}-{1}' -f $domainName, $cap.id) -replace '[\\/#?]', '_' -replace '[\x00-\x1F\x7F]', ''
             $PolicyData = @{
                 id                                          = $cap.id
                 displayName                                 = $cap.displayName
@@ -136,7 +137,7 @@
 
             $Entity = @{
                 Policy       = [string]($PolicyData | ConvertTo-Json -Depth 10 -Compress)
-                RowKey       = [string]$GUID
+                RowKey       = [string]$RowKey
                 PartitionKey = 'CAPolicy'
                 Tenant       = [string]$domainName
             }
@@ -144,7 +145,6 @@
         }
 
     } catch {
-        $GUID = (New-Guid).Guid
         $ErrorPolicy = ConvertTo-Json -InputObject @{
             Tenant           = $domainName
             displayName      = "Could not connect to Tenant: $($_.Exception.Message)"
@@ -156,7 +156,7 @@
         } -Compress
         $Entity = @{
             Policy       = [string]$ErrorPolicy
-            RowKey       = [string]$GUID
+            RowKey       = [string]('{0}-Error' -f $domainName) -replace '[\\/#?]', '_'
             PartitionKey = 'CAPolicy'
             Tenant       = [string]$domainName
         }

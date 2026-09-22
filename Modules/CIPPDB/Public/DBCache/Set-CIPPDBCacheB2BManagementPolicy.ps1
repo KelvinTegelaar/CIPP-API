@@ -34,10 +34,12 @@ function Set-CIPPDBCacheB2BManagementPolicy {
             $DomainPolicy = $ParsedDefinition.B2BManagementPolicy.InvitationsAllowedAndBlockedDomainsPolicy
             $AllowedDomains = @($DomainPolicy.AllowedDomains)
             $BlockedDomains = @($DomainPolicy.BlockedDomains)
-            $Policy | Add-Member -NotePropertyName 'parsedDefinition' -NotePropertyValue $ParsedDefinition -Force
-            $Policy | Add-Member -NotePropertyName 'allowedDomains' -NotePropertyValue $AllowedDomains -Force
-            $Policy | Add-Member -NotePropertyName 'blockedDomains' -NotePropertyValue $BlockedDomains -Force
-            $Policy | Add-Member -NotePropertyName 'hasRestrictions' -NotePropertyValue (($AllowedDomains.Count -gt 0) -or ($BlockedDomains.Count -gt 0)) -Force
+            $Policy | Add-Member -NotePropertyMembers ([ordered]@{
+                    parsedDefinition = $ParsedDefinition
+                    allowedDomains   = $AllowedDomains
+                    blockedDomains   = $BlockedDomains
+                    hasRestrictions  = (($AllowedDomains.Count -gt 0) -or ($BlockedDomains.Count -gt 0))
+                }) -Force
             $Policy
         }
 
@@ -45,7 +47,12 @@ function Set-CIPPDBCacheB2BManagementPolicy {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'B2BManagementPolicy' -Data @($B2BManagementPolicy) -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached B2B management policy successfully' -sev Debug
         } else {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No B2B management policy found' -sev Debug
+            # The read succeeded and the tenant genuinely has no legacy B2B policy: write the
+            # authoritative empty set so the Count marker records a completed collection and
+            # stale rows are cleared, instead of leaving the type indistinguishable from
+            # "collector never ran".
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'B2BManagementPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No B2B management policy found - cached authoritative empty set' -sev Debug
         }
 
     } catch {

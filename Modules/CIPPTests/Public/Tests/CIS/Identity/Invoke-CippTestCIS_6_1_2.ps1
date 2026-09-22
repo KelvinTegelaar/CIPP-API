@@ -14,14 +14,21 @@ function Invoke-CippTestCIS_6_1_2 {
         }
 
         $User = $Mailboxes | Where-Object { $_.RecipientTypeDetails -eq 'UserMailbox' }
-        $Failures = $User | Where-Object { $_.AuditEnabled -eq $false -or -not $_.AuditOwner -or $_.AuditOwner.Count -eq 0 }
+        # CIS 6.1.2 requires per-mailbox audit ACTIONS to be configured. With mailbox auditing on by
+        # default Microsoft applies the default action sets and Get-Mailbox reports AuditEnabled = True,
+        # so the reliable signal is a non-empty AuditOwner (the effective owner actions) or a
+        # DefaultAuditSet that still lists the Owner sign-in type (Microsoft-managed defaults).
+        # AuditEnabled itself can arrive as a string from EXO REST and is not graded directly.
+        $Failures = $User | Where-Object {
+            @($_.AuditOwner).Count -eq 0 -and ("$($_.DefaultAuditSet)" -notmatch 'Owner')
+        }
 
         if ($Failures.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All $($User.Count) user mailbox(es) have auditing enabled with audit actions configured."
+            $Result = "All $($User.Count) user mailbox(es) have owner audit actions configured."
         } else {
             $Status = 'Failed'
-            $Result = "$($Failures.Count) of $($User.Count) user mailbox(es) have auditing disabled or no audit actions configured."
+            $Result = "$($Failures.Count) of $($User.Count) user mailbox(es) have no owner audit actions configured."
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_6_1_2' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Mailbox audit actions are configured' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance'

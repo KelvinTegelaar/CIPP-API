@@ -79,14 +79,20 @@ function Set-CIPPIntunePolicy {
                     if ($FuzzyResult.MatchType -eq 'fuzzy') {
                         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Fuzzy matched policy '$($FuzzyResult.OriginalName)' for template '$DisplayName' (distance=$($FuzzyResult.Distance))" -Sev Info
                     }
-                    $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, '@odata.context', targetedMobileApps
+                    $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, '@odata.context', targetedMobileApps, targetedMobileAppsDetails
                     $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 20 -Compress
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $TenantFilter -type PATCH -body $RawJSON -AddedHeaders $ApprovalHeaders
                     Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev Info
                     $CreateRequest = $FuzzyResult.Policy
                 } else {
                     $PostType = 'added'
-                    $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, '@odata.context'
+                    # The template's targetedMobileApps are ids from the tenant it was captured in.
+                    # Resolve them to this tenant's apps (or fail with the app named) before creating.
+                    $ResolvedApps = @(Resolve-CIPPIntuneTargetedMobileApps -PolicyFile $PolicyFile -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName)
+                    $PolicyFile = $PolicyFile | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, '@odata.context', targetedMobileAppsDetails
+                    if ($ResolvedApps.Count -gt 0 -or $PolicyFile.PSObject.Properties['targetedMobileApps']) {
+                        $PolicyFile | Add-Member -NotePropertyName 'targetedMobileApps' -NotePropertyValue @($ResolvedApps) -Force
+                    }
                     $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 20 -Compress
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter -type POST -body $RawJSON -AddedHeaders $ApprovalHeaders
                     Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Added policy $($DisplayName) via template" -Sev Info
@@ -103,7 +109,15 @@ function Set-CIPPIntunePolicy {
                 $ComplianceODataType = ($RawJSON | ConvertFrom-Json).'@odata.type'
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance -ODataType $ComplianceODataType
                 if ($FuzzyResult) {
-                    $RawJSON = ConvertTo-Json -InputObject ($PolicyFile | Select-Object * -ExcludeProperty 'scheduledActionsForRule') -Depth 20 -Compress
+                    $EditPolicy = $PolicyFile | Select-Object * -ExcludeProperty 'scheduledActionsForRule'
+                    # deviceCompliancePolicies is a polymorphic collection with an abstract base type. A PATCH
+                    # carrying derived-type properties (osMinimumVersion, workProfile*, ...) with no @odata.type
+                    # fails Graph model validation. Templates imported or captured without it (RAWJson has no
+                    # @odata.type) hit this, so borrow the concrete type from the matched policy.
+                    if (-not $EditPolicy.'@odata.type' -and $FuzzyResult.Policy.'@odata.type') {
+                        $null = $EditPolicy | Add-Member -MemberType NoteProperty -Name '@odata.type' -Value $FuzzyResult.Policy.'@odata.type' -Force
+                    }
+                    $RawJSON = ConvertTo-Json -InputObject $EditPolicy -Depth 20 -Compress
                     $PostType = 'edited'
                     $ExistingID = $FuzzyResult.Policy
                     if ($FuzzyResult.MatchType -eq 'fuzzy') {
@@ -197,10 +211,31 @@ function Set-CIPPIntunePolicy {
                 }
 
                 $Template = $RawJSON | ConvertFrom-Json
+
+                # Apple enrollment (ADE) policies must carry a creationSource that binds them to this
+                # tenant's ADE token ("DepTokenId_{tokenId}"). The token id is per tenant, so templates
+                # store a %ADETokenId% placeholder that Get-CIPPTextReplacement (run above) resolves
+                # from the tenant's custom variable. Missing it, the DCV2 create fails with an opaque
+                # generic error - so fail early with the tenant's real token id(s) to set instead.
+                $IsEnrollmentPolicy = $Template.templateReference.templateFamily -like 'enrollment*' -or $Template.technologies -match 'enrollment'
+                if ($IsEnrollmentPolicy -and (-not $Template.creationSource -or $Template.creationSource -match '%')) {
+                    try { $DepTokens = @(New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings' -tenantid $TenantFilter) } catch { $DepTokens = @() }
+                    $TokenHint = if ($DepTokens.Count -eq 0) {
+                        'This tenant has no Apple ADE/DEP token - connect one under Apple enrollment first.'
+                    } elseif ($DepTokens.Count -eq 1) {
+                        "Create a tenant custom variable named 'ADETokenId' set to '$($DepTokens[0].id)', then redeploy."
+                    } else {
+                        "Create a tenant custom variable named 'ADETokenId' set to one of this tenant's ADE token ids ($(@($DepTokens.id) -join ', ')), then redeploy."
+                    }
+                    throw "Apple enrollment policy '$DisplayName' has no ADE token binding. $TokenHint"
+                }
+
                 if ($Template.templateReference.templateId) {
                     # Remove settings this tenant does not offer. The comparison paths run the
                     # baseline through the same helper so they diff against what actually lands.
-                    $Template = Select-CIPPIntuneAvailableSetting -Policy $Template -TenantFilter $TenantFilter
+                    # ThrowOnMissingRequired turns Graph's opaque "required Setting not present"
+                    # rejection into a named, actionable error for stale Apple enrollment templates.
+                    $Template = Select-CIPPIntuneAvailableSetting -Policy $Template -TenantFilter $TenantFilter -ThrowOnMissingRequired
                     $RawJSON = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
 
@@ -208,7 +243,10 @@ function Set-CIPPIntunePolicy {
                 $CatalogTemplateId = $Template.templateReference.templateId
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance -NameProperty 'name' -TemplateId $CatalogTemplateId
                 if ($FuzzyResult) {
-                    $PolicyFile = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty Platform, PolicyType, CreationSource
+                    # CreationSource is a read-only echo on ordinary Catalog policies, but on an
+                    # enrollment policy it is the token binding and must survive the edit (PUT).
+                    $ExcludeOnEdit = if ($IsEnrollmentPolicy) { @('Platform', 'PolicyType') } else { @('Platform', 'PolicyType', 'CreationSource') }
+                    $PolicyFile = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty $ExcludeOnEdit
                     $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 100 -Compress
                     $ExistingID = $FuzzyResult.Policy
                     if ($FuzzyResult.MatchType -eq 'fuzzy') {

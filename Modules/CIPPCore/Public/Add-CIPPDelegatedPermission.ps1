@@ -82,6 +82,7 @@ function Add-CIPPDelegatedPermission {
     }
 
     $CurrentDelegatedScopes = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/oauth2PermissionGrants" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
+    $ChangedResources = [System.Collections.Generic.List[string]]::new()
 
     foreach ($App in $RequiredResourceAccess) {
         if (!$App) {
@@ -134,6 +135,7 @@ function Add-CIPPDelegatedPermission {
                 } | ConvertTo-Json -Compress
                 $CreateRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants' -tenantid $TenantFilter -body $Createbody -type POST -NoAuthCheck $true
                 $Results.add("Successfully added permissions for $($svcPrincipalId.displayName)")
+                $ChangedResources.Add("$($svcPrincipalId.displayName) (added)")
             } catch {
                 $Results.add("Failed to add permissions for $($svcPrincipalId.displayName): $(Get-NormalizedError -message $_.Exception.Message)")
                 continue
@@ -180,8 +182,19 @@ function Add-CIPPDelegatedPermission {
             # Added permissions
             $Added = ($Compare | Where-Object { $_.SideIndicator -eq '=>' }).InputObject -join ' '
             $Removed = ($Compare | Where-Object { $_.SideIndicator -eq '<=' }).InputObject -join ' '
+            $AddedCount = @(($Compare | Where-Object { $_.SideIndicator -eq '=>' })).Count
+            $RemovedCount = @(($Compare | Where-Object { $_.SideIndicator -eq '<=' })).Count
             $Results.add("Successfully updated permissions for $($svcPrincipalId.displayName). $(if ($Added) { "Added: $Added"}) $(if ($Removed) { "Removed: $Removed"})")
+            $ChangedResources.Add("$($svcPrincipalId.displayName) (updated: +$AddedCount/-$RemovedCount)")
         }
+    }
+
+    if ($ChangedResources.Count -gt 0) {
+        Write-LogMessage -API 'Add-CIPPDelegatedPermission' -tenant $TenantFilter -message "Updated delegated permissions for $($ourSVCPrincipal.displayName): $($ChangedResources -join '; ')" -Sev 'Info'
+    }
+    $Failures = @($Results | Where-Object { $_ -match '^Failed to' })
+    if ($Failures.Count -gt 0) {
+        Write-LogMessage -API 'Add-CIPPDelegatedPermission' -tenant $TenantFilter -message "Failed during delegated permission update for $($ourSVCPrincipal.displayName): $($Failures.Count) error(s)" -Sev 'Warning' -LogData @{ Failures = $Failures }
     }
 
     return $Results

@@ -128,6 +128,10 @@ Describe 'Invoke-ExecRefreshMyAccess' {
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::TooManyRequests)
         Should -Invoke Test-CIPPAccessUserRole -Times 0 -Exactly
         Should -Invoke Start-UserSyncTimer -Times 0 -Exactly
+        # A throttle the operator can't see is a throttle nobody can diagnose — the 429 must be logged.
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter {
+            $API -eq 'RefreshMyAccess' -and $sev -eq 'Info' -and $message -match 'cooldown'
+        }
     }
 
     It 'allows a refresh once the cooldown has elapsed' {

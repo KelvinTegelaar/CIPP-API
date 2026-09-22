@@ -529,6 +529,47 @@ Describe 'Get-CIPPDrift - stale drift entity pruning' {
         $script:RemovedDriftEntities.Count | Should -Be 0
     }
 
+    It 'does not remove a decided IntuneTemplates row when a continuation page of the policy inventory failed' {
+        # New-GraphBulkRequest keeps status 200 on an item whose later page failed and flags it
+        # PagingIncomplete instead. Policies on the missing page are absent from the inventory, so
+        # without this gate their accepted rows were pruned as "gone" and re-created as New on the
+        # next run (the reported reset of customer-specific deviations every couple of days).
+        $script:DriftEntityRows = @(New-DriftEntity -StandardName 'IntuneTemplates.policy-on-page-two' -Status 'CustomerSpecific' -Reason 'customer specific' -User 'admin@msp.com')
+        Mock -CommandName Test-CIPPStandardLicense -MockWith { param($StandardName, $TenantFilter, $Preset) $Preset -eq 'Intune' }
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            param($Requests, $tenantid, $asapp)
+            foreach ($r in $Requests) {
+                $Item = [pscustomobject]@{ id = $r.id; status = 200; body = @{ value = @() } }
+                if ($r.id -eq 'deviceManagement/configurationPolicies') {
+                    $Item | Add-Member -NotePropertyName 'PagingIncomplete' -NotePropertyValue $true
+                    $Item | Add-Member -NotePropertyName 'PagingError' -NotePropertyValue 'continuation page returned 429'
+                }
+                $Item
+            }
+        }
+
+        Get-CIPPDrift -TenantFilter 'contoso.onmicrosoft.com' -WarningVariable Warnings -WarningAction SilentlyContinue | Out-Null
+
+        $script:RemovedDriftEntities.Count | Should -Be 0
+        @($Warnings) | Where-Object { $_ -match 'incomplete' -and $_ -match '429' } | Should -Not -BeNullOrEmpty
+    }
+
+    It 'still prunes a vanished IntuneTemplates row when every page of the inventory succeeded' {
+        # Control for the test above: same rows, same inventory, no incomplete flag - the row has no
+        # matching tenant policy and is correctly removed.
+        $script:DriftEntityRows = @(New-DriftEntity -StandardName 'IntuneTemplates.policy-really-gone' -Status 'CustomerSpecific' -Reason 'customer specific' -User 'admin@msp.com')
+        Mock -CommandName Test-CIPPStandardLicense -MockWith { param($StandardName, $TenantFilter, $Preset) $Preset -eq 'Intune' }
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            param($Requests, $tenantid, $asapp)
+            foreach ($r in $Requests) { [pscustomobject]@{ id = $r.id; status = 200; body = @{ value = @() } } }
+        }
+
+        Get-CIPPDrift -TenantFilter 'contoso.onmicrosoft.com' | Out-Null
+
+        $script:RemovedDriftEntities.Count | Should -Be 1
+        $script:RemovedDriftEntities[0].StandardName | Should -Be 'IntuneTemplates.policy-really-gone'
+    }
+
     It 'does not remove a drift row that is still referenced by the current alignment' {
         $script:DriftEntityRows = @(New-DriftEntity -StandardName 'standards.StillRelevant')
         Mock -CommandName Get-CIPPTenantAlignment -MockWith {

@@ -8,35 +8,59 @@ function Start-DomainOrchestrator {
         Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    param($TenantFilter)
+    param(
+        $TenantFilter,
+        [switch]$SkipExchangeFilter
+    )
     try {
 
         if ($TenantFilter -and $TenantFilter -ne 'allTenants') {
-            $TenantList = @($TenantFilter)
-            $TenantParams = @{
-                TenantFilter = $TenantFilter
+            $Queue = New-CippQueueEntry -Name 'Domain Analyser' -TotalTasks 1
+            $InputObject = [PSCustomObject]@{
+                QueueFunction    = [PSCustomObject]@{
+                    FunctionName = 'GetTenants'
+                    DurableName  = 'DomainAnalyserTenant'
+                    QueueId      = $Queue.RowKey
+                    TenantParams = @{
+                        TenantFilter = $TenantFilter
+                    }
+                }
+                OrchestratorName = 'DomainAnalyser_Tenants'
+                SkipLog          = $true
             }
         } else {
-            $TenantList = Get-Tenants -IncludeAll
-            if (($TenantList | Measure-Object).Count -eq 0) {
-                Write-Information 'No tenants found'
+            $TenantList = @(Get-Tenants)
+            if (-not $SkipExchangeFilter) {
+                $ExchangeCapabilities = @(
+                    'EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE'
+                    'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV'
+                    'EXCHANGE_LITE'
+                    'EXCHANGE_S_DESKLESS', 'EXCHANGE_S_DESKLESS_GOV'
+                    'EXCHANGE_S_ESSENTIALS'
+                )
+                $TenantList = @($TenantList | Where-Object {
+                        Test-CIPPStandardLicense -StandardName 'DomainAnalyser' -TenantFilter $_.defaultDomainName -RequiredCapabilities $ExchangeCapabilities -SkipLog
+                    })
+            }
+            if ($TenantList.Count -eq 0) {
+                Write-Information 'No tenants to analyse'
                 return 0
             }
-            $TenantParams = @{
-                IncludeAll = $true
-            }
-        }
 
-        $Queue = New-CippQueueEntry -Name 'Domain Analyser' -TotalTasks ($TenantList | Measure-Object).Count
-        $InputObject = [PSCustomObject]@{
-            QueueFunction    = [PSCustomObject]@{
-                FunctionName = 'GetTenants'
-                DurableName  = 'DomainAnalyserTenant'
-                QueueId      = $Queue.RowKey
-                TenantParams = $TenantParams
+            $Queue = New-CippQueueEntry -Name 'Domain Analyser' -TotalTasks $TenantList.Count
+            $Batch = foreach ($Tenant in $TenantList) {
+                [PSCustomObject]@{
+                    customerId   = $Tenant.customerId
+                    FunctionName = 'DomainAnalyserTenant'
+                    QueueId      = $Queue.RowKey
+                    QueueName    = $Tenant.defaultDomainName
+                }
             }
-            OrchestratorName = 'DomainAnalyser_Tenants'
-            SkipLog          = $true
+            $InputObject = [PSCustomObject]@{
+                Batch            = @($Batch)
+                OrchestratorName = 'DomainAnalyser_Tenants'
+                SkipLog          = $true
+            }
         }
         if ($PSCmdlet.ShouldProcess('Domain Analyser', 'Starting Orchestrator')) {
             Write-LogMessage -API 'DomainAnalyser' -message 'Starting Domain Analyser' -sev Info

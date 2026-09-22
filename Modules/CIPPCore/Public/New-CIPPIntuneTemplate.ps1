@@ -61,12 +61,42 @@ function New-CIPPIntuneTemplate {
         'mobileAppConfigurations' {
             $Type = 'AppConfiguration'
             $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$($urlname)('$($ID)')" -tenantid $TenantFilter
+            # targetedMobileApps are mobileApp ids, which only mean something in the tenant the
+            # policy was captured from - deploying them elsewhere fails with an unknown app. Record
+            # each app's identity (bundle / package id, name, type) so deployment can find the same
+            # app in the target tenant. See Resolve-CIPPIntuneTargetedMobileApps.
+            $TargetedAppDetails = foreach ($AppId in @($Template.targetedMobileApps | Where-Object { $_ })) {
+                try {
+                    $App = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$AppId" -tenantid $TenantFilter
+                    [PSCustomObject]@{
+                        id                = $App.id
+                        displayName       = $App.displayName
+                        '@odata.type'     = $App.'@odata.type'
+                        bundleId          = $App.bundleId
+                        packageId         = $App.packageId
+                        packageIdentifier = $App.packageIdentifier
+                        appStoreUrl       = $App.appStoreUrl
+                    }
+                } catch {
+                    Write-Warning "Could not read targeted app $AppId for app configuration '$($Template.displayName)': $($_.Exception.Message)"
+                }
+            }
+            if ($TargetedAppDetails) {
+                $Template | Add-Member -NotePropertyName 'targetedMobileAppsDetails' -NotePropertyValue @($TargetedAppDetails) -Force
+            }
             $DisplayName = $Template.displayName
             $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
         }
         'configurationPolicies' {
             $Type = 'Catalog'
             $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')?`$expand=settings" -tenantid $TenantFilter | Select-Object name, description, settings, platforms, technologies, templateReference
+            # Apple enrollment (ADE) policies deploy only with a creationSource binding them to the
+            # target tenant's ADE token ("DepTokenId_{tokenId}"). That id is per tenant, so strip the
+            # source tenant's token and store a %ADETokenId% placeholder the deploy resolves from the
+            # target tenant's custom variable (see Get-CIPPTextReplacement / Set-CIPPIntunePolicy).
+            if ($Template.templateReference.templateFamily -like 'enrollment*' -or $Template.technologies -match 'enrollment') {
+                $Template | Add-Member -NotePropertyName 'creationSource' -NotePropertyValue 'DepTokenId_%ADETokenId%' -Force
+            }
             $TemplateJson = $Template | ConvertTo-Json -Depth 100 -Compress
             $DisplayName = $Template.name
 

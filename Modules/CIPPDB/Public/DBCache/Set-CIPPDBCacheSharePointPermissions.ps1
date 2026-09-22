@@ -37,6 +37,9 @@ function Set-CIPPDBCacheSharePointPermissions {
         $LicenseCheck = Test-CIPPStandardLicense -StandardName 'SharePointPermissionsCache' -TenantFilter $TenantFilter -Preset SharePoint -SkipLog
         if ($LicenseCheck -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have a SharePoint license, skipping SharePoint permissions cache' -sev Debug
+            # A license skip is still a completed collection: record the authoritative empty set
+            # so collect-on-miss does not re-run this collector forever on unlicensed tenants.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointPermissions' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
@@ -108,6 +111,11 @@ function Set-CIPPDBCacheSharePointPermissions {
                 Parameters   = @{
                     TenantFilter      = $TenantFilter
                     ExpectedSiteCount = $ExpectedSiteCount
+                    # The full expected site-id set lets Push-StoreSharePointPermissions tell a site
+                    # whose batch failed this run (carry its prior rows over, flagged Skipped) from
+                    # one that no longer exists (let it fall out), so a single flaky batch no longer
+                    # discards the whole run and empties the report.
+                    ExpectedSiteIds   = @($Sites.id)
                 }
             }
         }

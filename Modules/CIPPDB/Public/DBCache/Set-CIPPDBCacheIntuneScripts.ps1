@@ -10,6 +10,11 @@ function Set-CIPPDBCacheIntuneScripts {
         $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneScriptsCache' -TenantFilter $TenantFilter -Preset Intune -SkipLog
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping scripts cache' -sev Debug
+            # A license skip is still a completed collection: record authoritative empty sets for
+            # every type this collector writes so collect-on-miss does not re-run it forever.
+            foreach ($SkippedType in @('IntuneScriptGroups', 'IntuneWindowsScripts', 'IntuneMacOSScripts', 'IntuneRemediationScripts', 'IntuneLinuxScripts')) {
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type $SkippedType -Data @() -AddCount -ClearOnEmpty
+            }
             return
         }
 

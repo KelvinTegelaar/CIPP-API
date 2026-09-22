@@ -12,6 +12,9 @@ function Invoke-ExecAzBobbyTables {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $AllowList = @(
         'Add-AzDataTableEntity'
         'Add-CIPPAzDataTableEntity'
@@ -26,17 +29,20 @@ function Invoke-ExecAzBobbyTables {
     )
 
     $Function = $Request.Body.FunctionName
+    $TableName = $Request.Body.TableName
     $Params = if ($Request.Body.Parameters) {
         $Request.Body.Parameters | ConvertTo-Json -Compress -ErrorAction Stop | ConvertFrom-Json -AsHashtable
     } else {
         @{}
     }
+    $ParamKeys = if ($Params.Keys) { @($Params.Keys) -join ', ' } else { 'none' }
+    $TableNote = if ($TableName) { " on table '$TableName'" } else { '' }
 
     if ($Function -in $AllowList) {
         if ($Function -eq 'Get-AzDataTable') {
             $Context = New-AzDataTableContext -ConnectionString $env:AzureWebJobsStorage
         } else {
-            $Context = New-AzDataTableContext -ConnectionString $env:AzureWebJobsStorage -TableName $Request.Body.TableName
+            $Context = New-AzDataTableContext -ConnectionString $env:AzureWebJobsStorage -TableName $TableName
         }
         try {
             $Results = & $Function -Context $Context @Params
@@ -46,19 +52,22 @@ function Invoke-ExecAzBobbyTables {
             # Drop it from the Get-CIPPTable cache so it gets recreated on next use. The table
             # name comes from the request, so clear everything when it was not supplied.
             if ($Function -eq 'Remove-AzDataTable') {
-                if ($Request.Body.TableName) {
-                    Unregister-CIPPTable -TableName $Request.Body.TableName
+                if ($TableName) {
+                    Unregister-CIPPTable -TableName $TableName
                 } else {
                     Unregister-CIPPTable -All
                 }
             }
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "SuperAdmin AzBobbyTables ran '$Function'$TableNote (param keys: $ParamKeys)" -Sev 'Info'
             $StatusCode = [HttpStatusCode]::OK
         } catch {
             $Results = $_.Exception.Message
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "SuperAdmin AzBobbyTables '$Function' failed: $Results" -Sev 'Error' -LogData (Get-CippException -Exception $_)
             $StatusCode = [HttpStatusCode]::InternalServerError
         }
     } else {
         $Results = "Function $Function not found or not allowed"
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "SuperAdmin AzBobbyTables blocked: $Results" -Sev 'Error'
         $StatusCode = [HttpStatusCode]::NotFound
     }
 

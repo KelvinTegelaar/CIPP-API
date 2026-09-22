@@ -40,12 +40,14 @@ function Invoke-listStandardTemplates {
             }
         }
         if ($Data) {
-            $Data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
-            $Data | Add-Member -NotePropertyName 'source' -NotePropertyValue $_.Source -Force
-            $Data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($_.SHA)) -Force
+            $DataProps = [ordered]@{
+                GUID     = $_.GUID
+                source   = $_.Source
+                isSynced = (![string]::IsNullOrEmpty($_.SHA))
+            }
 
             if (!$Data.excludedTenants) {
-                $Data | Add-Member -NotePropertyName 'excludedTenants' -NotePropertyValue @() -Force
+                $DataProps['excludedTenants'] = @()
             } else {
                 if ($Data.excludedTenants -and $Data.excludedTenants -ne 'excludedTenants') {
                     $Data.excludedTenants = @($Data.excludedTenants)
@@ -53,6 +55,7 @@ function Invoke-listStandardTemplates {
                     $Data.excludedTenants = @()
                 }
             }
+            $Data | Add-Member -NotePropertyMembers $DataProps -Force
 
             # Re-expand TemplateList-Tags live so stale addedFields snapshots don't show removed templates
             if ($Data.standards) {

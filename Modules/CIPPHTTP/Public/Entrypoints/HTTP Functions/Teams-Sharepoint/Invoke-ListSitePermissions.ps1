@@ -29,10 +29,10 @@ function Invoke-ListSitePermissions {
     try {
         if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
 
-        $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-        $Scope = "$($SharePointInfo.SharePointUrl)/.default"
-        $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
-        $BaseUri = "$($SiteUrl.TrimEnd('/'))/_api"
+        $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
+        $Scope = $RestContext.Scope
+        $JsonAccept = $RestContext.Headers
+        $BaseUri = $RestContext.BaseUri
 
         # Scope: a document library, or the site root web when no list was supplied.
         $IsLibrary = -not [string]::IsNullOrWhiteSpace($ListId)

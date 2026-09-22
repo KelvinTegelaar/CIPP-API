@@ -82,6 +82,8 @@ function Invoke-ExecPartnerWebhook {
                 StandardsExcludeAllTenants = $Request.Body.standardsExcludeAllTenants
             }
             Add-CIPPAzDataTableEntity @ConfigTable -Entity $PartnerWebhookOnboarding -Force | Out-Null
+            # Subscription create/update is logged by New-CIPPGraphSubscription; log the onboarding config write here.
+            Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint) -tenant 'Global' -message "Partner webhook onboarding config saved (Enabled=$([bool]$Request.Body.enabled))" -Sev 'Info'
         }
         'SendTest' {
             $Results = New-GraphPOSTRequest -uri 'https://api.partnercenter.microsoft.com/webhooks/v1/registration/validationEvents' -tenantid $env:TenantID -NoAuthCheck $true -scope 'https://api.partnercenter.microsoft.com/.default'
@@ -106,3 +108,4 @@ function Invoke-ExecPartnerWebhook {
         Body       = $Body
     }
 }
+

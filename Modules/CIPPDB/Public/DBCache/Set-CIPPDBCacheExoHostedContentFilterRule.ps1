@@ -23,6 +23,11 @@ function Set-CIPPDBCacheExoHostedContentFilterRule {
         if ($HostedContentFilterRules) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoHostedContentFilterRule' -Data $HostedContentFilterRules -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($HostedContentFilterRules.Count) hosted content filter rules" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoHostedContentFilterRule' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 hosted content filter rules (none found)' -sev Debug
         }
         $HostedContentFilterRules = $null
 

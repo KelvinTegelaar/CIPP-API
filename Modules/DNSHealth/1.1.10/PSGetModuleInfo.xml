@@ -1,0 +1,166 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">DNSHealth</S>
+      <Version N="Version">1.1.10</Version>
+      <S N="Type">Module</S>
+      <S N="Description">CIPP DNS Health Check Module</S>
+      <S N="Author">John Duprey</S>
+      <S N="CompanyName">johnduprey</S>
+      <S N="Copyright">2023 John Duprey</S>
+      <DT N="PublishedDate">2026-08-24T16:52:31+08:00</DT>
+      <Obj N="InstalledDate" RefId="1">
+        <DT>2026-08-25T00:59:14.3697426+08:00</DT>
+        <MS>
+          <Obj N="DisplayHint" RefId="2">
+            <TN RefId="1">
+              <T>Microsoft.PowerShell.Commands.DisplayHintType</T>
+              <T>System.Enum</T>
+              <T>System.ValueType</T>
+              <T>System.Object</T>
+            </TN>
+            <ToString>DateTime</ToString>
+            <I32>2</I32>
+          </Obj>
+        </MS>
+      </Obj>
+      <Nil N="UpdatedDate" />
+      <Nil N="LicenseUri" />
+      <URI N="ProjectUri">https://github.com/johnduprey/DNSHealth</URI>
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="3">
+        <TN RefId="2">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>PSModule</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="4">
+        <TN RefId="3">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="2" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="6">
+              <TNRef RefId="2" />
+              <LST>
+                <S>Read-DmarcPolicy</S>
+                <S>Read-MtaStsPolicy</S>
+                <S>Add-MailProvider</S>
+                <S>Get-MailProvider</S>
+                <S>Read-AutoDiscoverRecord</S>
+                <S>Read-DkimRecord</S>
+                <S>Read-MtaStsRecord</S>
+                <S>Read-MXRecord</S>
+                <S>Read-NSRecord</S>
+                <S>Read-SPFRecord</S>
+                <S>Read-TlsRptRecord</S>
+                <S>Read-WhoisRecord</S>
+                <S>Remove-MailProvider</S>
+                <S>Resolve-DnsHttpsQuery</S>
+                <S>Set-DnsResolver</S>
+                <S>Test-DNSSEC</S>
+                <S>Test-HttpsCertificate</S>
+                <S>Test-MtaSts</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="7">
+              <TNRef RefId="2" />
+              <LST>
+                <S>Read-DmarcPolicy</S>
+                <S>Read-MtaStsPolicy</S>
+                <S>Add-MailProvider</S>
+                <S>Get-MailProvider</S>
+                <S>Read-AutoDiscoverRecord</S>
+                <S>Read-DkimRecord</S>
+                <S>Read-MtaStsRecord</S>
+                <S>Read-MXRecord</S>
+                <S>Read-NSRecord</S>
+                <S>Read-SPFRecord</S>
+                <S>Read-TlsRptRecord</S>
+                <S>Read-WhoisRecord</S>
+                <S>Remove-MailProvider</S>
+                <S>Resolve-DnsHttpsQuery</S>
+                <S>Set-DnsResolver</S>
+                <S>Test-DNSSEC</S>
+                <S>Test-HttpsCertificate</S>
+                <S>Test-MtaSts</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">DscResource</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">Workflow</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <Nil N="ReleaseNotes" />
+      <Obj N="Dependencies" RefId="8">
+        <TNRef RefId="2" />
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="9">
+        <TN RefId="4">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">2023 John Duprey</S>
+          <S N="description">CIPP DNS Health Check Module</S>
+          <S N="requireLicenseAcceptance">False</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">0</S>
+          <S N="downloadCount">606</S>
+          <S N="packageSize">35781</S>
+          <S N="published">24/08/2026 4:52:31 PM +08:00</S>
+          <S N="created">24/08/2026 4:52:31 PM +08:00</S>
+          <S N="lastUpdated">24/08/2026 4:52:31 PM +08:00</S>
+          <S N="tags">PSModule PSFunction_Read-DmarcPolicy PSCommand_Read-DmarcPolicy PSFunction_Read-MtaStsPolicy PSCommand_Read-MtaStsPolicy PSFunction_Add-MailProvider PSCommand_Add-MailProvider PSFunction_Get-MailProvider PSCommand_Get-MailProvider PSFunction_Read-AutoDiscoverRecord PSCommand_Read-AutoDiscoverRecord PSFunction_Read-DkimRecord PSCommand_Read-DkimRecord PSFunction_Read-MtaStsRecord PSCommand_Read-MtaStsRecord PSFunction_Read-MXRecord PSCommand_Read-MXRecord PSFunction_Read-NSRecord PSCommand_Read-NSRecord PSFunction_Read-SPFRecord PSCommand_Read-SPFRecord PSFunction_Read-TlsRptRecord PSCommand_Read-TlsRptRecord PSFunction_Read-WhoisRecord PSCommand_Read-WhoisRecord PSFunction_Remove-MailProvider PSCommand_Remove-MailProvider PSFunction_Resolve-DnsHttpsQuery PSCommand_Resolve-DnsHttpsQuery PSFunction_Set-DnsResolver PSCommand_Set-DnsResolver PSFunction_Test-DNSSEC PSCommand_Test-DNSSEC PSFunction_Test-HttpsCertificate PSCommand_Test-HttpsCertificate PSFunction_Test-MtaSts PSCommand_Test-MtaSts PSIncludes_Function</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2026-08-24T16:52:31Z</S>
+          <S N="NormalizedVersion">1.1.10</S>
+          <S N="Authors">John Duprey</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">DNSHealth.nuspec|MailProviders\Mimecast.json|MailProviders\BarracudaESS.json|MailProviders\SpamTitan.json|DNSHealth.psd1|MailProviders\AppRiver.json|MailProviders\Null.json|MailProviders\HornetSecurity.json|MailProviders\MimecastOffshore.json|MailProviders\Sophos.json|MailProviders\_template.json|SevenTinyRsa.dll|MailProviders\Proofpoint.json|MailProviders\Microsoft365.json|MailProviders\Reflexion.json|DNSHealth.psm1|MailProviders\Intermedia.json|MailProviders\SymantecCloud.json|MailProviders\Google.json</S>
+          <S N="GUID">a300d2b0-d468-46d1-88a3-e442a76b655b</S>
+          <S N="PowerShellVersion">7.0</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\Users\Zac\Documents\PowerShell\Modules\DNSHealth\1.1.10</S>
+    </MS>
+  </Obj>
+</Objs>

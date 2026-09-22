@@ -38,14 +38,15 @@ function Invoke-ListAlertsQueue {
             CustomSubject   = $Task.CustomSubject
             Enabled         = $Task.Disabled -ne $true
             RawAlert        = @{
-                Conditions    = @($Conditions)
-                Actions       = @($($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue))
-                Tenants       = @($Tenants)
-                type          = $Task.type
-                RowKey        = $Task.RowKey
-                PartitionKey  = $Task.PartitionKey
-                AlertComment  = $Task.AlertComment
-                CustomSubject = $Task.CustomSubject
+                Conditions        = @($Conditions)
+                Actions           = @($($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue))
+                Tenants           = @($Tenants)
+                type              = $Task.type
+                RowKey            = $Task.RowKey
+                PartitionKey      = $Task.PartitionKey
+                AlertComment      = $Task.AlertComment
+                CustomSubject     = $Task.CustomSubject
+                PsaTicketPriority = $Task.PsaTicketPriority
             }
         }
 
@@ -69,8 +70,14 @@ function Invoke-ListAlertsQueue {
                     } catch {
                         Write-Warning "Failed to expand tenant group for webhook access check: $($_.Exception.Message)"
                     }
+                } elseif ($Tenant.value -eq 'AllTenants') {
+                    # AllTenants alerts cover the caller's own tenants, so restricted readers may see them
+                    $HasAccess = $true
                 } else {
-                    if ($AllowedTenants -contains $Tenant.customerId) {
+                    # Selector objects store customerId under addedFields; fall back to resolving
+                    # the stored defaultDomainName for entries saved without it
+                    $CustomerId = $Tenant.addedFields.customerId ?? $Tenant.customerId ?? ($TenantList | Where-Object -Property defaultDomainName -EQ $Tenant.value).customerId
+                    if ($AllowedTenants -contains $CustomerId) {
                         $HasAccess = $true
                     }
                 }
@@ -112,7 +119,11 @@ function Invoke-ListAlertsQueue {
                             type  = $_.type ?? 'Tenant'
                         }
                     })
-                $ExcludedTenants = @()
+                # A legacy row's excludedTenants is a snapshot of every unselected tenant, ignored at
+                # run time and hidden here. A versioned row's is the operator's own picks.
+                if (-not $Task.TenantSelectionVersion) {
+                    $ExcludedTenants = @()
+                }
             } catch {
                 Write-Warning "Failed to parse Tenants for alert task $($Task.RowKey): $($_.Exception.Message)"
                 $TenantsForDisplay = @([PSCustomObject]@{
@@ -209,9 +220,13 @@ function Invoke-ListAlertsQueue {
                                     break
                                 }
                             }
+                        } elseif ($TenantItem.value -eq 'AllTenants') {
+                            # AllTenants alerts cover the caller's own tenants, so restricted readers may see them
+                            $HasAccess = $true
                         } else {
                             $TenantInfo = $TenantList | Where-Object -Property defaultDomainName -EQ $TenantItem.value
-                            if ($TenantInfo -and $AllowedTenants -contains $TenantInfo.customerId) {
+                            $CustomerId = $TenantItem.addedFields.customerId ?? $TenantInfo.customerId
+                            if ($AllowedTenants -contains $CustomerId) {
                                 $HasAccess = $true
                             }
                         }
@@ -220,6 +235,9 @@ function Invoke-ListAlertsQueue {
                 } catch {
                     Write-Warning "Failed to parse Tenants for access check on task $($Task.RowKey): $($_.Exception.Message)"
                 }
+            } elseif ($Task.Tenant -eq 'AllTenants') {
+                # AllTenants alerts cover the caller's own tenants, so restricted readers may see them
+                $HasAccess = $true
             } else {
                 # Regular single-tenant access check
                 $Tenant = $TenantList | Where-Object -Property defaultDomainName -EQ $Task.Tenant

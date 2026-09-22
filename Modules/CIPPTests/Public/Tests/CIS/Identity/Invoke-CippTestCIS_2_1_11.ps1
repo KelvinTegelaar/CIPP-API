@@ -13,16 +13,21 @@ function Invoke-CippTestCIS_2_1_11 {
             return
         }
 
-        $Default = $Malware | Where-Object { $_.IsDefault -eq $true } | Select-Object -First 1
-        if (-not $Default) { $Default = $Malware | Select-Object -First 1 }
-
+        # Comprehensive filtering is enforced by whichever malware policy applies via its rule, not
+        # only the built-in Default (which is capped at ~50 file types) - CIPP's own standard creates
+        # a non-default policy for exactly this. Grade the best policy that meets the bar.
         # CIS v7 defines a comprehensive list of 186 extensions and requires at least 90% adoption (>= 168).
-        $FileTypeCount = ($Default.FileTypes | Measure-Object).Count
+        $Policies = @($Malware)
+        $Compliant = $Policies | Where-Object { $_.EnableFileFilter -eq $true -and (($_.FileTypes | Measure-Object).Count -ge 168) } | Select-Object -First 1
 
-        if ($Default.EnableFileFilter -eq $true -and $FileTypeCount -ge 168) {
+        if ($Compliant) {
+            $FileTypeCount = ($Compliant.FileTypes | Measure-Object).Count
             $Status = 'Passed'
-            $Result = "Comprehensive attachment filtering is applied — $FileTypeCount file types blocked on '$($Default.Identity)'."
+            $Result = "Comprehensive attachment filtering is applied — $FileTypeCount file types blocked on '$($Compliant.Identity)'."
         } else {
+            $Default = $Policies | Where-Object { $_.IsDefault -eq $true } | Select-Object -First 1
+            if (-not $Default) { $Default = $Policies | Select-Object -First 1 }
+            $FileTypeCount = ($Default.FileTypes | Measure-Object).Count
             $Status = 'Failed'
             $Result = "Attachment filter on '$($Default.Identity)' is not comprehensive (EnableFileFilter: $($Default.EnableFileFilter), FileTypes count: $FileTypeCount, expected >= 168 — 90% of the CIS v7 186-extension list)."
         }

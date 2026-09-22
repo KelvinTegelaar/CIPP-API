@@ -29,12 +29,24 @@
     "BackgroundColor": {
       "type": "textField",
       "label": "Background Color (hex, e.g. #ffffff)",
-      "omitWhenBlank": true
+      "omitWhenBlank": true,
+      "validators": {
+        "pattern": {
+          "value": "^#[0-9A-Fa-f]{6}$",
+          "message": "Must be a hex color like #FFFFFF"
+        }
+      }
     },
     "LogoUrl": {
       "type": "textField",
       "label": "Logo Image URL (max 40KB, 170x70px)",
-      "omitWhenBlank": true
+      "omitWhenBlank": true,
+      "validators": {
+        "pattern": {
+          "value": "^https?://.+$",
+          "message": "Must be a URL starting with http:// or https://"
+        }
+      }
     },
     "IntroductionText": {
       "type": "textField",
@@ -49,22 +61,46 @@
     "EmailText": {
       "type": "textField",
       "label": "Email text below the button",
-      "omitWhenBlank": true
+      "omitWhenBlank": true,
+      "validators": {
+        "maxLength": {
+          "value": 1024,
+          "message": "Maximum length is 1024 characters"
+        }
+      }
     },
     "PrivacyStatementUrl": {
       "type": "textField",
       "label": "Privacy Statement URL",
-      "omitWhenBlank": true
+      "omitWhenBlank": true,
+      "validators": {
+        "pattern": {
+          "value": "^https?://.+$",
+          "message": "Must be a URL starting with http:// or https://"
+        }
+      }
     },
     "DisclaimerText": {
       "type": "textField",
       "label": "Disclaimer Statement",
-      "omitWhenBlank": true
+      "omitWhenBlank": true,
+      "validators": {
+        "maxLength": {
+          "value": 1024,
+          "message": "Maximum length is 1024 characters"
+        }
+      }
     },
     "PortalText": {
       "type": "textField",
       "label": "Portal header text (max 128 chars)",
-      "omitWhenBlank": true
+      "omitWhenBlank": true,
+      "validators": {
+        "maxLength": {
+          "value": 128,
+          "message": "Maximum length is 128 characters"
+        }
+      }
     },
     "OTPEnabled": {
       "type": "autoComplete",

@@ -11,6 +11,9 @@ function Invoke-ExecCippFunction {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $BlockList = @(
         'Get-GraphToken'
         'Get-GraphTokenFromCert'
@@ -28,6 +31,7 @@ function Invoke-ExecCippFunction {
     } else {
         @{}
     }
+    $ParamKeys = if ($Params.Keys) { @($Params.Keys) -join ', ' } else { 'none' }
 
     if (Get-Command -Module CIPPCore -Name $Function -and $BlockList -notcontains $Function) {
         try {
@@ -35,13 +39,16 @@ function Invoke-ExecCippFunction {
             if (!$Results) {
                 $Results = "Function $Function executed successfully"
             }
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "SuperAdmin CippFunction ran '$Function' (param keys: $ParamKeys)" -Sev 'Info'
             $StatusCode = [HttpStatusCode]::OK
         } catch {
             $Results = $_.Exception.Message
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "SuperAdmin CippFunction '$Function' failed: $Results" -Sev 'Error' -LogData (Get-CippException -Exception $_)
             $StatusCode = [HttpStatusCode]::InternalServerError
         }
     } else {
         $Results = "Function $Function not found or not allowed"
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "SuperAdmin CippFunction blocked: $Results" -Sev 'Error'
         $StatusCode = [HttpStatusCode]::NotFound
     }
 

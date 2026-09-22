@@ -35,7 +35,7 @@ function Invoke-AddIntuneTemplate {
                 PartitionKey          = 'IntuneTemplate'
                 GUID                  = "$GUID"
             }
-            Write-LogMessage -headers $Headers -API $APIName -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Info'
 
             $Result = 'Successfully added template'
             $StatusCode = [HttpStatusCode]::OK
@@ -73,7 +73,7 @@ function Invoke-AddIntuneTemplate {
                 RowKey       = "$GUID"
                 PartitionKey = 'IntuneTemplate'
             }
-            Write-LogMessage -headers $Headers -API $APIName -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Info'
 
             $Result = 'Successfully added template'
             $StatusCode = [HttpStatusCode]::OK
@@ -82,7 +82,7 @@ function Invoke-AddIntuneTemplate {
         $StatusCode = [HttpStatusCode]::InternalServerError
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Intune Template Deployment failed: $($ErrorMessage.NormalizedMessage)"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
     }
 
 

@@ -46,12 +46,20 @@ function Invoke-CIPPStandardIntuneTemplate {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'IntuneTemplate'"
 
-    $Template = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($Settings.TemplateList.value)*").JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+    # The template picker surfaces the row's GUID column while the engine keys on RowKey (built-in
+    # templates are keyed '<guid>.IntuneTemplate.json'). CIPP writes both to the same value, but a
+    # template re-synced from a repo by an older release can carry a JSON GUID that no longer matches
+    # its RowKey - accept either rather than reporting a template that is sitting in the table as gone.
+    $TemplateRef = [string]$Settings.TemplateList.value
+    $Template = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.RowKey -like "$TemplateRef*" -or $_.GUID -eq $TemplateRef } | Select-Object -First 1).JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
     Write-Information "[IntuneTemplate][$Tenant] TableLoad: $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
     $lap = $sw.Elapsed
 
     if ($null -eq $Template) {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to find template $($Settings.TemplateList.value). Has this Intune Template been deleted?" -sev 'Error'
+        # Name the template the standard still points at: the id alone sends people searching the
+        # template table for a row that was deleted, when the fix is in the standards template.
+        $TemplateLabel = if ($Settings.TemplateList.label) { "'$($Settings.TemplateList.label)' " } else { '' }
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Intune template $TemplateLabel($TemplateRef) no longer exists in the template library. Remove it from the standards or drift template, or select the template again." -sev 'Error'
         return $true
     }
 

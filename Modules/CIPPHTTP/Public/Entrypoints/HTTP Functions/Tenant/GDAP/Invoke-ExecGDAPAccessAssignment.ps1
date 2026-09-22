@@ -167,11 +167,13 @@ function Invoke-ExecGDAPAccessAssignment {
                     $Results = foreach ($Result in $BulkResults) {
                         $Message = $Messages | Where-Object id -EQ $Result.id
                         if ($Result.status -in @('201', '202', '204')) {
+                            Write-LogMessage -headers $Request.Headers -API $APIName -tenant 'Global' -message $Message.message -Sev 'Info'
                             @{
                                 resultText = $Message.message
                                 state      = 'success'
                             }
                         } else {
+                            Write-LogMessage -headers $Request.Headers -API $APIName -tenant 'Global' -message "Error: $($Message.message): $($Result.body.error.message)" -Sev 'Error'
                             @{
                                 resultText = "Error: $($Message.message): $($Result.body.error.message)"
                                 state      = 'error'
@@ -184,6 +186,7 @@ function Invoke-ExecGDAPAccessAssignment {
                         resultText = 'This relationship already has the correct access assignments'
                         state      = 'success'
                     }
+                    Write-LogMessage -headers $Request.Headers -API $APIName -tenant 'Global' -message 'GDAP access assignments already correct; no changes applied' -Sev 'Info'
                 } else {
                     $Results = @()
                 }
