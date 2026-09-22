@@ -38,8 +38,8 @@ function Invoke-ListCASituations {
             identities   = $Battery.identities
             candidates   = $Battery.candidates
             country      = $Battery.country
-            situations   = @($Battery.situations)
-            excluded     = @($Battery.excluded)
+            situations   = @($Battery.situations | Where-Object { $null -ne $_ })
+            excluded     = @($Battery.excluded | Where-Object { $null -ne $_ })
             summary      = $Battery.summary
         }
         $StatusCode = [HttpStatusCode]::OK

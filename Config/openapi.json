@@ -38611,12 +38611,6 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
-                      "AcknowledgedBy": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "AcknowledgeNote": {
-                        "x-cipp-field-source": "frontend"
-                      },
                       "CmdletName": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -38646,7 +38640,7 @@
                         "x-cipp-field-source": "storage,frontend"
                       },
                       "SnoozeReason": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,frontend"
                       },
                       "SnoozeRowKey": {
                         "x-cipp-field-source": "storage"
@@ -38655,10 +38649,10 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SnoozeUntilResolved": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,frontend"
                       },
                       "SnoozeVisible": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,frontend"
                       },
                       "Status": {
                         "x-cipp-field-source": "storage,frontend"
@@ -59216,7 +59210,7 @@
                       },
                       "KeepVisible": {
                         "type": "string",
-                        "x-cipp-field-source": "storage,backend"
+                        "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "PartitionKey": {
                         "x-cipp-field-source": "storage,backend"
@@ -59260,7 +59254,7 @@
                       },
                       "UntilResolved": {
                         "type": "string",
-                        "x-cipp-field-source": "storage,backend"
+                        "x-cipp-field-source": "storage,backend,frontend"
                       }
                     }
                   }
