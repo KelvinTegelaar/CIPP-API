@@ -5,7 +5,7 @@ function Invoke-ExecAccessChecks {
     .ROLE
         CIPP.AppSettings.Read
     .DESCRIPTION
-        Runs the CIPP deployment's self-diagnostics and returns the result. Type selects the check: 'Permissions' verifies the SAM application's Graph permissions, 'Tenants' tests access to each tenant, and 'GDAP' inspects the GDAP relationships and role mappings. Results are cached for an hour unless SkipCache is true.
+        Runs the CIPP deployment's self-diagnostics and returns the result. Type selects the check: 'Permissions' verifies the SAM application's Graph permissions, 'Tenants' tests access to each tenant, and 'GDAP' inspects the GDAP relationships and role mappings. Results are cached for an hour and served from cache by default. Pass SkipCache to trigger a fresh run of the check; the run repopulates the cache and the response only acknowledges it started, so call again without SkipCache to read the updated results. For the 'Tenants' check, supplying TenantId returns just that tenant's cached result; add SkipCache to trigger a re-check of that single tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -22,10 +22,14 @@ function Invoke-ExecAccessChecks {
     # body - reading only the query left both empty and returned an empty result for every Type.
     $Type = $Request.Query.Type ?? $Request.Body.Type
 
-    # Re-run the check instead of serving the cached result.
+    # Trigger a fresh run of the check instead of serving the cached result. The run repopulates
+    # the cache and the response only acknowledges it, so a follow-up call without SkipCache is
+    # what returns the updated result.
     $SkipCache = ($Request.Query.SkipCache ?? $Request.Body.SkipCache) -eq $true
 
-    # The tenant to (re)check for the 'Tenants' type. Query or body, for the same reason as Type.
+    # The tenant to read for the 'Tenants' type: returns just that tenant's cached result. Pair it
+    # with SkipCache to trigger a re-check of that one tenant, then read again without SkipCache to
+    # get the refreshed result. Query or body, as with Type.
     $TenantId = $Request.Body.TenantId ?? $Request.Query.TenantId
 
     switch ($Type) {
@@ -51,10 +55,22 @@ function Invoke-ExecAccessChecks {
             }
         }
         'Tenants' {
-            $AccessChecks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantAccessChecks'"
-            if (!$TenantId) {
+            # A single-tenant refresh runs synchronously and only when explicitly requested via
+            # SkipCache, returning an acknowledgement (the "Check Tenant" button relies on this).
+            # Every other call - the full list, or a single TenantId without SkipCache - just
+            # serves the cached rows, so a caller can read one tenant's result without side effects.
+            if ($TenantId -and $SkipCache) {
+                $Tenant = Get-Tenants -TenantFilter $TenantId
+                $null = Test-CIPPAccessTenant -Tenant $Tenant.customerId -Headers $Request.Headers
+                $Results = "Refreshing tenant $($Tenant.displayName)"
+            } else {
+                $AccessChecks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantAccessChecks'"
                 try {
                     $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID }
+                    # Narrow to a single tenant when TenantId is supplied (customerId or domain).
+                    if ($TenantId) {
+                        $Tenants = $Tenants | Where-Object { $_.customerId -eq $TenantId -or $_.defaultDomainName -eq $TenantId }
+                    }
                     $Results = foreach ($Tenant in $Tenants) {
                         $TenantCheck = $AccessChecks | Where-Object -Property RowKey -EQ $Tenant.customerId | Select-Object -Property Data
                         $TenantResult = [PSCustomObject]@{
@@ -112,18 +128,13 @@ function Invoke-ExecAccessChecks {
                     Write-Warning "Error running tenant access check - $($_.Exception.Message)"
                     $Results = @()
                 }
-            }
 
-            if ($SkipCache -or $LastRun -lt $4HoursAgo) {
-                $Message = Test-CIPPAccessTenant -Headers $Request.Headers
+                # Full-list only: queue a background re-check when the cache is stale or a refresh
+                # was requested. A single tenant refreshes synchronously in the branch above.
+                if (-not $TenantId -and ($SkipCache -or $LastRun -lt $4HoursAgo)) {
+                    $Message = Test-CIPPAccessTenant -Headers $Request.Headers
+                }
             }
-
-            if ($TenantId) {
-                $Tenant = Get-Tenants -TenantFilter $TenantId
-                $null = Test-CIPPAccessTenant -Tenant $Tenant.customerId -Headers $Request.Headers
-                $Results = "Refreshing tenant $($Tenant.displayName)"
-            }
-
         }
         'GDAP' {
             if (-not $SkipCache) {

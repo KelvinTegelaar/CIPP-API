@@ -11550,7 +11550,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Runs the CIPP deployment's self-diagnostics and returns the result. Type selects the check: 'Permissions' verifies the SAM application's Graph permissions, 'Tenants' tests access to each tenant, and 'GDAP' inspects the GDAP relationships and role mappings. Results are cached for an hour unless SkipCache is true.",
+        "description": "Runs the CIPP deployment's self-diagnostics and returns the result. Type selects the check: 'Permissions' verifies the SAM application's Graph permissions, 'Tenants' tests access to each tenant, and 'GDAP' inspects the GDAP relationships and role mappings. Results are cached for an hour and served from cache by default. Pass SkipCache to trigger a fresh run of the check; the run repopulates the cache and the response only acknowledges it started, so call again without SkipCache to read the updated results. For the 'Tenants' check, supplying TenantId returns just that tenant's cached result; add SkipCache to trigger a re-check of that single tenant.",
         "requestBody": {
           "required": false,
           "content": {
@@ -11560,11 +11560,11 @@
                 "properties": {
                   "SkipCache": {
                     "type": "string",
-                    "description": "Re-run the check instead of serving the cached result."
+                    "description": "Trigger a fresh run of the check instead of serving the cached result. The run repopulates the cache and the response only acknowledges it, so a follow-up call without SkipCache is what returns the updated result."
                   },
                   "TenantId": {
                     "type": "string",
-                    "description": "The tenant to (re)check for the 'Tenants' type. Query or body, for the same reason as Type."
+                    "description": "The tenant to read for the 'Tenants' type: returns just that tenant's cached result. Pair it with SkipCache to trigger a re-check of that one tenant, then read again without SkipCache to get the refreshed result. Query or body, as with Type."
                   },
                   "Type": {
                     "type": "string",
@@ -11579,7 +11579,7 @@
           {
             "name": "SkipCache",
             "in": "query",
-            "description": "Re-run the check instead of serving the cached result.",
+            "description": "Trigger a fresh run of the check instead of serving the cached result. The run repopulates the cache and the response only acknowledges it, so a follow-up call without SkipCache is what returns the updated result.",
             "required": false,
             "schema": {
               "type": "string"
@@ -11588,7 +11588,7 @@
           {
             "name": "TenantId",
             "in": "query",
-            "description": "The tenant to (re)check for the 'Tenants' type. Query or body, for the same reason as Type.",
+            "description": "The tenant to read for the 'Tenants' type: returns just that tenant's cached result. Pair it with SkipCache to trigger a re-check of that one tenant, then read again without SkipCache to get the refreshed result. Query or body, as with Type.",
             "required": false,
             "schema": {
               "type": "string"
