@@ -23489,6 +23489,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -23513,9 +23516,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -24268,7 +24275,7 @@
         "tags": [
           "Tools > Report-Builder"
         ],
-        "description": "Returns the server-rendered PDF for a generated Report Builder report as application/pdf bytes.\nBacks both the in-app preview (shown in an iframe) and the download button on the view page.\n404 when the report has no rendered PDF (generated before server-side rendering, or its render\nfailed), and also when the report belongs to a tenant the caller cannot access.",
+        "description": "Returns the server-rendered PDF for a generated Report Builder report as application/pdf bytes.\nBacks both the in-app preview (shown in an iframe) and the download button on the view page.\nA report generated before server-side rendering (or whose render failed) is rendered from its\nstored blocks on first request and cached. 404 when the report does not exist, and also when\nthe report belongs to a tenant the caller cannot access.",
         "parameters": [
           {
             "name": "id",
@@ -24296,7 +24303,12 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "PartitionKey": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
                 }
               }
             }
