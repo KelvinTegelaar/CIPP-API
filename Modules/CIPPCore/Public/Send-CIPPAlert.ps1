@@ -20,6 +20,7 @@ function Send-CIPPAlert {
         $PsaTicketPriority,
         $PSAReference,
         $PSATicketId,
+        $PSAConsolidationKey,
         [switch]$UseStandardizedSchema
     )
     Write-Information 'Shipping Alert'
@@ -371,6 +372,12 @@ function Send-CIPPAlert {
                 if ($PSATicketId) {
                     $Alert.PsaTicketId = $PSATicketId
                     Write-Information "PSA alert target ticket: $PSATicketId"
+                }
+                if ($PSAConsolidationKey) {
+                    # Optional stable key for PSA extensions that support consolidation.
+                    # Extensions that do not consume this property remain unaffected.
+                    $Alert.PSAConsolidationKey = $PSAConsolidationKey
+                    Write-Information 'PSA alert consolidation key supplied'
                 }
                 if ($AffectedUser) {
                     $Alert.AffectedUser = $AffectedUser
