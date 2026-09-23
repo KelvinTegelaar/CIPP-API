@@ -38,7 +38,7 @@ function Invoke-ExecBECBulkCheck {
         $RequestedBy = try { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } catch { 'CIPP' }
         # the technician's own address (first x-forwarded-for hop) is never the user's or the attacker's
         $RequestedFromIP = ConvertTo-CIPPBecHostAddress -Address ([string](([string]$Headers.'x-forwarded-for' -split ',')[0])).Trim()
-        $Queue = New-CippQueueEntry -Name "BEC investigation - $TenantFilter" -Link "/identity/reports/bec-reports?tenantFilter=$TenantFilter" -Reference "bec-$TenantFilter-$([guid]::NewGuid().ToString('N'))" -TotalTasks $UserIds.Count
+        $Queue = New-CippQueueEntry -Name "BEC investigation - $TenantFilter" -Link "/identity/administration/bec?tenantFilter=$TenantFilter" -Reference "bec-$TenantFilter-$([guid]::NewGuid().ToString('N'))" -TotalTasks $UserIds.Count
         $Batch = [System.Collections.Generic.List[object]]::new()
         $Cases = [System.Collections.Generic.List[object]]::new()
         foreach ($UserId in $UserIds) {
