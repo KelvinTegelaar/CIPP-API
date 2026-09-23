@@ -37614,47 +37614,10 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                   "properties": {
-                    "APIKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ApplicationId": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ApplicationSecret": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "RefreshToken": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
-                    },
-                    "RowKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "SASUrl": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "SecretValue": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "TenantId": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     }
                   }
                 }
