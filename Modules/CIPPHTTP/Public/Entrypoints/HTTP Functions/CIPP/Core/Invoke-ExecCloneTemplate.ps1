@@ -26,6 +26,15 @@ function Invoke-ExecCloneTemplate {
             $NewGuid = [guid]::NewGuid().ToString()
             $Template.RowKey = $NewGuid
             $Template.JSON = $Template.JSON -replace $GUID, $NewGuid
+            # Some template types (e.g. CA) also key lookups off the GUID column, not just RowKey
+            if ($Template.GUID) {
+                $Template.GUID = $NewGuid
+            }
+            # Clearing Source detaches the clone from its library: community sync matches existing
+            # templates on displayName + Source, so a clone keeping the Source could be overwritten
+            if ($Template.Source) {
+                $Template.Source = $null
+            }
             if ($Template.Package) {
                 $Template.Package = $null
             }
