@@ -51421,7 +51421,7 @@
           {
             "name": "PageSize",
             "in": "query",
-            "description": "Rows to return per page, clamped between 50 and 1000. Defaults to 400.",
+            "description": "Rows to return per page, clamped between 50 and 5000. Defaults to 2000.",
             "required": false,
             "schema": {
               "type": "integer"

@@ -229,10 +229,10 @@ function Invoke-ListLogs {
     # range newest-day-first and, within a day, in RowKey order (newest-first for entries
     # written with the inverted-ticks RowKey scheme).
     if ($Request.Query.manualPagination -and [System.Convert]::ToBoolean($Request.Query.manualPagination)) {
-        $PageSize = 400
-        # Rows to return per page, clamped between 50 and 1000. Defaults to 400.
+        $PageSize = 2000
+        # Rows to return per page, clamped between 50 and 5000. Defaults to 2000.
         if ($Request.Query.PageSize -as [int]) {
-            $PageSize = [Math]::Min([Math]::Max([int]$Request.Query.PageSize, 50), 1000)
+            $PageSize = [Math]::Min([Math]::Max([int]$Request.Query.PageSize, 50), 5000)
         }
         # Bound the table round trips a single request can make, so a filter that matches
         # nothing across many partitions returns a short (possibly empty) page with a
