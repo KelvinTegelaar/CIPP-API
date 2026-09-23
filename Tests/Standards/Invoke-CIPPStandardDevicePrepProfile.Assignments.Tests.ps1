@@ -90,7 +90,7 @@ BeforeAll {
                 New-ChoiceSetting 'enrollment_autopilot_dpp_deploymentmode' '0'
                 New-ChoiceSetting 'enrollment_autopilot_dpp_deploymenttype' '0'
                 New-ChoiceSetting 'enrollment_autopilot_dpp_jointype' '0'
-                New-ChoiceSetting 'enrollment_autopilot_dpp_accountype' '0'
+                New-ChoiceSetting 'enrollment_autopilot_dpp_accountype' '1'
                 New-ChoiceSetting 'enrollment_autopilot_dpp_allowskip' '0'
                 New-ChoiceSetting 'enrollment_autopilot_dpp_allowdiagnostics' '0'
                 New-SimpleSetting 'enrollment_autopilot_dpp_timeout' 60

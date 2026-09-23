@@ -21,7 +21,7 @@ function Invoke-CIPPStandardDevicePrepProfile {
             {"type":"textField","name":"standards.DevicePrepProfile.ProfileDescription","label":"Profile Description","required":false}
             {"type":"select","multiple":false,"name":"standards.DevicePrepProfile.DeploymentType","label":"Deployment Type","options":[{"label":"Single user","value":"0"},{"label":"Shared","value":"1"}]}
             {"type":"select","multiple":false,"name":"standards.DevicePrepProfile.JoinType","label":"Join Type","options":[{"label":"Microsoft Entra join","value":"0"},{"label":"Microsoft Entra hybrid join","value":"1"}]}
-            {"type":"select","multiple":false,"name":"standards.DevicePrepProfile.AccountType","label":"Account Type","options":[{"label":"Standard user","value":"0"},{"label":"Administrator","value":"1"}]}
+            {"type":"select","multiple":false,"name":"standards.DevicePrepProfile.AccountType","label":"Account Type","options":[{"label":"Standard user","value":"1"},{"label":"Administrator","value":"0"}]}
             {"type":"number","name":"standards.DevicePrepProfile.Timeout","label":"Timeout (minutes)","defaultValue":60}
             {"type":"textField","name":"standards.DevicePrepProfile.CustomErrorMessage","label":"Custom Error Message","required":false}
             {"type":"switch","name":"standards.DevicePrepProfile.AllowSkip","label":"Allow users to skip setup after failure","defaultValue":false}
@@ -65,7 +65,7 @@ function Invoke-CIPPStandardDevicePrepProfile {
     $DeploymentMode = '0' # Device Prep only supports self-deploying mode
     $DeploymentType = $Settings.DeploymentType.value ?? $Settings.DeploymentType ?? '0'
     $JoinType = $Settings.JoinType.value ?? $Settings.JoinType ?? '0'
-    $AccountType = $Settings.AccountType.value ?? $Settings.AccountType ?? '0'
+    $AccountType = $Settings.AccountType.value ?? $Settings.AccountType ?? '1' # 1 = Standard user, 0 = Administrator
     $Timeout = [int]($Settings.Timeout ?? 60)
     $CustomErrorMessage = $Settings.CustomErrorMessage ?? "Contact your organization`u{2019}s support person for help."
     $AllowSkip = if ($Settings.AllowSkip -eq $true) { '1' } else { '0' }

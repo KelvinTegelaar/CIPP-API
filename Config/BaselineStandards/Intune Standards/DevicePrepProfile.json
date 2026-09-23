@@ -75,11 +75,11 @@
       "omitWhenBlank": true,
       "options": [
         {
-          "value": "0",
+          "value": "1",
           "label": "Standard user"
         },
         {
-          "value": "1",
+          "value": "0",
           "label": "Administrator"
         }
       ]

@@ -292,7 +292,7 @@ Describe 'Get-CIPPBaselineDevicePrepProfileState' {
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_deploymentmode' 'enrollment_autopilot_dpp_deploymentmode_0')
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_deploymenttype' 'enrollment_autopilot_dpp_deploymenttype_0')
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_jointype' 'enrollment_autopilot_dpp_jointype_0')
-                (New-ChoiceSetting 'enrollment_autopilot_dpp_accountype' 'enrollment_autopilot_dpp_accountype_0')
+                (New-ChoiceSetting 'enrollment_autopilot_dpp_accountype' 'enrollment_autopilot_dpp_accountype_1')
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_allowskip' 'enrollment_autopilot_dpp_allowskip_0')
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_allowdiagnostics' 'enrollment_autopilot_dpp_allowdiagnostics_0')
                 @{ settingInstance = @{ settingDefinitionId = 'enrollment_autopilot_dpp_timeout'; simpleSettingValue = @{ value = 60 } } }
