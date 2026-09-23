@@ -719,6 +719,18 @@
                     },
                     "description": "The editor round-trips the tenant selector's own option objects ({label, value, type}) verbatim via assignedTo/excludedTo; the flat excludedTenants values keep the exclusion logic simple. Raw string values are accepted everywhere too."
                   },
+                  "GitHub": {
+                    "type": "object",
+                    "properties": {
+                      "FullName": {
+                        "type": "string"
+                      },
+                      "Message": {
+                        "type": "string"
+                      }
+                    },
+                    "description": "Optional. Pushes the saved baseline to a GitHub template repository after the save: FullName is the repository (owner/repo), Message is the commit message. Not stored on the baseline."
+                  },
                   "GUID": {
                     "type": "string"
                   },
@@ -761,13 +773,78 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "alertEmails": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "alertWebhookUrl": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "assignedTo": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "description": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "disableAlerts": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "disableScheduledRuns": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "excludedTenants": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "excludedTo": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "LocalChanges": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "storage"
+                    },
                     "Metadata": {
                       "x-cipp-field-source": "backend"
                     },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SHA": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Stages": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "templateName": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "updatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "updatedBy": {
+                      "x-cipp-field-source": "storage"
                     }
                   }
                 }
@@ -6359,6 +6436,18 @@
                   "createdAt": {
                     "type": "string"
                   },
+                  "GitHub": {
+                    "type": "object",
+                    "properties": {
+                      "FullName": {
+                        "type": "string"
+                      },
+                      "Message": {
+                        "type": "string"
+                      }
+                    },
+                    "description": "Optional. Pushes the saved template to a GitHub template repository after the save: FullName is the repository (owner/repo), Message is the commit message. Not stored on the template."
+                  },
                   "GUID": {
                     "type": "string"
                   },
@@ -8623,6 +8712,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -8650,9 +8742,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -10502,6 +10598,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -10529,9 +10628,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -10905,6 +11008,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -10932,9 +11038,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -13241,6 +13351,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -13271,9 +13384,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -13590,6 +13707,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateId": {
@@ -16863,6 +16983,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -16887,9 +17010,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -17210,19 +17337,16 @@
                     "type": "boolean"
                   },
                   "FullName": {
-                    "type": "string",
-                    "description": "Pretty-printed, not compressed: repo files are hand-edited on GitHub."
+                    "type": "string"
                   },
                   "GUID": {
-                    "type": "string",
-                    "description": "A baseline is not a templates-table row: Export-CIPPBaselineTemplate assembles the portable set - the BaselineTemplate file plus one standard template file per referenced CA/Intune template (packages expanded to their current members). Related templates are separate files, exactly the shape UploadTemplate writes, so they import through the untouched path."
+                    "type": "string"
                   },
                   "Id": {
                     "type": "string"
                   },
                   "Message": {
-                    "type": "string",
-                    "description": "Pretty-printed, not compressed: repo files are hand-edited on GitHub."
+                    "type": "string"
                   },
                   "Path": {
                     "type": "string"
@@ -17374,6 +17498,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -17398,9 +17525,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -20643,6 +20774,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -20670,9 +20804,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -30906,6 +31044,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -30930,9 +31071,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -31858,6 +32003,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -34756,6 +34904,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -34783,9 +34934,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -35611,6 +35766,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -35641,9 +35799,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -36310,6 +36472,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -36337,9 +36502,13 @@
                       "x-cipp-field-source": "storage"
                     },
                     "SHA": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
                       "x-cipp-field-source": "storage"
                     },
                     "TemplateName": {
@@ -39267,6 +39436,9 @@
                       "AppType": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Error": {
                         "x-cipp-field-source": "backend"
                       },
@@ -39297,9 +39469,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateId": {
@@ -39917,6 +40093,9 @@
                       "appTypes": {
                         "x-cipp-field-source": "backend,frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "description": {
                         "x-cipp-field-source": "backend,frontend"
                       },
@@ -39947,9 +40126,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -40121,6 +40304,9 @@
                       "assignmentFilterManagementType": {
                         "x-cipp-field-source": "backend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "description": {
                         "x-cipp-field-source": "backend,frontend"
                       },
@@ -40157,9 +40343,13 @@
                         "x-cipp-field-source": "backend"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -41113,6 +41303,9 @@
                       "remediationPosture": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "source": {
+                        "x-cipp-field-source": "frontend"
+                      },
                       "stageNames": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -41302,6 +41495,9 @@
                       "Columns": {
                         "x-cipp-field-source": "backend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Data": {
                         "x-cipp-field-source": "backend"
                       },
@@ -41332,9 +41528,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "Style": {
@@ -41400,6 +41600,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -41427,9 +41630,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "Style": {
@@ -42030,6 +42237,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "displayName": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -42060,10 +42270,14 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
                         "x-cipp-field-source": "storage,frontend"
+                      },
+                      "SourcePath": {
+                        "x-cipp-field-source": "storage"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -43079,6 +43293,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "EnableSafeList": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -43118,9 +43335,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -43347,6 +43568,9 @@
                       "companyName": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "displayName": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -43383,9 +43607,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -45859,6 +46087,9 @@
                       "comments": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Enabled": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -45892,9 +46123,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -46543,6 +46778,9 @@
                       "cippconnectortype": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -46570,9 +46808,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -48968,6 +49210,9 @@
                       "allowExternal": {
                         "x-cipp-field-source": "backend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "description": {
                         "x-cipp-field-source": "backend,frontend"
                       },
@@ -49013,10 +49258,14 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
                         "x-cipp-field-source": "storage,backend"
+                      },
+                      "SourcePath": {
+                        "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
                         "x-cipp-field-source": "storage"
@@ -50083,6 +50332,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "description": {
                         "x-cipp-field-source": "backend,frontend"
                       },
@@ -50119,9 +50371,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -50279,6 +50535,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "corrupt": {
                         "x-cipp-field-source": "backend"
                       },
@@ -50318,10 +50577,14 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
                         "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "SourcePath": {
+                        "x-cipp-field-source": "storage"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -50583,6 +50846,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "defaultDuration.label": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -50628,9 +50894,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "templateName": {
@@ -50737,6 +51007,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "createdBy": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -50770,9 +51043,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "templateName": {
@@ -51474,6 +51751,9 @@
                       "AppId": {
                         "x-cipp-field-source": "backend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "DateFilter": {
                         "x-cipp-field-source": "backend"
                       },
@@ -51516,9 +51796,13 @@
                         "x-cipp-field-source": "backend"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "Standard": {
@@ -53283,6 +53567,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -53307,9 +53594,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "templateName": {
@@ -54334,6 +54625,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -54382,9 +54676,13 @@
                         "x-cipp-field-source": "frontend"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "templateName": {
@@ -54595,6 +54893,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "CustomCount": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -54628,9 +54929,13 @@
                         "x-cipp-field-source": "frontend"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -54885,6 +55190,9 @@
                       "comments": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Enabled": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -54918,9 +55226,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -55751,6 +56063,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -55775,9 +56090,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateDescription": {
@@ -56291,6 +56610,9 @@
                       "comments": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Description": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -56321,9 +56643,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -56468,6 +56794,9 @@
                       "Comment": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "ContentType": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -56504,9 +56833,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -57769,6 +58102,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Error": {
                         "x-cipp-field-source": "backend"
                       },
@@ -57799,12 +58135,16 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "SiteTemplateCount": {
                         "x-cipp-field-source": "frontend"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateId": {
@@ -59348,6 +59688,9 @@
                       "BulkSpamAction": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -59381,9 +59724,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -59747,54 +60094,31 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
                     "properties": {
                       "displayName": {
                         "x-cipp-field-source": "backend"
-                      },
-                      "ETag": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
                       },
                       "excludedTenants": {
                         "x-cipp-field-source": "frontend"
                       },
                       "GUID": {
-                        "x-cipp-field-source": "storage,backend"
-                      },
-                      "JSON": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "backend"
                       },
                       "name": {
                         "x-cipp-field-source": "backend"
                       },
-                      "Package": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "PartitionKey": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "Permissions": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "RowKey": {
-                        "x-cipp-field-source": "storage"
-                      },
                       "runManually": {
                         "x-cipp-field-source": "frontend"
                       },
-                      "SHA": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "Source": {
-                        "x-cipp-field-source": "storage"
+                      "source": {
+                        "x-cipp-field-source": "frontend"
                       },
                       "standards": {
                         "x-cipp-field-source": "frontend"
                       },
                       "templateName": {
-                        "x-cipp-field-source": "storage,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "templates": {
                         "x-cipp-field-source": "backend"
@@ -59802,18 +60126,14 @@
                       "tenantFilter": {
                         "x-cipp-field-source": "frontend"
                       },
-                      "Timestamp": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
                       "type": {
                         "x-cipp-field-source": "frontend"
                       },
                       "updatedAt": {
                         "x-cipp-field-source": "frontend"
                       },
-                      "UpdatedBy": {
-                        "x-cipp-field-source": "storage,frontend"
+                      "updatedBy": {
+                        "x-cipp-field-source": "frontend"
                       }
                     }
                   }
@@ -60726,6 +61046,9 @@
                       "compliant": {
                         "x-cipp-field-source": "backend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "currentValue": {
                         "x-cipp-field-source": "backend"
                       },
@@ -60774,9 +61097,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "standardId": {
@@ -60944,6 +61271,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "entries": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -60986,9 +61316,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {
@@ -61869,6 +62203,9 @@
                       "comments": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -61896,9 +62233,13 @@
                         "x-cipp-field-source": "storage"
                       },
                       "SHA": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
                         "x-cipp-field-source": "storage"
                       },
                       "TemplateName": {

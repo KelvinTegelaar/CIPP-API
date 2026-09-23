@@ -14,6 +14,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity {}
     function Add-CIPPAzDataTableEntity { param($Entity) $null = $Entity }
 
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GitHub/Get-CIPPTemplateContentHash.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Import-CommunityTemplate.ps1')
 
     function Get-RepoTemplate {
@@ -22,6 +23,15 @@ BeforeAll {
             RowKey       = '7f3a91c2-4d1e-4b8a-9c3f-2e5d6a8b1f04'
             PartitionKey = 'IntuneTemplate'
             JSON         = (@{ Displayname = 'Baseline'; Description = $Description } | ConvertTo-Json -Compress)
+        }
+    }
+
+    function Get-RepoStandardsTemplate {
+        param([string]$Description = 'Description from the repo')
+        [PSCustomObject]@{
+            RowKey       = '9a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9'
+            PartitionKey = 'StandardsTemplateV2'
+            JSON         = (@{ templateName = 'Baseline'; Description = $Description } | ConvertTo-Json -Compress)
         }
     }
 }
@@ -81,6 +91,54 @@ Describe 'Import-CommunityTemplate direct-write path' {
 
             $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'abc123' -Source 'owner/repo'
             Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly
+        }
+    }
+
+    Context 'source path' {
+        It 'stamps SourcePath when passed' {
+            Mock Get-CIPPAzDataTableEntity {
+                [PSCustomObject]@{
+                    RowKey       = '7f3a91c2-4d1e-4b8a-9c3f-2e5d6a8b1f04'
+                    PartitionKey = 'IntuneTemplate'
+                    SHA          = 'abc123'
+                    JSON         = (@{ Displayname = 'Baseline' } | ConvertTo-Json -Compress)
+                }
+            }
+            $script:Written = $null
+            Mock Add-CIPPAzDataTableEntity { $script:Written = $Entity }
+
+            $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'def456' -Source 'owner/repo' -Path 'IntuneTemplate/Baseline.json'
+            $script:Written.SourcePath | Should -Be 'IntuneTemplate/Baseline.json'
+        }
+
+        It 'writes no SourcePath when not passed' {
+            Mock Get-CIPPAzDataTableEntity { $null }
+            $script:Written = $null
+            Mock Add-CIPPAzDataTableEntity { $script:Written = $Entity }
+
+            $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'abc123' -Source 'owner/repo'
+            $script:Written.PSObject.Properties.Name | Should -Not -Contain 'SourcePath'
+        }
+    }
+
+    Context 'ContentHash' {
+        It 'is stamped for a StandardsTemplateV2 row' {
+            Mock Get-CIPPAzDataTableEntity { $null }
+            $script:Written = $null
+            Mock Add-CIPPAzDataTableEntity { $script:Written = $Entity }
+
+            $null = Import-CommunityTemplate -Template (Get-RepoStandardsTemplate) -SHA 'abc123' -Source 'owner/repo'
+            $script:Written.ContentHash | Should -Not -BeNullOrEmpty
+            $script:Written.ContentHash | Should -Match '^[0-9a-f]{64}$'
+        }
+
+        It 'is not stamped for a non-StandardsTemplateV2 row' {
+            Mock Get-CIPPAzDataTableEntity { $null }
+            $script:Written = $null
+            Mock Add-CIPPAzDataTableEntity { $script:Written = $Entity }
+
+            $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'abc123' -Source 'owner/repo'
+            $script:Written.PSObject.Properties.Name | Should -Not -Contain 'ContentHash'
         }
     }
 
