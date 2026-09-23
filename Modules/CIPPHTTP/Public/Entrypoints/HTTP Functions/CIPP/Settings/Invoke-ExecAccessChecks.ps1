@@ -36,7 +36,7 @@ function Invoke-ExecAccessChecks {
         'Permissions' {
             if (-not $SkipCache) {
                 try {
-                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions' and Timestamp and Timestamp ge datetime'$TimestampFilter'"
+                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions' and Timestamp ge datetime'$TimestampFilter'"
                     $Results = $Cache.Data | ConvertFrom-Json -ErrorAction Stop
                 } catch {
                     $Results = $null
