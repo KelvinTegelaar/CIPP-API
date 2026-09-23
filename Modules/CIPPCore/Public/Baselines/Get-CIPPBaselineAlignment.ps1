@@ -475,14 +475,14 @@ function Get-CIPPBaselineAlignment {
         }
 
         $Fleet = & $ScoreRows $Rows
-        # Trend = the daily rollups Set-CIPPBaselineTrendPoint writes after every run (last
-        # 90 days), with today's point always replaced by the LIVE score so the chart never
-        # lags the rest of the page.
+        # Trend = the daily rollups Set-CIPPBaselineTrendPoint writes after every run, capped
+        # at 14 days (13 stored days + today), with today's point always replaced by the LIVE
+        # score so the chart never lags the rest of the page.
         $Today = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
         $Trend = [System.Collections.Generic.List[object]]::new()
         try {
             $TrendTable = Get-CippTable -tablename 'BaselineTrend'
-            $Cutoff = (Get-Date).ToUniversalTime().AddDays(-90).ToString('yyyy-MM-dd')
+            $Cutoff = (Get-Date).ToUniversalTime().AddDays(-13).ToString('yyyy-MM-dd')
             $TrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter "PartitionKey eq 'fleet' and RowKey ge '$Cutoff' and RowKey lt '$Today'") | Sort-Object -Property RowKey
             foreach ($Point in $TrendRows) {
                 $Trend.Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
