@@ -254,6 +254,13 @@
                   "AlertComment": {
                     "type": "string"
                   },
+                  "becActions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Which containment actions the 'becremediate' action runs (ListBECRemediationActions ids); empty = the default six."
+                  },
                   "conditions": {
                     "type": "array",
                     "items": {
@@ -12549,11 +12556,12 @@
     },
     "/api/ExecAddTrustedIP": {
       "post": {
-        "summary": "ExecAddTrustedIP",
+        "summary": "Adds IP addresses or ranges to CIPP's IP allow/block list.",
         "operationId": "ExecAddTrustedIP",
         "tags": [
           "CIPP > Settings"
         ],
+        "description": "Sets each IP address or CIDR range (IPv4 or IPv6) to Trusted, Blocked or NotTrusted (neutral) for one tenant, or for every tenant with tenantfilter=AllTenants. A tenant entry overrides an AllTenants entry for the same range, and the most specific range decides an address. The audit-log alerts treat Trusted addresses as known; the BEC investigation uses Trusted and Blocked entries as confirmed-safe and confirmed-compromised IPs.",
         "requestBody": {
           "required": false,
           "content": {
@@ -12565,10 +12573,16 @@
                     "type": "array",
                     "items": {
                       "type": "string"
-                    }
+                    },
+                    "description": "IP addresses or CIDR ranges (IPv4 or IPv6); one entry may also hold several separated by commas or spaces"
+                  },
+                  "Note": {
+                    "type": "string",
+                    "description": "Optional note shown with the entry"
                   },
                   "State": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Trusted, Blocked, or NotTrusted to make the entry neutral again"
                   }
                 }
               }
@@ -15394,29 +15408,95 @@
         "x-cipp-role": "Tenant.Baselines.ReadWrite"
       }
     },
-    "/api/ExecBECCheck": {
+    "/api/ExecBECBulkCheck": {
       "get": {
-        "summary": "ExecBECCheck",
+        "summary": "Queues Business Email Compromise investigations for many users at once.",
+        "operationId": "ExecBECBulkCheck",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Queues one BEC investigation per user as a single orchestration with a queue entry for progress. Accepts either an array of { UserIds, tenantFilter } items (the Users table bulk action) or one object with UserIds[]. Each run gets its own case id; results appear on the BEC Reports page and each user's Compromise Remediation tab.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
+      }
+    },
+    "/api/ExecBECCheck": {
+      "post": {
+        "summary": "Reads, polls or starts a Business Email Compromise investigation.",
         "operationId": "ExecBECCheck",
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Returns the business email compromise assessment for a user: sign-ins with a location analysis against the user's assigned usage location, mailbox rules and rule changes, trusted/blocked sender changes, OneDrive and SharePoint sharing link activity, added applications matched against the known-malicious catalog, MFA methods, Intune devices, sent mail, and tenant-wide password changes. If no cached result exists the check is queued as a background job and the response reports it as waiting, so poll rather than expecting results on the first call. Pass overwrite=true to force a fresh run.",
+        "description": "GET with GUID (or caseId) returns that run: while it is queued or running { Waiting = true, Progress } where Progress is the job status (queued until a worker picks it up, then running) and the per-step state the page renders; { Error, Progress } when it failed; otherwise the results payload with the server-side Score, per-collector Completeness and a Run block. A queued or running run whose progress has not moved for 20 minutes is marked failed by this poll (the worker restarted or the run was abandoned) and returned as { Error }. GET without a GUID returns the user's latest run as { GUID, Status } and starts nothing (GUID is null when the user has no runs). POST with tenantFilter, userid and userName queues a new run and returns its { GUID }. Every run is the full investigation and is kept in the BecReports table; metadata only, never message content.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "userid": {
+                    "type": "string",
+                    "description": "Object id of the user to investigate"
+                  },
+                  "userName": {
+                    "type": "string",
+                    "description": "The user's UPN (stored on the run and used by the collectors)"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
         "parameters": [
           {
-            "name": "GUID",
+            "name": "caseId",
             "in": "query",
+            "description": "The run to read; GUID keeps the original poll contract",
             "required": false,
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "overwrite",
+            "name": "GUID",
             "in": "query",
+            "description": "The run to read; GUID keeps the original poll contract",
             "required": false,
             "schema": {
-              "type": "boolean"
+              "type": "string"
             }
           },
           {
@@ -15425,6 +15505,7 @@
           {
             "name": "userid",
             "in": "query",
+            "description": "Object id of the user to investigate",
             "required": false,
             "schema": {
               "type": "string"
@@ -15433,6 +15514,7 @@
           {
             "name": "userName",
             "in": "query",
+            "description": "The user's UPN (stored on the run and used by the collectors)",
             "required": false,
             "schema": {
               "type": "string"
@@ -15446,40 +15528,25 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                   "properties": {
-                    "Batch": {
+                    "CaseId": {
                       "x-cipp-field-source": "backend"
                     },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "OrchestratorName": {
+                    "Containment": {
                       "x-cipp-field-source": "backend"
                     },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
+                    "ExtractedAt": {
+                      "x-cipp-field-source": "backend"
                     },
-                    "Results": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
+                    "RequestedAt": {
+                      "x-cipp-field-source": "backend"
                     },
-                    "RowKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "SkipLog": {
+                    "RequestedBy": {
                       "x-cipp-field-source": "backend"
                     },
                     "Status": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "UserId": {
-                      "x-cipp-field-source": "storage"
+                      "x-cipp-field-source": "backend"
                     }
                   }
                 }
@@ -15491,6 +15558,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -15501,13 +15571,14 @@
         "x-cipp-role": "Identity.User.Read"
       }
     },
-    "/api/ExecBECRemediate": {
+    "/api/ExecBECEvidenceExport": {
       "post": {
-        "summary": "ExecBECRemediate",
-        "operationId": "ExecBECRemediate",
+        "summary": "Builds the evidence package for a Business Email Compromise run and returns it.",
+        "operationId": "ExecBECEvidenceExport",
         "tags": [
           "Identity > Administration > Users"
         ],
+        "description": "Collates the run's stored results, one CSV per finding set, the score, the containment history, every logbook entry stamped with the case id and the browser-rendered PDF reports (pdfBase64, pdfSummaryBase64) into a ZIP. Nothing is stored: the ZIP is returned base64-encoded (ZipBase64) for the browser to save. Metadata only - nothing in the package is message content.",
         "requestBody": {
           "required": true,
           "content": {
@@ -15515,13 +15586,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "caseId": {
+                    "type": "string"
+                  },
+                  "pdfBase64": {
+                    "type": "string",
+                    "description": "optional: the report PDFs rendered in the browser, base64-encoded (full report + C-suite summary)"
+                  },
+                  "pdfSummaryBase64": {
+                    "type": "string"
+                  },
                   "tenantFilter": {
-                    "type": "string"
-                  },
-                  "userid": {
-                    "type": "string"
-                  },
-                  "username": {
                     "type": "string"
                   }
                 },
@@ -15541,10 +15616,349 @@
                   "type": "object",
                   "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                   "properties": {
-                    "Results": {
+                    "Bytes": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "CaseId": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "FileCount": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "ZipBase64": {
                       "x-cipp-field-source": "backend"
                     }
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
+      }
+    },
+    "/api/ExecBECIPReview": {
+      "post": {
+        "summary": "Re-judges the IP addresses of a BEC case with the investigator's overrides and chosen accounts.",
+        "operationId": "ExecBECIPReview",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Validates the request and queues a background re-run of the case's address-dependent sections: the investigator's overrides (an address or CIDR range marked Safe or Compromised, with an optional note) become the case's complete override set, the sign-ins of the chosen accounts are correlated with the case's addresses, the address lists are re-read, and mailbox activity, IP verdicts, attacker activity, delegated mailboxes and the score are recomputed for the original window. Returns a DeploymentId whose per-step progress ListOffboardingProgress returns. To make a verdict permanent for the tenant, add the address to CIPP's IP allow/block list (ExecAddTrustedIP).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "CaseId": {
+                    "type": "string",
+                    "description": "The BEC case (run) to review"
+                  },
+                  "CorrelateUsers": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Object ids of other accounts whose sign-ins to correlate with the case's addresses"
+                  },
+                  "Overrides": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "IP": {
+                          "type": "string"
+                        },
+                        "Note": {
+                          "type": "string"
+                        },
+                        "Verdict": {
+                          "$ref": "#/components/schemas/LabelValue"
+                        }
+                      }
+                    },
+                    "description": "The complete set of overrides for the case: an address or CIDR range, Safe or Compromised, and a note. Auto drops the override."
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "resultText": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "state": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
+    "/api/ExecBECRemediate": {
+      "post": {
+        "summary": "Runs selectable Business Email Compromise containment for a user.",
+        "operationId": "ExecBECRemediate",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the default set runs (the DefaultSelected actions, configurable instance-wide from CIPP settings). Actions marked Critical require Confirmation to equal the user's UPN. With Async the request is validated, queued as a scheduled task that runs straight away, and answered with a DeploymentId whose per-action progress ListOffboardingProgress returns; without it the actions run inline and their results are returned. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Actions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Action ids from ListBECRemediationActions; empty runs the default set"
+                  },
+                  "Async": {
+                    "type": "boolean",
+                    "description": "run as a background scheduled task and report progress under the returned DeploymentId"
+                  },
+                  "CaseId": {
+                    "type": "string",
+                    "description": "the BEC run whose findings supply default targets and which records the outcome"
+                  },
+                  "Confirmation": {
+                    "type": "string",
+                    "description": "must equal the user's UPN when a Critical action is selected"
+                  },
+                  "Parameters": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "userid": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter",
+                  "userid",
+                  "username"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
+                  "properties": {
+                    "resultText": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "state": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph,backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
+    "/api/ExecBECRemediationDefaults": {
+      "post": {
+        "summary": "Gets or sets which BEC containment actions are selected by default.",
+        "operationId": "ExecBECRemediationDefaults",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "GET with List=true returns the containment catalog (Id, Label, Description, Impact, DefaultSelected) with the instance-wide defaults applied. POST with DefaultActions saves the action ids that start selected in the BEC containment drawer and run when ExecBECRemediate is called without Actions.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "DefaultActions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Containment action ids (ListBECRemediationActions) that start selected"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "List",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ExecBECReport": {
+      "post": {
+        "summary": "Manages a stored Business Email Compromise run.",
+        "operationId": "ExecBECReport",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Action=Delete removes a BEC run permanently: its results payload, its evidence package and the run row. Runs are otherwise kept indefinitely.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "Currently only Delete"
+                  },
+                  "caseId": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -41460,6 +41874,289 @@
         "x-cipp-role": "Identity.AuditLog.Read"
       }
     },
+    "/api/ListBECPhishingSpread": {
+      "get": {
+        "summary": "Lists who else received mail from a sender, from message-trace metadata.",
+        "operationId": "ListBECPhishingSpread",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Given a sender address (and optionally a subject fragment), walks the message trace for the last N days and groups the recipients: address, internal or external, message count, first and last delivery and the subjects seen. Use it to find the spread of a phishing message from a compromised or look-alike sender. Metadata only - no message content is read.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "look-back in days (1-90)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sender",
+            "in": "query",
+            "description": "the sender to trace",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "description": "optional subject fragment to narrow the trace (case-insensitive contains)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "Complete": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Days": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ExternalCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "InternalCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Recipients": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Sender": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "TotalMessages": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
+      }
+    },
+    "/api/ListBECRemediationActions": {
+      "post": {
+        "summary": "Lists the available Business Email Compromise containment actions.",
+        "operationId": "ListBECRemediationActions",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Returns the catalog of containment actions ExecBECRemediate accepts - id, label, description, impact (Low/Medium/High/Critical), whether it is reversible and whether it runs by default (the instance-wide defaults from CIPP settings).",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "DefaultSelected": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Description": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Id": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Impact": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Label": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Order": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ParameterName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Reversible": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "TargetSource": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListBECReports": {
+      "get": {
+        "summary": "Lists Business Email Compromise runs.",
+        "operationId": "ListBECReports",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Lists every stored BEC run (case id, user, status, threat level and score, when it was extracted, who requested it) for a tenant, or for every tenant with tenantFilter=AllTenants. Optionally narrowed to one user with userId. Runs are kept until deleted; this list never reads the result payloads.",
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "Narrow the list to one user's run history",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "CaseId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ContainmentRuns": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "DisplayName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ErrorMessage": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ExtractedAt": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "IncompleteCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Level": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "RequestedAt": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "RequestedBy": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Score": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Status": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "UserId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "UserPrincipalName": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListBPA": {
       "get": {
         "summary": "ListBPA",
@@ -50640,7 +51337,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Lists trusted IP addresses configured in CIPP for IP-based access control.",
+        "description": "Lists CIPP's IP allow/block list: every tenant or AllTenants entry with its address or CIDR range (Range) and state (Trusted, Blocked or NotTrusted).",
         "responses": {
           "200": {
             "description": "Success",
@@ -53962,17 +54659,17 @@
     },
     "/api/ListOffboardingProgress": {
       "get": {
-        "summary": "Get the live progress of an offboarding job",
+        "summary": "Get the live progress of an offboarding or BEC remediation job",
         "operationId": "ListOffboardingProgress",
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Returns the progress rows of an offboarding job started from the wizard: one row per user with\nits overall status and the status and message of every step. Same rows as ListAsyncDeployment.\nThis is a read-only GET, so it carries a read role; an offboarding operator (who holds the\nbroader user write role) can still follow and re-run their jobs.",
+        "description": "Returns the progress rows of an offboarding job started from the wizard, or of a background BEC\nremediation (ExecBECRemediate with Async): one row per user with its overall status and the\nstatus and message of every step. Same rows as ListAsyncDeployment.\nThis is a read-only GET, so it carries a read role; an offboarding operator (who holds the\nbroader user write role) can still follow and re-run their jobs.",
         "parameters": [
           {
             "name": "DeploymentId",
             "in": "query",
-            "description": "The DeploymentId handed back by ExecOffboardUser, also stored on each offboarding task",
+            "description": "The DeploymentId handed back by ExecOffboardUser (also stored on each offboarding task) or ExecBECRemediate",
             "required": true,
             "schema": {
               "type": "string"

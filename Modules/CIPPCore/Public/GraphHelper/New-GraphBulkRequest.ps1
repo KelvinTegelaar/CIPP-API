@@ -54,6 +54,33 @@ function New-GraphBulkRequest {
                 }
                 $Return
             }
+            # A throttled or briefly unavailable FIRST page used to come straight back as the item's failure
+            # (continuation pages below are retried). Send those items again - twice, waiting the longest
+            # Retry-After they asked for, up to 30 s - before a caller sees a failure.
+            $TransientStatus = @(429, 503, 504)
+            for ($Attempt = 1; $Attempt -le 2; $Attempt++) {
+                $Transient = @($ReturnedData.responses | Where-Object { ($_.status -as [int]) -in $TransientStatus })
+                if ($Transient.Count -eq 0) { break }
+                $Wait = 1
+                foreach ($Throttled in $Transient) {
+                    $Asked = $Throttled.headers.'Retry-After' -as [int]
+                    if ($Asked -gt $Wait) { $Wait = $Asked }
+                }
+                Start-Sleep -Seconds ([Math]::Min($Wait, 30))
+                $TransientIds = @($Transient | ForEach-Object { [string]$_.id })
+                $RetryRequests = @($Requests | Where-Object { [string]$_.id -in $TransientIds })
+                for ($j = 0; $j -lt $RetryRequests.Count; $j += 20) {
+                    $RetryBody = ConvertTo-Json -InputObject @{ requests = @($RetryRequests[$j..($j + 19)]) } -Compress -Depth 100
+                    $RetryReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $RetryBody
+                    foreach ($Fresh in @($RetryReturn.responses)) {
+                        foreach ($Batch in @($ReturnedData)) {
+                            for ($k = 0; $k -lt @($Batch.responses).Count; $k++) {
+                                if ([string]$Batch.responses[$k].id -eq [string]$Fresh.id) { $Batch.responses[$k] = $Fresh }
+                            }
+                        }
+                    }
+                }
+            }
             foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
                 if ($NoPaginateIds -contains $MoreData.id) {
                     continue

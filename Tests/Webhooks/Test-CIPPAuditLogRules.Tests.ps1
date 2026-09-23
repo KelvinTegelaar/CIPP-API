@@ -27,6 +27,7 @@ BeforeAll {
     function New-GraphBulkRequest { param($Requests, $AsApp, $TenantId) }
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, [switch]$Stream, $ComplexFilter, $NoPagination) }
     function Add-CIPPApplicationPermission { param($RequiredResourceAccess, $ApplicationId, $TenantFilter) }
+    function Get-CIPPPartnerUserLookup { @{} }
 
     # Lookup blob in the 'hashtable' cache format, so no Graph refresh is attempted.
     function New-LookupRow {
