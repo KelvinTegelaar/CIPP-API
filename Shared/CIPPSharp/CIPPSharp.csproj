@@ -21,7 +21,14 @@
     <!-- Compile-only: ExcludeAssets="runtime" keeps the System.Management.Automation facade out of bin\
          (PowerShell supplies the real assembly at runtime) while still compiling against its types. -->
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.1" PrivateAssets="all" ExcludeAssets="runtime" />
-    <!-- Server-side PDF renderer. MIT, zero third-party deps: only OfficeIMO.Pdf.dll + OfficeIMO.Core.dll land in bin\. -->
-    <PackageReference Include="OfficeIMO.Pdf" Version="3.3.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Server-side PDF renderer. MIT, zero third-party deps: only OfficeIMO.Pdf.dll + OfficeIMO.Core.dll land in bin\.
+         INTERIM: vendored net8.0 builds of OfficeIMO 3.4.3 (unreleased) from upstream master 399adf1d1, which
+         carries the report-generation performance work (#2577: table layout, text/number formatting, image reuse
+         and segmented object storage; output unchanged), measured with build/tools/pdf-bench. Once a release
+         ships that work, restore <PackageReference Include="OfficeIMO.Pdf" Version="..." /> and delete lib\. -->
+    <Reference Include="OfficeIMO.Pdf" HintPath="lib\OfficeIMO.Pdf.dll" />
+    <Reference Include="OfficeIMO.Core" HintPath="lib\OfficeIMO.Core.dll" />
   </ItemGroup>
 </Project>

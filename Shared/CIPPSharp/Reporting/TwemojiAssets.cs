@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -42,7 +43,7 @@ namespace CIPP.Reporting
 
         // Bytes read on first use for an emoji and kept (a used emoji is at most ~5 KB; the whole set is
         // ~4 MB), so a report referencing the same emoji many times reads the file once.
-        private static readonly Dictionary<string, byte[]> Cache = new(StringComparer.Ordinal);
+        private static readonly ConcurrentDictionary<string, byte[]?> Cache = new(StringComparer.Ordinal);
 
         public static bool Enabled => Dir.Value is not null && Available.Value.Count > 0;
 
@@ -84,14 +85,11 @@ namespace CIPP.Reporting
         {
             var k = Key(cluster);
             if (k is null || !Available.Value.Contains(k)) return null;
-            lock (Cache) { if (Cache.TryGetValue(k, out var hit)) return hit; }
-            try
+            return Cache.GetOrAdd(k, key =>
             {
-                var bytes = File.ReadAllBytes(Path.Combine(Dir.Value!, k + ".png"));
-                lock (Cache) { Cache[k] = bytes; }
-                return bytes;
-            }
-            catch { return null; }
+                try { return File.ReadAllBytes(Path.Combine(Dir.Value!, key + ".png")); }
+                catch { return null; }
+            });
         }
     }
 }

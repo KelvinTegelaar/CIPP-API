@@ -54,8 +54,54 @@ namespace CIPP.Reporting
             return "#" + digits.ToUpperInvariant();
         }
 
-        private static (int r, int g, int b) ToRgb(string? hex)
+        // hsl(H, S%, L%) - the palette form the dashboard sankeys emit (e.g. "hsl(210, 70%, 50%)"). Commas
+        // or spaces between the three parts; the % on S/L is optional. Anything else returns null.
+        private static readonly Regex HslPattern = new(
+            @"^hsl\(\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)%?\s*[, ]\s*(\d+(?:\.\d+)?)%?\s*\)$",
+            RegexOptions.IgnoreCase);
+
+        private static (int r, int g, int b)? TryHslToRgb(string? value)
         {
+            if (value is null) return null;
+            var m = HslPattern.Match(value.Trim());
+            if (!m.Success) return null;
+            var h = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+            var s = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) / 100.0;
+            var l = double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture) / 100.0;
+            h = ((h % 360) + 360) % 360 / 360.0;
+            s = Math.Max(0, Math.Min(1, s));
+            l = Math.Max(0, Math.Min(1, l));
+            if (s == 0)
+            {
+                var g = (int)Math.Round(l * 255);
+                return (g, g, g);
+            }
+            var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            var p = 2 * l - q;
+            static double Hue(double p, double q, double t)
+            {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1.0 / 6) return p + (q - p) * 6 * t;
+                if (t < 1.0 / 2) return q;
+                if (t < 2.0 / 3) return p + (q - p) * (2.0 / 3 - t) * 6;
+                return p;
+            }
+            return (
+                (int)Math.Round(Hue(p, q, h + 1.0 / 3) * 255),
+                (int)Math.Round(Hue(p, q, h) * 255),
+                (int)Math.Round(Hue(p, q, h - 1.0 / 3) * 255));
+        }
+
+        /// <summary>Hex, hsl() (or the default brand colour when unparseable) as 0-255 channels.</summary>
+        public static (int r, int g, int b) ToRgb(string? hex)
+        {
+            // The canonical #RRGGBB every palette entry and constant already is, parsed without the regexes.
+            if (hex is { Length: 7 } && hex[0] == '#'
+                && int.TryParse(hex.AsSpan(1), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var rgb))
+                return ((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+            var hsl = TryHslToRgb(hex);
+            if (hsl.HasValue) return hsl.Value;
             var normalised = NormaliseHex(hex) ?? DefaultBrandColour;
             var d = normalised.Substring(1);
             return (
@@ -118,8 +164,6 @@ namespace CIPP.Reporting
         public string Secondary { get; }
         public string OnPrimary { get; }
         public IReadOnlyDictionary<string, string> Palette { get; }
-        public string OnHeading { get; }
-        public string OnChart { get; }
         public string OnTable { get; }
         public string OnInfographic { get; }
         public IReadOnlyList<string> Series { get; }
@@ -168,8 +212,6 @@ namespace CIPP.Reporting
             }
             Palette = palette;
 
-            OnHeading = ColourMath.ReadableTextOn(palette["heading"]);
-            OnChart = ColourMath.ReadableTextOn(palette["chart"]);
             OnTable = ColourMath.ReadableTextOn(palette["table"]);
             OnInfographic = ColourMath.ReadableTextOn(palette["infographicBackground"]);
             Series = BuildSeries(palette["chart"], palette["chartAccent"]);

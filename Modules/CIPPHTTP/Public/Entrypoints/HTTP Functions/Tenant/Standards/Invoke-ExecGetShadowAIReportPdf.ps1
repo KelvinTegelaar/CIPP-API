@@ -21,15 +21,17 @@ function Invoke-ExecGetShadowAIReportPdf {
         if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A tenantFilter is required' })
         }
+        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
 
-        $TenantName = $TenantFilter
-        try {
-            $TenantInfo = Get-Tenants -TenantFilter $TenantFilter
-            if ($TenantInfo.displayName) { $TenantName = [string]$TenantInfo.displayName }
-        } catch { $TenantName = $TenantFilter }
+        # Optional per-section toggles from the client's section panel (POST body). Absent -> full report.
+        $SectionConfig = @{}
+        $RawCfg = $Request.Body.sectionConfig
+        if ($RawCfg -is [hashtable]) { $SectionConfig = $RawCfg }
+        elseif ($RawCfg) { foreach ($p in $RawCfg.PSObject.Properties) { $SectionConfig[$p.Name] = [bool]$p.Value } }
 
-        $Raw = (Invoke-ListShadowAI -Request @{ Query = @{ tenantFilter = $TenantFilter }; Headers = $Request.Headers }).Body
-        $Data = @{
+        # The same shaped data the Shadow AI page reads (from the reporting cache).
+        $Raw = Get-CIPPShadowAIReport -TenantFilter $TenantFilter
+        $Report = Build-CippShadowAIReportTree -SectionConfig $SectionConfig -Data @{
             TenantName    = $TenantName
             summary       = $Raw.summary
             detectedApps  = $Raw.detectedApps
@@ -38,29 +40,7 @@ function Invoke-ExecGetShadowAIReportPdf {
             byRisk        = $Raw.byRisk
         }
 
-        # Optional per-section toggles from the client's section panel (POST body). Absent -> full report.
-        $SectionConfig = @{}
-        $RawCfg = $Request.Body.sectionConfig ?? $Request.Body.SectionConfig
-        if ($RawCfg) {
-            if ($RawCfg -is [hashtable]) { $SectionConfig = $RawCfg }
-            else { foreach ($p in $RawCfg.PSObject.Properties) { $SectionConfig[$p.Name] = [bool]$p.Value } }
-        }
-
-        # Hero chapter photos are frontend assets not available to the backend; the hero pages render on a
-        # solid infographic background without them.
-        $Tree = Build-CippShadowAIReportTree -Data $Data -HeroImages @{} -SectionConfig $SectionConfig
-
-        $Variables = @{
-            coverlabel      = 'AI Risk Assessment'
-            coversubtitle   = 'Discovery and risk assessment of AI tools in use across managed devices and cloud applications.'
-            coverfooternote = 'Confidential - For Internal Use Only'
-            footerlabel     = "$TenantName - Shadow AI Report"
-        }
-
-        $Branding = try { Get-CIPPBrandingSettings } catch { @{} }
-        $Bytes = ConvertTo-CippReportPdf -Blocks $Tree -Branding $Branding -Variables $Variables `
-            -TenantName $TenantName -ReportName 'Shadow AI Report' -GeneratedOn ((Get-Date).ToString('MMMM d, yyyy'))
-
+        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'Shadow AI Report'
         $FileName = ("Shadow_AI_Report_$TenantFilter" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK

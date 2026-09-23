@@ -5,18 +5,14 @@ function New-CIPPBecEvidencePackage {
     .DESCRIPTION
         Collates everything CIPP holds about a case into one ZIP: the results payload as JSON, one
         CSV per finding set, the score, the containment history, every logbook line stamped with the
-        case id, and the browser-rendered PDF reports when supplied. Nothing is stored: the ZIP is
-        returned to the caller to hand to the browser. Everything inside is metadata the run already
-        collected; passwords were redacted before they were stored and are scrubbed from the logbook
-        copy again here.
+        case id, and the full and C-suite-summary report PDFs rendered server-side. Nothing is stored:
+        the ZIP is returned to the caller to hand to the browser. Everything inside is metadata the run
+        already collected; passwords were redacted before they were stored and are scrubbed from the
+        logbook copy again here.
     .PARAMETER TenantFilter
         Tenant default domain name.
     .PARAMETER CaseId
         The run to package.
-    .PARAMETER PdfBase64
-        Optional base64-encoded full PDF report rendered by the frontend.
-    .PARAMETER PdfSummaryBase64
-        Optional base64-encoded C-suite summary PDF rendered by the frontend.
     .PARAMETER Headers
         CIPP request headers, for logging.
     .PARAMETER APIName
@@ -28,8 +24,6 @@ function New-CIPPBecEvidencePackage {
     param(
         [Parameter(Mandatory = $true)][string]$TenantFilter,
         [Parameter(Mandatory = $true)][string]$CaseId,
-        [string]$PdfBase64,
-        [string]$PdfSummaryBase64,
         $Headers,
         [string]$APIName = 'BECEvidenceExport'
     )
@@ -97,18 +91,31 @@ function New-CIPPBecEvidencePackage {
     }
     $Files['logbook.json'] = $Utf8.GetBytes((ConvertTo-Json -InputObject @($LogRows) -Depth 10))
 
-    # The frontend renders the reports client-side (react-pdf), so it hands the PDFs in. Validate and
-    # add each supplied one - the full report and the C-suite summary.
-    $AddPdf = {
-        param([string]$Base64, [string]$Name)
-        if ([string]::IsNullOrWhiteSpace($Base64)) { return }
-        $PdfBytes = [System.Convert]::FromBase64String(($Base64 -replace '^data:application/pdf;base64,', ''))
-        if ($PdfBytes.Length -gt 25MB) { throw "The PDF report ($Name) exceeds 25 MB" }
-        if ($PdfBytes.Length -lt 4 -or [System.Text.Encoding]::ASCII.GetString($PdfBytes, 0, 4) -ne '%PDF') { throw "The supplied $Name report is not a PDF" }
-        $Files[$Name] = $PdfBytes
+    # Render the report PDFs server-side (the full report and the C-suite summary) through the same
+    # builder and kit the report endpoint uses. The builder reads containment off becData.Run, so
+    # attach the run block exactly as ExecGetBecReportPdf does. A render failure must not lose the rest
+    # of the evidence, so it is caught and the package ships without the PDFs.
+    try {
+        $BecData = $Results
+        $RunBlock = [pscustomobject]@{
+            CaseId      = $Run.CaseId
+            Status      = $Run.Status
+            ExtractedAt = $Run.ExtractedAt
+            RequestedAt = $Run.RequestedAt
+            RequestedBy = $Run.RequestedBy
+            Containment = $Run.Containment
+        }
+        $BecData | Add-Member -NotePropertyName 'Run' -NotePropertyValue $RunBlock -Force
+        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
+        $DisplayName = @($Run.DisplayName, $Run.UserPrincipalName, $Run.UserId) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1
+        $UserData = [pscustomobject]@{ displayName = $DisplayName; userPrincipalName = $Run.UserPrincipalName; id = $Run.UserId }
+        $Full = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName
+        $Files['report-full.pdf'] = ConvertTo-CippReportPdf -Blocks $Full.Blocks -Variables $Full.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report'
+        $Summary = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName -Variant summary
+        $Files['report-summary.pdf'] = ConvertTo-CippReportPdf -Blocks $Summary.Blocks -Variables $Summary.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report'
+    } catch {
+        Write-Information "BEC evidence: server-side PDF render failed for $CaseId`: $($_.Exception.Message)"
     }
-    & $AddPdf $PdfBase64 'report-full.pdf'
-    & $AddPdf $PdfSummaryBase64 'report-summary.pdf'
 
     $Stream = [System.IO.MemoryStream]::new()
     $Archive = [System.IO.Compression.ZipArchive]::new($Stream, [System.IO.Compression.ZipArchiveMode]::Create, $true)

@@ -232,26 +232,51 @@ namespace CIPP.Reporting
         public const char EmojiInfo = 'ℹ';
         private static readonly HashSet<char> EmojiKept = new() { EmojiWarning, EmojiCheck, EmojiInfo };
 
-        // When a fallback emoji font is bundled, the reports' portable ASCII status tokens are promoted to
-        // the matching glyph (rendered downstream); with no font/image assets they stay as tokens, so the
-        // report degrades gracefully. Set once by ReportPdf from whether the font loaded.
-        public static bool RenderEmojiGlyphs;
+        // The monochrome fallback font ships next to the assembly as emoji-fallback.ttf (like the OfficeIMO
+        // DLLs). Loaded once; absence just means emoji degrade to the ASCII tokens rather than throwing.
+        internal static readonly Lazy<byte[]?> EmojiFontBytes = new(() =>
+        {
+            try
+            {
+                var dir = System.IO.Path.GetDirectoryName(typeof(ReportMarkdown).Assembly.Location);
+                if (string.IsNullOrEmpty(dir)) return null;
+                var path = System.IO.Path.Combine(dir, "emoji-fallback.ttf");
+                return System.IO.File.Exists(path) ? System.IO.File.ReadAllBytes(path) : null;
+            }
+            catch { return null; }
+        });
+
+        // Exactly the code points the bundled font can draw above U+00FF, minus the CP1252 specials the
+        // standard fonts render: the single source of truth for what Sanitize keeps (keeping one the font
+        // can't draw would make OfficeIMO's encoding preflight throw) and which ranges ReportPdf declares
+        // for the fallback. Read once from the font's own cmap so the two never drift; empty without a font.
+        private static readonly Lazy<HashSet<int>> EmojiCoverageSet = new(() =>
+        {
+            var set = new HashSet<int>();
+            var font = EmojiFontBytes.Value;
+            if (font is not { Length: > 0 }) return set;
+            try
+            {
+                foreach (var cp in FontCmap.ReadCodepoints(font))
+                    if (cp > 0xFF && !IsWinAnsiSpecial(cp)) set.Add(cp);
+            }
+            catch { set.Clear(); }
+            return set;
+        });
+        public static HashSet<int> EmojiCoverage => EmojiCoverageSet.Value;
+
+        // With the fallback font bundled, the reports' portable ASCII status tokens are promoted to the
+        // matching glyph (rendered downstream); without it they stay as tokens, so the report degrades.
+        public static bool RenderEmojiGlyphs => EmojiFontBytes.Value is { Length: > 0 };
 
         // True when the bundled Twemoji colour PNG set is present, so an emoji grapheme cluster (including
         // multi-code-point ZWJ sequences, flags and skin tones) is kept whole for the renderer to place as
-        // an inline colour image. Set once by ReportPdf from TwemojiAssets.Enabled.
-        public static bool RenderEmojiImages;
+        // an inline colour image; the monochrome font remains the fallback for anything not bundled.
+        public static bool RenderEmojiImages => TwemojiAssets.Enabled;
         private static readonly (string token, string glyph)[] EmojiTokens =
         {
             ("[!]", "⚠"), ("[Pass]", "✅"), ("[Fail]", "❌"), ("[i]", "ℹ"),
         };
-
-        // Every code point the bundled fallback font can actually draw, above U+00FF and excluding the
-        // CP1252 specials the standard fonts already encode. Populated once by ReportPdf straight from the
-        // font's cmap, so Sanitize only ever keeps an emoji the font can render - keeping one it can't
-        // would make OfficeIMO's encoding preflight throw. Empty when no font is bundled (emoji then
-        // degrade to '?'/tokens), so this is also the source of truth for the fallback's declared ranges.
-        public static HashSet<int> EmojiCoverage = new();
 
         // CP1252 / WinAnsi code points above U+00FF that the PDF standard fonts CAN encode - kept as-is.
         private static readonly HashSet<char> WinAnsiSpecials = new(new[]

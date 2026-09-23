@@ -4,8 +4,8 @@ function Build-CippSharingReportTree {
         Compose the SharePoint/OneDrive Sharing report as a component tree (server port of
         SharingReportButton.jsx).
     .DESCRIPTION
-        Pure composition from already-gathered sharing data; returns the component-node array for
-        ConvertTo-CippReportPdf. Cover-meta and footer note are passed through report variables.
+        Pure composition from already-gathered sharing data. Returns @{ Blocks; Variables }: the
+        component nodes for ConvertTo-CippReportPdf and the cover/footer report variables.
     .PARAMETER Data
         Sharing data: summary (counts), links[], topRecipients[], topLibraries[].
     #>
@@ -13,22 +13,25 @@ function Build-CippSharingReportTree {
     param([Parameter(Mandatory)][hashtable]$Data)
 
     $summary = if ($Data.summary) { $Data.summary } else { @{} }
-    $links = @($Data.links)
-    $topRecipients = @($Data.topRecipients)
-    $topLibraries = @($Data.topLibraries)
+    # `?? @()` so a missing list is empty rather than @($null), which would render as one blank row.
+    $links = @($Data.links ?? @())
+    $topRecipients = @($Data.topRecipients ?? @())
+    $topLibraries = @($Data.topLibraries ?? @())
     function nz($v) { if ($null -eq $v) { 0 } else { [int]$v } }
     function plural($c, $s, $p) { "$c $(if ($c -eq 1) { $s } else { if ($p) { $p } else { "${s}s" } })" }
     function joinList($v) { if ($v -is [array]) { $v -join ', ' } else { [string]$v } }
 
     # Exposure grade (client assessExposure).
-    $score = 0
-    if ((nz $summary.anonymousEditLinks) -gt 0) { $score += 5 }
-    if ((nz $summary.neverExpiringAnonymous) -gt 0) { $score += 3 }
-    if ((nz $summary.anonymousLinks) -gt 0) { $score += 2 }
-    if ((nz $summary.folderShares) -gt 0) { $score += 2 }
-    if ((nz $summary.externalLinks) -gt 0) { $score += 1 }
-    $exposure = if ($score -ge 7) { @{ level = 'High'; severity = 'high' } } elseif ($score -ge 3) { @{ level = 'Medium'; severity = 'medium' } } else { @{ level = 'Low'; severity = 'low' } }
-    $sevColour = @{ high = '#742A2A'; medium = '#744210'; low = '#22543D' }[$exposure.severity]
+    $score = (@(
+            if ((nz $summary.anonymousEditLinks) -gt 0) { 5 }
+            if ((nz $summary.neverExpiringAnonymous) -gt 0) { 3 }
+            if ((nz $summary.anonymousLinks) -gt 0) { 2 }
+            if ((nz $summary.folderShares) -gt 0) { 2 }
+            if ((nz $summary.externalLinks) -gt 0) { 1 }
+        ) | Measure-Object -Sum).Sum
+    $exposure = if ($score -ge 7) { 'High' } elseif ($score -ge 3) { 'Medium' } else { 'Low' }
+    $dangerC = '#742A2A'; $warnC = '#744210'
+    $sevColour = @{ High = $dangerC; Medium = $warnC; Low = '#22543D' }[$exposure]
 
     $canEdit = { param($r) (joinList $r.roles) -match 'write|owner' }
     $anonEdit = @($links | Where-Object { $_.classification -eq 'Anonymous' -and (& $canEdit $_) })
@@ -43,19 +46,18 @@ function Build-CippSharingReportTree {
     # -- Executive Summary --
     $blocks.Add((New-CippReportPage -Title 'Executive Summary' -Subtitle 'What has been shared, and how far it reaches'))
     $blocks.Add((New-CippReportParagraph -Html ('<p>Sharing links are created by users on individual files and folders. They hand out access outside the permission structure an administrator sets on a site or library, they accumulate quietly as people work, and nothing prompts anyone to review them. This report covers what exists today across SharePoint and OneDrive in <b>{0}</b>.</p>' -f [System.Net.WebUtility]::HtmlEncode([string]$Data.TenantName))))
-    $dangerC = '#742A2A'; $warnC = '#744210'
     $blocks.Add((New-CippReportStatRow -Stats @(
                 @{ value = (nz $summary.anonymousEditLinks); label = 'Anonymous & Editable'; colour = $(if ((nz $summary.anonymousEditLinks) -gt 0) { $dangerC }) }
                 @{ value = (nz $summary.neverExpiringAnonymous); label = 'Anonymous, No Expiry'; colour = $(if ((nz $summary.neverExpiringAnonymous) -gt 0) { $dangerC }) }
                 @{ value = (nz $summary.folderShares); label = 'Shared Folders'; colour = $(if ((nz $summary.folderShares) -gt 0) { $warnC }) }
                 @{ value = (nz $summary.externalRecipients); label = 'External Recipients'; colour = $(if ((nz $summary.externalRecipients) -gt 0) { $warnC }) }
             )))
-    $expText = switch ($exposure.level) {
+    $expText = switch ($exposure) {
         'High' { 'Content is reachable by people who cannot be identified. Anonymous links work for anyone holding them, with no sign-in and no record of use - and where those links also allow editing, changes are attributed to nobody. Treat the findings below as immediate remediation work.' }
         'Medium' { 'Sharing extends beyond the intended audience in places. Each finding below is individually manageable, but every open link widens what a single forwarded message can expose.' }
         default { 'No high-risk sharing was found. Links are scoped and time-bounded. Continue reviewing periodically, since sharing accumulates as projects come and go.' }
     }
-    $blocks.Add((New-CippReportAlertBox -Title "Sharing Exposure: $($exposure.level)" -Colour $sevColour -Content $expText))
+    $blocks.Add((New-CippReportAlertBox -Title "Sharing Exposure: $exposure" -Colour $sevColour -Content $expText))
     $blocks.Add((New-CippReportInfoBox -Title 'What was examined' -Content ("{0} sharing links and external shares across {1} SharePoint sites, {2} Teams-connected sites and {3} OneDrive accounts, covering {4} distinct shared items. Data is taken from the last completed sync, not read live." -f (nz $summary.totalLinks), (nz $summary.sharePointSites), (nz $summary.teamsSites), (nz $summary.oneDriveAccounts), (nz $summary.itemsShared))))
     $blocks.Add((New-CippReportInfoBox -Title 'What is not covered' -Content 'This report covers sharing links only. Permissions granted on a site or document library are a separate access path, governed differently, and are covered by the Permissions Report. A clean result here does not mean access is restricted - it means nothing has been shared out by link.'))
 
@@ -121,5 +123,16 @@ function Build-CippSharingReportTree {
                 @{ label = 'Password-protect sensitive shares.'; text = 'A password meaningfully narrows who can use a link that has been forwarded on.' }
             )))
 
-    , @($blocks)
+    @{
+        Blocks    = @($blocks)
+        Variables = @{
+            coverlabel         = 'Data Sharing Review'
+            coversubtitle      = "What has been shared out of SharePoint and OneDrive at $($Data.TenantName), who it reaches, and which of those shares are worth acting on."
+            covermeta          = ("{0} sharing links $([char]0x00B7) {1} items $([char]0x00B7) {2} external recipients" -f (nz $summary.totalLinks), (nz $summary.itemsShared), (nz $summary.externalRecipients))
+            covermetanote      = "Sharing exposure: $exposure"
+            coverfooternote    = "Confidential $([char]0x2014) For Internal Use Only"
+            coverfallbackimage = '/reportImages/glasses.jpg'
+            footerlabel        = "$($Data.TenantName) $([char]0x2014) SharePoint & OneDrive Sharing"
+        }
+    }
 }

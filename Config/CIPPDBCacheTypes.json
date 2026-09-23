@@ -285,6 +285,11 @@
     "description": "Exchange Online mailbox usage statistics"
   },
   {
+    "type": "MailTrafficSummary",
+    "friendlyName": "Mail Traffic Summary",
+    "description": "Top mail senders and recipients by message volume over the last 30 days"
+  },
+  {
     "type": "OneDriveSiteListing",
     "collectedBy": "OneDriveUsage",
     "friendlyName": "OneDrive Site Listing",

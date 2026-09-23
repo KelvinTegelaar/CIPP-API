@@ -5,11 +5,12 @@ function Invoke-ExecGetBecReportPdf {
     .ROLE
         Identity.User.Read
     .DESCRIPTION
-        Server-renders the BEC (Business Email Compromise) analysis report as application/pdf bytes. Reads
-        the cached BEC run for the user (the cachebec table, populated by execBECCheck / Push-BECRun) and
+        Server-renders a stored Business Email Compromise (BEC) run as application/pdf bytes. Reads the
+        run through Get-CIPPBecReport (the BecReports metadata row plus its BecResults payload) and
         composes it through the shared CIPPSharp component kit (Build-CippBecReportTree) - the server-side
-        replacement for the client react-pdf BECRemediationReportButton. The BEC check must have completed
-        for the user first (the report reads its cached result, it does not trigger a new run).
+        replacement for the client react-pdf BECRemediationReportButton. A run is named by its caseId;
+        pass userId instead to render the user's newest completed run. The run must have completed - the
+        report reads its stored result, it does not trigger a new investigation.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,55 +20,64 @@ function Invoke-ExecGetBecReportPdf {
 
     try {
         $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-        $UserId = $Request.Query.userId ?? $Request.Query.userid ?? $Request.Query.GUID ?? $Request.Body.userId
-        $UserName = $Request.Query.userName ?? $Request.Query.username ?? $Request.Body.userName
-        $UserDisplayName = $Request.Query.userDisplayName ?? $Request.Body.userDisplayName
-        if ([string]::IsNullOrWhiteSpace($TenantFilter) -or [string]::IsNullOrWhiteSpace($UserId)) {
-            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A tenantFilter and userId are required' })
+        # The stored run to render. A caseId names it directly; a userId picks the user's newest completed run.
+        $CaseId = $Request.Query.caseId ?? $Request.Body.caseId
+        $UserId = $Request.Query.userId ?? $Request.Body.userId
+        # 'full' (default) = every page; 'summary' = the executive lead only, for a C-suite reader
+        $Variant = switch ([string]($Request.Query.variant ?? $Request.Body.variant)) {
+            'summary' { 'summary' }
+            default { 'full' }
+        }
+        if ([string]::IsNullOrWhiteSpace($TenantFilter) -or ([string]::IsNullOrWhiteSpace($CaseId) -and [string]::IsNullOrWhiteSpace($UserId))) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A tenantFilter and either a caseId or a userId are required' })
         }
 
-        # Read the cached BEC result (the same cache execBECCheck polls). No -Property projection so a result
-        # split across part rows is reassembled.
-        $Table = Get-CippTable -tablename 'cachebec'
-        $Row = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'bec' and RowKey eq '$UserId'" | Select-Object -First 1
-        if (-not $Row -or [string]::IsNullOrEmpty($Row.Results) -or $Row.Status -eq 'Waiting') {
+        # Without a caseId, fall back to the user's most recent completed run (the list is newest-first).
+        if ([string]::IsNullOrWhiteSpace($CaseId)) {
+            $Runs = @(Get-CIPPBecReport -TenantFilter $TenantFilter -UserId $UserId)
+            $CaseId = ($Runs | Where-Object { $_.Status -eq 'Completed' } | Select-Object -First 1).CaseId
+            if ([string]::IsNullOrWhiteSpace($CaseId)) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::NotFound
+                        Body       = 'No completed BEC analysis is stored for this user. Run the BEC check first, then generate the report.'
+                    })
+            }
+        }
+
+        $Run = Get-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -IncludeResults
+        if (-not $Run -or $Run.Status -ne 'Completed' -or -not $Run.Results) {
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::NotFound
-                    Body       = 'No completed BEC analysis is cached for this user. Run the BEC check first, then generate the report.'
+                    Body       = "No completed BEC analysis is stored for case '$CaseId'. Run the BEC check first, then generate the report."
                 })
         }
 
-        $BecData = if ($Row.Results -is [string]) { $Row.Results | ConvertFrom-Json -AsHashtable } else { $Row.Results }
-
-        $TenantName = $TenantFilter
-        try {
-            $TenantInfo = Get-Tenants -TenantFilter $TenantFilter
-            if ($TenantInfo.displayName) { $TenantName = [string]$TenantInfo.displayName }
-        } catch { $TenantName = $TenantFilter }
-
-        $DisplayName = if (-not [string]::IsNullOrWhiteSpace($UserDisplayName)) { $UserDisplayName } elseif (-not [string]::IsNullOrWhiteSpace($UserName)) { $UserName } else { $UserId }
-        $UserData = @{ displayName = $DisplayName; userPrincipalName = $UserName }
-
-        $Tree = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName
-
-        $AnalysisDate = try { ([datetime]$BecData.ExtractedAt).ToString('MMM d, yyyy, hh:mm tt', [Globalization.CultureInfo]::InvariantCulture) } catch { [string]$BecData.ExtractedAt }
-        $Variables = @{
-            coverlabel      = 'Security Incident Report'
-            covertitle      = 'BEC Compromise'
-            coveraccent     = 'Analysis'
-            covertenant     = $DisplayName
-            coversubtitle   = "Business Email Compromise Investigation Report for $TenantName"
-            covermeta       = [string]$UserName
-            covermetanote   = "Analysis Date: $AnalysisDate"
-            coverfooternote = 'Confidential & Proprietary - For Internal Use Only'
-            footerlabel     = "$TenantName - BEC Analysis Report for $DisplayName"
+        # The results payload is what the check pages render. The containment history and the run's own
+        # identifiers live on the metadata row, and the client renderer reads them off becData.Run - so
+        # attach the same .Run block here, and the builder reads it exactly as the client does.
+        $BecData = $Run.Results
+        $RunBlock = [pscustomobject]@{
+            CaseId      = $Run.CaseId
+            Status      = $Run.Status
+            ExtractedAt = $Run.ExtractedAt
+            RequestedAt = $Run.RequestedAt
+            RequestedBy = $Run.RequestedBy
+            Containment = $Run.Containment
         }
+        $BecData | Add-Member -NotePropertyName 'Run' -NotePropertyValue $RunBlock -Force
 
-        $Branding = try { Get-CIPPBrandingSettings } catch { @{} }
-        $Bytes = ConvertTo-CippReportPdf -Blocks $Tree -Branding $Branding -Variables $Variables `
-            -TenantName $TenantName -ReportName 'BEC Analysis Report' -GeneratedOn ((Get-Date).ToString('MMMM d, yyyy'))
+        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
+        # The investigated user labels the cover and footer; the run stored who it was for.
+        $DisplayName = @($Run.DisplayName, $Run.UserPrincipalName, $Request.Query.userDisplayName, $Request.Body.userDisplayName, $Run.UserId) |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1
+        $UserName = @($Run.UserPrincipalName, $Request.Query.userName, $Request.Body.userName) |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1
+        $UserData = [pscustomobject]@{ displayName = $DisplayName; userPrincipalName = $UserName; id = $Run.UserId }
 
-        $FileName = ("BEC_Report_$DisplayName" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
+        $Report = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName -Variant $Variant
+
+        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report'
+        $FileName = ("BEC_$(if ($Variant -eq 'summary') { 'Summary' } else { 'Report' })_$DisplayName" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK
                 ContentType = 'application/pdf'

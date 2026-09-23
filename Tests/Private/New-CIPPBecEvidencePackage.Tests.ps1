@@ -7,6 +7,11 @@ BeforeAll {
     # Nothing in the evidence path may touch blob storage
     function New-CIPPAzStorageRequest { throw 'blob storage must not be touched' }
     function Write-LogMessage { param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $LogData) }
+    # The reports are rendered server-side through the report builder + kit; stub them so the unit test
+    # never loads OfficeIMO - the package's job here is collation, not the kit's PDF bytes.
+    function Get-CippReportTenantName { param($TenantFilter) }
+    function Build-CippBecReportTree { param($UserData, $BecData, $TenantName, $Variant) }
+    function ConvertTo-CippReportPdf { param($Blocks, $Variables, $TenantName, $TenantFilter, $ReportName, $Branding, $BrandingPresetId, $GeneratedOn, $PageSize, [switch]$Landscape) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/New-CIPPBecEvidencePackage.ps1')
 
     $script:Run = [pscustomobject]@{
@@ -21,7 +26,7 @@ BeforeAll {
             Score = [pscustomobject]@{ Value = 12; Level = 'High' }
         }
     }
-    $script:PdfBase64 = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes('%PDF-1.4 fake'))
+    $script:FakePdf = [System.Text.Encoding]::ASCII.GetBytes('%PDF-1.4 fake')
 
     function Read-Zip {
         param([byte[]]$Bytes)
@@ -52,10 +57,13 @@ Describe 'New-CIPPBecEvidencePackage' {
             )
         }
         Mock Write-LogMessage { }
+        Mock Get-CippReportTenantName { 'Contoso' }
+        Mock Build-CippBecReportTree { @{ Blocks = @(@{ type = 'blank' }); Variables = @{ coverlabel = 'Security Incident Report' } } }
+        Mock ConvertTo-CippReportPdf { $script:FakePdf }
     }
 
-    It 'builds a ZIP with the results, per-finding CSVs, score, containment, logbook and both PDFs, and stores nothing' {
-        $Package = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001' -PdfBase64 $script:PdfBase64 -PdfSummaryBase64 $script:PdfBase64
+    It 'builds a ZIP with the results, per-finding CSVs, score, containment, logbook and both server-rendered PDFs, and stores nothing' {
+        $Package = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
         $Package.Bytes | Should -BeGreaterThan 0
         $Entries = Read-Zip -Bytes $Package.ZipBytes
         $Entries.Keys | Should -Contain 'results.json'
@@ -69,15 +77,25 @@ Describe 'New-CIPPBecEvidencePackage' {
         $Entries.Keys | Should -Contain 'report-full.pdf'
         $Entries.Keys | Should -Contain 'report-summary.pdf'
         $Entries.Count | Should -Be $Package.FileCount
+        # rendered server-side: the full report and the summary variant, no browser round-trip
+        Should -Invoke ConvertTo-CippReportPdf -Times 2
+        Should -Invoke Build-CippBecReportTree -Times 1 -ParameterFilter { $Variant -eq 'summary' }
         Should -Invoke Set-CIPPBecReport -Times 0 -Because 'an export leaves no record on the run'
     }
 
-    It 'flattens arrays and nested objects into CSV cells and builds without PDFs' {
+    It 'flattens arrays and nested objects into CSV cells' {
         $Package = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
         $Entries = Read-Zip -Bytes $Package.ZipBytes
         $Csv = [System.Text.Encoding]::UTF8.GetString($Entries['findings/NewRules.csv'])
         $Csv | Should -Match 'Forwards or redirects messages; Deletes messages'
         $Csv | Should -Match '\{""a"":1\}'
+    }
+
+    It 'still ships the rest of the package when the PDF render fails' {
+        Mock ConvertTo-CippReportPdf { throw 'render boom' }
+        $Package = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
+        $Entries = Read-Zip -Bytes $Package.ZipBytes
+        $Entries.Keys | Should -Contain 'results.json'
         $Entries.Keys | Should -Not -Contain 'report-full.pdf'
         $Entries.Keys | Should -Not -Contain 'report-summary.pdf'
     }
@@ -91,8 +109,7 @@ Describe 'New-CIPPBecEvidencePackage' {
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Filter -like "BecCaseId eq 'BEC-20260820120000-ev0001'*" -and $Filter -like "*PartitionKey ge '20260819'*" }
     }
 
-    It 'refuses a non-PDF and an incomplete run' {
-        { New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001' -PdfBase64 ([Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes('<html>'))) } | Should -Throw '*not a PDF*'
+    It 'refuses an incomplete run' {
         Mock Get-CIPPBecReport { [pscustomobject]@{ Status = 'Waiting' } }
         { New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-x' } | Should -Throw '*only completed runs*'
     }

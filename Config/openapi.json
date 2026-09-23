@@ -15578,7 +15578,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Collates the run's stored results, one CSV per finding set, the score, the containment history, every logbook entry stamped with the case id and the browser-rendered PDF reports (pdfBase64, pdfSummaryBase64) into a ZIP. Nothing is stored: the ZIP is returned base64-encoded (ZipBase64) for the browser to save. Metadata only - nothing in the package is message content.",
+        "description": "Collates the run's stored results, one CSV per finding set, the score, the containment history, every logbook entry stamped with the case id and the full and C-suite-summary report PDFs (rendered server-side) into a ZIP. Nothing is stored: the ZIP is returned base64-encoded (ZipBase64) for the browser to save. Metadata only - nothing in the package is message content.",
         "requestBody": {
           "required": true,
           "content": {
@@ -15587,13 +15587,6 @@
                 "type": "object",
                 "properties": {
                   "caseId": {
-                    "type": "string"
-                  },
-                  "pdfBase64": {
-                    "type": "string",
-                    "description": "optional: the report PDFs rendered in the browser, base64-encoded (full report + C-suite summary)"
-                  },
-                  "pdfSummaryBase64": {
                     "type": "string"
                   },
                   "tenantFilter": {
@@ -16189,7 +16182,8 @@
                     "type": "string"
                   },
                   "kind": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "A name for a gallery image, so it can be picked by name where the image is offered elsewhere: the report builder lists uploaded covers as Infographic page backgrounds."
                   },
                   "logoImageId": {
                     "type": "string"
@@ -16215,6 +16209,10 @@
                   },
                   "showPageNumbers": {
                     "type": "boolean"
+                  },
+                  "tenantLabel": {
+                    "type": "string",
+                    "description": "Which of the tenant's names the preset's reports print; see the Set action."
                   },
                   "watermarkEnabled": {
                     "type": "boolean"
@@ -23333,46 +23331,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
-                  "properties": {
-                    "Blocks": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "GeneratedAt": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "RowKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Settings": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Status": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "TemplateName": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "TenantFilter": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    }
-                  }
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -23456,6 +23415,574 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecGetBaselineWhatIfReportPdf": {
+      "post": {
+        "summary": "ExecGetBaselineWhatIfReportPdf",
+        "operationId": "ExecGetBaselineWhatIfReportPdf",
+        "tags": [
+          "Tenant > Standards"
+        ],
+        "description": "Server-renders the Security Baseline report for a tenant as application/pdf bytes: where the\nassigned baselines stand today, what is already in place, the Conditional Access and Intune\npolicies and the settings the baseline will change (what each does, its value today, the value\nit will be set to and why), the rollout waves still to come and the agreed exceptions - plus,\noptionally, everything one or more simulated (not yet assigned) baselines would add. Reads the\nsame alignment, baseline and catalog data the Baselines page shows, composes it through the\nshared CIPPSharp component kit (Build-CippBaselineWhatIfReportTree) and returns the finished\nPDF. Nothing is changed by producing it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandingPresetId": {
+                    "type": "string",
+                    "description": "Optional. The branding preset to render with; an unknown id falls back to the default branding."
+                  },
+                  "sectionConfig": {
+                    "type": "object",
+                    "properties": {
+                      "alreadyAligned": {
+                        "type": "string",
+                        "description": "Optional. Show the \"What Is Already In Place\" page (deployed policies and enforced settings, with their values). A boolean; defaults to true."
+                      },
+                      "rolloutStages": {
+                        "type": "string",
+                        "description": "Optional. Show the \"How The Rollout Works\" section (the remaining waves and when they arrive). A boolean; defaults to true."
+                      }
+                    },
+                    "description": "Optional. Show the \"What Is Already In Place\" page (deployed policies and enforced settings, with their values). A boolean; defaults to true."
+                  },
+                  "simulatedTemplateIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Required. The tenant (default domain) to report on."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "description": "Optional. The branding preset to render with; an unknown id falls back to the default branding.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "GUID": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "JSON": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Package": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Permissions": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SHA": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "TemplateName": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "UpdatedBy": {
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Baselines.Read"
+      }
+    },
+    "/api/ExecGetBecReportPdf": {
+      "post": {
+        "summary": "ExecGetBecReportPdf",
+        "operationId": "ExecGetBecReportPdf",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Server-renders a stored Business Email Compromise (BEC) run as application/pdf bytes. Reads the\nrun through Get-CIPPBecReport (the BecReports metadata row plus its BecResults payload) and\ncomposes it through the shared CIPPSharp component kit (Build-CippBecReportTree) - the server-side\nreplacement for the client react-pdf BECRemediationReportButton. A run is named by its caseId;\npass userId instead to render the user's newest completed run. The run must have completed - the\nreport reads its stored result, it does not trigger a new investigation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "caseId": {
+                    "type": "string",
+                    "description": "The stored run to render. A caseId names it directly; a userId picks the user's newest completed run."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "userDisplayName": {
+                    "type": "string",
+                    "description": "The investigated user labels the cover and footer; the run stored who it was for."
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "userName": {
+                    "type": "string"
+                  },
+                  "variant": {
+                    "type": "string",
+                    "description": "'full' (default) = every page; 'summary' = the executive lead only, for a C-suite reader"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "query",
+            "description": "The stored run to render. A caseId names it directly; a userId picks the user's newest completed run.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "userDisplayName",
+            "in": "query",
+            "description": "The investigated user labels the cover and footer; the run stored who it was for.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userName",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variant",
+            "in": "query",
+            "description": "'full' (default) = every page; 'summary' = the executive lead only, for a C-suite reader",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
+      }
+    },
+    "/api/ExecGetExecutiveReportPdf": {
+      "post": {
+        "summary": "ExecGetExecutiveReportPdf",
+        "operationId": "ExecGetExecutiveReportPdf",
+        "tags": [
+          "Tenant > Standards"
+        ],
+        "description": "Server-renders the Executive Summary report as application/pdf bytes. Every figure is read from the\nnightly Reporting DB cache via New-CIPPDbRequest (Users/Guests/Roles for the environment overview,\nLicenseOverview, ManagedDevices, ConditionalAccessPolicies and SecureScore) plus the standards\ncomparison from the CippStandardsReports table resolved against the standards catalog - the same\ncached data the rest of CIPP reports from, with no live Graph or cross-endpoint HTTP calls. The\nshaped data is composed through the shared CIPPSharp component kit (Build-CippExecutiveReportTree),\nthe server-side replacement for the client react-pdf ExecutiveReportButton. Each source is gathered\ndefensively: a source with no cached data simply drops its section.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandingPresetId": {
+                    "type": "string",
+                    "description": "The branding preset a caller picked for this render, else the global branding settings."
+                  },
+                  "sectionConfig": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "description": "The branding preset a caller picked for this render, else the global branding settings.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "CurrentValue": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ExpectedValue": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "LicenseAvailable": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "TemplateId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Value": {
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Standards.Read"
+      }
+    },
+    "/api/ExecGetLicenseReportPdf": {
+      "post": {
+        "summary": "ExecGetLicenseReportPdf",
+        "operationId": "ExecGetLicenseReportPdf",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Server-renders the License Optimisation report as application/pdf bytes. Runs the same license\nrecommendation analysis the License Optimization page reads through ListLicenseRecommendations\n(Get-CIPPLicenseRecommendation, with the page's currency, thresholds and recommendation switches)\nand composes it through the shared CIPPSharp kit (Build-CippLicenseReportTree) - the server-side\nreplacement for the client react-pdf LicenseReportButton.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandingPresetId": {
+                    "type": "string",
+                    "description": "The branding preset to render against (the Licensing Report default from the branding settings), else the global branding."
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "Currency the money figures are resolved in: a three-letter ISO code such as USD or EUR. Defaults to USD."
+                  },
+                  "inactiveDays": {
+                    "type": "string",
+                    "description": "Days without a sign-in after which a licensed person counts as inactive (1-365). Defaults to 90."
+                  },
+                  "protectSecurityFeatures": {
+                    "type": "string"
+                  },
+                  "recommendDowngrades": {
+                    "type": "string"
+                  },
+                  "recommendTerms": {
+                    "type": "string"
+                  },
+                  "recommendUpgrades": {
+                    "type": "string"
+                  },
+                  "sections": {
+                    "type": "object",
+                    "properties": {
+                      "downgrades": {
+                        "type": "boolean"
+                      },
+                      "method": {
+                        "type": "boolean"
+                      },
+                      "reclaim": {
+                        "type": "boolean"
+                      },
+                      "spend": {
+                        "type": "boolean"
+                      },
+                      "terms": {
+                        "type": "boolean"
+                      },
+                      "upgrades": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "The tenant to report on. A single tenant; AllTenants is not supported."
+                  },
+                  "tenureMonths": {
+                    "type": "string",
+                    "description": "Months a seat must have been held by the same person to count as stable for a yearly commitment (1-36). Defaults to 6."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "description": "The branding preset to render against (the Licensing Report default from the branding settings), else the global branding.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "description": "Currency the money figures are resolved in: a three-letter ISO code such as USD or EUR. Defaults to USD.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "inactiveDays",
+            "in": "query",
+            "description": "Days without a sign-in after which a licensed person counts as inactive (1-365). Defaults to 90.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "protectSecurityFeatures",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recommendDowngrades",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recommendTerms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recommendUpgrades",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "tenureMonths",
+            "in": "query",
+            "description": "Months a seat must have been held by the same person to count as stable for a yearly commitment (1-36). Defaults to 6.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Directory.Read"
+      }
+    },
     "/api/ExecGetLocalAdminPassword": {
       "post": {
         "summary": "ExecGetLocalAdminPassword",
@@ -23515,6 +24042,143 @@
           }
         ],
         "x-cipp-role": "Endpoint.Device.Read"
+      }
+    },
+    "/api/ExecGetMailFlowReportPdf": {
+      "post": {
+        "summary": "ExecGetMailFlowReportPdf",
+        "operationId": "ExecGetMailFlowReportPdf",
+        "tags": [
+          "Email-Exchange > Reports"
+        ],
+        "description": "Server-renders the Exchange mail flow report as application/pdf bytes. Reads the same three Exchange\nreports the Mail Flow page uses (Get-MailFlowStatusReport plus the TopMailSender and\nTopSpamRecipient traffic summaries), aggregates the daily disposition rows the way the page does,\nand composes them through the shared CIPPSharp kit (Build-CippMailFlowReportTree) - the server-side\nreplacement for the client react-pdf MailFlowReportButton.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Reporting window in days (1-90).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.Read"
+      }
+    },
+    "/api/ExecGetPermissionsReportPdf": {
+      "post": {
+        "summary": "ExecGetPermissionsReportPdf",
+        "operationId": "ExecGetPermissionsReportPdf",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Server-renders the SharePoint Permissions report as application/pdf bytes. Gathers the same shaped\ndata the Permissions page uses (ListSharePointPermissions, from the CIPP reporting cache), composes\nit through the shared CIPPSharp component kit (Build-CippPermissionsReportTree) and returns the\nfinished PDF - the server-side replacement for the client react-pdf PermissionsReportButton.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.Read"
       }
     },
     "/api/ExecGetRecoveryKey": {
@@ -23595,6 +24259,205 @@
           }
         ],
         "x-cipp-role": "Endpoint.Device.Read"
+      }
+    },
+    "/api/ExecGetReportBuilderPdf": {
+      "get": {
+        "summary": "ExecGetReportBuilderPdf",
+        "operationId": "ExecGetReportBuilderPdf",
+        "tags": [
+          "Tools > Report-Builder"
+        ],
+        "description": "Returns the server-rendered PDF for a generated Report Builder report as application/pdf bytes.\nBacks both the in-app preview (shown in an iframe) and the download button on the view page.\n404 when the report has no rendered PDF (generated before server-side rendering, or its render\nfailed), and also when the report belongs to a tenant the caller cannot access.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "The generated report's GUID.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ReportGUID",
+            "in": "query",
+            "description": "The generated report's GUID.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.ReportBuilder.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ExecGetShadowAIReportPdf": {
+      "post": {
+        "summary": "ExecGetShadowAIReportPdf",
+        "operationId": "ExecGetShadowAIReportPdf",
+        "tags": [
+          "Tenant > Standards"
+        ],
+        "description": "Server-renders the Shadow AI report as application/pdf bytes. Gathers the same shaped data the\nShadow AI page uses (ListShadowAI) and composes it through the shared CIPPSharp component kit\n(Build-CippShadowAIReportTree) - the server-side replacement for the client react-pdf\nShadowAIReportButton.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sectionConfig": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Standards.Read"
+      }
+    },
+    "/api/ExecGetSharingReportPdf": {
+      "post": {
+        "summary": "ExecGetSharingReportPdf",
+        "operationId": "ExecGetSharingReportPdf",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Server-renders the SharePoint & OneDrive Sharing report as application/pdf bytes. Gathers the same\nshaped data the Sharing page uses (ListSharePointSharing, from the CIPP reporting cache), composes\nit through the shared CIPPSharp component kit (Build-CippSharingReportTree) and returns the finished\nPDF - the server-side replacement for the client react-pdf SharingReportButton.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.Read"
       }
     },
     "/api/ExecGitHubAction": {
@@ -30019,6 +30882,151 @@
           }
         ],
         "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
+    "/api/ExecPreviewBrandingReportPdf": {
+      "post": {
+        "summary": "ExecPreviewBrandingReportPdf",
+        "operationId": "ExecPreviewBrandingReportPdf",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Renders a sample report against a branding configuration - normally the unsaved state of the\nbranding editor - and returns it as application/pdf bytes, so a colour, logo, cover, footer or\nwatermark can be judged on every page of a real report before it is saved. Each report type has\na fixed sample of the data its builder needs (Config/ReportSamples/<type>.json); nothing is read\nfrom a tenant.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "branding": {
+                    "type": "object",
+                    "properties": {
+                      "tenantLabel": {
+                        "type": "string",
+                        "description": "The sample tenant, named the way the branding under edit would name a real one."
+                      }
+                    },
+                    "description": "The branding to render against, in the shape Get-CIPPBrandingSettings returns: colours (flat or under roleColours), a data-URL logo and cover or a coverStock path, footer, watermark and tenantLabel. Omitted -> the saved branding settings."
+                  },
+                  "reportType": {
+                    "type": "string",
+                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, licensing or baseline."
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Optional: the tenant whose %variables% (%cippurl%, custom variables) resolve in the footer and cover."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ExecPreviewReportBuilderPdf": {
+      "post": {
+        "summary": "ExecPreviewReportBuilderPdf",
+        "operationId": "ExecPreviewReportBuilderPdf",
+        "tags": [
+          "Tools > Report-Builder"
+        ],
+        "description": "Renders the current (unsaved) Report Builder state to a PDF and returns it as application/pdf\nbytes without persisting a generated-report row. Powers the builder's live preview and download.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Blocks": {
+                    "type": "string"
+                  },
+                  "Settings": {
+                    "type": "string"
+                  },
+                  "TemplateGUID": {
+                    "type": "string"
+                  },
+                  "TemplateName": {
+                    "type": "string"
+                  },
+                  "TenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "TenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.ReportBuilder.ReadWrite"
       }
     },
     "/api/ExecQuarantineManagement": {
@@ -45252,7 +46260,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Retrieves cached tenant data from the CIPP reporting database (CippReportingDB). This is the fastest\nand most efficient way to query tenant data across single or multiple tenants. The database is populated\nnightly by background cache jobs, so data is typically at most 24 hours old.\n\nRequired query parameters:\n  - tenantFilter: The tenant domain or 'AllTenants' to query all managed tenants.\n\nOptional query parameters:\n  - type: The cache collection to retrieve (e.g. Users, Groups, Mailboxes, Devices, etc.).\n          Omit it (or pass type=_availableTypes) to get the list of collections for the tenant\n          instead of records; it is also not needed when countsOnly=true.\n  - countsOnly: When 'true', returns one row per tenant per collection containing only the record\n                count and the time that collection was last cached. This reads the pre-computed\n                '<Type>-Count' rows, so it is a single table query regardless of tenant count and\n                never materializes the underlying records. Combine with tenantFilter=AllTenants to\n                get an estate-wide inventory and per-tenant cache freshness in one call. Pass a\n                type alongside it to restrict the result to a single collection.\n  - select: Comma-separated list of top-level fields to keep on each record (e.g.\n            select=id,displayName,userPrincipalName). Everything else is dropped during parse,\n            shrinking the response. A kept field keeps its ENTIRE subtree, so select=conditions\n            keeps conditions.users.includeRoles too; projection never reaches inside a kept\n            value. The owning Tenant is always stamped on each record regardless of select.\n  - top: Return at most this many records. For tenantFilter=AllTenants this is a GLOBAL cap\n         across all tenants when ungrouped, so use it to sample rather than to page. When\n         groupBy=Tenant is also set, top instead caps the records within each tenant bucket.\n  - latestOnly: When 'true', keep only the newest record per tenant, ranked by dateField (or\n                an auto-detected date field such as createdDateTime). Collapses per-day\n                snapshot types like SecureScore to one current row per tenant.\n  - groupBy: Set to 'Tenant' to return one bucket per tenant as\n             { Tenant, Count, Records } objects instead of a flat record list.\n  - dateField: The record field latestOnly ranks by. Omit to auto-detect.\n\nUse type=_availableTypes to discover which cache collections exist for a given tenant. Omitting the\ntype parameter also returns the available types.\n\nPERFORMANCE GUIDANCE: For AllTenants queries or any bulk/cross-tenant data retrieval, prefer\nListDBCache over calling individual endpoints (e.g. ListUsers, ListGroups, ListMailboxes) directly.\nIndividual endpoints make live API calls per tenant which is significantly slower and may hit\nthrottling limits. ListDBCache reads pre-cached data from Azure Table Storage and returns results\nin seconds regardless of tenant count.\n\nNote that tenantFilter=AllTenants WITH a type performs a cross-partition scan and materializes every\nrecord of that collection across every tenant, so it grows with the size of the estate. Where only\ntotals are needed, countsOnly=true is dramatically cheaper and should always be preferred.\n\nRecommended workflow for MCP tool selection:\n  1. Call ListDBCache with type=_availableTypes to discover available cache collections.\n  2. If the data you need exists as a cache type, use ListDBCache with that type.\n  3. Only fall back to individual List* endpoints when you need real-time data for a single tenant\n     or when the data is not available in the cache.\n\nCommon cache types include: Users, Groups, Mailboxes, Devices, ConditionalAccess, Applications,\nIntunePolicy, CompliancePolicy, and many more. The exact set depends on what has been configured.",
+        "description": "Retrieves cached tenant data from the CIPP reporting database (CippReportingDB). This is the fastest\nand most efficient way to query tenant data across single or multiple tenants. The database is populated\nnightly by background cache jobs, so data is typically at most 24 hours old.\n\nRequired query parameters:\n  - tenantFilter: The tenant domain or 'AllTenants' to query all managed tenants.\n\nOptional query parameters:\n  - type: The cache collection to retrieve (e.g. Users, Groups, Mailboxes, Devices, etc.).\n          Omit it (or pass type=_availableTypes) to get the list of collections for the tenant\n          instead of records; it is also not needed when countsOnly=true.\n  - countsOnly: When 'true', returns one row per tenant per collection containing only the record\n                count and the time that collection was last cached. This reads the pre-computed\n                '<Type>-Count' rows, so it is a single table query regardless of tenant count and\n                never materializes the underlying records. Combine with tenantFilter=AllTenants to\n                get an estate-wide inventory and per-tenant cache freshness in one call. Pass a\n                type alongside it to restrict the result to a single collection.\n  - select: Comma-separated list of top-level fields to keep on each record (e.g.\n            select=id,displayName,userPrincipalName). Everything else is dropped during parse,\n            shrinking the response. A kept field keeps its ENTIRE subtree, so select=conditions\n            keeps conditions.users.includeRoles too; projection never reaches inside a kept\n            value. The owning Tenant is always stamped on each record regardless of select.\n  - top: Return at most this many records. For tenantFilter=AllTenants this is a GLOBAL cap\n         across all tenants when ungrouped, so use it to sample rather than to page. When\n         groupBy=Tenant is also set, top instead caps the records within each tenant bucket.\n  - latestOnly: When 'true', keep only the newest record per tenant, ranked by dateField (or\n                an auto-detected date field such as createdDateTime). Collapses per-day\n                snapshot types like SecureScore to one current row per tenant.\n  - groupBy: Set to 'Tenant' to return one bucket per tenant as\n             { Tenant, Count, Records } objects instead of a flat record list.\n  - dateField: The record field latestOnly ranks by. Omit to auto-detect.\n\nUse type=_shape for every collection's row count and fields (recorded when the cache was written).\nUse type=_availableTypes to discover which cache collections exist for a given tenant. Omitting the\ntype parameter also returns the available types.\n\nPERFORMANCE GUIDANCE: For AllTenants queries or any bulk/cross-tenant data retrieval, prefer\nListDBCache over calling individual endpoints (e.g. ListUsers, ListGroups, ListMailboxes) directly.\nIndividual endpoints make live API calls per tenant which is significantly slower and may hit\nthrottling limits. ListDBCache reads pre-cached data from Azure Table Storage and returns results\nin seconds regardless of tenant count.\n\nNote that tenantFilter=AllTenants WITH a type performs a cross-partition scan and materializes every\nrecord of that collection across every tenant, so it grows with the size of the estate. Where only\ntotals are needed, countsOnly=true is dramatically cheaper and should always be preferred.\n\nRecommended workflow for MCP tool selection:\n  1. Call ListDBCache with type=_availableTypes to discover available cache collections.\n  2. If the data you need exists as a cache type, use ListDBCache with that type.\n  3. Only fall back to individual List* endpoints when you need real-time data for a single tenant\n     or when the data is not available in the cache.\n\nCommon cache types include: Users, Groups, Mailboxes, Devices, ConditionalAccess, Applications,\nIntunePolicy, CompliancePolicy, and many more. The exact set depends on what has been configured.",
         "parameters": [
           {
             "name": "countsOnly",
@@ -57673,359 +58681,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
-                    "properties": {
-                      "agent": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "aiToolsDetected": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "appDisplayName": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "appId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "appliedConditionalAccessPolicies": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "appliedEventListeners": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "appOwnerTenantId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "appTokenProtectionStatus": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "authenticationAppDeviceDetails": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "authenticationAppPolicyEvaluationDetails": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "authenticationContextClassReferences": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "authenticationDetails": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "authenticationMethodsUsed": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "authenticationProcessingDetails": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "authenticationProtocol": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "authenticationRequirement": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "authenticationRequirementPolicies": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "autonomousSystemNumber": {
-                        "type": "integer",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "azureResourceId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "byCategory": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "byRisk": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "clientAppUsed": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "clientCredentialType": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "clientSessionId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "conditionalAccessAudiences": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "conditionalAccessStatus": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "consentedAiApps": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "consentedApps": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "correlationId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "createdDateTime": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "crossTenantAccessType": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "detectedApps": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "deviceDetail": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "deviceInstalls": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "entraSynced": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "federatedCredentialId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "flaggedForReview": {
-                        "type": "boolean",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "globalSecureAccessIpAddress": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "highRiskTools": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "homeTenantId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "homeTenantName": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "id": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "incomingTokenType": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "intuneSynced": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "ipAddress": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "ipAddressFromResourceProvider": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "isInteractive": {
-                        "type": "boolean",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "isTenantRestricted": {
-                        "type": "boolean",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "isThroughGlobalSecureAccess": {
-                        "type": "boolean",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "lastDataRefresh": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "location": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "managedServiceIdentity": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "mfaDetail": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "networkLocationDetails": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "originalRequestId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "originalTransferMethod": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "privateLinkDetails": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "processingTimeInMilliseconds": {
-                        "type": "integer",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "resourceDisplayName": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "resourceId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "resourceOwnerTenantId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "resourceServicePrincipalId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "resourceTenantId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "riskDetail": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "riskEventTypes_v2": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "riskLevelAggregated": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "riskLevelDuringSignIn": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "riskState": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "sanctionedTools": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "servicePrincipalCredentialKeyId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "servicePrincipalCredentialThumbprint": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "servicePrincipalId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "servicePrincipalName": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "sessionId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "sessionLifetimePolicies": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "signInEventTypes": {
-                        "type": "array",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "signInIdentifier": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "signInIdentifierType": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "signInTokenProtectionStatus": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "status": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "summary": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "tokenIssuerName": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "tokenIssuerType": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "tokenProtectionStatusDetails": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "topTools": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "uniqueTokenIdentifier": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "userAgent": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "userDisplayName": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "userId": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "userPrincipalName": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
-                      },
-                      "userType": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
-                      }
-                    }
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -58305,78 +58961,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                    "properties": {
-                      "assignments": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "broadClaimGrants": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "byBroadClaim": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "byPermissionLevel": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "byPrincipalType": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "claim": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "directFullControlGrants": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "externalGrants": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "grants": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "lastDataRefresh": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "level": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "libraries": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "librariesScanned": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "permissionsSynced": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "site": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "sitesScanned": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "sitesSkipped": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "skippedSites": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "summary": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "topSitesByUniqueLibraries": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "totalAssignments": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "type": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "uniquePermissionLibraries": {
-                        "x-cipp-field-source": "backend"
-                      }
-                    }
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -58655,111 +59240,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                    "properties": {
-                      "anonymousEditLinks": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "anonymousLinks": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "byLinkType": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "byScope": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "externalLinks": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "externalRecipients": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "folderShares": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "internalLinks": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "itemsShared": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "lastDataRefresh": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "library": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "links": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "linksSynced": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "neverExpiringAnonymous": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "oneDriveAccounts": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "oneDriveFiles": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "oneDriveStorageUsedGB": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "passwordProtectedLinks": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "recipient": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "scope": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "sharePointFiles": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "sharePointSites": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "sharePointStorageUsedGB": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "site": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "summary": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "teamsFiles": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "teamsSites": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "teamsStorageUsedGB": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "topLibraries": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "topRecipients": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "topSites": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "totalLinks": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "type": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "usageSynced": {
-                        "x-cipp-field-source": "backend"
-                      }
-                    }
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }

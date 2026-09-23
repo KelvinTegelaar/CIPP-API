@@ -5,7 +5,7 @@ BeforeAll {
     if (-not ([System.Management.Automation.PSTypeName]'HttpStatusCode').Type) {
         $TypeAccelerators::Add('HttpStatusCode', [System.Net.HttpStatusCode])
     }
-    function New-CIPPBecEvidencePackage { param($TenantFilter, $CaseId, $PdfBase64, $PdfSummaryBase64, $Headers, $APIName) }
+    function New-CIPPBecEvidencePackage { param($TenantFilter, $CaseId, $Headers, $APIName) }
     function Set-CippBecCaseContext { param($CaseId) }
     function Write-LogMessage { param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = [string]$Exception.Exception.Message } }
@@ -43,13 +43,6 @@ Describe 'Invoke-ExecBECEvidenceExport' {
         [System.Convert]::FromBase64String($Response.Body.Evidence.ZipBase64) | Should -Be $script:ZipBytes
         Should -Invoke New-CIPPBecEvidencePackage -Times 1 -ParameterFilter { $TenantFilter -eq 'contoso.com' -and $CaseId -eq 'BEC-1' -and $APIName -eq 'ExecBECEvidenceExport' -and $Headers.'x-ms-client-principal' -eq 'x' }
         Should -Invoke Write-LogMessage -Times 0 -ParameterFilter { $sev -eq 'Error' }
-    }
-
-    It 'forwards the browser-rendered PDFs to the package builder, and passes them empty when the browser sent none' {
-        $null = Invoke-ExecBECEvidenceExport -Request (New-Request @{ tenantFilter = 'contoso.com'; caseId = 'BEC-1'; pdfBase64 = 'JVBERi0x'; pdfSummaryBase64 = 'JVBERi0y' }) -TriggerMetadata $null
-        Should -Invoke New-CIPPBecEvidencePackage -Times 1 -ParameterFilter { $PdfBase64 -eq 'JVBERi0x' -and $PdfSummaryBase64 -eq 'JVBERi0y' }
-        $null = Invoke-ExecBECEvidenceExport -Request (New-Request @{ tenantFilter = 'contoso.com'; caseId = 'BEC-1' }) -TriggerMetadata $null
-        Should -Invoke New-CIPPBecEvidencePackage -Times 1 -ParameterFilter { $CaseId -eq 'BEC-1' -and $PdfBase64 -eq '' -and $PdfSummaryBase64 -eq '' }
     }
 
     It 'stamps the case id on the log context while it runs and clears it afterwards' {

@@ -30,7 +30,11 @@ function Get-CIPPDbItem {
         [string]$Type,
 
         [Parameter(Mandatory = $false)]
-        [switch]$CountsOnly
+        [switch]$CountsOnly,
+
+        # With -CountsOnly: also return each collection's recorded Shape (fields and types).
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeShape
     )
 
     try {
@@ -64,7 +68,8 @@ function Get-CIPPDbItem {
             $Filter = [string]::Join(' and ', $Conditions)
             # -Property does the projection server-side; the trailing Select-Object was
             # redundant (and rebuilt every row as a NoteProperty bag, slowing later filters).
-            $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property 'PartitionKey', 'RowKey', 'DataCount', 'Timestamp'
+            $Properties = @('PartitionKey', 'RowKey', 'DataCount', 'Timestamp'; if ($IncludeShape) { 'Shape' })
+            $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property $Properties
         } else {
             if (-not $Type) {
                 throw 'Type parameter is required when CountsOnly is not specified'

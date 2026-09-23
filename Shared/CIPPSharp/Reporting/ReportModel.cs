@@ -56,9 +56,12 @@ namespace CIPP.Reporting
         {
             var result = new List<ReportNode>();
             if (string.IsNullOrWhiteSpace(json)) return result;
-            JsonElement root;
-            try { root = JsonDocument.Parse(json).RootElement; }
+            JsonDocument doc;
+            try { doc = JsonDocument.Parse(json); }
             catch { return result; }
+            // Disposed once the tree is copied out, so its pooled buffers go back to the pool.
+            using var _ = doc;
+            var root = doc.RootElement;
             if (root.ValueKind == JsonValueKind.Array)
             {
                 foreach (var el in root.EnumerateArray())
