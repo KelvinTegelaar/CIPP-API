@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "description": "Graph paths treated as customer-content for Test-CIPPGraphEndpointBlocked. Case-insensitive regexes against the percent-decoded path (host/version stripped) and against $expand values. Segments end at /, (, ; or end of path so OData key syntax like messages('id') is covered.",
+  "blockedEndpoints": [
+    {
+      "id": "drive-trees",
+      "pattern": "(^|/)drives?(?=[/(;]|$)",
+      "reason": "driveItem GETs/children return @microsoft.graph.downloadUrl"
+    },
+    {
+      "id": "drive-item",
+      "pattern": "(^|/)driveItem(?=[/(;]|$)",
+      "reason": "List item driveItem returns @microsoft.graph.downloadUrl"
+    },
+    {
+      "id": "shares",
+      "pattern": "(^|/)(?<!print/)shares(?=[/(;]|$)",
+      "reason": "Sharing-link resolution returns driveItems with @microsoft.graph.downloadUrl"
+    },
+    {
+      "id": "media-value",
+      "pattern": "(?<!photo/)(?<!\\d+x\\d+/)\\$value(?=[/(;]|$)",
+      "reason": "Raw binary/MIME via /$value; allows users/.../photo/$value and photos/{size}/$value"
+    },
+    {
+      "id": "file-content",
+      "pattern": "(^|/)(?<!serviceAnnouncement/messages[/(][^/]*/attachments[/(][^/]*/)content(?=[/(;]|$)",
+      "reason": "Explicit /content bytes; does not match contentTypes; excludes Message Center attachment content"
+    },
+    {
+      "id": "mail-messages",
+      "pattern": "(^|/)(?<!serviceAnnouncement/(\\$expand/)?)(getAll(Retained)?)?messages(?=[/(;]|$)",
+      "reason": "Mail/Teams message bodies (incl. getAllMessages/getAllRetainedMessages); excludes admin/serviceAnnouncement/messages"
+    },
+    {
+      "id": "mail-attachments",
+      "pattern": "(^|/)(?<!serviceAnnouncement/messages[/(][^/]*/(\\$expand/)?)attachments(?=[/(;]|$)",
+      "reason": "Mail/chat/group attachment names and content; excludes Message Center attachments"
+    },
+    {
+      "id": "chats",
+      "pattern": "(^|/)chats(?=[/(;]|$)",
+      "reason": "Teams chats; lastMessagePreview expands to message text"
+    },
+    {
+      "id": "calendar-events",
+      "pattern": "(^|/)(events|calendarView)(?=[/(;]|$)",
+      "reason": "Calendar event bodies, attendees, locations"
+    },
+    {
+      "id": "contacts",
+      "pattern": "/contacts(?=[/(;]|$)",
+      "reason": "Personal (mailbox) contact PII; root contacts (directory org contacts) stays allowed"
+    },
+    {
+      "id": "onenote",
+      "pattern": "(^|/)onenote(?=[/(;]|$)",
+      "reason": "OneNote page content"
+    },
+    {
+      "id": "online-meetings",
+      "pattern": "(^|/)onlineMeetings(?=[/(;]|$)",
+      "reason": "Meeting participants, joinWebUrl, recordings/transcripts"
+    },
+    {
+      "id": "call-records",
+      "pattern": "(^|/)callRecords(?=[/(;]|$)",
+      "reason": "Call participant and phone-number PII"
+    },
+    {
+      "id": "group-conversations",
+      "pattern": "(^|/)(conversations|threads|posts)(?=[/(;]|$)",
+      "reason": "Group mailbox conversation/thread/post content"
+    },
+    {
+      "id": "todo-tasks",
+      "pattern": "(^|/)todo/(.*/)?tasks(?=[/(;]|$)",
+      "reason": "To Do task titles, bodies, checklist items and attachments; todo/lists (list names) stays allowed"
+    },
+    {
+      "id": "planner-tasks",
+      "pattern": "(^|/)planner/(.*/)?tasks(?=[/(;]|$)",
+      "reason": "Planner task titles, assignees, descriptions and checklists (tasks and tasks/{id}/details); plans and plan details stay allowed"
+    },
+    {
+      "id": "site-pages",
+      "pattern": "(^|/)pages(?=[/(;]|$)",
+      "reason": "SharePoint site page content (canvasLayout, web parts)"
+    },
+    {
+      "id": "list-items",
+      "pattern": "(^|/)lists(?=[/(]).*/items(?=[/(;]|$)",
+      "reason": "SharePoint list item fields (row data); list definitions and columns stay allowed"
+    },
+    {
+      "id": "copilot-interactions",
+      "pattern": "(^|/)(ai)?interactionHistory(?=[/(;]|$)",
+      "reason": "Copilot prompts and responses"
+    },
+    {
+      "id": "adhoc-calls",
+      "pattern": "(^|/)adhocCalls(?=[/(;]|$)",
+      "reason": "Ad hoc call transcripts/recordings; transcripts/{id}/metadataContent returns spokenText"
+    },
+    {
+      "id": "document-insights",
+      "pattern": "(^|/)insights(?=[/(;]|$)",
+      "reason": "Trending/used/shared documents: titles, previewText, and /resource returns the driveItem"
+    },
+    {
+      "id": "external-items",
+      "pattern": "(^|/)external/connections(?=[/(]).*/items(?=[/(;]|$)",
+      "reason": "Graph connector items include indexed content (content.value) and properties"
+    },
+    {
+      "id": "bookings-customers",
+      "pattern": "(^|/)bookingBusinesses(?=[/(]).*/(appointments|customers)(?=[/(;]|$)",
+      "reason": "Bookings customer names, emails, phones, addresses and notes"
+    },
+    {
+      "id": "virtual-event-attendees",
+      "pattern": "(^|/)virtualEvents/(.*/)?(registrations|attendanceReports)(?=[/(;]|$)",
+      "reason": "Webinar/town hall registrant and attendee names, emails and registration answers"
+    }
+  ]
+}
