@@ -66,14 +66,14 @@ Describe 'Get-CIPPAlertQuarantineReleaseRequests' {
         }
     }
 
-    It 'queries a one-day window, not a few hours' {
+    It 'queries the full 30-day quarantine window for requested releases' {
         Get-CIPPAlertQuarantineReleaseRequests -TenantFilter $script:Tenant
 
         $script:CapturedParams | Should -Not -BeNullOrEmpty
         $script:CapturedParams.ReleaseStatus | Should -Be 'Requested'
         $Span = ((Get-Date) - $script:CapturedParams.StartReceivedDate).TotalDays
-        $Span | Should -BeGreaterThan 0.9   # ~1 day
-        $Span | Should -BeLessThan 1.1       # regression guard: the old window was 0.25 days (6 hours)
+        $Span | Should -BeGreaterThan 29.9   # regression guard: 6 hours, then 1 day, both missed requests raised later
+        $Span | Should -BeLessThan 30.1      # EXO rejects a StartReceivedDate beyond 30 days
         $script:CapturedParams.EndReceivedDate | Should -BeGreaterThan $script:CapturedParams.StartReceivedDate
     }
 
