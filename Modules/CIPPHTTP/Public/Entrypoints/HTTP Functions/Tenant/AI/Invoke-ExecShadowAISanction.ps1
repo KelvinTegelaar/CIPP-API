@@ -3,7 +3,7 @@ function Invoke-ExecShadowAISanction {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.ReadWrite
+        Tenant.AI.ReadWrite
     .DESCRIPTION
         Marks an AI tool from the Shadow AI catalog as company sanctioned for a tenant, or removes
         that status. Sanctioned tools are stored per tenant in the ShadowAIConfig table and are

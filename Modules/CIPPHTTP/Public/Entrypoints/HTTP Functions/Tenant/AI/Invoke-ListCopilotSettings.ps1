@@ -3,7 +3,7 @@ function Invoke-ListCopilotSettings {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.Read
+        Tenant.AI.Read
     .DESCRIPTION
         Lists the Microsoft 365 Copilot admin policy settings for a tenant, one row per setting,
         with the current raw value and a friendly state (Enabled / Disabled / Not configured).

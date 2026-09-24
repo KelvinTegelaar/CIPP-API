@@ -3,7 +3,7 @@ function Invoke-ListCopilotUsage {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.Read
+        Tenant.AI.Read
     .DESCRIPTION
         Returns Microsoft 365 Copilot usage reports for a tenant, flattened into table rows.
         Type=Adoption  -> getMicrosoft365CopilotUserCountSummary (per-product enabled vs active users)

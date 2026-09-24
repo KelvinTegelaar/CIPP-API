@@ -3,7 +3,7 @@ function Invoke-ListAgent365Packages {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.Read
+        Tenant.AI.Read
     .DESCRIPTION
         Lists Microsoft Agent 365 / Copilot packages (agents and Microsoft 365 apps) in the tenant
         catalog via the Package Management API. Requires a Microsoft Agent 365 license on the tenant.

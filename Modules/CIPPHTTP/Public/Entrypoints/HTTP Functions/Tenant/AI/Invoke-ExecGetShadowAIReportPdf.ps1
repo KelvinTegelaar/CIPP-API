@@ -3,7 +3,7 @@ function Invoke-ExecGetShadowAIReportPdf {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.Read
+        Tenant.AI.Read
     .DESCRIPTION
         Server-renders the Shadow AI report as application/pdf bytes. Gathers the same shaped data the
         Shadow AI page uses (ListShadowAI) and composes it through the shared CIPPSharp component kit

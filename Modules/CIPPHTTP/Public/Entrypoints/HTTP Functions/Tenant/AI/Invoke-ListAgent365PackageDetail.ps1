@@ -3,7 +3,7 @@ function Invoke-ListAgent365PackageDetail {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.Read
+        Tenant.AI.Read
     .DESCRIPTION
         Gets the full detail for a single Microsoft Agent 365 / Copilot package by id, including the
         allowedUsersAndGroups, acquireUsersAndGroups and elementDetails that the list endpoint omits.

@@ -3,7 +3,7 @@ function Invoke-ListShadowAI {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Standards.Read
+        Tenant.AI.Read
     .DESCRIPTION
         Compiles a Shadow AI overview for a tenant by matching CACHED data from the CIPP reporting
         database (DetectedApps, ServicePrincipals, OAuth2PermissionGrants) against the curated AI

@@ -124,6 +124,9 @@
       "name": "Tenant > Administration > Tenant"
     },
     {
+      "name": "Tenant > AI"
+    },
+    {
       "name": "Tenant > Conditional"
     },
     {
@@ -18194,7 +18197,7 @@
         "summary": "ExecCopilotSettings",
         "operationId": "ExecCopilotSettings",
         "tags": [
-          "Tenant > Standards"
+          "Tenant > AI"
         ],
         "description": "Sets a single Microsoft 365 Copilot policy setting to Enabled (1), Disabled (0) or Not configured (cleared).",
         "requestBody": {
@@ -18267,7 +18270,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.AI.ReadWrite"
       }
     },
     "/api/ExecCopyForSent": {
@@ -24343,7 +24346,7 @@
         "summary": "ExecGetShadowAIReportPdf",
         "operationId": "ExecGetShadowAIReportPdf",
         "tags": [
-          "Tenant > Standards"
+          "Tenant > AI"
         ],
         "description": "Server-renders the Shadow AI report as application/pdf bytes. Gathers the same shaped data the\nShadow AI page uses (ListShadowAI) and composes it through the shared CIPPSharp component kit\n(Build-CippShadowAIReportTree) - the server-side replacement for the client react-pdf\nShadowAIReportButton.",
         "requestBody": {
@@ -24405,7 +24408,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.Read"
+        "x-cipp-role": "Tenant.AI.Read"
       }
     },
     "/api/ExecGetSharingReportPdf": {
@@ -36966,7 +36969,7 @@
         "summary": "ExecShadowAISanction",
         "operationId": "ExecShadowAISanction",
         "tags": [
-          "Tenant > Standards"
+          "Tenant > AI"
         ],
         "description": "Marks an AI tool from the Shadow AI catalog as company sanctioned for a tenant, or removes\nthat status. Sanctioned tools are stored per tenant in the ShadowAIConfig table and are\nreported by ListShadowAI with risk 'Informational' and status 'Sanctioned'; all other\ndetected AI tools report status 'Unsanctioned'.",
         "requestBody": {
@@ -37027,7 +37030,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.AI.ReadWrite"
       }
     },
     "/api/ExecSharePointPerms": {
@@ -39769,7 +39772,7 @@
         "summary": "ListAgent365PackageDetail",
         "operationId": "ListAgent365PackageDetail",
         "tags": [
-          "Tenant > Standards"
+          "Tenant > AI"
         ],
         "description": "Gets the full detail for a single Microsoft Agent 365 / Copilot package by id, including the\nallowedUsersAndGroups, acquireUsersAndGroups and elementDetails that the list endpoint omits.\nUses delegated auth: this call returns 424 Failed Dependency under application context.",
         "parameters": [
@@ -39945,7 +39948,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.Read"
+        "x-cipp-role": "Tenant.AI.Read"
       }
     },
     "/api/ListAgent365Packages": {
@@ -39953,7 +39956,7 @@
         "summary": "ListAgent365Packages",
         "operationId": "ListAgent365Packages",
         "tags": [
-          "Tenant > Standards"
+          "Tenant > AI"
         ],
         "description": "Lists Microsoft Agent 365 / Copilot packages (agents and Microsoft 365 apps) in the tenant\ncatalog via the Package Management API. Requires a Microsoft Agent 365 license on the tenant.\nUses delegated auth: the Package Management API currently fails under application context\n(424 Failed Dependency on GET, partial on LIST). Agents are NOT returned by the default list,\nso this also queries supportedHosts=Copilot and merges the results (deduped by id). An explicit\nOData $filter (Filter query parameter) overrides the default merge.",
         "parameters": [
@@ -40129,7 +40132,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.Read"
+        "x-cipp-role": "Tenant.AI.Read"
       }
     },
     "/api/ListAlertResults": {
@@ -45515,7 +45518,7 @@
         "summary": "ListCopilotSettings",
         "operationId": "ListCopilotSettings",
         "tags": [
-          "Tenant > Standards"
+          "Tenant > AI"
         ],
         "description": "Lists the Microsoft 365 Copilot admin policy settings for a tenant, one row per setting,\nwith the current raw value and a friendly state (Enabled / Disabled / Not configured).",
         "parameters": [
@@ -45564,7 +45567,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.Read"
+        "x-cipp-role": "Tenant.AI.Read"
       }
     },
     "/api/ListCopilotUsage": {
@@ -45572,7 +45575,7 @@
         "summary": "ListCopilotUsage",
         "operationId": "ListCopilotUsage",
         "tags": [
-          "Tenant > Standards"
+          "Tenant > AI"
         ],
         "description": "Returns Microsoft 365 Copilot usage reports for a tenant, flattened into table rows.\nType=Adoption  -> getMicrosoft365CopilotUserCountSummary (per-product enabled vs active users)\nType=Trend     -> getMicrosoft365CopilotUserCountTrend    (per-date active/enabled users)\nType=UserDetail-> getMicrosoft365CopilotUsageUserDetail   (per-user last activity per app)",
         "parameters": [
@@ -45700,7 +45703,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.Read"
+        "x-cipp-role": "Tenant.AI.Read"
       }
     },
     "/api/ListCSPLicenses": {
@@ -58679,7 +58682,7 @@
         "summary": "ListShadowAI",
         "operationId": "ListShadowAI",
         "tags": [
-          "Tenant > Standards"
+          "Tenant > AI"
         ],
         "description": "Compiles a Shadow AI overview for a tenant by matching CACHED data from the CIPP reporting\ndatabase (DetectedApps, ServicePrincipals, OAuth2PermissionGrants) against the curated AI\ncatalog (Config/ShadowAI.json). No live Graph enumeration is performed - refresh the data by\nsyncing those caches (ExecCIPPDBCache). The only live call is a bounded, best-effort 7-day\nsign-in lookup for the matched AI applications.",
         "parameters": [
@@ -58714,7 +58717,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.Read"
+        "x-cipp-role": "Tenant.AI.Read"
       }
     },
     "/api/ListSharedMailboxAccountEnabled": {
