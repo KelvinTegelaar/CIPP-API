@@ -17,7 +17,7 @@ function Start-CIPPOrchestrator {
         Indicates the caller is already running in a queue trigger context.
         Skips queuing and starts orchestration directly to avoid double-queuing.
     .EXAMPLE
-        Start-CIPPOrchestrator -InputObject @{OrchestratorName='BPA'; Batch=@($Tenants)}
+        Start-CIPPOrchestrator -InputObject @{OrchestratorName='UpdatePermissionsOrchestrator'; Batch=@($Tenants)}
     .EXAMPLE
         Start-CIPPOrchestrator -InputObject $InputObject -CallerIsQueueTrigger
     .FUNCTIONALITY

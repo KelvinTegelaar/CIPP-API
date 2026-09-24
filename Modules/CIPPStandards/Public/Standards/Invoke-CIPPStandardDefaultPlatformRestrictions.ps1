@@ -217,6 +217,5 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DefaultPlatformRestrictions' -CurrentValue $CompareField -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DefaultPlatformRestrictions' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

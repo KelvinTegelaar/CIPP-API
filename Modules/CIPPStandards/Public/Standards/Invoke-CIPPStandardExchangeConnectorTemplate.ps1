@@ -123,6 +123,5 @@ function Invoke-CIPPStandardExchangeConnectorTemplate {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.ExchangeConnectorTemplates' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ExchangeConnectorTemplatesDeployed' -FieldValue ($DeployedConnectors.Identity) -StoreAs StringArray -Tenant $tenant
     }
 }

@@ -102,6 +102,5 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.RestrictThirdPartyStorageServices' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ThirdPartyStorageServicesRestricted' -FieldValue ($CurrentState.accountEnabled -eq $false) -StoreAs bool -Tenant $Tenant
     }
 }

@@ -145,15 +145,6 @@ function Invoke-CIPPStandardSPFileRequests {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SPFileRequestsEnabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'SPCoreFileRequestsEnabled' -FieldValue $CurrentState.CoreRequestFilesLinkEnabled -StoreAs bool -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'SPOneDriveFileRequestsEnabled' -FieldValue $CurrentState.OneDriveRequestFilesLinkEnabled -StoreAs bool -Tenant $Tenant
-
-        if ($null -ne $ExpirationDays) {
-            Add-CIPPBPAField -FieldName 'SPCoreFileRequestsExpirationDays' -FieldValue $CurrentState.CoreRequestFilesLinkExpirationInDays -StoreAs string -Tenant $Tenant
-            Add-CIPPBPAField -FieldName 'SPOneDriveFileRequestsExpirationDays' -FieldValue $CurrentState.OneDriveRequestFilesLinkExpirationInDays -StoreAs string -Tenant $Tenant
-        }
-
         $CurrentValue = @{
             CoreRequestFilesLinkEnabled              = $CurrentState.CoreRequestFilesLinkEnabled
             OneDriveRequestFilesLinkEnabled          = $CurrentState.OneDriveRequestFilesLinkEnabled

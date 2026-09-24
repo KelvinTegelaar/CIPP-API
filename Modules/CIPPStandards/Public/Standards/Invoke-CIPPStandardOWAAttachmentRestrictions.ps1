@@ -136,6 +136,5 @@ function Invoke-CIPPStandardOWAAttachmentRestrictions {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.OWAAttachmentRestrictions' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'OWAAttachmentRestrictions' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

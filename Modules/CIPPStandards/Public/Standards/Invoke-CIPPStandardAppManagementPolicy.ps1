@@ -193,6 +193,5 @@ function Invoke-CIPPStandardAppManagementPolicy {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.AppManagementPolicy' -CurrentValue $CurrentValue -ExpectedValue $desiredState -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AppManagementPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

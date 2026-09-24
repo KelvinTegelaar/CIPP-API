@@ -222,7 +222,6 @@ function Invoke-CIPPStandardOauthConsent {
 
         $StateIsCorrect = ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.cipp-consent-policy') -and $IncludesAreConfigured
 
-        Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
 
         $CurrentValue = @{
             permissionGrantPolicyIdsAssignedToDefaultUserRole = $State.permissionGrantPolicyIdsAssignedToDefaultUserRole

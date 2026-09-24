@@ -95,7 +95,6 @@ function Invoke-CIPPStandardTeamsEmailIntegration {
             AllowEmailIntoChannel = $AllowEmailIntoChannel
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsEmailIntegration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'TeamsEmailIntoChannel' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
     }
 }

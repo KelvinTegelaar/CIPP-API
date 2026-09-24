@@ -93,7 +93,6 @@ function Invoke-CIPPStandardTeamsExternalAccessPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TeamsExternalAccessPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
             EnableFederationAccess     = $CurrentState.EnableFederationAccess

@@ -211,6 +211,5 @@ function Invoke-CIPPStandardDefenderASRPolicy {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DefenderASRPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DefenderASRPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

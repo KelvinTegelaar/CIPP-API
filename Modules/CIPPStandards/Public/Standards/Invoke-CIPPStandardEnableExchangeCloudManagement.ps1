@@ -117,6 +117,5 @@ function Invoke-CIPPStandardEnableExchangeCloudManagement {
         $filtered = $MailboxesToUpdate | Select-Object -Property UserPrincipalName, IsExchangeCloudManaged, RecipientTypeDetails, ExternalDirectoryObjectId
         $stateReport = if ($StateIsCorrect -eq $true) { $true } else { $filtered }
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableExchangeCloudManagement' -FieldValue $stateReport -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'EnableExchangeCloudManagement' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }

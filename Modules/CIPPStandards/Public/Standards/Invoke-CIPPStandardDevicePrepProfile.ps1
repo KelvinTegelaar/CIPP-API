@@ -478,6 +478,5 @@ function Invoke-CIPPStandardDevicePrepProfile {
     # Report
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DevicePrepProfile' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DevicePrepProfile' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -89,7 +89,7 @@ function Invoke-ListCommunityRepoTemplates {
     # writes {PartitionKey}/{Name}.json), so these folder names reliably identify the type.
     $KnownPartitionKeys = @(
         'IntuneTemplate', 'CATemplate', 'StandardsTemplate', 'StandardsTemplateV2', 'GroupTemplate',
-        'AppApprovalTemplate', 'ReportBuilderTemplate', 'BPATemplate', 'TransportTemplate',
+        'AppApprovalTemplate', 'ReportBuilderTemplate', 'TransportTemplate',
         'ExConnectorTemplate', 'AppTemplate', 'ContactTemplate', 'JITAdminTemplate',
         'UserDefaultTemplate', 'AssignmentFilterTemplate', 'IntuneReusableSettingTemplate',
         'SharePointTemplate', 'DlpCompliancePolicyTemplate', 'RetentionCompliancePolicyTemplate',

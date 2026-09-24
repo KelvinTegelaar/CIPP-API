@@ -73,7 +73,6 @@ function Invoke-CIPPStandardDisableViva {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableViva' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableViva' -FieldValue $CurrentSetting.isEnabledInOrganization -StoreAs bool -Tenant $Tenant
     }
 
 }

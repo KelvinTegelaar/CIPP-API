@@ -18,7 +18,6 @@ BeforeAll {
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $message, $sev, $LogData, $headers) $script:logs.Add(@{ Message = $message; Sev = $sev }) }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $CurrentValue, $ExpectedValue, $TenantFilter) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Get-CippException { [CmdletBinding()] param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
 
     . $StandardPath

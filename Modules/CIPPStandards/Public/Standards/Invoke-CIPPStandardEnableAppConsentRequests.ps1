@@ -185,6 +185,5 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableAppConsentRequests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue $CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

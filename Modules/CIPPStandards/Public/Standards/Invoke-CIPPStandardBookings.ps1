@@ -74,7 +74,6 @@ function Invoke-CIPPStandardBookings {
         Set-CIPPStandardsCompareField -FieldName 'standards.Bookings' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         # Default is not set, not set means it's enabled
         if ($null -eq $CurrentState ) { $CurrentState = $true }
-        Add-CIPPBPAField -FieldName 'BookingsState' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 
     if ($Settings.remediate -eq $true) {

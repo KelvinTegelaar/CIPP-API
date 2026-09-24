@@ -158,7 +158,6 @@ function Invoke-CIPPStandardUsageLocation {
 
     if ($Settings.report -eq $true) {
         $FieldValue = @($IncorrectUsers | Select-Object -Property userPrincipalName, displayName, usageLocation, userType)
-        Add-CIPPBPAField -FieldName 'UsageLocationIncorrectUsers' -FieldValue $FieldValue -StoreAs json -Tenant $Tenant
 
         $CurrentValue = @{
             usageLocation  = $UsageLocation

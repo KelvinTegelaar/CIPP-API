@@ -3,7 +3,7 @@ function Invoke-ListStandardsCompare {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.BestPracticeAnalyser.Read
+        Tenant.Standards.Read
     .DESCRIPTION
         Compares current tenant configuration against applied standards, showing compliance status and drift for each standard.
     #>

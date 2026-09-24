@@ -20,7 +20,6 @@ BeforeAll {
     function New-GraphPOSTRequest { [CmdletBinding()] param($uri, $tenantid, $body, $type) }
     function Get-CIPPIntunePolicyAssignments { [CmdletBinding()] param($PolicyId, $TemplateType, $TenantFilter, $ExistingPolicy) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $TenantFilter, [bool]$LicenseAvailable = $true, [array]$BulkFields) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Write-LogMessage { [CmdletBinding()] param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $LogData) }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
     function Get-CippException { [CmdletBinding()] param($Exception) [PSCustomObject]@{ NormalizedError = [string]$Exception } }
@@ -144,7 +143,6 @@ Describe 'Invoke-CIPPStandardDevicePrepProfile assignment handling' {
         Mock -CommandName Set-CIPPStandardsCompareField -MockWith {
             $script:CompareFields += @{ Current = $CurrentValue; Expected = $ExpectedValue }
         }
-        Mock -CommandName Add-CIPPBPAField -MockWith { }
         Mock -CommandName Write-LogMessage -MockWith { }
         Mock -CommandName Write-StandardsAlert -MockWith { }
     }

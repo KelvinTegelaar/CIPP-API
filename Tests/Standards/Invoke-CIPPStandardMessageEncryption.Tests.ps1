@@ -21,7 +21,6 @@ BeforeAll {
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $message, $sev, $LogData) }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $CurrentValue, $ExpectedValue, $TenantFilter) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Get-CippException { [CmdletBinding()] param($Exception) }
 
     . $StandardPath
@@ -69,7 +68,6 @@ Describe 'Invoke-CIPPStandardMessageEncryption' {
         Mock -CommandName Write-LogMessage -MockWith { }
         Mock -CommandName Write-StandardsAlert -MockWith { }
         Mock -CommandName Set-CIPPStandardsCompareField -MockWith { }
-        Mock -CommandName Add-CIPPBPAField -MockWith { }
         Mock -CommandName Get-CippException -MockWith { @{ NormalizedError = 'boom' } }
     }
 
@@ -216,7 +214,6 @@ Describe 'Invoke-CIPPStandardMessageEncryption' {
                 $ExpectedValue.EnablePdfEncryption -eq $true -and
                 $ExpectedValue.AdRmsDetected -eq $false
             }
-            Should -Invoke Add-CIPPBPAField -Times 1 -Exactly -ParameterFilter { $FieldValue -eq $false }
         }
     }
 
@@ -282,9 +279,6 @@ Describe 'Invoke-CIPPStandardMessageEncryption' {
                 $ExpectedValue.AzureRMSLicensingEnabled -eq $true -and
                 $ExpectedValue.SimplifiedClientAccessEnabled -eq $true -and
                 $ExpectedValue.AdRmsDetected -eq $false
-            }
-            Should -Invoke Add-CIPPBPAField -Times 1 -Exactly -ParameterFilter {
-                $FieldName -eq 'messageEncryptionEnabled' -and $FieldValue -eq $false
             }
         }
     }

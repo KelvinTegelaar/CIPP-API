@@ -188,7 +188,6 @@ function Invoke-CIPPStandardPlannerBlockTaskDelete {
 
     if ($Settings.report -eq $true) {
         $FieldValue = @($IncorrectUsers | Select-Object -Property userPrincipalName, displayName, blockDeleteTasksNotCreatedBySelf)
-        Add-CIPPBPAField -FieldName 'PlannerBlockTaskDeleteIncorrectUsers' -FieldValue $FieldValue -StoreAs json -Tenant $Tenant
 
         $CurrentValue = @{
             incorrectUsers = @($FieldValue)

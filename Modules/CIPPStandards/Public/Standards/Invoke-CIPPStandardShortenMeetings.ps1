@@ -86,18 +86,6 @@ function Invoke-CIPPStandardShortenMeetings {
     }
 
     if ($Settings.report -eq $true) {
-        $BPAField = @{
-            FieldName  = 'ShortenMeetings'
-            FieldValue = $CorrectState
-            Tenant     = $Tenant
-        }
-
-        if ($CorrectState -eq $true) {
-            Add-CIPPBPAField @BPAField -StoreAs bool
-        } else {
-            Add-CIPPBPAField @BPAField -StoreAs json
-        }
-
         $CurrentValue = @{
             ShortenEventScopeDefault            = $CurrentState.ShortenEventScopeDefault
             DefaultMinutesToReduceShortEventsBy = $CurrentState.DefaultMinutesToReduceShortEventsBy

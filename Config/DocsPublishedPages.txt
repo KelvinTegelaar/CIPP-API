@@ -394,9 +394,6 @@ user-documentation/tenant/standards
 user-documentation/tenant/standards/alignment
 user-documentation/tenant/standards/alignment/templates
 user-documentation/tenant/standards/alignment/templates/available-standards
-user-documentation/tenant/standards/bpa-report
-user-documentation/tenant/standards/bpa-report/best-practice-templates
-user-documentation/tenant/standards/bpa-report/builder
 user-documentation/tenant/standards/domains-analyser
 user-documentation/tenant/standards/domains-analyser/domain-analyser-updates-and-data-refreshing
 user-documentation/tenant/standards/template

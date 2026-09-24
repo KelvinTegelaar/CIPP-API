@@ -297,9 +297,7 @@ function Invoke-CIPPStandardAppDeploy {
     }
 
     if ($Settings.report -eq $true) {
-        $StateIsCorrect = $MissingApps.Count -eq 0 ? $true : @{ 'Missing Apps' = $MissingApps -join ',' }
         Set-CIPPStandardsCompareField -FieldName 'standards.AppDeploy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
-        Add-CIPPBPAField -FieldName 'AppDeploy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
 }

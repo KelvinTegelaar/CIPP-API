@@ -89,6 +89,5 @@ function Invoke-CIPPStandardEXODirectSend {
             RejectDirectSend = $CurrentConfig
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.EXODirectSend' -CurrentValue $CurrentState -ExpectedValue $ExpectedState -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'EXODirectSend' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }
