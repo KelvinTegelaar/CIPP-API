@@ -55401,6 +55401,9 @@
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
                       },
+                      "PSAConsolidationKey": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "PsaTicketId": {
                         "x-cipp-field-source": "storage"
                       },
@@ -65964,6 +65967,9 @@
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
                       },
+                      "PSAConsolidationKey": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "PsaTicketId": {
                         "x-cipp-field-source": "storage"
                       },
@@ -70185,6 +70191,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PSAConsolidationKey": {
                       "x-cipp-field-source": "storage"
                     },
                     "PsaTicketId": {
