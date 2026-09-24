@@ -71,7 +71,7 @@ BeforeAll {
         }
     }
     function New-AppUsage { param($Upn, $Windows)
-        [pscustomobject]@{ userPrincipalName = $Upn; details = @([pscustomobject]@{ reportPeriod = 90; windows = $Windows; mac = $false; web = $true; mobile = $false }) }
+        [pscustomobject]@{ userPrincipalName = $Upn; details = @([pscustomobject]@{ reportPeriod = 180; windows = $Windows; mac = $false; web = $true; mobile = $false }) }
     }
 }
 
@@ -364,6 +364,7 @@ Describe 'Get-CIPPLicenseRecommendation' {
 
         $Report.Summary.TotalPotentialMonthly | Should -Be ([math]::Round(10.0 + $Report.Summary.DowngradeMonthly + $Report.Summary.ConsolidationMonthly + $Report.Summary.TermMonthly, 2))
         $Report.Summary.TotalPotentialAnnual | Should -Be ([math]::Round($Report.Summary.TotalPotentialMonthly * 12, 2))
+        $Report.Summary.ReportPeriodDays | Should -Be 180
         @($Report.Products).Count | Should -Be 5
         ($Report.Products | Where-Object { $_.skuId -eq $script:Premium }).Capabilities | Should -Contain 'Device management'
         ($Report.Products | Where-Object { $_.skuId -eq $script:Standard }).MonthlySpend | Should -Be 56.0

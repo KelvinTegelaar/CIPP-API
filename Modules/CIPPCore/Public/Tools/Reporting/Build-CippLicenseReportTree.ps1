@@ -79,7 +79,7 @@ function Build-CippLicenseReportTree {
     function whole($v) { money $v 0 }
     function cents($v) { money $v 2 }
 
-    $ReportDays = orDefault $Summary.ReportPeriodDays 90
+    $ReportDays = orDefault $Summary.ReportPeriodDays 180
     $InactiveDays = orDefault $Summary.InactiveDays 90
     $TenureMonths = orDefault $Summary.TenureMonths 6
     $UpliftPct = jsRound ((orDefault $Summary.MonthlyCommitmentUplift 0.2) * 100)
