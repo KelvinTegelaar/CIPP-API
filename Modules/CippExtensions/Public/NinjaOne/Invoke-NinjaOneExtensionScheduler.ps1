@@ -43,14 +43,6 @@ function Invoke-NinjaOneExtensionScheduler {
             }
         }
 
-        $CveBatch = foreach ($Tenant in $TenantsToProcess) {
-            [PSCustomObject]@{
-                'NinjaAction'  = 'CveSyncTenant'
-                'MappedTenant' = $Tenant
-                'FunctionName' = 'NinjaOneQueue'
-            }
-        }
-
         if (($Batch | Measure-Object).Count -gt 0) {
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'NinjaOneOrchestrator'
@@ -59,15 +51,6 @@ function Invoke-NinjaOneExtensionScheduler {
             #Write-Host ($InputObject | ConvertTo-Json)
             $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
             Write-Host "Started permissions orchestration with ID = '$InstanceId'"
-        }
-
-        if (($CveBatch | Measure-Object).Count -gt 0) {
-            $CveInputObject = [PSCustomObject]@{
-                OrchestratorName = 'NinjaOneOrchestrator'
-                Batch            = @($CveBatch)
-            }
-            $CveInstanceId = Start-CIPPOrchestrator -InputObject $CveInputObject
-            Write-Host "Started CVE sync orchestration with ID = '$CveInstanceId'"
         }
 
         $AddObject = @{
