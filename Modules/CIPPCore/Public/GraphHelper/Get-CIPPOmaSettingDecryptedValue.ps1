@@ -97,6 +97,7 @@ function Get-CIPPOmaSettingDecryptedValue {
                     }
                 } catch {
                     Write-Warning "Error decrypting OMA setting '$($omaSetting.displayName)': $($_.Exception.Message)"
+                    Write-LogMessage -API 'IntunePolicy' -tenant $TenantFilter -message "Could not decrypt OMA-URI setting '$($omaSetting.displayName)' in '$($DeviceConfiguration.displayName)': $(Get-NormalizedError -Message $_.Exception.Message)" -sev Warning
                     # Continue with other settings even if one fails
                 }
             }
