@@ -131,6 +131,14 @@ Describe 'Test-CIPPGraphEndpointBlocked' {
             @{ Uri = "solutions/bookingBusinesses('b')/appointments/a"; Id = 'bookings-customers' }
             @{ Uri = 'solutions/virtualEvents/webinars/w/registrations'; Id = 'virtual-event-attendees' }
             @{ Uri = 'solutions/virtualEvents/townhalls/t/sessions/s/attendanceReports'; Id = 'virtual-event-attendees' }
+            @{ Uri = "users/u/calendar/reminderView(startDateTime='2026-01-01',endDateTime='2026-02-01')"; Id = 'calendar-events' }
+            @{ Uri = 'users/u/outlook/taskFolders/f/tasks'; Id = 'todo-tasks' }
+            @{ Uri = 'users/u/planner/myDayTasks'; Id = 'planner-tasks' }
+            @{ Uri = 'users/u/planner/all/delta'; Id = 'planner-tasks' }
+            @{ Uri = 'sites/s/items/i'; Id = 'list-items' }
+            @{ Uri = 'users/u/chats:'; Id = 'chats' }
+            @{ Uri = 'users/u/people'; Id = 'people' }
+            @{ Uri = 'security/cases/ediscoveryCases/c/operations/o'; Id = 'ediscovery' }
         ) {
             { Test-CIPPGraphEndpointBlocked -Uri $Uri -Throw } | Should -Throw -ExpectedMessage "*($Id)*"
         }
@@ -149,6 +157,40 @@ Describe 'Test-CIPPGraphEndpointBlocked' {
             @{ Uri = 'users/x/drive. /items' }
         ) {
             Test-CIPPGraphEndpointBlocked -Uri $Uri | Should -BeTrue
+        }
+
+        It 'blocks encoding trick <Uri>' -ForEach @(
+            @{ Uri = 'sites/s/lists/l?$expand=fields, driveItem' }
+            @{ Uri = 'sites/s/lists/l?$expand=fields,+driveItem' }
+            @{ Uri = 'sites/s?$expand=%09driveItem' }
+            @{ Uri = 'sites/s?$expand=driveItem%26x%3D1' }
+            @{ Uri = 'users/x?%20$expand=messages' }
+            @{ Uri = 'users/x??$expand=messages' }
+            @{ Uri = 'users/x?%2524EXPAND=messages' }
+            @{ Uri = 'users/x/%2525252525256Dessages' }
+            @{ Uri = 'users/x/drive%3F' }
+            @{ Uri = 'users/x/drive%23' }
+            @{ Uri = 'users/x/%u006Dessages' }
+            @{ Uri = 'users/x/messages%00' }
+            @{ Uri = 'users/x/mess%E2%80%8Bages' }
+            @{ Uri = "users/x/messages.('m')" }
+        ) {
+            Test-CIPPGraphEndpointBlocked -Uri $Uri | Should -BeTrue
+        }
+
+        It 'only exempts allowed prefixes as whole segments <Uri>' -ForEach @(
+            @{ Uri = 'users/u/mailFolders/xserviceAnnouncement/messages' }
+            @{ Uri = 'users/u/serviceAnnouncement/messages' }
+            @{ Uri = 'blueprint/shares/u!abc/root' }
+            @{ Uri = 'sites/s/xphoto/$value' }
+            @{ Uri = 'sites/s/x/48x48/$value' }
+        ) {
+            Test-CIPPGraphEndpointBlocked -Uri $Uri | Should -BeTrue
+        }
+
+        It 'fails closed on input that makes a pattern backtrack' {
+            $Uri = 'sites/' + ('lists(a)/' * 20000) + 'x'
+            { Test-CIPPGraphEndpointBlocked -Uri $Uri -Throw } | Should -Throw -ExpectedMessage '*could not be checked in time*'
         }
 
         It 'blocks $expand passed separately via -Expand' {
@@ -183,6 +225,34 @@ Describe 'Test-CIPPGraphEndpointBlocked' {
 
         It 'allows a harmless $expand' {
             Test-CIPPGraphEndpointBlocked -Uri 'groups?$expand=members($select=id)' -Expand 'owners' | Should -BeFalse
+        }
+
+        It 'allows ordinary queries with spaces and functions <Uri>' -ForEach @(
+            @{ Uri = "users?`$filter=startswith(displayName,'drive')&`$select=id,displayName" }
+            @{ Uri = 'groups?$expand=members($select=id, displayName)' }
+            @{ Uri = 'users/x?$expand=manager($levels=max;$select=id)' }
+            @{ Uri = "deviceManagement/managedDevices?`$filter=operatingSystem eq 'Windows'" }
+            @{ Uri = "reports/getOffice365ActiveUserDetail(period='D7')" }
+            @{ Uri = 'users?$search="displayName:messages"' }
+        ) {
+            Test-CIPPGraphEndpointBlocked -Uri $Uri | Should -BeFalse
+        }
+
+        It 'allows admin and device-secret endpoints <Uri>' -ForEach @(
+            @{ Uri = 'admin/people/pronouns' }
+            @{ Uri = 'deviceManagement/autopilotEvents' }
+            @{ Uri = 'deviceManagement/managedDevices/d/detectedApps' }
+            @{ Uri = 'groups/g/transitiveMembers/microsoft.graph.group?$select=id,displayName' }
+            @{ Uri = 'users/u/authentication/methods?$top=99' }
+            @{ Uri = "reports/getMailboxUsageDetail(period='D7')" }
+            @{ Uri = 'directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members' }
+            @{ Uri = 'organization/o/branding' }
+            @{ Uri = 'informationProtection/bitlocker/recoveryKeys/k?$select=key' }
+            @{ Uri = 'directory/deviceLocalCredentials/d?$select=credentials' }
+            @{ Uri = 'deviceManagement/managedDevices/d/getFileVaultKey' }
+            @{ Uri = "deviceManagement/deviceConfigurations('c')/getOmaSettingPlainTextValue(secretReferenceValueId='s')" }
+        ) {
+            Test-CIPPGraphEndpointBlocked -Uri $Uri | Should -BeFalse
         }
 
         It 'allows directory org contacts <Uri>' -ForEach @(

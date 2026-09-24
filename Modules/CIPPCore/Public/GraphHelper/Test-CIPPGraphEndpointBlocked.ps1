@@ -30,19 +30,31 @@ function Test-CIPPGraphEndpointBlocked {
         [switch]$Throw
     )
 
+    # Decode until stable (every pass shortens the string, so it terminates), including IIS-style %uXXXX.
+    # Whitespace, control and format characters (NUL, zero-width space) are then dropped: Graph either
+    # ignores them or 404s, so removing them before matching can only fail closed.
     function ConvertFrom-CippEncodedGraphText([string]$Text) {
-        for ($i = 0; $i -lt 5; $i++) {
-            $Decoded = [System.Uri]::UnescapeDataString($Text)
-            if ($Decoded -eq $Text) { break }
-            $Text = $Decoded
-        }
-        return $Text
+        do {
+            $Previous = $Text
+            $Text = [regex]::Replace([System.Uri]::UnescapeDataString($Text), '%u([0-9a-f]{4})', {
+                    [string][char][Convert]::ToInt32($args[0].Groups[1].Value, 16)
+                }, 'IgnoreCase')
+        } while ($Text -ne $Previous)
+        return $Text -replace '[\s\p{C}]+', ''
+    }
+
+    # \ ? and # become separators (a front end or a second decode may honour them), and trailing dots on
+    # a segment are dropped, since some front ends strip them.
+    function ConvertTo-CippGraphMatchPath([string]$Text) {
+        return $Text -replace '[\\?#]', '/' -replace '\.+(?=[/(;]|$)', '' -replace '^/+', ''
     }
 
     # An $expand expression like "fields,driveItem($select=id)" is matched as path segments under the
     # resource it expands, so patterns that need a parent (planner/.../tasks, lists/.../items) still apply.
+    # Anything that is not part of a property name is a separator, so "fields, driveItem" and
+    # "fields,+driveItem" (+ is a space in a query string) cannot hide the segment boundary.
     function ConvertTo-CippExpandPath([string]$Text) {
-        return $ExpandPrefix + ((ConvertFrom-CippEncodedGraphText $Text) -replace '[,();=]', '/')
+        return ConvertTo-CippGraphMatchPath ($ExpandPrefix + ((ConvertFrom-CippEncodedGraphText $Text) -replace '[^\w.$@-]', '/'))
     }
 
     $Candidates = [System.Collections.Generic.List[string]]::new()
@@ -61,8 +73,7 @@ function Test-CIPPGraphEndpointBlocked {
         } else {
             $Raw, $Query = ($Text -replace '^https?://[^/]+/(v1\.0|beta)/?', '' -replace '#.*$', '') -split '\?', 2
         }
-        # Trailing dots/whitespace on a segment are dropped by some front ends, so ignore them when matching.
-        $Path = (ConvertFrom-CippEncodedGraphText $Raw) -replace '\\', '/' -replace '[.\s]+(?=/|$)', '' -replace '^/+', ''
+        $Path = ConvertTo-CippGraphMatchPath (ConvertFrom-CippEncodedGraphText $Raw)
         if ($Path) {
             $Candidates.Add($Path)
             $ExpandPrefix = '{0}/$expand/' -f $Path.TrimEnd('/')
@@ -70,7 +81,9 @@ function Test-CIPPGraphEndpointBlocked {
 
         foreach ($Pair in ($Query -split '&')) {
             $Key, $Value = $Pair -split '=', 2
-            if ((ConvertFrom-CippEncodedGraphText $Key) -in @('$expand', 'expand') -and $Value) {
+            # Loose on purpose (catches "?$expand", "$Expand ", "%2524expand"): a false hit only means the
+            # value is checked too.
+            if ((ConvertFrom-CippEncodedGraphText $Key) -match 'expand' -and $Value) {
                 $Candidates.Add((ConvertTo-CippExpandPath $Value))
             }
         }
@@ -90,22 +103,36 @@ function Test-CIPPGraphEndpointBlocked {
         $BlocklistPath = Join-Path -Path $env:CIPPRootPath -ChildPath 'Config\GraphEndpointBlocklist.json'
         $Blocklist = [System.IO.File]::ReadAllText($BlocklistPath) | ConvertFrom-Json
         $RegexOptions = [System.Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant'
-        $script:CippGraphEndpointBlocklist = @(
+        # Patterns like lists(?=[/(]).*/items backtrack quadratically on crafted input; cap each match.
+        $MatchTimeout = [timespan]::FromMilliseconds(250)
+        $Entries = @(
             foreach ($Entry in @($Blocklist.blockedEndpoints)) {
                 if (-not $Entry.pattern) { continue }
                 [pscustomobject]@{
                     id     = $Entry.id
                     reason = $Entry.reason
-                    Regex  = [regex]::new($Entry.pattern, $RegexOptions)
+                    Regex  = [regex]::new($Entry.pattern, $RegexOptions, $MatchTimeout)
                 }
             }
         )
+        if ($Entries.Count -eq 0) {
+            throw "Graph endpoint blocklist at $BlocklistPath has no patterns"
+        }
+        $script:CippGraphEndpointBlocklist = $Entries
     }
 
     foreach ($Candidate in $Candidates) {
         foreach ($Entry in $script:CippGraphEndpointBlocklist) {
-            if ($Entry.Regex.IsMatch($Candidate)) {
-                $Message = 'Graph endpoint blocked ({0}): {1}' -f $Entry.id, $Entry.reason
+            $Reason = $Entry.reason
+            try {
+                $IsBlocked = $Entry.Regex.IsMatch($Candidate)
+            } catch {
+                # Match timeout on pathological input: fail closed.
+                $IsBlocked = $true
+                $Reason = 'path could not be checked in time'
+            }
+            if ($IsBlocked) {
+                $Message = 'Graph endpoint blocked ({0}): {1}' -f $Entry.id, $Reason
                 Write-Information $Message
                 if ($Throw) {
                     throw $Message
