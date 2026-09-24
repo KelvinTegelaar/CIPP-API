@@ -14,7 +14,8 @@ function Test-CIPPGraphEndpointBlocked {
     .PARAMETER Expand
         $expand / expand values passed separately from the Uri.
     .PARAMETER Throw
-        If set, throw when blocked. Message includes the matched entry id and reason.
+        If set, throw when blocked and emit nothing when allowed, so callers can use it as a bare
+        guard statement without leaking $false into their own output.
     .FUNCTIONALITY
         Internal
     #>
@@ -96,6 +97,7 @@ function Test-CIPPGraphEndpointBlocked {
     }
 
     if ($Candidates.Count -eq 0) {
+        if ($Throw) { return }
         return $false
     }
 
@@ -142,5 +144,6 @@ function Test-CIPPGraphEndpointBlocked {
         }
     }
 
+    if ($Throw) { return }
     return $false
 }

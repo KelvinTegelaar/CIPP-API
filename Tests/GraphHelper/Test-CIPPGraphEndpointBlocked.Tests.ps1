@@ -311,6 +311,11 @@ Describe 'Test-CIPPGraphEndpointBlocked' {
         It 'does not throw for an allowed path' {
             { Test-CIPPGraphEndpointBlocked -Uri 'users' -Throw } | Should -Not -Throw
         }
+
+        It 'emits nothing for an allowed path so bare guard calls do not leak into caller output' {
+            @(Test-CIPPGraphEndpointBlocked -Uri 'users' -Throw).Count | Should -Be 0
+            @(Test-CIPPGraphEndpointBlocked -Uri '' -Throw).Count | Should -Be 0
+        }
     }
 }
 
