@@ -38884,6 +38884,9 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "PendingVerification": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
                     },
