@@ -23,6 +23,11 @@ function Invoke-ExecGenerateReportBuilderReport {
             $ExistingEntity = Get-CIPPAzDataTableEntity @ReportTable -Filter "RowKey eq '$($Body.ReportGUID)'"
             if ($ExistingEntity) {
                 Remove-CIPPAzDataTableEntity @ReportTable -Entity $ExistingEntity
+                # The rendered PDF sits in its own table; a large one is split across part rows, so fetch
+                # the raw head + part rows (keys only, no split markers) and hand them all to the remover.
+                $PdfTable = Get-CippTable -tablename 'ReportBuilderPdfs'
+                $PdfRows = @(Get-CIPPAzDataTableEntity @PdfTable -Filter "RowKey eq '$($Body.ReportGUID)' or OriginalEntityId eq '$($Body.ReportGUID)'" -Property PartitionKey, RowKey)
+                if ($PdfRows.Count -gt 0) { Remove-CIPPAzDataTableEntity @PdfTable -Entity $PdfRows }
                 Write-LogMessage -headers $Headers -API $APIName -message "Deleted generated report '$($Body.ReportGUID)'" -Sev 'Info'
                 $Result = @{ Results = 'Successfully deleted generated report' }
             } else {
@@ -53,8 +58,12 @@ function Invoke-ExecGenerateReportBuilderReport {
             $GenerateResult = Push-ExecGenerateReportBuilderReport @GenerateParams
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Generated report builder report '$TemplateName'" -Sev 'Info'
 
+            # Push-* returns either the plain result string, or an envelope carrying base64 email
+            # attachments for the scheduled path. The interactive HTTP response only needs the message -
+            # the finished PDF is fetched from ExecGetReportBuilderPdf, not echoed here as base64.
+            $ResultText = if ($GenerateResult -is [System.Collections.IDictionary] -and $GenerateResult['Results']) { $GenerateResult['Results'] } else { $GenerateResult }
             $Result = @{
-                Results = $GenerateResult
+                Results = $ResultText
             }
             $StatusCode = [HttpStatusCode]::OK
 
@@ -68,6 +77,6 @@ function Invoke-ExecGenerateReportBuilderReport {
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = ConvertTo-Json -InputObject $Result -Depth 20
+            Body       = $Result
         })
 }

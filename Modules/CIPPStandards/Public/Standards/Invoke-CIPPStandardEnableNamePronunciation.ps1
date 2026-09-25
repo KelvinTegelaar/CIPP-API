@@ -74,6 +74,5 @@ function Invoke-CIPPStandardEnableNamePronunciation {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableNamePronunciation' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
-        Add-CIPPBPAField -FieldName 'NamePronunciationEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
     }
 }

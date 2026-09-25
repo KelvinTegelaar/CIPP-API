@@ -179,6 +179,12 @@ function Set-CIPPIntunePolicy {
                 if ([string]::IsNullOrWhiteSpace($DisplayName)) {
                     throw "This device configuration template has no name - the template's Displayname column and the payload's displayName are both empty. Recreate the template."
                 }
+                # An OMA-URI secret still encrypted in the template is a placeholder tied to a tenant we can't
+                # identify from here, so the plaintext is unrecoverable and Graph rejects it on create.
+                $EncryptedOma = @($PolicyFile.omaSettings | Where-Object { $_.secretReferenceValueId -or $_.isEncrypted -eq $true -or $_.value -eq 'PGEvPg==' })
+                if ($EncryptedOma.Count -gt 0) {
+                    throw "Template has undecrypted OMA-URI setting(s) '$($EncryptedOma.displayName -join "', '")'. Recapture it from the source tenant or edit in the plaintext value."
+                }
                 $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value "$Description" -Force
                 $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $DisplayName -Force
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter

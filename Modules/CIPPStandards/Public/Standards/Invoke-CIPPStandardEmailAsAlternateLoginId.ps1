@@ -121,6 +121,5 @@
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.EmailAsAlternateLoginId' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'EmailAsAlternateLoginId' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

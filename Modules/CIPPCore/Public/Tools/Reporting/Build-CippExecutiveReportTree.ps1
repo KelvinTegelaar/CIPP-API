@@ -3,16 +3,15 @@ function Build-CippExecutiveReportTree {
     .SYNOPSIS
         Compose the Executive report as a component tree (server port of ExecutiveReportButton.jsx).
     .DESCRIPTION
-        Pure composition: takes the already-gathered/shaped report data and returns the array of
-        component nodes for ConvertTo-CippReportPdf. Holds no data gathering, so it is unit-testable
-        with sample data and drives the same layout the client ExecutiveReportDocument produces.
+        Pure composition: takes the already-gathered/shaped report data and returns @{ Blocks; Variables }
+        - the component nodes for ConvertTo-CippReportPdf and the cover/footer report variables. Holds no
+        data gathering, so it is unit-testable with sample data and drives the same layout the client
+        ExecutiveReportDocument produces.
     .PARAMETER Data
         Hashtable of the report's data:
           TenantName, UserStats, SecureScore (currentScore/maxScore/percentageCurrent/percentageVsSimilar/
           percentageVsAllTenants/trend), Licenses[], Devices[], CAPolicies[] (raw state), SecurityControls[]
           (name/description/tags/status).
-    .PARAMETER HeroImages
-        Hashtable of chapter-divider photos as data-URLs, keyed board/glasses/working/laptop/city.
     .PARAMETER SectionConfig
         Which sections to include (executiveSummary/securityStandards/secureScore/licenseManagement/
         deviceManagement/conditionalAccess/infographics).
@@ -20,7 +19,6 @@ function Build-CippExecutiveReportTree {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][hashtable]$Data,
-        [hashtable]$HeroImages = @{},
         [hashtable]$SectionConfig = @{}
     )
 
@@ -32,9 +30,10 @@ function Build-CippExecutiveReportTree {
 
     $tenant = $Data.TenantName
     $blocks = [System.Collections.Generic.List[object]]::new()
-    function Hero($key, $ov, $hi, $hl, $sub, $ft) {
-        if ($cfg.infographics -and $HeroImages[$key]) {
-            $blocks.Add((New-CippReportHero -Image $HeroImages[$key] -Overtitle $ov -Highlight $hi -Headline $hl -SubText $sub -FooterText $ft))
+    # Chapter dividers over the bundled stock photos (the renderer resolves /reportImages/ paths).
+    function Hero($image, $ov, $hi, $hl, $sub, $ft) {
+        if ($cfg.infographics) {
+            $blocks.Add((New-CippReportHero -Image "/reportImages/$image.jpg" -Overtitle $ov -Highlight $hi -Headline $hl -SubText $sub -FooterText $ft))
         }
     }
 
@@ -191,5 +190,16 @@ function Build-CippExecutiveReportTree {
         $blocks.Add((New-CippReportInfoBox -Title 'Access Control Recommendations' -Content ($caRec + 'Regularly review how these policies affect employee productivity and adjust as needed. Consider additional location-based protections for enhanced security without impacting daily operations.')))
     }
 
-    , @($blocks)
+    @{
+        Blocks    = @($blocks)
+        Variables = @{
+            coverlabel         = 'SECURITY ASSESSMENT'
+            covertitle         = 'Executive'
+            coveraccent        = 'Summary'
+            covertenant        = [string]$tenant
+            coversubtitle      = "Security & Compliance Assessment for $tenant"
+            coverfallbackimage = '/reportImages/soc.jpg'
+            footerlabel        = "$tenant - Executive Summary"
+        }
+    }
 }

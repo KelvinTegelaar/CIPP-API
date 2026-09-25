@@ -15,7 +15,7 @@ function Add-CippQueueMessage {
         Defaults to P2 when called from an HTTP request (user-initiated work skips the queue) and
         P5 otherwise.
     .EXAMPLE
-        Add-CippQueueMessage -Cmdlet 'Start-BPAOrchestrator' -Parameters @{ TenantFilter = 'AllTenants'; Force = $true }
+        Add-CippQueueMessage -Cmdlet 'Start-UserTasksOrchestrator' -Parameters @{ TaskId = $RowKey }
     .FUNCTIONALITY
         Internal
     #>

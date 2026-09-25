@@ -154,7 +154,6 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'QuarantineRequestAlert' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         # Both sides are normalised the same way and kept as arrays (a bare @() around an if-expression
         # unrolls a single element to a scalar, which would never match the array-shaped Current value).

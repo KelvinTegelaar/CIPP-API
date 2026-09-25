@@ -27,9 +27,9 @@ function New-CippReportHeading {
 }
 
 function New-CippReportParagraph {
-    # Body copy. -Html passes raw HTML (bold/links); -Markdown passes markdown; -Text wraps plain text.
+    # Body copy. -Html passes raw HTML (bold/links); -Text wraps plain text.
     # -Title adds a section heading above the paragraph. -Indent steps plain -Text in under a heading.
-    param([string]$Text, [string]$Html, [string]$Markdown, [string]$Title, [switch]$Indent)
+    param([string]$Text, [string]$Html, [string]$Title, [switch]$Indent)
     if ($Indent) {
         $n = [ordered]@{ type = 'paragraphindent'; content = [string]$Text }
         if ($Title) { $n.title = $Title }
@@ -37,8 +37,6 @@ function New-CippReportParagraph {
     }
     if ($Html) {
         $n = [ordered]@{ type = 'blank'; content = $Html }
-    } elseif ($Markdown) {
-        $n = [ordered]@{ type = 'database'; format = 'text'; content = $Markdown }
     } else {
         $n = [ordered]@{ type = 'blank'; content = ('<p>{0}</p>' -f [System.Net.WebUtility]::HtmlEncode([string]$Text)) }
     }
@@ -47,8 +45,8 @@ function New-CippReportParagraph {
 }
 
 function New-CippReportStatRow {
-    # A row of stat cards. -Stats: @( @{ value; label; caption; colour }, ... ).
-    param([string]$Title, [Parameter(Mandatory)][object[]]$Stats)
+    # A row of stat cards. -Stats: @( @{ value; label; caption; colour }, ... ). An empty row renders nothing.
+    param([string]$Title, [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Stats)
     $n = [ordered]@{ type = 'scorecard'; stats = @($Stats) }
     if ($Title) { $n.title = $Title }
     $n
@@ -56,9 +54,11 @@ function New-CippReportStatRow {
 
 function New-CippReportTable {
     # A data table. -Columns: @( @{ header; key; width; bold; align; toneField }, ... ). -Rows: row objects.
-    param([string]$Title, [Parameter(Mandatory)][object[]]$Columns, [object[]]$Rows = @(), [int]$Limit = 25)
+    # -EmptyText is drawn inside the table border when there are no rows (client DataTable emptyText).
+    param([string]$Title, [Parameter(Mandatory)][object[]]$Columns, [object[]]$Rows = @(), [int]$Limit = 25, [string]$EmptyText)
     $n = [ordered]@{ type = 'richtable'; columns = @($Columns); rows = @($Rows); limit = $Limit }
     if ($Title) { $n.title = $Title }
+    if ($EmptyText) { $n.emptyText = $EmptyText }
     $n
 }
 
@@ -78,12 +78,23 @@ function New-CippReportNote {
 
 function New-CippReportChart {
     # A chart: -Kind bar|donut|trend, -Data @( @{ label; value; colour }, ... ). Title shows in the frame.
-    param([string]$Title, [ValidateSet('bar', 'donut', 'trend')][string]$Kind = 'bar', [Parameter(Mandatory)][object[]]$Data, [double]$Max, [string]$Caption, [string]$CentreLabel)
+    # Empty data is allowed: the kit draws a "No data available" frame (a tenant with no mail, no risks...).
+    param([string]$Title, [ValidateSet('bar', 'donut', 'trend')][string]$Kind = 'bar', [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Data, [double]$Max, [string]$Caption, [string]$CentreLabel)
     $n = [ordered]@{ type = 'chart'; chartKind = $Kind; chartData = @($Data) }
     if ($Title) { $n.title = $Title }
     if ($PSBoundParameters.ContainsKey('Max')) { $n.max = $Max }
     if ($Caption) { $n.caption = $Caption }
     if ($CentreLabel) { $n.centreLabel = $CentreLabel }
+    $n
+}
+
+function New-CippReportProgress {
+    # A list of labelled progress bars (the client ProgressList). -Items: @( @{ label; value; max; display; colour }, ... ).
+    # Each renders a value/max data bar over a grey track - zero-safe (a 0 value draws an empty track), unlike a
+    # bar chart whose rounded bars collapse at zero. -Display overrides the "N%" label (e.g. a raw count).
+    param([string]$Title, [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Items)
+    $n = [ordered]@{ type = 'progress'; items = @($Items) }
+    if ($Title) { $n.title = $Title }
     $n
 }
 
@@ -132,5 +143,19 @@ function New-CippReportHero {
     if ($Headline) { $n.headline = $Headline }
     if ($SubText) { $n.subText = $SubText }
     if ($FooterText) { $n.footerText = $FooterText }
+    $n
+}
+
+function New-CippReportSankey {
+    # A flow diagram (the dashboard CippSankey). -Nodes: @( @{ id; nodeColor; label }, ... ) - nodeColor
+    # accepts hex or hsl(); -Links: @( @{ source; target; value }, ... ) referencing node ids. Node columns
+    # and heights are derived from the link flow. -Height sets the plot height (default 240pt). Empty data
+    # draws a "No data available" frame.
+    param([string]$Title, [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Nodes,
+        [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Links, [string]$Caption, [double]$Height)
+    $n = [ordered]@{ type = 'sankey'; nodes = @($Nodes); links = @($Links) }
+    if ($Title) { $n.title = $Title }
+    if ($Caption) { $n.caption = $Caption }
+    if ($PSBoundParameters.ContainsKey('Height')) { $n.height = $Height }
     $n
 }

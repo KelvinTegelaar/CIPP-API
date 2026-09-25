@@ -127,35 +127,21 @@ function Invoke-CippWebhookProcessing {
                 }
             }
             'becremediate' {
+                # Same dispatcher as the BEC page's containment: the rule's BecActions selection, or - for a
+                # rule that predates selectable containment - the four steps this action always ran. Automation
+                # confirms Critical actions by design. The password never enters the alert payload.
                 $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Data.UserId)" -tenantid $TenantFilter).UserPrincipalName
+                $BecActionsRaw = try { $Data.CIPPBecActions | ConvertFrom-Json -ErrorAction Stop } catch { @() }
+                $BecActions = @($BecActionsRaw | ForEach-Object { if ($_ -and $_.PSObject.Properties['value']) { $_.value } else { $_ } } | Where-Object { $_ })
+                if ($BecActions.Count -eq 0) { $BecActions = @('ResetPassword', 'DisableAccount', 'RevokeSessions', 'DisableInboxRules') }
                 try {
-                    Set-CIPPResetPassword -UserID $Username -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
+                    $ContainmentRows = Invoke-CIPPBecContainment -TenantFilter $TenantFilter -UserId $Data.UserId -UserPrincipalName $Username -Actions $BecActions -Confirmed -Redacted -Headers 'Alert Engine' -APIName 'Alert Engine'
+                    foreach ($Row in @($ContainmentRows)) { "$($Row.Action) ($($Row.state)): $($Row.resultText)" }
                 } catch {
-                    Write-Host "Failed to reset password for $Username`: $($_.Exception.Message)"
-                }
-                try {
-                    Set-CIPPSignInState -userid $Username -AccountEnabled $false -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
-                } catch {
-                    Write-Host "Failed to disable sign-in for $Username`: $($_.Exception.Message)"
-                }
-                try {
-                    Revoke-CIPPSessions -userid $Username -username $Username -Headers 'Alert Engine' -APIName 'Alert Engine' -tenantFilter $TenantFilter
-                } catch {
-                    Write-Host "Failed to revoke sessions for $Username`: $($_.Exception.Message)"
-                }
-                $RuleDisabled = 0
-                New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $Username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | ForEach-Object {
-                    $null = New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
-                    "Disabled Inbox Rule $($_.Identity) for $Username"
-                    $RuleDisabled++
-                }
-                if ($RuleDisabled) {
-                    "Disabled $RuleDisabled Inbox Rules for $Username"
-                } else {
-                    "No Inbox Rules found for $Username. We have not disabled any rules."
+                    Write-Host "BEC containment failed for $Username`: $($_.Exception.Message)"
+                    "BEC containment failed for $Username`: $($_.Exception.Message)"
                 }
                 "Completed BEC Remediate for $Username"
-                Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for $Username" -sev 'Info'
             }
             <#'cippcommand' {
                 $CommandSplat = @{}

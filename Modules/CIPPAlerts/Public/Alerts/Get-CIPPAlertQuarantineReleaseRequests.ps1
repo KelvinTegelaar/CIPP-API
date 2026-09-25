@@ -18,14 +18,13 @@
     }
 
     try {
-        # The received-date window has to be wide enough to catch a release request raised some time after
-        # the message was quarantined. The old 6-hour window missed most of them; a one-day window suits an
-        # hourly-scheduled alert. (The Quarantine page applies no received-date filter, which is why the
-        # request is visible there while no webhook or email is ever sent.)
+        # EXO can only filter on when the message was received, not when release was requested, and users
+        # often ask days after the message was quarantined. Cover the full 30 days EXO allows so every
+        # pending request is seen; Write-AlertTrace keeps an already-alerted request from re-alerting.
         $cmdParams = @{
             PageSize          = 1000
             ReleaseStatus     = 'Requested'
-            StartReceivedDate = (Get-Date).AddDays(-1)
+            StartReceivedDate = (Get-Date).AddDays(-30)
             EndReceivedDate   = (Get-Date)
         }
         $RequestedReleases = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams $cmdParams -ErrorAction Stop | Select-Object -ExcludeProperty *data.type* | Sort-Object -Property ReceivedTime

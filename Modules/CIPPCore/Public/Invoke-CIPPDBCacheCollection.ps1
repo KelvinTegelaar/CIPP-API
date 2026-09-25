@@ -127,6 +127,7 @@ function Invoke-CIPPDBCacheCollection {
         ExchangeData       = @(
             'CASMailboxes'
             'MailboxUsage'
+            'MailTrafficSummary'
             'OfficeActivations'
             'HVEAccounts'
         )

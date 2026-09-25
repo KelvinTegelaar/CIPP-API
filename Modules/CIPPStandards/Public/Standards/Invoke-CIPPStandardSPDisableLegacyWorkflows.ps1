@@ -86,7 +86,6 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SPDisableLegacyWorkflows' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
             StopNew2010Workflows = $CurrentState.StopNew2010Workflows

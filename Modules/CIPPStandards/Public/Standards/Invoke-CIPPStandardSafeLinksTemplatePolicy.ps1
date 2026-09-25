@@ -441,7 +441,6 @@ function Invoke-SafeLinksReport {
         }
     }
 
-    Add-CIPPBPAField -FieldName 'SafeLinksTemplatePolicy' -FieldValue $AllTemplatesApplied -StoreAs bool -Tenant $Tenant
 
     $CurrentValue = @{
         TemplateResults     = $ReportResults

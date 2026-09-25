@@ -4,9 +4,8 @@ function Build-CippShadowAIReportTree {
         Compose the Shadow AI report as a component tree (server port of ShadowAIReportButton's
         ShadowAIReportPages).
     .PARAMETER Data
-        Shadow AI data: summary, detectedApps[], consentedApps[], topTools[], byRisk[].
-    .PARAMETER HeroImages
-        Chapter-divider photos as data-URLs, keyed laptop/working.
+        Shadow AI data: summary, detectedApps[], consentedApps[], topTools[], byRisk[]. Returns
+        @{ Blocks; Variables }.
     .PARAMETER SectionConfig
         Which sections to include, keyed executiveSummary/infographics/background/riskLevels/
         sanctionedTools/detectedSoftware/entraApplications/recommendations. Empty (the default) includes
@@ -14,13 +13,14 @@ function Build-CippShadowAIReportTree {
         toggles).
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory)][hashtable]$Data, [hashtable]$HeroImages = @{}, [hashtable]$SectionConfig = @{})
+    param([Parameter(Mandatory)][hashtable]$Data, [hashtable]$SectionConfig = @{})
 
     $summary = if ($Data.summary) { $Data.summary } else { @{} }
-    $detected = @($Data.detectedApps)
-    $consented = @($Data.consentedApps)
-    $topTools = @($Data.topTools)
-    $byRisk = @($Data.byRisk)
+    # `?? @()` so a missing list is empty rather than @($null), which would render as one blank row.
+    $detected = @($Data.detectedApps ?? @())
+    $consented = @($Data.consentedApps ?? @())
+    $topTools = @($Data.topTools ?? @())
+    $byRisk = @($Data.byRisk ?? @())
     $riskColours = @{ high = '#EF4444'; medium = '#F59E0B'; low = '#3B82F6'; informational = '#10B981' }
     function RiskColour($r) { $k = "$r".ToLower(); if ($riskColours.ContainsKey($k)) { $riskColours[$k] } else { '#A0AEC0' } }
     function nz($v) { if ($null -eq $v) { 0 } else { $v } }
@@ -42,11 +42,17 @@ function Build-CippShadowAIReportTree {
         @{ name = 'Informational'; text = 'Company sanctioned tools that have been explicitly approved for use in this tenant. They remain in the report for visibility but no longer contribute to the risk figures.' }
     )
 
-    # Distinct sanctioned tools across both sources.
-    $sanctioned = @{}
-    foreach ($a in $detected) { if ($a.status -eq 'Sanctioned') { if (-not $sanctioned[$a.aiTool]) { $sanctioned[$a.aiTool] = @{ tool = $a.aiTool; vendor = $a.vendor; category = $a.category; devices = 0; users = 0 } } ; $sanctioned[$a.aiTool].devices += (nz $a.deviceCount) } }
-    foreach ($a in $consented) { if ($a.status -eq 'Sanctioned') { if (-not $sanctioned[$a.aiTool]) { $sanctioned[$a.aiTool] = @{ tool = $a.aiTool; vendor = $a.vendor; category = $a.category; devices = 0; users = 0 } } ; $sanctioned[$a.aiTool].users += (nz $a.activeUsersLast7Days) } }
-    $sanctionedList = @($sanctioned.Values | Select-Object -First 18)
+    # Distinct sanctioned tools across both sources: device installs come from the Intune inventory
+    # rows, 7-day users from the Entra consent rows, summed per tool.
+    $sanctionedList = @($detected + $consented | Where-Object { $_.status -eq 'Sanctioned' } | Group-Object { $_.aiTool } | ForEach-Object {
+            @{
+                tool     = $_.Name
+                vendor   = $_.Group[0].vendor
+                category = $_.Group[0].category
+                devices  = ($_.Group | ForEach-Object { nz $_.deviceCount } | Measure-Object -Sum).Sum
+                users    = ($_.Group | ForEach-Object { nz $_.activeUsersLast7Days } | Measure-Object -Sum).Sum
+            }
+        } | Select-Object -First 18)
     $detectedRows = @($detected | Select-Object -First 18)
     $consentedRows = @($consented | Select-Object -First 18)
 
@@ -72,7 +78,7 @@ function Build-CippShadowAIReportTree {
         }
     }
 
-    if ((on 'infographics') -and $HeroImages.laptop) { $blocks.Add((New-CippReportHero -Image $HeroImages.laptop -Highlight '75%' -SubText "of knowledge workers already`nuse generative AI at work -`nmost without their employer knowing" -FooterText "Visibility is the first step`nto control")) }
+    if (on 'infographics') { $blocks.Add((New-CippReportHero -Image '/reportImages/laptop.jpg' -Highlight '75%' -SubText "of knowledge workers already`nuse generative AI at work -`nmost without their employer knowing" -FooterText "Visibility is the first step`nto control")) }
 
     # -- Understanding Shadow AI --
     if (on 'background') {
@@ -107,7 +113,7 @@ function Build-CippShadowAIReportTree {
         $blocks.Add((New-CippReportPage -Title 'AI Software on Managed Devices' -Subtitle 'AI applications found in the Intune software inventory'))
         $detNote = if ($detected.Count -gt $detectedRows.Count) { ", showing the top $($detectedRows.Count) of $($detected.Count) entries" } else { '' }
         $blocks.Add((New-CippReportParagraph -Text "The following AI applications were detected in the software inventory of managed devices$detNote. Device counts indicate how widely each application has spread through the environment."))
-        $blocks.Add((New-CippReportTable -Limit $detectedRows.Count -Columns @(
+        $blocks.Add((New-CippReportTable -Limit $detectedRows.Count -EmptyText 'No AI software was detected on managed devices during the last inventory sync.' -Columns @(
                     @{ header = 'Application'; key = 'application'; width = 4; bold = $true }, @{ header = 'AI Tool'; key = 'aiTool'; width = 3 }, @{ header = 'Category'; key = 'category'; width = 3 }
                     @{ header = 'Risk'; key = 'risk'; width = 2; colourField = 'riskColour' }, @{ header = 'Status'; key = 'status'; width = 2.5 }, @{ header = 'Devices'; key = 'deviceCount'; width = 1.5 }
                 ) -Rows @($detectedRows | ForEach-Object { @{ application = $_.application; aiTool = $_.aiTool; category = $_.category; risk = $_.risk; riskColour = (RiskColour $_.risk); status = $_.status; deviceCount = "$($_.deviceCount)" } })))
@@ -118,13 +124,13 @@ function Build-CippShadowAIReportTree {
         $blocks.Add((New-CippReportPage -Title 'AI Applications in Entra ID' -Subtitle 'AI services with a footprint in your identity platform'))
         $conNote = if ($consented.Count -gt $consentedRows.Count) { ", showing the top $($consentedRows.Count) of $($consented.Count) entries" } else { '' }
         $blocks.Add((New-CippReportParagraph -Text "The following AI services are registered as applications in the tenant, including any permissions users have consented to$conNote. The consent date shows when each service first gained a foothold in the environment."))
-        $blocks.Add((New-CippReportTable -Limit $consentedRows.Count -Columns @(
+        $blocks.Add((New-CippReportTable -Limit $consentedRows.Count -EmptyText 'No AI applications were found in Entra ID.' -Columns @(
                     @{ header = 'Application'; key = 'application'; width = 4; bold = $true }, @{ header = 'AI Tool'; key = 'aiTool'; width = 3 }
                     @{ header = 'Risk'; key = 'risk'; width = 2; colourField = 'riskColour' }, @{ header = 'Status'; key = 'status'; width = 2.5 }, @{ header = 'Users (7d)'; key = 'activeUsersLast7Days'; width = 2 }, @{ header = 'First Consented'; key = 'firstConsented'; width = 2.5 }
                 ) -Rows @($consentedRows | ForEach-Object { @{ application = $_.application; aiTool = $_.aiTool; risk = $_.risk; riskColour = (RiskColour $_.risk); status = $_.status; activeUsersLast7Days = "$($_.activeUsersLast7Days)"; firstConsented = $(if ($_.firstConsentedDateTime) { ([datetime]$_.firstConsentedDateTime).ToString('M/d/yyyy') } else { 'Unknown' }) } })))
     }
 
-    if ((on 'infographics') -and $HeroImages.working) { $blocks.Add((New-CippReportHero -Image $HeroImages.working -Highlight '1 in 3' -SubText "employees shares sensitive work data`nwith AI tools without approval" -FooterText "Sanctioned alternatives keep`nyour data under contract")) }
+    if (on 'infographics') { $blocks.Add((New-CippReportHero -Image '/reportImages/working.jpg' -Highlight '1 in 3' -SubText "employees shares sensitive work data`nwith AI tools without approval" -FooterText "Sanctioned alternatives keep`nyour data under contract")) }
 
     # -- Recommendations --
     if (on 'recommendations') {
@@ -143,5 +149,13 @@ function Build-CippShadowAIReportTree {
         $blocks.Add((New-CippReportInfoBox -Title 'Next Review' -Content 'The AI tool landscape changes quickly and new tools appear in tenants within days of release. We recommend re-running this assessment monthly and reviewing newly detected tools against your acceptable AI use policy.'))
     }
 
-    , @($blocks)
+    @{
+        Blocks    = @($blocks)
+        Variables = @{
+            coverlabel         = 'AI Risk Assessment'
+            coversubtitle      = 'Discovery and risk assessment of AI tools in use across managed devices and cloud applications.'
+            coverfallbackimage = '/reportImages/city.jpg'
+            footerlabel        = "$($Data.TenantName) - Shadow AI Report"
+        }
+    }
 }

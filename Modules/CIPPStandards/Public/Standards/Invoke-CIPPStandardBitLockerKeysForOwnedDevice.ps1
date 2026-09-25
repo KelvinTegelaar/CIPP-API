@@ -102,6 +102,5 @@ function Invoke-CIPPStandardBitLockerKeysForOwnedDevice {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.BitLockerKeysForOwnedDevice' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
-        Add-CIPPBPAField -FieldName 'BitLockerKeysForOwnedDevice' -FieldValue $CurrentValue -StoreAs bool -Tenant $tenant
     }
 }

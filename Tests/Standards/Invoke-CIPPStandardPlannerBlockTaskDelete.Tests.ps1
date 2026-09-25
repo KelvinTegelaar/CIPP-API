@@ -15,7 +15,6 @@ BeforeAll {
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $message, $sev, $headers, $LogData) }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $CurrentValue, $ExpectedValue, $TenantFilter, $LicenseAvailable) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Get-NormalizedError { [CmdletBinding()] param($Message) $Message }
     function Get-CippException { [CmdletBinding()] param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
 
@@ -51,7 +50,6 @@ Describe 'Invoke-CIPPStandardPlannerBlockTaskDelete' {
             $script:alerts.Add(@{ Message = $message; Object = $object })
         }
         Mock -CommandName Set-CIPPStandardsCompareField -MockWith { }
-        Mock -CommandName Add-CIPPBPAField -MockWith { }
         Mock -CommandName Write-LogMessage -MockWith {
             param($API, $tenant, $message, $sev, $LogData)
             $script:logs.Add(@{ Message = $message; Sev = $sev; LogData = $LogData })

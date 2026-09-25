@@ -95,6 +95,5 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharePointLegacyAuth' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SharePointLegacyAuthEnabled' -FieldValue $CurrentInfo.isLegacyAuthProtocolsEnabled -StoreAs bool -Tenant $tenant
     }
 }

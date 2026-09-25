@@ -1,0 +1,243 @@
+{
+  "window": {
+    "days": 7
+  },
+  "caps": {
+    "auditLogPages": 10,
+    "mailActivityPages": 10
+  },
+  "score": {
+    "thresholds": {
+      "high": 7,
+      "medium": 4
+    },
+    "newUsersThreshold": 5,
+    "weights": {
+      "NewRules": 3,
+      "InboxRuleChanges": 3,
+      "PermissionChangesTargetingUser": 2,
+      "PermissionChanges": 1,
+      "NewApps": 1,
+      "NewUsers": 1,
+      "SafelistChanges": 2,
+      "SuspiciousRules": 5,
+      "MaliciousApps": 5,
+      "ForeignSuccessfulSignIns": 3,
+      "ForeignActivity": 3,
+      "AnonymousLinks": 3,
+      "MassMail": 3,
+      "RecentMfaMethods": 2,
+      "RecentIntuneDevices": 2,
+      "FlaggedDelegations": 2,
+      "RiskyUserGrants": 3,
+      "CatalogUserGrants": 5,
+      "RiskyTransportRuleChanges": 4,
+      "FlaggedMailboxAddIns": 1,
+      "TyposquatSenders": 3,
+      "DefenderDetections": 3,
+      "FlaggedDirectoryAudits": 2,
+      "RecentRegisteredDevices": 2,
+      "ForeignNonInteractiveSignIns": 3,
+      "SuspiciousMailActivity": 2,
+      "RiskyUserHigh": 4,
+      "RiskyUserMedium": 2,
+      "RiskyUserLow": 1,
+      "ConfirmedCompromised": 5,
+      "AttackerIPs": 4,
+      "AttackerMailAccess": 3,
+      "AttackerFileAccess": 2,
+      "AttackerForms": 3,
+      "DelegatedMailboxAttackerAccess": 3,
+      "OtherAccountsReached": 3
+    }
+  },
+  "inboxRules": {
+    "suspiciousFolderPattern": "RSS",
+    "lowVisibilityFolderRegex": "(?i)(rss|archive|deleted|junk|conversation history|notes|sync issues)",
+    "sensitiveNameRegex": "(?i)(invoice|payment|security|alert|verify|microsoft|admin)",
+    "sensitiveKeywordRegex": "(?i)(invoice|payment|wire|remittance|bank|swift|iban|ach|routing|account number|beneficiary|payroll|password|credential|verif|urgent|confidential)"
+  },
+  "phishingSubjectPatterns": {
+    "Urgent action language": "(?i)urgent.{0,25}(action|response).{0,25}required",
+    "Account verification language": "(?i)(verify|validate).{0,25}(account|identity|password)",
+    "Account suspension language": "(?i)(suspend|disable|expire).{0,25}(account|mailbox|access)",
+    "Prize or lottery language": "(?i)\\b(winner|lottery|prize|gift card)\\b",
+    "Invoice or payment language": "(?i)\\b(invoice|payment|wire|remittance)\\b"
+  },
+  "phishingKeywordPattern": "(?i)\\b(urgent|verify|suspend(?:ed)?|password|credential|invoice|payment|wire|gift card|confidential)\\b",
+  "typosquat": {
+    "minDistance": 1,
+    "maxDistance": 2
+  },
+  "riskyScopes": {
+    "regex": "(?i)(\\.ReadWrite(\\.All)?$|\\.All$|Mail\\.|Files\\.|Directory\\.|RoleManagement\\.|offline_access)"
+  },
+  "transportRules": {
+    "operations": [
+      "New-TransportRule",
+      "Set-TransportRule",
+      "Enable-TransportRule",
+      "Disable-TransportRule",
+      "Remove-TransportRule"
+    ],
+    "riskyParameterRegex": "(?i)^(BlindCopyTo|RedirectMessageTo|CopyTo|AddToRecipients|AddManagerAsRecipientType|RouteMessageOutboundConnector|ModerateMessageByUser|ModerateMessageByManager)$",
+    "recentParameterRegex": "(?i)^(DeleteMessage|Quarantine|SetSCL|RemoveHeader|SetHeaderName)$",
+    "descriptionRegex": "(?i)(redirect|blind copy|bcc|delete|quarantine|set the spam confidence)"
+  },
+  "directoryAudit": {
+    "flaggedActivities": [
+      "User registered security info",
+      "User registered all required security info",
+      "User started security info registration",
+      "User changed default security info",
+      "User deleted security info",
+      "Admin registered security info",
+      "Update user",
+      "Reset password (by admin)",
+      "Change user password",
+      "Reset user password",
+      "Update StsRefreshTokenValidFrom Timestamp",
+      "Consent to application",
+      "Add OAuth2PermissionGrant",
+      "Add app role assignment to service principal",
+      "Add app role assignment grant to user",
+      "Add service principal",
+      "Add service principal credentials",
+      "Add delegated permission grant",
+      "Register device",
+      "Add device",
+      "Add registered owner to device",
+      "Add registered users to device",
+      "Invite external user",
+      "Add user",
+      "Add member to role",
+      "Add eligible member to role",
+      "Disable Strong Authentication",
+      "Update user attributes (StrongAuthentication)"
+    ]
+  },
+  "mailActivity": {
+    "userOperations": [
+      "MailItemsAccessed",
+      "HardDelete",
+      "SoftDelete",
+      "MoveToDeletedItems",
+      "Send",
+      "AttachmentAccess",
+      "Move",
+      "UpdateFolderPermissions",
+      "UpdateCalendarDelegation",
+      "SearchQueryInitiatedExchange",
+      "Set-Mailbox"
+    ],
+    "mailboxOwnerOperations": [
+      "SendAs",
+      "SendOnBehalf"
+    ],
+    "hardDeleteThreshold": 20
+  },
+  "sentMail": {
+    "repeatSubjectMessages": 5,
+    "repeatSubjectRecipients": 20,
+    "minRepeatedSubjectMessages": 3,
+    "burstMessages": 10,
+    "burstRecipients": 30,
+    "burstWindowMinutes": 10
+  },
+  "mailboxAddIns": {
+    "trustedProviderRegex": "(?i)^microsoft"
+  },
+  "delegations": {
+    "folderScopes": [
+      "Calendar",
+      "Inbox"
+    ]
+  },
+  "baseline": {
+    "days": 30,
+    "colleagueSample": 8
+  },
+  "ipVerdict": {
+    "thresholds": {
+      "likelyAttacker": 6,
+      "suspicious": 3,
+      "likelyUser": -3
+    },
+    "minBaselineSignIns": 10,
+    "regularShare": 0.05,
+    "regularDays": 3,
+    "knownAsnShare": 0.2,
+    "knownLocationShare": 0.1,
+    "serviceAsnRegex": "(?i)microsoft",
+    "scriptedUserAgentRegex": "(?i)(python|axios|curl|okhttp|go-http-client|node-fetch|powershell|libwww|java/|httpclient|postman)",
+    "weights": {
+      "flaggedAction": 4,
+      "flaggedActionExtraKind": 1,
+      "hostingOrProxy": 3,
+      "foreign": 2,
+      "newToUser": 2,
+      "newNetwork": 1,
+      "newLocation": 1,
+      "riskySignIn": 3,
+      "riskySignInLow": 1,
+      "scriptedClient": 3,
+      "widerAttack": 2,
+      "sharedSession": 3,
+      "blockListHint": 2,
+      "baselineRegular": -4,
+      "baselineSeen": -2,
+      "knownNetwork": -1,
+      "knownLocation": -1,
+      "compliantDevice": -2,
+      "colleagues": -2,
+      "trustedNamedLocation": -4,
+      "technicianAddress": -4,
+      "allowListHint": -1,
+      "onlyFailedSignIns": -3
+    },
+    "serviceAppIds": {
+      "2832473f-ec63-45fb-976f-5d45a7d4bb91": "Partner Customer Delegated Administration (GDAP)"
+    }
+  },
+  "attackerActivity": {
+    "fileOperations": [
+      "FileAccessed",
+      "FileDownloaded",
+      "FileSyncDownloadedFull",
+      "FilePreviewed",
+      "FileUploaded",
+      "FileModified",
+      "FileDeleted",
+      "FileRecycled",
+      "FileMoved",
+      "FileCopied",
+      "FileRenamed",
+      "SearchQueryPerformed"
+    ],
+    "linkUsageOperations": [
+      "AnonymousLinkUsed",
+      "CompanyLinkUsed",
+      "SecureLinkUsed",
+      "SharingInvitationAccepted"
+    ],
+    "formsResponseOperations": [
+      "CreateResponse",
+      "SubmitResponse",
+      "ViewRuntimeForm",
+      "UpdatePhishingStatus"
+    ],
+    "formsAttackerOperations": [
+      "CreateForm",
+      "EditForm",
+      "ShareForm",
+      "SendForm",
+      "AllowShareFormForCopy",
+      "AddFormCoauthor",
+      "ConnectToExcelWorkbook",
+      "ExportForm",
+      "ViewResponses",
+      "GetSummaryLink"
+    ],
+    "subjectLookbackDays": 90
+  }
+}

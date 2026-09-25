@@ -21,50 +21,19 @@ function Invoke-ExecGetSharingReportPdf {
         if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A tenantFilter is required' })
         }
+        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
 
-        # Client display name for the cover; fall back to the tenant filter if it can't be resolved.
-        $TenantName = $TenantFilter
-        try {
-            $TenantInfo = Get-Tenants -TenantFilter $TenantFilter
-            if ($TenantInfo.displayName) { $TenantName = [string]$TenantInfo.displayName }
-        } catch { $TenantName = $TenantFilter }
-
-        # Gather the shaped sharing data in-process from the list endpoint (reads the reporting cache; no
-        # live Graph enumeration), then hand it to the tree builder as a hashtable with the tenant name.
-        $Raw = (Invoke-ListSharePointSharing -Request @{ Query = @{ tenantFilter = $TenantFilter }; Headers = $Request.Headers }).Body
-        $Summary = $Raw.summary
-        $Data = @{
+        # The same shaped data the Sharing page reads (from the reporting cache; no live Graph enumeration).
+        $Raw = Get-CIPPSharePointSharingReport -TenantFilter $TenantFilter
+        $Report = Build-CippSharingReportTree -Data @{
             TenantName    = $TenantName
-            summary       = $Summary
+            summary       = $Raw.summary
             links         = $Raw.links
             topRecipients = $Raw.topRecipients
             topLibraries  = $Raw.topLibraries
         }
-        $Tree = Build-CippSharingReportTree -Data $Data
 
-        # Cover / footer text (report variables). The exposure grade mirrors the tree's own grading so the
-        # cover note and the in-report alert agree.
-        function nz($v) { if ($null -eq $v) { 0 } else { [int]$v } }
-        $Score = 0
-        if ((nz $Summary.anonymousEditLinks) -gt 0) { $Score += 5 }
-        if ((nz $Summary.neverExpiringAnonymous) -gt 0) { $Score += 3 }
-        if ((nz $Summary.anonymousLinks) -gt 0) { $Score += 2 }
-        if ((nz $Summary.folderShares) -gt 0) { $Score += 2 }
-        if ((nz $Summary.externalLinks) -gt 0) { $Score += 1 }
-        $Exposure = if ($Score -ge 7) { 'High' } elseif ($Score -ge 3) { 'Medium' } else { 'Low' }
-        $Variables = @{
-            coverlabel      = 'Data Sharing Review'
-            coversubtitle   = "What has been shared out of SharePoint and OneDrive at $TenantName, who it reaches, and which of those shares are worth acting on."
-            covermeta       = ('{0} sharing links / {1} items / {2} external recipients' -f (nz $Summary.totalLinks), (nz $Summary.itemsShared), (nz $Summary.externalRecipients))
-            covermetanote   = "Sharing exposure: $Exposure"
-            coverfooternote = 'Confidential - For Internal Use Only'
-            footerlabel     = "$TenantName - SharePoint & OneDrive Sharing"
-        }
-
-        $Branding = try { Get-CIPPBrandingSettings } catch { @{} }
-        $Bytes = ConvertTo-CippReportPdf -Blocks $Tree -Branding $Branding -Variables $Variables `
-            -TenantName $TenantName -ReportName 'Sharing Report' -GeneratedOn ((Get-Date).ToString('MMMM d, yyyy'))
-
+        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'Sharing Report'
         $FileName = ("Sharing_Report_$TenantFilter" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK

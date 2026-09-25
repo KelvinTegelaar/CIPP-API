@@ -57,6 +57,8 @@ function Get-CIPPLicenseRecommendation {
 
     .PARAMETER InactiveDays
         Sign-in / activity age in days past which a user counts as inactive. Default 90.
+        Usage evidence comes from Microsoft's D180 active-user and app-usage reports; this value
+        filters within that window.
 
     .PARAMETER Licenses
         Optional. LicenseOverview records (Get-CIPPLicenseOverview shape).
@@ -133,14 +135,14 @@ function Get-CIPPLicenseRecommendation {
         $ActivityDetail = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ActiveUserDetail')
         $Sources.ActivityDetail = 'Cache'
         if ($ActivityDetail.Count -eq 0) {
-            try { $ActivityDetail = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getOffice365ActiveUserDetail(period='D90')?`$format=application%2fjson" -tenantid $TenantFilter); $Sources.ActivityDetail = 'Live' } catch { Write-Information "Active user detail live fallback failed: $($_.Exception.Message)" }
+            try { $ActivityDetail = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getOffice365ActiveUserDetail(period='D180')?`$format=application%2fjson" -tenantid $TenantFilter); $Sources.ActivityDetail = 'Live' } catch { Write-Information "Active user detail live fallback failed: $($_.Exception.Message)" }
         }
     }
     if (-not $PSBoundParameters.ContainsKey('AppUsage')) {
         $AppUsage = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'M365AppUserDetail')
         $Sources.AppUsage = 'Cache'
         if ($AppUsage.Count -eq 0) {
-            try { $AppUsage = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getM365AppUserDetail(period='D90')?`$format=application%2fjson" -tenantid $TenantFilter); $Sources.AppUsage = 'Live' } catch { Write-Information "App usage live fallback failed: $($_.Exception.Message)" }
+            try { $AppUsage = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getM365AppUserDetail(period='D180')?`$format=application%2fjson" -tenantid $TenantFilter); $Sources.AppUsage = 'Live' } catch { Write-Information "App usage live fallback failed: $($_.Exception.Message)" }
         }
     }
     if (-not $PSBoundParameters.ContainsKey('MailboxUsage')) { $MailboxUsage = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'MailboxUsage'); $Sources.MailboxUsage = 'Cache' }
@@ -768,7 +770,7 @@ function Get-CIPPLicenseRecommendation {
         Tenant                    = $TenantFilter
         Currency                  = $Currency
         GeneratedAt               = $Now.ToString('o')
-        ReportPeriodDays          = 90
+        ReportPeriodDays          = 180
         InactiveDays              = $InactiveDays
         TenureMonths              = $TenureMonths
         RecommendDowngrades       = $RecommendDowngrades

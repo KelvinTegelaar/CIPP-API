@@ -120,6 +120,5 @@ function Invoke-CIPPStandardMessageEncryption {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.MessageEncryption' -CurrentValue ([PSCustomObject]$ReportCurrent) -ExpectedValue ([PSCustomObject]$ReportExpected) -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'messageEncryptionEnabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

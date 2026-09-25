@@ -4,25 +4,27 @@ function Build-CippPermissionsReportTree {
         Compose the SharePoint Permissions report as a component tree (server port of
         PermissionsReportButton.jsx).
     .PARAMETER Data
-        Permissions data: summary (counts), assignments[], skippedSites[].
+        Permissions data: summary (counts), assignments[], skippedSites[]. Returns @{ Blocks; Variables }.
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory)][hashtable]$Data)
 
     $summary = if ($Data.summary) { $Data.summary } else { @{} }
-    $assignments = @($Data.assignments)
-    $skipped = @($Data.skippedSites)
+    # `?? @()` so a missing list is empty rather than @($null), which would count as one row.
+    $assignments = @($Data.assignments ?? @())
+    $skipped = @($Data.skippedSites ?? @())
     function nz($v) { if ($null -eq $v) { 0 } else { [int]$v } }
     function plural($c, $s, $p) { "$c $(if ($c -eq 1) { $s } else { if ($p) { $p } else { "${s}s" } })" }
 
-    $score = 0
-    if ((nz $summary.broadClaimGrants) -gt 0) { $score += 5 }
-    if ((nz $summary.externalGrants) -gt 0) { $score += 3 }
-    if ((nz $summary.directFullControlGrants) -gt 0) { $score += 2 }
-    if ((nz $summary.uniquePermissionLibraries) -gt 0) { $score += 1 }
-    $exposure = if ($score -ge 7) { @{ level = 'High'; severity = 'high' } } elseif ($score -ge 3) { @{ level = 'Medium'; severity = 'medium' } } else { @{ level = 'Low'; severity = 'low' } }
-    $sevColour = @{ high = '#742A2A'; medium = '#744210'; low = '#22543D' }[$exposure.severity]
+    $score = (@(
+            if ((nz $summary.broadClaimGrants) -gt 0) { 5 }
+            if ((nz $summary.externalGrants) -gt 0) { 3 }
+            if ((nz $summary.directFullControlGrants) -gt 0) { 2 }
+            if ((nz $summary.uniquePermissionLibraries) -gt 0) { 1 }
+        ) | Measure-Object -Sum).Sum
+    $exposure = if ($score -ge 7) { 'High' } elseif ($score -ge 3) { 'Medium' } else { 'Low' }
     $dangerC = '#742A2A'; $warnC = '#744210'
+    $sevColour = @{ High = $dangerC; Medium = $warnC; Low = '#22543D' }[$exposure]
     $claimLabels = @{ Everyone = 'Everyone (includes external users)'; EveryoneExceptExternal = 'Everyone except external users'; AllUsers = 'All Users' }
 
     $real = @($assignments | Where-Object { $_.principalId -and -not $_.isSystemManaged })
@@ -44,12 +46,12 @@ function Build-CippPermissionsReportTree {
                 @{ value = (nz $summary.directFullControlGrants); label = 'Direct Full Control'; colour = $(if ((nz $summary.directFullControlGrants) -gt 0) { $warnC }) }
                 @{ value = (nz $summary.uniquePermissionLibraries); label = 'Detached Libraries' }
             )))
-    $expText = switch ($exposure.level) {
+    $expText = switch ($exposure) {
         'High' { 'Content is reachable by people it was never meant for. A tenant-wide grant is present, which opens the content to the entire organisation regardless of who the site membership says should have it - and it is the most common reason material turns up unexpectedly in search results and AI assistant answers. Treat the findings below as immediate remediation work.' }
         'Medium' { 'Access extends past the intended audience in places. Each finding below is individually manageable, but each one widens what a single compromised account reaches.' }
         default { 'Permissions broadly match what the structure intends. No tenant-wide grants were found. Continue reviewing periodically, particularly after site or library changes.' }
     }
-    $blocks.Add((New-CippReportAlertBox -Title "Permission Exposure: $($exposure.level)" -Colour $sevColour -Content $expText))
+    $blocks.Add((New-CippReportAlertBox -Title "Permission Exposure: $exposure" -Colour $sevColour -Content $expText))
     $blocks.Add((New-CippReportInfoBox -Title 'What was examined' -Content ("{0} SharePoint sites and {1} document libraries were read, producing {2} permission assignments. Data is taken from the last completed sync, not read live." -f (nz $summary.sitesScanned), (nz $summary.librariesScanned), (nz $summary.totalAssignments))))
     $blocks.Add((New-CippReportInfoBox -Title 'What is not covered' -Content 'Permissions are reported as grant paths, not effective access - a group holding a permission is one entry and its members are not expanded, so a person may hold access that shows here only via their group. Permissions on individual folders and files are not enumerated. OneDrive personal sites are out of scope. Access handed out by sharing link is a separate path, covered by the Sharing Report.'))
     if ($skipped.Count -gt 0) {
@@ -106,7 +108,18 @@ function Build-CippPermissionsReportTree {
 
     # -- Appendix --
     $blocks.Add((New-CippReportPage -Title 'Appendix: Detached Library Permissions' -Subtitle 'Assignments on libraries that no longer inherit from their site'))
-    $blocks.Add((New-CippReportTable -Limit 40 -Columns @(@{ header = 'Site'; key = 'site'; width = 1.8 }, @{ header = 'Library'; key = 'library'; width = 1.6 }, @{ header = 'Principal'; key = 'principal'; width = 2.2 }, @{ header = 'Permission'; key = 'level'; width = 1.2 }) -Rows @($libRows | ForEach-Object { @{ site = (& $siteLabel $_); library = $_.libraryTitle; principal = ($_.title ?? $_.email ?? $_.loginName); level = $_.permissionLevel } })))
+    $blocks.Add((New-CippReportTable -Limit 40 -EmptyText 'No libraries hold their own permissions.' -Columns @(@{ header = 'Site'; key = 'site'; width = 1.8 }, @{ header = 'Library'; key = 'library'; width = 1.6 }, @{ header = 'Principal'; key = 'principal'; width = 2.2 }, @{ header = 'Permission'; key = 'level'; width = 1.2 }) -Rows @($libRows | ForEach-Object { @{ site = (& $siteLabel $_); library = $_.libraryTitle; principal = ($_.title ?? $_.email ?? $_.loginName); level = $_.permissionLevel } })))
 
-    , @($blocks)
+    @{
+        Blocks    = @($blocks)
+        Variables = @{
+            coverlabel         = 'Access Review'
+            coversubtitle      = "Who is structurally allowed into SharePoint sites and document libraries at $($Data.TenantName), and where that access reaches further than intended."
+            covermeta          = ("{0} sites $([char]0x00B7) {1} libraries $([char]0x00B7) {2} permission assignments" -f (nz $summary.sitesScanned), (nz $summary.librariesScanned), (nz $summary.totalAssignments))
+            covermetanote      = "Permission exposure: $exposure"
+            coverfooternote    = "Confidential $([char]0x2014) For Internal Use Only"
+            coverfallbackimage = '/reportImages/soc.jpg'
+            footerlabel        = "$($Data.TenantName) $([char]0x2014) SharePoint Permissions"
+        }
+    }
 }

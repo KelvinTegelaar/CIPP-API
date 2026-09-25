@@ -4,10 +4,11 @@ function Set-CIPPDBCacheM365AppUserDetail {
         Caches the Microsoft 365 Apps usage detail report for a tenant
 
     .DESCRIPTION
-        Stores getM365AppUserDetail(period='D90') - one row per user with, per platform (Windows,
+        Stores getM365AppUserDetail(period='D180') - one row per user with, per platform (Windows,
         Mac, mobile, web), whether each Office app (Outlook, Word, Excel, PowerPoint, OneNote,
         Teams) was used in the period. Rows are keyed by userPrincipalName so they join to the
-        cached Users dataset.
+        cached Users dataset. D180 is the longest Graph window so license optimization can filter
+        to any inactive threshold.
 
         The license recommendation report uses the Windows/Mac columns to tell whether a user
         actually runs the installed desktop apps their plan pays for.
@@ -32,7 +33,7 @@ function Set-CIPPDBCacheM365AppUserDetail {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Microsoft 365 app usage detail' -sev Debug
 
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getM365AppUserDetail(period='D90')?`$format=application%2fjson" -tenantid $TenantFilter -Stream |
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getM365AppUserDetail(period='D180')?`$format=application%2fjson" -tenantid $TenantFilter -Stream |
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'M365AppUserDetail' -AddCount
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Microsoft 365 app usage detail successfully' -sev Debug
 

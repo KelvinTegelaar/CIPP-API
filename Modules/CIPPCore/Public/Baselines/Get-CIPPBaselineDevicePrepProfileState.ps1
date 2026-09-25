@@ -39,7 +39,7 @@ function Get-CIPPBaselineDevicePrepProfileState {
 
     $DeploymentType = [string]($V.DeploymentType.value ?? $V.DeploymentType ?? '0')
     $JoinType = [string]($V.JoinType.value ?? $V.JoinType ?? '0')
-    $AccountType = [string]($V.AccountType.value ?? $V.AccountType ?? '0')
+    $AccountType = [string]($V.AccountType.value ?? $V.AccountType ?? '1') # 1 = Standard user, 0 = Administrator
     # Empty string means unset, exactly like a pruned remediate key: '' ?? falls through
     # and [int]'' is 0, which graded timeout 0 against the 60 the executor writes.
     $Timeout = if ([string]::IsNullOrWhiteSpace("$($V.Timeout)")) { 60 } else { [int]"$($V.Timeout)" }

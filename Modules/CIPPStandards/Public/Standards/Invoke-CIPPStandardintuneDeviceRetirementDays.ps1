@@ -94,6 +94,5 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
             deviceInactivityBeforeRetirementInDays = $Settings.days
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceRetirementDays' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

@@ -10,7 +10,6 @@ BeforeAll {
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $message, $sev, $LogData) }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $CurrentValue, $ExpectedValue, $TenantFilter) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Get-NormalizedError { [CmdletBinding()] param($Message) $Message }
 
     . $StandardPath
@@ -33,7 +32,6 @@ Describe 'Invoke-CIPPStandardExternalComplianceTrusted' {
         Mock Write-LogMessage { }
         Mock Write-StandardsAlert { }
         Mock Set-CIPPStandardsCompareField { }
-        Mock Add-CIPPBPAField { }
     }
 
     It 'remediates compliant-device trust without resetting sibling trust flags' {
@@ -54,9 +52,6 @@ Describe 'Invoke-CIPPStandardExternalComplianceTrusted' {
             $FieldName -eq 'standards.ExternalComplianceTrusted' -and
             $CurrentValue.isCompliantDeviceAccepted -eq $false -and
             $ExpectedValue.isCompliantDeviceAccepted -eq $true
-        }
-        Should -Invoke Add-CIPPBPAField -Times 1 -Exactly -ParameterFilter {
-            $FieldName -eq 'ExternalComplianceTrusted' -and $FieldValue -eq $false
         }
     }
 }

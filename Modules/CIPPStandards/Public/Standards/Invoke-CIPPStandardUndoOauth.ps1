@@ -73,7 +73,6 @@ function Invoke-CIPPStandardUndoOauth {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'UndoOauth' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
         $CurrentValue = @{
             permissionGrantPolicyIdsAssignedToDefaultUserRole = $CurrentState.permissionGrantPolicyIdsAssignedToDefaultUserRole
         }

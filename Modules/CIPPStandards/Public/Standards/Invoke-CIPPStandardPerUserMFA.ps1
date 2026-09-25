@@ -97,6 +97,5 @@ function Invoke-CIPPStandardPerUserMFA {
             UsersWithoutMFA = @()
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.PerUserMFA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
-        Add-CIPPBPAField -FieldName 'LegacyMFAUsers' -FieldValue $UsersWithoutMFA -StoreAs json -Tenant $tenant
     }
 }

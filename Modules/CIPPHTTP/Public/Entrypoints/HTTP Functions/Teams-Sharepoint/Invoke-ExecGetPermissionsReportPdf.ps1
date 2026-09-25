@@ -21,43 +21,18 @@ function Invoke-ExecGetPermissionsReportPdf {
         if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A tenantFilter is required' })
         }
+        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
 
-        $TenantName = $TenantFilter
-        try {
-            $TenantInfo = Get-Tenants -TenantFilter $TenantFilter
-            if ($TenantInfo.displayName) { $TenantName = [string]$TenantInfo.displayName }
-        } catch { $TenantName = $TenantFilter }
-
-        $Raw = (Invoke-ListSharePointPermissions -Request @{ Query = @{ tenantFilter = $TenantFilter }; Headers = $Request.Headers }).Body
-        $Summary = $Raw.summary
-        $Data = @{
+        # The same shaped data the Permissions page reads (from the reporting cache).
+        $Raw = Get-CIPPSharePointPermissionsReport -TenantFilter $TenantFilter
+        $Report = Build-CippPermissionsReportTree -Data @{
             TenantName   = $TenantName
-            summary      = $Summary
+            summary      = $Raw.summary
             assignments  = $Raw.assignments
             skippedSites = $Raw.skippedSites
         }
-        $Tree = Build-CippPermissionsReportTree -Data $Data
 
-        function nz($v) { if ($null -eq $v) { 0 } else { [int]$v } }
-        $Score = 0
-        if ((nz $Summary.broadClaimGrants) -gt 0) { $Score += 5 }
-        if ((nz $Summary.externalGrants) -gt 0) { $Score += 3 }
-        if ((nz $Summary.directFullControlGrants) -gt 0) { $Score += 2 }
-        if ((nz $Summary.uniquePermissionLibraries) -gt 0) { $Score += 1 }
-        $Exposure = if ($Score -ge 7) { 'High' } elseif ($Score -ge 3) { 'Medium' } else { 'Low' }
-        $Variables = @{
-            coverlabel      = 'Access Review'
-            coversubtitle   = "Who is structurally allowed into SharePoint sites and document libraries at $TenantName, and where that access reaches further than intended."
-            covermeta       = ('{0} sites / {1} libraries / {2} permission assignments' -f (nz $Summary.sitesScanned), (nz $Summary.librariesScanned), (nz $Summary.totalAssignments))
-            covermetanote   = "Permission exposure: $Exposure"
-            coverfooternote = 'Confidential - For Internal Use Only'
-            footerlabel     = "$TenantName - SharePoint Permissions"
-        }
-
-        $Branding = try { Get-CIPPBrandingSettings } catch { @{} }
-        $Bytes = ConvertTo-CippReportPdf -Blocks $Tree -Branding $Branding -Variables $Variables `
-            -TenantName $TenantName -ReportName 'Permissions Report' -GeneratedOn ((Get-Date).ToString('MMMM d, yyyy'))
-
+        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'Permissions Report'
         $FileName = ("Permissions_Report_$TenantFilter" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK

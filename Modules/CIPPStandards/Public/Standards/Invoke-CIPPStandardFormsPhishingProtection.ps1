@@ -88,6 +88,5 @@ function Invoke-CIPPStandardFormsPhishingProtection {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.FormsPhishingProtection' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'FormsPhishingProtection' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 }

@@ -4,6 +4,7 @@ function Build-CippMailFlowReportTree {
         Compose the Exchange Mail Flow report as a component tree (server port of MailFlowReportButton.jsx).
     .PARAMETER Data
         Mail flow data: days, totals, directionTotals, daily[], topSenders[], topSpamRecipients[].
+        Returns @{ Blocks; Variables }.
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory)][hashtable]$Data)
@@ -19,25 +20,26 @@ function Build-CippMailFlowReportTree {
     $days = if ((nz $Data.days) -gt 0) { [int]$Data.days } else { 14 }
     $totals = if ($Data.totals) { $Data.totals } else { @{} }
     $dir = if ($Data.directionTotals) { $Data.directionTotals } else { @{} }
-    $daily = @($Data.daily)
-    $topSenders = @($Data.topSenders)
-    $topSpam = @($Data.topSpamRecipients)
+    # `?? @()` so a missing list is empty rather than @($null), which would render as one blank row.
+    $daily = @($Data.daily ?? @())
+    $topSenders = @($Data.topSenders ?? @())
+    $topSpam = @($Data.topSpamRecipients ?? @())
 
-    $totalMail = 0; foreach ($d in $dispositions) { $totalMail += (nz $totals[$d.key]) }
+    $totalMail = ($dispositions | ForEach-Object { nz $totals[$_.key] } | Measure-Object -Sum).Sum
     $goodPct = pct (nz $totals.GoodMail) $totalMail
     $phish = nz $totals.EmailPhish; $malware = nz $totals.EmailMalware; $threats = $phish + $malware
     $transportRules = nz $totals.TransportRules
-    $targeted = pct ((nz $totals.EmailMalware) + (nz $totals.EmailPhish)) $totalMail
+    $targeted = pct $threats $totalMail
     $spam = pct ((nz $totals.SpamDetections) + (nz $totals.EdgeBlockSpam)) $totalMail
-    $hygiene = if ($totalMail -le 0) { @{ level = 'Good'; severity = 'low' } }
-    elseif ($targeted -gt 1 -or $spam -gt 25) { @{ level = 'Attention Needed'; severity = 'high' } }
-    elseif ($targeted -gt 0.25 -or $spam -gt 10) { @{ level = 'Fair'; severity = 'medium' } }
-    else { @{ level = 'Good'; severity = 'low' } }
-    $sevColour = @{ high = '#742A2A'; medium = '#744210'; low = '#22543D' }[$hygiene.severity]
+    $hygiene = if ($totalMail -le 0) { 'Good' }
+    elseif ($targeted -gt 1 -or $spam -gt 25) { 'Attention Needed' }
+    elseif ($targeted -gt 0.25 -or $spam -gt 10) { 'Fair' }
+    else { 'Good' }
     $dangerC = '#742A2A'; $warnC = '#744210'
+    $sevColour = @{ 'Attention Needed' = $dangerC; Fair = $warnC; Good = '#22543D' }[$hygiene]
 
     $dayLabel = { param($v) if ($v) { ([datetime]$v).ToString('MMM d') } else { '' } }
-    $volumeSeries = foreach ($row in $daily) { $s = 0; foreach ($d in $dispositions) { $s += (nz $row[$d.key]) }; @{ label = (& $dayLabel $row.date); value = $s } }
+    $volumeSeries = foreach ($row in $daily) { @{ label = (& $dayLabel $row.date); value = ($dispositions | ForEach-Object { nz $row[$_.key] } | Measure-Object -Sum).Sum } }
     $directionSeries = @(
         @{ label = 'Inbound'; value = (nz $dir.Inbound) }
         @{ label = 'Outbound'; value = (nz $dir.Outbound) }
@@ -56,12 +58,12 @@ function Build-CippMailFlowReportTree {
                 @{ value = (num $phish); label = 'Phish Blocked'; colour = $(if ($phish -gt 0) { $warnC }) }
                 @{ value = (num $malware); label = 'Malware Blocked'; colour = $(if ($malware -gt 0) { $dangerC }) }
             )))
-    $hygText = switch ($hygiene.level) {
+    $hygText = switch ($hygiene) {
         'Attention Needed' { 'Threat traffic is a material share of total mail. At this rate the organisation is being targeted rather than incidentally caught by bulk campaigns, and the filters are absorbing volume that protection policy and user awareness should be reducing at source. Treat the recommendations as current work.' }
         'Fair' { 'Threats are being caught at a level that is normal for an organisation of this profile, but not negligible. The filtering is working; the value now is in checking which users absorb most of it and whether their protection matches their exposure.' }
         default { 'Threat traffic is a small fraction of total mail and is being stopped before delivery. Nothing here needs action beyond keeping the review cadence, since a change in this profile is usually the first visible sign of a campaign starting.' }
     }
-    $blocks.Add((New-CippReportAlertBox -Title "Mail Hygiene: $($hygiene.level)" -Colour $sevColour -Content $hygText))
+    $blocks.Add((New-CippReportAlertBox -Title "Mail Hygiene: $hygiene" -Colour $sevColour -Content $hygText))
     $blocks.Add((New-CippReportInfoBox -Title 'What this data is' -Content "Figures come from Microsoft's mail flow status report for the tenant, aggregated as daily counts per disposition and direction. It is a count of messages, not a record of them: individual senders, subjects and recipients are not part of this data set, and a message appears once under the disposition that was applied to it."))
     $blocks.Add((New-CippReportInfoBox -Title 'What it does not show' -Content 'A blocked message is a filter working, not an incident. Nothing here indicates that a threat reached a user or that an account was compromised - that requires message trace and sign-in data, which are reviewed separately. Equally, a clean result does not prove nothing got through; it proves nothing was recognised.'))
 
@@ -109,5 +111,16 @@ function Build-CippMailFlowReportTree {
                 @{ label = 'Keep quarantine reviewed and released promptly.'; text = 'Filtering only holds if people trust it. Where legitimate mail sits in quarantine unattended, users route around the controls - and that habit costs more than the filtering saves.' }
             )))
 
-    , @($blocks)
+    @{
+        Blocks    = @($blocks)
+        Variables = @{
+            coverlabel         = 'Email Traffic Review'
+            coversubtitle      = "Where email at $($Data.TenantName) came from over the last $days days, how much of it was delivered, and what was stopped before it reached a mailbox."
+            covermeta          = ("{0:N0} messages $([char]0x00B7) {1}% delivered $([char]0x00B7) {2:N0} threats caught" -f $totalMail, $goodPct, $threats)
+            covermetanote      = "Mail hygiene: $hygiene"
+            coverfooternote    = "Confidential $([char]0x2014) For Internal Use Only"
+            coverfallbackimage = '/reportImages/city.jpg'
+            footerlabel        = "$($Data.TenantName) $([char]0x2014) Mail Flow"
+        }
+    }
 }

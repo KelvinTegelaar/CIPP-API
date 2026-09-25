@@ -32,6 +32,8 @@ Describe 'Sign-in permission scope' {
         @{ Endpoint = 'ListReportBuilderTemplates'; Role = 'CIPP.ReportBuilder.Read' }
         @{ Endpoint = 'ExecGenerateReportBuilderReport'; Role = 'CIPP.ReportBuilder.ReadWrite' }
         @{ Endpoint = 'ExecReportBuilderTemplate'; Role = 'CIPP.ReportBuilder.ReadWrite' }
+        @{ Endpoint = 'ExecGetReportBuilderPdf'; Role = 'CIPP.ReportBuilder.Read' }
+        @{ Endpoint = 'ExecPreviewReportBuilderPdf'; Role = 'CIPP.ReportBuilder.ReadWrite' }
     ) {
         Get-EntrypointRole -Name $Endpoint | Should -Be $Role
     }

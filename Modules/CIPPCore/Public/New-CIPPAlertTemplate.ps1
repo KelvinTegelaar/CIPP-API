@@ -216,7 +216,7 @@ function New-CIPPAlertTemplate {
         $ButtonText = 'View custom test results'
     }
     if ($InputObject -eq 'auditlog') {
-        $ButtonUrl = "$CIPPURL/identity/administration/users/user/bec?userId=$($data.ObjectId)&tenantFilter=$Tenant"
+        $ButtonUrl = "$CIPPURL/identity/administration/bec/case?userId=$($data.ObjectId)&tenantFilter=$Tenant"
         $ButtonText = 'User Management'
         $AfterButtonText = '<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>'
         switch ($Data.Operation) {
@@ -241,7 +241,7 @@ function New-CIPPAlertTemplate {
                     $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                     $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
                 }
-                $ButtonUrl = "$CIPPURL/identity/administration/users/user/bec?userId=$($data.UserId)&tenantFilter=$Tenant"
+                $ButtonUrl = "$CIPPURL/identity/administration/bec/case?userId=$($data.UserId)&tenantFilter=$Tenant"
                 $ButtonText = 'Start BEC Investigation'
                 $AfterButtonText = '<p>If you believe this is a suspect rule, you can click the button above to start the investigation.</p>'
             }
@@ -254,7 +254,7 @@ function New-CIPPAlertTemplate {
                     $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                     $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
                 }
-                $ButtonUrl = "$CIPPURL/identity/administration/users/user/bec?userId=$($data.UserId)&tenantFilter=$Tenant"
+                $ButtonUrl = "$CIPPURL/identity/administration/bec/case?userId=$($data.UserId)&tenantFilter=$Tenant"
                 $ButtonText = 'Start BEC Investigation'
                 $AfterButtonText = '<p>If you believe this is a suspect rule, you can click the button above to start the investigation.</p>'
             }
@@ -384,7 +384,7 @@ function New-CIPPAlertTemplate {
                     $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                     $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
                 }
-                $ButtonUrl = "$CIPPURL/identity/administration/users/user/bec?userId=$($data.Userkey)&tenantFilter=$Tenant"
+                $ButtonUrl = "$CIPPURL/identity/administration/bec/case?userId=$($data.Userkey)&tenantFilter=$Tenant"
                 $ButtonText = 'User Management'
                 $AfterButtonText = '<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>'
             }

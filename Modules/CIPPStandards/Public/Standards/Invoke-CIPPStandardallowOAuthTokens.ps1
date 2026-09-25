@@ -68,7 +68,6 @@ function Invoke-CIPPStandardallowOAuthTokens {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'softwareOath' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.allowOAuthTokens' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
     }
 }

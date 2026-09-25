@@ -226,12 +226,6 @@ function Invoke-CIPPStandardUserSubmissions {
     }
 
     if ($Settings.report -eq $true) {
-        if ($PolicyState.length -eq 0) {
-            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $Tenant
-        } else {
-            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        }
-
         $PolicyState = $PolicyState | Select-Object EnableReportToMicrosoft, ReportJunkToCustomizedAddress, ReportNotJunkToCustomizedAddress, ReportPhishToCustomizedAddress, ReportJunkAddresses, ReportNotJunkAddresses, ReportPhishAddresses
         $RuleState = $RuleState | Select-Object State, SentTo
 

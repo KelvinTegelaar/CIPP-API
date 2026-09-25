@@ -102,7 +102,6 @@ function Start-CIPPStatsTimer {
             PWPush                 = $RawExt.PWPush.Enabled
             CFZTNA                 = $RawExt.CFZTNA.Enabled
             GitHub                 = $RawExt.GitHub.Enabled
-            BestPracticeAnalyser   = $FeatureFlags.BestPracticeAnalyser
             SuperAdminNG           = $FeatureFlags.SuperAdminNG
             MCPServer              = $FeatureFlags.MCPServer
             SSOMigrationStatus     = $MigrationStatus

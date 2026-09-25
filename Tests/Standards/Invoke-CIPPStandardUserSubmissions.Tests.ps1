@@ -19,7 +19,6 @@ BeforeAll {
         [CmdletBinding()]
         param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $TenantFilter)
     }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Get-NormalizedError { [CmdletBinding()] param($Message) $Message }
     function Get-CippException { [CmdletBinding()] param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
 
@@ -51,7 +50,6 @@ Describe 'Invoke-CIPPStandardUserSubmissions comparison payload' {
         }
         Mock -CommandName Write-LogMessage -MockWith { }
         Mock -CommandName Write-StandardsAlert -MockWith { }
-        Mock -CommandName Add-CIPPBPAField -MockWith { }
         Mock -CommandName Set-CIPPStandardsCompareField -MockWith {
             param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $TenantFilter)
             $script:compareFields.Add([pscustomobject]@{

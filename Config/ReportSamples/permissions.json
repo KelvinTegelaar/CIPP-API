@@ -1,0 +1,27 @@
+{
+  "summary": {
+    "sitesScanned": 12,
+    "librariesScanned": 34,
+    "totalAssignments": 156,
+    "broadClaimGrants": 2,
+    "externalGrants": 5,
+    "directFullControlGrants": 3,
+    "uniquePermissionLibraries": 7
+  },
+  "assignments": [
+    {
+      "siteName": "Sample Marketing",
+      "libraryName": "Documents",
+      "principal": "Everyone except external users",
+      "permission": "Edit",
+      "type": "Broad claim"
+    },
+    {
+      "siteName": "Sample Finance",
+      "libraryName": "Documents",
+      "principal": "partner@example.com",
+      "permission": "Full Control",
+      "type": "External"
+    }
+  ]
+}
