@@ -49,6 +49,7 @@ function Get-CIPPSharePointLibraryCopyOperation {
         SourceLibraryName = $Primary.SourceLibraryName
         DestSiteName      = $Primary.DestSiteName
         DestLibraryName   = $Primary.DestLibraryName
+        DestFolderName    = $Primary.DestFolderName
         StartedBy         = $Primary.StartedBy
         Status            = $Primary.Status
         JobHandleCount    = [int]$Primary.JobHandleCount

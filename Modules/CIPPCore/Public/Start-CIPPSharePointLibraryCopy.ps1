@@ -29,12 +29,19 @@ function Start-CIPPSharePointLibraryCopy {
         [string]$DestListId,
         [string]$DestSiteName,
         [string]$DestLibraryName,
+        [string]$DestFolderName,
 
         [int]$NameConflictBehavior = 1,
         [string]$StartedBy,
         $Headers,
         $APIName = 'SharePoint Library Copy'
     )
+
+    if (-not [string]::IsNullOrEmpty($DestFolderName)) {
+        $FolderCheck = Test-CIPPSharePointLibraryCopyFolderName -FolderName $DestFolderName
+        if (-not $FolderCheck.Valid) { throw $FolderCheck.Reason }
+        $DestFolderName = $FolderCheck.Name
+    }
 
     $ResolveLibraryMeta = {
         param([string]$SiteId, [string]$SiteUrl, [string]$ListId)
@@ -96,12 +103,22 @@ function Start-CIPPSharePointLibraryCopy {
     if ($Count -gt 200) { $WarnLevel = 'strong' }
     elseif ($Count -gt 50) { $WarnLevel = 'soft' }
 
+    $HasDestFolder = -not [string]::IsNullOrEmpty($DestFolderName)
+
     if ($Mode -eq 'PreflightLibraryCopy') {
-        return [PSCustomObject]@{
+        $Preflight = [PSCustomObject]@{
             EligibleRootCount = $Count
             WarnLevel         = $WarnLevel
             Message           = "Estimated SharePoint jobs: $Count."
         }
+        if ($HasDestFolder) {
+            # Read-only: preflight reports whether the folder will be reused, it never creates it.
+            $ExistingFolder = Resolve-CIPPSharePointLibraryCopyDestFolder -TenantFilter $TenantFilter -SiteId $DestMeta.SiteId `
+                -ListId $DestMeta.ListId -FolderName $DestFolderName
+            $Preflight | Add-Member -NotePropertyName DestFolderName -NotePropertyValue $DestFolderName
+            $Preflight | Add-Member -NotePropertyName DestFolderExists -NotePropertyValue ([bool]$ExistingFolder)
+        }
+        return $Preflight
     }
 
     $SourceRoot = Resolve-CIPPSharePointLibraryRootUri -TenantFilter $TenantFilter -SiteUrl $SourceMeta.SiteUrl `
@@ -109,9 +126,23 @@ function Start-CIPPSharePointLibraryCopy {
     $DestRoot = Resolve-CIPPSharePointLibraryRootUri -TenantFilter $TenantFilter -SiteUrl $DestMeta.SiteUrl `
         -SiteId $DestMeta.SiteId -ListId $DestMeta.ListId
 
+    $DestinationUri = $DestRoot.LibraryRootUri
+    $DestFolder = $null
+    if ($HasDestFolder) {
+        $DestFolder = Resolve-CIPPSharePointLibraryCopyDestFolder -TenantFilter $TenantFilter -SiteId $DestMeta.SiteId `
+            -ListId $DestMeta.ListId -FolderName $DestFolderName -Create
+        # Graph's webUrl is the folder's absolute, already-encoded URL (same form as the source ExportObjectUris).
+        $DestinationUri = if ($DestFolder.WebUrl) {
+            [string]$DestFolder.WebUrl
+        } else {
+            "$($DestRoot.LibraryRootUri.TrimEnd('/'))/$($DestFolder.Name ?? $DestFolderName)"
+        }
+        $DestFolderName = $DestFolder.Name ?? $DestFolderName
+    }
+
     $SameWeb = $SourceMeta.SiteId -eq $DestMeta.SiteId
     $CopyJobs = Invoke-CIPPSharePointCreateCopyJobs -TenantFilter $TenantFilter -SourceSiteUrl $SourceRoot.SiteUrl `
-        -ExportObjectUris $Enumerate.ChildUris -DestinationUri $DestRoot.LibraryRootUri `
+        -ExportObjectUris $Enumerate.ChildUris -DestinationUri $DestinationUri `
         -NameConflictBehavior $NameConflictBehavior -SameWebCopyMoveOptimization $SameWeb
 
     $OperationId = (New-Guid).Guid
@@ -125,7 +156,7 @@ function Start-CIPPSharePointLibraryCopy {
             [PSCustomObject]@{ Status = 'Queued'; IsComplete = $false }
         })
 
-    Set-CIPPSharePointLibraryCopyOperation -TenantFilter $TenantFilter -OperationId $OperationId -Entity @{
+    $OperationEntity = @{
         SourceSiteUrl     = $SourceRoot.SiteUrl
         SourceSiteName    = $SrcSiteName
         SourceLibraryName = $SrcLibName
@@ -147,13 +178,23 @@ function Start-CIPPSharePointLibraryCopy {
                 Message       = 'Copy queued.'
             } -Compress)
     }
+    if ($HasDestFolder) {
+        $OperationEntity.DestFolderName = $DestFolderName
+    }
+    Set-CIPPSharePointLibraryCopyOperation -TenantFilter $TenantFilter -OperationId $OperationId -Entity $OperationEntity
 
+    $DstLabel = if ($HasDestFolder) { "$DstLibName/$DestFolderName" } else { $DstLibName }
     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter `
-        -message "Started library copy $OperationId ($SrcLibName -> $DstLibName, $($CopyJobs.Count) jobs)" -sev Info
+        -message "Started library copy $OperationId ($SrcLibName -> $DstLabel, $($CopyJobs.Count) jobs)" -sev Info
 
-    [PSCustomObject]@{
+    $Result = [PSCustomObject]@{
         OperationId     = $OperationId
         JobHandleCount  = $CopyJobs.Count
         Message         = 'Library copy started.'
     }
+    if ($HasDestFolder) {
+        $Result | Add-Member -NotePropertyName DestFolderName -NotePropertyValue $DestFolderName
+        $Result | Add-Member -NotePropertyName DestFolderCreated -NotePropertyValue ([bool]$DestFolder.Created)
+    }
+    $Result
 }

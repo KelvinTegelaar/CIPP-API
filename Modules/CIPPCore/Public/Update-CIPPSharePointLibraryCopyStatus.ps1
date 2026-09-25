@@ -157,10 +157,14 @@ function Update-CIPPSharePointLibraryCopyStatus {
         DestSiteName         = $Operation.DestSiteName
         DestLibraryName      = $Operation.DestLibraryName
     }
+    $HasDestFolder = -not [string]::IsNullOrEmpty([string]$Operation.DestFolderName)
+    if ($HasDestFolder) {
+        $Snapshot | Add-Member -NotePropertyName DestFolderName -NotePropertyValue ([string]$Operation.DestFolderName)
+    }
 
     $Expiry = if ($AllComplete) { ([DateTime]::UtcNow.AddHours(48)).ToString('o') } else { $Operation.Expiry }
 
-    Set-CIPPSharePointLibraryCopyOperation -TenantFilter $TenantFilter -OperationId $OperationId -Entity @{
+    $OperationEntity = @{
         SourceSiteUrl     = $Operation.SourceSiteUrl
         SourceSiteName    = $Operation.SourceSiteName
         SourceLibraryName = $Operation.SourceLibraryName
@@ -173,6 +177,10 @@ function Update-CIPPSharePointLibraryCopyStatus {
         HandleStates      = (ConvertTo-Json -InputObject @($HandleStates) -Compress -Depth 6)
         SanitizedSnapshot = (ConvertTo-Json -InputObject $Snapshot -Compress -Depth 6)
     }
+    if ($HasDestFolder) {
+        $OperationEntity.DestFolderName = [string]$Operation.DestFolderName
+    }
+    Set-CIPPSharePointLibraryCopyOperation -TenantFilter $TenantFilter -OperationId $OperationId -Entity $OperationEntity
 
     return $Snapshot
 }
