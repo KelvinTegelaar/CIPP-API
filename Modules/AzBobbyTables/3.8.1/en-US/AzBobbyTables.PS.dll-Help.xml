@@ -1126,6 +1126,7 @@ PS C:\&gt; $UserEntities = Get-AzDataTableEntity -Property 'FirstName','Age' -Co
       <maml:para>Rows belonging to one logical entity are recognized by their `OriginalEntityId` property and merged in `PartIndex` order, after which chunked properties recorded in the `SplitOverProps` manifest are joined back into their original single property. Entities that were never split are returned as-is.</maml:para>
       <maml:para>If both a plain row and leftover part rows exist for the same RowKey, the plain row wins, so an entity that was rewritten smaller after having been split still reads correctly.</maml:para>
       <maml:para>Since split entities span multiple rows, First, Skip, Sort and Count operate on rows before reassembly. If a filter matches only some rows of a split entity, the cmdlet fetches the missing rows before reassembly. A Property selection that excludes the split markers (OriginalEntityId, PartIndex, SplitOverProps, PartCount and the chunk properties) prevents reassembly.</maml:para>
+      <maml:para>When none of the parameters First, Skip or Sort are specified, entities are streamed to the pipeline as they are read instead of being collected first.</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>

@@ -4,7 +4,7 @@
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '3.6.2'
+ModuleVersion = '3.8.1'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -114,17 +114,27 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-          ReleaseNotes = '## [3.6.2] - 2026-08-01
-
-### Added
-
-- Added `Add-AzDataTableLargeEntity`, `Get-AzDataTableLargeEntity` and `Remove-AzDataTableLargeEntity` for working with entities that exceed the Azure Table Storage size limits (64 KiB per string property, 1 MiB per entity). Oversized string properties are split into chunk properties recorded in a `SplitOverProps` JSON manifest, and entities that are still too large are distributed over multiple rows marked with `OriginalEntityId` and `PartIndex`; reads reassemble the original entity transparently and removes delete all part rows. The existing entity cmdlets are unaffected.
+          ReleaseNotes = @('## [3.4.0] - 2026-09-25
 
 ### Fixed
 
-- `Get-AzDataTableEntity` no longer fails with `400 InvalidInput` when `-First` is given a value above 1000. The page-size hint introduced in 3.6.1 was passed to the service unclamped, and Azure Table Storage rejects a page size over its limit of 1000 rather than capping it. The hint is now clamped to that limit. Results are unchanged: the hint only sizes each page, so requests for more than 1000 entities are served by paging, as they were before 3.6.1.
+- `Remove-AzDataTableLargeEntity`, and the stale part cleanup of `Add-` and `Update-AzDataTableLargeEntity`, no longer scan the whole partition to find part rows. Part rows were looked up by filtering on `OriginalEntityId`, which is not a key, so every lookup read every row in the partition and removing entities from large partitions took minutes per batch. Part rows are now found by their RowKey range, an index seek, and confirmed by `OriginalEntityId`.
 
-'
+','## [3.4.0] - 2025-07-03
+
+### Added
+
+- Added SortedList as valid type for -Entity parameter [#52](https://github.com/PalmEmanuel/AzBobbyTables/issues/52)
+- New command `Get-AzDataTableSupportedEntityType` to get the supported data types for the module when using `-Entity` parameter
+
+### Changed
+
+- Dependency version bumps
+- Rewrote core module logic to add a converter system which allows for flexible entity types
+- Updated gitversion config for build and release
+- Improved module tests for the new type converter system
+
+')
 
         # Prerelease string of this module
         # Prerelease = ''

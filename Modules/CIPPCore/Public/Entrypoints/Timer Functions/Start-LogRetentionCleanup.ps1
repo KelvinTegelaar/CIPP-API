@@ -9,12 +9,13 @@ function Start-LogRetentionCleanup {
     param()
 
     try {
-        # Check rerun protection - only run once every 24 hours (86400 seconds)
+        # Check rerun protection - 23 hours, so the daily timer is never blocked by firing a few
+        # seconds short of a full 24 hours after the previous run
         $RerunParams = @{
             TenantFilter = 'AllTenants'
             Type         = 'LogCleanup'
             API          = 'LogRetentionCleanup'
-            Interval     = 86400
+            Interval     = 82800
         }
         $Rerun = Test-CIPPRerun @RerunParams
         if ($Rerun) {
@@ -46,8 +47,9 @@ function Start-LogRetentionCleanup {
 
         Write-Host "Starting log cleanup with retention of $RetentionDays days"
 
-        # Calculate cutoff date
-        $CutoffDate = (Get-Date).AddDays(-$RetentionDays).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        # CippLogs is partitioned by day (yyyyMMdd), so the cutoff is a PartitionKey range the
+        # table service can seek to, instead of a Timestamp filter that scans every row
+        $CutoffPartition = (Get-Date).ToUniversalTime().AddDays(-$RetentionDays).ToString('yyyyMMdd')
 
         $TotalDeletedCount = 0
         $BatchSize = 5000
@@ -55,7 +57,7 @@ function Start-LogRetentionCleanup {
         # Clean up CIPP Logs
         if ($PSCmdlet.ShouldProcess('CippLogs', 'Cleaning up old logs')) {
             $CippLogsTable = Get-CippTable -tablename 'CippLogs'
-            $CutoffFilter = "Timestamp lt datetime'$CutoffDate'"
+            $CutoffFilter = "PartitionKey lt '$CutoffPartition'"
 
             # Process deletions in batches of 10k to avoid timeout
             $HasMoreRecords = $true
