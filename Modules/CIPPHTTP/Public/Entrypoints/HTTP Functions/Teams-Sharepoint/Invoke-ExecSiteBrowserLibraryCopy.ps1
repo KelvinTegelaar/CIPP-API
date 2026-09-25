@@ -7,6 +7,7 @@ function Invoke-ExecSiteBrowserLibraryCopy {
     .DESCRIPTION
         Starts or preflights a SharePoint document library content copy (CreateCopyJobs + MoveButKeepSource).
         Actions: PreflightLibraryCopy, StartLibraryCopy.
+        Optional DestFolderName copies into a folder (created or reused) at the destination library root.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -62,6 +63,14 @@ function Invoke-ExecSiteBrowserLibraryCopy {
         }
         if ([string]::IsNullOrWhiteSpace($Params.DestSiteId) -and [string]::IsNullOrWhiteSpace($Params.DestSiteUrl)) {
             throw 'DestSiteId or DestSiteUrl is required.'
+        }
+
+        # Optional: copy into a folder at the destination library root instead of the root itself.
+        $DestFolderRaw = $Request.Body.DestFolderName ?? $Request.Body.destFolderName
+        if (-not [string]::IsNullOrEmpty([string]$DestFolderRaw)) {
+            $FolderCheck = Test-CIPPSharePointLibraryCopyFolderName -FolderName ([string]$DestFolderRaw)
+            if (-not $FolderCheck.Valid) { throw $FolderCheck.Reason }
+            $Params.DestFolderName = $FolderCheck.Name
         }
 
         $Result = Start-CIPPSharePointLibraryCopy @Params

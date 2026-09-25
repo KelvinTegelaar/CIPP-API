@@ -89,6 +89,27 @@ Describe 'Get-CIPPSharePointLibraryCopyOperation' {
 
         $Result.OperationId | Should -Be $OpId
         $Result.CopyJobInfos.Count | Should -Be 1
+        $Result.DestFolderName | Should -BeNullOrEmpty
+    }
+
+    It 'round-trips DestFolderName and keeps it across status-only merges' {
+        $OpId = [guid]::NewGuid().Guid
+
+        Set-CIPPSharePointLibraryCopyOperation -TenantFilter 'contoso.com' -OperationId $OpId -Entity @{
+            DestLibraryName = 'Leavers'
+            DestFolderName  = 'Archive - jane@contoso.com'
+            Status          = 'Processing'
+            JobHandleCount  = 1
+            CopyJobInfos    = @([PSCustomObject]@{ JobId = 'a' })
+            HandleStates    = '[]'
+        }
+        Set-CIPPSharePointLibraryCopyOperation -TenantFilter 'contoso.com' -OperationId $OpId -Entity @{
+            Status = 'Completed'
+        }
+
+        $Result = Get-CIPPSharePointLibraryCopyOperation -TenantFilter 'contoso.com' -OperationId $OpId
+        $Result.DestFolderName | Should -Be 'Archive - jane@contoso.com'
+        $Result.Status | Should -Be 'Completed'
     }
 
     It 'merges status updates without deleting CopyJobInfos' {

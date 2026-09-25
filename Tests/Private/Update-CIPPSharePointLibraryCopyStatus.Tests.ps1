@@ -108,4 +108,45 @@ Describe 'Update-CIPPSharePointLibraryCopyStatus' {
         $Result.Status | Should -Be 'Completed'
         $script:ProgressCalls | Should -Be 0
     }
+
+    It 'omits DestFolderName from the snapshot and record when the copy targeted the library root' {
+        Mock Set-CIPPSharePointLibraryCopyOperation {}
+
+        $Result = Update-CIPPSharePointLibraryCopyStatus -TenantFilter 'contoso.com' -OperationId ([guid]::NewGuid().Guid)
+
+        $Result.PSObject.Properties.Name | Should -Not -Contain 'DestFolderName'
+        Should -Invoke Set-CIPPSharePointLibraryCopyOperation -Times 1 -Exactly -ParameterFilter {
+            -not $Entity.ContainsKey('DestFolderName')
+        }
+    }
+
+    It 'reports and re-persists DestFolderName when the copy targeted a folder' {
+        Mock Get-CIPPSharePointLibraryCopyOperation {
+            [PSCustomObject]@{
+                OperationId       = $OperationId
+                SourceSiteUrl     = 'https://contoso.sharepoint.com/personal/jane_contoso_com'
+                SourceSiteName    = 'Jane Doe'
+                SourceLibraryName = 'Documents'
+                DestSiteName      = 'Archive'
+                DestLibraryName   = 'Leavers'
+                DestFolderName    = 'Archive - jane@contoso.com'
+                StartedBy         = 'admin'
+                Status            = 'Processing'
+                JobHandleCount    = 1
+                Expiry            = ([DateTime]::UtcNow.AddDays(7)).ToString('o')
+                CopyJobInfos      = @([PSCustomObject]@{ JobId = 'job-1'; JobQueueUri = 'https://queue'; EncryptionKey = 'key' })
+                HandleStates      = @([PSCustomObject]@{ Status = 'Queued'; IsComplete = $false })
+                SanitizedSnapshot = $null
+            }
+        }
+        Mock Set-CIPPSharePointLibraryCopyOperation {}
+
+        $Result = Update-CIPPSharePointLibraryCopyStatus -TenantFilter 'contoso.com' -OperationId ([guid]::NewGuid().Guid)
+
+        $Result.DestFolderName | Should -Be 'Archive - jane@contoso.com'
+        Should -Invoke Set-CIPPSharePointLibraryCopyOperation -Times 1 -Exactly -ParameterFilter {
+            $Entity.DestFolderName -eq 'Archive - jane@contoso.com' -and
+            ($Entity.SanitizedSnapshot | ConvertFrom-Json).DestFolderName -eq 'Archive - jane@contoso.com'
+        }
+    }
 }
