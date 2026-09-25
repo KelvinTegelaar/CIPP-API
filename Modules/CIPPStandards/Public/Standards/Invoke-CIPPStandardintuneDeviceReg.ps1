@@ -90,6 +90,5 @@ function Invoke-CIPPStandardintuneDeviceReg {
             userDeviceQuota = $Settings.max
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceReg' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'intuneDeviceReg' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

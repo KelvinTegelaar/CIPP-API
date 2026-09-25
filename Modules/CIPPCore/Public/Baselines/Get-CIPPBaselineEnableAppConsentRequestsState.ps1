@@ -35,8 +35,12 @@ function Get-CIPPBaselineEnableAppConsentRequestsState {
     $Roles = @(@($Item.Variables.ReviewerRoles) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     if ($Roles.Count -eq 0) { $Roles = @('62e90394-69f5-4237-9190-012177145e10') }
 
+    # Missing roles are reported by name (the classic standard does the same), falling back to the id
+    $RoleLabels = @{ '62e90394-69f5-4237-9190-012177145e10' = 'Global Administrator' }
+    foreach ($Role in @($Item.Variables.ReviewerRoles)) { if ($Role.value) { $RoleLabels["$($Role.value)"] = $Role.label ?? $Role.value } }
+
     $ReviewerQueries = @(@($Policy.reviewers) | ForEach-Object { "$($_.query)" })
-    $MissingRoles = @($Roles | Where-Object { $Role = $_; -not ($ReviewerQueries | Where-Object { $_ -match $Role }) })
+    $MissingRoles = @($Roles | Where-Object { $Role = $_; -not ($ReviewerQueries | Where-Object { $_ -match [regex]::Escape($Role) }) } | ForEach-Object { $RoleLabels[$_] ?? $_ })
 
     $UserNames = @(@($Item.Variables.ReviewerUsers) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $MissingUsers = @()

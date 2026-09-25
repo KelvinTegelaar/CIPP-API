@@ -1,0 +1,1229 @@
+{
+  "sectionConfig": {
+    "alreadyAligned": true,
+    "rolloutStages": true
+  },
+  "tenant": {
+    "displayName": "contoso.onmicrosoft.com",
+    "tenantFilter": "contoso.onmicrosoft.com",
+    "rows": [
+      {
+        "standardName": "ConditionalAccessTemplate#live1",
+        "standardLabel": "Conditional Access Template - CA00 - Block legacy authentication",
+        "status": "Compliant",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "displayName": "CA00 - Block legacy authentication",
+          "state": "enabled",
+          "conditions": {
+            "clientAppTypes": [
+              "exchangeActiveSync",
+              "other"
+            ],
+            "users": {
+              "includeUsers": [
+                "All"
+              ],
+              "excludeUsers": [
+                "BreakGlass Admin"
+              ]
+            }
+          },
+          "grantControls": {
+            "builtInControls": [
+              "block"
+            ]
+          }
+        },
+        "currentValue": {
+          "displayName": "CA00 - Block legacy authentication",
+          "state": "enabled"
+        }
+      },
+      {
+        "standardName": "IntuneTemplate#live2",
+        "standardLabel": "Intune Template - Windows - Defender Antivirus",
+        "status": "Compliant",
+        "templateId": "tpl-devices",
+        "expectedValue": {
+          "displayName": "Windows - Defender Antivirus"
+        },
+        "currentValue": {
+          "displayName": "Windows - Defender Antivirus"
+        }
+      },
+      {
+        "standardName": "AuditLog",
+        "standardLabel": "Enable the Unified Audit Log",
+        "status": "Compliant",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "UnifiedAuditLogIngestionEnabled": true
+        },
+        "currentValue": {
+          "UnifiedAuditLogIngestionEnabled": true
+        }
+      },
+      {
+        "standardName": "EnableMailTips",
+        "standardLabel": "Enable all MailTips",
+        "status": "Compliant",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "MailTipsAllTipsEnabled": true,
+          "MailTipsExternalRecipientsTipsEnabled": true,
+          "MailTipsGroupMetricsEnabled": true,
+          "MailTipsLargeAudienceThreshold": 25
+        },
+        "currentValue": {
+          "MailTipsAllTipsEnabled": true,
+          "MailTipsExternalRecipientsTipsEnabled": true,
+          "MailTipsGroupMetricsEnabled": true,
+          "MailTipsLargeAudienceThreshold": 25
+        }
+      },
+      {
+        "standardName": "ConditionalAccessTemplate#abc123",
+        "standardLabel": "Conditional Access Template - CA01 - Require MFA for all users",
+        "status": "Drift",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "displayName": "CA01 - Require MFA for all users",
+          "state": "enabled",
+          "conditions": {
+            "locations": {
+              "includeLocations": [
+                "AllTrusted"
+              ]
+            },
+            "signInRiskLevels": [
+              "high",
+              "medium"
+            ],
+            "users": {
+              "includeUsers": [
+                "All"
+              ],
+              "excludeGroups": [
+                "CA Exclusions",
+                "Service Accounts",
+                "Break Glass",
+                "Directory Sync"
+              ],
+              "excludeRoles": [
+                "Directory Synchronization Accounts"
+              ],
+              "excludeGuestsOrExternalUsers": {
+                "guestOrExternalUserTypes": "b2bCollaborationGuest",
+                "externalTenants": {
+                  "membershipKind": "all"
+                }
+              }
+            }
+          },
+          "grantControls": {
+            "builtInControls": [
+              "mfa"
+            ]
+          }
+        },
+        "currentValue": null
+      },
+      {
+        "standardName": "IntuneTemplate#9f9f9f",
+        "standardLabel": "Intune Template - Windows - Baseline Security",
+        "status": "Drift",
+        "templateId": "tpl-devices",
+        "expectedValue": {
+          "displayName": "Windows - Baseline Security"
+        },
+        "currentValue": null
+      },
+      {
+        "standardName": "OutBoundSpamAlert",
+        "standardLabel": "Set Outbound Spam Alert e-mail",
+        "status": "Drift",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "NotifyOutboundSpam": true,
+          "NotifyOutboundSpamRecipients": [
+            "security@contoso.com"
+          ],
+          "BccSuspiciousOutboundMail": false
+        },
+        "currentValue": {
+          "Identity": "Default",
+          "NotifyOutboundSpam": false,
+          "NotifyOutboundSpamRecipients": [],
+          "BccSuspiciousOutboundMail": false
+        }
+      },
+      {
+        "standardName": "TeamsGlobalMeetingPolicy",
+        "standardLabel": "Define Global Meeting Policy for Teams",
+        "status": "Drift",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "AllowAnonymousUsersToJoinMeeting": false,
+          "AllowAnonymousUsersToStartMeeting": false,
+          "AutoAdmittedUsers": "EveryoneInCompanyExcludingGuests",
+          "AllowPSTNUsersToBypassLobby": false,
+          "MeetingChatEnabledType": "EnabledExceptAnonymous",
+          "DesignatedPresenterRoleMode": "OrganizerOnlyUserOverride",
+          "AllowExternalParticipantGiveRequestControl": false,
+          "AllowParticipantGiveRequestControl": false,
+          "AllowExternalNonTrustedMeetingChat": false,
+          "AllowCloudRecording": false
+        },
+        "currentValue": {
+          "AllowAnonymousUsersToJoinMeeting": true,
+          "AllowAnonymousUsersToStartMeeting": false,
+          "AutoAdmittedUsers": "Everyone",
+          "AllowPSTNUsersToBypassLobby": true,
+          "MeetingChatEnabledType": "Enabled",
+          "DesignatedPresenterRoleMode": "EveryoneUserOverride",
+          "AllowExternalParticipantGiveRequestControl": false,
+          "AllowParticipantGiveRequestControl": true,
+          "AllowExternalNonTrustedMeetingChat": true,
+          "AllowCloudRecording": true
+        }
+      },
+      {
+        "standardName": "DisableGuestDirectory",
+        "standardLabel": "Restrict guest user access to directory objects",
+        "status": "Denied - Remediate Pending",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "guestUserRoleId": "2af84b1e-32c8-42b7-82bc-daa82404023b"
+        },
+        "currentValue": {
+          "guestUserRoleId": "a0b1b346-4d3e-4e8b-98f8-753987be4970"
+        }
+      },
+      {
+        "standardName": "PWdisplayAppInformationRequiredState",
+        "standardLabel": "Enable Passwordless with Location information and Number Matching",
+        "status": "Partially Accepted",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "state": "enabled",
+          "featureSettings": {
+            "displayAppInformationRequiredState": {
+              "state": "enabled"
+            }
+          }
+        },
+        "currentValue": {
+          "state": "enabled",
+          "featureSettings": {
+            "displayAppInformationRequiredState": {
+              "state": "default"
+            }
+          }
+        }
+      },
+      {
+        "standardName": "PerUserMFA",
+        "standardLabel": "Enables per user MFA for all users.",
+        "status": "Accepted",
+        "templateId": "tpl-core",
+        "deviationReason": "Customer keeps per-user MFA until their migration completes in Q2."
+      },
+      {
+        "standardName": "AnonReportDisable",
+        "standardLabel": "Enable Usernames instead of pseudo anonymised names in reports",
+        "status": "Accepted",
+        "templateId": "tpl-core",
+        "deviationReason": null
+      },
+      {
+        "standardName": "DisableSelfServiceLicenses",
+        "standardLabel": "Disable Self Service Licensing",
+        "status": "No Data",
+        "templateId": "tpl-core",
+        "expectedValue": null,
+        "currentValue": null
+      },
+      {
+        "standardName": "EnableCustomerLockbox",
+        "standardLabel": "Enable Customer Lockbox",
+        "status": "No Data",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "CustomerLockBoxEnabled": true
+        },
+        "currentValue": null
+      },
+      {
+        "standardName": "DisableAppCreation",
+        "standardLabel": "Disable App creation by users",
+        "status": "No Data",
+        "templateId": "tpl-core",
+        "expectedValue": null,
+        "currentValue": null
+      },
+      {
+        "standardName": "ConditionalAccessTemplate#pend1",
+        "standardLabel": "Conditional Access Template - CA05 - Require MFA for admins",
+        "status": "No Data",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "displayName": "guid-ca-pend.CATemplate.json",
+          "state": "enabledForReportingButNotEnforced"
+        },
+        "currentValue": null
+      },
+      {
+        "standardName": "SecurityDefaults",
+        "standardLabel": "Enable Security Defaults",
+        "status": "Failed",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "isEnabled": true
+        },
+        "currentValue": null
+      },
+      {
+        "standardName": "ConditionalAccessTemplate#nolic",
+        "standardLabel": "Conditional Access Template - CA20 - Block high-risk users",
+        "status": "Skipped - No License",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "displayName": "guid-ca-risk.CATemplate.json"
+        },
+        "currentValue": null
+      },
+      {
+        "standardName": "LegacyRetiredSetting",
+        "standardLabel": "Legacy retired setting",
+        "status": "Skipped - Not applicable",
+        "templateId": "tpl-core",
+        "expectedValue": null,
+        "currentValue": null
+      },
+      {
+        "standardName": "sharingCapability",
+        "standardLabel": "Set Sharing Level for OneDrive and SharePoint",
+        "status": "Conflict",
+        "templateId": "tpl-core",
+        "expectedValue": {
+          "SharingCapability": 1
+        },
+        "currentValue": {
+          "SharingCapability": 2
+        }
+      }
+    ]
+  },
+  "stageStates": [
+    {
+      "tenantFilter": "contoso.onmicrosoft.com",
+      "tenantName": "Contoso",
+      "templateId": "tpl-core",
+      "templateName": "Core Security Baseline",
+      "currentStage": 1,
+      "totalStages": 3,
+      "stageName": "Foundations",
+      "enteredStageAt": 1790164800,
+      "nextStageName": "Hardening",
+      "estimatedAdvanceAt": 1791374400,
+      "manualAdvance": true,
+      "alignedPercentage": 67,
+      "nextStage": {
+        "name": "Hardening",
+        "logic": "or",
+        "conditions": [
+          {
+            "type": "time",
+            "days": 14,
+            "unit": "days"
+          },
+          {
+            "type": "manual"
+          }
+        ],
+        "standards": [
+          "IntuneTemplate#stage2a",
+          "IntuneTemplate#stage2b",
+          "SecurityDefaults",
+          "DisableGuestDirectory",
+          "EnableMailTips"
+        ]
+      }
+    },
+    {
+      "tenantFilter": "contoso.onmicrosoft.com",
+      "tenantName": "Contoso",
+      "templateId": "tpl-devices",
+      "templateName": "Device Baseline",
+      "currentStage": 2,
+      "totalStages": 2,
+      "stageName": "Rollout",
+      "enteredStageAt": 1789560000,
+      "nextStageName": null,
+      "estimatedAdvanceAt": null,
+      "manualAdvance": false,
+      "alignedPercentage": 50,
+      "nextStage": null
+    }
+  ],
+  "assignedTemplates": [
+    {
+      "GUID": "tpl-core",
+      "templateName": "Core Security Baseline",
+      "stages": [
+        {
+          "name": "Foundations",
+          "logic": "and",
+          "conditions": [],
+          "standards": [
+            "AuditLog",
+            "ConditionalAccessTemplate#abc123",
+            "ConditionalAccessTemplate#live1",
+            "ConditionalAccessTemplate#pend1",
+            "DisableAppCreation",
+            "DisableSelfServiceLicenses",
+            "EnableCustomerLockbox"
+          ],
+          "standardsConfig": [
+            {
+              "standard": "AuditLog",
+              "instance": "AuditLog",
+              "variables": {
+                "enabled": true
+              }
+            },
+            {
+              "standard": "ConditionalAccessTemplate",
+              "instance": "ConditionalAccessTemplate#pend1",
+              "variables": {
+                "caTemplate": {
+                  "label": "CA05 - Require MFA for admins",
+                  "value": "guid-ca-pend"
+                },
+                "state": {
+                  "label": "Report only",
+                  "value": "enabledForReportingButNotEnforced"
+                }
+              }
+            },
+            {
+              "standard": "DisableAppCreation",
+              "instance": "DisableAppCreation",
+              "variables": {
+                "allowAppCreation": false
+              }
+            },
+            {
+              "standard": "DisableSelfServiceLicenses",
+              "instance": "DisableSelfServiceLicenses",
+              "variables": {}
+            },
+            {
+              "standard": "EnableCustomerLockbox",
+              "instance": "EnableCustomerLockbox",
+              "variables": {
+                "enabled": true
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hardening",
+          "logic": "or",
+          "conditions": [
+            {
+              "type": "time",
+              "days": 14,
+              "unit": "days"
+            },
+            {
+              "type": "manual"
+            }
+          ],
+          "standards": [
+            "DisableGuestDirectory",
+            "EnableMailTips",
+            "IntuneTemplate#stage2a",
+            "IntuneTemplate#stage2b",
+            "SecurityDefaults"
+          ],
+          "standardsConfig": []
+        },
+        {
+          "name": "Lockdown",
+          "logic": "and",
+          "conditions": [
+            {
+              "type": "group",
+              "group": "grp-1",
+              "groupName": "Premium customers"
+            }
+          ],
+          "standards": [
+            "TeamsGlobalMeetingPolicy"
+          ],
+          "standardsConfig": []
+        }
+      ]
+    },
+    {
+      "GUID": "tpl-devices",
+      "templateName": "Device Baseline",
+      "stages": [
+        {
+          "name": "Pilot",
+          "logic": "and",
+          "conditions": [],
+          "standards": [
+            "IntuneTemplate#live2"
+          ],
+          "standardsConfig": []
+        },
+        {
+          "name": "Rollout",
+          "logic": "and",
+          "conditions": [
+            {
+              "type": "time",
+              "days": 1,
+              "unit": "weeks"
+            }
+          ],
+          "standards": [
+            "IntuneTemplate#9f9f9f"
+          ],
+          "standardsConfig": []
+        }
+      ]
+    }
+  ],
+  "simulatedTemplates": [
+    {
+      "GUID": "tpl-zero-trust",
+      "templateName": "Zero Trust",
+      "stages": [
+        {
+          "name": "Default",
+          "logic": "and",
+          "conditions": [],
+          "standards": [
+            "AuditLog",
+            "ConditionalAccessTemplate#sim1",
+            "DefaultSharingLink",
+            "IntuneTemplate#sim3",
+            "IntuneTemplatePackage#sim2"
+          ],
+          "standardsConfig": [
+            {
+              "standard": "AuditLog",
+              "instance": "AuditLog",
+              "variables": {
+                "enabled": true
+              }
+            },
+            {
+              "standard": "ConditionalAccessTemplate",
+              "instance": "ConditionalAccessTemplate#sim1",
+              "variables": {
+                "caTemplate": {
+                  "label": "CA10 - Require phishing-resistant MFA for admins",
+                  "value": "guid-ca-sim"
+                },
+                "state": "enabled"
+              }
+            },
+            {
+              "standard": "DefaultSharingLink",
+              "instance": "DefaultSharingLink",
+              "variables": {}
+            },
+            {
+              "standard": "IntuneTemplate",
+              "instance": "IntuneTemplate#sim3",
+              "variables": {
+                "intuneTemplate": {
+                  "label": "Windows - BitLocker",
+                  "value": "guid-intune-bitlocker"
+                }
+              }
+            },
+            {
+              "standard": "IntuneTemplatePackage",
+              "instance": "IntuneTemplatePackage#sim2",
+              "variables": {
+                "intuneTemplatePackage": {
+                  "label": "Windows Hardening (4 Templates)",
+                  "value": "Windows Hardening"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guests",
+          "logic": "and",
+          "conditions": [
+            {
+              "type": "time",
+              "days": 7,
+              "unit": "days"
+            }
+          ],
+          "standards": [
+            "sharingCapability",
+            "SPDirectSharing"
+          ],
+          "standardsConfig": [
+            {
+              "standard": "sharingCapability",
+              "instance": "sharingCapability",
+              "variables": {
+                "sharingCapability": 0
+              }
+            },
+            {
+              "standard": "SPDirectSharing",
+              "instance": "SPDirectSharing",
+              "variables": {}
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "resolvers": {
+    "caByGuid": {
+      "guid-ca-pend": {
+        "displayName": "CA05 - Require MFA for admins",
+        "state": "enabled",
+        "conditions": {
+          "users": {
+            "includeRoles": [
+              "Global Administrator",
+              "Security Administrator"
+            ],
+            "excludeUsers": [
+              "BreakGlass Admin"
+            ]
+          }
+        },
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        }
+      },
+      "guid-ca-sim": {
+        "displayName": "CA10 - Require phishing-resistant MFA for admins",
+        "state": "enabledForReportingButNotEnforced",
+        "conditions": {
+          "users": {
+            "includeRoles": [
+              "Global Administrator",
+              "Security Administrator",
+              "Exchange Administrator",
+              "SharePoint Administrator"
+            ],
+            "excludeUsers": [
+              "BreakGlass Admin"
+            ]
+          }
+        },
+        "grantControls": {
+          "authenticationStrength": {
+            "displayName": "Phishing-resistant MFA"
+          }
+        },
+        "sessionControls": {
+          "signInFrequency": {
+            "isEnabled": true,
+            "value": 4,
+            "type": "hours"
+          }
+        }
+      }
+    },
+    "intuneByGuid": {
+      "guid-intune-bitlocker": {
+        "displayName": "Windows - BitLocker"
+      }
+    }
+  },
+  "catalog": [
+    {
+      "name": "ConditionalAccessTemplate",
+      "label": "Conditional Access Template",
+      "helpText": "Manage conditional access policies for better security.",
+      "executiveText": "Deploys standardized conditional access policies that automatically enforce security requirements based on user location, device compliance, and risk factors.",
+      "impact": "High Impact",
+      "recommendedBy": [
+        "CIS",
+        "Microsoft",
+        "CIPP"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (5.2.2.1)",
+        "SMB1001 (2.5)"
+      ],
+      "expected": null,
+      "variables": {
+        "caTemplate": {
+          "type": "autoComplete",
+          "label": "Select Conditional Access Template"
+        },
+        "state": {
+          "type": "autoComplete",
+          "label": "What state should we deploy this template in?",
+          "options": [
+            {
+              "label": "Do not change state",
+              "value": "donotchange"
+            },
+            {
+              "label": "Report only",
+              "value": "enabledForReportingButNotEnforced"
+            },
+            {
+              "label": "Enabled",
+              "value": "enabled"
+            },
+            {
+              "label": "Disabled",
+              "value": "disabled"
+            }
+          ],
+          "default": "enabledForReportingButNotEnforced",
+          "recommended": "enabled"
+        }
+      }
+    },
+    {
+      "name": "IntuneTemplate",
+      "label": "Intune Template",
+      "executiveText": "Deploys standardized device management configurations across all corporate devices.",
+      "impact": "High Impact",
+      "recommendedBy": [
+        "CIPP"
+      ],
+      "tag": [
+        "SMB1001 (1.2)"
+      ],
+      "expected": {
+        "displayName": "%intuneTemplate%"
+      },
+      "variables": {
+        "intuneTemplate": {
+          "type": "autoComplete",
+          "label": "Select Intune Template"
+        }
+      }
+    },
+    {
+      "name": "IntuneTemplatePackage",
+      "label": "Intune Template Package",
+      "executiveText": "Deploys every Intune template tagged with a package in one step.",
+      "impact": "High Impact",
+      "recommendedBy": [
+        "CIPP"
+      ],
+      "tag": [
+        "HighImpact"
+      ],
+      "expected": null,
+      "variables": {
+        "intuneTemplatePackage": {
+          "type": "autoComplete",
+          "label": "Select a package of Intune Templates"
+        }
+      }
+    },
+    {
+      "name": "AuditLog",
+      "label": "Enable the Unified Audit Log",
+      "executiveText": "Turns on the audit log that records who did what across Microsoft 365, which every security investigation depends on.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIS",
+        "CIPP"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (3.1.1)",
+        "mip_search_auditlog"
+      ],
+      "expected": {
+        "UnifiedAuditLogIngestionEnabled": "%enabled%"
+      },
+      "variables": {
+        "enabled": {
+          "type": "switch",
+          "label": "Unified Audit Log ingestion enabled",
+          "default": true,
+          "recommended": true
+        }
+      }
+    },
+    {
+      "name": "EnableMailTips",
+      "label": "Enable all MailTips",
+      "executiveText": "Shows senders a warning before they email large groups or people outside the company, which cuts down misdirected mail.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIS",
+        "CIPP"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (6.5.2)",
+        "exo_mailtipsenabled"
+      ],
+      "expected": {
+        "MailTipsAllTipsEnabled": "%mailTipsEnabled%",
+        "MailTipsExternalRecipientsTipsEnabled": "%mailTipsEnabled%",
+        "MailTipsGroupMetricsEnabled": "%mailTipsEnabled%",
+        "MailTipsLargeAudienceThreshold": "%largeAudienceThreshold%"
+      },
+      "variables": {
+        "mailTipsEnabled": {
+          "type": "switch",
+          "label": "All MailTips enabled",
+          "default": true,
+          "recommended": true
+        },
+        "largeAudienceThreshold": {
+          "type": "number",
+          "label": "Number of recipients to trigger the large audience MailTip (Default is 25)",
+          "default": 25,
+          "recommended": 25
+        }
+      }
+    },
+    {
+      "name": "OutBoundSpamAlert",
+      "label": "Set Outbound Spam Alert e-mail",
+      "executiveText": "Sends an alert to a mailbox you choose whenever one of your accounts starts sending spam, an early sign of a broken-into account.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIS"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (2.1.6)",
+        "mdo_spam_notifications_only_for_admins"
+      ],
+      "expected": {
+        "NotifyOutboundSpam": "%NotifyOutboundSpam%",
+        "NotifyOutboundSpamRecipients": [
+          "%OutboundSpamContact%"
+        ],
+        "BccSuspiciousOutboundMail": "%BccSuspiciousOutboundMail%"
+      },
+      "variables": {
+        "NotifyOutboundSpam": {
+          "type": "switch",
+          "label": "Notify on outbound spam",
+          "default": true,
+          "recommended": true
+        },
+        "OutboundSpamContact": {
+          "type": "textField",
+          "label": "Outbound spam contact"
+        },
+        "BccSuspiciousOutboundMail": {
+          "type": "switch",
+          "label": "BCC suspicious outbound mail to a mailbox"
+        }
+      }
+    },
+    {
+      "name": "TeamsGlobalMeetingPolicy",
+      "label": "Define Global Meeting Policy for Teams",
+      "executiveText": "Establishes security-focused default settings for Teams meetings, controlling who can join meetings, present content, and participate in chats.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIS"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (8.5.1)",
+        "CIS M365 7.0.0 (8.5.2)"
+      ],
+      "expected": {
+        "AllowAnonymousUsersToJoinMeeting": "%AllowAnonymousUsersToJoinMeeting%",
+        "AllowAnonymousUsersToStartMeeting": "%AllowAnonymousUsersToStartMeeting%",
+        "AutoAdmittedUsers": "%AutoAdmittedUsers%",
+        "AllowPSTNUsersToBypassLobby": "%AllowPSTNUsersToBypassLobby%",
+        "MeetingChatEnabledType": "%MeetingChatEnabledType%",
+        "DesignatedPresenterRoleMode": "%DesignatedPresenterRoleMode%",
+        "AllowExternalParticipantGiveRequestControl": "%AllowExternalParticipantGiveRequestControl%",
+        "AllowParticipantGiveRequestControl": "%AllowParticipantGiveRequestControl%",
+        "AllowExternalNonTrustedMeetingChat": "%AllowExternalNonTrustedMeetingChat%",
+        "AllowCloudRecording": "%AllowCloudRecording%"
+      },
+      "variables": {
+        "DesignatedPresenterRoleMode": {
+          "label": "Default value of the `Who can present?`",
+          "options": [
+            {
+              "label": "Everyone",
+              "value": "EveryoneUserOverride"
+            },
+            {
+              "label": "People in my organization",
+              "value": "EveryoneInCompanyUserOverride"
+            },
+            {
+              "label": "Only organizer",
+              "value": "OrganizerOnlyUserOverride"
+            }
+          ]
+        },
+        "AllowAnonymousUsersToJoinMeeting": {
+          "label": "Allow anonymous users to join meeting"
+        },
+        "AllowAnonymousUsersToStartMeeting": {
+          "label": "Allow anonymous users to start meeting"
+        },
+        "AutoAdmittedUsers": {
+          "label": "Who can bypass the lobby?",
+          "options": [
+            {
+              "label": "Keep the tenant's current value",
+              "value": ""
+            },
+            {
+              "label": "Only organizers and co-organizers",
+              "value": "OrganizerOnly"
+            },
+            {
+              "label": "People in organization excluding guests",
+              "value": "EveryoneInCompanyExcludingGuests"
+            },
+            {
+              "label": "Everyone",
+              "value": "Everyone"
+            }
+          ]
+        },
+        "AllowPSTNUsersToBypassLobby": {
+          "label": "Allow dial-in users to bypass lobby"
+        },
+        "MeetingChatEnabledType": {
+          "label": "Meeting chat policy",
+          "options": [
+            {
+              "label": "On for everyone",
+              "value": "Enabled"
+            },
+            {
+              "label": "On for everyone but anonymous users",
+              "value": "EnabledExceptAnonymous"
+            },
+            {
+              "label": "Off for everyone",
+              "value": "Disabled"
+            }
+          ]
+        },
+        "AllowParticipantGiveRequestControl": {
+          "label": "Participants can give or request control"
+        },
+        "AllowExternalParticipantGiveRequestControl": {
+          "label": "External participants can give or request control"
+        },
+        "AllowExternalNonTrustedMeetingChat": {
+          "label": "External meeting chat",
+          "options": [
+            {
+              "label": "Keep the tenant's current value",
+              "value": ""
+            },
+            {
+              "label": "Off (CIS recommended)",
+              "value": false
+            },
+            {
+              "label": "On",
+              "value": true
+            }
+          ]
+        },
+        "AllowCloudRecording": {
+          "label": "Meeting cloud recording",
+          "options": [
+            {
+              "label": "Keep the tenant's current value",
+              "value": ""
+            },
+            {
+              "label": "Off (CIS recommended)",
+              "value": false
+            },
+            {
+              "label": "On",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "DisableGuestDirectory",
+      "label": "Restrict guest user access to directory objects",
+      "executiveText": "Stops guest accounts from browsing your staff directory, so an outside contact cannot map out who works for you.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIPP"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (5.1.6.2)",
+        "CISA (MS.AAD.5.1v1)"
+      ],
+      "expected": {
+        "guestUserRoleId": "%guestUserRoleId%"
+      },
+      "variables": {
+        "guestUserRoleId": {
+          "label": "Guest user access level",
+          "options": [
+            {
+              "label": "Restricted access (guests can only see their own profile)",
+              "value": "2af84b1e-32c8-42b7-82bc-daa82404023b"
+            },
+            {
+              "label": "Limited access (guests can see membership of non-hidden groups)",
+              "value": "10dae51f-b6af-4016-8d66-8c2a99b929b3"
+            },
+            {
+              "label": "Same access as member users",
+              "value": "a0b1b346-4d3e-4e8b-98f8-753987be4970"
+            }
+          ],
+          "default": "2af84b1e-32c8-42b7-82bc-daa82404023b",
+          "recommended": "2af84b1e-32c8-42b7-82bc-daa82404023b"
+        }
+      }
+    },
+    {
+      "name": "PWdisplayAppInformationRequiredState",
+      "label": "Enable Passwordless with Location information and Number Matching",
+      "helpText": "Enables the MS authenticator app to display information about the app that is requesting authentication.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIS"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (5.2.3.1)",
+        "EIDSCA.AM03"
+      ],
+      "expected": {
+        "state": "enabled",
+        "featureSettings": {
+          "displayAppInformationRequiredState": {
+            "state": "enabled"
+          }
+        }
+      },
+      "variables": {}
+    },
+    {
+      "name": "PerUserMFA",
+      "label": "Enables per user MFA for all users.",
+      "executiveText": "Requires every user to confirm their sign-in with a second factor.",
+      "impact": "High Impact",
+      "recommendedBy": [],
+      "tag": [
+        "CISA (MS.AAD.1.1v1)"
+      ],
+      "expected": {
+        "offenders": []
+      },
+      "variables": {}
+    },
+    {
+      "name": "AnonReportDisable",
+      "label": "Enable Usernames instead of pseudo anonymised names in reports",
+      "executiveText": "Shows real user names in usage reports so activity can be traced to a person.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIPP"
+      ],
+      "tag": [],
+      "expected": {
+        "displayConcealedNames": false
+      },
+      "variables": {}
+    },
+    {
+      "name": "DisableSelfServiceLicenses",
+      "label": "Disable Self Service Licensing",
+      "executiveText": "Stops staff from buying or trialling Microsoft licenses on their own, so every license is approved and paid for centrally.",
+      "impact": "Medium Impact",
+      "recommendedBy": [],
+      "tag": [],
+      "expected": null,
+      "variables": {
+        "Exclusions": {
+          "label": "Excluded product IDs, comma or semicolon separated (stay enabled)"
+        },
+        "DisableTrials": {
+          "label": "Also disable trial autoclaim",
+          "default": false
+        }
+      }
+    },
+    {
+      "name": "EnableCustomerLockbox",
+      "label": "Enable Customer Lockbox",
+      "executiveText": "Makes Microsoft ask for your approval before its engineers can look at your data during a support case.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIS"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (1.3.6)",
+        "CustomerLockBoxEnabled"
+      ],
+      "expected": {
+        "CustomerLockBoxEnabled": "%enabled%"
+      },
+      "variables": {
+        "enabled": {
+          "label": "Customer Lockbox enabled",
+          "default": true,
+          "recommended": true
+        }
+      }
+    },
+    {
+      "name": "DisableAppCreation",
+      "label": "Disable App creation by users",
+      "executiveText": "Only administrators can register new applications, which closes a common route for consent-phishing attacks.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIS",
+        "CIPP",
+        "SMB1001"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (5.1.2.2)",
+        "CISA (MS.AAD.4.1v1)"
+      ],
+      "expected": {
+        "allowedToCreateApps": "%allowAppCreation%"
+      },
+      "variables": {
+        "allowAppCreation": {
+          "label": "Allow users to create app registrations",
+          "default": false,
+          "recommended": false
+        }
+      }
+    },
+    {
+      "name": "SecurityDefaults",
+      "label": "Enable Security Defaults",
+      "executiveText": "Turns on Microsoft's baseline sign-in protections for tenants without Conditional Access.",
+      "impact": "High Impact",
+      "recommendedBy": [],
+      "tag": [
+        "CISA (MS.AAD.11.1v1)",
+        "SMB1001 (2.5)"
+      ],
+      "expected": {
+        "isEnabled": true
+      },
+      "variables": {}
+    },
+    {
+      "name": "sharingCapability",
+      "label": "Set Sharing Level for OneDrive and SharePoint",
+      "helpText": "Sets the default sharing level for OneDrive and SharePoint.",
+      "executiveText": "Defines the organization's default policy for sharing files and folders in SharePoint and OneDrive, balancing collaboration needs with security requirements.",
+      "impact": "High Impact",
+      "recommendedBy": [
+        "CIS",
+        "CIPP"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (7.2.3)",
+        "CIS M365 7.0.0 (7.2.4)"
+      ],
+      "expected": {
+        "SharingCapability": "%sharingCapability%"
+      },
+      "variables": {
+        "sharingCapability": {
+          "label": "Select Sharing Level",
+          "options": [
+            {
+              "label": "Users can share only with people in the organization. No external sharing is allowed.",
+              "value": 0
+            },
+            {
+              "label": "Users can share with new and existing guests. Guests must sign in or provide a verification code.",
+              "value": 1
+            },
+            {
+              "label": "Users can share with anyone by using links that do not require sign-in.",
+              "value": 2
+            },
+            {
+              "label": "Users can share with existing guests (those already in the directory of the organization).",
+              "value": 3
+            }
+          ],
+          "recommended": 1
+        }
+      }
+    },
+    {
+      "name": "DefaultSharingLink",
+      "label": "Set Default Sharing Link Settings",
+      "executiveText": "Configures SharePoint default sharing links to implement the principle of least privilege for document sharing.",
+      "impact": "Low Impact",
+      "recommendedBy": [
+        "CIS",
+        "CIPP"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (7.2.7)",
+        "CIS M365 7.0.0 (7.2.11)"
+      ],
+      "expected": {
+        "DefaultSharingLinkType": "%sharingLinkType%",
+        "DefaultLinkPermission": 1
+      },
+      "variables": {
+        "sharingLinkType": {
+          "label": "Default Sharing Link Type",
+          "options": [
+            {
+              "label": "Direct - Only the people the user specifies",
+              "value": 1
+            },
+            {
+              "label": "Internal - Only people in your organization",
+              "value": 2
+            }
+          ],
+          "default": 2
+        }
+      }
+    },
+    {
+      "name": "SPDirectSharing",
+      "label": "Default sharing to Direct users",
+      "executiveText": "New sharing links default to named people rather than the whole organisation.",
+      "impact": "Medium Impact",
+      "recommendedBy": [
+        "CIS"
+      ],
+      "tag": [
+        "CIS M365 7.0.0 (7.2.7)"
+      ],
+      "expected": {
+        "DefaultSharingLinkType": "Direct",
+        "SiteUrl": "https://%tenantname%.sharepoint.com"
+      },
+      "variables": {}
+    }
+  ]
+}

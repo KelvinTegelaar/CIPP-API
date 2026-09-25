@@ -8,9 +8,10 @@ function Invoke-CIPPSharePointTemplateDeploy {
     Each site has a siteType (sharePoint or teams). When overrideSiteType is set, the template
     siteType is used for every site; otherwise each site's own siteType applies. Teams sites
     are created via the Teams API so channels and Teams functionality stay intact, then
-    document libraries are added to the backing SharePoint site. SharePoint sites use the
-    plain site-creation path. Root-level and per-library permissions are applied by group
-    display name, optionally creating missing groups as security groups.
+    optional extra channels, document libraries, and Documents-root folders (siblings of
+    General) are added. SharePoint sites use the plain site-creation path (libraries only).
+    Root-level and per-library permissions are applied by group display name, optionally
+    creating missing groups as security groups.
 
     .PARAMETER TemplateData
     The deserialized template object (templateName, siteType, overrideSiteType, createMissingGroups, siteTemplates)
@@ -67,13 +68,20 @@ function Invoke-CIPPSharePointTemplateDeploy {
         if ($SiteType -notin @('sharePoint', 'teams')) { $SiteType = 'sharePoint' }
         $IsTeams = $SiteType -eq 'teams'
 
+        # Channels/folders only apply to Teams; missing arrays (old templates) count as empty.
+        # Avoid @($null) which is a one-element array and would invent a blank item step.
+        $Channels = if ($IsTeams -and $null -ne $SiteTemplate.channels) { @($SiteTemplate.channels) } else { @() }
+        $Folders = if ($IsTeams -and $null -ne $SiteTemplate.folders) { @($SiteTemplate.folders) } else { @() }
+        $Libraries = if ($null -ne $SiteTemplate.libraries) { @($SiteTemplate.libraries) } else { @() }
+
         # Step counter for this site: prerequisites, create, site permissions, then one step
-        # per library. Shown as 'Step x of y' in the live progress messages.
-        $TotalSteps = 3 + @($SiteTemplate.libraries).Count
+        # per channel / library / folder. Shown as 'Step x of y' in the live progress messages.
+        $TotalSteps = 3 + $Channels.Count + $Libraries.Count + $Folders.Count
         try {
             Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 1 of ${TotalSteps}: Checking prerequisites"
             # Skip if exists: leave pre-existing sites/teams completely untouched — no
-            # libraries or permission changes are applied to anything this run didn't create.
+            # channels, libraries, folders, or permission changes are applied to anything
+            # this run didn't create.
             if ($SkipIfExists) {
                 $AlreadyExists = $false
                 if ($IsTeams) {
@@ -100,10 +108,12 @@ function Invoke-CIPPSharePointTemplateDeploy {
             }
             # Create the container first: a full Team (Teams API) so all Teams functionality
             # stays intact, or a plain SharePoint site otherwise.
+            $GroupId = $null
             if ($IsTeams) {
                 Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 2 of ${TotalSteps}: Creating Team and waiting for its SharePoint site"
                 $Team = New-CIPPTeam -DisplayName $SiteTemplate.displayName -Description ($SiteTemplate.description ?? '') -Owner $SiteOwner -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                 $SiteUrl = $Team.SiteUrl
+                $GroupId = $Team.GroupId
                 $Results.Add("[$TenantFilter] Created Team '$($SiteTemplate.displayName)' with site $SiteUrl")
                 $RawLanguage = [string](($SiteTemplate.language.value ?? $SiteTemplate.language))
                 if ($RawLanguage -and $RawLanguage -ne 'default') {
@@ -145,7 +155,7 @@ function Invoke-CIPPSharePointTemplateDeploy {
                 $Results.Add("[$TenantFilter] Created site '$($SiteTemplate.displayName)' at $SiteUrl")
             }
 
-            # Track template-defined sub-steps (site perms, libraries, library perms). A failure
+            # Track template-defined sub-steps (site perms, channels, libraries, folders). A failure
             # here must mark this site step failed — do not report succeeded after swallowing errors.
             $StepFailures = [System.Collections.Generic.List[string]]::new()
 
@@ -173,12 +183,38 @@ function Invoke-CIPPSharePointTemplateDeploy {
                 }
             }
 
-            # Then the document libraries via the SharePoint module.
-            $LibraryStep = 3
-            foreach ($Library in $SiteTemplate.libraries) {
-                $LibraryStep++
+            # Item steps start after prerequisites + create + site permissions.
+            $ItemStep = 3
+
+            # Teams: channels first (extra public/private channels; Site Owner owns private ones).
+            foreach ($Channel in $Channels) {
+                $ItemStep++
+                $ChannelName = [string]($Channel.name ?? '')
+                $RawMembership = [string](($Channel.membershipType.value ?? $Channel.membershipType))
+                $MembershipType = switch ($RawMembership) {
+                    'private' { 'private' }
+                    'shared' { 'shared' }
+                    default { 'standard' }
+                }
+                $RawLayout = [string](($Channel.layoutType.value ?? $Channel.layoutType))
+                $LayoutType = if ($RawLayout -eq 'chat') { 'chat' } else { 'post' }
                 try {
-                    Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step $LibraryStep of ${TotalSteps}: Creating library '$($Library.name)'"
+                    Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step $ItemStep of ${TotalSteps}: Creating channel '$ChannelName'"
+                    $NewChannel = New-CIPPTeamChannel -GroupId $GroupId -ChannelName $ChannelName -MembershipType $MembershipType -LayoutType $LayoutType -Owner $SiteOwner -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): channel '$ChannelName' ($MembershipType, $LayoutType) $($NewChannel.Created ? 'created' : 'already existed')")
+                } catch {
+                    $FailMsg = "Channel '$ChannelName' failed: $($_.Exception.Message)"
+                    $StepFailures.Add($FailMsg)
+                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): $FailMsg")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
+                }
+            }
+
+            # Document libraries via the SharePoint module.
+            foreach ($Library in $Libraries) {
+                $ItemStep++
+                try {
+                    Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step $ItemStep of ${TotalSteps}: Creating library '$($Library.name)'"
                     $NewLibrary = New-CIPPSharePointLibrary -SiteUrl $SiteUrl -LibraryName $Library.name -Description ($Library.description ?? '') -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                     $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): library '$($Library.name)' $($NewLibrary.Created ? 'created' : 'already existed')")
 
@@ -202,6 +238,22 @@ function Invoke-CIPPSharePointTemplateDeploy {
                     }
                 } catch {
                     $FailMsg = "Library '$($Library.name)' failed: $($_.Exception.Message)"
+                    $StepFailures.Add($FailMsg)
+                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): $FailMsg")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
+                }
+            }
+
+            # Teams: folders at Documents root (siblings of General).
+            foreach ($Folder in $Folders) {
+                $ItemStep++
+                $FolderName = [string]($Folder.name ?? '')
+                try {
+                    Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step $ItemStep of ${TotalSteps}: Creating folder '$FolderName'"
+                    $NewFolder = New-CIPPSharePointFolder -GroupId $GroupId -FolderName $FolderName -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): folder '$FolderName' $($NewFolder.Created ? 'created' : 'already existed')")
+                } catch {
+                    $FailMsg = "Folder '$FolderName' failed: $($_.Exception.Message)"
                     $StepFailures.Add($FailMsg)
                     $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): $FailMsg")
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error

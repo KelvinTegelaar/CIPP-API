@@ -25,9 +25,9 @@ function Get-CIPPAlertNoCAConfig {
                     Message = 'Conditional Access is available, but no policies could be found.'
                     Tenant  = $TenantFilter
                 }
-
-                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
+
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

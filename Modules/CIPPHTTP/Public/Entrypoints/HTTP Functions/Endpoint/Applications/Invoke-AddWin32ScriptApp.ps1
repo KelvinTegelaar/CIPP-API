@@ -13,6 +13,11 @@ function Invoke-AddWin32ScriptApp {
 
     $Win32ScriptApp = $Request.Body
     $AssignTo = $Win32ScriptApp.AssignTo -eq 'customGroup' ? $Win32ScriptApp.CustomGroup : $Win32ScriptApp.AssignTo
+    $ExcludeGroup = $Win32ScriptApp.excludeGroup
+    # Group ids from the deploy drawer's single-tenant picker. CustomGroup/excludeGroup still
+    # carry the display names for logging and as a fallback if the ids are ever dropped.
+    $GroupIds = @($Request.Body.GroupIds | Where-Object { $_ })
+    $ExcludeGroupIds = @($Request.Body.ExcludeGroupIds | Where-Object { $_ })
 
     # Validate required fields
     if ([string]::IsNullOrEmpty($Win32ScriptApp.ApplicationName) -and [string]::IsNullOrEmpty($Win32ScriptApp.applicationName)) {
@@ -41,6 +46,9 @@ function Invoke-AddWin32ScriptApp {
                 tenant                = $Tenant
                 Applicationname       = $AppName
                 assignTo              = $AssignTo
+                excludeGroup          = $ExcludeGroup
+                GroupIds              = $GroupIds
+                ExcludeGroupIds       = $ExcludeGroupIds
                 InstallationIntent    = $Win32ScriptApp.InstallationIntent
                 type                  = 'Win32ScriptApp'
                 description           = $Win32ScriptApp.description

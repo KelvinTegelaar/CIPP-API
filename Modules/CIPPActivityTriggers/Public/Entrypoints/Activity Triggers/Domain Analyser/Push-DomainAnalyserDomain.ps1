@@ -226,7 +226,7 @@ function Push-DomainAnalyserDomain {
         if ($Domain -match 'onmicrosoft.com' -and $Domain -notmatch 'mail.onmicrosoft.com') {
             $DKIMSelector1Value = "selector1-$($Domain -replace '\.', '-' )"
             $DKIMSelector2Value = "selector2-$($Domain -replace '\.', '-' )"
-            $DkimParams.Add('Selectors', @("$DKIMSelector1Value", "$DKIMSelector2Value"))
+            $DkimParams.Selectors = @("$DKIMSelector1Value", "$DKIMSelector2Value")
         }
 
         $DkimRecord = Read-DkimRecord @DkimParams -ErrorAction Stop

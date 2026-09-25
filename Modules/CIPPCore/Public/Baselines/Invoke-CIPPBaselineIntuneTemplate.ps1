@@ -36,12 +36,20 @@ function Invoke-CIPPBaselineIntuneTemplate {
     if ($Synced.RawJSON) { $RawJson = $Synced.RawJSON }
     $RawJson = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $RawJson -EscapeForJson
 
+    # Resolve %variables% in the identity columns the same way. Column-named types deploy under this
+    # name and are looked up by it, so a raw token creates a duplicate on every deploy. Plain text,
+    # not JSON-escaped, since these fill bare string slots. Names without a variable are untouched.
+    $DisplayName = "$($Template.Displayname)"
+    if ($DisplayName -match '%') { $DisplayName = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $DisplayName }
+    $Description = "$($Template.Description)"
+    if ($Description -match '%') { $Description = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Description }
+
     # customGroup overrides AssignTo, matching the old engine's behavior.
     $AssignTo = if ("$($Remediate.customGroup)") { "$($Remediate.customGroup)" } else { "$($Remediate.assignTo)" }
     $PolicyParams = @{
         TemplateType = $TemplateType
-        Description  = "$($Template.Description)"
-        DisplayName  = "$($Template.Displayname)"
+        Description  = $Description
+        DisplayName  = $DisplayName
         RawJSON      = $RawJson
         AssignTo     = $AssignTo
         ExcludeGroup = "$($Remediate.excludeGroup)"

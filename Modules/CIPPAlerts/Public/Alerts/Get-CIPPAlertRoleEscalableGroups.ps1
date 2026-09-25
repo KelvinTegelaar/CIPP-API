@@ -117,11 +117,10 @@ function Get-CIPPAlertRoleEscalableGroups {
             }
         }
 
-        if ($findings.Count -gt 0) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data @($findings)
-        } else {
+        if ($findings.Count -eq 0) {
             Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Role-escalable groups alert: no role-escalation group paths found" -sev 'Information'
         }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data @($findings)
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Role-escalable groups alert failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage

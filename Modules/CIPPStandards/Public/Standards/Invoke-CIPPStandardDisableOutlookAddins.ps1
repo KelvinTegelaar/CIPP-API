@@ -111,6 +111,5 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableOutlookAddins' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

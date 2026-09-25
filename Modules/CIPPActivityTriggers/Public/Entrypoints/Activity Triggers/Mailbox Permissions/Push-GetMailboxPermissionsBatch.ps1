@@ -41,7 +41,7 @@ function Push-GetMailboxPermissionsBatch {
         Write-Information "Built $($ExoBulkRequests.Count) bulk requests for batch $BatchNumber"
 
         # Execute bulk request for this batch with ReturnWithCommand to separate permission types
-        $MailboxPermissions = New-ExoBulkRequest -cmdletArray @($ExoBulkRequests) -tenantid $TenantFilter -ReturnWithCommand $true
+        $MailboxPermissions = New-ExoBulkRequest -cmdletArray @($ExoBulkRequests) -tenantid $TenantFilter -ReturnWithCommand $true -MaxConcurrency 5
 
         Write-Information "Bulk request completed. Result type: $($MailboxPermissions.GetType().Name)"
         if ($MailboxPermissions -is [hashtable]) {

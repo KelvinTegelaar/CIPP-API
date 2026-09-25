@@ -1,0 +1,93 @@
+{
+  "registerDeviceAction": "urn:user:registerdevice",
+  "registerSecurityInfoAction": "urn:user:registersecurityinfo",
+  "windowsAzureAdResource": "00000002-0000-0000-c000-000000000000",
+  "legacyMfaTrustedIpsLocation": "00000000-0000-0000-0000-000000000000",
+  "directorySyncRoleTemplateId": "d29b2b05-8046-44ba-8758-1e26182fcf32",
+  "equivalentStrengthGroups": {
+    "compliantDevice": "DeviceTrust",
+    "domainJoinedDevice": "DeviceTrust",
+    "approvedApplication": "AppProtection",
+    "compliantApplication": "AppProtection"
+  },
+  "grantControlLabels": {
+    "mfa": "multifactor authentication",
+    "compliantDevice": "a compliant device",
+    "domainJoinedDevice": "a Microsoft Entra hybrid joined device",
+    "approvedApplication": "an approved client app",
+    "compliantApplication": "an app protection policy",
+    "passwordChange": "a password change"
+  },
+  "guestTypeLabels": {
+    "internalGuest": "Internal guest users",
+    "b2bCollaborationGuest": "Collaboration guests",
+    "b2bCollaborationMember": "Collaboration members",
+    "b2bDirectConnectUser": "Direct connect users",
+    "otherExternalUser": "Other external users",
+    "serviceProvider": "Service provider users"
+  },
+  "guestTypeOrder": ["internalGuest", "b2bCollaborationGuest", "b2bCollaborationMember", "b2bDirectConnectUser", "otherExternalUser", "serviceProvider"],
+  "managedPolicyPatterns": [
+    { "keyword": "block legacy authentication" },
+    { "keyword": "block device code flow" },
+    { "keyword": "multifactor authentication for admins" },
+    { "keyword": "multifactor authentication for all users" },
+    { "keyword": "multifactor authentication for per-user" },
+    { "keyword": "reauthentication for risky sign-ins" },
+    { "keyword": "block access for high-risk users" },
+    { "keyword": "block all high risk agents" }
+  ],
+  "phishingResistant": {
+    "builtInStrengthId": "00000000-0000-0000-0000-000000000004",
+    "methodTokens": ["fido2", "windowshelloforbusiness", "x509certificatemultifactor", "x509certificatesinglefactor", "deviceboundpasskey", "hardwareoath"],
+    "nameRegex": "phishing.?resistant|fido2|windows hello|certificate.?based",
+    "policyNameRegex": "phishing.?resistant"
+  },
+  "servicePlanIds": {
+    "entraIdP1": "41781fb2-bc02-4b7c-bd55-b576c07bb09d",
+    "entraIdP2": "eec0eb4f-6444-4f95-aba0-50c24d67f998",
+    "intunePlan1": "c1ec4a95-1f05-45b3-a911-aa3fa01094f5",
+    "workloadIdPremiumP1": "84c289f0-efcb-486f-8581-07f44fc9efad",
+    "workloadIdPremiumP2": "7dc0e92d-bf15-401d-907e-0884efe7c760"
+  },
+  "guidanceAppIds": {
+    "exchangeOnline": "00000002-0000-0ff1-ce00-000000000000",
+    "sharePointOnline": "00000003-0000-0ff1-ce00-000000000000",
+    "teamsService": "cc15fd57-2c6c-4117-a88c-83b1d56b4bbe",
+    "office365Group": "Office365",
+    "azureVirtualDesktop": "9cdead84-a844-4324-93f2-b2e6bb768d07",
+    "windows365": "0af06dc6-e4b5-4f28-818e-e78e62d137a5",
+    "defenderAtpXplat": "a0e84e36-b067-4d5c-ab4a-3db38e598ae2",
+    "defenderTvm": "e724aa31-0f56-4018-b8be-f8cb82ca1196",
+    "windowsCloudLogin": "372140e0-b3b7-4226-8ef9-d57986796201"
+  },
+  "tokenProtectionDeviceFilterPatterns": [
+    { "pattern": "cloudpc", "label": "Cloud PCs" },
+    { "pattern": "azurevirtualdesktop", "label": "Azure Virtual Desktop" },
+    { "pattern": "powerapautomate", "label": "Power Automate hosted machines" },
+    { "pattern": "autopilot", "label": "Autopilot self-deploying devices" },
+    { "pattern": "securevm", "label": "Azure virtual machines" }
+  ],
+  "templates": {
+    "mfaAllUsers": "Require multifactor authentication for all users",
+    "mfaAllAdmins": "Require multifactor authentication for administrators",
+    "mfaGuests": "Require multifactor authentication for guest access",
+    "mfaB2BGuest": "Require multifactor authentication for guest access",
+    "mfaMixedGuests": "Require multifactor authentication for guest access",
+    "phishingResistantAdmins": "Require phishing-resistant multifactor authentication for administrators",
+    "registerSecurityInfo": "Secure security information registration",
+    "signInRisk": "Require multifactor authentication for medium and high sign-in risk",
+    "userRisk": "Require a secure password change for high user risk",
+    "blockCountries": "Block sign-ins from countries outside the allowed list",
+    "blockLegacyAuth": "Block legacy authentication",
+    "blockUnsupportedPlatforms": "Block unsupported device platforms",
+    "blockDeviceCode": "Block device code flow sign-ins",
+    "blockHighRiskUsers": "Block high-risk users",
+    "blockHighRiskSignIns": "Block high-risk sign-ins",
+    "windowsAzureAdBaselineScopes": "Require multifactor authentication for basic directory access",
+    "riskRemediationHigh": "Require risk remediation for high user risk",
+    "riskRemediationEam": "Require risk remediation for external authentication method users",
+    "appProtectionMobile": "Require an approved client app or app protection policy on mobile",
+    "requireCompliantDevice": "Require a compliant or Microsoft Entra hybrid joined device"
+  }
+}

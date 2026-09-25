@@ -5,9 +5,9 @@ function Update-CippSamPermissions {
     .DESCRIPTION
         Writes the full applied permission set - the SAM manifest base PLUS any admin-configured extra
         permissions - into the AppPermissions table, so the table always reflects everything the
-        CIPP-SAM app is expected to have. Get-CippSamPermissions diffs the manifest against this table
-        to decide when a Permissions repair is needed, so persisting the manifest here is what lets that
-        check clear after a repair.
+        CIPP-SAM app is expected to have. The grant flow below reads this table, so persisting the
+        manifest here is what lets the permission check clear after a repair - that check compares the
+        effective set against the grants on the service principal, not against this table.
 
         It deliberately does NOT write the partner CIPP-SAM app registration's requiredResourceAccess.
         Permissions reach the CIPP-SAM service principal(s) - partner and clients - through the grant

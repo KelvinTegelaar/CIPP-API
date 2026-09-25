@@ -130,7 +130,6 @@ function Invoke-CIPPStandardRetentionPolicyTag {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'RetentionPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
 
         $CurrentValue = @{
             retentionEnabled     = $CurrentState.RetentionEnabled

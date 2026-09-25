@@ -118,6 +118,5 @@ function Invoke-CIPPStandardMailContacts {
             contactEmail                = if ([string]::IsNullOrWhiteSpace($Contacts.GeneralContact)) { $CurrentValue.contactEmail } else { $Contacts.GeneralContact }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
-        Add-CIPPBPAField -FieldName 'MailContacts' -FieldValue $CurrentInfo -StoreAs json -Tenant $tenant
     }
 }

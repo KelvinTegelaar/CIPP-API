@@ -18,8 +18,8 @@ function Invoke-ExecSAMAppPermissions {
 
                 # Persist the full applied set = manifest base ∪ submitted extras, so the AppPermissions
                 # table always reflects everything the CIPP-SAM app should have (the manifest is always
-                # applied and cannot be removed). Get-CippSamPermissions diffs the manifest against this
-                # table to decide when a Permissions repair is needed.
+                # applied and cannot be removed). The grant flow reads this table when applying
+                # permissions to the service principal, which is what the permission check diffs against.
                 $Applied = @{}
                 $AppIds = @(@($ManifestPermissions.PSObject.Properties.Name) + @($Submitted.PSObject.Properties.Name)) | Where-Object { $_ } | Sort-Object -Unique
                 foreach ($AppId in $AppIds) {

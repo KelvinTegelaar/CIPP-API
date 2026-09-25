@@ -13,11 +13,14 @@ function Get-CIPPAlertAppCertificateExpiry {
 
     $Now = Get-Date
     $AlertData = @()
+    # A cache read that fails is 'could not check', not 'nothing expiring': skip the reconcile so open items stay open.
+    $ReadFailed = $false
 
     try {
         $appList = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Apps'
     } catch {
         $appList = @()
+        $ReadFailed = $true
     }
 
     $AppAlertData = foreach ($App in $appList) {
@@ -40,6 +43,7 @@ function Get-CIPPAlertAppCertificateExpiry {
         $servicePrincipals = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals'
     } catch {
         $servicePrincipals = @()
+        $ReadFailed = $true
     }
 
     $SamlAlertData = foreach ($ServicePrincipal in $servicePrincipals) {
@@ -63,7 +67,9 @@ function Get-CIPPAlertAppCertificateExpiry {
         @($AppAlertData)
         @($SamlAlertData)
     ) | Where-Object { $null -ne $_ }
-    if ($AlertData) {
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+    if ($ReadFailed) {
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message 'App certificate expiry alert skipped: the application or service principal cache could not be read' -sev Info
+        return
     }
+    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 }

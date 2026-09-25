@@ -26,7 +26,7 @@ function Invoke-ListTestResultsTenants {
         $TenantFilterRaw = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
         # One or more test IDs (the result row's RowKey), e.g. 'CustomScript-<guid>'.
         $TestIdRaw = $Request.Query.testId ?? $Request.Body.testId
-        # Narrow the scan to these statuses: Passed, Failed, Investigate, Skipped, Informational.
+        # Narrow the scan to these statuses: Passed, Failed, Investigate, Skipped, Informational and Unlicensed.
         $StatusRaw = $Request.Query.status ?? $Request.Body.status
         # Restrict to a single test type: Identity, Devices or Custom.
         $TestType = $Request.Query.testType ?? $Request.Body.testType

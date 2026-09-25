@@ -60,10 +60,6 @@ function Invoke-CIPPStandardsharingCapability {
         return
     }
 
-    if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'sharingCapability' -FieldValue $CurrentInfo.sharingCapability -StoreAs string -Tenant $Tenant
-    }
-
     # Get level value using null-coalescing operator
     $level = $Settings.Level.value ?? $Settings.Level
 

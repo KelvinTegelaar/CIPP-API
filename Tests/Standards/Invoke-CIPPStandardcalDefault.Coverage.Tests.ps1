@@ -15,7 +15,6 @@ BeforeAll {
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset) }
     function New-CIPPDbRequest { param($TenantFilter, $Type, [string[]]$Fields) }
     function Set-CIPPStandardsCompareField { param($FieldName, $CurrentValue, $ExpectedValue, $TenantFilter) }
-    function Add-CIPPBPAField { param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Write-StandardsAlert { param($message, $object, $tenant, $standardName, $standardId) }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams) }
     function Set-CIPPDBCacheMailboxes { param($TenantFilter) }
@@ -37,7 +36,6 @@ Describe 'Invoke-CIPPStandardcalDefault coverage guard' {
         Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
         Mock -CommandName Write-LogMessage -MockWith { $script:Messages.Add([PSCustomObject]@{ Message = $message; Sev = $sev }) }
         Mock -CommandName Set-CIPPStandardsCompareField -MockWith { $script:Compared = $CurrentValue }
-        Mock -CommandName Add-CIPPBPAField -MockWith { }
         Mock -CommandName Write-StandardsAlert -MockWith { }
         # Nothing here may reach Exchange: every case below is a no-drift case.
         Mock -CommandName New-ExoRequest -MockWith { throw 'New-ExoRequest must not be called' }

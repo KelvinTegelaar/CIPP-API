@@ -240,7 +240,4 @@ function Invoke-CIPPStandardAutopatchGroup {
         }
     }
 
-    if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'AutopatchGroup' -FieldValue ([bool]$ExistingGroup) -StoreAs bool -Tenant $Tenant
-    }
 }

@@ -98,7 +98,6 @@ function Invoke-CIPPStandardSPEmailAttestation {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SPEmailAttestation' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
             EmailAttestationReAuthDays = $CurrentState.EmailAttestationReAuthDays

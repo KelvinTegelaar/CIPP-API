@@ -461,7 +461,5 @@ function Invoke-CIPPStandardAuthenticationMethods {
             $ExpectedValue[$Result.Method.Key] = $Result.ExpectedConfig
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.AuthenticationMethods' -CurrentValue ([PSCustomObject]$CurrentValue) -ExpectedValue ([PSCustomObject]$ExpectedValue) -TenantFilter $Tenant
-        $AllCompliant = -not ($ComplianceResults | Where-Object { -not $_.IsCompliant })
-        Add-CIPPBPAField -FieldName 'AuthenticationMethods' -FieldValue ([bool]$AllCompliant) -StoreAs bool -Tenant $Tenant
     }
 }

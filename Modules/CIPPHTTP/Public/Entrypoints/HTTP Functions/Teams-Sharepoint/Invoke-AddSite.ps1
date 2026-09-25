@@ -16,7 +16,19 @@ function Invoke-AddSite {
     $SharePointObj = $Request.Body
 
     try {
-        $Result = New-CIPPSharepointSite -Headers $Headers -SiteName $SharePointObj.siteName -SiteDescription $SharePointObj.siteDescription -SiteOwner $SharePointObj.siteOwner.value -TemplateName $SharePointObj.templateName.value -SiteDesign $SharePointObj.siteDesign.value -SensitivityLabel $SharePointObj.sensitivityLabel -TenantFilter $TenantFilter
+        $SiteParams = @{
+            Headers          = $Headers
+            SiteName         = $SharePointObj.siteName
+            SiteDescription  = $SharePointObj.siteDescription
+            SiteOwner        = $SharePointObj.siteOwner.value
+            TemplateName     = $SharePointObj.templateName.value
+            SensitivityLabel = $SharePointObj.sensitivityLabel
+            IsPublic         = ($SharePointObj.isPublic -eq $true)
+            TenantFilter     = $TenantFilter
+        }
+        # Optional. Only applies to the Team and Communication templates; omitted for TeamGroup.
+        if ($SharePointObj.siteDesign.value) { $SiteParams.SiteDesign = $SharePointObj.siteDesign.value }
+        $Result = New-CIPPSharepointSite @SiteParams
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $StatusCode = [HttpStatusCode]::InternalServerError

@@ -34,7 +34,7 @@ Function Invoke-AddExConnectorTemplate {
             $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
             $_ | Select-Object -Property $NonEmptyProperties
         }
-        $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, * | ConvertTo-Json -Depth 10)
+        $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, * -ExcludeProperty Name | ConvertTo-Json -Depth 10)
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{

@@ -293,6 +293,11 @@ namespace CIPP
         /// Covers graph.microsoft.com and any *.microsoft.com graph surface.
         /// Cap: 30 connections.
         /// </summary>
+        // Per-lane connection cap. Override any lane with env "<Lane>MaxConnectionsPerServer"
+        // (e.g. ExoMaxConnectionsPerServer) for load testing; otherwise the tuned default applies.
+        private static int MaxConn(string envVar, int fallback)
+            => int.TryParse(Environment.GetEnvironmentVariable(envVar), out var v) && v > 0 ? v : fallback;
+
         private static HttpClient BuildGraphClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
@@ -301,14 +306,14 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,   // Graph supports HTTP/2; streams share connections
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 30,
+            MaxConnectionsPerServer        = MaxConn("GraphMaxConnectionsPerServer", 30),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
         /// EXO client — Exchange Online and Outlook endpoints.
         /// Covers outlook.office365.com, outlook.office.com, outlook.com,
         /// and *.protection.outlook.com (mail protection / transport).
-        /// Cap: 20 connections.
+        /// Cap: 30 connections (override with env <c>ExoMaxConnectionsPerServer</c>).
         /// HTTP/2 enabled — EXO REST APIs support it.
         /// </summary>
         private static HttpClient BuildExoClient() => new HttpClient(new SocketsHttpHandler
@@ -319,7 +324,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 20,
+            MaxConnectionsPerServer        = MaxConn("ExoMaxConnectionsPerServer", 30),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -337,7 +342,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 5,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("LoginMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -356,7 +361,7 @@ namespace CIPP
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = false,  // 3xx IS the expected response here
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("ComplianceMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -373,7 +378,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("PartnerCenterMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -389,7 +394,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("AdminPlaneMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -410,7 +415,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("SpoMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -428,7 +433,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 5,
-            MaxConnectionsPerServer        = 2,
+            MaxConnectionsPerServer        = MaxConn("DnsMaxConnectionsPerServer", 2),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -447,7 +452,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("DefaultMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         // -----------------------------------------------------------------

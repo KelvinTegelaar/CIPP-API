@@ -18,11 +18,13 @@ BeforeAll {
     function New-CIPPAlertTemplate { param($format, $data, $ActionResults, $CIPPURL, $AlertComment, $CustomSubject, $Tenant, $AuditLogLink) }
     function Send-CIPPAlert { param($Type, $Title, $HTMLContent, $JSONContent, $TenantFilter, $APIName, $SchemaSource, $InvokingCommand, $AffectedUser) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
+    function ConvertTo-CIPPODataFilterValue { param([string]$Value, $Type) $Value -replace "'", "''" }
 
     function New-WebhookData {
-        param([string]$Id = 'rec-1')
+        param([string]$Id = 'rec-1', [string]$CreationTime)
         [pscustomobject]@{
             Id                = $Id
+            CreationTime      = $CreationTime
             CIPPAction        = $null   # no actions: keeps these tests on the dispatch path only
             CIPPLocationInfo  = $null
             AuditRecord       = '{}'
@@ -35,6 +37,14 @@ BeforeAll {
     }
 
     . $FunctionPath
+
+    # Dispatching helper for the event-identity tests: an action is needed so Send-CIPPAlert fires.
+    function Invoke-Record {
+        param([string]$Id, [string]$CreationTime)
+        $Data = New-WebhookData -Id $Id -CreationTime $CreationTime
+        $Data.CIPPAction = (ConvertTo-Json -Compress -InputObject @(@{ label = 'Send Webhook'; value = 'generateWebhook' }))
+        Invoke-CippWebhookProcessing -TenantFilter 'contoso.com' -Data $Data -CIPPURL 'https://cipp.invalid'
+    }
 }
 
 Describe 'Invoke-CippWebhookProcessing' {
@@ -182,6 +192,94 @@ Describe 'Invoke-CippWebhookProcessing' {
             Invoke-CippWebhookProcessing -TenantFilter 'contoso.com' -Data $Data -CIPPURL 'https://cipp.invalid'
 
             ($script:Sequence -join ',') | Should -Be 'claim,send,store'
+        }
+    }
+
+    Context 'event identity' {
+        # The record Id is not unique over time - Entra sign-in records reuse the same Id for the
+        # same user weeks apart - so the claim has to identify the EVENT. The key stays the Id, and
+        # the event time stored alongside it decides whether a conflict is a real duplicate.
+
+        BeforeEach {
+            $script:Rows = @{}
+            $script:ClaimTimestamp = [datetimeoffset]::UtcNow
+            Mock -CommandName Add-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Entity, [switch]$Force, $OperationType)
+                $Key = '{0}|{1}' -f $Entity.PartitionKey, $Entity.RowKey
+                if (-not $Force -and $script:Rows.ContainsKey($Key)) { throw 'The specified entity already exists.' }
+                $script:Rows[$Key] = $Entity
+                $script:ClaimedRows.Add($Entity)
+            }
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Filter, $Property, $First)
+                @($script:Rows.Values) | Where-Object { $Filter -match "RowKey eq '$([regex]::Escape([string]$_.RowKey))'" } | ForEach-Object {
+                    [pscustomobject]@{
+                        RowKey            = $_.RowKey
+                        EventCreationTime = $_.EventCreationTime
+                        Timestamp         = $script:ClaimTimestamp
+                    }
+                }
+            }
+        }
+
+        It 'dispatches a second event that reuses an earlier record id' {
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-01T10:00:00'
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-22T10:00:00'
+            Should -Invoke Send-CIPPAlert -Times 2 -Exactly
+            $Claims = @($script:ClaimedRows | Where-Object { $_.Title -eq 'Processing' })
+            $Claims.Count | Should -Be 2
+            $Claims[0].EventCreationTime | Should -Be '20260701100000'
+            $Claims[1].EventCreationTime | Should -Be '20260722100000'
+            # The key itself is untouched, so the audit-log link and the Saved Logs lookup still agree.
+            @($Claims.RowKey | Select-Object -Unique) | Should -Be 'rec-1'
+        }
+
+        It 'skips an event older than the stored claim' {
+            # One row per Id, so a re-claim has to be monotonic. Accepting any DIFFERENT stamp would
+            # let two same-Id events inside the reconciliation window overwrite each other on every
+            # 12h pass and re-alert forever.
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-09-22T10:00:00'
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-01T12:00:00'
+            Should -Invoke Send-CIPPAlert -Times 1 -Exactly
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-09-22T11:00:00'
+            Should -Invoke Send-CIPPAlert -Times 2 -Exactly
+        }
+
+        It 'skips a repeat of the same event' {
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-22T10:00:00'
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-22T10:00:00'
+            Should -Invoke Send-CIPPAlert -Times 1 -Exactly
+        }
+
+        It 'skips a repeat against a claim that is still fresh' {
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-22T10:00:00'
+            $script:ClaimTimestamp = [datetimeoffset]::UtcNow.AddDays(-1)
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-22T10:00:00'
+            Should -Invoke Send-CIPPAlert -Times 1 -Exactly
+        }
+
+        It 'overwrites a claim older than the reconciliation window' {
+            # Claims are never pruned, so without an age limit one stale row owns the key forever.
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-22T10:00:00'
+            $script:ClaimTimestamp = [datetimeoffset]::UtcNow.AddDays(-8)
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-22T10:00:00'
+            Should -Invoke Send-CIPPAlert -Times 2 -Exactly
+            Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Info' }
+        }
+
+        It 'falls back to the record id alone when the event has no creation time' {
+            Invoke-Record -Id 'rec-1'
+            Invoke-Record -Id 'rec-1'
+            Should -Invoke Send-CIPPAlert -Times 1 -Exactly
+            @($script:ClaimedRows | Where-Object { $_.Title -eq 'Processing' })[0].EventCreationTime | Should -Be ''
+        }
+
+        It 'carries the event time onto the stored row so the next event can be told apart' {
+            # The completed row replaces the claim under the same key; losing the stamp there would
+            # make a later event with the same id look like a duplicate again.
+            Invoke-Record -Id 'rec-1' -CreationTime '2026-07-22T10:00:00'
+            @($script:ClaimedRows)[-1].Data | Should -Not -BeNullOrEmpty
+            @($script:ClaimedRows)[-1].EventCreationTime | Should -Be '20260722100000'
         }
     }
 

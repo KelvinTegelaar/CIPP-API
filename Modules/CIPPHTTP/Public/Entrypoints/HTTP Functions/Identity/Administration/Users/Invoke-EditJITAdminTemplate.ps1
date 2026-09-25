@@ -102,6 +102,9 @@ function Invoke-EditJITAdminTemplate {
             defaultNotificationActions  = $Request.Body.defaultNotificationActions
             generateTAPByDefault        = [bool]$Request.Body.generateTAPByDefault
             reasonTemplate              = $Request.Body.reasonTemplate
+            defaultVacationMode         = [bool]$Request.Body.defaultVacationMode
+            defaultVacationCAPolicy     = $Request.Body.defaultVacationCAPolicy
+            defaultVacationExcludeAuditAlerts = [bool]$Request.Body.defaultVacationExcludeAuditAlerts
             createdBy                   = $ExistingData.createdBy
             createdDate                 = $ExistingData.createdDate
             modifiedBy                  = $UserDetails

@@ -46,6 +46,25 @@ Function Invoke-AddSensitivityLabelTemplate {
         }
 
         $JSON = ([pscustomobject]$Ordered | ConvertTo-Json -Depth 10)
+
+        # Encryption rights granted to the source tenant's own domain would follow the template into every
+        # other tenant. Swap them for %defaultdomain% so each deploy resolves to the target tenant instead.
+        $SourceTenant = $Request.Body.tenantFilter
+        if ($SourceTenant -and $Source.PSObject.Properties['LabelActions']) {
+            $TenantInfo = Get-Tenants -TenantFilter $SourceTenant
+            $SourceDomains = [System.Collections.Generic.List[string]]::new()
+            foreach ($Domain in @($TenantInfo.defaultDomainName, $TenantInfo.initialDomainName)) {
+                if ($Domain) { $SourceDomains.Add($Domain) }
+            }
+            try {
+                $VerifiedDomains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$select=id,isVerified' -tenantid $SourceTenant
+                foreach ($Domain in @($VerifiedDomains | Where-Object { $_.isVerified })) { $SourceDomains.Add($Domain.id) }
+            } catch {
+                Write-Information "Could not list domains for $SourceTenant, falling back to its default and initial domain: $($_.Exception.Message)"
+            }
+            $JSON = ConvertTo-CIPPSensitivityLabelDomainToken -Json $JSON -Domains $SourceDomains
+        }
+
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{

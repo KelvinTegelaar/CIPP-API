@@ -111,6 +111,5 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.GlobalQuarantineNotifications' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue [string]$CurrentState.EndUserSpamNotificationFrequency -StoreAs string -Tenant $Tenant
     }
 }

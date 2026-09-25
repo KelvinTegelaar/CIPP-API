@@ -20,9 +20,11 @@ function Invoke-ExecCippFunction {
         'New-CIPPCertificateAssertion'
         'Get-ClassicAPIToken'
         'Get-CIPPSAMCertificate'
+        'Get-CIPPSAMCertificateVersions'
         'New-CIPPSAMCertificate'
         'Set-CIPPSAMCertificate'
         'Update-CIPPSAMCertificate'
+        'ConvertTo-CIPPSAMCertificateInfo'
     )
 
     $Function = $Request.Body.FunctionName

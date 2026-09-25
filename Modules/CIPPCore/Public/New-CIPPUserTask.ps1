@@ -230,6 +230,42 @@ function New-CIPPUserTask {
         }
     }
 
+    # SharePoint site membership is scheduled instead of run inline: a freshly created account cannot
+    # be resolved on a site (ensureuser) until it has replicated to SharePoint.
+    if ($UserObj.sharePointSites) {
+        $SiteRole = $UserObj.sharePointSiteRole.value ?? $UserObj.sharePointSiteRole ?? 'Members'
+        $SiteAccessTime = [int64](([datetime]::UtcNow).AddMinutes(15) - (Get-Date '1/1/1970')).TotalSeconds
+        foreach ($Site in @($UserObj.sharePointSites)) {
+            $SiteLabel = $Site.label ?? $Site.value
+            try {
+                $TaskBody = [PSCustomObject]@{
+                    TenantFilter  = $UserObj.tenantFilter
+                    Name          = "Add SharePoint Site Member: $($CreationResults.Username) -> $($Site.value) ($SiteRole)"
+                    Command       = @{ value = 'Set-CIPPSharePointSiteMember' }
+                    Parameters    = [PSCustomObject]@{
+                        TenantFilter      = $UserObj.tenantFilter
+                        UserPrincipalName = $CreationResults.Username
+                        Role              = $SiteRole
+                        SharePointType    = $Site.addedFields.rootWebTemplate
+                        GroupId           = $Site.addedFields.ownerPrincipalName
+                        SiteUrl           = $Site.value
+                        APIName           = 'SharePoint Site Onboarding'
+                    }
+                    ScheduledTime = $SiteAccessTime
+                    PostExecution = @{ Webhook = $false; Email = $false; PSA = $false }
+                }
+                $ScheduleResult = Add-CIPPScheduledTask -Task $TaskBody -hidden $false -Headers $Headers -DisallowDuplicateName $true
+                if ($ScheduleResult -like 'Successfully added task:*') {
+                    $Results.Add("Scheduled $SiteRole access to the SharePoint site $SiteLabel in 15 minutes.")
+                } else {
+                    $Results.Add("Failed to schedule SharePoint access to $($SiteLabel): $ScheduleResult")
+                }
+            } catch {
+                $Results.Add("Failed to schedule SharePoint access to $($SiteLabel): $($_.Exception.Message)")
+            }
+        }
+    }
+
     if ($UserObj.setManager) {
         $ManagerResults = Set-CIPPManager -Users $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
         $Results.Add($ManagerResults.Result)

@@ -80,7 +80,8 @@ function Invoke-EditTenant {
         }
 
         # Remove any static groups that are no longer selected (dynamic groups are managed by the orchestrator)
-        if ($tenantGroups) {
+        # An empty selection clears static memberships; an omitted or null field leaves them unchanged.
+        if ($null -ne $tenantGroups) {
             foreach ($Group in $CurrentGroupMemberships) {
                 if ($StaticGroupIds -contains $Group.GroupId -and $tenantGroups.GroupId -notcontains $Group.GroupId) {
                     $GroupName = ($StaticGroups | Where-Object { $_.RowKey -eq $Group.GroupId }).Name

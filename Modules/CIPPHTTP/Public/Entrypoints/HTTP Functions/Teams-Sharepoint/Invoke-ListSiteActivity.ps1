@@ -13,6 +13,7 @@ function Invoke-ListSiteActivity {
 
     $APIName = 'ListSiteActivity'
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    # Optional site-type filter: 'SharePoint' or 'TeamsSite'. Omit to return both.
     $Type = $Request.Query.Type ?? $Request.Body.Type
     $SiteId = $Request.Query.siteId ?? $Request.Body.siteId
 
@@ -23,11 +24,17 @@ function Invoke-ListSiteActivity {
             })
     }
 
-    if ($Type -and $Type -notin @('SharePoint', 'TeamsSite')) {
-        return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'Type must be SharePoint or TeamsSite'
-            })
+    switch ($Type) {
+        'SharePoint' { }
+        'TeamsSite' { }
+        default {
+            if ($Type) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = 'Type must be SharePoint or TeamsSite'
+                    })
+            }
+        }
     }
 
     try {

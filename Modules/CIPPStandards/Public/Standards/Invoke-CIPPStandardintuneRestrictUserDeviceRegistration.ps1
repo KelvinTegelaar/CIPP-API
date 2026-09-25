@@ -90,6 +90,5 @@ function Invoke-CIPPStandardintuneRestrictUserDeviceRegistration {
             disableUserDeviceRegistration = $DisableUserDeviceRegistration
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.intuneRestrictUserDeviceRegistration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'intuneRestrictUserDeviceRegistration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -251,6 +251,18 @@ function Initialize-CIPPAuth {
                     # created before this existed, or whose service principal had not replicated at
                     # creation, self-heals on the next warmup. Idempotent and cheap: the grant helper
                     # no-ops once the scopes are present. Best-effort per client.
+                    # Resolve the dedicated CIPP-MCP resource app so we can also reconcile the
+                    # client -> resource user_impersonation consent (it can fail on the first Save if
+                    # the freshly created resource SP hasn't replicated yet).
+                    $McpResourceObjectId = $null
+                    $McpResourceScopeId = $null
+                    try {
+                        $McpResRow = Get-CIPPAzDataTableEntity @(Get-CippTable -tablename 'CippMcpResource') -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
+                        if (-not [string]::IsNullOrWhiteSpace($McpResRow.ObjectId)) { $McpResourceObjectId = "$($McpResRow.ObjectId)" }
+                        if (-not [string]::IsNullOrWhiteSpace($McpResRow.ScopeId)) { $McpResourceScopeId = "$($McpResRow.ScopeId)" }
+                    } catch {
+                        Write-Information "[Auth-Init] Could not resolve CIPP-MCP resource app for consent reconcile: $_"
+                    }
                     foreach ($McpId in $McpClientIds) {
                         if ([string]::IsNullOrEmpty($McpId)) { continue }
                         try {
@@ -258,9 +270,47 @@ function Initialize-CIPPAuth {
                             if ($McpConsent.Action -ne 'nochange') {
                                 Write-Information "[Auth-Init] MCP client $McpId offline_access consent: $($McpConsent.Action)"
                             }
+                            if ($McpResourceObjectId -and $McpResourceScopeId) {
+                                $PreAuthChanged = Set-CippMcpResourcePreAuth -ResourceObjectId $McpResourceObjectId -ClientAppId $McpId -ScopeId $McpResourceScopeId
+                                if ($PreAuthChanged) {
+                                    Write-Information "[Auth-Init] MCP client $McpId pre-authorized on CIPP-MCP resource user_impersonation scope"
+                                }
+                            }
                         } catch {
-                            Write-Information "[Auth-Init] MCP client $McpId offline_access consent reconcile failed (non-fatal): $_"
+                            Write-Information "[Auth-Init] MCP client $McpId consent reconcile failed (non-fatal): $_"
                         }
+                    }
+
+                    # Self-heal the split-app MCP wiring. If the dedicated CIPP-MCP resource app has
+                    # never been provisioned, or its stored app registration no longer resolves in
+                    # Entra, re-run Set-CIPPMCPClientApp for each MCPAllowed client — that ensures the
+                    # resource app (New-CIPPMcpResourceApp) and configures the client (callbacks,
+                    # permissions, consent). Gated so a healthy instance does no writes; covers
+                    # instances enabled before the split. Best-effort.
+                    $McpNeedsReconcile = $true
+                    try {
+                        $McpResTable = Get-CippTable -tablename 'CippMcpResource'
+                        $McpResRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
+                        if (-not [string]::IsNullOrWhiteSpace($McpResRow.AppId)) {
+                            $McpResExists = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($McpResRow.AppId)')?`$select=appId" -NoAuthCheck $true -AsApp $true
+                            $McpNeedsReconcile = -not [bool]$McpResExists.appId
+                        }
+                    } catch {
+                        Write-Information "[Auth-Init] Could not check CIPP-MCP resource state for reconcile (non-fatal): $_"
+                        $McpNeedsReconcile = $false
+                    }
+                    if ($McpNeedsReconcile) {
+                        foreach ($McpId in $McpClientIds) {
+                            if ([string]::IsNullOrEmpty($McpId)) { continue }
+                            try {
+                                $null = Set-CIPPMCPClientApp -AppId $McpId -Headers @{}
+                                Write-Information "[Auth-Init] MCP client $McpId + CIPP-MCP resource reconciled during warmup"
+                            } catch {
+                                Write-Information "[Auth-Init] MCP reconcile failed for client $McpId (non-fatal): $_"
+                            }
+                        }
+                    } else {
+                        Write-Information '[Auth-Init] CIPP-MCP resource app present — no MCP app reconcile needed'
                     }
 
                     # Ensure the MCP OAuth scope advertisement (challenge header + discovery docs)

@@ -89,6 +89,58 @@ Describe 'Invoke-EditTenant tenant groups' {
         }
     }
 
+    It 'clears static memberships for an empty selection while preserving dynamic memberships' {
+        $script:MemberEntities = @(
+            foreach ($GroupId in @($script:StaticGroupId, $script:LegacyGroupId, $script:DynamicGroupId)) {
+                [pscustomobject]@{
+                    PartitionKey = 'Member'
+                    RowKey       = '{0}-{1}' -f $GroupId, $script:CustomerId
+                    GroupId      = $GroupId
+                    customerId   = $script:CustomerId
+                }
+            }
+        )
+        $Request = New-EditRequest -TenantGroups @()
+
+        $Response = Invoke-EditTenant -Request $Request -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        Should -Invoke Remove-CIPPAzDataTableEntity -Times 2 -Exactly
+        foreach ($ExpectedGroupId in @($script:StaticGroupId, $script:LegacyGroupId)) {
+            Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+                $Entity.GroupId -eq $ExpectedGroupId
+            }
+        }
+        Should -Invoke Remove-CIPPAzDataTableEntity -Times 0 -Exactly -ParameterFilter {
+            $Entity.GroupId -eq $script:DynamicGroupId
+        }
+        Should -Invoke Get-TenantGroups -Times 1 -Exactly -ParameterFilter { $SkipCache }
+    }
+
+    It 'preserves memberships when tenantGroups is <Selection>' -ForEach @(
+        @{ Selection = 'omitted' }
+        @{ Selection = 'null' }
+    ) {
+        $script:MemberEntities = @(
+            [pscustomobject]@{
+                PartitionKey = 'Member'
+                RowKey       = '{0}-{1}' -f $script:StaticGroupId, $script:CustomerId
+                GroupId      = $script:StaticGroupId
+                customerId   = $script:CustomerId
+            }
+        )
+        $Request = New-EditRequest -TenantGroups $null
+        if ($Selection -eq 'omitted') {
+            $Request.Body.PSObject.Properties.Remove('tenantGroups')
+        }
+
+        $Response = Invoke-EditTenant -Request $Request -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        Should -Invoke Remove-CIPPAzDataTableEntity -Times 0 -Exactly
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+    }
+
     It 'adds membership for a legacy group that has no GroupType property' {
         $Request = New-EditRequest -TenantGroups @(
             [pscustomobject]@{ groupId = $script:StaticGroupId; groupName = 'Whatever - Do this' }

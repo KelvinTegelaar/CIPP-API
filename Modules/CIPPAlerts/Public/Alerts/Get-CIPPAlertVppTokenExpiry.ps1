@@ -32,9 +32,7 @@ function Get-CIPPAlertVppTokenExpiry {
                     $Vpp | Select-Object -Property organizationName, appleId, vppTokenAccountType, @{Name = 'Message'; Expression = { $Message } }, @{Name = 'Tenant'; Expression = { $TenantFilter } }
                 }
             }
-            if ($AlertData) {
-                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-            }
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
         } catch {}
 

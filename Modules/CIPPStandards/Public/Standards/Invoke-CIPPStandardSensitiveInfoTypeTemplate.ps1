@@ -96,6 +96,5 @@ function Invoke-CIPPStandardSensitiveInfoTypeTemplate {
         $ExpectedValue = @{ NonCompliantSensitiveInfoTypes = @() }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.SensitiveInfoTypeTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SensitiveInfoTypeTemplate' -FieldValue ($NonCompliant.Count -eq 0) -StoreAs bool -Tenant $Tenant
     }
 }

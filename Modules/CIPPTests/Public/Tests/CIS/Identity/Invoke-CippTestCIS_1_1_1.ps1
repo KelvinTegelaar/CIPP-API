@@ -57,13 +57,13 @@ function Invoke-CippTestCIS_1_1_1 {
 
         if ($NonCompliant.Count -eq 0) {
             $Status = 'Passed'
-            $Result = [System.Text.StringBuilder]::new("All $($PrivilegedUsers.Count) privileged users are cloud-only and unlicensed.")
+            $Result = [System.Text.StringBuilder]::new("All $($PrivilegedUsers.Count) privileged users are cloud-only, use an onmicrosoft.com UPN and are unlicensed.")
         } else {
             $Status = 'Failed'
-            $Result = [System.Text.StringBuilder]::new("$($NonCompliant.Count) of $($PrivilegedUsers.Count) privileged user(s) are not cloud-only or are licensed:`n`n")
-            $null = $Result.Append("| UPN | Synced | Licensed |`n| :-- | :----- | :------- |`n")
+            $Result = [System.Text.StringBuilder]::new("$($NonCompliant.Count) of $($PrivilegedUsers.Count) privileged user(s) fail one or more checks (synced from on-premises, non-onmicrosoft.com UPN, or licensed):`n`n")
+            $null = $Result.Append("| UPN | Synced | onmicrosoft UPN | Licensed |`n| :-- | :----- | :-------------- | :------- |`n")
             foreach ($U in ($NonCompliant | Select-Object -First 25)) {
-                $null = $Result.Append("| $($U.userPrincipalName) | $([bool]$U.onPremisesSyncEnabled) | $([bool]($U.assignedLicenses.Count -gt 0)) |`n")
+                $null = $Result.Append("| $($U.userPrincipalName) | $([bool]$U.onPremisesSyncEnabled) | $($U.userPrincipalName -like '*onmicrosoft.com') | $([bool]($U.assignedLicenses.Count -gt 0)) |`n")
             }
         }
 

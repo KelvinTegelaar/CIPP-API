@@ -43,7 +43,6 @@ BeforeAll {
             initialDomainName        = $Initial
             delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'
             Excluded                 = $false
-            GraphErrorCount          = 0
             LastGraphError           = ''
             RequiresRefresh          = $false
             LastRefresh              = $LastRefresh
@@ -103,6 +102,18 @@ Describe 'Get-Tenants refresh loop' {
             }
             if ($uri -like '*findTenantInformationByTenantId*') { return [PSCustomObject]@{ defaultDomainName = $script:FallbackDomain } }
             throw "unexpected Graph call: $uri"
+        }
+    }
+
+    Context 'default cache read' {
+        It 'does not hide tenants behind an error-count threshold' {
+            # The count is never reset for direct tenants, so a threshold filter drops them for good.
+            $script:RowsByKey[$script:GuidA] = New-CachedRow -Guid $script:GuidA -DisplayName 'Contoso' -Default 'contoso.com' -Initial 'contoso.onmicrosoft.com' -LastRefresh ([DateTimeOffset]::UtcNow)
+
+            $Result = Get-Tenants
+
+            Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $Filter -like '*GraphErrorCount*' } -Times 0 -Exactly
+            $Result.customerId | Should -Be $script:GuidA
         }
     }
 

@@ -81,7 +81,6 @@ function Invoke-CIPPStandardSendFromAlias {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue $CurrentInfo -StoreAs bool -Tenant $Tenant
         $CurrentValue = @{ SendFromAliasEnabled = $CurrentInfo }
         $ExpectedValue = @{ SendFromAliasEnabled = $WantedState }
         Set-CIPPStandardsCompareField -FieldName 'standards.SendFromAlias' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant

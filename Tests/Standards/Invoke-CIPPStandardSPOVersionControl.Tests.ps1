@@ -20,7 +20,6 @@ BeforeAll {
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $Tenant2, $message, $sev, $headers, $LogData) }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $CurrentValue, $ExpectedValue, $TenantFilter) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Get-CippException { [CmdletBinding()] param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
 
     . $StandardPath
@@ -31,7 +30,6 @@ BeforeAll {
 Describe 'Invoke-CIPPStandardSPOVersionControl report' {
     BeforeEach {
         $script:Compare = $null
-        $script:Bpa = $null
         $script:Alerts = [System.Collections.Generic.List[object]]::new()
 
         Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
@@ -44,10 +42,6 @@ Describe 'Invoke-CIPPStandardSPOVersionControl report' {
         Mock -CommandName Set-CIPPStandardsCompareField -MockWith {
             param($FieldName, $CurrentValue, $ExpectedValue, $TenantFilter)
             $script:Compare = @{ FieldName = $FieldName; Current = $CurrentValue; Expected = $ExpectedValue }
-        }
-        Mock -CommandName Add-CIPPBPAField -MockWith {
-            param($FieldName, $FieldValue, $StoreAs, $Tenant)
-            $script:Bpa = $FieldValue
         }
     }
 
@@ -75,7 +69,6 @@ Describe 'Invoke-CIPPStandardSPOVersionControl report' {
             $script:Compare.Expected.EnableAutoExpirationVersionTrim | Should -BeTrue
             # The same whole-object comparison the report and drift paths perform.
             ($script:Compare.Current | ConvertTo-Json -Compress) | Should -Be ($script:Compare.Expected | ConvertTo-Json -Compress)
-            $script:Bpa | Should -BeTrue
         }
 
         It 'still reports a tenant that has automatic trimming off' {
@@ -93,7 +86,6 @@ Describe 'Invoke-CIPPStandardSPOVersionControl report' {
 
             $script:Compare.Current.EnableAutoExpirationVersionTrim | Should -BeFalse
             $script:Compare.Expected.EnableAutoExpirationVersionTrim | Should -BeTrue
-            $script:Bpa | Should -BeFalse
             $script:Alerts.Count | Should -Be 1
             $script:Alerts[0] | Should -Match 'managed by Microsoft'
             $script:Alerts[0] | Should -Not -Match 'Expected: .*MajorVersionLimit='
@@ -125,7 +117,6 @@ Describe 'Invoke-CIPPStandardSPOVersionControl report' {
             $script:Compare.Expected.MajorVersionLimit | Should -Be 50
             $script:Compare.Expected.ExpireVersionsAfterDays | Should -Be 365
             ($script:Compare.Current | ConvertTo-Json -Compress) | Should -Be ($script:Compare.Expected | ConvertTo-Json -Compress)
-            $script:Bpa | Should -BeTrue
         }
 
         It 'reports a limit that differs from the configured one' {
@@ -143,7 +134,6 @@ Describe 'Invoke-CIPPStandardSPOVersionControl report' {
 
             $script:Compare.Current.MajorVersionLimit | Should -Be 500
             $script:Compare.Expected.MajorVersionLimit | Should -Be 50
-            $script:Bpa | Should -BeFalse
         }
     }
 }

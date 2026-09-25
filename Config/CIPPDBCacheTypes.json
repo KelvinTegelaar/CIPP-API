@@ -150,6 +150,16 @@
     "description": "License usage overview"
   },
   {
+    "type": "ActiveUserDetail",
+    "friendlyName": "Active User Detail",
+    "description": "Per-user last-activity dates for Exchange, OneDrive, SharePoint, Teams and Viva Engage over 90 days"
+  },
+  {
+    "type": "M365AppUserDetail",
+    "friendlyName": "Microsoft 365 App Usage Detail",
+    "description": "Per-user Office app usage by platform (Windows, Mac, mobile, web) over 90 days"
+  },
+  {
     "type": "MFAState",
     "friendlyName": "MFA State",
     "description": "Multi-factor authentication state"
@@ -251,8 +261,8 @@
   },
   {
     "type": "ExoProtectionAlert",
-    "friendlyName": "Exchange Protection Alerts",
-    "description": "Microsoft 365 protection alert policies (Security & Compliance endpoint)"
+    "friendlyName": "Exchange Protection Alert Policies",
+    "description": "Microsoft 365 protection alert policy definitions (Security & Compliance endpoint) - the configured alert rules, NOT alerts that have fired"
   },
   {
     "type": "Mailboxes",
@@ -273,6 +283,11 @@
     "type": "MailboxUsage",
     "friendlyName": "Mailbox Usage",
     "description": "Exchange Online mailbox usage statistics"
+  },
+  {
+    "type": "MailTrafficSummary",
+    "friendlyName": "Mail Traffic Summary",
+    "description": "Top mail senders and recipients by message volume over the last 30 days"
   },
   {
     "type": "OneDriveSiteListing",
@@ -300,6 +315,11 @@
     "type": "SharePointSiteUsage",
     "friendlyName": "SharePoint Site Usage",
     "description": "SharePoint site usage statistics"
+  },
+  {
+    "type": "SharePointUsageReport",
+    "friendlyName": "SharePoint Usage Report (Tenant-level)",
+    "description": "Aggregated SharePoint storage usage across all sites in the tenant"
   },
   {
     "type": "SiteActivity",

@@ -5,6 +5,10 @@
 # the received-date window used to be only 6 hours, which silently hid every release request raised
 # against a message that had been sitting in quarantine longer than that - even though the same
 # request is plainly visible on the Quarantine page (which applies no received-date filter).
+#
+# Write-AlertTrace is a lifecycle reconciler: a run that checked and found nothing must still call it
+# once with empty data (that is what resolves earlier requests), while a run that could not check
+# (no licence, EXO error) must not call it at all.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -62,14 +66,14 @@ Describe 'Get-CIPPAlertQuarantineReleaseRequests' {
         }
     }
 
-    It 'queries a one-day window, not a few hours' {
+    It 'queries the full 30-day quarantine window for requested releases' {
         Get-CIPPAlertQuarantineReleaseRequests -TenantFilter $script:Tenant
 
         $script:CapturedParams | Should -Not -BeNullOrEmpty
         $script:CapturedParams.ReleaseStatus | Should -Be 'Requested'
         $Span = ((Get-Date) - $script:CapturedParams.StartReceivedDate).TotalDays
-        $Span | Should -BeGreaterThan 0.9   # ~1 day
-        $Span | Should -BeLessThan 1.1       # regression guard: the old window was 0.25 days (6 hours)
+        $Span | Should -BeGreaterThan 29.9   # regression guard: 6 hours, then 1 day, both missed requests raised later
+        $Span | Should -BeLessThan 30.1      # EXO rejects a StartReceivedDate beyond 30 days
         $script:CapturedParams.EndReceivedDate | Should -BeGreaterThan $script:CapturedParams.StartReceivedDate
     }
 
@@ -86,12 +90,13 @@ Describe 'Get-CIPPAlertQuarantineReleaseRequests' {
         $script:CapturedData[0].QuarantineViewUrl | Should -Match 'https://cipp.contoso.com/email/administration/quarantine'
     }
 
-    It 'does not emit when there are no pending release requests' {
+    It 'reports an empty run when there are no pending release requests' {
         Mock -CommandName New-ExoRequest -MockWith { param($tenantid, $cmdlet, $cmdParams) $script:CapturedParams = $cmdParams; @() }
 
         Get-CIPPAlertQuarantineReleaseRequests -TenantFilter $script:Tenant
 
-        Should -Invoke Write-AlertTrace -Times 0
+        Should -Invoke Write-AlertTrace -Times 1 -Exactly
+        $script:CapturedTenant | Should -Be $script:Tenant
         $script:CapturedData | Should -BeNullOrEmpty
     }
 

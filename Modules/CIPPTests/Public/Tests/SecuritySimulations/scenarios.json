@@ -1,0 +1,1403 @@
+[
+  {
+    "id": "AdminNonCompliantDevice",
+    "title": "Global Admin on a non-compliant device",
+    "category": "Identity & Conditional Access",
+    "severity": "Critical",
+    "summary": "A Global Administrator signs in from an unmanaged, non-compliant computer, giving an attacker on that machine full control of the tenant.",
+    "requiredCapabilities": [
+      "AAD_PREMIUM"
+    ],
+    "persona": "admin",
+    "attackerCanSatisfy": [
+      "mfa"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "An attacker controls a personal, unmanaged computer that a Global Administrator uses, and has the admin's password and MFA approval."
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "The admin account signs in from the unmanaged Windows machine. Only a device requirement can tell this machine apart from a trusted one.",
+        "whatIf": {
+          "clientAppType": "browser",
+          "devicePlatform": "windows",
+          "deviceInfo": {
+            "isCompliant": false
+          }
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "Admins are not required to use a compliant device, so any machine can hold an admin session.",
+            "role": "prevents",
+            "fix": {
+              "caTemplate": "Require a compliant device for administrators"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: administrators must use a compliant device, so the unmanaged machine cannot hold the session."
+      },
+      {
+        "id": "PortalAccess",
+        "title": "Admin portals opened",
+        "text": "The attacker opens the admin centers and reviews users, roles and licensing. Nothing is changed yet, so the session looks like routine administration.",
+        "whenFixed": "A shorter idle timeout ends the abandoned admin session before it can be misused.",
+        "standards": [
+          {
+            "name": "ActivityBasedTimeout",
+            "role": "limits"
+          }
+        ]
+      },
+      {
+        "id": "RoleGrant",
+        "title": "New administrator created",
+        "text": "The attacker adds a second account to a privileged role so access survives a password reset. This creates a standing back door into the tenant.",
+        "alerts": [
+          {
+            "operation": "Add member to role.",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "Add member to role."
+          }
+        ],
+        "whenFixed": "The role change is written to the audit log and surfaces for review.",
+        "standards": [
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "The admin session is refused on the unmanaged device, so the attacker never reaches the admin centers.",
+      "notPrevented": "The attacker gains lasting tenant-wide control through a hidden second administrator."
+    }
+  },
+  {
+    "id": "AnonymousLinkSensitiveSite",
+    "title": "Anyone link on a sensitive site",
+    "category": "SharePoint & Data",
+    "severity": "High",
+    "summary": "An attacker creates an Anyone link on a sensitive SharePoint site so files can be downloaded without signing in.",
+    "requiredCapabilities": [
+      "SHAREPOINTENTERPRISE"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker controls an account with access to a sensitive site and wants to move data out with as little friction as possible."
+      },
+      {
+        "id": "CreateLink",
+        "title": "Anyone link created",
+        "text": "The attacker creates an Anyone link that grants access to files without any sign-in. The link can be shared or sold freely.",
+        "whenFixed": "Anonymous sharing is disabled, so no Anyone link can be created, and the attempt is recorded.",
+        "standards": [
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          },
+          {
+            "name": "DefaultSharingLink",
+            "role": "limits"
+          },
+          {
+            "name": "sharingCapability",
+            "role": "prevents"
+          },
+          {
+            "name": "SPAnonymousLinkExpiration",
+            "role": "limits"
+          }
+        ]
+      },
+      {
+        "id": "Access",
+        "title": "Files downloaded through the link",
+        "text": "Anyone holding the link downloads the files without authenticating. There is no record of who took the data.",
+        "whenFixed": "A short expiry on Anyone links narrows the window in which the link works.",
+        "standards": [
+          {
+            "name": "SPAnonymousLinkExpiration",
+            "role": "limits"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "Anonymous sharing is refused, so a no-sign-in link is never created.",
+      "notPrevented": "Sensitive files are downloadable by anyone who receives the link."
+    }
+  },
+  {
+    "id": "AuditingOff",
+    "title": "Silent tenant: auditing turned off",
+    "category": "Audit & Detection",
+    "severity": "High",
+    "summary": "With the Unified Audit Log disabled, an attacker acts inside the tenant knowing that key actions leave no usable trail.",
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker has taken over an account and finds that the Unified Audit Log is turned off. Actions will not be recorded for later investigation."
+      },
+      {
+        "id": "DisableCheck",
+        "title": "No audit trail confirmed",
+        "text": "The attacker confirms that sign-ins and admin actions are not being logged. This removes the main record responders would rely on.",
+        "whenFixed": "The Unified Audit Log is on, so every following action is recorded for investigation.",
+        "standards": [
+          {
+            "name": "AnonReportDisable",
+            "role": "detects"
+          },
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "MailboxAccess",
+        "title": "Mailbox read without a trace",
+        "text": "The attacker opens the mailbox and searches for valuable mail. With mailbox auditing off, the access leaves little evidence.",
+        "whenFixed": "Mailbox auditing records the access even when the attacker expects silence.",
+        "standards": [
+          {
+            "name": "EnableMailboxAuditing",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "Exfiltration",
+        "title": "Mail forwarded out",
+        "text": "The attacker adds a rule that forwards new mail to an external address, assuming the change will go unseen.",
+        "alerts": [
+          {
+            "operation": "New-InboxRule",
+            "logbook": "Audit.Exchange",
+            "preset": "New-InboxRuleForward"
+          }
+        ],
+        "whenFixed": "External forwarding is blocked and, with the audit log on, the rule creation raises an alert.",
+        "standards": [
+          {
+            "name": "EXODisableAutoForwarding",
+            "role": "prevents"
+          },
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "With auditing on, every step is recorded and the forwarding rule is blocked and alerted.",
+      "notPrevented": "The attacker reads and forwards mail with almost no trace left behind."
+    }
+  },
+  {
+    "id": "BulkSyncUnmanagedDevice",
+    "title": "Bulk sync to an unmanaged device",
+    "category": "SharePoint & Data",
+    "severity": "High",
+    "summary": "A compromised user syncs entire document libraries to a personal, unmanaged computer, copying company data off managed systems.",
+    "requiredCapabilities": [
+      "SHAREPOINTENTERPRISE"
+    ],
+    "persona": "user",
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker controls a user's account and signs in from a personal, unmanaged computer to collect data."
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "The attacker connects the OneDrive client from an unmanaged Windows machine. Only an unmanaged-device control can limit what the sync client can pull.",
+        "whatIf": {
+          "clientAppType": "mobileAppsAndDesktopClients",
+          "devicePlatform": "windows",
+          "deviceInfo": {
+            "isCompliant": false
+          }
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "Access from unmanaged devices is not restricted, so the sync client can copy whole libraries.",
+            "role": "prevents",
+            "fix": {
+              "caTemplate": "Block downloads on unmanaged devices for SharePoint and OneDrive"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: unmanaged devices are limited to web-only access, so the sync client cannot download.",
+        "standards": [
+          {
+            "name": "unmanagedSync",
+            "role": "prevents"
+          }
+        ]
+      },
+      {
+        "id": "Sync",
+        "title": "Libraries copied to the local disk",
+        "text": "The attacker syncs entire libraries to the personal machine, pulling documents off managed systems. The data now sits outside the tenant's controls.",
+        "whenFixed": "The sync button is disabled and the copied data is limited by sync restrictions.",
+        "standards": [
+          {
+            "name": "ExcludedfileExt",
+            "role": "limits"
+          },
+          {
+            "name": "SPSyncButtonState",
+            "role": "limits"
+          },
+          {
+            "name": "unmanagedSync",
+            "role": "prevents"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "Unmanaged devices are held to web-only access, so libraries cannot be synced off.",
+      "notPrevented": "Whole libraries land on a personal machine beyond the reach of tenant controls."
+    }
+  },
+  {
+    "id": "DeviceCodePhishing",
+    "title": "Device-code phishing",
+    "category": "Identity & Conditional Access",
+    "severity": "High",
+    "summary": "An attacker tricks a user into approving a device-code sign-in and receives a fully authenticated token that already includes the MFA claim.",
+    "requiredCapabilities": [
+      "AAD_PREMIUM"
+    ],
+    "persona": "user",
+    "attackerCanSatisfy": [
+      "mfa"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker starts a device-code sign-in and sends the code to the user with a convincing message. The user enters the code and approves it."
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "The device-code flow completes and hands the attacker a token that already satisfies MFA. Only a policy that blocks this flow can stop it.",
+        "whatIf": {
+          "clientAppType": "browser",
+          "devicePlatform": "windows",
+          "authenticationFlow": {
+            "transferMethod": "deviceCodeFlow"
+          },
+          "country": "DE",
+          "ipAddress": "185.220.100.8"
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "Device code flow is not blocked, so a phished code becomes a working token.",
+            "role": "prevents",
+            "fix": {
+              "caTemplate": "Block device code flow sign-ins"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: device code flow is refused, so the phished code cannot become a token."
+      },
+      {
+        "id": "TokenUse",
+        "title": "Token used to read mail and files",
+        "text": "The attacker uses the token to read the user's mailbox and documents. The traffic looks like a normal signed-in app.",
+        "whenFixed": "Mailbox auditing records the access even though the sign-in looked legitimate."
+      },
+      {
+        "id": "Persistence",
+        "title": "Inbox rule created for ongoing reach",
+        "text": "The attacker adds an inbox rule to keep receiving the user's mail. This keeps a copy flowing after the token expires.",
+        "alerts": [
+          {
+            "operation": "New-InboxRule",
+            "logbook": "Audit.Exchange",
+            "preset": "New-InboxRule"
+          }
+        ],
+        "whenFixed": "The rule creation raises an alert and external delivery is blocked.",
+        "standards": [
+          {
+            "name": "EXODisableAutoForwarding",
+            "role": "prevents"
+          },
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "The device-code sign-in is refused, so the phished code is useless.",
+      "notPrevented": "The attacker reads mail and files and sets up an inbox rule to keep access."
+    }
+  },
+  {
+    "id": "GuestReshareSprawl",
+    "title": "Guest re-share sprawl",
+    "category": "SharePoint & Data",
+    "severity": "Medium",
+    "summary": "A guest re-shares files they were given, spreading access to more outsiders than the owner intended.",
+    "requiredCapabilities": [
+      "SHAREPOINTENTERPRISE"
+    ],
+    "persona": "guest",
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "A guest was shared a folder for a project and can re-share it. The attacker controls that guest account."
+      },
+      {
+        "id": "Reshare",
+        "title": "Files re-shared to more outsiders",
+        "text": "The guest shares the files onward to additional external people. Access now reaches people the owner never approved.",
+        "whenFixed": "External users cannot re-share, so access does not spread beyond the owner's intent.",
+        "standards": [
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          },
+          {
+            "name": "DisableReshare",
+            "role": "prevents"
+          },
+          {
+            "name": "sharingDomainRestriction",
+            "role": "limits"
+          },
+          {
+            "name": "SPGuestPeoplePicker",
+            "role": "limits"
+          }
+        ]
+      },
+      {
+        "id": "Sprawl",
+        "title": "Access spreads beyond control",
+        "text": "Each new recipient can potentially share again, widening exposure. The owner loses track of who can reach the data.",
+        "whenFixed": "Automatic guest-access expiry removes stale external access before it spreads far.",
+        "standards": [
+          {
+            "name": "SPExternalUserExpiration",
+            "role": "limits"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "Re-sharing by external users is blocked, so access stays with the people the owner chose.",
+      "notPrevented": "The files spread to an unknown set of outsiders through repeated re-sharing."
+    }
+  },
+  {
+    "id": "GuestWithDirectoryRole",
+    "title": "Guest account holding a directory role",
+    "category": "Identity & Conditional Access",
+    "severity": "High",
+    "summary": "A guest account that was granted a directory role is used to read the directory and hand privileged access to another account.",
+    "requiredCapabilities": [
+      "AAD_PREMIUM"
+    ],
+    "persona": "guest",
+    "attackerCanSatisfy": [
+      "mfa"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "A guest account was given a directory role during a project and never removed. The attacker controls that guest account."
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "The guest signs in through a browser and its role rights come along. Only guest-focused controls treat this account differently from a normal member.",
+        "whatIf": {
+          "clientAppType": "browser",
+          "devicePlatform": "windows",
+          "country": "NL",
+          "ipAddress": "185.220.101.9"
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "Guest sign-ins are not restricted, so an external account can carry a privileged role.",
+            "role": "limits",
+            "fix": {
+              "caTemplate": "Restrict guest access with Conditional Access"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: guest access is restricted, so the external account cannot use its role.",
+        "standards": [
+          {
+            "name": "DisableGuests",
+            "role": "limits"
+          },
+          {
+            "name": "GuestInvite",
+            "role": "prevents"
+          }
+        ]
+      },
+      {
+        "id": "Enumerate",
+        "title": "Directory read",
+        "text": "The attacker lists users, groups and roles to map the organization. This makes it easy to choose high-value targets.",
+        "whenFixed": "Guest directory access is restricted, so the account cannot enumerate other users.",
+        "standards": [
+          {
+            "name": "DisableGuestDirectory",
+            "role": "prevents"
+          }
+        ]
+      },
+      {
+        "id": "RoleAbuse",
+        "title": "Another account promoted",
+        "text": "The attacker adds a second account to a privileged role to keep control if the guest is removed. This creates a standing back door.",
+        "alerts": [
+          {
+            "operation": "Add member to role.",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "Add member to role."
+          }
+        ],
+        "whenFixed": "The role change is written to the audit log and surfaces for review.",
+        "standards": [
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "Guest restrictions and directory limits stop the external account from reading or escalating.",
+      "notPrevented": "The attacker maps the tenant and plants a second privileged account."
+    }
+  },
+  {
+    "id": "LegacyAuthMailboxAccess",
+    "title": "Legacy authentication mailbox access",
+    "category": "Identity & Conditional Access",
+    "severity": "High",
+    "summary": "An attacker uses an older mail protocol that cannot prompt for MFA to reach a mailbox with a stolen password.",
+    "requiredCapabilities": [
+      "EXCHANGE_S_ENTERPRISE"
+    ],
+    "persona": "user",
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker has the user's password and connects with a legacy protocol that only supports password sign-in. MFA cannot be requested on that path."
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "The attacker authenticates with a legacy client, which never triggers an MFA prompt. Only blocking legacy authentication closes this path.",
+        "whatIf": {
+          "clientAppType": "other",
+          "devicePlatform": "windows",
+          "country": "NL",
+          "ipAddress": "91.219.236.10"
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "Legacy authentication is still allowed, so a password alone reaches the mailbox.",
+            "role": "prevents",
+            "fix": {
+              "caTemplate": "Block legacy authentication"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: legacy authentication is refused, so the password-only client cannot connect.",
+        "standards": [
+          {
+            "name": "SecurityDefaults",
+            "role": "prevents"
+          },
+          {
+            "name": "DisableBasicAuthSMTP",
+            "role": "prevents"
+          }
+        ]
+      },
+      {
+        "id": "MailboxAccess",
+        "title": "Mailbox downloaded",
+        "text": "The attacker pulls mail through the legacy protocol, reading recent messages and attachments. The connection looks like an old mail client.",
+        "whenFixed": "Mailbox auditing records the legacy access for responders.",
+        "standards": [
+          {
+            "name": "EnableMailboxAuditing",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "Exfiltration",
+        "title": "External forwarding turned on",
+        "text": "The attacker configures mailbox forwarding to an outside address so new mail is copied automatically. Access continues even if the password changes.",
+        "alerts": [
+          {
+            "operation": "Set-Mailbox",
+            "logbook": "Audit.Exchange",
+            "preset": "Set-MailboxForwardingExternal"
+          }
+        ],
+        "whenFixed": "External forwarding is blocked and the change raises an alert.",
+        "standards": [
+          {
+            "name": "EXODisableAutoForwarding",
+            "role": "prevents"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "Legacy authentication is refused, so the stolen password cannot open the mailbox.",
+      "notPrevented": "The attacker reads the mailbox and forwards its mail out of the tenant."
+    }
+  },
+  {
+    "id": "MailboxRuleExfiltration",
+    "title": "Mailbox rule exfiltration",
+    "category": "Exchange & Email",
+    "severity": "High",
+    "summary": "An attacker with mailbox access sets up inbox rules and forwarding to copy mail out of the tenant automatically.",
+    "requiredCapabilities": [
+      "EXCHANGE_S_ENTERPRISE"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker already has access to a user's mailbox and wants a quiet, ongoing copy of incoming mail."
+      },
+      {
+        "id": "InboxRule",
+        "title": "Forwarding inbox rule created",
+        "text": "The attacker creates an inbox rule that forwards new mail to an outside address and hides it in a rarely-seen folder. Mail now leaves the mailbox on arrival.",
+        "alerts": [
+          {
+            "operation": "New-InboxRule",
+            "logbook": "Audit.Exchange",
+            "preset": "New-InboxRuleForward"
+          }
+        ],
+        "whenFixed": "External forwarding is blocked and the rule creation raises an alert.",
+        "standards": [
+          {
+            "name": "EnableMailboxAuditing",
+            "role": "detects"
+          },
+          {
+            "name": "EXODisableAutoForwarding",
+            "role": "prevents"
+          },
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "MailboxForward",
+        "title": "Mailbox forwarding enabled",
+        "text": "The attacker also turns on mailbox-level forwarding as a backup path. Even if the rule is removed, copies keep flowing out.",
+        "alerts": [
+          {
+            "operation": "Set-Mailbox",
+            "logbook": "Audit.Exchange",
+            "preset": "Set-MailboxForwardingExternal"
+          }
+        ],
+        "whenFixed": "External forwarding is blocked and the outbound spam alert flags the sudden external flow.",
+        "standards": [
+          {
+            "name": "EXODisableAutoForwarding",
+            "role": "prevents"
+          },
+          {
+            "name": "OutBoundSpamAlert",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "External forwarding is refused, so no mail leaves the tenant and the attempts are alerted.",
+      "notPrevented": "Every incoming message is copied to the attacker for as long as the rules survive."
+    }
+  },
+  {
+    "id": "MaliciousOAuthConsent",
+    "title": "Malicious OAuth app consent",
+    "category": "Identity & Conditional Access",
+    "severity": "High",
+    "summary": "A user is tricked into consenting to a malicious application, which then reads mail and files through the granted permissions.",
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker sends a convincing link asking the user to grant an application access to their data. The user clicks through the consent screen."
+      },
+      {
+        "id": "Consent",
+        "title": "Consent granted to the application",
+        "text": "The user approves the application, which is added to the tenant and receives standing access to mail and files. No password is needed again.",
+        "alerts": [
+          {
+            "operation": "Add service principal.",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "Add service principal."
+          }
+        ],
+        "whenFixed": "User consent is routed to admin approval, so the malicious app is never granted access.",
+        "standards": [
+          {
+            "name": "AppManagementPolicy",
+            "role": "limits"
+          },
+          {
+            "name": "EnableAppConsentRequests",
+            "role": "prevents"
+          },
+          {
+            "name": "OauthConsent",
+            "role": "prevents"
+          },
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "MailAccess",
+        "title": "Mail and files read through the app",
+        "text": "The app reads the user's mailbox and documents using the permissions it was given. The access continues without any further sign-in.",
+        "whenFixed": "Mailbox auditing records the app's access for responders to review.",
+        "standards": [
+          {
+            "name": "EnableMailboxAuditing",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "The consent request is held for admin approval, so the malicious app never gains access.",
+      "notPrevented": "The attacker's app reads mail and files quietly for as long as the grant remains."
+    }
+  },
+  {
+    "id": "MassUserDeletion",
+    "title": "Mass user deletion",
+    "category": "Audit & Detection",
+    "severity": "High",
+    "summary": "A compromised administrator deletes many user accounts at once to disrupt the business.",
+    "requiredCapabilities": [
+      "AAD_PREMIUM"
+    ],
+    "persona": "admin",
+    "attackerCanSatisfy": [
+      "mfa"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker controls an account with user-management rights and intends to cause maximum disruption."
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "The account signs in from an unfamiliar address before the deletions begin. Strong sign-in controls are the last chance to stop it.",
+        "whatIf": {
+          "clientAppType": "browser",
+          "devicePlatform": "windows",
+          "country": "NL",
+          "ipAddress": "185.220.101.60"
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "MFA is not enforced, so a stolen password reaches user management.",
+            "role": "prevents",
+            "fix": {
+              "caTemplate": "Require multifactor authentication for all users"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach user management.",
+        "standards": [
+          {
+            "name": "PerUserMFA",
+            "role": "prevents"
+          },
+          {
+            "name": "SecurityDefaults",
+            "role": "prevents"
+          }
+        ]
+      },
+      {
+        "id": "DeleteUsers",
+        "title": "Accounts deleted in bulk",
+        "text": "The attacker deletes many accounts quickly, cutting off sign-in and mail for those users. The business impact is immediate.",
+        "alerts": [
+          {
+            "operation": "Delete user",
+            "logbook": "Audit.AzureActiveDirectory"
+          }
+        ],
+        "whenFixed": "Each deletion is written to the audit log, so the burst is detected quickly.",
+        "standards": [
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "Recover",
+        "title": "Recovery window",
+        "text": "Deleted accounts and their data can be restored for a limited time. The faster the burst is noticed, the more can be recovered.",
+        "whenFixed": "Retention of deleted users' OneDrive data keeps their files recoverable during the window.",
+        "standards": [
+          {
+            "name": "DeletedUserRentention",
+            "role": "recovers"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "MFA stops the takeover, so no accounts are deleted.",
+      "notPrevented": "Many users lose access at once, and only prompt detection limits the damage."
+    }
+  },
+  {
+    "id": "MfaTampering",
+    "title": "MFA tampering after compromise",
+    "category": "Audit & Detection",
+    "severity": "Critical",
+    "summary": "After taking over a privileged account, an attacker strips users' MFA and revokes their sessions to lock in control.",
+    "requiredCapabilities": [
+      "AAD_PREMIUM"
+    ],
+    "persona": "admin",
+    "attackerCanSatisfy": [
+      "mfa"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker controls a privileged account that can manage other users' authentication methods."
+      },
+      {
+        "id": "DisableMfa",
+        "title": "Victims' MFA removed",
+        "text": "The attacker disables strong authentication on target accounts so they can be signed into with passwords alone. This weakens the accounts for later use.",
+        "alerts": [
+          {
+            "operation": "Disable Strong Authentication.",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "Disable Strong Authentication."
+          }
+        ],
+        "whenFixed": "The change is written to the audit log and re-enforced MFA restores protection.",
+        "standards": [
+          {
+            "name": "PerUserMFA",
+            "role": "recovers"
+          },
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "RevokeSessions",
+        "title": "Existing sessions revoked",
+        "text": "The attacker revokes the users' sessions to force fresh sign-ins on the weakened accounts. This helps push out the legitimate users.",
+        "alerts": [
+          {
+            "operation": "Update StsRefreshTokenValidFrom Timestamp.",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "Update StsRefreshTokenValidFrom Timestamp."
+          }
+        ],
+        "whenFixed": "The session revocation is written to the audit log and surfaces for review.",
+        "standards": [
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "ReRegister",
+        "title": "Attacker registers its own MFA",
+        "text": "The attacker registers a new authentication method it controls on a target account. This gives durable access under the attacker's own factor.",
+        "whenFixed": "Method controls limit what can be registered and suspicious-activity reporting flags the change.",
+        "standards": [
+          {
+            "name": "AuthenticationMethods",
+            "role": "prevents"
+          },
+          {
+            "name": "AuthMethodsSettings",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "MFA policy re-enforces protection and every change is recorded and reviewable.",
+      "notPrevented": "The attacker holds weakened accounts under its own MFA method."
+    }
+  },
+  {
+    "id": "PasswordSprayNoMfa",
+    "title": "Password spray on an account without MFA",
+    "category": "Identity & Conditional Access",
+    "severity": "High",
+    "summary": "An attacker guesses a common password for an account that has no MFA registered and signs in unchallenged.",
+    "requiredCapabilities": [
+      "AAD_PREMIUM_P2"
+    ],
+    "persona": "user",
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker tries a handful of common passwords against many accounts at a slow pace to avoid lockouts. One targeted account has never registered MFA."
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "A sprayed password matches and the account signs in. With no MFA registered, only password and risk controls stand in the way.",
+        "whatIf": {
+          "clientAppType": "browser",
+          "devicePlatform": "windows",
+          "signInRiskLevel": "high",
+          "country": "US",
+          "ipAddress": "104.244.72.115"
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "The account has no MFA, so a correct password alone grants access.",
+            "role": "prevents",
+            "fix": {
+              "caTemplate": "Require multifactor authentication for all users"
+            }
+          },
+          {
+            "when": [
+              "allowed"
+            ],
+            "text": "No sign-in risk policy, so the high-risk sign-in is not challenged.",
+            "role": "detects",
+            "requiredCapabilities": [
+              "AAD_PREMIUM_P2"
+            ],
+            "fix": {
+              "caTemplate": "Require multifactor authentication for medium and high sign-in risk"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: MFA is required, so the guessed password alone is not enough.",
+        "standards": [
+          {
+            "name": "CustomBannedPasswordList",
+            "role": "prevents"
+          },
+          {
+            "name": "PerUserMFA",
+            "role": "prevents"
+          },
+          {
+            "name": "SecurityDefaults",
+            "role": "prevents"
+          },
+          {
+            "name": "SmartLockout",
+            "role": "limits"
+          }
+        ]
+      },
+      {
+        "id": "AccountTakeover",
+        "title": "Account explored",
+        "text": "The attacker reads the mailbox and shared files to learn the business and find more targets. Nothing is changed, so the sign-in looks ordinary.",
+        "whenFixed": "Mailbox auditing records the access so the takeover can be spotted.",
+        "standards": [
+          {
+            "name": "EnableMailboxAuditing",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "Persistence",
+        "title": "Mail forwarded out",
+        "text": "The attacker creates a rule that forwards new mail to an outside address. This gives quiet, lasting access to the conversation.",
+        "alerts": [
+          {
+            "operation": "New-InboxRule",
+            "logbook": "Audit.Exchange",
+            "preset": "New-InboxRuleForward"
+          }
+        ],
+        "whenFixed": "External forwarding is blocked and the rule creation raises an alert.",
+        "standards": [
+          {
+            "name": "EXODisableAutoForwarding",
+            "role": "prevents"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "MFA and lockout controls stop the guessed password from granting access.",
+      "notPrevented": "The attacker takes over the account and forwards its mail out of the tenant."
+    }
+  },
+  {
+    "id": "RoleAssignmentEscalation",
+    "title": "Privilege escalation by role assignment",
+    "category": "Identity & Conditional Access",
+    "severity": "Critical",
+    "summary": "An attacker who took over an account with role-management rights grants itself higher privileges and plants a back-door application.",
+    "requiredCapabilities": [
+      "AAD_PREMIUM"
+    ],
+    "persona": "user",
+    "attackerCanSatisfy": [
+      "mfa"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker has taken over a help-desk account that can manage group membership and role assignments."
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "The account signs in from an unfamiliar address at medium risk. Strong sign-in controls are the last chance to stop it before privileges are changed.",
+        "whatIf": {
+          "clientAppType": "browser",
+          "devicePlatform": "windows",
+          "signInRiskLevel": "medium",
+          "country": "NL",
+          "ipAddress": "185.220.101.33"
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "MFA is not enforced for this account, so a stolen password reaches role management.",
+            "role": "prevents",
+            "fix": {
+              "caTemplate": "Require multifactor authentication for all users"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach role management.",
+        "standards": [
+          {
+            "name": "PerUserMFA",
+            "role": "prevents"
+          },
+          {
+            "name": "SecurityDefaults",
+            "role": "prevents"
+          }
+        ]
+      },
+      {
+        "id": "RoleGrant",
+        "title": "Privileged role granted",
+        "text": "The attacker adds its account to a privileged role, gaining tenant-wide control. The change takes effect immediately.",
+        "alerts": [
+          {
+            "operation": "Add member to role.",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "Add member to role."
+          }
+        ],
+        "whenFixed": "The role change is written to the audit log and surfaces for review.",
+        "standards": [
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "Persistence",
+        "title": "Back-door application added",
+        "text": "The attacker registers a hidden application with broad permissions so access survives password and role cleanup. The application acts on its own, without a user present.",
+        "alerts": [
+          {
+            "operation": "Add service principal.",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "Add service principal."
+          }
+        ],
+        "whenFixed": "Consent and application-credential controls stop the back-door app from being usable.",
+        "standards": [
+          {
+            "name": "AppManagementPolicy",
+            "role": "limits"
+          },
+          {
+            "name": "OauthConsent",
+            "role": "prevents"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "MFA stops the takeover before any role can be changed.",
+      "notPrevented": "The attacker gains tenant-wide control and hides a back-door application."
+    }
+  },
+  {
+    "id": "SignInOutsideAllowedCountries",
+    "title": "Sign-in from outside allowed countries",
+    "category": "Identity & Conditional Access",
+    "severity": "High",
+    "summary": "An attacker signs in from a country the organization never operates in and reaches a user's mailbox and files.",
+    "requiredCapabilities": [
+      "AAD_PREMIUM"
+    ],
+    "persona": "user",
+    "attackerCanSatisfy": [
+      "mfa"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker has the user's password and can approve MFA through a phished prompt. The organization only works from a small set of countries."
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "The attacker connects from an address in Russia. Only a location control can tell this apart from an ordinary sign-in.",
+        "whatIf": {
+          "clientAppType": "browser",
+          "devicePlatform": "windows",
+          "country": "RU",
+          "ipAddress": "45.132.1.20"
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "No location policy, so sign-ins from countries the business never uses are allowed.",
+            "role": "prevents",
+            "fix": {
+              "caTemplate": "Block sign-ins from countries outside the allowed list"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: the sign-in comes from a country outside the allowed list and is refused."
+      },
+      {
+        "id": "MailboxAccess",
+        "title": "Mailbox opened and read",
+        "text": "The attacker reads recent mail and searches for finance and reset messages. The session behaves like the real user, so nothing looks out of place.",
+        "whenFixed": "Mailbox auditing records the foreign-location access for responders to catch.",
+        "standards": [
+          {
+            "name": "EnableMailboxAuditing",
+            "role": "detects"
+          },
+          {
+            "name": "ActivityBasedTimeout",
+            "role": "limits"
+          }
+        ]
+      },
+      {
+        "id": "Forwarding",
+        "title": "Mail forwarded outside the tenant",
+        "text": "The attacker creates an inbox rule that forwards new mail to an external address. Copies now leave the tenant automatically.",
+        "alerts": [
+          {
+            "operation": "New-InboxRule",
+            "logbook": "Audit.Exchange",
+            "preset": "New-InboxRuleForward"
+          }
+        ],
+        "whenFixed": "External forwarding is blocked and the rule creation raises an alert.",
+        "standards": [
+          {
+            "name": "EXODisableAutoForwarding",
+            "role": "prevents"
+          },
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "The foreign sign-in is refused, so the mailbox is never opened.",
+      "notPrevented": "The attacker reads the mailbox and quietly forwards mail out of the tenant."
+    }
+  },
+  {
+    "id": "StolenTokenReplay",
+    "title": "Stolen session token replay",
+    "category": "Identity & Conditional Access",
+    "severity": "Critical",
+    "summary": "An attacker replays a session token stolen through a fake sign-in page and signs in as the user without re-entering a password or MFA.",
+    "requiredCapabilities": [
+      "AAD_PREMIUM"
+    ],
+    "persona": "user",
+    "attackerCanSatisfy": [
+      "mfa"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker has captured a valid session token from the user through a fake sign-in page that relayed the real one. The token still carries the multifactor approval the user completed.",
+        "whenFixed": "The Check browser extension recognises the fake sign-in page and blocks it, so no token is captured in the first place.",
+        "standards": [
+          {
+            "name": "DeployCheckChromeExtension",
+            "role": "prevents"
+          }
+        ]
+      },
+      {
+        "id": "SignIn",
+        "title": "Sign-in evaluated by Conditional Access",
+        "text": "The attacker replays the token from an unmanaged Windows browser on a hosting-provider address. Because the token already carries MFA, only device and risk controls can still stop the session.",
+        "whatIf": {
+          "clientAppType": "browser",
+          "devicePlatform": "windows",
+          "deviceInfo": {
+            "isCompliant": false
+          },
+          "signInRiskLevel": "medium",
+          "country": "NL",
+          "ipAddress": "185.220.101.47"
+        },
+        "gaps": [
+          {
+            "when": [
+              "allowed",
+              "weakGrant"
+            ],
+            "text": "No compliant-device requirement, so a replayed token from any machine is accepted.",
+            "role": "prevents",
+            "fix": {
+              "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device"
+            }
+          },
+          {
+            "when": [
+              "allowed"
+            ],
+            "text": "No sign-in risk policy, so the medium-risk replay is not challenged.",
+            "role": "detects",
+            "requiredCapabilities": [
+              "AAD_PREMIUM_P2"
+            ],
+            "fix": {
+              "caTemplate": "Require multifactor authentication for medium and high sign-in risk"
+            }
+          }
+        ],
+        "stopsChainWhen": "blocked",
+        "whenFixed": "Blocked: the device is not compliant, so the replayed token is refused.",
+        "standards": [
+          {
+            "name": "PhishProtection",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "MailboxSearch",
+        "title": "Mailbox searched for valuable mail",
+        "text": "The attacker opens the mailbox and searches for invoices, payroll and password-reset messages. Nothing is changed yet, so the activity looks like normal browsing.",
+        "whenFixed": "Mailbox auditing records the search, giving responders an early signal of takeover.",
+        "standards": [
+          {
+            "name": "EnableMailboxAuditing",
+            "role": "detects"
+          },
+          {
+            "name": "ActivityBasedTimeout",
+            "role": "limits"
+          }
+        ]
+      },
+      {
+        "id": "Persistence",
+        "title": "Forwarding set up for ongoing access",
+        "text": "The attacker creates an inbox rule and turns on mailbox forwarding so copies of new mail reach an outside address. This keeps the attacker informed even after the token expires.",
+        "alerts": [
+          {
+            "operation": "New-InboxRule",
+            "logbook": "Audit.Exchange",
+            "preset": "New-InboxRule"
+          },
+          {
+            "operation": "Set-Mailbox",
+            "logbook": "Audit.Exchange",
+            "preset": "Set-MailboxForwardingExternal"
+          }
+        ],
+        "whenFixed": "External forwarding is blocked by policy and the rule creation raises an alert.",
+        "standards": [
+          {
+            "name": "EnableMailboxAuditing",
+            "role": "detects"
+          },
+          {
+            "name": "EXODisableAutoForwarding",
+            "role": "prevents"
+          },
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "The replayed token is refused at sign-in because the device is not compliant, and the takeover never starts.",
+      "notPrevented": "The attacker reads and quietly forwards mail for as long as the stolen token and forwarding rule survive."
+    }
+  },
+  {
+    "id": "TransportRuleExfiltration",
+    "title": "Transport-rule exfiltration",
+    "category": "Exchange & Email",
+    "severity": "High",
+    "summary": "An attacker with Exchange admin rights creates an organization-wide transport rule that blind-copies mail to an outside address.",
+    "requiredCapabilities": [
+      "EXCHANGE_S_ENTERPRISE"
+    ],
+    "steps": [
+      {
+        "id": "Assumption",
+        "title": "Starting assumption",
+        "text": "The attacker controls an Exchange administrator account and wants to capture mail across the whole organization at once."
+      },
+      {
+        "id": "TransportRule",
+        "title": "Organization-wide transport rule created",
+        "text": "The attacker creates a transport rule that blind-copies messages to an external address for every mailbox. One change captures the entire mail flow.",
+        "alerts": [
+          {
+            "operation": "New-TransportRule",
+            "logbook": "Audit.Exchange"
+          }
+        ],
+        "whenFixed": "The rule creation is written to the audit log and surfaces for review.",
+        "standards": [
+          {
+            "name": "DisableExchangeOnlinePowerShell",
+            "role": "limits"
+          },
+          {
+            "name": "AuditLog",
+            "role": "detects"
+          }
+        ]
+      },
+      {
+        "id": "Exfiltration",
+        "title": "Company mail copied out",
+        "text": "Mail for all users is now silently copied to the attacker. The volume of external mail rises sharply.",
+        "whenFixed": "The outbound spam alert flags the surge of external mail so responders can act.",
+        "standards": [
+          {
+            "name": "OutBoundSpamAlert",
+            "role": "detects"
+          }
+        ]
+      }
+    ],
+    "outcome": {
+      "prevented": "The transport-rule change is recorded and the external surge is alerted for fast removal.",
+      "notPrevented": "All company mail is copied out of the tenant through a single hidden rule."
+    }
+  }
+]

@@ -30,7 +30,6 @@ BeforeAll {
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $Tenant2, $message, $sev, $headers, $LogData) }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $TenantFilter, $Tenant) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Get-NormalizedError { [CmdletBinding()] param($Message) $Message }
     function Get-CippException { [CmdletBinding()] param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
 
@@ -90,7 +89,6 @@ Describe 'Invoke-CIPPStandardDisableGuests' {
         $script:audits = @()
 
         Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
-        Mock -CommandName Add-CIPPBPAField -MockWith { }
         Mock -CommandName Write-LogMessage -MockWith {
             param($API, $tenant, $message, $sev, $LogData)
             $script:logs.Add(@{ Message = $message; Sev = $sev })

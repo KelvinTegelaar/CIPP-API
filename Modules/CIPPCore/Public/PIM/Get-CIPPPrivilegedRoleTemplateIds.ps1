@@ -14,6 +14,8 @@ function Get-CIPPPrivilegedRoleTemplateIds {
     .PARAMETER Set
         Privileged          - CIPP's privileged set (18 roles). Default.
         CisaHighlyPrivileged - the six roles CISA SCuBA calls highly privileged.
+        Critical            - the four roles that decide who else is privileged: Global, Privileged Role,
+                              Privileged Authentication and Conditional Access Administrator.
         GlobalAdministrator - only Global Administrator.
 
     .PARAMETER WithNames
@@ -25,7 +27,7 @@ function Get-CIPPPrivilegedRoleTemplateIds {
     #>
     [CmdletBinding()]
     param(
-        [ValidateSet('Privileged', 'CisaHighlyPrivileged', 'GlobalAdministrator')]
+        [ValidateSet('Privileged', 'CisaHighlyPrivileged', 'GlobalAdministrator', 'Critical')]
         [string]$Set = 'Privileged',
 
         [switch]$WithNames
@@ -54,6 +56,14 @@ function Get-CIPPPrivilegedRoleTemplateIds {
 
     $Ids = switch ($Set) {
         'GlobalAdministrator' { @('62e90394-69f5-4237-9190-012177145e10') }
+        'Critical' {
+            @(
+                '62e90394-69f5-4237-9190-012177145e10',
+                'e8611ab8-c189-46e8-94e1-60213ab1f814',
+                '7be44c8a-adaf-4e2a-84d6-ab2649e08a13',
+                'b1be1c3e-b65d-4f19-8427-f6fa0d97feb9'
+            )
+        }
         'CisaHighlyPrivileged' {
             @(
                 '62e90394-69f5-4237-9190-012177145e10',

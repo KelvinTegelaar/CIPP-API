@@ -94,7 +94,6 @@ function Invoke-CIPPStandardTeamsChatProtection {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TeamsChatProtection' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
             FileTypeCheck      = $CurrentState.FileTypeCheck

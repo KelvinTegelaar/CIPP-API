@@ -58,12 +58,55 @@ function Invoke-PublicMcpRegister {
         return (New-CippMcpRegistrationError -Code 'invalid_redirect_uri' -Description 'redirect_uris is required and must contain at least one URI.' -Headers $CorsHeaders)
     }
 
-    # The "registered client" is always the instance's single MCP resource app registration.
+    # The "registered client" is an MCPAllowed API client - the app the connector signs in AS (the
+    # dedicated CIPP-MCP app is the resource, not handed out here). Several MCPAllowed clients can
+    # coexist, each with its own role/IP/redirects/CA; a connector can pin one with ?client=<appId>
+    # on the MCP URL, otherwise the first that resolves in Entra is used.
     $Table = Get-CippTable -tablename 'ApiClients'
-    $McpClient = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' |
-        Where-Object { "$($_.MCPAllowed)" -eq 'True' } | Select-Object -First 1
+    $McpCandidates = @(Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' |
+            Where-Object { "$($_.MCPAllowed)" -eq 'True' })
+    $RequestedClient = "$($Request.Query.client)".Trim()
+    if (-not [string]::IsNullOrWhiteSpace($RequestedClient)) {
+        $Scoped = @($McpCandidates | Where-Object { "$($_.RowKey)" -eq $RequestedClient })
+        if ($Scoped.Count -eq 0) {
+            return (New-CippMcpRegistrationError -Code 'invalid_client_metadata' -Description "No enabled MCP client matches ?client=$RequestedClient on this instance." -Headers $CorsHeaders)
+        }
+        $McpCandidates = $Scoped
+    }
+    if ($McpCandidates.Count -eq 0) {
+        return (New-CippMcpRegistrationError -Code 'invalid_client_metadata' -Description 'No MCP client is configured on this instance. Enable "MCP Access Allowed" on an API client in CIPP and run Save to Azure.' -Headers $CorsHeaders)
+    }
+
+    # Only advertise a client whose Entra app registration still exists. A stale holder (its app
+    # registration deleted, or a failed setup that never created one) would otherwise be handed out
+    # as client_id and every connect fails at authorize with AADSTS700016 (issue #619). Existence is
+    # cached 5 min per appId so this anonymous endpoint can't be turned into a Graph-call amplifier.
+    if (-not $script:McpResourceAppExistsCache) { $script:McpResourceAppExistsCache = @{} }
+    $McpClient = $null
+    foreach ($Candidate in $McpCandidates) {
+        $CandidateId = "$($Candidate.RowKey)"
+        $Cached = $script:McpResourceAppExistsCache[$CandidateId]
+        if ($Cached -and ([DateTimeOffset]::UtcNow - $Cached.CheckedAt).TotalSeconds -lt 300) {
+            if ($Cached.Exists) { $McpClient = $Candidate; break }
+            Write-LogMessage -API 'PublicMcpRegister' -message "Skipping MCP client $CandidateId : its Entra app registration no longer exists." -Sev 'Warning'
+            continue
+        }
+        try {
+            $ResourceApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=appId eq '$CandidateId'&`$select=appId" -NoAuthCheck $true -AsApp $true
+            $Exists = [bool]($ResourceApp.appId)
+            $script:McpResourceAppExistsCache[$CandidateId] = @{ Exists = $Exists; CheckedAt = [DateTimeOffset]::UtcNow }
+            if ($Exists) { $McpClient = $Candidate; break }
+            Write-LogMessage -API 'PublicMcpRegister' -message "Skipping MCP client $CandidateId : its Entra app registration no longer exists." -Sev 'Warning'
+        } catch {
+            # On a Graph error don't hide a possibly-valid client — treat it as present so a
+            # transient outage can't break every connect, and don't cache the uncertain result.
+            Write-LogMessage -API 'PublicMcpRegister' -message "Could not verify MCP resource app $CandidateId exists; proceeding. Error: $($_.Exception.Message)" -Sev 'Warning'
+            $McpClient = $Candidate
+            break
+        }
+    }
     if (-not $McpClient) {
-        return (New-CippMcpRegistrationError -Code 'invalid_client_metadata' -Description 'No MCP resource client is configured on this instance. Enable "MCP Access Allowed" on an API client in CIPP and run Save to Azure.' -Headers $CorsHeaders)
+        return (New-CippMcpRegistrationError -Code 'invalid_client_metadata' -Description 'The configured MCP resource client no longer has a valid app registration in Entra. Re-run MCP setup on an API client in CIPP and Save to Azure.' -Headers $CorsHeaders)
     }
 
     # Known client callbacks and loopback (any port/path) pass directly. Anything else must be a
@@ -102,11 +145,15 @@ function Invoke-PublicMcpRegister {
         return (New-CippMcpRegistrationError -Code 'invalid_redirect_uri' -Description "Redirect URI '$Uri' is not an allowed MCP client callback for this server. To allow a custom client, add its callback to the MCP resource app registration (see the CIPP-API integration docs)." -Headers $CorsHeaders)
     }
 
+    # The MCPAllowed client app is itself the OAuth client the connector signs in as (a different app
+    # from the dedicated CIPP-MCP resource, so the refresh is not "a token for itself"/AADSTS90009).
+    $PublicClientId = "$($McpClient.RowKey)"
+
     $ClientName = "$($Body.client_name ?? 'MCP client')"
-    Write-LogMessage -API 'PublicMcpRegister' -message "MCP client registration served: '$ClientName' -> client_id $($McpClient.RowKey) ($($RedirectUris.Count) redirect URI(s))" -Sev 'Info'
+    Write-LogMessage -API 'PublicMcpRegister' -message "MCP client registration served: '$ClientName' -> client_id $PublicClientId (resource app $($McpClient.RowKey), $($RedirectUris.Count) redirect URI(s))" -Sev 'Info'
 
     $Response = [ordered]@{
-        client_id                  = "$($McpClient.RowKey)"
+        client_id                  = $PublicClientId
         client_id_issued_at        = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
         client_name                = $ClientName
         redirect_uris              = @($RedirectUris)

@@ -7,6 +7,10 @@ function Set-CIPPIntunePolicy {
         $RawJSON,
         $AssignTo,
         $ExcludeGroup,
+        # Group ids from the deploy drawer's single-tenant picker. When present they win over the
+        # name-based AssignTo/ExcludeGroup resolution inside Set-CIPPAssignedPolicy.
+        $GroupIds,
+        $ExcludeGroupIds,
         $Headers,
         $APIName = 'Set-CIPPIntunePolicy',
         $TenantFilter,
@@ -137,6 +141,11 @@ function Set-CIPPIntunePolicy {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'groupPolicyConfigurations'
                 $CreateBody = '{"description":"' + $Description + '","displayName":"' + $DisplayName + '","roleScopeTagIds":["0"]}'
+                # Settings from an imported ADMX file bind to definition ids that differ per tenant.
+                # Rewrite the template's binds to this tenant's ids before anything is created, so a
+                # template whose ADMX is missing here fails by name instead of leaving an empty policy
+                # behind after Graph rejects updateDefinitionValues.
+                $RawJSON = Resolve-CIPPIntuneAdminTemplateBinding -RawJSON $RawJSON -TenantFilter $TenantFilter -DisplayName $DisplayName -Headers $Headers -APIName $APIName
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $TenantFilter
                 $FuzzyResult = Find-CIPPFuzzyPolicyMatch -DisplayName $DisplayName -ExistingPolicies $CheckExististing -MaxDistance $LevenshteinDistance
                 if ($FuzzyResult) {
@@ -169,6 +178,12 @@ function Set-CIPPIntunePolicy {
                 if ([string]::IsNullOrWhiteSpace($DisplayName)) { $DisplayName = $PolicyFile.displayName ?? $PolicyFile.name }
                 if ([string]::IsNullOrWhiteSpace($DisplayName)) {
                     throw "This device configuration template has no name - the template's Displayname column and the payload's displayName are both empty. Recreate the template."
+                }
+                # An OMA-URI secret still encrypted in the template is a placeholder tied to a tenant we can't
+                # identify from here, so the plaintext is unrecoverable and Graph rejects it on create.
+                $EncryptedOma = @($PolicyFile.omaSettings | Where-Object { $_.secretReferenceValueId -or $_.isEncrypted -eq $true -or $_.value -eq 'PGEvPg==' })
+                if ($EncryptedOma.Count -gt 0) {
+                    throw "Template has undecrypted OMA-URI setting(s) '$($EncryptedOma.displayName -join "', '")'. Recapture it from the source tenant or edit in the plaintext value."
                 }
                 $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value "$Description" -Force
                 $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $DisplayName -Force
@@ -399,6 +414,9 @@ function Set-CIPPIntunePolicy {
                 ExcludeGroup   = $ExcludeGroup
                 AssignmentMode = $AssignmentMode
             }
+            # '@($null).Count' is 1, so test the value before counting it.
+            if ($GroupIds -and @($GroupIds).Count -gt 0) { $AssignParams.GroupIds = @($GroupIds) }
+            if ($ExcludeGroupIds -and @($ExcludeGroupIds).Count -gt 0) { $AssignParams.ExcludeGroupIds = @($ExcludeGroupIds) }
 
             if ($AssignmentFilterName) {
                 $AssignParams.AssignmentFilterName = $AssignmentFilterName
@@ -410,6 +428,30 @@ function Set-CIPPIntunePolicy {
         return "Successfully $($PostType) policy for $($TenantFilter) with display name $($DisplayName)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
+
+        # Microsoft has tightened Intune DCV2 (settings catalog / configurationPolicies) and device
+        # compliance model validation to reject null values on required properties that older template
+        # captures left null. CIPP re-sends the stored template verbatim, so the write now fails on a
+        # value the operator cannot see in the UI. Turn that specific rejection into an actionable
+        # message that names the offending property - patching only the live policy does not help,
+        # because the stored template still carries the null and every later run resends it. We do not
+        # guess a replacement value: many of these (e.g. bitLockerEnabled) are security-relevant.
+        $ErrorText = @($ErrorMessage.NormalizedError, $ErrorMessage.Message, [string]$ErrorMessage.RawError) -join ' '
+        $NullProperty = $null
+        if ($ErrorText -match "A null value was found for the property named '([^']+)'") {
+            $NullProperty = $Matches[1]
+        } elseif ($ErrorText -match '([A-Za-z0-9_]+)\s*:\s*value cannot be null') {
+            $NullProperty = $Matches[1]
+        } elseif ($ErrorText -match 'value cannot be null' -or $ErrorText -match 'ModelValidationFailure') {
+            $NullProperty = 'a required property'
+        }
+
+        if ($NullProperty) {
+            $NullMessage = "Failed to $($PostType ?? 'deploy') Intune policy '$DisplayName' for $TenantFilter. Microsoft now rejects the null value stored for '$NullProperty' on this policy - it no longer allows null on this required property. The stored template carries this null, so re-deploying or patching only the live policy will not fix it: edit or re-capture the template to set a value for '$NullProperty', then deploy again. Underlying error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $NullMessage -Sev 'Error' -LogData $ErrorMessage
+            throw $NullMessage
+        }
+
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Failed $($PostType) policy $($DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         throw "Failed to add or set policy for $($TenantFilter) with display name $($DisplayName): $($ErrorMessage.NormalizedError)"
     }

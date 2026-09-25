@@ -6,9 +6,11 @@ function Invoke-CIPPBaselineDevicePrepProfile {
         The classic's three-way write. Settings correct but assignment wrong: repair the
         assignment IN PLACE through /assign - recreating would sever the enrollment-time
         device group linkage over a delta the endpoint can fix. Otherwise: delete the drifted
-        profile and recreate it with the classic's exact settings body, resolving (or, when
-        CreateNewGroup allows, creating with the Intune Provisioning Client as owner) the
-        device security group first.
+        profile and recreate it with the classic's exact settings body. The device security group
+        is resolved (or, when CreateNewGroup allows, created with the Intune Provisioning Client as
+        owner) before either branch, because the group Intune enrols devices into is applied
+        through setEnrollmentTimeDeviceMembershipTarget on the policy rather than by the settings
+        string, so both branches have to write it.
     .FUNCTIONALITY
         Internal
     #>
@@ -25,7 +27,7 @@ function Invoke-CIPPBaselineDevicePrepProfile {
     $DeploymentMode = '0' # Device Prep only supports self-deploying mode
     $DeploymentType = [string]($Remediate.deploymentType.value ?? $Remediate.deploymentType ?? '0')
     $JoinType = [string]($Remediate.joinType.value ?? $Remediate.joinType ?? '0')
-    $AccountType = [string]($Remediate.accountType.value ?? $Remediate.accountType ?? '0')
+    $AccountType = [string]($Remediate.accountType.value ?? $Remediate.accountType ?? '1') # 1 = Standard user, 0 = Administrator
     $Timeout = if ([string]::IsNullOrWhiteSpace("$($Remediate.timeout)")) { 60 } else { [int]"$($Remediate.timeout)" }
     $CustomErrorMessage = if ([string]::IsNullOrWhiteSpace("$($Remediate.customErrorMessage)")) { "Contact your organization$([char]0x2019)s support person for help." } else { "$($Remediate.customErrorMessage)" }
     $AllowSkip = $(if ($Remediate.allowSkip -eq $true) { '1' } else { '0' })
@@ -38,15 +40,6 @@ function Invoke-CIPPBaselineDevicePrepProfile {
     }
     if ($AssignmentTarget.Unsupported) {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "DevicePrepProfile: $($AssignmentTarget.Unsupported)" -Sev 'Warning'
-    }
-
-    # Settings already correct means only the assignment drifted: repair it in place.
-    if ($Current.settingsCorrect -eq $true -and -not [string]::IsNullOrWhiteSpace("$($Current.policyId)")) {
-        if ($AssignmentBody) {
-            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($Current.policyId)')/assign" -tenantid $TenantFilter -body $AssignmentBody -type POST
-            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Repaired the assignment for Device Prep profile '$ProfileName'." -Sev 'Info'
-        }
-        return
     }
 
     # Resolve or create the device security group, the classic's flow.
@@ -84,8 +77,26 @@ function Invoke-CIPPBaselineDevicePrepProfile {
         }
     }
 
+    # Settings already correct means only the assignment or the membership target drifted:
+    # repair them in place.
+    if ($Current.settingsCorrect -eq $true -and -not [string]::IsNullOrWhiteSpace("$($Current.policyId)")) {
+        # isAssigned is absent when the assignment could not be graded, and a blind re-post is
+        # the safe answer there; a graded-correct assignment is left alone.
+        if ($AssignmentBody -and $Current.isAssigned -ne $true) {
+            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($Current.policyId)')/assign" -tenantid $TenantFilter -body $AssignmentBody -type POST
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Repaired the assignment for Device Prep profile '$ProfileName'." -Sev 'Info'
+        }
+        if (-not [string]::IsNullOrWhiteSpace($DeviceGroupId) -and "$($Current.deviceGroupId)" -ne $DeviceGroupId) {
+            $null = Set-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId "$($Current.policyId)" -GroupId $DeviceGroupId -TenantFilter $TenantFilter
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Applied the enrollment time device membership target for Device Prep profile '$ProfileName'." -Sev 'Info'
+        }
+        return
+    }
+
     if (-not [string]::IsNullOrWhiteSpace("$($Current.policyId)")) {
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($Current.policyId)')" -tenantid $TenantFilter -type DELETE
+        # The recreated profile gets a new id, so the old marker must not survive it.
+        Remove-CIPPEnrollmentTimeDeviceMembershipMarker -PolicyId "$($Current.policyId)" -TenantFilter $TenantFilter
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Deleted the drifted Device Prep profile '$ProfileName' for recreation." -Sev 'Info'
     }
 
@@ -162,6 +173,9 @@ function Invoke-CIPPBaselineDevicePrepProfile {
     $NewPolicy = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $TenantFilter -body $Body -type POST
     if ("$($NewPolicy.id)" -and $AssignmentBody) {
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($NewPolicy.id)')/assign" -tenantid $TenantFilter -body $AssignmentBody -type POST
+    }
+    if ("$($NewPolicy.id)" -and -not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
+        $null = Set-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId "$($NewPolicy.id)" -GroupId $DeviceGroupId -TenantFilter $TenantFilter
     }
     Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Deployed the Device Prep profile '$ProfileName'." -Sev 'Info'
 }

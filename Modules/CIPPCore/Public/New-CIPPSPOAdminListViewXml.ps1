@@ -23,6 +23,7 @@ function New-CIPPSPOAdminListViewXml {
 
     .PARAMETER ExcludeTemplates
     TemplateName values to exclude via Neq. Mutually exclusive with IncludeTemplates.
+    Teams channel sites (TEAMCHANNEL#0/#1) are included by default, unlike the admin UI.
 
     .PARAMETER IncludeTemplates
     TemplateName values to include via In. Mutually exclusive with ExcludeTemplates.
@@ -68,7 +69,7 @@ function New-CIPPSPOAdminListViewXml {
         [AllowNull()]
         [object]$ExcludeState = 0,
 
-        [string[]]$ExcludeTemplates = @('TEAMCHANNEL#0', 'TEAMCHANNEL#1'),
+        [string[]]$ExcludeTemplates = @(),
 
         [string[]]$IncludeTemplates = @(),
 

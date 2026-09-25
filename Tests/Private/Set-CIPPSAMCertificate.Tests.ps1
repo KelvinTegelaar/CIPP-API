@@ -57,4 +57,15 @@ Describe 'Set-CIPPSAMCertificate dev-mode storage' {
         $script:Written.applicationid | Should -Be 'app-a'
         $script:Written.SAMCertificate | Should -Be 'bmV3'
     }
+
+    It 'copies the prior SAMCertificate to SAMCertificatePrevious on rotate' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [PSCustomObject]@{ PartitionKey = 'Secret'; RowKey = 'Secret'; SAMCertificate = 'b2xk' }
+        }
+
+        $null = Set-CIPPSAMCertificate -PfxBase64 'bmV3'
+
+        $script:Written.SAMCertificatePrevious | Should -Be 'b2xk'
+        $script:Written.SAMCertificate | Should -Be 'bmV3'
+    }
 }

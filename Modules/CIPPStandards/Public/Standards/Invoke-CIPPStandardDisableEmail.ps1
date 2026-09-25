@@ -73,6 +73,5 @@ function Invoke-CIPPStandardDisableEmail {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableEmail' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableEmail' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

@@ -291,6 +291,5 @@ function Invoke-CIPPStandardColleagueImpersonationAlert {
             '(U-Z) Colleague Impersonation Alert' = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.ColleagueImpersonationAlert' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ColleagueImpersonationAlert' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -44,6 +44,10 @@ function Set-CIPPSAMCertificate {
         if (!$Secret) {
             $Secret = [PSCustomObject]@{ PartitionKey = 'Secret'; RowKey = 'Secret' }
         }
+        # Preserve the prior current as Previous so local rotation can keep current+previous on Entra.
+        if ($Secret.$Name) {
+            $Secret | Add-Member -MemberType NoteProperty -Name "${Name}Previous" -Value $Secret.$Name -Force
+        }
         $Secret | Add-Member -MemberType NoteProperty -Name $Name -Value $PfxBase64 -Force
         Add-AzDataTableEntity @Table -Entity $Secret -Force
         Update-CIPPSAMCertificateEnvCache -Name $Name -PfxBase64 $PfxBase64

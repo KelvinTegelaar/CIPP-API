@@ -94,6 +94,5 @@ function Invoke-CIPPStandardSPDisableCustomScripts {
             SPDisableCustomScripts = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SPDisableCustomScripts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SPDisableCustomScripts' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

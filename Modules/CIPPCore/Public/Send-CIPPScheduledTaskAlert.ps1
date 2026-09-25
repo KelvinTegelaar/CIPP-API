@@ -407,7 +407,7 @@ function Send-CIPPScheduledTaskAlert {
                             apiEndpoint = '/api/ExecSnoozeAlert'
                             cmdletName  = $TaskInfo.Command
                             tenant      = $TenantFilter
-                            durations   = @(7, 14, 30, -1)
+                            durations   = @(7, 14, 30, 90)
                             items       = @($Results | ForEach-Object {
                                     $HashResult = Get-AlertContentHash -AlertItem $_
                                     [PSCustomObject]@{

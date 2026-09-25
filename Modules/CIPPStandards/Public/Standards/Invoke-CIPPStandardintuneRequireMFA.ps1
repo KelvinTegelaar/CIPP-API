@@ -70,8 +70,6 @@ function Invoke-CIPPStandardintuneRequireMFA {
     }
 
     if ($Settings.report -eq $true) {
-        $RequireMFA = if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') { $true } else { $false }
-
         $CurrentValue = @{
             multiFactorAuthConfiguration = $PreviousSetting.multiFactorAuthConfiguration
         }
@@ -79,6 +77,5 @@ function Invoke-CIPPStandardintuneRequireMFA {
             multiFactorAuthConfiguration = 'required'
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.intuneRequireMFA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'intuneRequireMFA' -FieldValue $RequireMFA -StoreAs bool -Tenant $Tenant
     }
 }

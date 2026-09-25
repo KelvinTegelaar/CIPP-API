@@ -187,7 +187,6 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'FederationConfiguration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentAllowedDomainsForReport = if ($IsCurrentAllowAllKnownDomains) {
             'AllowAllKnownDomains'
