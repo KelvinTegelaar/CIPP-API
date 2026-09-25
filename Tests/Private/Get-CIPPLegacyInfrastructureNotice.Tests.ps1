@@ -64,7 +64,7 @@ Describe 'Get-CIPPLegacyInfrastructureNotice' {
 
         $Notice.maintenance | Should -BeTrue
         $Notice.noticeId | Should -Be 'legacy-function-app-infrastructure'
-        $Notice.dismissible | Should -BeTrue
+        $Notice.dismissible | Should -BeFalse
         $Notice.active | Should -BeFalse
         $Notice.Keys | Should -Contain 'startTime'
         $Notice.Keys | Should -Contain 'endTime'

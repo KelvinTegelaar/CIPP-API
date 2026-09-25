@@ -31,6 +31,6 @@ function Get-CIPPLegacyInfrastructureNotice {
         startTime   = $null
         endTime     = $null
         active      = $false
-        dismissible = $true
+        dismissible = $false
     }
 }
