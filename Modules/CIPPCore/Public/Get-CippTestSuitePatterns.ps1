@@ -30,5 +30,6 @@ function Get-CippTestSuitePatterns {
         CopilotReadiness = 'Invoke-CippTestCopilotReady*'
         GenericTests     = 'Invoke-CippTestGenericTest*'
         E8               = 'Invoke-CippTestE8_*'
+        SecuritySimulations = 'Invoke-CippTestSecuritySimulation_*'
     }
 }

@@ -20,6 +20,7 @@ function Send-CIPPAlert {
         $PsaTicketPriority,
         $PSAReference,
         $PSATicketId,
+        $PSAConsolidationKey,
         [switch]$UseStandardizedSchema
     )
     Write-Information 'Shipping Alert'
@@ -65,16 +66,27 @@ function Send-CIPPAlert {
                     saveToSentItems = 'true'
                 }
 
-                # Add file attachments if provided
+                # Add file attachments if provided. sendMail rejects a request body over 4MB, so attach in
+                # order (the report PDF comes first) and omit whatever no longer fits.
                 if ($Attachments -and $Attachments.Count -gt 0) {
-                    $PowerShellBody.message.attachments = @($Attachments | ForEach-Object {
-                        @{
-                            '@odata.type'  = '#microsoft.graph.fileAttachment'
-                            name           = $_.Name
-                            contentType    = $_.ContentType
-                            contentBytes   = $_.ContentBytes
+                    $Budget = 4MB - 64KB - [System.Text.Encoding]::UTF8.GetByteCount((ConvertTo-Json -Compress -Depth 10 -InputObject $PowerShellBody))
+                    $FittingAttachments = @($Attachments | ForEach-Object {
+                        $Size = ([string]$_.ContentBytes).Length + 512
+                        if ($Size -le $Budget) {
+                            $Budget = $Budget - $Size
+                            @{
+                                '@odata.type'  = '#microsoft.graph.fileAttachment'
+                                name           = $_.Name
+                                contentType    = $_.ContentType
+                                contentBytes   = $_.ContentBytes
+                            }
+                        } else {
+                            Write-Information "Omitting attachment $($_.Name) from '$Title': too large for sendMail"
                         }
                     })
+                    if ($FittingAttachments.Count -gt 0) {
+                        $PowerShellBody.message.attachments = $FittingAttachments
+                    }
                 }
 
                 $JSONBody = ConvertTo-Json -Compress -Depth 10 -InputObject $PowerShellBody
@@ -371,6 +383,12 @@ function Send-CIPPAlert {
                 if ($PSATicketId) {
                     $Alert.PsaTicketId = $PSATicketId
                     Write-Information "PSA alert target ticket: $PSATicketId"
+                }
+                if ($PSAConsolidationKey) {
+                    # Optional stable key for PSA extensions that support consolidation.
+                    # Extensions that do not consume this property remain unaffected.
+                    $Alert.PSAConsolidationKey = $PSAConsolidationKey
+                    Write-Information 'PSA alert consolidation key supplied'
                 }
                 if ($AffectedUser) {
                     $Alert.AffectedUser = $AffectedUser

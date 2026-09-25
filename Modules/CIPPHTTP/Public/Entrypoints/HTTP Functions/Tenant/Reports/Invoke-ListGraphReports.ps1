@@ -13,8 +13,13 @@ function Invoke-ListGraphReports {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     $TenantFilter = $Request.Query.tenantFilter
+    # Report source: 'graph' (default) for Microsoft Graph usage reports, or 'office' for
+    # the reports.office.com service.
     $Type = $Request.Query.type ?? 'graph'
+    # The report name to fetch (e.g. 'getEmailActivityUserDetail'). Omit to enumerate the
+    # reports available for the selected Type instead of fetching one.
     $Report = $Request.Query.report
+    # Reporting window for Graph reports: 'D7', 'D30' (default), 'D90' or 'D180'.
     $Period = $Request.Query.period ?? 'D30'
 
     if (-not $TenantFilter) {
@@ -24,19 +29,27 @@ function Invoke-ListGraphReports {
         }
     }
 
-    $ValidTypes = @('graph', 'office')
-    if ($Type -notin $ValidTypes) {
-        return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::BadRequest
-            Body       = @{ error = "Invalid type '$Type'. Valid values: $($ValidTypes -join ', ')." }
+    switch ($Type) {
+        'graph' { }
+        'office' { }
+        default {
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ error = "Invalid type '$Type'. Valid values: graph, office." }
+            }
         }
     }
 
-    $ValidPeriods = @('D7', 'D30', 'D90', 'D180')
-    if ($Period -notin $ValidPeriods) {
-        return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::BadRequest
-            Body       = @{ error = "Invalid period '$Period'. Valid values: $($ValidPeriods -join ', ')." }
+    switch ($Period) {
+        'D7' { }
+        'D30' { }
+        'D90' { }
+        'D180' { }
+        default {
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ error = "Invalid period '$Period'. Valid values: D7, D30, D90, D180." }
+            }
         }
     }
 

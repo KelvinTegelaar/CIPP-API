@@ -137,6 +137,5 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableExchangeOnlinePowerShell' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ExchangeOnlinePowerShellDisabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

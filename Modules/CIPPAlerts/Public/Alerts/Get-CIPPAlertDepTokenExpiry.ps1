@@ -30,9 +30,7 @@ function Get-CIPPAlertDepTokenExpiry {
                     $Dep | Select-Object -Property tokenName, @{Name = 'Message'; Expression = { $Message } }
                 }
             }
-            if ($AlertData) {
-                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-            }
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
         } catch {}
 

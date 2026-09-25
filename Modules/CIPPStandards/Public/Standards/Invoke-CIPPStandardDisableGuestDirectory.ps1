@@ -84,6 +84,5 @@ function Invoke-CIPPStandardDisableGuestDirectory {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuestDirectory' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableGuestDirectory' -FieldValue $CurrentStatus -StoreAs bool -Tenant $tenant
     }
 }

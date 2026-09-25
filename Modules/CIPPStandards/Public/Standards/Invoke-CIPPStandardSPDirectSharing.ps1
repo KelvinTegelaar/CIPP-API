@@ -88,7 +88,6 @@ function Invoke-CIPPStandardSPDirectSharing {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DirectSharing' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
 
         $CurrentValue = @{
             DefaultSharingLinkType = $CurrentState.DefaultSharingLinkType

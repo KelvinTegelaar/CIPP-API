@@ -221,7 +221,6 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SafeLinksPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
 
         $CurrentValue = @{
             Name                       = $CurrentState.Name

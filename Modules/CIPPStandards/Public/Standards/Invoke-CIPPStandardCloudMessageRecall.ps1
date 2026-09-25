@@ -74,7 +74,6 @@ function Invoke-CIPPStandardCloudMessageRecall {
         # Default is not set, not set means it's enabled
         if ($null -eq $CurrentState ) { $CurrentState = $true }
         Set-CIPPStandardsCompareField -FieldName 'standards.CloudMessageRecall' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'MessageRecall' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 
 

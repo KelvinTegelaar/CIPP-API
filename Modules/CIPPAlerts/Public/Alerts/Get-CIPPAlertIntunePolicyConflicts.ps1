@@ -63,6 +63,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
     }
 
     $Issues = [System.Collections.Generic.List[object]]::new()
+    $ReadFailed = $false
 
     if ($Config.IncludePolicies -and $AlertableStatuses) {
         $PolicySources = @(
@@ -96,6 +97,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
                     }
                 }
             } catch {
+                $ReadFailed = $true
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to read cached $($Source.Kind) policy states: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
@@ -122,16 +124,20 @@ function Get-CIPPAlertIntunePolicyConflicts {
                     })
             }
         } catch {
+            $ReadFailed = $true
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to read cached Intune app install status: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
 
-    if (-not $Issues) {
+    # A failed cache read means the picture is incomplete: "could not check" is not "clear".
+    if ($ReadFailed) {
         return
     }
 
-    if (-not $Config.AlertEachIssue) {
+    if (-not $Issues) {
+        $AlertData = $null
+    } elseif (-not $Config.AlertEachIssue) {
         $PolicyCount = ($Issues | Where-Object { $_.Type -eq 'Policy' }).Count
         $AppCount = ($Issues | Where-Object { $_.Type -eq 'Application' }).Count
 
@@ -146,7 +152,5 @@ function Get-CIPPAlertIntunePolicyConflicts {
         $AlertData = $Issues
     }
 
-    if ($AlertData) {
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-    }
+    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 }

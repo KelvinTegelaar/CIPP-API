@@ -158,7 +158,14 @@ Describe 'Get-CIPPBaselineEnableAppConsentRequestsState' {
         Mock New-CIPPDbRequest { @(@{ isEnabled = $true; reviewers = @(@{ query = '/v1.0/users/someone@contoso.com' }) } | ConvertTo-Cached) }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ReviewerRoles = [PSCustomObject]@{ label = 'GA'; value = '62e90394-69f5-4237-9190-012177145e10' } } }
         $Prepared = Get-CIPPBaselineEnableAppConsentRequestsState -Item $Item -TenantFilter $script:Tenant
-        $Prepared.Current.missingReviewerRoles | Should -Contain '62e90394-69f5-4237-9190-012177145e10'
+        $Prepared.Current.missingReviewerRoles | Should -Contain 'GA'
+    }
+
+    It 'names the default Global Administrator role when no role is configured and it is missing' {
+        Mock New-CIPPDbRequest { @(@{ isEnabled = $true; reviewers = @(@{ query = '/v1.0/users/someone@contoso.com' }) } | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{} }
+        $Prepared = Get-CIPPBaselineEnableAppConsentRequestsState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.missingReviewerRoles | Should -Be @('Global Administrator')
     }
 
     It 'merges configured roles into the reviewer list without dropping hand-added ones' {

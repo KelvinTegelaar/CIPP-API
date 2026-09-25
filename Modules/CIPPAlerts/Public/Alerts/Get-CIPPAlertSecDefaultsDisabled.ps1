@@ -25,10 +25,10 @@ function Get-CIPPAlertSecDefaultsDisabled {
                     Message = 'Security Defaults is disabled and no Conditional Access policies are configured. This tenant has no baseline security protection.'
                     Tenant  = $TenantFilter
                 }
-
-                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
         }
+
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Security Defaults Disabled Alert: Error occurred: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

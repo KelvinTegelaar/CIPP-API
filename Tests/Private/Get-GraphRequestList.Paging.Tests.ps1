@@ -16,6 +16,7 @@ BeforeAll {
     function New-CippQueueEntry { param($Name, $Link, $Reference, $TotalTasks) }
     function Start-CIPPOrchestrator { param($InputObject) }
     function New-GraphGetRequest { param($uri, $tenantid) }
+    function Test-CIPPGraphEndpointBlocked { param($Uri, $Expand, [switch]$Throw) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphRequests/Get-GraphRequestList.ps1')

@@ -186,6 +186,5 @@ function Invoke-CIPPStandardDefenderCompliancePolicy {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DefenderCompliancePolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DefenderCompliancePolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

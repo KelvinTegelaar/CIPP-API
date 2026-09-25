@@ -82,7 +82,6 @@ function Invoke-CIPPStandardExternalComplianceTrusted {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.ExternalComplianceTrusted' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ExternalComplianceTrusted' -FieldValue $ExternalComplianceTrusted.inboundTrust.isCompliantDeviceAccepted -StoreAs bool -Tenant $Tenant
     }
 
     if ($Settings.alert -eq $true) {

@@ -174,6 +174,5 @@ function Invoke-CIPPStandardSPOVersionControl {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.SPOVersionControl' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SPOVersionControl' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

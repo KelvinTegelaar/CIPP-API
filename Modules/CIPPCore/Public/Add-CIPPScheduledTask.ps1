@@ -27,6 +27,9 @@ function Add-CIPPScheduledTask {
     )
 
     try {
+        # The [pscustomobject] parameter type doesn't convert hashtables, and PSObject.Properties can't see hashtable keys
+        if ($Task -is [System.Collections.IDictionary]) { $Task = [pscustomobject]$Task }
+        if ($Task.Parameters -is [System.Collections.IDictionary]) { $Task.Parameters = [pscustomobject]$Task.Parameters }
 
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'
 

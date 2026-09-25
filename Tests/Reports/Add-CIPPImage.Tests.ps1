@@ -46,6 +46,13 @@ Describe 'Add-CIPPImage' {
                 Should -Be 'image/svg+xml'
         }
 
+        It 'accepts every format the report engine draws, whatever the case of the subtype' {
+            foreach ($Type in 'PNG', 'jpg', 'gif', 'bmp', 'tiff', 'webp') {
+                (Add-CIPPImage -PartitionKey 'logo' -Data (New-DataUrl -Type $Type)).contentType |
+                    Should -Be "image/$($Type.ToLowerInvariant())"
+            }
+        }
+
         It 'stores the original data URL, not just the decoded bytes' {
             $Url = New-DataUrl
             Add-CIPPImage -PartitionKey 'logo' -Data $Url | Out-Null
@@ -86,6 +93,12 @@ Describe 'Add-CIPPImage' {
         It 'rejects a non-image data URL' {
             { Add-CIPPImage -PartitionKey 'logo' -Data 'data:text/html;base64,PGh0bWw+' } |
                 Should -Throw '*Invalid image format*'
+        }
+
+        It 'rejects an image format the report engine cannot draw' {
+            { Add-CIPPImage -PartitionKey 'logo' -Data (New-DataUrl -Type 'heic') } |
+                Should -Throw '*Unsupported image format*'
+            $script:SavedEntity | Should -BeNullOrEmpty
         }
 
         It 'rejects a bare URL' {

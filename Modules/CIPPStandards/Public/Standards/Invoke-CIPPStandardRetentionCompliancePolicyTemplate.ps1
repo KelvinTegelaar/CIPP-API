@@ -80,6 +80,5 @@ function Invoke-CIPPStandardRetentionCompliancePolicyTemplate {
         $ExpectedValue = @{ MissingPolicies = @() }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.RetentionCompliancePolicyTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'RetentionCompliancePolicyTemplate' -FieldValue ($MissingPolicies.Count -eq 0) -StoreAs bool -Tenant $Tenant
     }
 }

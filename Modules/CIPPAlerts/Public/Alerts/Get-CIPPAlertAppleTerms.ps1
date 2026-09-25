@@ -35,6 +35,6 @@ function Get-CIPPAlertAppleTerms {
             LastSyncTriggeredDateTime  = $AppleTerms.lastSyncTriggeredDateTime
             Tenant                     = $TenantFilter
         }
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     }
+    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 }

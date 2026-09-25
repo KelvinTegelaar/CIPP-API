@@ -24,7 +24,9 @@ function New-CIPPBaseline {
         $Baseline,
         $User,
         $Source,
-        $SHA
+        $SHA,
+        $SourcePath,
+        [bool]$LocalChanges
     )
 
     if (-not $Baseline.templateName) {
@@ -49,13 +51,16 @@ function New-CIPPBaseline {
     $SafeGuid = ConvertTo-CIPPODataFilterValue -Value $GUID
     $ExistingRollout = Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout' and RowKey eq '$SafeGuid'" | Select-Object -First 1
     $RolloutTable.Force = $true
+    # Explicit -LocalChanges wins; otherwise carry the existing rollout row's flag across,
+    # same as Source/SHA/SourcePath, so an editor re-save doesn't silently clear it.
+    $LocalChangesValue = if ($PSBoundParameters.ContainsKey('LocalChanges')) { $LocalChanges } else { $ExistingRollout.LocalChanges }
     # The editor round-trips the tenant selector's own option objects ({label, value,
     # type}) verbatim via assignedTo/excludedTo; the flat excludedTenants values keep
     # the exclusion logic simple. Raw string values are accepted everywhere too.
     $ExcludedValues = @($Baseline.excludedTenants | ForEach-Object {
             if ($null -eq $_) { } elseif ($_ -is [string]) { $_ } else { "$($_.value)" }
         } | Where-Object { $_ })
-    Add-CIPPAzDataTableEntity @RolloutTable -Entity @{
+    $RolloutEntity = @{
         PartitionKey    = 'rollout'
         RowKey          = "$GUID"
         templateName    = "$($Baseline.templateName)"
@@ -65,6 +70,10 @@ function New-CIPPBaseline {
         excludedTenants = (ConvertTo-Json -Compress -Depth 10 -InputObject $ExcludedValues)
         alertEmails     = "$($Baseline.alertEmails)"
         alertWebhookUrl = "$($Baseline.alertWebhookUrl)"
+        # 'Disable Alerts': deviations are still detected and shown, but no email, webhook
+        # or PSA notification fires for this baseline. Negative flag on purpose: rows saved
+        # before the column existed keep alerting, exactly right.
+        disableAlerts   = [bool]$Baseline.disableAlerts
         # 'Disable Scheduled Runs': the baseline only executes when an operator runs it.
         # Negative flag on purpose: rows saved before the column existed default to
         # scheduled, exactly right.
@@ -74,7 +83,13 @@ function New-CIPPBaseline {
         updatedAt       = $Now
         Source          = "$($Source ?? $ExistingRollout.Source)"
         SHA             = "$($SHA ?? $ExistingRollout.SHA)"
+        SourcePath      = "$($SourcePath ?? $ExistingRollout.SourcePath)"
     }
+    # A brand-new baseline with no Source and no explicit flag gets no LocalChanges column at all.
+    if ($null -ne $LocalChangesValue) {
+        $RolloutEntity.LocalChanges = [bool]$LocalChangesValue
+    }
+    Add-CIPPAzDataTableEntity @RolloutTable -Entity $RolloutEntity
 
     # Explode into delta rows: RK <scopeSegment>-<standardName>-s<stage>-<templateId>.
     # The stage is part of the key so the same standard can exist in two stages (the

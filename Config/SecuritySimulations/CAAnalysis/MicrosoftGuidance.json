@@ -1,0 +1,173 @@
+[
+  {
+    "id": "TokenProtectionApps",
+    "title": "Token protection is applied to applications that do not support it",
+    "appliesWhen": "A policy turns on token protection.",
+    "requirement": "Token protection only works for Exchange Online, SharePoint Online, Teams, Azure Virtual Desktop, Windows 365 and Windows Cloud Login. Applying it more widely, including through the Office 365 application group, locks people out of tools that cannot support it.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-token-protection#deployment",
+    "remediation": "Limit the token-protection policy to the individual services that support it rather than a broad selection or the Office 365 application group."
+  },
+  {
+    "id": "TokenProtectionPlatforms",
+    "title": "Token protection is applied beyond Windows desktop apps",
+    "appliesWhen": "A policy turns on token protection.",
+    "requirement": "Token protection works only on Windows devices and only for desktop and mobile apps. Applying it to other platforms or to web browsers locks out people who cannot meet it.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-token-protection#deployment",
+    "remediation": "Limit the token-protection policy to Windows devices and to desktop and mobile apps, and leave web browsers out of scope."
+  },
+  {
+    "id": "TokenProtectionDevices",
+    "title": "Token protection does not exempt devices that cannot support it",
+    "appliesWhen": "A policy turns on token protection.",
+    "requirement": "Several device types cannot support token protection, including Surface Hub, Teams Rooms, Cloud PCs, virtual desktop hosts, self-deploying and bulk-enrolled devices and Azure virtual machines. Unless they are exempt, they are locked out.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-token-protection#known-limitations",
+    "remediation": "Exempt the unsupported device types from the token-protection policy through a device filter so they keep working."
+  },
+  {
+    "id": "BreakGlassMissing",
+    "title": "Tenant-wide policy has no emergency-access exemption",
+    "appliesWhen": "A policy that applies to every user requires multifactor authentication, blocks access, or requires a managed device.",
+    "requirement": "A policy that applies to every user should always exempt at least two emergency-access accounts, so that a mistake in the policy or a service outage cannot lock the whole organization out.",
+    "severity": "critical",
+    "docUrl": "https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access",
+    "remediation": "Exempt two dedicated emergency-access accounts from this policy and alert on any sign-in by them."
+  },
+  {
+    "id": "SurfaceHubMfa",
+    "title": "Surface Hub meeting rooms cannot meet this policy",
+    "appliesWhen": "A policy that applies to every user and every application asks for multifactor authentication, a managed device, an approved app or app protection.",
+    "requirement": "Surface Hub room accounts cannot complete multifactor authentication or meet device, app or password-change requirements. When a policy that applies to every user asks for any of these, the rooms stop signing in.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/surface-hub/conditional-access-for-surface-hub",
+    "remediation": "Exempt the Surface Hub room accounts, or a group containing them, from this policy."
+  },
+  {
+    "id": "TeamsRoomsMfa",
+    "title": "Teams Rooms devices cannot meet this policy",
+    "appliesWhen": "A policy that applies to every user and every application requires multifactor authentication or an authentication strength.",
+    "requirement": "Teams Rooms on Windows cannot complete multifactor authentication and Android room devices cannot meet an authentication strength. When a policy that applies to every user asks for these, the rooms stop signing in.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/microsoftteams/rooms/supported-ca-and-compliance-policies",
+    "remediation": "Exempt the Teams Rooms accounts from multifactor requirements and protect them with a managed-device requirement instead."
+  },
+  {
+    "id": "DeviceCodeTeamsDevices",
+    "title": "Blocking device-code sign-in breaks Teams device setup",
+    "appliesWhen": "A policy blocks the device-code sign-in flow.",
+    "requirement": "Teams phones, panels and Android room devices are signed in remotely through the device-code flow. Blocking that flow for everyone prevents these devices from being set up.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/microsoftteams/rooms/supported-ca-and-compliance-policies",
+    "remediation": "Exempt the Teams device accounts from the device-code block, or limit the block so it does not apply to Teams devices."
+  },
+  {
+    "id": "SignInFrequencyTeamsRooms",
+    "title": "Sign-in frequency signs Teams Rooms devices out",
+    "appliesWhen": "A policy that applies to every user and every application sets a sign-in frequency.",
+    "requirement": "Teams Rooms, phones and panels cannot handle a sign-in frequency. Applying one to every user makes these devices sign out periodically and disrupts meetings.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/microsoftteams/rooms/supported-ca-and-compliance-policies",
+    "remediation": "Exempt the Teams Rooms and shared-device accounts from the sign-in frequency, or apply it to administrator roles only."
+  },
+  {
+    "id": "DefenderMobileApps",
+    "title": "Defender mobile apps are caught by a blocking policy",
+    "appliesWhen": "A blocking policy covers every user and every application without exempting the Microsoft Defender mobile apps.",
+    "requirement": "The Microsoft Defender mobile app reports device health in the background. A blocking policy that covers every application can stop those reports, and devices then appear non-compliant for no real reason.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/defender-endpoint/mobile-resources-defender-endpoint#microsoft-defender-mobile-app-exclusion-from-conditional-access-ca-policies",
+    "remediation": "Exempt the two Microsoft Defender mobile applications from this policy so device health reporting keeps working."
+  },
+  {
+    "id": "AzureVmSignInMfa",
+    "title": "Remote desktop to Azure virtual machines may not meet this policy",
+    "appliesWhen": "A policy that applies to every user and every application requires multifactor authentication or a managed device without exempting virtual machine sign-in.",
+    "requirement": "Remote desktop sign-ins to Azure virtual machines can only satisfy a multifactor requirement from a device that supports Windows Hello for Business or a security key, and Windows Server devices can never count as compliant. Without an exemption, administrators may be unable to connect.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/entra/identity/devices/howto-vm-sign-in-azure-ad-windows#missing-application",
+    "remediation": "Exempt the Azure virtual machine sign-in application from multifactor and device requirements unless every administrator connects with Windows Hello for Business or a security key."
+  },
+  {
+    "id": "ContinuousAccessEvaluationDisabled",
+    "title": "Continuous access evaluation is switched off",
+    "appliesWhen": "A policy switches continuous access evaluation off.",
+    "requirement": "Continuous access evaluation ends a session the moment an account is disabled, its password changes or its location changes. With it switched off, sessions stay valid for up to an hour after such an event.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-continuous-access-evaluation",
+    "remediation": "Keep continuous access evaluation switched on unless a specific problem with it has been confirmed."
+  },
+  {
+    "id": "SignInFrequencyIndividualServices",
+    "title": "Sign-in frequency on individual services breaks Teams devices",
+    "appliesWhen": "A policy sets a sign-in frequency on individual Microsoft 365 services rather than on all applications.",
+    "requirement": "A sign-in frequency applied to individual Microsoft 365 services rather than all applications can interrupt or stop the Teams device sign-in flow and is not supported by Microsoft.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/microsoftteams/rooms/supported-ca-and-compliance-policies",
+    "remediation": "Apply the sign-in frequency to all applications or to the Microsoft admin portals rather than to individual services."
+  },
+  {
+    "id": "ResilienceDefaultsDisabled",
+    "title": "Users lose access during a Microsoft outage",
+    "appliesWhen": "A policy switches resilience defaults off.",
+    "requirement": "With resilience defaults switched off, anyone whose session expires during a Microsoft sign-in service outage is denied access until the service recovers.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/resilience-defaults",
+    "remediation": "Keep resilience defaults switched on unless strict real-time evaluation is a firm requirement."
+  },
+  {
+    "id": "AllResourcesAppExclusion",
+    "title": "Basic directory permissions need their own coverage",
+    "appliesWhen": "A policy covers every application but exempts some.",
+    "requirement": "Microsoft used to exempt basic profile and directory permissions from a tenant-wide policy that had any application exemption. That exemption has been removed and those permissions are now enforced through the directory service itself, so a policy should cover that service to keep the baseline intact.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-cloud-apps#conditional-access-behavior-when-an-all-resources-policy-has-an-app-exclusion",
+    "remediation": "Cover the directory service with a policy that requires multifactor authentication from all users, so basic permissions stay protected even where other applications are exempt."
+  },
+  {
+    "id": "DirectorySyncAccountMfa",
+    "title": "Directory synchronization exemption may no longer be needed",
+    "appliesWhen": "A multifactor policy for every user exempts the directory synchronization role.",
+    "requirement": "The synchronization account used to be exempt from multifactor requirements because it could not perform them. Recent versions of Entra Connect let the synchronization service sign in as an application instead, which removes the need for the exemption.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/entra/identity/hybrid/connect/reference-connect-version-history",
+    "remediation": "Upgrade Entra Connect to a version that supports application-based sign-in, switch to it, and remove the synchronization role exemption from multifactor policies."
+  },
+  {
+    "id": "ExternalAuthMethodGuests",
+    "title": "External authentication provider may block guests and partners",
+    "appliesWhen": "A policy for every user or for administrators relies on an external authentication provider.",
+    "requirement": "When a policy requires an external authentication provider such as Duo or RSA, guests, partners and service providers cannot meet it because they are not enrolled with that provider. They are locked out even though Microsoft's own multifactor authentication would have been enough.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/authentication/how-to-authentication-external-method-manage",
+    "remediation": "Limit the external-provider requirement to internal users enrolled with it, and let guests and partners meet the policy with Microsoft's own multifactor authentication."
+  },
+  {
+    "id": "ApprovedClientAppRetirement",
+    "title": "Approved-client-app requirement is being retired",
+    "appliesWhen": "A policy relies on the approved-client-app requirement.",
+    "requirement": "Microsoft is retiring the approved-client-app requirement. Policies that rely on it must move to the app protection policy requirement, or accept either of the two, to keep protecting data in mobile apps.",
+    "severity": "critical",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/migrate-approved-client-app",
+    "remediation": "Replace the approved-client-app requirement with the app protection policy requirement, accepting either during the transition if needed."
+  },
+  {
+    "id": "UserRiskPasswordChangeRetired",
+    "title": "Risky users are asked for a password change that not everyone can complete",
+    "appliesWhen": "A user risk policy relies on the password-change requirement.",
+    "requirement": "The password-change requirement for risky users has been retired. People who sign in without a password cannot complete it and stay locked out once flagged. The newer risk-remediation requirement chooses the right recovery path for each person.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/id-protection/concept-identity-protection-policies",
+    "remediation": "Replace the password-change requirement with the risk-remediation requirement."
+  },
+  {
+    "id": "UserRiskRemediationExternalProvider",
+    "title": "Risk remediation cannot be completed by users of an external provider",
+    "appliesWhen": "A user risk policy pairs risk remediation with an authentication strength.",
+    "requirement": "When risk remediation is paired with an authentication strength, people who use an external provider such as Duo, Okta or Ping cannot complete it, because authentication strengths do not accept external providers. Without a companion policy that accepts plain multifactor authentication for them, they stay locked out.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/id-protection/concept-identity-protection-policies",
+    "remediation": "Add a companion risk policy for the users of the external provider that requires plain multifactor authentication together with risk remediation, and keep the stronger requirement for everyone else."
+  }
+]

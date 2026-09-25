@@ -340,7 +340,6 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SpamFilterPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
         $CurrentValue = @{
             Name                             = $CurrentState.Name
             SpamAction                       = $CurrentState.SpamAction

@@ -111,6 +111,5 @@ function Invoke-CIPPStandardMigrateOneDriveShortcuts {
             UsersWithRootShortcuts = @()
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MigrateOneDriveShortcuts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'MigrateOneDriveShortcuts' -FieldValue $FieldValue -StoreAs json -Tenant $Tenant
     }
 }

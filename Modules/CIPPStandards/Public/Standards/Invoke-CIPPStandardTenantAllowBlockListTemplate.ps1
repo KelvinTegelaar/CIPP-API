@@ -160,7 +160,6 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
             }) -join '; '
             $CurrentValue = ($MissingByTemplate | ForEach-Object { "$($_.TemplateName) [$($_.ListType)/$($_.Action)] - Missing: $($_.MissingEntries -join ', ')" }) -join '; '
         }
-        Add-CIPPBPAField -FieldName 'TenantAllowBlockListTemplate' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.TenantAllowBlockListTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
     }
 }

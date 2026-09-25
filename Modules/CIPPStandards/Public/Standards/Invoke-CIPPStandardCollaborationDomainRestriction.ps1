@@ -148,6 +148,5 @@ function Invoke-CIPPStandardCollaborationDomainRestriction {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.CollaborationDomainRestriction' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'CollaborationDomainRestriction' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

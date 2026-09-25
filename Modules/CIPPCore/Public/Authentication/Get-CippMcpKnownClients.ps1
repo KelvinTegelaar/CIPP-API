@@ -45,6 +45,9 @@ function Get-CippMcpKnownClients {
             'https://insiders.vscode.dev/redirect'
             # Loopback for desktop/CLI clients (port-agnostic in Entra)
             'http://127.0.0.1'
+            # Common local-dev default. NOTE: unlike 127.0.0.1, 'localhost' is only port-agnostic
+            # without a path, so this exact string only matches clients that use it verbatim.
+            'http://localhost/callback'
         )
         ConfidentialRedirectUris = @(
             # Copilot Studio / M365 Copilot agents (Power Platform connector redirect)

@@ -77,6 +77,5 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableSecurityGroupUsers' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
-        Add-CIPPBPAField -FieldName 'DisableSecurityGroupUsers' -FieldValue $CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -StoreAs bool -Tenant $tenant
     }
 }

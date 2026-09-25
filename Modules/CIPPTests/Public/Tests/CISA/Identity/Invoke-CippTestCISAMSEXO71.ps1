@@ -4,7 +4,7 @@ function Invoke-CippTestCISAMSEXO71 {
     Tests MS.EXO.7.1 - External sender warnings SHALL be implemented
 
     .DESCRIPTION
-    Checks if external sender warnings are enabled in Exchange Online organization config
+    Checks if external sender identification (Get-ExternalInOutlook) is enabled in Exchange Online
 
     .FUNCTIONALITY
     Internal
@@ -16,22 +16,22 @@ function Invoke-CippTestCISAMSEXO71 {
     )
 
     try {
-        $OrgConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
+        $OrgConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoExternalInOutlook'
 
         if (-not $OrgConfig) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoOrganizationConfig cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'External sender warnings SHALL be implemented' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO71' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoExternalInOutlook cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'External sender warnings SHALL be implemented' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO71' -TenantFilter $Tenant
             return
         }
 
         $OrgConfigObject = $OrgConfig | Select-Object -First 1
 
-        if ($OrgConfigObject.ExternalInOutlook -eq $true) {
+        if ($OrgConfigObject.Enabled -eq $true) {
             $Result = [System.Text.StringBuilder]::new('✅ **Pass**: External sender warnings are enabled in Outlook.')
             $Status = 'Passed'
         } else {
             $Result = [System.Text.StringBuilder]::new("❌ **Fail**: External sender warnings are not enabled in Outlook.`n`n")
             $null = $Result.Append("**Current Setting:**`n")
-            $null = $Result.Append("- ExternalInOutlook: $($OrgConfigObject.ExternalInOutlook)")
+            $null = $Result.Append("- ExternalInOutlook Enabled: $($OrgConfigObject.Enabled)")
             $Status = 'Failed'
         }
 

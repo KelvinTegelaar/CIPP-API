@@ -100,9 +100,7 @@ function Get-CIPPAlertInactiveLicensedUsers {
                 }
             }
 
-            if ($AlertData) {
-                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-            }
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         } catch {}
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

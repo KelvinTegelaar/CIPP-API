@@ -19,7 +19,7 @@ BeforeAll {
     function Remove-AzDataTableEntity { param($TableName, $Context, $Entity, [switch]$Force) }
     function Expand-CIPPTenantGroups { param($TenantFilter) }
     function Test-CIPPConditionFilter { param($Condition) }
-    function Invoke-CippWebhookProcessing { param($Data, $CIPPURL, $TenantFilter, $AlertComment) }
+    function Invoke-CippWebhookProcessing { param($Data, $CIPPURL, $TenantFilter, $AlertComment, $PendingAuditLogWrites) }
     function Get-CIPPGeoIPLocationBatch { param($IPs) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
@@ -27,6 +27,19 @@ BeforeAll {
     function New-GraphBulkRequest { param($Requests, $AsApp, $TenantId) }
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, [switch]$Stream, $ComplexFilter, $NoPagination) }
     function Add-CIPPApplicationPermission { param($RequiredResourceAccess, $ApplicationId, $TenantFilter) }
+    function Get-CIPPPartnerUserLookup { @{} }
+
+    # The IP allow/block list helpers run for real (over the mocked table reads) so the CIDR and
+    # most-specific-range matching is exercised end to end.
+    foreach ($Helper in @(
+            'Authentication/Get-CIPPIPAllowBlockList.ps1'
+            'Authentication/Resolve-CIPPIPAllowBlockList.ps1'
+            'Authentication/Test-IpInRange.ps1'
+            'Authentication/ConvertTo-CIPPIPRange.ps1'
+            'BEC/ConvertTo-CIPPBecHostAddress.ps1'
+        )) {
+        . (Join-Path $RepoRoot "Modules/CIPPCore/Public/$Helper")
+    }
 
     # Lookup blob in the 'hashtable' cache format, so no Graph refresh is attempted.
     function New-LookupRow {
@@ -40,8 +53,10 @@ BeforeAll {
     }
 
     function New-AuditRow {
-        param([string]$Id = 'rec-1', [string]$Operation = 'Set-Mailbox')
-        [pscustomobject]@{
+        # AuditId/CreationTime are opt-in: they live on auditData, which is what the record loop
+        # copies, and the shaping tests below are written against the shape without them.
+        param([string]$Id = 'rec-1', [string]$Operation = 'Set-Mailbox', [string]$AuditId, [string]$CreationTime)
+        $Row = [pscustomobject]@{
             id              = $Id
             createdDateTime = '2026-07-29T09:00:00Z'
             operation       = $Operation
@@ -63,6 +78,9 @@ BeforeAll {
                 )
             }
         }
+        if ($AuditId) { $Row.auditData | Add-Member -NotePropertyName 'Id' -NotePropertyValue $AuditId }
+        if ($CreationTime) { $Row.auditData | Add-Member -NotePropertyName 'CreationTime' -NotePropertyValue $CreationTime }
+        $Row
     }
 
     . $FunctionPath
@@ -78,6 +96,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         $script:AuditRuleLookupCache = @{}
         $script:AuditRuleListCache = @{}
         $script:PartnerUserMemo = $null
+        $script:TrustedIpRows = @()
 
         Mock -CommandName Get-CIPPTable -MockWith {
             param($TableName)
@@ -116,6 +135,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
                     )
                 }
                 'Config' { [pscustomobject]@{ Value = 'cipp.contoso.com' } }
+                'trustedIps' { $script:TrustedIpRows }
                 default { @() }
             }
         }
@@ -377,6 +397,42 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         # told it may take the cheap route. Both halves of that are pinned: the plain delete for
         # processed rows, and skipping the id-resolution pass entirely.
 
+        It 'stores one audit log row per key, keeping the newest event' {
+            # Completed rows are batched, and two records of one pass can share an Id - Entra
+            # sign-in records reuse them. The table module silently keeps one of the duplicates, so
+            # a batch carrying both could store the OLDER stamp; the newer event would then be
+            # replayable as 'newer' again and re-alert on every reconciliation pass.
+            $script:StoredAuditRows = [System.Collections.Generic.List[object]]::new()
+            Mock -CommandName Add-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Entity, [switch]$Force, $OperationType)
+                if ($TableName -eq 'AuditLogs') {
+                    foreach ($e in @($Entity)) { $script:StoredAuditRows.Add($e) }
+                }
+            }
+            Mock -CommandName Invoke-CippWebhookProcessing -MockWith {
+                param($Data, $CIPPURL, $TenantFilter, $AlertComment, $PendingAuditLogWrites)
+                $Stamp = ''
+                if ($Data.CreationTime) { $Stamp = ([datetime]$Data.CreationTime).ToUniversalTime().ToString('yyyyMMddHHmmss') }
+                $null = $PendingAuditLogWrites.Add(@{
+                        PartitionKey      = $TenantFilter
+                        RowKey            = [string]$Data.Id
+                        Title             = 'alert'
+                        Data              = 'stored'
+                        Tenant            = $TenantFilter
+                        EventCreationTime = $Stamp
+                    })
+            }
+
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(
+                New-AuditRow -Id 'rec-a' -AuditId 'reused-id' -CreationTime '2026-07-01T12:00:00Z'
+                New-AuditRow -Id 'rec-b' -AuditId 'reused-id' -CreationTime '2026-09-22T10:00:00Z'
+            )
+
+            $Stored = @($script:StoredAuditRows | Where-Object { $_.RowKey -eq 'reused-id' })
+            $Stored.Count | Should -Be 1
+            $Stored[0].EventCreationTime | Should -Be '20260922100000'
+        }
+
         It 'uses the plain delete, not the part-aware one' {
             # Remove-CIPPAzDataTableEntity also removes the -partN rows of split entities and costs
             # ~2.7x per row for it. The caller's sweep covers those instead. 150 rows so a full
@@ -506,6 +562,44 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             )
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
             @($script:RemovedRows).RowKey | Should -Not -Contain 'unrelated'
+        }
+    }
+
+    Context 'the IP allow/block list' {
+        # New-AuditRow's client IP is 203.0.113.10.
+        It 'treats an address inside a trusted CIDR range as trusted' {
+            $script:TrustedIpRows = @(
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = '203.0.113.0_24'; Range = '203.0.113.0/24'; state = 'Trusted' }
+            )
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)).DataToProcess)[0]
+            $data.CIPPGeoLocation | Should -BeNullOrEmpty
+            Should -Invoke Get-CIPPGeoIPLocationBatch -Times 0
+        }
+
+        It 'still trusts a legacy single-address row' {
+            $script:TrustedIpRows = @(
+                [pscustomobject]@{ PartitionKey = 'AllTenants'; RowKey = '203.0.113.10'; state = 'Trusted' }
+            )
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)).DataToProcess)[0]
+            $data.CIPPGeoLocation | Should -BeNullOrEmpty
+        }
+
+        It 'does not trust a blocked address inside a trusted range' {
+            $script:TrustedIpRows = @(
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = '203.0.113.0_24'; Range = '203.0.113.0/24'; state = 'Trusted' }
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = '203.0.113.10'; state = 'Blocked' }
+            )
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)).DataToProcess)[0]
+            $data.CIPPGeoLocation | Should -Be 'Unknown'
+            Should -Invoke Get-CIPPGeoIPLocationBatch -Times 1
+        }
+
+        It 'does not trust an address outside the range' {
+            $script:TrustedIpRows = @(
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = '198.51.100.0_24'; Range = '198.51.100.0/24'; state = 'Trusted' }
+            )
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)).DataToProcess)[0]
+            $data.CIPPGeoLocation | Should -Be 'Unknown'
         }
     }
 

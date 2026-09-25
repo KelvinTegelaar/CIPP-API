@@ -37,6 +37,9 @@ function Invoke-ListGraphBulkRequest {
     if ($BulkRequests) {
         $GraphRequestParams.Requests = @($BulkRequests)
         try {
+            foreach ($GraphRequest in $BulkRequests) {
+                Test-CIPPGraphEndpointBlocked -Uri $GraphRequest.url -Throw
+            }
             $Body = New-GraphBulkRequest @GraphRequestParams
             $Results = @{
                 StatusCode = [System.Net.HttpStatusCode]::OK

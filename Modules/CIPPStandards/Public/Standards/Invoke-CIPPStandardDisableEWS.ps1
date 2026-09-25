@@ -85,6 +85,5 @@ function Invoke-CIPPStandardDisableEWS {
             DisableEWS = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableEWS' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableEWS' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

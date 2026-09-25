@@ -7,6 +7,18 @@ function New-CIPPIntuneTemplate {
         $CIPPURL,
         $ODataType
     )
+    # App Protection and MAM App Configuration list rows (Invoke-ListAppProtectionPolicies) carry the
+    # concrete @odata.type as their URLName. Map it into the managedAppPolicies bucket and derive
+    # $ODataType so that branch fetches from the correct concrete collection - the generic
+    # managedAppPolicies collection rejects a fetch-by-id for an app configuration policy ("Invalid Id").
+    $ManagedAppPolicyTypes = @(
+        'androidManagedAppProtection', 'iosManagedAppProtection', 'windowsManagedAppProtection',
+        'mdmWindowsInformationProtectionPolicy', 'targetedManagedAppConfiguration', 'defaultManagedAppProtection'
+    )
+    if ($URLName -in $ManagedAppPolicyTypes) {
+        if (-not $ODataType) { $ODataType = "#microsoft.graph.$URLName" }
+        $URLName = 'managedAppPolicies'
+    }
     if ($ODataType) {
         switch -wildcard ($ODataType) {
             '*CompliancePolicy' {
@@ -115,6 +127,12 @@ function New-CIPPIntuneTemplate {
             if ($Template.omaSettings) {
                 Write-Information "Checking for encrypted OMA settings in policy: $($Template.displayName)"
                 $Template = Get-CIPPOmaSettingDecryptedValue -DeviceConfiguration $Template -DeviceConfigurationId $ID -TenantFilter $TenantFilter
+                # The decrypt helper is best-effort and leaves Intune's placeholder behind on failure. No
+                # tenant accepts that on create, so refuse to store a template that can never deploy.
+                $EncryptedOma = @($Template.omaSettings | Where-Object { $_.secretReferenceValueId -or $_.isEncrypted -eq $true -or $_.value -eq 'PGEvPg==' })
+                if ($EncryptedOma.Count -gt 0) {
+                    throw "Could not decrypt OMA-URI setting(s) '$($EncryptedOma.displayName -join "', '")', template not saved. Check the logbook, and that CIPP has DeviceManagementConfiguration.Read.All on the tenant."
+                }
             }
 
             $DisplayName = $Template.displayName
@@ -124,35 +142,10 @@ function New-CIPPIntuneTemplate {
             $Type = 'Admin'
             $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')" -tenantid $TenantFilter
             $DisplayName = $Template.displayName
-            $TemplateJsonItems = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues?`$expand=definition" -tenantid $TenantFilter
-            $TemplateJsonSource = foreach ($TemplateJsonItem in $TemplateJsonItems) {
-                $presentationValues = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues('$($TemplateJsonItem.id)')/presentationValues?`$expand=presentation" -tenantid $TenantFilter | ForEach-Object {
-                    $obj = $_
-                    if ($obj.id) {
-                        $PresObj = @{
-                            id                        = $obj.id
-                            'presentation@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')/presentations('$($obj.presentation.id)')"
-                        }
-                        if ($obj.values) { $PresObj['values'] = $obj.values }
-                        if ($obj.value) { $PresObj['value'] = $obj.value }
-                        if ($obj.'@odata.type') { $PresObj['@odata.type'] = $obj.'@odata.type' }
-                        [pscustomobject]$PresObj
-                    }
-                }
-                [PSCustomObject]@{
-                    'definition@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')"
-                    enabled                 = $TemplateJsonItem.enabled
-                    presentationValues      = @($presentationValues)
-                }
-            }
-            $inputvar = [pscustomobject]@{
-                added      = @($TemplateJsonSource)
-                updated    = @()
-                deletedIds = @()
-
-            }
-
-
+            # Each setting's identity (name, category, class, presentation position) is recorded next
+            # to its bind: a definition from an imported ADMX file has a different id in every tenant,
+            # and the identity is what Resolve-CIPPIntuneAdminTemplateBinding matches on at deployment.
+            $inputvar = Get-CIPPIntuneAdminTemplateDefinitionValue -PolicyId $ID -TenantFilter $TenantFilter -IncludeIdentity
             $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 100 -Compress)
         }
         'windowsFeatureUpdateProfiles' {

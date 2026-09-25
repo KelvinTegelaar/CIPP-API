@@ -88,6 +88,5 @@ function Invoke-CIPPStandardEmptyFilterIPAllowList {
             IPAllowList      = ''
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.EmptyFilterIPAllowList' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'EmptyFilterIPAllowList' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

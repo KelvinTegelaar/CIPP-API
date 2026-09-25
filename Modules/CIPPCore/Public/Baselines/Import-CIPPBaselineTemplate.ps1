@@ -26,6 +26,7 @@ function Import-CIPPBaselineTemplate {
         $FullName,
         $Branch,
         $SHA,
+        $Path,
         $User,
         [switch]$Force
     )
@@ -49,8 +50,9 @@ function Import-CIPPBaselineTemplate {
         if (-not $Reference) { continue }
         try {
             $File = $null
+            $FilePath = $null
             if ("$($Reference.path)") {
-                try { $File = Get-GitHubFileContents -FullName $FullName -Path $Reference.path -Branch $Branch } catch { $File = $null }
+                try { $File = Get-GitHubFileContents -FullName $FullName -Path $Reference.path -Branch $Branch; $FilePath = $Reference.path } catch { $File = $null }
             }
             if (-not $File) {
                 # The file moved or was renamed: find it by sanitized display name under
@@ -61,14 +63,14 @@ function Import-CIPPBaselineTemplate {
                     $_.path -match '\.json$' -and $_.path -like "$($Reference.partition)/*" -and
                     (((($_.path -split '/')[-1]) -replace '\.json$', '') -eq $Sanitized)
                 } | Select-Object -First 1
-                if ($Candidate) { $File = Get-GitHubFileContents -FullName $FullName -Path $Candidate.path -Branch $Branch }
+                if ($Candidate) { $File = Get-GitHubFileContents -FullName $FullName -Path $Candidate.path -Branch $Branch; $FilePath = $Candidate.path }
             }
             if (-not $File) {
                 $Failures.Add("$($Reference.displayName) ($($Reference.partition)) was not found in the repository")
                 continue
             }
             $Content = $File.content | ConvertFrom-Json -Depth 100
-            $null = Import-CommunityTemplate -Template $Content -SHA $File.sha -Source $FullName -Force:$Force
+            $null = Import-CommunityTemplate -Template $Content -SHA $File.sha -Source $FullName -Path $FilePath -Force:$Force
             $ImportedCount++
         } catch {
             $Failures.Add("$($Reference.displayName): $($_.Exception.Message)")
@@ -83,9 +85,11 @@ function Import-CIPPBaselineTemplate {
         excludedTenants = @()
         alertEmails     = ''
         alertWebhookUrl = ''
+        disableAlerts   = $false
         stages          = @($Baseline.stages)
     }
-    $Saved = New-CIPPBaseline -Baseline $Payload -User ("$User" ? "$User" : 'GitHub Import') -Source "$FullName" -SHA "$SHA"
+    # An import lands the repo copy exactly as-is, so there is nothing local yet to push back.
+    $Saved = New-CIPPBaseline -Baseline $Payload -User ("$User" ? "$User" : 'GitHub Import') -Source "$FullName" -SHA "$SHA" -SourcePath "$Path" -LocalChanges:$false
 
     $Message = "Imported baseline '$($Baseline.templateName)' ($($Saved.DeltaCount) delta rows) with $ImportedCount related template$(if ($ImportedCount -eq 1) { '' } else { 's' }). Assign it to real tenants in the editor - it arrives assigned to the 'Exported Template' placeholder."
     if ($Failures.Count -gt 0) {

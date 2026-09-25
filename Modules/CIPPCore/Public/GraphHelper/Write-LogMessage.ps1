@@ -91,6 +91,11 @@ function Write-LogMessage {
     if ($script:CippBaselineRunIdStorage.Value) {
         $TableRow.BaselineRunId = [string]$script:CippBaselineRunIdStorage.Value
     }
+    # Set by Set-CippBecCaseContext while a BEC check, containment, content search or evidence
+    # export runs, so the evidence package can bundle every log line of a case.
+    if ($script:CippBecCaseIdStorage.Value) {
+        $TableRow.BecCaseId = [string]$script:CippBecCaseIdStorage.Value
+    }
 
     $Table.Entity = $TableRow
     Add-CIPPAzDataTableEntity @Table | Out-Null

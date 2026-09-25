@@ -117,7 +117,6 @@ function Invoke-CIPPStandardTeamsMessagingPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TeamsMessagingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
             AllowOwnerDeleteMessage                      = $CurrentState.AllowOwnerDeleteMessage

@@ -28,11 +28,16 @@ BeforeAll {
     function Add-CIPPApplicationPermission { param($RequiredResourceAccess, $ApplicationId, $TemplateId, $TenantFilter) }
     function Get-CippTable { param($tablename) @{} }
     function Get-CIPPAzDataTableEntity { param($Filter) }
+    function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
+    function Remove-AzDataTableEntity { param($Entity, [switch]$Force) }
     function Get-CIPPTextReplacement { param($TenantFilter, $Text) $Text }
     function Get-NormalizedError { param($Message) "$Message" }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPEnrollmentTimeDeviceMembershipTarget.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Set-CIPPEnrollmentTimeDeviceMembershipTarget.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Remove-CIPPEnrollmentTimeDeviceMembershipMarker.ps1')
     . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
     . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
     foreach ($Name in @('DefenderAVPolicy', 'DefenderASRPolicy', 'DefenderEDRPolicy', 'DefenderExclusionPolicy',
@@ -287,7 +292,7 @@ Describe 'Get-CIPPBaselineDevicePrepProfileState' {
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_deploymentmode' 'enrollment_autopilot_dpp_deploymentmode_0')
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_deploymenttype' 'enrollment_autopilot_dpp_deploymenttype_0')
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_jointype' 'enrollment_autopilot_dpp_jointype_0')
-                (New-ChoiceSetting 'enrollment_autopilot_dpp_accountype' 'enrollment_autopilot_dpp_accountype_0')
+                (New-ChoiceSetting 'enrollment_autopilot_dpp_accountype' 'enrollment_autopilot_dpp_accountype_1')
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_allowskip' 'enrollment_autopilot_dpp_allowskip_0')
                 (New-ChoiceSetting 'enrollment_autopilot_dpp_allowdiagnostics' 'enrollment_autopilot_dpp_allowdiagnostics_0')
                 @{ settingInstance = @{ settingDefinitionId = 'enrollment_autopilot_dpp_timeout'; simpleSettingValue = @{ value = 60 } } }
@@ -324,6 +329,138 @@ Describe 'Get-CIPPBaselineDevicePrepProfileState' {
         $Prepared.Current.isAssigned | Should -BeFalse
         $Prepared.Current.settingsCorrect | Should -BeTrue
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'reads deviceGroupId from the membership target, not from the settings string' {
+        # The devicesecuritygroupids string the portal displays is not what Intune enrols
+        # devices into - the cache carries only the string, so this has to be a live read.
+        Mock New-CIPPDbRequest { @($script:DppPolicy | ConvertTo-Cached) }
+        Mock Compare-CIPPIntuneAssignments { [PSCustomObject]@{ Unknown = $true } }
+        Mock New-GraphGetRequest { @([PSCustomObject]@{ id = 'device-group-1'; displayName = 'DPP Devices' }) }
+        Mock Get-CIPPAzDataTableEntity { }
+        Mock New-GraphPostRequest { [PSCustomObject]@{ enrollmentTimeDeviceMembershipTargets = @([PSCustomObject]@{ targetType = 'staticSecurityGroup'; targetId = 'device-group-1' }) } }
+        # The cache string is deliberately EMPTY here: the live action must win over it.
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ProfileName = 'CIPP Device Prep'; CustomErrorMessage = 'msg'; DeviceGroupName = 'DPP Devices'; AssignTo = 'none' } }
+        $Prepared = Get-CIPPBaselineDevicePrepProfileState -Item $Item -TenantFilter $script:Tenant
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -like "*configurationPolicies('dpp-1')/retrieveEnrollmentTimeDeviceMembershipTarget" }
+        $Prepared.Current.deviceGroupId | Should -Be 'device-group-1'
+        $Prepared.Expected.deviceGroupId | Should -Be 'device-group-1'
+        # Repairable in place: applying the group must never send the profile down recreate.
+        $Prepared.Current.settingsCorrect | Should -BeTrue
+    }
+
+    It 'the MARKER answers only when the action does not route' {
+        Mock New-CIPPDbRequest { @($script:DppPolicy | ConvertTo-Cached) }
+        Mock Compare-CIPPIntuneAssignments { [PSCustomObject]@{ Unknown = $true } }
+        Mock New-GraphGetRequest { @([PSCustomObject]@{ id = 'device-group-1'; displayName = 'DPP Devices' }) }
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ PartitionKey = $script:Tenant; RowKey = 'dpp-1'; GroupId = 'device-group-1' } }
+        Mock New-GraphPostRequest { throw 'No OData route exists' }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ProfileName = 'CIPP Device Prep'; CustomErrorMessage = 'msg'; DeviceGroupName = 'DPP Devices'; AssignTo = 'none' } }
+        $Prepared = Get-CIPPBaselineDevicePrepProfileState -Item $Item -TenantFilter $script:Tenant
+        # The action is attempted first and fails; the marker is what answers.
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*retrieveEnrollmentTimeDeviceMembershipTarget' }
+        $Prepared.Current.deviceGroupId | Should -Be 'device-group-1'
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'a MISSING membership target grades as a deviation while the settings stay correct' {
+        Mock New-CIPPDbRequest { @($script:DppPolicy | ConvertTo-Cached) }
+        Mock Compare-CIPPIntuneAssignments { [PSCustomObject]@{ Unknown = $true } }
+        Mock Get-CIPPAzDataTableEntity { }
+        Mock New-GraphGetRequest { @([PSCustomObject]@{ id = 'device-group-1'; displayName = 'DPP Devices' }) }
+        Mock New-GraphPostRequest { [PSCustomObject]@{ enrollmentTimeDeviceMembershipTargets = @() } }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ProfileName = 'CIPP Device Prep'; CustomErrorMessage = 'msg'; DeviceGroupName = 'DPP Devices'; AssignTo = 'none' } }
+        $Prepared = Get-CIPPBaselineDevicePrepProfileState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.deviceGroupId | Should -Be ''
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+        $Prepared.Current.settingsCorrect | Should -BeTrue
+    }
+
+    It 'the settings string alone never vouches for the profile - no marker grades as deviated' {
+        # Every create writes the string whether or not the group was ever applied, so a
+        # half-deployed profile would otherwise grade as healthy forever.
+        $PolicyCopy = $script:DppPolicy.Clone()
+        $PolicyCopy.settings = @($script:DppPolicy.settings | Where-Object { $_.settingInstance.settingDefinitionId -ne 'enrollment_autopilot_dpp_devicesecuritygroupids' }) +
+        @(@{ settingInstance = @{ settingDefinitionId = 'enrollment_autopilot_dpp_devicesecuritygroupids'; simpleSettingValue = @{ value = 'device-group-1' } } })
+        $script:StringOnlyPolicy = $PolicyCopy
+        Mock New-CIPPDbRequest { @($script:StringOnlyPolicy | ConvertTo-Cached) }
+        Mock Compare-CIPPIntuneAssignments { [PSCustomObject]@{ Unknown = $true } }
+        Mock New-GraphGetRequest { @([PSCustomObject]@{ id = 'device-group-1'; displayName = 'DPP Devices' }) }
+        Mock Get-CIPPAzDataTableEntity { }
+        Mock New-GraphPostRequest { throw 'No OData route exists' }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ProfileName = 'CIPP Device Prep'; CustomErrorMessage = 'msg'; DeviceGroupName = 'DPP Devices'; AssignTo = 'none' } }
+        $Prepared = Get-CIPPBaselineDevicePrepProfileState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.deviceGroupId | Should -Be ''
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+        $Prepared.Current.settingsCorrect | Should -BeTrue
+    }
+
+    It 'an EXPECTED group that does not exist leaves the dimension out - nothing here can create it' {
+        Mock New-CIPPDbRequest { @($script:DppPolicy | ConvertTo-Cached) }
+        Mock Compare-CIPPIntuneAssignments { [PSCustomObject]@{ Unknown = $true } }
+        Mock New-GraphGetRequest { @() }
+        Mock Get-CIPPAzDataTableEntity { }
+        Mock New-GraphPostRequest { throw 'should not be called' }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ProfileName = 'CIPP Device Prep'; CustomErrorMessage = 'msg'; DeviceGroupName = 'DPP Devices'; AssignTo = 'none' } }
+        $Prepared = Get-CIPPBaselineDevicePrepProfileState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'deviceGroupId'
+        $Prepared.Current.PSObject.Properties.Name | Should -Not -Contain 'deviceGroupId'
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'repairs ONLY what drifted: a wrong group does not re-post a correct assignment' {
+        Mock Get-CIPPIntuneAssignmentTarget { [PSCustomObject]@{ Targets = @(@{ '@odata.type' = '#microsoft.graph.groupAssignmentTarget'; groupId = 'g2' }); Unsupported = $null } }
+        Mock New-GraphGetRequest { @([PSCustomObject]@{ id = 'device-group-1'; displayName = 'DPP Devices' }) }
+        Mock New-GraphPostRequest { [PSCustomObject]@{ validationSucceeded = $true } }
+        Mock Add-CIPPAzDataTableEntity { }
+        $Remediate = [PSCustomObject]@{ profileName = 'CIPP Device Prep'; assignTo = 'AllDevicesAndUsers'; deviceGroupName = 'DPP Devices' }
+        $Current = [PSCustomObject]@{ policyId = 'dpp-1'; settingsCorrect = $true; isAssigned = $true; deviceGroupId = '' }
+        Invoke-CIPPBaselineDevicePrepProfile -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*setEnrollmentTimeDeviceMembershipTarget' }
+    }
+
+    It 'repairs ONLY what drifted: a wrong assignment does not re-apply a correct group' {
+        Mock Get-CIPPIntuneAssignmentTarget { [PSCustomObject]@{ Targets = @(@{ '@odata.type' = '#microsoft.graph.groupAssignmentTarget'; groupId = 'g2' }); Unsupported = $null } }
+        Mock New-GraphGetRequest { @([PSCustomObject]@{ id = 'device-group-1'; displayName = 'DPP Devices' }) }
+        Mock New-GraphPostRequest { [PSCustomObject]@{ validationSucceeded = $true } }
+        Mock Add-CIPPAzDataTableEntity { }
+        $Remediate = [PSCustomObject]@{ profileName = 'CIPP Device Prep'; assignTo = 'AllDevicesAndUsers'; deviceGroupName = 'DPP Devices' }
+        $Current = [PSCustomObject]@{ policyId = 'dpp-1'; settingsCorrect = $true; isAssigned = $false; deviceGroupId = 'device-group-1' }
+        Invoke-CIPPBaselineDevicePrepProfile -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -like "*configurationPolicies('dpp-1')/assign" }
+    }
+
+    It 'the repair-in-place branch APPLIES the device group, which /assign never does' {
+        Mock Get-CIPPIntuneAssignmentTarget { [PSCustomObject]@{ Targets = @(); Unsupported = $null } }
+        Mock New-GraphGetRequest { @([PSCustomObject]@{ id = 'device-group-1'; displayName = 'DPP Devices' }) }
+        Mock New-GraphPostRequest { [PSCustomObject]@{ validationSucceeded = $true } }
+        Mock Add-CIPPAzDataTableEntity { }
+        $Remediate = [PSCustomObject]@{ profileName = 'CIPP Device Prep'; assignTo = 'none'; deviceGroupName = 'DPP Devices' }
+        Invoke-CIPPBaselineDevicePrepProfile -Remediate $Remediate -TenantFilter $script:Tenant -Current ([PSCustomObject]@{ policyId = 'dpp-1'; settingsCorrect = $true })
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            $uri -like "*configurationPolicies('dpp-1')/setEnrollmentTimeDeviceMembershipTarget" -and
+            ($body | ConvertFrom-Json).enrollmentTimeDeviceMembershipTargets[0].targetId -eq 'device-group-1'
+        }
+    }
+
+    It 'the recreate branch applies the device group to the NEW policy and re-markers it' {
+        Mock Get-CIPPIntuneAssignmentTarget { [PSCustomObject]@{ Targets = @(); Unsupported = $null } }
+        Mock New-GraphGetRequest { @([PSCustomObject]@{ id = 'device-group-1'; displayName = 'DPP Devices' }) }
+        Mock New-GraphPostRequest { [PSCustomObject]@{ id = 'dpp-new'; validationSucceeded = $true } }
+        Mock Add-CIPPAzDataTableEntity { }
+        Mock Remove-AzDataTableEntity { }
+        $Remediate = [PSCustomObject]@{ profileName = 'CIPP Device Prep'; assignTo = 'none'; deviceGroupName = 'DPP Devices'; timeout = 90 }
+        Invoke-CIPPBaselineDevicePrepProfile -Remediate $Remediate -TenantFilter $script:Tenant -Current ([PSCustomObject]@{ policyId = 'dpp-1'; settingsCorrect = $false })
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            $uri -like "*configurationPolicies('dpp-new')/setEnrollmentTimeDeviceMembershipTarget" -and
+            ($body | ConvertFrom-Json).enrollmentTimeDeviceMembershipTargets[0].targetId -eq 'device-group-1'
+        }
+        # The old id is gone, so its marker must not outlive it.
+        Should -Invoke Remove-AzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Entity.RowKey -eq 'dpp-1' }
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Entity.RowKey -eq 'dpp-new' -and $Entity.GroupId -eq 'device-group-1' }
     }
 
     It 'repairs a wrong assignment IN PLACE - no delete, no recreate' {

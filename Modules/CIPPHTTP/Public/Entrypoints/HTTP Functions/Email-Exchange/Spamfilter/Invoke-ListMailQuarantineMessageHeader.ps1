@@ -15,6 +15,8 @@ function Invoke-ListMailQuarantineMessageHeader {
 
     try {
         $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessageHeader' -cmdParams @{ 'Identity' = $Identity }
+        # Headers are message content as far as the customer is concerned; record who viewed them.
+        Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -tenant $TenantFilter -message "Viewed the headers of quarantined message $Identity" -Sev 'Info'
         $Body = @{
             'Identity' = $Identity
             'Header'   = [string]($GraphRequest.Header ?? $GraphRequest)

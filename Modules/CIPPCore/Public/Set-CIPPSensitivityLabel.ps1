@@ -36,6 +36,14 @@ function Set-CIPPSensitivityLabel {
     $PolicySource = $Template.PolicyParams
     $LabelName = $LabelParams.Name
 
+    # Rights identities can carry replacement tokens - captured templates hold %defaultdomain% where the
+    # source label named its own tenant's domain (see ConvertTo-CIPPSensitivityLabelDomainToken).
+    if ("$($LabelParams['EncryptionRightsDefinitions'])" -match '%') {
+        $LabelParams['EncryptionRightsDefinitions'] = @($LabelParams['EncryptionRightsDefinitions'] | ForEach-Object {
+                if ($_ -is [string] -and $_ -match '%') { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $_ } else { $_ }
+            })
+    }
+
     # PswsHashtable parameters need the Exchange.GenericHashTable odata type to bind over the AdminApi.
     if ($LabelParams.ContainsKey('AdvancedSettings')) {
         $LabelParams['AdvancedSettings'] = ConvertTo-CIPPExoHashtable -InputObject $LabelParams['AdvancedSettings']

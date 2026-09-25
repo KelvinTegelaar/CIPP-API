@@ -86,7 +86,6 @@ function Invoke-CIPPStandardTeamsEnrollUser {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TeamsEnrollUser' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
             EnrollUserOverride = $CurrentState.EnrollUserOverride

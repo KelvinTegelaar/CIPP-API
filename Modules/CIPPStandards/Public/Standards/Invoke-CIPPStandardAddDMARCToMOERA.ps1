@@ -100,6 +100,5 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.AddDMARCToMOERA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AddDMARCToMOERA' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

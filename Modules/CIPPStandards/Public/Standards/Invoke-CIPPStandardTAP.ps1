@@ -111,7 +111,6 @@ function Invoke-CIPPStandardTAP {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TemporaryAccessPass' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
             state                    = $CurrentState.state

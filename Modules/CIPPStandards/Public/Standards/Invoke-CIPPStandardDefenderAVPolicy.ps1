@@ -316,6 +316,5 @@ function Invoke-CIPPStandardDefenderAVPolicy {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DefenderAVPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DefenderAVPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

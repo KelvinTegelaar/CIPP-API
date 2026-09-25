@@ -248,6 +248,11 @@ function New-CIPPIntuneAppDeployment {
                 APIName       = $APIName
             }
             if ($AppTypeForAssignment) { $AssignParams.AppType = $AppTypeForAssignment }
+            # Group ids queued by the deploy drawer's single-tenant picker; they win over the
+            # name resolution of assignTo/excludeGroup inside Set-CIPPAssignedApplication.
+            # '@($null).Count' is 1, so test the value before counting it.
+            if ($AppConfig.GroupIds -and @($AppConfig.GroupIds).Count -gt 0) { $AssignParams.GroupIds = @($AppConfig.GroupIds) }
+            if ($AppConfig.ExcludeGroupIds -and @($AppConfig.ExcludeGroupIds).Count -gt 0) { $AssignParams.ExcludeGroupIds = @($AppConfig.ExcludeGroupIds) }
             Set-CIPPAssignedApplication @AssignParams
         }
     }

@@ -86,7 +86,6 @@ function Invoke-CIPPStandardSPAzureB2B {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'AzureB2B' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
 
         $CurrentValue = @{
             EnableAzureADB2BIntegration = $CurrentState.EnableAzureADB2BIntegration

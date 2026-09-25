@@ -39,7 +39,6 @@ function Invoke-CIPPStandardDisableEntraPortal {
 
     if ($Settings.report -eq $true) {
         set-CIPPStandardsCompareField -FieldName 'standards.DisableEntraPortal' -FieldValue $CurrentInfo.isSoftwareOathEnabled -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableEntraPortal' -FieldValue $CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
     }
 
 }

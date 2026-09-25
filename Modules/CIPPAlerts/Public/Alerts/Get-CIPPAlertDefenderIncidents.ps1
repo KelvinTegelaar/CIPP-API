@@ -36,9 +36,7 @@ function Get-CIPPAlertDefenderIncidents {
                 Tenant         = $TenantFilter
             }
         }
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
     } catch {
         # Pretty sure this one is gonna be spammy cause of licensing issues, so it's commented out -Bobby

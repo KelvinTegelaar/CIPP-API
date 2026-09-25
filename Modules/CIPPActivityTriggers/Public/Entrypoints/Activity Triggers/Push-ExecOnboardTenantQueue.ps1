@@ -501,6 +501,23 @@ function Push-ExecOnboardTenantQueue {
         }
 
         if ($OnboardingSteps.Step4.Status -eq 'succeeded') {
+            $SelectedGroupIds = if ($TenantOnboarding.TenantGroups) { $TenantOnboarding.TenantGroups | ConvertFrom-Json }
+            if ($SelectedGroupIds) {
+                $GroupTable = Get-CIPPTable -tablename 'TenantGroups'
+                $MembersTable = Get-CIPPTable -tablename 'TenantGroupMembers'
+                # Only static groups, dynamic group membership is managed by the orchestrator
+                $SelectedGroups = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup'" | Where-Object { $_.GroupType -ne 'dynamic' -and $SelectedGroupIds -contains $_.RowKey }
+                foreach ($Group in $SelectedGroups) {
+                    Add-CIPPAzDataTableEntity @MembersTable -Entity @{
+                        PartitionKey = 'Member'
+                        RowKey       = '{0}-{1}' -f $Group.RowKey, $Tenant.customerId
+                        GroupId      = $Group.RowKey
+                        customerId   = $Tenant.customerId
+                    } -Force
+                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Added tenant to group '$($Group.Name)'" })
+                }
+                $null = Get-TenantGroups -SkipCache
+            }
             if ($StandardsExcludeAllTenants -eq $true) {
                 $GroupTable = Get-CIPPTable -tablename 'TenantGroups'
                 $MembersTable = Get-CIPPTable -tablename 'TenantGroupMembers'

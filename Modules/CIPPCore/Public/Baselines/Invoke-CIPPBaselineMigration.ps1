@@ -57,6 +57,8 @@ function Invoke-CIPPBaselineMigration {
         AutopilotStatusPage           = @{ drop = @('AllowRetry'); dropNotes = @{ AllowRetry = "a leftover from an old classic-standard version - the current classic standard ignores it too (the 'Block device usage during setup' switch drives the retry setting)" } }
         Bookings                      = @{ rename = @{ state = 'enabled' } }
         CloudMessageRecall            = @{ rename = @{ state = 'enabled' } }
+        # V2 stored the SPO enum name; the V3 definition speaks SPO numerics.
+        DefaultSharingLink            = @{ value = @{ sharingLinkType = @{ Direct = 1; Internal = 2 } } }
         ConditionalAccessTemplate     = @{ rename = @{ TemplateList = 'caTemplate' }; value = @{ state = @{ Enabled = 'enabled'; Disabled = 'disabled' } } }
         DisableAddShortcutsToOneDrive = @{ rename = @{ state = 'disableAddToOneDrive' } }
         EnableMailTips                = @{ rename = @{ MailTipsLargeAudienceThreshold = 'largeAudienceThreshold' } }
@@ -68,6 +70,8 @@ function Invoke-CIPPBaselineMigration {
         sharingCapability             = @{ rename = @{ Level = 'sharingCapability' }; value = @{ sharingCapability = @{ disabled = 0; externalUserSharingOnly = 1; externalUserAndGuestSharing = 2; existingExternalUserSharingOnly = 3 } } }
         SpoofWarn                     = @{ rename = @{ state = 'externalWarningEnabled' }; value = @{ externalWarningEnabled = @{ enabled = $true; disabled = $false } } }
         SPSyncButtonState             = @{ rename = @{ state = 'hideSyncButton' } }
+        # V2 were switches (bool); V3 passes the Teams cmdlet's 'Enabled'/'Disabled' strings.
+        TeamsChatProtection           = @{ value = @{ FileTypeCheck = @{ True = 'Enabled'; False = 'Disabled' }; UrlReputationCheck = @{ True = 'Enabled'; False = 'Disabled' } } }
         TAP                           = @{ rename = @{ config = 'isUsableOnce' } }
         unmanagedSync                 = @{ rename = @{ state = 'conditionalAccessPolicy' } }
         BitLockerKeysForOwnedDevice   = @{ rename = @{ state = 'allowed' }; value = @{ allowed = @{ allow = $true; restrict = $false } } }
@@ -365,7 +369,7 @@ function Invoke-CIPPBaselineMigration {
         $SourceMarker = "StandardsTemplateV2:$V2Guid"
         # mapper= is the migration logic version: bump it when the MAPPING changes (not the
         # source data) so unchanged V2 templates still re-commit once with the improved output.
-        $Sha = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$($Row.JSON)|reportOnly=$ReportOnly|detect=$AddDetectStandards|mapper=2"))).ToLower()
+        $Sha = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$($Row.JSON)|reportOnly=$ReportOnly|detect=$AddDetectStandards|mapper=3"))).ToLower()
         $SafeSource = ConvertTo-CIPPODataFilterValue -Value $SourceMarker
         $Existing = Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout' and Source eq '$SafeSource'" | Select-Object -First 1
         if ($Existing -and "$($Existing.SHA)" -eq $Sha) {

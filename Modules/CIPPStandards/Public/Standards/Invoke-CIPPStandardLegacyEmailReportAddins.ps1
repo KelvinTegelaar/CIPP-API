@@ -155,6 +155,5 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.LegacyEmailReportAddins' -Tenant $Tenant -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue
-        Add-CIPPBPAField -FieldName 'LegacyEmailReportAddins' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }
