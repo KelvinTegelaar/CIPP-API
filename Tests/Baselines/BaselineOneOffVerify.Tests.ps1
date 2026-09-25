@@ -12,8 +12,9 @@ BeforeAll {
     function Update-CippQueueEntry { param($RowKey, $Status, $Name) }
     function Get-CIPPBaselineDefinition { param($Name) }
     function Get-CippTable { param($tablename) @{} }
-    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }
+    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" -replace "'", "''" }
     function Get-CIPPAzDataTableEntity { param($Filter) }
+    function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Add-CIPPBaselineHistoryEvent { param($TenantFilter, $Standard, $Mode, $TriggeredBy, $Outcome, $Detail, $RunId, $Remediated) }
     function Set-CIPPBaselineResult { param($Result, $Prior, $RunId) }
@@ -348,6 +349,8 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         Mock Set-CIPPDBCacheTestCache { }
         Mock Start-Sleep { }
         Mock Write-LogMessage { }
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ PartitionKey = $script:Tenant; RowKey = 'TestStd'; PendingVerification = $true } }
+        Mock Add-CIPPAzDataTableEntity { }
         $script:PushItem = @{
             RunId = 'run-1'; Mode = 'oneoff'; TriggeredBy = 'operator@contoso.com'
             Item  = @{ TenantFilter = $script:Tenant; Standard = 'TestStd'; BaseName = 'TestStd' }
@@ -366,6 +369,29 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $Sev -eq 'Warning' }
     }
 
+    It 'a clean verdict clears PendingVerification on the stored row' {
+        Mock Invoke-CIPPBaselineStandard {
+            if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $true } }
+            [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
+        }
+        Push-CIPPBaselineStandard -Item $script:PushItem
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Entity.PendingVerification -eq $false }
+    }
+
+    It 'escapes an apostrophe in the Standard name before it reaches the table filter' {
+        # Instance keys are derived from template names and can carry an apostrophe -
+        # unescaped, it breaks out of the OData string literal.
+        Mock Invoke-CIPPBaselineStandard {
+            if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $true } }
+            [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
+        }
+        $script:PushItem.Item.Standard = "IntuneTemplate#Bob's Policy"
+        Push-CIPPBaselineStandard -Item $script:PushItem
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $Filter -eq "PartitionKey eq '$($script:Tenant)' and RowKey eq 'IntuneTemplate~Bob''s Policy'"
+        }
+    }
+
     It 'stale then fresh: waits for propagation, collects a SECOND time, ends quiet' {
         # The whole point of the fix - the first refresh captured pre-write state, the
         # retry after the backoff captures the real one.
@@ -380,6 +406,15 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $Sev -eq 'Warning' }
     }
 
+    It 'a verdict that only turns clean AFTER the retries also clears PendingVerification' {
+        Mock Invoke-CIPPBaselineStandard {
+            if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = ($script:GradeCalls -ge 2) } }
+            [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
+        }
+        Push-CIPPBaselineStandard -Item $script:PushItem
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Entity.PendingVerification -eq $false }
+    }
+
     It 'still stale after BOTH retries: warns and STOPS - two growing backoffs, never a loop' {
         Mock Invoke-CIPPBaselineStandard {
             if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $false } }
@@ -390,6 +425,15 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         $script:GradeCalls | Should -Be 3
         Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 30 }
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Warning' -and $message -like '*still grades*' }
+    }
+
+    It 'still non-compliant after both retries does NOT write the row' {
+        Mock Invoke-CIPPBaselineStandard {
+            if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $false } }
+            [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
+        }
+        Push-CIPPBaselineStandard -Item $script:PushItem
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
     }
 
     It 'scheduled runs are untouched: impact records out, no inline refresh, no verification' {
@@ -403,6 +447,7 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         $Records[0].CacheType | Should -Be 'TestCache'
         Should -Invoke Set-CIPPDBCacheTestCache -Times 0 -Exactly
         $script:GradeCalls | Should -Be 0
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
     }
 }
 
