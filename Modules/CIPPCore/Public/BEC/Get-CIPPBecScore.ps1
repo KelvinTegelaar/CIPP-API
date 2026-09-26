@@ -10,6 +10,11 @@ function Get-CIPPBecScore {
         agree. The Full-scope signals (delegations, grants, transport rules, add-ins, received mail,
         Defender, directory audits, registered devices, non-interactive sign-ins, mail activity, risk
         state) add their weights only when their data is present in the payload.
+        The attacker-address signals all rest on the same IP verdicts, so one wrong verdict would count
+        five times over. AttackerIPs always counts; the ones derived from it (mail, files, forms,
+        delegated mailboxes, other accounts reached) count only when an attacker address is backed by
+        evidence of its own - an investigator or CIPP-list verdict (Compromised), an attacker action
+        from it, or a medium/high Entra sign-in risk. Otherwise they are listed, unapplied.
     .PARAMETER Results
         The BEC results object.
     .PARAMETER Heuristics
@@ -119,6 +124,12 @@ function Get-CIPPBecScore {
         DelegatedMailboxAttackerAccess = "Another mailbox reached through this account's delegated access from an attacker address"
     }
 
+    # an attacker address backed by more than network heuristics (see DESCRIPTION)
+    $Corroborated = @($Results.IPVerdicts | Where-Object {
+            $_.Verdict -eq 'Compromised' -or ($_.Verdict -eq 'LikelyAttacker' -and @($_.Reasons | Where-Object { $_.Code -in @('FlaggedAction', 'RiskySignIn') }).Count -gt 0)
+        }).Count -gt 0
+    $Derived = @('AttackerMailAccess', 'AttackerFileAccess', 'AttackerForms', 'OtherAccountsReached', 'DelegatedMailboxAttackerAccess')
+
     $Breakdown = [System.Collections.Generic.List[object]]::new()
     $Total = 0
     foreach ($Name in $Stats.Keys) {
@@ -127,13 +138,14 @@ function Get-CIPPBecScore {
             'NewUsers' { $Value -gt $NewUsersThreshold }
             # a change to this mailbox outweighs unrelated tenant churn; only one of the two applies
             'PermissionChanges' { $Value -gt 0 -and [int]$Stats['PermissionChangesTargetingUser'] -eq 0 }
+            { $_ -in $Derived } { $Value -gt 0 -and $Corroborated }
             default { $Value -gt 0 }
         }
         $Wt = [int]($W.$Name ?? 0)
         if ($Applied) { $Total = $Total + $Wt }
         $Breakdown.Add([pscustomobject]@{
                 Signal      = $Name
-                Description = $Descriptions[$Name]
+                Description = $(if ($Name -in $Derived -and $Value -gt 0 -and -not $Corroborated) { "$($Descriptions[$Name]) - not counted: no attacker address is backed by an attacker action, a risky sign-in or a confirmed verdict" } else { $Descriptions[$Name] })
                 Weight      = $Wt
                 Count       = $Value
                 Applied     = [bool]$Applied

@@ -28,6 +28,9 @@ BeforeAll {
         foreach ($Key in $Overrides.Keys) { $Base[$Key] = $Overrides[$Key] }
         [pscustomobject]$Base
     }
+    # a confirmed attacker address with no sign-ins or activity of its own: backs the derived
+    # attacker signals without adding AttackerIPs
+    $script:Backed = @([pscustomobject]@{ Verdict = 'Compromised'; SuccessfulSignIns = 0; Activities = 0 })
 }
 
 AfterAll {
@@ -115,12 +118,14 @@ Describe 'Get-CIPPBecScore' {
             # an attacker address that only failed to sign in, or a suspicious one, does not count
             @{ Key = 'IPVerdicts'; Value = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 1; Activities = 0 }, [pscustomobject]@{ Verdict = 'Compromised'; SuccessfulSignIns = 0; Activities = 0 }, [pscustomobject]@{ Verdict = 'Suspicious'; SuccessfulSignIns = 3; Activities = 2 }); Expected = 4; Signal = 'AttackerIPs' }
             # item-level activity counts only from addresses judged the attacker's
-            @{ Key = 'AttackerMailActivity'; Value = @([pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'victim@contoso.com' }, [pscustomobject]@{ IPVerdict = 'Unknown'; MailboxOwner = 'victim@contoso.com' }); Expected = 3; Signal = 'AttackerMailAccess' }
-            @{ Key = 'AttackerFileActivity'; Value = @([pscustomobject]@{ IPVerdict = 'Compromised' }); Expected = 2; Signal = 'AttackerFileAccess' }
-            @{ Key = 'FormsActivity'; Value = @([pscustomobject]@{ Flagged = $true; IPVerdict = 'LikelyAttacker' }, [pscustomobject]@{ Flagged = $true; IPVerdict = 'Suspicious' }); Expected = 3; Signal = 'AttackerForms' }
+            @{ Key = 'AttackerMailActivity'; Value = @([pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'victim@contoso.com' }, [pscustomobject]@{ IPVerdict = 'Unknown'; MailboxOwner = 'victim@contoso.com' }); Expected = 3; Signal = 'AttackerMailAccess'; Backed = $true }
+            @{ Key = 'AttackerFileActivity'; Value = @([pscustomobject]@{ IPVerdict = 'Compromised' }); Expected = 2; Signal = 'AttackerFileAccess'; Backed = $true }
+            @{ Key = 'FormsActivity'; Value = @([pscustomobject]@{ Flagged = $true; IPVerdict = 'LikelyAttacker' }, [pscustomobject]@{ Flagged = $true; IPVerdict = 'Suspicious' }); Expected = 3; Signal = 'AttackerForms'; Backed = $true }
         )
         foreach ($Case in $Cases) {
-            $Score = Get-CIPPBecScore -Results (New-Results @{ $Case.Key = $Case.Value }) -Heuristics $script:Heuristics
+            $Payload = @{ $Case.Key = $Case.Value }
+            if ($Case.Backed) { $Payload.IPVerdicts = $script:Backed }
+            $Score = Get-CIPPBecScore -Results (New-Results $Payload) -Heuristics $script:Heuristics
             $Score.Value | Should -Be $Case.Expected -Because "$($Case.Signal) should add $($Case.Expected)"
             ($Score.Breakdown | Where-Object { $_.Signal -eq $Case.Signal }).Applied | Should -BeTrue -Because "$($Case.Signal) should be applied"
         }
@@ -131,18 +136,41 @@ Describe 'Get-CIPPBecScore' {
             [pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'ceo@contoso.com' }
             [pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'Victim@contoso.com' }
         )
-        $Score = Get-CIPPBecScore -Results (New-Results @{ UserPrincipalName = 'victim@contoso.com'; AttackerMailActivity = $Mail }) -Heuristics $script:Heuristics
+        $Score = Get-CIPPBecScore -Results (New-Results @{ UserPrincipalName = 'victim@contoso.com'; AttackerMailActivity = $Mail; IPVerdicts = $script:Backed }) -Heuristics $script:Heuristics
         ($Score.Breakdown | Where-Object Signal -EQ 'DelegatedMailboxAttackerAccess').Count | Should -Be 1 -Because 'the own mailbox, in any case, is not a delegated one'
         $Score.Value | Should -Be 6
     }
 
     It 'counts only the other accounts an attacker address reached, not the attempts' {
         $Blast = @([pscustomobject]@{ UserPrincipalName = 'a@contoso.com'; Reached = $true }, [pscustomobject]@{ UserPrincipalName = 'b@contoso.com'; Reached = $false })
-        $Score = Get-CIPPBecScore -Results (New-Results @{ BlastRadius = $Blast }) -Heuristics $script:Heuristics
+        $Score = Get-CIPPBecScore -Results (New-Results @{ BlastRadius = $Blast; IPVerdicts = $script:Backed }) -Heuristics $script:Heuristics
         $Signal = $Score.Breakdown | Where-Object Signal -EQ 'OtherAccountsReached'
         $Signal.Count | Should -Be 1
         $Signal.Applied | Should -BeTrue
         $Signal.Weight | Should -Be 3
+    }
+
+    It 'counts one heuristic-only attacker verdict once, not again through everything derived from it' {
+        # a Microsoft or user address misjudged on network heuristics alone used to add 4+3+2+3+3 = 15
+        $Heuristic = [pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 3; Activities = 5; Reasons = @([pscustomobject]@{ Code = 'HostingOrProxy' }, [pscustomobject]@{ Code = 'Foreign' }, [pscustomobject]@{ Code = 'NewToUser' }) }
+        $Payload = @{
+            UserPrincipalName    = 'victim@contoso.com'
+            IPVerdicts           = @($Heuristic)
+            AttackerMailActivity = @([pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'ceo@contoso.com' })
+            AttackerFileActivity = @([pscustomobject]@{ IPVerdict = 'LikelyAttacker' })
+            BlastRadius          = @([pscustomobject]@{ UserPrincipalName = 'a@contoso.com'; Reached = $true })
+        }
+        $Score = Get-CIPPBecScore -Results (New-Results $Payload) -Heuristics $script:Heuristics
+        $Score.Value | Should -Be 4 -Because 'only AttackerIPs counts'
+        $Held = @($Score.Breakdown | Where-Object { $_.Signal -in @('AttackerMailAccess', 'AttackerFileAccess', 'OtherAccountsReached', 'DelegatedMailboxAttackerAccess') })
+        @($Held | Where-Object Applied).Count | Should -Be 0
+        @($Held | Where-Object { $_.Description -like '*not counted*' }).Count | Should -Be 4 -Because 'each held-back signal says why'
+
+        # the same address behind an attacker action, or rated risky by Entra, backs them
+        foreach ($Code in @('FlaggedAction', 'RiskySignIn')) {
+            $Payload.IPVerdicts = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 3; Activities = 5; Reasons = @([pscustomobject]@{ Code = $Code }) })
+            (Get-CIPPBecScore -Results (New-Results $Payload) -Heuristics $script:Heuristics).Value | Should -Be 15 -Because "$Code corroborates the verdict"
+        }
     }
 
     It 'does not score a Defender detection that was blocked, or a dismissed risky user' {

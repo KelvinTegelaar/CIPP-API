@@ -7,7 +7,9 @@ function Get-CIPPBecIPVerdicts {
         or on an audited action gets a verdict, a score and the reasons behind it:
         - Compromised / Safe: an investigator override for this case, else CIPP's IP allow/block list
           (Blocked / Trusted). These decide outright.
-        - Service: a Microsoft network address the user never signed in from (Exchange and other
+        - Service: an address in Microsoft 365's published service ranges (ServiceRanges - Microsoft
+          acting for the user, whether or not it shows in the user's sign-ins), a Microsoft network
+          address the user never signed in from (Exchange and other
           services act from their own addresses), one whose sign-ins are all by a service
           application (CIPP's own, or Microsoft's Partner Customer Delegated Administration - see
           ipVerdict.serviceAppIds), or one seen only on CIPP or partner actions. An
@@ -23,8 +25,13 @@ function Get-CIPPBecIPVerdicts {
         location, the address of a technician who ran or reviewed the investigation (most likely the
         partner's own, so a strong start towards trusted - but still judged, since a technician's
         address can be shared or wrong), or an address with only failed sign-ins (spray noise, which is also capped at
-        Suspicious). A final pass lifts addresses that share an Entra or mailbox session with a
-        likely-attacker address, because one session moving between addresses is one actor.
+        Suspicious). An IPv6 address counts as known to the user when its /64 was used before the
+        window: devices rotate through privacy addresses inside their /64.
+        A final pass lifts addresses that share an Entra or mailbox session with a likely-attacker
+        address, because one session moving between addresses is one actor - but never an address
+        already judged the user's or one the user used before the window: a stolen session is replayed
+        from new addresses, while the user's own device legitimately carries it between its known
+        IPv4 and IPv6 addresses.
     .PARAMETER SignIns
         The window's interactive sign-ins (IPAddress, Status, Country, City, ASN, RiskLevelDuringSignIn,
         UserAgent, DeviceCompliant, SessionId, CreatedDateTime).
@@ -50,6 +57,8 @@ function Get-CIPPBecIPVerdicts {
         Addresses of the technicians who ran or reviewed the case ({ IP, By }).
     .PARAMETER CippAppId
         The CIPP application id; sign-ins by it (and by ipVerdict.serviceAppIds) are service sign-ins.
+    .PARAMETER ServiceRanges
+        Microsoft 365's published service ranges (Get-CIPPMicrosoft365IPRanges), as CIDRs.
     .FUNCTIONALITY
         Internal
     #>
@@ -66,7 +75,8 @@ function Get-CIPPBecIPVerdicts {
         [string]$UsageLocation,
         $Heuristics,
         [object[]]$TechnicianIPs = @(),
-        [string]$CippAppId = $env:ApplicationID
+        [string]$CippAppId = $env:ApplicationID,
+        [string[]]$ServiceRanges = @()
     )
 
     $Cfg = $Heuristics.ipVerdict
@@ -88,6 +98,31 @@ function Get-CIPPBecIPVerdicts {
 
     $HostOf = { param($Value) ConvertTo-CIPPBecHostAddress -Address ([string]$Value) }
     $Truthy = { param($Value) $Value -eq $true -or [string]$Value -eq 'True' }
+
+    # the service ranges are parsed once and matched by bytes (Test-IpInRange costs ~0.4 ms a call,
+    # and ~90 ranges are checked for every address)
+    $ServiceNets = @(foreach ($Range in @($ServiceRanges | Where-Object { $_ })) {
+            $Net, $Bits = ([string]$Range) -split '/', 2
+            $Parsed = $null
+            if (-not [System.Net.IPAddress]::TryParse($Net, [ref]$Parsed)) { continue }
+            $NetBytes = $Parsed.GetAddressBytes()
+            $Length = if ($Bits) { [int]$Bits } else { $NetBytes.Length * 8 }
+            [pscustomobject]@{ Range = [string]$Range; Bytes = $NetBytes; Whole = [int][Math]::Truncate($Length / 8); Mask = (0xFF -shl (8 - $Length % 8)) -band 0xFF; Partial = ($Length % 8) -ne 0 }
+        })
+    $ServiceRangeOf = {
+        param($IP)
+        $Parsed = $null
+        if ($ServiceNets.Count -eq 0 -or -not [System.Net.IPAddress]::TryParse([string]$IP, [ref]$Parsed)) { return $null }
+        $Bytes = $Parsed.GetAddressBytes()
+        foreach ($Net in $ServiceNets) {
+            if ($Net.Bytes.Length -ne $Bytes.Length) { continue }
+            $Match = $true
+            for ($i = 0; $i -lt $Net.Whole; $i++) { if ($Bytes[$i] -ne $Net.Bytes[$i]) { $Match = $false; break } }
+            if ($Match -and $Net.Partial -and ($Bytes[$Net.Whole] -band $Net.Mask) -ne ($Net.Bytes[$Net.Whole] -band $Net.Mask)) { $Match = $false }
+            if ($Match) { return $Net.Range }
+        }
+        return $null
+    }
 
     # --- gather everything known about each address ---
     $IPs = [ordered]@{}
@@ -145,6 +180,20 @@ function Get-CIPPBecIPVerdicts {
     $BaselineOk = $Baseline -and [int]$Baseline.Successful -ge $MinBaseline
     $BaselineIPs = @{}
     foreach ($Row in @($Baseline.IPs | Where-Object { $_ })) { $BaselineIPs[[string]$Row.IP] = $Row }
+    # IPv6 devices rotate through privacy addresses inside one /64 (daily or faster), so a new IPv6
+    # address in a /64 the user used before is the user's network, as a known IPv4 address is
+    $BaselineNetworks = @{}
+    foreach ($Row in @($Baseline.IPs | Where-Object { $_ })) {
+        $Net = ConvertTo-CIPPBecHostAddress -Address ([string]$Row.IP) -Network
+        if ($Net -notlike '*/64') { continue }
+        if (-not $BaselineNetworks.ContainsKey($Net)) { $BaselineNetworks[$Net] = [pscustomobject]@{ IP = $Net; SignIns = 0; Share = 0.0; Days = 0 } }
+        $Agg = $BaselineNetworks[$Net]
+        $Agg.SignIns = $Agg.SignIns + [int]$Row.SignIns
+        $Agg.Share = $Agg.Share + [double]$Row.Share
+        # ponytail: the rows carry a day count, not the days, so the busiest address's count stands in
+        # (undercounts a /64 used on different days by different addresses; the summed share carries it)
+        $Agg.Days = [Math]::Max($Agg.Days, [int]$Row.Days)
+    }
     $BaselineAsns = @{}
     foreach ($Row in @($Baseline.ASNs | Where-Object { $_ })) { $BaselineAsns[[string]$Row.ASN] = $Row }
     $BaselineCountries = @{}
@@ -202,11 +251,16 @@ function Get-CIPPBecIPVerdicts {
         if ($Entry.Scripted) { & $Add 'ScriptedClient' (& $Weight 'scriptedClient' 3) 'A sign-in used a scripting or automation user agent' }
 
         $Known = $BaselineIPs[$IP]
+        $KnownWhat = 'address'
+        if (-not $Known) {
+            $Net = ConvertTo-CIPPBecHostAddress -Address $IP -Network
+            if ($Net -like '*/64' -and $BaselineNetworks.ContainsKey($Net)) { $Known = $BaselineNetworks[$Net]; $KnownWhat = "IPv6 network ($Net)" }
+        }
         if ($Known) {
             if ([double]$Known.Share -ge $RegularShare -or [int]$Known.Days -ge $RegularDays) {
-                & $Add 'BaselineRegular' (& $Weight 'baselineRegular' -4) "The user's regular address before the window ($([math]::Round([double]$Known.Share * 100, 1))% of sign-ins, $($Known.Days) day(s))"
+                & $Add 'BaselineRegular' (& $Weight 'baselineRegular' -4) "The user's regular $KnownWhat before the window ($([math]::Round([double]$Known.Share * 100, 1))% of sign-ins, $($Known.Days) day(s))"
             } else {
-                & $Add 'BaselineSeen' (& $Weight 'baselineSeen' -2) "Used by the user before the window ($($Known.SignIns) sign-in(s))"
+                & $Add 'BaselineSeen' (& $Weight 'baselineSeen' -2) "$(if ($KnownWhat -eq 'address') { 'Used' } else { "Its $KnownWhat was used" }) by the user before the window ($($Known.SignIns) sign-in(s))"
             }
         } elseif ($BaselineOk) {
             & $Add 'NewToUser' (& $Weight 'newToUser' 2) 'Never used by the user before the window'
@@ -223,10 +277,11 @@ function Get-CIPPBecIPVerdicts {
         }
         if ($Entry.Compliant) { & $Add 'CompliantDevice' (& $Weight 'compliantDevice' -2) 'Signed in from a compliant device' }
         if ($Peer) {
+            $PeerOn = if ($Peer.Network) { "its IPv6 network ($($Peer.Network))" } else { 'it' }
             if ([int]$Peer.OtherUsersBefore -ge 2 -and -not ($Hosting -or $Proxy)) {
-                & $Add 'Colleagues' (& $Weight 'colleagues' -2) "$($Peer.OtherUsersBefore) other account(s) used it before the window (office or VPN exit)"
+                & $Add 'Colleagues' (& $Weight 'colleagues' -2) "$($Peer.OtherUsersBefore) other account(s) used $PeerOn before the window (office or VPN exit)"
             } elseif ([int]$Peer.OtherUsersInWindowOnly -ge 2 -and [int]$Peer.OtherUsersBefore -eq 0) {
-                & $Add 'WiderAttack' (& $Weight 'widerAttack' 2) "$($Peer.OtherUsersInWindowOnly) other account(s) signed in from it only during the window"
+                & $Add 'WiderAttack' (& $Weight 'widerAttack' 2) "$($Peer.OtherUsersInWindowOnly) other account(s) signed in from $PeerOn only during the window"
             }
         }
         foreach ($Hint in @($Hints | Where-Object { Test-IpInRange -IPAddress $IP -Range $_.Range })) {
@@ -246,6 +301,7 @@ function Get-CIPPBecIPVerdicts {
         $Rows.Add([pscustomobject]@{
                 IP = $IP; Entry = $Entry; Reasons = $Reasons; Score = $Score; OnlyFailed = $OnlyFailed
                 Country = $Country; City = $City; ASName = $AsName; Hosting = $Hosting; Proxy = $Proxy; Peer = $Peer
+                Known = $Known; ServiceRange = & $ServiceRangeOf $IP
             })
     }
 
@@ -259,6 +315,7 @@ function Get-CIPPBecIPVerdicts {
         if ($Listed) {
             return [pscustomobject]@{ Verdict = $(if ($Listed.State -eq 'Blocked') { 'Compromised' } else { 'Safe' }); Source = "$($Listed.Source) ($($Listed.Range))" }
         }
+        if ($Row.ServiceRange) { return [pscustomobject]@{ Verdict = 'Service'; Source = "Microsoft 365 service address ($($Row.ServiceRange))" } }
         $SignInCount = $Row.Entry.SignIns + $Row.Entry.NonInteractive
         if ($SignInCount -eq 0 -and $Row.ASName -match $ServiceAsn) { return [pscustomobject]@{ Verdict = 'Service'; Source = "Microsoft service address ($($Row.ASName))" } }
         $OnlyServiceActors = @($Row.Entry.ActorKinds | Where-Object { $_ -notin $ServiceActors }).Count -eq 0
@@ -275,13 +332,14 @@ function Get-CIPPBecIPVerdicts {
     foreach ($Row in $Rows) { $Row | Add-Member -NotePropertyName 'Decision' -NotePropertyValue (& $Classify $Row) -Force }
 
     # One Entra or mailbox session moving between addresses is one actor: lift the rest of a session
-    # that includes a likely-attacker address.
+    # that includes a likely-attacker address - except addresses judged the user's or used by the user
+    # before the window (a dual-stack device carries one session across its IPv4 and IPv6 addresses).
     $AttackerSessions = [System.Collections.Generic.HashSet[string]]::new()
     foreach ($Row in @($Rows | Where-Object { $_.Decision.Verdict -in @('Compromised', 'LikelyAttacker') })) {
         foreach ($Session in $Row.Entry.Sessions) { $null = $AttackerSessions.Add($Session) }
     }
     if ($AttackerSessions.Count -gt 0) {
-        foreach ($Row in @($Rows | Where-Object { $_.Decision.Verdict -in @('Suspicious', 'Unknown', 'LikelyUser') })) {
+        foreach ($Row in @($Rows | Where-Object { $_.Decision.Verdict -in @('Suspicious', 'Unknown') -and -not $_.Known })) {
             $Shared = @($Row.Entry.Sessions | Where-Object { $AttackerSessions.Contains($_) })
             if ($Shared.Count -eq 0) { continue }
             $Points = & $Weight 'sharedSession' 3
@@ -293,7 +351,7 @@ function Get-CIPPBecIPVerdicts {
 
     $Order = @{ Compromised = 0; LikelyAttacker = 1; Suspicious = 2; Unknown = 3; LikelyUser = 4; Safe = 5; Service = 6 }
     @($Rows | ForEach-Object {
-            $Known = $BaselineIPs[$_.IP]
+            $Known = $_.Known
             [pscustomobject]@{
                 IP                     = $_.IP
                 Verdict                = $_.Decision.Verdict

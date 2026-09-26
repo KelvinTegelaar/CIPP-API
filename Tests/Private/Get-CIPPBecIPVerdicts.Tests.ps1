@@ -22,8 +22,8 @@ BeforeAll {
         '40.107.1.1'   = [pscustomobject]@{ CountryOrRegion = 'US'; City = 'Boydton'; Proxy = $false; Hosting = $true; ASName = 'MICROSOFT-CORP-MSN-AS-BLOCK' }
     }
     function Get-Verdicts {
-        param($SignIns = @(), $NonInteractive = @(), $Events = @(), $Guidance = @(), $Overrides = @(), $Peers = @{}, $Baseline = $script:Baseline)
-        Get-CIPPBecIPVerdicts -SignIns $SignIns -NonInteractiveSignIns $NonInteractive -Events $Events -Baseline $Baseline -Guidance $Guidance -Overrides $Overrides -Peers $Peers -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics
+        param($SignIns = @(), $NonInteractive = @(), $Events = @(), $Guidance = @(), $Overrides = @(), $Peers = @{}, $Baseline = $script:Baseline, $ServiceRanges = @())
+        Get-CIPPBecIPVerdicts -SignIns $SignIns -NonInteractiveSignIns $NonInteractive -Events $Events -Baseline $Baseline -Guidance $Guidance -Overrides $Overrides -Peers $Peers -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -ServiceRanges $ServiceRanges
     }
     function Get-Row { param($Rows, $IP) $Rows | Where-Object IP -EQ $IP }
 }
@@ -72,6 +72,59 @@ Describe 'Get-CIPPBecIPVerdicts' {
         $Rented = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '40.107.1.1' -Country 'US' -ASN '8075')) '40.107.1.1'
         $Rented.Verdict | Should -Not -Be 'Service'
         @($Rented.Reasons.Code) | Should -Contain 'HostingOrProxy'
+    }
+
+    It 'classes an address in the Microsoft 365 ranges as a service even when the user signed in from it' {
+        # the shape that used to snowball: a Microsoft front end in the user's non-interactive sign-ins,
+        # hosting + foreign + new to the user = LikelyAttacker on heuristics alone
+        $Ranges = @('40.107.0.0/16', '2603:1006::/40', '2603:1036::/36')
+        $NonInteractive = @(
+            New-SignIn -IP '2603:1036:303:2c50::5' -Country 'US' -City 'Boydton' -ASN '8075'
+            New-SignIn -IP '40.107.1.1' -Country 'US' -City 'Boydton' -ASN '8075'
+        )
+        $Rows = Get-Verdicts -NonInteractive $NonInteractive -ServiceRanges $Ranges
+        foreach ($IP in @('2603:1036:303:2c50::5', '40.107.1.1')) {
+            $Row = Get-Row $Rows $IP
+            $Row.Verdict | Should -Be 'Service' -Because "$IP is a Microsoft 365 front end"
+            $Row.Source | Should -Match 'Microsoft 365 service address'
+        }
+        (Get-Row (Get-Verdicts -NonInteractive $NonInteractive) '40.107.1.1').Verdict | Should -Not -Be 'Service' -Because 'without the list a signed-in Microsoft address is still judged (rented Azure)'
+        $Rented = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '20.55.1.1' -Country 'US' -ASN '8075') -ServiceRanges $Ranges) '20.55.1.1'
+        $Rented.Verdict | Should -Not -Be 'Service' -Because 'Azure compute outside the Microsoft 365 ranges can be the attacker'
+    }
+
+    It 'knows a new IPv6 privacy address by the /64 the user signed in from before the window' {
+        $Baseline = [pscustomobject]@{
+            Successful = 40
+            # a device rotating through temporary addresses: every one seen on a day or two
+            IPs        = @(1..8 | ForEach-Object { [pscustomobject]@{ IP = "2001:db8:1:2:a:b:c:$_"; SignIns = 5; Share = 0.125; Days = 1 } })
+            ASNs       = @([pscustomobject]@{ ASN = '1221'; SignIns = 40; Share = 1.0 })
+            Locations  = @([pscustomobject]@{ Country = 'AU'; City = 'Sydney'; SignIns = 40; Share = 1.0 })
+        }
+        $Rows = Get-Verdicts -SignIns @((New-SignIn -IP '2001:db8:1:2:dead:beef:0:1'), (New-SignIn -IP '2001:db8:9:9::1')) -Baseline $Baseline
+        $HomeRow = Get-Row $Rows '2001:db8:1:2:dead:beef:0:1'
+        @($HomeRow.Reasons.Code) | Should -Contain 'BaselineRegular'
+        @($HomeRow.Reasons.Code) | Should -Not -Contain 'NewToUser'
+        ($HomeRow.Reasons | Where-Object Code -EQ 'BaselineRegular').Text | Should -Match '2001:db8:1:2::/64'
+        $HomeRow.Verdict | Should -Be 'LikelyUser'
+        @((Get-Row $Rows '2001:db8:9:9::1').Reasons.Code) | Should -Contain 'NewToUser' -Because 'another /64 is still new'
+    }
+
+    It 'never lifts an address the user used before the window through a shared session' {
+        # one dual-stack device: its IPv4 and IPv6 addresses carry the same Entra session
+        $Baseline = [pscustomobject]@{
+            Successful = 40
+            IPs        = @([pscustomobject]@{ IP = '203.0.113.99'; SignIns = 1; Share = 0.025; Days = 1 })
+            ASNs       = @([pscustomobject]@{ ASN = '1221'; SignIns = 40; Share = 1.0 })
+            Locations  = @([pscustomobject]@{ Country = 'AU'; City = 'Sydney'; SignIns = 40; Share = 1.0 })
+        }
+        $SignIns = @(
+            New-SignIn -IP '198.51.100.7' -Country 'NG' -Risk 'high' -SessionId 'S1'
+            New-SignIn -IP '203.0.113.99' -SessionId 'S1'
+        )
+        $Rows = Get-Verdicts -SignIns $SignIns -Baseline $Baseline -Events @([pscustomobject]@{ IP = '198.51.100.7'; Kind = 'Directory change'; Flagged = $true })
+        (Get-Row $Rows '198.51.100.7').Verdict | Should -Be 'LikelyAttacker'
+        @((Get-Row $Rows '203.0.113.99').Reasons.Code) | Should -Not -Contain 'SharedSession'
     }
 
     It 'never calls an address with only failed sign-ins more than suspicious' {

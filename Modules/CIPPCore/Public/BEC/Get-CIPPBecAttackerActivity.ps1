@@ -10,8 +10,11 @@ function Get-CIPPBecAttackerActivity {
         Every record is tied to an address, even when the audit log left it out or recorded a
         Microsoft front-end address: its own client address, else the sign-in behind its token
         (AppAccessContext.UniqueTokenId), else its Entra session (AppAccessContext.AADSessionId),
-        else another record of the same mailbox session. Of the candidates, the one with the worst
-        verdict wins - a record tied to an attacker token is the attacker's.
+        else another record of the same mailbox session. The most direct link with a verdict wins -
+        the record's own address over its token, its token over a shared session - and a Microsoft
+        front end (Service) never counts as the actor. Only among the addresses of one session does
+        the worst verdict win: a session also carries the user's own addresses, so it must not
+        outrank where the request itself came from.
         - Mail: from the mailbox records the MailActivity search already read (no second search):
           one row per message opened (internet message id + folder, named from the message trace),
           per folder synced by a desktop client (the whole folder counts as taken), per item deleted,
@@ -98,9 +101,9 @@ function Get-CIPPBecAttackerActivity {
         if (-not $MailboxSessions.ContainsKey([string]$AD.SessionId)) { $MailboxSessions[[string]$AD.SessionId] = [System.Collections.Generic.HashSet[string]]::new() }
         $null = $MailboxSessions[[string]$AD.SessionId].Add($IP)
     }
-    $Worst = {
+    $Nearest = {
         param($Candidates)
-        @($Candidates | Where-Object { $_.IP } | Sort-Object -Property @{ Expression = { $Rank[[string]$VerdictOf[$_.IP]] ?? 9 } }, @{ Expression = { $_.Order } }) | Select-Object -First 1
+        @($Candidates | Where-Object { $_.IP } | Sort-Object -Property @{ Expression = { $_.Order } }, @{ Expression = { $Rank[[string]$VerdictOf[$_.IP]] ?? 9 } }) | Select-Object -First 1
     }
     $Resolve = {
         param($AD)
@@ -117,7 +120,7 @@ function Get-CIPPBecAttackerActivity {
         }
         # a record whose own address is a Microsoft front end says nothing about the actor: prefer what it is tied to
         $Useful = @($Candidates | Where-Object { $VerdictOf[$_.IP] -and $VerdictOf[$_.IP] -ne 'Service' })
-        $Pick = if ($Useful.Count -gt 0) { & $Worst $Useful } else { $Candidates | Select-Object -First 1 }
+        $Pick = if ($Useful.Count -gt 0) { & $Nearest $Useful } else { $Candidates | Select-Object -First 1 }
         if (-not $Pick) { return [pscustomobject]@{ IP = $null; Source = 'none'; Verdict = $null } }
         [pscustomobject]@{ IP = $Pick.IP; Source = $Pick.Source; Verdict = $(if ($VerdictOf[$Pick.IP]) { $VerdictOf[$Pick.IP] } else { 'Unknown' }) }
     }

@@ -6,6 +6,7 @@ BeforeAll {
     function Get-CIPPBecColleagueSample { param($TenantFilter, $ExcludeUserId, $StartDate, $Count) }
     function Get-CIPPBecCorrelatedUserPeers { param($TenantFilter, $UserIds, $IPs, $StartDate, $WindowStart) }
     function Get-CIPPGeoIPLocationBatch { param([string[]]$IPs) }
+    function Get-CIPPMicrosoft365IPRanges { }
     function Get-NormalizedError { param($message) $message }
     foreach ($File in @('Authentication/ConvertTo-CIPPIPRange.ps1', 'Authentication/Test-IpInRange.ps1', 'Authentication/Resolve-CIPPIPAllowBlockList.ps1', 'BEC/ConvertTo-CIPPBecHostAddress.ps1', 'BEC/New-CIPPBecCollectorResult.ps1', 'BEC/Get-CIPPBecIPVerdicts.ps1', 'BEC/ConvertTo-CIPPBecIPEvents.ps1', 'BEC/Invoke-CIPPBecIPAnalysis.ps1')) {
         . (Join-Path $RepoRoot "Modules/CIPPCore/Public/$File")
@@ -28,6 +29,7 @@ Describe 'Invoke-CIPPBecIPAnalysis' {
     BeforeEach {
         Mock Get-CIPPBecIPGuidance { New-CIPPBecCollectorResult -Data @() }
         Mock Get-CIPPBecSignInBaseline { New-CIPPBecCollectorResult -Data $script:Baseline -Count 30 }
+        Mock Get-CIPPMicrosoft365IPRanges { throw 'endpoints.office.com unreachable' }
         Mock Get-CIPPGeoIPLocationBatch { @{ '198.51.100.7' = [pscustomobject]@{ CountryOrRegion = 'NG'; City = 'Lagos'; Hosting = $true; Proxy = $false; ASName = 'DIGITALOCEAN-ASN' } } }
         Mock Get-CIPPBecIPPeers { $R = @{}; foreach ($IP in $IPs) { $R[$IP] = [pscustomobject]@{ IP = $IP; OtherUsersBefore = 0; OtherUsersInWindowOnly = 2; Users = @('x@contoso.com', 'y@contoso.com') } }; $R }
     }
@@ -40,6 +42,12 @@ Describe 'Invoke-CIPPBecIPAnalysis' {
         ($Analysis.Verdicts | Where-Object IP -EQ '203.0.113.10').Verdict | Should -Be 'LikelyUser'
         $Analysis.Baseline.Complete | Should -BeTrue
         $Analysis.PeersResult.Complete | Should -BeTrue
+    }
+
+    It 'classes Microsoft 365 front ends as a service, and judges as before when the list cannot be read' {
+        Mock Get-CIPPMicrosoft365IPRanges { @('198.51.100.0/24') }
+        ($script:Analysis = Invoke-Analysis).Verdicts | Where-Object IP -EQ '198.51.100.7' | ForEach-Object { $_.Verdict | Should -Be 'Service' }
+        Should -Invoke Get-CIPPBecIPPeers -Times 0 -Because 'a settled service address needs no other-account lookup'
     }
 
     It 're-uses the stored baseline and peers of the case instead of fetching them again' {
