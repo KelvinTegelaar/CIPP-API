@@ -62658,6 +62658,91 @@
       }
     },
     "/api/ListTenants": {
+      "get": {
+        "summary": "ListTenants",
+        "operationId": "ListTenants",
+        "tags": [
+          "Tenant > Administration > Tenant"
+        ],
+        "description": "Lists all managed tenants accessible to the current user, with support for cache clearing and tenant filtering. This is the primary endpoint for tenant enumeration. Pass Search for a fuzzy, case-insensitive substring lookup across displayName, defaultDomainName, initialDomainName and customerId when the exact domain is unknown.",
+        "parameters": [
+          {
+            "name": "AllTenantSelector",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "IncludeOffboardingDefaults",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Search",
+            "in": "query",
+            "description": "Fuzzy tenant lookup: case-insensitive substring match over displayName, defaultDomainName, initialDomainName and customerId. Arbitrary verified domains are not indexed by Get-Tenants and cannot be matched here. Supports '*' wildcards. Use this when you don't know the exact domain.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TenantFilter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TriggerRefresh",
+            "in": "query",
+            "description": "Re-reads the tenant given in tenantFilter, or queues a refresh of all tenants when omitted. Returns a Results message instead of the tenant list.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
+      },
       "post": {
         "summary": "ListTenants",
         "operationId": "ListTenants",

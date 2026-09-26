@@ -47,6 +47,8 @@ function Get-CippMcpToolCatalog {
             foreach ($MethodEntry in $PathEntry.Value.GetEnumerator()) {
                 $Method = [string]$MethodEntry.Key
                 if ($Method -notin @('get', 'post')) { continue }
+                # a GET/POST pair is one tool; the POST also lists the query parameters
+                if ($Method -eq 'get' -and $PathEntry.Value.Contains('post')) { continue }
 
                 $Op = $MethodEntry.Value
                 $Role = $Op['x-cipp-role']

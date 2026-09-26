@@ -263,8 +263,33 @@ Describe 'endpoint discovery' {
         }
     }
 
-    It 'emits exactly one operation per path so MCP tool names stay unique' {
+    It 'emits one operation per path unless a read endpoint also takes body-only fields' {
         foreach ($Path in $script:Spec.paths.Values) { $Path.Keys.Count | Should -Be 1 }
+    }
+
+    It 'documents both GET and POST for a read endpoint with body-only fields' {
+        $Dir = Join-Path $TestDrive 'dual-method'
+        $null = New-Item -ItemType Directory -Path $Dir -Force
+        Set-Content -Path (Join-Path $Dir 'Invoke-ListDual.ps1') -Value @'
+function Invoke-ListDual {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Identity.User.Read
+    #>
+    param($Request, $TriggerMetadata)
+    $Tenant = $Request.Query.tenantFilter
+    if ($Request.Body.ClearCache -eq $true) { $Tenant = $null }
+    return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::OK; Body = @($Tenant) })
+}
+'@
+        $Spec = Invoke-Generator -Name 'dual-method' -With @{ EntrypointPath = $Dir }
+        $PathItem = $Spec.paths['/api/ListDual']
+        @($PathItem.Keys) | Should -Be @('get', 'post')
+        $PathItem.get.Contains('requestBody') | Should -BeFalse
+        $PathItem.post.requestBody.content.'application/json'.schema.properties.Keys | Should -Contain 'ClearCache'
+        @($PathItem.get.parameters | ForEach-Object { $_.'$ref' }) | Should -Contain '#/components/parameters/tenantFilter'
     }
 }
 

@@ -48,7 +48,8 @@ BeforeAll {
         param([string]$Endpoint)
         $PathItem = $script:Spec.paths["/api/$Endpoint"]
         if (-not $PathItem) { return $null }
-        $Method = @($PathItem.Keys)[0]
+        # a path documented as both GET and POST carries its body on the POST
+        $Method = if ($PathItem.Contains('post')) { 'post' } else { @($PathItem.Keys)[0] }
         return [pscustomobject]@{ Method = $Method; Operation = $PathItem[$Method] }
     }
 
@@ -144,11 +145,14 @@ Describe 'request schema fidelity' {
 }
 
 Describe 'invariants the MCP projection depends on' {
-    It 'gives every path exactly one operation' {
-        # Get-CippMcpToolList names a tool after the endpoint; two operations on one
-        # path would advertise two tools with the same name
-        $Multi = @($script:Spec.paths.GetEnumerator() | Where-Object { $_.Value.Keys.Count -ne 1 } | ForEach-Object { $_.Key })
-        $Multi | Should -BeNullOrEmpty
+    It 'gives every path one operation, or a GET and POST pair' {
+        # The MCP catalog names a tool after the endpoint and keeps the POST of a pair,
+        # which also lists the query parameters, so a pair still yields one tool
+        $Bad = @($script:Spec.paths.GetEnumerator() | Where-Object {
+                $Keys = @($_.Value.Keys)
+                -not ($Keys.Count -eq 1 -or ($Keys.Count -eq 2 -and $Keys -contains 'get' -and $Keys -contains 'post'))
+            } | ForEach-Object { $_.Key })
+        $Bad | Should -BeNullOrEmpty
     }
 
     It 'uses only methods the API accepts' {
