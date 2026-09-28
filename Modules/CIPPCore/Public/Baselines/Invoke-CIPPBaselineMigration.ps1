@@ -22,8 +22,10 @@ function Invoke-CIPPBaselineMigration {
           faithful posture per standard so the operator re-enables deliberately.
         - Multi-instance arrays (IntuneTemplate/ConditionalAccessTemplate/Quarantine...)
           become one instance each, keyed by a stable hash of the referenced template id
-          so re-migration updates instead of duplicating. 'TemplateList-Tags' selections
-          map to the IntuneTemplatePackage standard (tag = package, membership stays live).
+          so re-migration updates instead of duplicating. V2 multi-selects on a single
+          template picker (GroupTemplate, TransportRuleTemplate, ...) fan out the same way.
+          'TemplateList-Tags' selections map to the IntuneTemplatePackage standard
+          (tag = package, membership stays live).
         - A hand-authored specials map covers the renamed/restructured standards; any key
           that still cannot be mapped lands in the report as a warning and the V3 default
           applies - nothing drops silently.
@@ -66,6 +68,9 @@ function Invoke-CIPPBaselineMigration {
         EXODirectSend                 = @{ rename = @{ state = 'rejectDirectSend' }; value = @{ rejectDirectSend = @{ enabled = $false; disabled = $true } } }
         FocusedInbox                  = @{ rename = @{ state = 'enabled' } }
         SafeAttachmentPolicy          = @{ rename = @{ action = 'SafeAttachmentAction' } }
+        # V2 template pickers saved under a generic key; V3 names the identity variable.
+        ReusableSettingsTemplate      = @{ rename = @{ TemplateList = 'reusableSettingsTemplate' } }
+        SafeLinksTemplatePolicy       = @{ rename = @{ TemplateIds = 'safeLinksTemplate' } }
         # V2 stored the Graph string enum; the V3 definition speaks SPO numerics.
         sharingCapability             = @{ rename = @{ Level = 'sharingCapability' }; value = @{ sharingCapability = @{ disabled = 0; externalUserSharingOnly = 1; externalUserAndGuestSharing = 2; existingExternalUserSharingOnly = 3 } } }
         SpoofWarn                     = @{ rename = @{ state = 'externalWarningEnabled' }; value = @{ externalWarningEnabled = @{ enabled = $true; disabled = $false } } }
@@ -213,6 +218,24 @@ function Invoke-CIPPBaselineMigration {
             }
         }
 
+        # V2 template pickers (GroupTemplate, TransportRuleTemplate, the Purview templates...)
+        # saved a multi-select on ONE entry; the V3 definition is multi-instance with one
+        # template per instance. Pull the selection out here and fan it out below - copied
+        # verbatim it lands as a list in a single-value field (all GUIDs in one instance).
+        $IdentityKey = "$($Definition.instanceIdentity)"
+        $IdentityValues = $null
+        if (-not $InstanceSeed -and $Definition.multiple -eq $true -and $IdentityKey) {
+            $IdentitySetting = @($Settings.Keys) | Where-Object { $_ -ieq $IdentityKey } | Select-Object -First 1
+            if ($IdentitySetting -and $Settings[$IdentitySetting] -is [array]) {
+                $IdentityValues = @(@($Settings[$IdentitySetting]) | ForEach-Object { "$(& $Unwrap $_)" } | Where-Object { $_ } | Select-Object -Unique)
+                $null = $Settings.Remove($IdentitySetting)
+                if ($IdentityValues.Count -eq 0) {
+                    $Warnings.Add("$TargetName entry selects no template - skipped")
+                    return [PSCustomObject]@{ Configs = @(); Warnings = $Warnings }
+                }
+            }
+        }
+
         $DefVars = @($Definition.variables.PSObject.Properties)
         $Variables = [ordered]@{}
         foreach ($Key in @($Settings.Keys)) {
@@ -233,6 +256,24 @@ function Invoke-CIPPBaselineMigration {
             $MatchingOption = @($DefVar.Value.options) | Where-Object { "$($_.value)" -eq "$Value" } | Select-Object -First 1
             if ($MatchingOption) { $Value = $MatchingOption.value }
             $Variables[$DefVar.Name] = & $Coerce $Value $DefVar.Value.type
+        }
+
+        if ($IdentityValues) {
+            $FanOut = foreach ($IdentityValue in $IdentityValues) {
+                $InstanceVariables = [ordered]@{}
+                foreach ($Key in $Variables.Keys) { $InstanceVariables[$Key] = $Variables[$Key] }
+                $InstanceVariables[$IdentityKey] = $IdentityValue
+                [PSCustomObject]@{
+                    standard          = $TargetName
+                    instance          = ('{0}#m{1}' -f $TargetName, (& $InstanceId $IdentityValue))
+                    variables         = [PSCustomObject]$InstanceVariables
+                    remediateEnabled  = $EffectiveRemediate
+                    alertEnabled      = $Alert
+                    alertOnRemediate  = $false
+                    faithfulRemediate = $Remediate
+                }
+            }
+            return [PSCustomObject]@{ Configs = @($FanOut); Warnings = $Warnings }
         }
 
         $Instance = if ($InstanceSeed) {
@@ -369,7 +410,7 @@ function Invoke-CIPPBaselineMigration {
         $SourceMarker = "StandardsTemplateV2:$V2Guid"
         # mapper= is the migration logic version: bump it when the MAPPING changes (not the
         # source data) so unchanged V2 templates still re-commit once with the improved output.
-        $Sha = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$($Row.JSON)|reportOnly=$ReportOnly|detect=$AddDetectStandards|mapper=3"))).ToLower()
+        $Sha = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$($Row.JSON)|reportOnly=$ReportOnly|detect=$AddDetectStandards|mapper=4"))).ToLower()
         $SafeSource = ConvertTo-CIPPODataFilterValue -Value $SourceMarker
         $Existing = Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout' and Source eq '$SafeSource'" | Select-Object -First 1
         if ($Existing -and "$($Existing.SHA)" -eq $Sha) {
