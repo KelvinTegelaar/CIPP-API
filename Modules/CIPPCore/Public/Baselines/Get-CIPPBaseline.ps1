@@ -47,10 +47,14 @@ function Get-CIPPBaseline {
     # name field = displayName) are what CA and Intune templates use, but the wider
     # template families store rows under partitions that do NOT match their executor
     # ('TransportTemplate', 'ExConnectorTemplate', ...) and name them 'name'/'Name'.
+    # Only picker identities are template references: free-text identities (the
+    # Autopilot/Device Prep/Apple enrollment profile names) are the value itself, and
+    # wrapping them renders '[object Object]' in the editor's text field.
     $IdentityDefinitions = @{}
     if ($ResolveIdentityLabels) {
         foreach ($Definition in @(Get-CIPPBaselineDefinition)) {
-            if ($Definition.instanceIdentity) {
+            $IdentityType = "$($Definition.variables.$($Definition.instanceIdentity).type)"
+            if ($Definition.instanceIdentity -and $IdentityType -in @('autoComplete', 'select')) {
                 $IdentityDefinitions[$Definition.name] = @{
                     Variable  = $Definition.instanceIdentity
                     Partition = "$($Definition.identity.partition ?? $Definition.remediate.executor)"
