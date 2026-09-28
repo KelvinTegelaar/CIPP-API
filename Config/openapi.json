@@ -23588,44 +23588,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
-                  "properties": {
-                    "CurrentValue": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ExpectedValue": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "LicenseAvailable": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "PartitionKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "RowKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "TemplateId": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Value": {
-                      "x-cipp-field-source": "storage"
-                    }
-                  }
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
