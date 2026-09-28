@@ -26,22 +26,11 @@
   "compare": "subset",
   "variables": {
     "ReviewerRoles": {
-      "type": "autoComplete",
+      "type": "AdminRolesMultiSelect",
+      "multiple": true,
       "creatable": false,
-      "label": "App Consent Reviewer Role",
-      "omitWhenBlank": true,
-      "api": {
-        "url": "/api/ListGraphRequest",
-        "data": {
-          "Endpoint": "roleManagement/directory/roleDefinitions",
-          "$select": "id,displayName",
-          "$top": 999
-        },
-        "dataKey": "Results",
-        "labelField": "displayName",
-        "valueField": "id",
-        "queryKey": "ListEntraRoleDefinitions"
-      }
+      "label": "App Consent Reviewer Roles",
+      "omitWhenBlank": true
     },
     "ReviewerUsers": {
       "type": "autoComplete",
