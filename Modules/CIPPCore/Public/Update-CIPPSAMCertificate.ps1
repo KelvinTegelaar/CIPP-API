@@ -5,8 +5,8 @@ function Update-CIPPSAMCertificate {
 
     .DESCRIPTION
     Loads Key Vault SAMCertificate current/previous versions as the Entra keep-set.
-    On every run, removes proven CIPP debris (older KV thumbprints or CIPP-SAM displayName
-    orphans) while preserving unknown credentials. Mints only when missing, near expiry,
+    On every run, removes proven CIPP debris (older KV thumbprints from this instance's own
+    history) while preserving every other credential. Mints only when missing, near expiry,
     or -Force. Drift re-registers the same stored public key without minting. Renewal
     keeps at most the previous current plus the new cert, then stores the PFX under the
     same KV name. Store failure rolls back only the newly added credential.
@@ -265,9 +265,9 @@ function Get-CIPPSAMCredentialClassification {
             continue
         }
 
-        $IsCippDisplayName = $Credential.displayName -like 'CIPP-SAM Certificate*'
-        $InHistorical = $HistoricalThumbprints.Contains($Thumbprint)
-        if ($InHistorical -or $IsCippDisplayName) {
+        # Only prune certs this instance itself stored (any KV version outside the keep-set).
+        # Other instances sharing the SAM app use the same displayName prefix; never touch theirs.
+        if ($HistoricalThumbprints.Contains($Thumbprint) -or $KnownThumbprints -contains $Thumbprint) {
             $RemovedCount++
             Write-Information "Pruning CIPP key credential $($Credential.keyId) thumbprint=$Thumbprint displayName=$($Credential.displayName)"
             continue
