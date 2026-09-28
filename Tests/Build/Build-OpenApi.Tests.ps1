@@ -287,6 +287,8 @@ function Invoke-ListDual {
         $Spec = Invoke-Generator -Name 'dual-method' -With @{ EntrypointPath = $Dir }
         $PathItem = $Spec.paths['/api/ListDual']
         @($PathItem.Keys) | Should -Be @('get', 'post')
+        $PathItem.get.operationId | Should -Be 'ListDual'
+        $PathItem.post.operationId | Should -Be 'ListDualPost'
         $PathItem.get.Contains('requestBody') | Should -BeFalse
         $PathItem.post.requestBody.content.'application/json'.schema.properties.Keys | Should -Contain 'ClearCache'
         @($PathItem.get.parameters | ForEach-Object { $_.'$ref' }) | Should -Contain '#/components/parameters/tenantFilter'

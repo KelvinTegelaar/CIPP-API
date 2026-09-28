@@ -62708,7 +62708,7 @@
       },
       "post": {
         "summary": "ListTenants",
-        "operationId": "ListTenants",
+        "operationId": "ListTenantsPost",
         "tags": [
           "Tenant > Administration > Tenant"
         ],
