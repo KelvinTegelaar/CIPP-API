@@ -149,7 +149,17 @@ function Send-CIPPScheduledTaskAlert {
 
         # Build HTML with adaptive table styling
         $TableDesign = '<style>table.adaptiveTable{border:1px solid currentColor;background-color:transparent;width:100%;text-align:left;border-collapse:collapse;opacity:0.9}table.adaptiveTable td,table.adaptiveTable th{border:1px solid currentColor;padding:8px 6px;opacity:0.8}table.adaptiveTable tbody td{font-size:13px}table.adaptiveTable tr:nth-child(even){background-color:rgba(128,128,128,0.1)}table.adaptiveTable thead{background-color:rgba(128,128,128,0.2);border-bottom:2px solid currentColor}table.adaptiveTable thead th{font-size:15px;font-weight:700;border-left:1px solid currentColor}table.adaptiveTable thead th:first-child{border-left:none}table.adaptiveTable tfoot{font-size:14px;font-weight:700;background-color:rgba(128,128,128,0.1);border-top:2px solid currentColor}table.adaptiveTable tfoot td{font-size:14px}@media (prefers-color-scheme: dark){table.adaptiveTable{opacity:0.95}table.adaptiveTable tr:nth-child(even){background-color:rgba(255,255,255,0.05)}table.adaptiveTable thead{background-color:rgba(255,255,255,0.1)}table.adaptiveTable tfoot{background-color:rgba(255,255,255,0.05)}}</style>'
-        $EncodedTaskName = [System.Web.HttpUtility]::HtmlEncode($TaskInfo.Name)
+        # Scripted alerts store Name as "{tenant labels}: {subject}". That list must not appear in
+        # per-tenant PSA/email bodies - Tenant is already on the next line. Prefer CustomSubject,
+        # else strip the leading scope for Alert deliveries, else keep the full Name.
+        $DisplayTitle = if (![string]::IsNullOrWhiteSpace($TaskInfo.CustomSubject)) {
+            [string]$TaskInfo.CustomSubject
+        } elseif ($TaskType -eq 'Alert' -and "$($TaskInfo.Name)" -match '^[^:]+:\s*(.+)$') {
+            $Matches[1].Trim()
+        } else {
+            [string]$TaskInfo.Name
+        }
+        $EncodedTaskName = [System.Web.HttpUtility]::HtmlEncode($DisplayTitle)
         $EncodedTenantName = [System.Web.HttpUtility]::HtmlEncode($TenantFilter)
         $AlertHeader = "<div style=`"margin:0 0 14px;`"><p style=`"margin:0 0 2px;font-size:15px;font-weight:600;`">$EncodedTaskName</p><p style=`"margin:0;font-size:13px;opacity:0.75;`">Tenant: <strong>$EncodedTenantName</strong></p></div>"
         # Commands that also serve an HTTP caller return a single row carrying the result lines plus
@@ -223,11 +233,12 @@ function Send-CIPPScheduledTaskAlert {
             $HTML += $AlertCommentHtml
         }
 
-        # Build title — honor CustomSubject if set on the task row, otherwise use default format
+        # Build title — honor CustomSubject if set on the task row, otherwise use DisplayTitle
+        # so multi-tenant alert Names do not leak other client labels into the ticket subject.
         $title = if (![string]::IsNullOrWhiteSpace($TaskInfo.CustomSubject)) {
             "$($TaskInfo.CustomSubject) - $TenantFilter"
         } else {
-            "$TaskType - $TenantFilter - $($TaskInfo.Name)"
+            "$TaskType - $TenantFilter - $DisplayTitle"
         }
         if ($TaskInfo.Reference) {
             $title += " - Reference: $($TaskInfo.Reference)"
