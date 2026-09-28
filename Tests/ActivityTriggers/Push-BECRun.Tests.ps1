@@ -132,7 +132,7 @@ Describe 'Push-BECRun' {
                 PeersResult = New-CIPPBecCollectorResult -Data @()
                 Peers       = @{}
                 Geo         = @{}
-                Verdicts    = @([pscustomobject]@{ IP = '203.0.113.10'; Verdict = 'LikelyAttacker'; SuccessfulSignIns = 1; Activities = 2 })
+                Verdicts    = @([pscustomobject]@{ IP = '203.0.113.10'; Verdict = 'LikelyAttacker'; SuccessfulSignIns = 1; Activities = 2; Reasons = @([pscustomobject]@{ Code = 'FlaggedAction'; Weight = 4; Text = 'Behind flagged activity: Inbox rule change' }) })
                 Events      = @()
             }
         }

@@ -64,4 +64,41 @@ Describe 'Invoke-CIPPBaselineMigration value maps' {
             $Options | Should -Contain $Value
         }
     }
+
+    Context 'Template picker multi-selects' {
+        It 'fans a V2 GroupTemplate multi-select out to one instance per template' {
+            $Result = Invoke-Migration @{ GroupTemplate = @(@{ action = @('Report'); groupTemplate = @(@{ label = 'Sales'; value = 'g-1' }, @{ label = 'HR'; value = 'g-2' }) }) }
+            $Configs = @($Result.Configs | Where-Object standard -EQ 'GroupTemplate')
+            $Configs.Count | Should -Be 2
+            @($Configs.variables.groupTemplate) | Should -Be @('g-1', 'g-2')
+            @($Configs.instance | Select-Object -Unique).Count | Should -Be 2
+        }
+
+        It 'unwraps a single-item V2 selection to the plain template id' {
+            $Result = Invoke-Migration @{ GroupTemplate = @(@{ action = @('Report'); groupTemplate = @(@{ label = 'Sales'; value = 'g-1' }) }) }
+            $Config = $Result.Configs | Where-Object standard -EQ 'GroupTemplate'
+            $Config.variables.groupTemplate | Should -BeExactly 'g-1'
+        }
+
+        It 'keys the instance the same way as a single-value selection so re-migration updates in place' {
+            $Multi = Invoke-Migration @{ GroupTemplate = @(@{ action = @('Report'); groupTemplate = @(@{ label = 'Sales'; value = 'g-1' }) }) }
+            $Single = Invoke-Migration @{ GroupTemplate = @(@{ action = @('Report'); groupTemplate = @{ label = 'Sales'; value = 'g-1' } }) }
+            ($Multi.Configs | Where-Object standard -EQ 'GroupTemplate').instance | Should -Be ($Single.Configs | Where-Object standard -EQ 'GroupTemplate').instance
+        }
+
+        It 'carries the remaining settings onto every fanned-out instance' {
+            $Result = Invoke-Migration @{ TransportRuleTemplate = @(@{ action = @('Report'); transportRuleTemplate = @(@{ label = 'A'; value = 't-1' }, @{ label = 'B'; value = 't-2' }); overwrite = $true }) }
+            $Configs = @($Result.Configs | Where-Object standard -EQ 'TransportRuleTemplate')
+            $Configs.Count | Should -Be 2
+            $Configs | ForEach-Object { $_.variables.overwrite | Should -BeTrue }
+        }
+
+        It 'maps the generic V2 picker keys onto the V3 identity variable' {
+            $Reusable = Invoke-Migration @{ ReusableSettingsTemplate = @(@{ action = @('Report'); TemplateList = @(@{ label = 'A'; value = 'r-1' }, @{ label = 'B'; value = 'r-2' }) }) }
+            $SafeLinks = Invoke-Migration @{ SafeLinksTemplatePolicy = @{ action = @('Report'); standards = @{ SafeLinksTemplatePolicy = @{ TemplateIds = @(@{ label = 'A'; value = 's-1' }) } } } }
+            @(($Reusable.Configs | Where-Object standard -EQ 'ReusableSettingsTemplate').variables.reusableSettingsTemplate) | Should -Be @('r-1', 'r-2')
+            ($SafeLinks.Configs | Where-Object standard -EQ 'SafeLinksTemplatePolicy').variables.safeLinksTemplate | Should -BeExactly 's-1'
+            @($Reusable.Report.warnings) + @($SafeLinks.Report.warnings) | Where-Object { $_ -match 'does not map' } | Should -BeNullOrEmpty
+        }
+    }
 }

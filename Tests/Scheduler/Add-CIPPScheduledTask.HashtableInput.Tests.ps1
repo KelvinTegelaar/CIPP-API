@@ -53,4 +53,16 @@ Describe 'Add-CIPPScheduledTask hashtable input' {
         $Stored.Keys | Sort-Object | Should -Be @('message', 'Sev')
         $Stored.message | Should -Be 'hi'
     }
+
+    It 'stores ScheduledTime as a string when re-queuing with RunNow' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [pscustomobject]@{ PartitionKey = 'ScheduledTask'; RowKey = 'abc'; Name = 'Existing'; ScheduledTime = $script:Future; TaskState = 'Completed' }
+        }
+        Mock -CommandName Add-CippQueueMessage -MockWith { $true }
+
+        Add-CIPPScheduledTask -RunNow -RowKey 'abc'
+
+        $script:CapturedEntity.ScheduledTime | Should -BeOfType [string]
+        [int64]$script:CapturedEntity.ScheduledTime | Should -BeLessThan ([int64]$script:Future)
+    }
 }

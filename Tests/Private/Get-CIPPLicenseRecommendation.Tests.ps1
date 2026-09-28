@@ -359,6 +359,184 @@ Describe 'Get-CIPPLicenseRecommendation' {
         @($Report.Terms | Where-Object { $_.skuId -eq $Storage }).Count | Should -Be 0
     }
 
+    It 'excludes an opaque add-on (no capability-mapped service plans) from consolidation' {
+        $Win365 = 'aaaaaaaa-1111-1111-1111-111111111111'
+        $PlanWin365Opaque = 'aaaaaaaa-2222-2222-2222-222222222222'
+
+        Mock -CommandName Get-CIPPLicenseCatalog -MockWith {
+            [pscustomobject]@{
+                meta         = [pscustomobject]@{ monthlyCommitmentUplift = 0.2; seatLimits = [pscustomobject]@{ business = 300 } }
+                capabilities = @(
+                    [pscustomobject]@{ id = 'email'; label = 'Email and calendar'; signal = 'exchange'; servicePlanIds = @($script:PlanExchange) }
+                    [pscustomobject]@{ id = 'teams'; label = 'Teams chat and meetings'; signal = 'teams'; servicePlanIds = @($script:PlanTeams) }
+                    [pscustomobject]@{ id = 'files'; label = 'File storage and sharing'; signal = 'files'; servicePlanIds = @($script:PlanSpo) }
+                    [pscustomobject]@{ id = 'desktopApps'; label = 'Office desktop apps'; signal = 'desktopApps'; servicePlanIds = @($script:PlanOfficeBiz) }
+                    [pscustomobject]@{ id = 'copilot'; label = 'Microsoft 365 Copilot'; signal = 'copilot'; servicePlanIds = @($script:PlanCopilot) }
+                    [pscustomobject]@{ id = 'deviceManagement'; label = 'Device management'; signal = $null; servicePlanIds = @($script:PlanIntune) }
+                    [pscustomobject]@{ id = 'signInSecurity'; label = 'Advanced sign-in security'; signal = $null; servicePlanIds = @($script:PlanAadP1) }
+                    [pscustomobject]@{ id = 'endpointSecurity'; label = 'Device threat protection'; signal = $null; servicePlanIds = @($script:PlanMde) }
+                )
+                families     = @()
+                products     = @(
+                    [pscustomobject]@{ skuId = $script:Basic; name = 'Business Basic'; family = 'business'; tier = 1; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:Standard; name = 'Business Standard'; family = 'business'; tier = 2; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:Premium; name = 'Business Premium'; family = 'business'; tier = 3; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:AppsBiz; name = 'Apps for Business'; family = 'apps'; tier = 1; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:ExP1; name = 'Exchange P1'; family = 'exchange'; tier = 1; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:Copilot; name = 'Copilot'; family = 'addon'; tier = 0; eligibleTarget = $false }
+                    [pscustomobject]@{ skuId = $Win365; name = 'Windows 365'; family = 'other'; tier = 0; eligibleTarget = $false }
+                )
+            }
+        }
+        Mock -CommandName Get-CIPPLicensePrice -MockWith {
+            @(
+                [pscustomobject]@{ skuId = $script:Basic; Product_Display_Name = 'Business Basic'; MonthlyPrice = 7.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:Standard; Product_Display_Name = 'Business Standard'; MonthlyPrice = 14.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:Premium; Product_Display_Name = 'Business Premium'; MonthlyPrice = 22.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:AppsBiz; Product_Display_Name = 'Apps for Business'; MonthlyPrice = 10.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:ExP1; Product_Display_Name = 'Exchange P1'; MonthlyPrice = 4.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:Copilot; Product_Display_Name = 'Copilot'; MonthlyPrice = 30.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $Win365; Product_Display_Name = 'Windows 365'; MonthlyPrice = 36.59; Currency = 'USD' }
+            )
+        }
+
+        $PlanIds = $script:PlanIds.Clone()
+        $PlanIds[$Win365] = @($PlanWin365Opaque)
+        $Users = @($script:Users) + (New-User 'combo-w365@contoso.com' @($script:Premium, $Win365) $script:Old)
+
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds
+
+        @($Report.Upgrades | Where-Object { $_.Type -eq 'Consolidate' -and $_.Users.userPrincipalName -contains 'combo-w365@contoso.com' }) | Should -BeNullOrEmpty
+        @($Report.Suggestions | Where-Object { $_.Type -eq 'Combine licenses' -and $_.User -eq 'combo-w365@contoso.com' }) | Should -BeNullOrEmpty
+
+        # The existing describable consolidation still fires for other users
+        $Row = $Report.Upgrades | Where-Object { $_.Type -eq 'Consolidate' -and $_.ToSkuId -eq $script:Standard }
+        $Row | Should -Not -BeNullOrEmpty
+        $Row.Users.userPrincipalName | Should -Contain 'combo@contoso.com'
+    }
+
+    It 'excludes an opaque add-on from the Protect cost basis and target family' {
+        $Win365 = 'aaaaaaaa-1111-1111-1111-111111111111'
+        $PlanWin365Opaque = 'aaaaaaaa-2222-2222-2222-222222222222'
+
+        Mock -CommandName Get-CIPPLicenseCatalog -MockWith {
+            [pscustomobject]@{
+                meta         = [pscustomobject]@{ monthlyCommitmentUplift = 0.2; seatLimits = [pscustomobject]@{ business = 300 } }
+                capabilities = @(
+                    [pscustomobject]@{ id = 'email'; label = 'Email and calendar'; signal = 'exchange'; servicePlanIds = @($script:PlanExchange) }
+                    [pscustomobject]@{ id = 'teams'; label = 'Teams chat and meetings'; signal = 'teams'; servicePlanIds = @($script:PlanTeams) }
+                    [pscustomobject]@{ id = 'files'; label = 'File storage and sharing'; signal = 'files'; servicePlanIds = @($script:PlanSpo) }
+                    [pscustomobject]@{ id = 'desktopApps'; label = 'Office desktop apps'; signal = 'desktopApps'; servicePlanIds = @($script:PlanOfficeBiz) }
+                    [pscustomobject]@{ id = 'copilot'; label = 'Microsoft 365 Copilot'; signal = 'copilot'; servicePlanIds = @($script:PlanCopilot) }
+                    [pscustomobject]@{ id = 'deviceManagement'; label = 'Device management'; signal = $null; servicePlanIds = @($script:PlanIntune) }
+                    [pscustomobject]@{ id = 'signInSecurity'; label = 'Advanced sign-in security'; signal = $null; servicePlanIds = @($script:PlanAadP1) }
+                    [pscustomobject]@{ id = 'endpointSecurity'; label = 'Device threat protection'; signal = $null; servicePlanIds = @($script:PlanMde) }
+                )
+                families     = @()
+                products     = @(
+                    [pscustomobject]@{ skuId = $script:Basic; name = 'Business Basic'; family = 'business'; tier = 1; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:Standard; name = 'Business Standard'; family = 'business'; tier = 2; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:Premium; name = 'Business Premium'; family = 'business'; tier = 3; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:AppsBiz; name = 'Apps for Business'; family = 'apps'; tier = 1; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:ExP1; name = 'Exchange P1'; family = 'exchange'; tier = 1; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:Copilot; name = 'Copilot'; family = 'addon'; tier = 0; eligibleTarget = $false }
+                    [pscustomobject]@{ skuId = $Win365; name = 'Windows 365'; family = 'other'; tier = 0; eligibleTarget = $false }
+                )
+            }
+        }
+        Mock -CommandName Get-CIPPLicensePrice -MockWith {
+            @(
+                [pscustomobject]@{ skuId = $script:Basic; Product_Display_Name = 'Business Basic'; MonthlyPrice = 7.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:Standard; Product_Display_Name = 'Business Standard'; MonthlyPrice = 14.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:Premium; Product_Display_Name = 'Business Premium'; MonthlyPrice = 22.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:AppsBiz; Product_Display_Name = 'Apps for Business'; MonthlyPrice = 10.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:ExP1; Product_Display_Name = 'Exchange P1'; MonthlyPrice = 4.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:Copilot; Product_Display_Name = 'Copilot'; MonthlyPrice = 30.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $Win365; Product_Display_Name = 'Windows 365'; MonthlyPrice = 36.59; Currency = 'USD' }
+            )
+        }
+
+        $PlanIds = $script:PlanIds.Clone()
+        $PlanIds[$Win365] = @($PlanWin365Opaque)
+        $Users = @($script:Users) + (New-User 'basic-w365@contoso.com' @($script:Basic, $Win365) $script:Old)
+        $Activity = @($script:Activity) + (New-Activity 'basic-w365@contoso.com' $true $true $true)
+        $Apps = @($script:Apps) + (New-AppUsage 'basic-w365@contoso.com' $true)
+
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $Users -ActivityDetail $Activity -AppUsage $Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds
+
+        $Row = $Report.Upgrades | Where-Object { $_.Type -eq 'Protect' -and $_.Users.userPrincipalName -contains 'basic-w365@contoso.com' }
+        $Row | Should -Not -BeNullOrEmpty
+        # The opaque add-on never joins the cost basis: only Business Basic is named and priced
+        $Row.FromLicenses | Should -Be @('Business Basic')
+        $Row.UnitCost | Should -Be 7.0
+
+        $Suggestion = $Report.Suggestions | Where-Object { $_.Type -eq 'Add protection' -and $_.User -eq 'basic-w365@contoso.com' }
+        $Suggestion | Should -Not -BeNullOrEmpty
+        $Suggestion.License | Should -Be 'Business Basic'
+    }
+
+    It 'reports the friendly name of a service plan a consolidation target would silently drop' {
+        $WinE3 = 'bbbbbbbb-1111-1111-1111-111111111111'
+        $PlanWinEnterprise = 'bbbbbbbb-2222-2222-2222-222222222222'
+        $PlanWinOpaque = 'bbbbbbbb-3333-3333-3333-333333333333'
+
+        Mock -CommandName Get-CIPPLicenseCatalog -MockWith {
+            [pscustomobject]@{
+                meta         = [pscustomobject]@{ monthlyCommitmentUplift = 0.2; seatLimits = [pscustomobject]@{ business = 300 } }
+                capabilities = @(
+                    [pscustomobject]@{ id = 'email'; label = 'Email and calendar'; signal = 'exchange'; servicePlanIds = @($script:PlanExchange) }
+                    [pscustomobject]@{ id = 'teams'; label = 'Teams chat and meetings'; signal = 'teams'; servicePlanIds = @($script:PlanTeams) }
+                    [pscustomobject]@{ id = 'files'; label = 'File storage and sharing'; signal = 'files'; servicePlanIds = @($script:PlanSpo) }
+                    [pscustomobject]@{ id = 'desktopApps'; label = 'Office desktop apps'; signal = 'desktopApps'; servicePlanIds = @($script:PlanOfficeBiz) }
+                    [pscustomobject]@{ id = 'copilot'; label = 'Microsoft 365 Copilot'; signal = 'copilot'; servicePlanIds = @($script:PlanCopilot) }
+                    [pscustomobject]@{ id = 'deviceManagement'; label = 'Device management'; signal = $null; servicePlanIds = @($script:PlanIntune) }
+                    [pscustomobject]@{ id = 'signInSecurity'; label = 'Advanced sign-in security'; signal = $null; servicePlanIds = @($script:PlanAadP1) }
+                    [pscustomobject]@{ id = 'endpointSecurity'; label = 'Device threat protection'; signal = $null; servicePlanIds = @($script:PlanMde) }
+                    [pscustomobject]@{ id = 'windowsEnterprise'; label = 'Windows Enterprise upgrade rights'; signal = $null; servicePlanIds = @($PlanWinEnterprise) }
+                )
+                families     = @()
+                products     = @(
+                    [pscustomobject]@{ skuId = $script:Basic; name = 'Business Basic'; family = 'business'; tier = 1; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:Standard; name = 'Business Standard'; family = 'business'; tier = 2; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:Premium; name = 'Business Premium'; family = 'business'; tier = 3; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:AppsBiz; name = 'Apps for Business'; family = 'apps'; tier = 1; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:ExP1; name = 'Exchange P1'; family = 'exchange'; tier = 1; eligibleTarget = $true }
+                    [pscustomobject]@{ skuId = $script:Copilot; name = 'Copilot'; family = 'addon'; tier = 0; eligibleTarget = $false }
+                    [pscustomobject]@{ skuId = $WinE3; name = 'Windows Enterprise E3'; family = 'other'; tier = 0; eligibleTarget = $false }
+                )
+            }
+        }
+        Mock -CommandName Get-CIPPLicensePrice -MockWith {
+            @(
+                [pscustomobject]@{ skuId = $script:Basic; Product_Display_Name = 'Business Basic'; MonthlyPrice = 7.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:Standard; Product_Display_Name = 'Business Standard'; MonthlyPrice = 14.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:Premium; Product_Display_Name = 'Business Premium'; MonthlyPrice = 22.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:AppsBiz; Product_Display_Name = 'Apps for Business'; MonthlyPrice = 10.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:ExP1; Product_Display_Name = 'Exchange P1'; MonthlyPrice = 4.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $script:Copilot; Product_Display_Name = 'Copilot'; MonthlyPrice = 30.0; Currency = 'USD' }
+                [pscustomobject]@{ skuId = $WinE3; Product_Display_Name = 'Windows Enterprise E3'; MonthlyPrice = 10.0; Currency = 'USD' }
+            )
+        }
+
+        # Premium also carries the Windows Enterprise upgrade rights plan here, so it can cover
+        # (and be cheaper than) Standard + Windows Enterprise E3 combined.
+        $PlanIds = $script:PlanIds.Clone()
+        $PlanIds[$script:Premium] = @($script:PlanIds[$script:Premium]) + $PlanWinEnterprise
+        $PlanIds[$WinE3] = @($PlanWinEnterprise, $PlanWinOpaque)
+        $PlanNames = @{ $PlanWinOpaque = 'Windows 10/11 Enterprise (New)' }
+        $Users = @($script:Users) + (New-User 'winE3user@contoso.com' @($script:Standard, $WinE3) $script:Old)
+
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds -PlanNamesById $PlanNames
+
+        $Row = $Report.Upgrades | Where-Object { $_.Type -eq 'Consolidate' -and $_.Users.userPrincipalName -contains 'winE3user@contoso.com' }
+        $Row | Should -Not -BeNullOrEmpty
+        $Row.Loses | Should -Contain 'Windows 10/11 Enterprise (New)'
+
+        $Suggestion = $Report.Suggestions | Where-Object { $_.Type -eq 'Combine licenses' -and $_.User -eq 'winE3user@contoso.com' }
+        $Suggestion | Should -Not -BeNullOrEmpty
+        $Suggestion.Reason | Should -Match 'would lose Windows 10/11 Enterprise \(New\)'
+    }
+
     It 'sums the potential into the summary and lists what is paid for' {
         $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $script:Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $script:PlanIds
 

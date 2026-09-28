@@ -91,7 +91,11 @@ function Invoke-CIPPBecIPAnalysis {
         try { $Geo = Get-CIPPGeoIPLocationBatch -IPs $AllIPs } catch { Write-Information "BEC IP analysis: geo lookup failed: $($_.Exception.Message)" }
     }
 
+    # without the list, Microsoft front ends fall back to the network-name rule (only when never signed in from)
+    $ServiceRanges = try { @(Get-CIPPMicrosoft365IPRanges) } catch { Write-Information "BEC IP analysis: Microsoft 365 range list failed: $($_.Exception.Message)"; @() }
+
     $VerdictParams = @{
+        ServiceRanges         = $ServiceRanges
         SignIns               = $SignIns
         NonInteractiveSignIns = $NonInteractive
         Events                = $Events

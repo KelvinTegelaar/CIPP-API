@@ -37,7 +37,7 @@ function Add-CIPPScheduledTask {
             try {
                 $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($RowKey)'"
                 $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
-                $ExistingTask.ScheduledTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+                $ExistingTask.ScheduledTime = [string][int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
                 $ExistingTask.TaskState = 'Planned'
                 Add-CIPPAzDataTableEntity @Table -Entity $ExistingTask -Force
                 Write-LogMessage -headers $Headers -API 'RunNow' -message "Task $($ExistingTask.Name) scheduled to run now" -Sev 'Info' -Tenant $ExistingTask.Tenant

@@ -16,12 +16,16 @@ function Convert-CippExecStandardsToControls {
         The listStandardTemplates Body, used only to resolve Intune/CA template GUIDs to display names.
     .PARAMETER Catalog
         The parsed Config\standards.json catalog (array of standard definitions).
+    .PARAMETER TemplateNames
+        Template GUID -> display name, read straight from the templates table (CATemplate/IntuneTemplate
+        rows). Takes precedence over names found in -Templates.
     #>
     [CmdletBinding()]
     param(
         $Compare,
         $Templates = @(),
-        $Catalog = @()
+        $Catalog = @(),
+        [hashtable]$TemplateNames = @{}
     )
 
     # JS parity: JSON.stringify of an object whose top-level keys are sorted. Nested objects keep their
@@ -70,6 +74,10 @@ function Convert-CippExecStandardsToControls {
                 }
             }
         }
+    }
+
+    foreach ($Guid in $TemplateNames.Keys) {
+        if (-not [string]::IsNullOrWhiteSpace([string]$TemplateNames[$Guid])) { $TemplateMap[([string]$Guid).ToLower()] = [string]$TemplateNames[$Guid] }
     }
 
     # Catalog by full standard name (e.g. 'standards.CopilotSettings').

@@ -204,13 +204,30 @@
       ]
     },
     {
-      "id": "windows",
-      "label": "Windows upgrade rights",
-      "description": "Upgrading Windows Pro to Enterprise or Business edition.",
+      "id": "windowsEnterprise",
+      "label": "Windows Enterprise upgrade rights",
+      "description": "Upgrading Windows Pro to Enterprise edition.",
       "signal": null,
       "servicePlanIds": [
-        "21b439ba-a0ca-424f-a6cc-52f954a5b111",
+        "21b439ba-a0ca-424f-a6cc-52f954a5b111"
+      ]
+    },
+    {
+      "id": "windowsBusiness",
+      "label": "Windows Business upgrade rights",
+      "description": "Upgrading Windows Pro to Business edition.",
+      "signal": null,
+      "servicePlanIds": [
         "8e229017-d77b-43d5-9305-903395523b99"
+      ]
+    },
+    {
+      "id": "virtualDesktop",
+      "label": "Azure Virtual Desktop rights",
+      "description": "Rights to run Windows in Azure Virtual Desktop.",
+      "signal": null,
+      "servicePlanIds": [
+        "e7c91390-7625-45be-94e0-e16907e03118"
       ]
     }
   ],

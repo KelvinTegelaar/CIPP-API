@@ -5,13 +5,9 @@
     "category": "Identity & Conditional Access",
     "severity": "Critical",
     "summary": "A Global Administrator signs in from an unmanaged, non-compliant computer, giving an attacker on that machine full control of the tenant.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM"
-    ],
+    "licensePresets": ["Entra"],
     "persona": "admin",
-    "attackerCanSatisfy": [
-      "mfa"
-    ],
+    "attackerCanSatisfy": ["mfa"],
     "steps": [
       {
         "id": "Assumption",
@@ -31,10 +27,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "Admins are not required to use a compliant device, so any machine can hold an admin session.",
             "role": "prevents",
             "fix": {
@@ -88,9 +81,7 @@
     "category": "SharePoint & Data",
     "severity": "High",
     "summary": "An attacker creates an Anyone link on a sensitive SharePoint site so files can be downloaded without signing in.",
-    "requiredCapabilities": [
-      "SHAREPOINTENTERPRISE"
-    ],
+    "licensePresets": ["SharePoint"],
     "steps": [
       {
         "id": "Assumption",
@@ -214,9 +205,7 @@
     "category": "SharePoint & Data",
     "severity": "High",
     "summary": "A compromised user syncs entire document libraries to a personal, unmanaged computer, copying company data off managed systems.",
-    "requiredCapabilities": [
-      "SHAREPOINTENTERPRISE"
-    ],
+    "licensePresets": ["SharePoint"],
     "persona": "user",
     "steps": [
       {
@@ -237,10 +226,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "Access from unmanaged devices is not restricted, so the sync client can copy whole libraries.",
             "role": "prevents",
             "fix": {
@@ -289,13 +275,9 @@
     "category": "Identity & Conditional Access",
     "severity": "High",
     "summary": "An attacker tricks a user into approving a device-code sign-in and receives a fully authenticated token that already includes the MFA claim.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM"
-    ],
+    "licensePresets": ["Entra"],
     "persona": "user",
-    "attackerCanSatisfy": [
-      "mfa"
-    ],
+    "attackerCanSatisfy": ["mfa"],
     "steps": [
       {
         "id": "Assumption",
@@ -317,10 +299,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "Device code flow is not blocked, so a phished code becomes a working token.",
             "role": "prevents",
             "fix": {
@@ -372,9 +351,7 @@
     "category": "SharePoint & Data",
     "severity": "Medium",
     "summary": "A guest re-shares files they were given, spreading access to more outsiders than the owner intended.",
-    "requiredCapabilities": [
-      "SHAREPOINTENTERPRISE"
-    ],
+    "licensePresets": ["SharePoint"],
     "persona": "guest",
     "steps": [
       {
@@ -430,13 +407,9 @@
     "category": "Identity & Conditional Access",
     "severity": "High",
     "summary": "A guest account that was granted a directory role is used to read the directory and hand privileged access to another account.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM"
-    ],
+    "licensePresets": ["Entra"],
     "persona": "guest",
-    "attackerCanSatisfy": [
-      "mfa"
-    ],
+    "attackerCanSatisfy": ["mfa"],
     "steps": [
       {
         "id": "Assumption",
@@ -455,10 +428,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "Guest sign-ins are not restricted, so an external account can carry a privileged role.",
             "role": "limits",
             "fix": {
@@ -522,9 +492,7 @@
     "category": "Identity & Conditional Access",
     "severity": "High",
     "summary": "An attacker uses an older mail protocol that cannot prompt for MFA to reach a mailbox with a stolen password.",
-    "requiredCapabilities": [
-      "EXCHANGE_S_ENTERPRISE"
-    ],
+    "licensePresets": ["Exchange"],
     "persona": "user",
     "steps": [
       {
@@ -544,10 +512,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "Legacy authentication is still allowed, so a password alone reaches the mailbox.",
             "role": "prevents",
             "fix": {
@@ -611,9 +576,7 @@
     "category": "Exchange & Email",
     "severity": "High",
     "summary": "An attacker with mailbox access sets up inbox rules and forwarding to copy mail out of the tenant automatically.",
-    "requiredCapabilities": [
-      "EXCHANGE_S_ENTERPRISE"
-    ],
+    "licensePresets": ["Exchange"],
     "steps": [
       {
         "id": "Assumption",
@@ -743,13 +706,9 @@
     "category": "Audit & Detection",
     "severity": "High",
     "summary": "A compromised administrator deletes many user accounts at once to disrupt the business.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM"
-    ],
+    "licensePresets": ["Entra"],
     "persona": "admin",
-    "attackerCanSatisfy": [
-      "mfa"
-    ],
+    "attackerCanSatisfy": ["mfa"],
     "steps": [
       {
         "id": "Assumption",
@@ -768,10 +727,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "MFA is not enforced, so a stolen password reaches user management.",
             "role": "prevents",
             "fix": {
@@ -834,13 +790,9 @@
     "category": "Audit & Detection",
     "severity": "Critical",
     "summary": "After taking over a privileged account, an attacker strips users' MFA and revokes their sessions to lock in control.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM"
-    ],
+    "licensePresets": ["Entra"],
     "persona": "admin",
-    "attackerCanSatisfy": [
-      "mfa"
-    ],
+    "attackerCanSatisfy": ["mfa"],
     "steps": [
       {
         "id": "Assumption",
@@ -917,9 +869,7 @@
     "category": "Identity & Conditional Access",
     "severity": "High",
     "summary": "An attacker guesses a common password for an account that has no MFA registered and signs in unchallenged.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM_P2"
-    ],
+    "licensePresets": ["Entra"],
     "persona": "user",
     "steps": [
       {
@@ -940,10 +890,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "The account has no MFA, so a correct password alone grants access.",
             "role": "prevents",
             "fix": {
@@ -951,14 +898,10 @@
             }
           },
           {
-            "when": [
-              "allowed"
-            ],
+            "when": ["allowed"],
             "text": "No sign-in risk policy, so the high-risk sign-in is not challenged.",
             "role": "detects",
-            "requiredCapabilities": [
-              "AAD_PREMIUM_P2"
-            ],
+            "licensePresets": ["EntraP2"],
             "fix": {
               "caTemplate": "Require multifactor authentication for medium and high sign-in risk"
             }
@@ -1028,13 +971,9 @@
     "category": "Identity & Conditional Access",
     "severity": "Critical",
     "summary": "An attacker who took over an account with role-management rights grants itself higher privileges and plants a back-door application.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM"
-    ],
+    "licensePresets": ["Entra"],
     "persona": "user",
-    "attackerCanSatisfy": [
-      "mfa"
-    ],
+    "attackerCanSatisfy": ["mfa"],
     "steps": [
       {
         "id": "Assumption",
@@ -1054,10 +993,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "MFA is not enforced for this account, so a stolen password reaches role management.",
             "role": "prevents",
             "fix": {
@@ -1132,13 +1068,9 @@
     "category": "Identity & Conditional Access",
     "severity": "High",
     "summary": "An attacker signs in from a country the organization never operates in and reaches a user's mailbox and files.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM"
-    ],
+    "licensePresets": ["Entra"],
     "persona": "user",
-    "attackerCanSatisfy": [
-      "mfa"
-    ],
+    "attackerCanSatisfy": ["mfa"],
     "steps": [
       {
         "id": "Assumption",
@@ -1157,10 +1089,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "No location policy, so sign-ins from countries the business never uses are allowed.",
             "role": "prevents",
             "fix": {
@@ -1222,13 +1151,9 @@
     "category": "Identity & Conditional Access",
     "severity": "Critical",
     "summary": "An attacker replays a session token stolen through a fake sign-in page and signs in as the user without re-entering a password or MFA.",
-    "requiredCapabilities": [
-      "AAD_PREMIUM"
-    ],
+    "licensePresets": ["Entra"],
     "persona": "user",
-    "attackerCanSatisfy": [
-      "mfa"
-    ],
+    "attackerCanSatisfy": ["mfa"],
     "steps": [
       {
         "id": "Assumption",
@@ -1258,10 +1183,7 @@
         },
         "gaps": [
           {
-            "when": [
-              "allowed",
-              "weakGrant"
-            ],
+            "when": ["allowed", "weakGrant"],
             "text": "No compliant-device requirement, so a replayed token from any machine is accepted.",
             "role": "prevents",
             "fix": {
@@ -1269,14 +1191,10 @@
             }
           },
           {
-            "when": [
-              "allowed"
-            ],
+            "when": ["allowed"],
             "text": "No sign-in risk policy, so the medium-risk replay is not challenged.",
             "role": "detects",
-            "requiredCapabilities": [
-              "AAD_PREMIUM_P2"
-            ],
+            "licensePresets": ["EntraP2"],
             "fix": {
               "caTemplate": "Require multifactor authentication for medium and high sign-in risk"
             }
@@ -1351,9 +1269,7 @@
     "category": "Exchange & Email",
     "severity": "High",
     "summary": "An attacker with Exchange admin rights creates an organization-wide transport rule that blind-copies mail to an outside address.",
-    "requiredCapabilities": [
-      "EXCHANGE_S_ENTERPRISE"
-    ],
+    "licensePresets": ["Exchange"],
     "steps": [
       {
         "id": "Assumption",

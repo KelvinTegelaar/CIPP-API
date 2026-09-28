@@ -33,7 +33,10 @@ function Push-AuditLogSearchCreationV2 {
 
     try {
         $Ledger = Get-CippTable -TableName 'AuditLogCoverage'
-        $Rows = @(Get-CIPPAzDataTableEntity @Ledger -Filter "PartitionKey eq '$TenantFilter'")
+        # Whole partition: re-planned MANUAL-* rows need re-creating too. No split markers - these rows never split.
+        $TenantKey = ([string]$TenantFilter).Replace("'", "''")
+        $Rows = @(Get-CIPPAzDataTableEntity @Ledger -Filter "PartitionKey eq '$TenantKey'" `
+                -Property 'RowKey', 'WindowStart', 'WindowEnd', 'State', 'NextAttemptUtc', 'Attempts', 'RetryCount', 'ThrottleCount')
         $Now = (Get-Date).ToUniversalTime()
 
         # 1) Seed owed regular + reconciliation windows as Planned.
