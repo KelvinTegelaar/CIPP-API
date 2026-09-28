@@ -83,6 +83,14 @@ Describe 'ConvertTo-CippReportPdf' {
             $b = @(@{ type = 'richtable'; title = 'Tall'; columns = $Cols; rows = $Rows; limit = 10 })
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b) | Should -BeTrue
         }
+        It 'renders a callout taller than a page (KeepTogether turns off so OfficeIMO does not throw)' {
+            # InfoBox/AlertBox are single-cell keep-together tables. A BEC full report can put dozens of
+            # skipped-collector or signal lines in one box; without the height guard that throws
+            # "Table height exceeds the available page content height."
+            $Lines = 1..80 | ForEach-Object { "Collector $_`: Missing licence for Exchange Online (not applicable)" }
+            $b = @(@{ type = 'alertbox'; title = '80 check(s) could not run'; content = ($Lines -join "`n"); lines = $true })
+            Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b) | Should -BeTrue
+        }
         It 'moves a row that would straddle a page break whole onto the next page' {
             # Twenty short lines in a third-width column: about 220pt, under half a page, so it is kept
             # whole. Filler rows put its top near the page foot, where it would otherwise be cut (a

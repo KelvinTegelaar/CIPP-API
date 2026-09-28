@@ -944,7 +944,7 @@ namespace CIPP.Reporting
             return new List<PdfTableCell[]> { new[] { new PdfTableCell(runs) } };
         }
 
-        private static PdfTableStyle CalloutStyle(string bgHex, string? stripeHex, double stripeWidth, string borderHex, double borderWidth, double bodySize, double firstSize)
+        private static PdfTableStyle CalloutStyle(string bgHex, string? stripeHex, double stripeWidth, string borderHex, double borderWidth, double bodySize, double firstSize, bool keepTogether = true)
         {
             // The client pads 12 inside the border (the stripe, on the left) and sets a line's baseline 0.9x its
             // size under the line top; OfficeIMO sets a cell's first baseline CellAscent x the table's font size
@@ -975,7 +975,10 @@ namespace CIPP.Reporting
                     [(0, 0)] = padding,
                 },
                 SpacingAfter = 0,                 // the gap after a callout is an explicit Spacer, not the table's
-                KeepTogether = true,              // a callout never splits across a page (client keeps each whole)
+                // Client keeps each callout whole, but OfficeIMO throws when a keep-together table is taller
+                // than the page (BEC's multi-line skipped-collector / signals boxes). Leave KeepTogether on
+                // only when the measured height fits; otherwise let the cell split across pages.
+                KeepTogether = keepTogether,
                 CellFills = new Dictionary<(int, int), PdfColor> { [(0, 0)] = Pdf(bgHex) },
             };
             if (stripeHex is not null)
@@ -988,6 +991,37 @@ namespace CIPP.Reporting
             return style;
         }
 
+        // True when the callout's estimated height fits on one page. Uses the same Helvetica wrap as
+        // RichTable's keep-whole guard; a near-page-height callout is treated as too tall so OfficeIMO
+        // never throws "Table height exceeds the available page content height."
+        private static bool CalloutFitsOnPage(ReportContext ctx, string? title, string content, bool lines,
+            double titleSize, double bodySize, double leftChrome, double borderWidth)
+        {
+            const double leading = 1.4;
+            var textWidth = Math.Max(1, ctx.ContentWidth - (CalloutPadX + leftChrome) - (CalloutPadX + borderWidth));
+            var firstSize = string.IsNullOrEmpty(title) ? bodySize : titleSize;
+            var height = CalloutPadY + borderWidth + 0.9 * firstSize - CellAscent * bodySize
+                + CalloutPadY + borderWidth - (0.9 - CellAscent) * bodySize;
+            if (!string.IsNullOrEmpty(title))
+            {
+                height += WrappedLines(San(title!), textWidth, titleSize, bold: true) * titleSize * leading;
+                // Title/body gap matches CalloutRows: a sized nbsp plus a body-size newline.
+                height += 14 + 6 - 0.9 * (titleSize - bodySize);
+            }
+            if (lines)
+            {
+                foreach (var ln in San(content).Replace("\r\n", "\n").Split('\n'))
+                    height += Math.Max(1, WrappedLines(ln, textWidth, bodySize, bold: false)) * bodySize * leading;
+            }
+            else
+            {
+                // Markdown is flattened to lines at draw time; counting the source as wrapped body text is a
+                // slight over-estimate (marks add no height), which prefers splitting over throwing.
+                height += Math.Max(1, WrappedLines(San(content), textWidth, bodySize, bold: false)) * bodySize * leading;
+            }
+            return height < ctx.ContentHeight - 2;
+        }
+
         /// <summary>
         /// A titled note with an accent stripe down its left edge (client InfoBox). `tone` (ok/warn) tints
         /// the background and title; `colour` recolours the stripe (and the title when tintTitle). `content`
@@ -998,8 +1032,10 @@ namespace CIPP.Reporting
         {
             var (accent, bg, titleColour) = InfoBoxColours(ctx, tone, colour, tintTitle);
             var body = CalloutBodyRuns(ctx, content, lines, ReportStyles.InfoText, ctx.Theme.Palette["subtitle"]);
+            var firstSize = string.IsNullOrEmpty(title) ? ReportStyles.InfoText : ReportStyles.InfoTitle;
+            var keep = CalloutFitsOnPage(ctx, title, content, lines, ReportStyles.InfoTitle, ReportStyles.InfoText, 4, 1);
             item.Table(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body, ReportStyles.InfoText), PdfAlign.Left,
-                CalloutStyle(bg, accent, 4, ReportColours.Line, 1, ReportStyles.InfoText, string.IsNullOrEmpty(title) ? ReportStyles.InfoText : ReportStyles.InfoTitle));
+                CalloutStyle(bg, accent, 4, ReportColours.Line, 1, ReportStyles.InfoText, firstSize, keep));
             item.Spacer(CalloutGap);
         }
 
@@ -1023,8 +1059,11 @@ namespace CIPP.Reporting
         {
             var accent = string.IsNullOrEmpty(colour) ? ctx.Theme.Palette["card"] : colour!;
             var body = CalloutBodyRuns(ctx, content, lines, ReportStyles.AlertText, ctx.Theme.Palette["body"]);
+            var firstSize = string.IsNullOrEmpty(title) ? ReportStyles.AlertText : ReportStyles.AlertTitle;
+            // AlertBox has no left stripe: left chrome is the 2pt border (same as CalloutStyle).
+            var keep = CalloutFitsOnPage(ctx, title, content, lines, ReportStyles.AlertTitle, ReportStyles.AlertText, 2, 2);
             item.Table(CalloutRows(title, accent, ReportStyles.AlertTitle, body, ReportStyles.AlertText), PdfAlign.Left,
-                CalloutStyle(ReportColours.AlertBg, null, 0, accent, 2, ReportStyles.AlertText, string.IsNullOrEmpty(title) ? ReportStyles.AlertText : ReportStyles.AlertTitle));
+                CalloutStyle(ReportColours.AlertBg, null, 0, accent, 2, ReportStyles.AlertText, firstSize, keep));
             item.Spacer(AlertGap);
         }
 
@@ -1097,8 +1136,11 @@ namespace CIPP.Reporting
         {
             var (accent, bg, titleColour) = InfoBoxColours(ctx, tone, colour, tintTitle);
             var body = CalloutBodyRuns(ctx, content, false, ReportStyles.InfoText, ctx.Theme.Palette["subtitle"]);
+            var firstSize = string.IsNullOrEmpty(title) ? ReportStyles.InfoText : ReportStyles.InfoTitle;
+            // Column width is unknown here; short column callouts keep together (client). A rare oversized
+            // one still hits the full-width InfoBox path in practice - column items are captions.
             col.Table(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body, ReportStyles.InfoText), PdfAlign.Left,
-                CalloutStyle(bg, accent, 4, ReportColours.Line, 1, ReportStyles.InfoText, string.IsNullOrEmpty(title) ? ReportStyles.InfoText : ReportStyles.InfoTitle));
+                CalloutStyle(bg, accent, 4, ReportColours.Line, 1, ReportStyles.InfoText, firstSize));
         }
 
         // Series colour for a chart entry: its own colour, else the theme series cycled by index.
