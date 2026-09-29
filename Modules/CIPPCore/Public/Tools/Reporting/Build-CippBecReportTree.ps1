@@ -243,7 +243,7 @@ function Build-CippBecReportTree {
     # Results roll-up: every check as one row, flagged (with a high-risk sub-count) or clear.
     # ============================================================================================
     $summarySource = @(
-        @{ area = 'Attacker network addresses'; count = $attackerIps.Count; danger = @($attackerIps | Where-Object { (AsInt $_.SuccessfulSignIns) -gt 0 -or (AsInt $_.Activities) -gt 0 }).Count }
+        @{ area = 'Attacker network addresses'; count = $attackerIps.Count; danger = @($attackerIps | Where-Object { (AsInt $_.SuccessfulSignIns) -gt 0 -or (AsInt $_.Activities) -gt 0 -or (AsInt $_.PasswordAccepted) -gt 0 }).Count }
         @{ area = 'Mail, files & forms touched by the attacker'; count = ($attackerMail.Count + $attackerFiles.Count + $attackerForms.Count); danger = $attackerFormIds.Count }
         @{ area = 'Other accounts & mailboxes reached'; count = ($blastRadius.Count + $delegatedReached.Count); danger = $reachedAccounts.Count }
         @{ area = 'Inbox rules & changes'; count = ($stats.newRules + $stats.ruleChanges) }

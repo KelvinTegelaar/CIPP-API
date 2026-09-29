@@ -14,7 +14,7 @@ function Get-CIPPBecScore {
         five times over. AttackerIPs always counts; the ones derived from it (mail, files, forms,
         delegated mailboxes, other accounts reached) count only when an attacker address is backed by
         evidence of its own - an investigator or CIPP-list verdict (Compromised), an attacker action
-        from it, or a medium/high Entra sign-in risk. Otherwise they are listed, unapplied.
+        from it, a medium/high Entra sign-in risk, or a password accepted from it. Otherwise they are listed, unapplied.
     .PARAMETER Results
         The BEC results object.
     .PARAMETER Heuristics
@@ -77,8 +77,8 @@ function Get-CIPPBecScore {
         RiskyUserMedium                = if ($Results.RiskState.Listed -eq $true -and $Results.RiskState.RiskState -eq 'atRisk' -and $Results.RiskState.RiskLevel -eq 'medium') { 1 } else { 0 }
         RiskyUserLow                   = if ($Results.RiskState.Listed -eq $true -and $Results.RiskState.RiskState -eq 'atRisk' -and $Results.RiskState.RiskLevel -eq 'low') { 1 } else { 0 }
         ConfirmedCompromised           = if ($Results.RiskState.RiskState -eq 'confirmedCompromised') { 1 } else { 0 }
-        # addresses judged the attacker's (by an investigator, the CIPP list or the heuristics) that got in or acted
-        AttackerIPs                    = @($Results.IPVerdicts | Where-Object { $_.Verdict -in @('Compromised', 'LikelyAttacker') -and ([int]$_.SuccessfulSignIns -gt 0 -or [int]$_.Activities -gt 0) }).Count
+        # addresses judged the attacker's (by an investigator, the CIPP list or the heuristics) that got in, acted or had the password
+        AttackerIPs                    = @($Results.IPVerdicts | Where-Object { $_.Verdict -in @('Compromised', 'LikelyAttacker') -and ([int]$_.SuccessfulSignIns -gt 0 -or [int]$_.Activities -gt 0 -or [int]$_.PasswordAccepted -gt 0) }).Count
         # item-level activity counts only from addresses judged the attacker's, not merely suspicious or unknown
         AttackerMailAccess             = @($Results.AttackerMailActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
         AttackerFileAccess             = @($Results.AttackerFileActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
@@ -118,7 +118,7 @@ function Get-CIPPBecScore {
         RiskyUserMedium                = 'Identity Protection: user at medium risk'
         RiskyUserLow                   = 'Identity Protection: user at low risk'
         ConfirmedCompromised           = 'Identity Protection: user confirmed compromised'
-        AttackerIPs                    = 'Sign-ins or activity from addresses judged to be the attacker'
+        AttackerIPs                    = 'Sign-ins, activity or an accepted password from addresses judged to be the attacker'
         AttackerMailAccess             = 'Mail opened, synced, deleted, moved or sent from an attacker address'
         AttackerFileAccess             = 'OneDrive/SharePoint files touched from an attacker address'
         AttackerForms                  = 'Microsoft Forms created, edited or shared from an attacker address'
@@ -128,7 +128,7 @@ function Get-CIPPBecScore {
 
     # an attacker address backed by more than network heuristics (see DESCRIPTION)
     $Corroborated = @($Results.IPVerdicts | Where-Object {
-            $_.Verdict -eq 'Compromised' -or ($_.Verdict -eq 'LikelyAttacker' -and @($_.Reasons | Where-Object { $_.Code -in @('FlaggedAction', 'RiskySignIn') }).Count -gt 0)
+            $_.Verdict -eq 'Compromised' -or ($_.Verdict -eq 'LikelyAttacker' -and @($_.Reasons | Where-Object { $_.Code -in @('FlaggedAction', 'RiskySignIn', 'PasswordAccepted') }).Count -gt 0)
         }).Count -gt 0
     $Derived = @('AttackerMailAccess', 'AttackerFileAccess', 'AttackerForms', 'OtherAccountsReached', 'DelegatedMailboxAttackerAccess')
 

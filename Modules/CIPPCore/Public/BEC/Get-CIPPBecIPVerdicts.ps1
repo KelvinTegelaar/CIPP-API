@@ -5,8 +5,8 @@ function Get-CIPPBecIPVerdicts {
     .DESCRIPTION
         Pure function over what the run already collected. Every address seen in the window's sign-ins
         or on an audited action gets a verdict, a score and the reasons behind it:
-        - Compromised / Safe: an investigator override for this case, else CIPP's IP allow/block list
-          (Blocked / Trusted). These decide outright.
+        - Compromised / Suspicious / Safe: an investigator override for this case, else CIPP's IP
+          allow/block list (Blocked / Trusted). These decide outright.
         - Service: an address in Microsoft 365's published service ranges (ServiceRanges - Microsoft
           acting for the user, whether or not it shows in the user's sign-ins), a Microsoft network
           address the user never signed in from (Exchange and other
@@ -20,14 +20,16 @@ function Get-CIPPBecIPVerdicts {
           ipVerdict thresholds.
         Heuristics (weights in BecHeuristics.json ipVerdict.weights) raise the score for an address
         behind a flagged action, a hosting or proxy network, a foreign location, one new to the user's
-        sign-in baseline, a risky sign-in, a scripted client, or other accounts appearing on it only
-        during the window; they lower it for an address, network or location the user regularly used
-        before the window, a compliant device, colleagues on it before the window, a trusted named
-        location, the address of a technician who ran or reviewed the investigation (most likely the
-        partner's own, so a strong start towards trusted - but still judged, since a technician's
-        address can be shared or wrong), or an address with only failed sign-ins (spray noise, which is also capped at
-        Suspicious). An IPv6 address counts as known to the user when its /64 was used before the
-        window: devices rotate through privacy addresses inside their /64.
+        sign-in baseline, a risky sign-in, a scripted client, a failed interactive sign-in that got past
+        the password (ipVerdict.passwordAcceptedErrorCodes: stopped by MFA or Conditional Access) with
+        no successful one, or other accounts appearing on it only during the window; they lower it for
+        an address, network or location the user regularly used before the window, a compliant device,
+        colleagues on it before the window, a trusted named location, the address of a technician who
+        ran or reviewed the investigation (most likely the partner's own, so a strong start towards
+        trusted - but still judged, since a technician's address can be shared or wrong), or an address
+        with only failed sign-ins or unfinished self-service password resets (spray noise, which is
+        also capped at Suspicious). An IPv6 address counts as known to the user when its /64 was used
+        before the window: devices rotate through privacy addresses inside their /64.
         A final pass lifts addresses that share an Entra or mailbox session with a likely-attacker
         address, because one session moving between addresses is one actor - but never an address
         already judged the user's or one the user used before the window: a stolen session is replayed
@@ -45,7 +47,7 @@ function Get-CIPPBecIPVerdicts {
     .PARAMETER Guidance
         Address list entries (Get-CIPPBecIPGuidance Data).
     .PARAMETER Overrides
-        This case's investigator overrides: { Range, Verdict (Safe|Compromised), Note }.
+        This case's investigator overrides: { Range, Verdict (Safe|Suspicious|Compromised), Note }.
     .PARAMETER Peers
         Hashtable keyed by IP (Get-CIPPBecIPPeers).
     .PARAMETER Geo
@@ -96,6 +98,7 @@ function Get-CIPPBecIPVerdicts {
     $KnownLocationShare = [double]($Cfg.knownLocationShare ?? 0.1)
     $ServiceAsn = [string]($Cfg.serviceAsnRegex ?? '(?i)microsoft')
     $ScriptedAgent = [string]($Cfg.scriptedUserAgentRegex ?? '(?i)(python|axios|curl|okhttp|go-http-client|node-fetch|powershell|libwww|java/|httpclient|postman)')
+    $PasswordAcceptedCodes = @(@($Cfg.passwordAcceptedErrorCodes ?? @('50074', '50076', '50079', '500121', '50158', '53000', '53001', '53002', '53003')) | ForEach-Object { [string]$_ })
     $ServiceActors = @('CIPP', 'Partner', 'OtherPartner')
     $ServiceApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($AppId in @(@($CippAppId) + @($Cfg.serviceAppIds.PSObject.Properties.Name) | Where-Object { $_ })) { $null = $ServiceApps.Add([string]$AppId) }
@@ -146,7 +149,7 @@ function Get-CIPPBecIPVerdicts {
         param($IP)
         if (-not $IPs.Contains($IP)) {
             $IPs[$IP] = [pscustomobject]@{
-                IP = $IP; SignIns = 0; NonInteractive = 0; Successful = 0; Failed = 0; FirstSeen = $null; LastSeen = $null
+                IP = $IP; SignIns = 0; NonInteractive = 0; Successful = 0; Failed = 0; ResetAttempts = 0; PasswordAccepted = 0; FirstSeen = $null; LastSeen = $null
                 Country = $null; City = $null; ASN = $null; Risk = 'none'; Scripted = $false; Compliant = $false
                 Kinds = [System.Collections.Generic.HashSet[string]]::new(); FlaggedKinds = [System.Collections.Generic.HashSet[string]]::new()
                 Events = 0; ActorKinds = [System.Collections.Generic.HashSet[string]]::new(); Sessions = [System.Collections.Generic.HashSet[string]]::new(); CippSignIns = 0
@@ -170,6 +173,8 @@ function Get-CIPPBecIPVerdicts {
             if ($Set.Interactive) { $Entry.SignIns++ } else { $Entry.NonInteractive++ }
             if ($SignIn.AppId -and $ServiceApps.Contains([string]$SignIn.AppId)) { $Entry.CippSignIns++ }
             if ($SignIn.Status -eq 'Success') { $Entry.Successful++ } else { $Entry.Failed++ }
+            # a non-interactive refresh asks for MFA again with a token, not the password
+            if ($Set.Interactive -and $SignIn.Status -ne 'Success' -and [string]$SignIn.ErrorCode -in $PasswordAcceptedCodes) { $Entry.PasswordAccepted++ }
             & $Seen $Entry $SignIn.CreatedDateTime
             if (-not $Entry.Country -and $SignIn.Country) { $Entry.Country = [string]$SignIn.Country; $Entry.City = [string]$SignIn.City }
             if (-not $Entry.ASN -and $SignIn.ASN) { $Entry.ASN = [string]$SignIn.ASN }
@@ -184,7 +189,7 @@ function Get-CIPPBecIPVerdicts {
         $IP = & $HostOf $Activity.IP
         if (-not $IP) { continue }
         $Entry = & $Touch $IP
-        $Entry.Events++
+        if ($Activity.Attempt -eq $true) { $Entry.ResetAttempts++ } else { $Entry.Events++ }
         if ($Activity.Kind) { $null = $Entry.Kinds.Add([string]$Activity.Kind) }
         if ($Activity.Flagged -eq $true -and $Activity.Kind) { $null = $Entry.FlaggedKinds.Add([string]$Activity.Kind) }
         $null = $Entry.ActorKinds.Add([string]($Activity.ActorKind ?? 'User'))
@@ -231,7 +236,7 @@ function Get-CIPPBecIPVerdicts {
             $Range = try { ConvertTo-CIPPIPRange -Value ([string]$_.Range) } catch { $null }
             if ($Range) {
                 $Prefix = if ($Range -match '/(\d+)$') { [int]$Matches[1] } elseif ($Range -match ':') { 128 } else { 32 }
-                [pscustomobject]@{ Range = $Range; Prefix = $Prefix; State = $(if ($_.Verdict -eq 'Compromised') { 'Blocked' } else { 'Trusted' }); Scope = 'Tenant'; Note = $_.Note }
+                [pscustomobject]@{ Range = $Range; Prefix = $Prefix; State = $(switch ($_.Verdict) { 'Compromised' { 'Blocked' } 'Suspicious' { 'Suspicious' } default { 'Trusted' } }); Scope = 'Tenant'; Note = $_.Note }
             }
         })
 
@@ -266,6 +271,10 @@ function Get-CIPPBecIPVerdicts {
         }
         if ($Entry.Risk -in @('medium', 'high')) { & $Add 'RiskySignIn' (& $Weight 'riskySignIn' 3) "Entra rated a sign-in $($Entry.Risk) risk" }
         elseif ($Entry.Risk -eq 'low') { & $Add 'RiskySignInLow' (& $Weight 'riskySignInLow' 1) 'Entra rated a sign-in low risk' }
+        # the user completes MFA from their own address; only the attacker stops at it everywhere
+        if ($Entry.PasswordAccepted -gt 0 -and $Entry.Successful -eq 0) {
+            & $Add 'PasswordAccepted' (& $Weight 'passwordAccepted' 4) "The password was accepted but $($Entry.PasswordAccepted) sign-in(s) were stopped by MFA or Conditional Access"
+        }
         if ($Entry.Scripted) { & $Add 'ScriptedClient' (& $Weight 'scriptedClient' 3) 'A sign-in used a scripting or automation user agent' }
 
         $Known = $BaselineIPs[$IP]
@@ -312,8 +321,8 @@ function Get-CIPPBecIPVerdicts {
         }
         $Technician = $Technicians[$IP]
         if ($Technician) { & $Add 'TechnicianAddress' (& $Weight 'technicianAddress' -4) "The address of the technician who ran or reviewed this case$(if ($Technician.By) { " ($($Technician.By))" }) - most likely the partner's" }
-        $OnlyFailed = ($Entry.SignIns + $Entry.NonInteractive) -gt 0 -and $Entry.Successful -eq 0 -and $Entry.Events -eq 0
-        if ($OnlyFailed) { & $Add 'OnlyFailed' (& $Weight 'onlyFailedSignIns' -3) 'Only failed sign-ins (password spray or lockout noise)' }
+        $OnlyFailed = ($Entry.Failed + $Entry.ResetAttempts) -gt 0 -and $Entry.Successful -eq 0 -and $Entry.Events -eq 0 -and $Entry.PasswordAccepted -eq 0
+        if ($OnlyFailed) { & $Add 'OnlyFailed' (& $Weight 'onlyFailedSignIns' -3) 'Only failed sign-ins or unfinished password resets (password spray or lockout noise)' }
 
         $Score = [int](($Reasons | Measure-Object -Property Weight -Sum).Sum)
         $Rows.Add([pscustomobject]@{
@@ -327,7 +336,7 @@ function Get-CIPPBecIPVerdicts {
         param($Row)
         $Case = Resolve-CIPPIPAllowBlockList -IPAddress $Row.IP -Entries $CaseEntries
         if ($Case) {
-            return [pscustomobject]@{ Verdict = $(if ($Case.State -eq 'Blocked') { 'Compromised' } else { 'Safe' }); Source = "Investigator ($($Case.Range))$(if ($Case.Note) { ": $($Case.Note)" })" }
+            return [pscustomobject]@{ Verdict = $(switch ($Case.State) { 'Blocked' { 'Compromised' } 'Suspicious' { 'Suspicious' } default { 'Safe' } }); Source = "Investigator ($($Case.Range))$(if ($Case.Note) { ": $($Case.Note)" })" }
         }
         $Listed = Resolve-CIPPIPAllowBlockList -IPAddress $Row.IP -Entries $ListEntries
         if ($Listed) {
@@ -362,7 +371,7 @@ function Get-CIPPBecIPVerdicts {
         foreach ($Session in $Row.Entry.Sessions) { $null = $AttackerSessions.Add($Session) }
     }
     if ($AttackerSessions.Count -gt 0) {
-        foreach ($Row in @($Rows | Where-Object { $_.Decision.Verdict -in @('Suspicious', 'Unknown') -and -not $_.Known })) {
+        foreach ($Row in @($Rows | Where-Object { $_.Decision.Verdict -in @('Suspicious', 'Unknown') -and $_.Decision.Source -eq 'Heuristics' -and -not $_.Known })) {
             $Shared = @($Row.Entry.Sessions | Where-Object { $AttackerSessions.Contains($_) })
             if ($Shared.Count -eq 0) { continue }
             $Points = & $Weight 'sharedSession' 3
@@ -393,6 +402,8 @@ function Get-CIPPBecIPVerdicts {
                 NonInteractiveSignIns  = $_.Entry.NonInteractive
                 SuccessfulSignIns      = $_.Entry.Successful
                 FailedSignIns          = $_.Entry.Failed
+                PasswordAccepted       = $_.Entry.PasswordAccepted
+                ResetAttempts          = $_.Entry.ResetAttempts
                 Activities             = $_.Entry.Events
                 Kinds                  = @($_.Entry.Kinds | Sort-Object)
                 FirstSeen              = if ($_.Entry.FirstSeen) { $_.Entry.FirstSeen.ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null }

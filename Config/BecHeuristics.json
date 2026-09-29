@@ -170,6 +170,7 @@
     "knownLocationShare": 0.1,
     "serviceAsnRegex": "(?i)microsoft",
     "scriptedUserAgentRegex": "(?i)(python|axios|curl|okhttp|go-http-client|node-fetch|powershell|libwww|java/|httpclient|postman)",
+    "passwordAcceptedErrorCodes": ["50074", "50076", "50079", "500121", "50158", "53000", "53001", "53002", "53003"],
     "weights": {
       "flaggedAction": 4,
       "flaggedActionExtraKind": 1,
@@ -181,6 +182,7 @@
       "riskySignIn": 3,
       "riskySignInLow": 1,
       "scriptedClient": 3,
+      "passwordAccepted": 4,
       "widerAttack": 2,
       "sharedSession": 3,
       "blockListHint": 2,

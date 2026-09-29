@@ -127,6 +127,8 @@ Describe 'Get-CIPPBecScore' {
             @{ Key = 'RiskState'; Value = [pscustomobject]@{ Listed = $true; RiskState = 'confirmedCompromised'; RiskLevel = 'high' }; Expected = 5; Signal = 'ConfirmedCompromised' }
             # an attacker address that only failed to sign in, or a suspicious one, does not count
             @{ Key = 'IPVerdicts'; Value = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 1; Activities = 0 }, [pscustomobject]@{ Verdict = 'Compromised'; SuccessfulSignIns = 0; Activities = 0 }, [pscustomobject]@{ Verdict = 'Suspicious'; SuccessfulSignIns = 3; Activities = 2 }); Expected = 4; Signal = 'AttackerIPs' }
+            # an attacker address that had the password counts even though MFA stopped it
+            @{ Key = 'IPVerdicts'; Value = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 0; Activities = 0; PasswordAccepted = 2 }); Expected = 4; Signal = 'AttackerIPs' }
             # item-level activity counts only from addresses judged the attacker's
             @{ Key = 'AttackerMailActivity'; Value = @([pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'victim@contoso.com' }, [pscustomobject]@{ IPVerdict = 'Unknown'; MailboxOwner = 'victim@contoso.com' }); Expected = 3; Signal = 'AttackerMailAccess'; Backed = $true }
             @{ Key = 'AttackerFileActivity'; Value = @([pscustomobject]@{ IPVerdict = 'Compromised' }); Expected = 2; Signal = 'AttackerFileAccess'; Backed = $true }
@@ -177,7 +179,7 @@ Describe 'Get-CIPPBecScore' {
         @($Held | Where-Object { $_.Description -like '*not counted*' }).Count | Should -Be 4 -Because 'each held-back signal says why'
 
         # the same address behind an attacker action, or rated risky by Entra, backs them
-        foreach ($Code in @('FlaggedAction', 'RiskySignIn')) {
+        foreach ($Code in @('FlaggedAction', 'RiskySignIn', 'PasswordAccepted')) {
             $Payload.IPVerdicts = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 3; Activities = 5; Reasons = @([pscustomobject]@{ Code = $Code }) })
             (Get-CIPPBecScore -Results (New-Results $Payload) -Heuristics $script:Heuristics).Value | Should -Be 15 -Because "$Code corroborates the verdict"
         }
