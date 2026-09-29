@@ -64,7 +64,7 @@ function Add-CIPPDbItem {
         # only some rows carry may be missed, which the picker tolerates by accepting a typed name.
         $ShapeFields = [ordered]@{}
         $ShapeSampled = 0
-        $ShapeSampleSize = 50
+        $ShapeSampleSize = 10
         $ShapeMaxFields = 300
         $TypeOf = {
             param($Value)
@@ -91,8 +91,6 @@ function Add-CIPPDbItem {
         }
         $NoteShape = {
             param($Item)
-            if ($ShapeSampled -ge $ShapeSampleSize) { return }
-            $ShapeSampled++
             foreach ($Property in @(& $PropertiesOf $Item)) {
                 $Kind = & $NoteField $Property.Name $Property.Value
                 # one level in: an object's own fields, or the fields of an array's first object
@@ -129,7 +127,11 @@ function Add-CIPPDbItem {
             $ItemId = $Item.ExternalDirectoryObjectId ?? $Item.id ?? $Item.Identity ?? $Item.skuId ?? $Item.userPrincipalName ?? [guid]::NewGuid().ToString()
             $RowKey = $RowKeyControlRegex.Replace($RowKeyPathRegex.Replace("$Type-$ItemId", '_'), '')
             if ($SeenInBatch.Add($RowKey)) {
-                & $NoteShape $Item
+                # Counted here: an increment inside $NoteShape ('&', child scope) would never land.
+                if ($ShapeSampled -lt $ShapeSampleSize) {
+                    $ShapeSampled++
+                    & $NoteShape $Item
+                }
                 $Batch.Add(@{
                         PartitionKey = $TenantFilter
                         RowKey       = $RowKey
