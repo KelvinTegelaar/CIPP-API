@@ -9,17 +9,24 @@ Function Invoke-ListUsers {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $ConversionTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $GraphFilter = $Request.Query.graphFilter
     $userid = $Request.Query.UserID
 
+    if ($userid -and (-not $TenantFilter -or $TenantFilter -eq 'AllTenants')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'A specific tenant is required when requesting a single user.' }
+            })
+    }
+    $ConversionTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
+
     # When fetching a single user, use an explicit $select so directory/schema extension properties are
     # returned. Covers the properties the user view and edit form consume, any attributes added via
     # Preferences > Added Attributes, and custom data attributes mapped for manual entry on users.
     $SelectParam = ''
-    if ($userid -and $TenantFilter -ne 'AllTenants') {
+    if ($userid) {
         $BaseProperties = @(
             'id', 'accountEnabled', 'ageGroup', 'assignedLicenses', 'businessPhones', 'city', 'companyName',
             'consentProvidedForMinor', 'country', 'createdDateTime', 'department', 'displayName',
