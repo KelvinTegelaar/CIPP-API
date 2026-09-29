@@ -421,7 +421,9 @@ function Get-CIPPLicenseRecommendation {
     # downgrade or consolidation still reports what silently disappears. Reporting only.
     $PlanLosses = {
         param($FromSkuIds, $FromDisabledSets, $TargetSkuId)
-        $TargetPlans = if ($TargetSkuId) { & $GetPlanSet $TargetSkuId } else { [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase) }
+        # Assigned outside the if: an empty set emitted from a statement block enumerates to nothing.
+        $TargetPlans = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        if ($TargetSkuId) { $TargetPlans = & $GetPlanSet $TargetSkuId }
         $Names = [System.Collections.Generic.List[string]]::new()
         for ($i = 0; $i -lt @($FromSkuIds).Count; $i++) {
             $PlanSet = & $GetPlanSet $FromSkuIds[$i]
@@ -489,7 +491,7 @@ function Get-CIPPLicenseRecommendation {
                         if ($Target -and $Target.caps.Contains($CapId)) { $Kept.Add((& $CapLabel $CapId)) } else { $Lost.Add((& $CapLabel $CapId)) }
                     }
                     $TargetSkuForLoss = if ($Target) { $Target.skuId } else { $null }
-                    foreach ($Name in (& $PlanLosses @($Key) @($Disabled) $TargetSkuForLoss)) {
+                    foreach ($Name in (& $PlanLosses @($Key) @(, $Disabled) $TargetSkuForLoss)) {
                         if (-not $Lost.Contains($Name)) { $Lost.Add($Name) }
                     }
                     $Lost = [System.Collections.Generic.List[string]]::new([string[]]@($Lost | Sort-Object -Unique))
