@@ -54,7 +54,18 @@ function Set-CIPPGroupLicense {
 
     $Results = [System.Collections.Generic.List[string]]::new()
     try {
-        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)/assignLicense" -tenantid $TenantFilter -body $LicenseBody -type POST
+        $Attempts = 0
+        while ($true) {
+            $Attempts++
+            try {
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)/assignLicense" -tenantid $TenantFilter -body $LicenseBody -type POST
+                break
+            } catch {
+                # A newly created group may not have replicated yet
+                if ($Attempts -ge 6 -or $_.Exception.Message -notmatch 'does not exist') { throw }
+                Start-Sleep -Seconds 5
+            }
+        }
 
         if ($AddLicenses.Count -gt 0) {
             $Message = "Assigned licenses to group $GroupName. Added: $($AddLicenses -join ', ')"
