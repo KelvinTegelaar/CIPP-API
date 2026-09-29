@@ -15575,7 +15575,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Validates the request and queues a background re-run of the case's address-dependent sections: the investigator's overrides (an address or CIDR range marked Safe or Compromised, with an optional note) become the case's complete override set, the sign-ins of the chosen accounts are correlated with the case's addresses, the address lists are re-read, and mailbox activity, IP verdicts, attacker activity, delegated mailboxes and the score are recomputed for the original window. Returns a DeploymentId whose per-step progress ListOffboardingProgress returns. To make a verdict permanent for the tenant, add the address to CIPP's IP allow/block list (ExecAddTrustedIP).",
+        "description": "Validates the request and queues a background re-run of the case's address-dependent sections: the investigator's overrides (an address or CIDR range marked Safe, Suspicious or Compromised, with an optional note) become the case's complete override set, the sign-ins of the chosen accounts are correlated with the case's addresses, the address lists are re-read, and mailbox activity, IP verdicts, attacker activity, delegated mailboxes and the score are recomputed for the original window. Returns a DeploymentId whose per-step progress ListOffboardingProgress returns. To make a verdict permanent for the tenant, add the address to CIPP's IP allow/block list (ExecAddTrustedIP).",
         "requestBody": {
           "required": true,
           "content": {
@@ -15610,7 +15610,7 @@
                         }
                       }
                     },
-                    "description": "The complete set of overrides for the case: an address or CIDR range, Safe or Compromised, and a note. Auto drops the override."
+                    "description": "The complete set of overrides for the case: an address or CIDR range, Safe, Suspicious or Compromised, and a note. Auto drops the override."
                   },
                   "tenantFilter": {
                     "$ref": "#/components/schemas/LabelValue"
