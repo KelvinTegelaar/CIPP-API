@@ -162,6 +162,7 @@ function Start-TableCleanup {
     $InputObject = @{
         Batch            = @($Batch)
         OrchestratorName = 'TableCleanup'
+        Priority         = 8
         SkipLog          = $true
     }
 

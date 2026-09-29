@@ -46,6 +46,7 @@ function Invoke-NinjaOneExtensionScheduler {
         if (($Batch | Measure-Object).Count -gt 0) {
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'NinjaOneOrchestrator'
+                Priority         = 6
                 Batch            = @($Batch)
             }
             #Write-Host ($InputObject | ConvertTo-Json)
@@ -88,6 +89,7 @@ function Invoke-NinjaOneExtensionScheduler {
             if (($Batch | Measure-Object).Count -gt 0) {
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'NinjaOneOrchestrator'
+                    Priority         = 6
                     Batch            = @($Batch)
                 }
                 #Write-Host ($InputObject | ConvertTo-Json)

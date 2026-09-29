@@ -155,8 +155,6 @@ function Invoke-CIPPDBCacheCollection {
             'IntuneAppProtectionPolicies'
             'IntuneScripts'
             'IntuneReusableSettings'
-            'DetectedApps'
-            'IntuneAppInstallStatus'
             'MDEOnboarding'
             'AutopilotDeploymentProfiles'
             'DeviceEnrollmentConfigurations'
@@ -164,6 +162,8 @@ function Invoke-CIPPDBCacheCollection {
             'IntuneDataProcessorOnboarding'
             'IntuneBrandingProfile'
             'ManagedDeviceCleanupRules'
+            'DetectedApps'
+            'IntuneAppInstallStatus'
         )
         Compliance         = @(
             'SensitivityLabels'
@@ -225,6 +225,14 @@ function Invoke-CIPPDBCacheCollection {
     $FailedCount = 0
     $Errors = [System.Collections.Generic.List[string]]::new()
     $Timings = [System.Collections.Generic.List[string]]::new()
+
+    if ($CollectionType -eq 'Intune') {
+        # Start the report exports early; DetectedApps and IntuneAppInstallStatus read them last
+        foreach ($ReportName in 'AppInvRawData', 'AppInstallStatusAggregate') {
+            try { $null = Get-CIPPIntuneReportExportJob -TenantFilter $TenantFilter -ReportName $ReportName }
+            catch { Write-Warning "  [$CollectionType] Could not start the $ReportName export for $TenantFilter : $($_.Exception.Message)" }
+        }
+    }
 
     foreach ($CacheType in $CacheTypes) {
         $FullFunctionName = "Set-CIPPDBCache$CacheType"
