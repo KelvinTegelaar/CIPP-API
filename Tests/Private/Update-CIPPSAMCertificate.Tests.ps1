@@ -111,7 +111,7 @@ Describe 'Update-CIPPSAMCertificate' {
         $script:MintCalled | Should -BeFalse
     }
 
-    It 'reconciles CIPP displayName orphans without minting' {
+    It 'keeps CIPP-named certs from other instances sharing the app' {
         Mock -CommandName Get-CIPPSAMCertificateVersions -MockWith {
             New-MockVersions -Current $script:CurrentCert
         }
@@ -119,7 +119,7 @@ Describe 'Update-CIPPSAMCertificate' {
             $Creds = [System.Collections.Generic.List[object]]::new()
             $Creds.Add((New-MockCredential -Thumbprint $script:CurrentCert.Thumbprint -DisplayName 'CIPP-SAM Certificate (cipp-test)'))
             foreach ($Orphan in $script:OrphanCerts) {
-                $Creds.Add((New-MockCredential -Thumbprint $Orphan.Thumbprint -DisplayName "CIPP-SAM Certificate (orphan)"))
+                $Creds.Add((New-MockCredential -Thumbprint $Orphan.Thumbprint -DisplayName "CIPP-SAM Certificate (other-instance)"))
             }
             [PSCustomObject]@{ id = $script:AppObjectId; keyCredentials = @($Creds) }
         }
@@ -127,13 +127,9 @@ Describe 'Update-CIPPSAMCertificate' {
         $Result = Update-CIPPSAMCertificate
 
         $Result.Renewed | Should -BeFalse
-        $Result.Reconciled | Should -BeTrue
-        $Result.RemovedCount | Should -Be 5
+        $Result.Reconciled | Should -BeFalse
         $script:MintCalled | Should -BeFalse
-        $script:PatchBodies.Count | Should -Be 1
-        $Parsed = $script:PatchBodies[0] | ConvertFrom-Json
-        @($Parsed.keyCredentials).Count | Should -Be 1
-        $Parsed.keyCredentials[0].customKeyIdentifier | Should -Be $script:CurrentCert.Thumbprint
+        $script:PatchBodies.Count | Should -Be 0
     }
 
     It 'removes extras whose thumbprint is in HistoricalThumbprints' {
@@ -241,7 +237,7 @@ Describe 'Update-CIPPSAMCertificate' {
         ($Keys | Where-Object { $_.customKeyIdentifier -eq $script:PreviousCert.Thumbprint }).Count | Should -Be 0
     }
 
-    It 'bootstraps with no current and drops CIPP extras keeping unknowns' {
+    It 'bootstraps with no current and keeps every existing credential' {
         Mock -CommandName Get-CIPPSAMCertificateVersions -MockWith {
             New-MockVersions
         }
@@ -261,10 +257,10 @@ Describe 'Update-CIPPSAMCertificate' {
         $script:MintCalled | Should -BeTrue
         $Parsed = $script:PatchBodies[0] | ConvertFrom-Json
         $Keys = @($Parsed.keyCredentials)
-        $Keys.Count | Should -Be 2
+        $Keys.Count | Should -Be 3
         ($Keys | Where-Object { $_.customKeyIdentifier -eq $script:UnknownCert.Thumbprint }).Count | Should -Be 1
         ($Keys | Where-Object { $_.key -eq $script:MintedCert.PublicKeyBase64 }).Count | Should -Be 1
-        ($Keys | Where-Object { $_.customKeyIdentifier -eq $script:OrphanCert.Thumbprint }).Count | Should -Be 0
+        ($Keys | Where-Object { $_.customKeyIdentifier -eq $script:OrphanCert.Thumbprint }).Count | Should -Be 1
     }
 
     It 'rolls back only the new key when storage fails after mint' {

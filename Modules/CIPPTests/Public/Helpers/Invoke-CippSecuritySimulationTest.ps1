@@ -25,13 +25,7 @@ function Invoke-CippSecuritySimulationTest {
         return Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -Name $ScenarioId -ResultMarkdown "Scenario '$ScenarioId' is not defined."
     }
 
-    $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $Tenant } catch { $null })
-    $IsLicensed = {
-        param($Required)
-        $Needed = @($Required | Where-Object { $_ })
-        $Needed.Count -eq 0 -or @($Needed | Where-Object { $Capabilities.$_ -eq $true }).Count -gt 0
-    }
-    $Licensed = & $IsLicensed $Scenario.requiredCapabilities
+    $Licensed = -not $Scenario.licensePresets -or (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset $Scenario.licensePresets -SkipLog)
 
     $AlignmentTable = Get-CippTable -tablename 'BaselineAlignment'
     $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $Tenant
@@ -61,7 +55,7 @@ function Invoke-CippSecuritySimulationTest {
                 '^Skipped - No License$' { $State.status = 'License missing'; $State.compliant = $null }
                 default { $State.status = 'No data'; $State.compliant = $null }
             }
-        } elseif (-not (& $IsLicensed $Definition.requiredCapabilities)) {
+        } elseif ($Definition.requiredCapabilities -and -not (Test-CIPPStandardLicense -StandardName $Name -TenantFilter $Tenant -RequiredCapabilities @($Definition.requiredCapabilities | ForEach-Object { $_ }) -SkipLog)) {
             $State.status = 'License missing'
             $State.compliant = $null
         } else {
@@ -150,7 +144,9 @@ function Invoke-CippSecuritySimulationTest {
     $Steps = @($Scenario.steps | Where-Object { $_ })
     $Persona = $(if ("$($Scenario.persona)") { "$($Scenario.persona)" } else { 'user' })
     $NeedsIdentity = @($Steps | Where-Object { $_.whatIf }).Count -gt 0
-    $Identity = $(if ($NeedsIdentity -and $Licensed) { Resolve-CIPPSimulationIdentity -TenantFilter $Tenant -Persona $Persona } else { $null })
+    # The What If API itself needs Entra ID P1 or P2, whatever else the scenario is licensed for.
+    $CALicensed = $NeedsIdentity -and $Licensed -and (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset Entra -SkipLog)
+    $Identity = $(if ($CALicensed) { Resolve-CIPPSimulationIdentity -TenantFilter $Tenant -Persona $Persona } else { $null })
     $AttackerCanSatisfy = @($Scenario.attackerCanSatisfy | Where-Object { $_ })
 
     $WhatIfCalls = 0
@@ -170,8 +166,8 @@ function Invoke-CippSecuritySimulationTest {
 
         $WhatIf = $null
         if ($Step.whatIf) {
-            if (-not $Licensed) {
-                $WhatIf = [PSCustomObject]@{ verdict = 'unknown'; detail = 'unlicensed'; error = 'This tenant is not licensed for Conditional Access.'; gaps = @(); policies = @() }
+            if (-not $CALicensed) {
+                $WhatIf = [PSCustomObject]@{ verdict = 'unknown'; detail = 'unlicensed'; error = $(if ($Licensed) { 'This tenant is not licensed for Conditional Access (Entra ID P1 or P2).' } else { 'This tenant is not licensed for the capabilities this scenario needs.' }); gaps = @(); policies = @() }
                 $WhatIfSkipped = $true
             } elseif (-not $Identity) {
                 $WhatIf = [PSCustomObject]@{ verdict = 'unknown'; detail = 'noIdentity'; error = "No $Persona account is available in the cache to evaluate this sign-in."; gaps = @(); policies = @() }
@@ -186,7 +182,7 @@ function Invoke-CippSecuritySimulationTest {
                 } else {
                     $Verdict = Get-CIPPCAWhatIfVerdict -Policies $Evaluation.Policies -AttackerCanSatisfy $AttackerCanSatisfy
                     $Gaps = foreach ($Gap in @($Step.gaps | Where-Object { $_ })) {
-                        $GapLicensed = & $IsLicensed $Gap.requiredCapabilities
+                        $GapLicensed = -not $Gap.licensePresets -or (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset $Gap.licensePresets -SkipLog)
                         $When = @($Gap.when | Where-Object { $_ } | ForEach-Object { "$_".ToLower() })
                         $Triggered = $GapLicensed -and (
                             ($When -contains 'allowed' -and $Verdict.verdict -eq 'allowed') -or

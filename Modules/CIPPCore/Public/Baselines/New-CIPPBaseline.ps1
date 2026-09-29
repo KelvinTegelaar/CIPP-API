@@ -35,6 +35,9 @@ function New-CIPPBaseline {
     if (-not $Baseline.stages -or @($Baseline.stages).Count -lt 1) {
         throw 'A baseline requires at least one stage.'
     }
+    if (@($Baseline.stages).Count -gt 20) {
+        throw 'A baseline can have at most 20 stages.'
+    }
 
     $GUID = $Baseline.GUID ? $Baseline.GUID : (New-Guid).GUID
     $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())

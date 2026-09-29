@@ -156,7 +156,23 @@ function Invoke-ExecGetExecutiveReportPdf {
                     $CatPath = Join-Path $env:CIPPRootPath 'Config\standards.json'
                     if (Test-Path $CatPath) { $Catalog = @(Get-Content $CatPath -Raw | ConvertFrom-Json -Depth 20) }
                 } catch { $Catalog = @() }
-                $SecurityControls = @(Convert-CippExecStandardsToControls -Compare @([pscustomobject]$TenantStd) -Catalog $Catalog)
+                # CA/Intune template standards are keyed by template GUID; resolve those to the template's display name.
+                $TemplateNames = @{}
+                if ($TenantStd.Keys -match '^standards\.(ConditionalAccessTemplate|IntuneTemplate)\.') {
+                    try {
+                        $TemplatesTable = Get-CIPPTable -TableName 'templates'
+                        foreach ($Template in @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'CATemplate' or PartitionKey eq 'IntuneTemplate'")) {
+                            try {
+                                $Content = $Template.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
+                                $DisplayName = [string]($Content.displayName ?? $Content.Displayname)
+                                if ([string]::IsNullOrWhiteSpace($DisplayName)) { continue }
+                                $TemplateNames["$($Template.RowKey)"] = $DisplayName
+                                if ($Template.GUID) { $TemplateNames["$($Template.GUID)"] = $DisplayName }
+                            } catch { Write-Information "Executive report: skipped unreadable template $($Template.RowKey): $($_.Exception.Message)" }
+                        }
+                    } catch { Write-Information "Executive report: template names unavailable - $($_.Exception.Message)" }
+                }
+                $SecurityControls = @(Convert-CippExecStandardsToControls -Compare @([pscustomobject]$TenantStd) -Catalog $Catalog -TemplateNames $TemplateNames)
             }
         } catch { Write-Information "Executive report: standards unavailable - $($_.Exception.Message)" }
 

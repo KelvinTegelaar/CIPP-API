@@ -358,10 +358,9 @@ Describe 'tool identity' {
         Initialize-FixtureSpec -Paths @{
             '/api/ListUsers' = @{ get = (Get-OperationFixture); post = (Get-OperationFixture) }
         }
-        $Tools = Get-ToolList
-        $Tools.Count | Should -Be 2
-        # documents today's behaviour: the guard against this lives in the generator
-        # and in Spec.Tests.ps1, not here
-        @($Tools.name | Select-Object -Unique).Count | Should -Be 1
+        $Tools = @(Get-ToolList)
+        $Tools.Count | Should -Be 1
+        # the POST also lists the query parameters, so it is the one kept
+        $Tools[0]._method | Should -Be 'POST'
     }
 }

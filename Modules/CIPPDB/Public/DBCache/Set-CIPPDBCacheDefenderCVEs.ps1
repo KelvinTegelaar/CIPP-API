@@ -38,6 +38,21 @@ function Set-CIPPDBCacheDefenderCVEs {
         $RecordCount = 0
         $SkippedCount = 0
 
+        # Tenant-wide device tables. TVM repeats every device once per (software x CVE), so a
+        # per-CVE copy of each device's id and JSON text costs ~350-400 bytes per CVE x device
+        # pair - hundreds of MB on a large tenant, all retained until the stream ends. Instead
+        # each distinct device is stored once and a CVE bucket holds small integer indexes:
+        #   $DeviceKeyIndex  dedupe key (id, else name; case-insensitive) -> key index
+        #   $FragmentIndex   exact id + name text -> fragment index
+        #   $DeviceFragments fragment index -> the {deviceId, deviceName} JSON text
+        # Two indexes rather than one because dedupe is case-insensitive but the stored text is
+        # whatever the CVE's first record for that device said, exactly as before. Read by index (a
+        # missing key is $null), not TryGetValue: a [ref] out-parameter costs several times an index
+        # lookup per record.
+        $DeviceKeyIndex = [System.Collections.Generic.Dictionary[string, int]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $FragmentIndex = [System.Collections.Generic.Dictionary[string, int]]::new([System.StringComparer]::Ordinal)
+        $DeviceFragments = [System.Collections.Generic.List[string]]::new()
+
         Get-DefenderTvmRaw -TenantId $TenantFilter -Stream | ForEach-Object {
             $Vuln = $_
             $RecordCount++
@@ -60,52 +75,45 @@ function Set-CIPPDBCacheDefenderCVEs {
                         vulnerabilitySeverityLevel = $Vuln.vulnerabilitySeverityLevel ?? ''
                         exploitabilityLevel        = $Vuln.exploitabilityLevel        ?? ''
 
-                        # Device metadata as the JSON text it will be stored as, not as objects.
-                        DeviceJson                 = [System.Text.StringBuilder]::new()
-                        DeviceCount                = 0
-                        # Dedupe devices by id so DeviceCount is a unique-device count and the
-                        # stored list carries each affected device once, however many software
-                        # packages reported the same CVE on it.
-                        SeenDevices                = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                        # Dedupe key indexes seen on this CVE, so DeviceCount is a unique-device
+                        # count and each affected device is stored once however many software
+                        # packages reported the CVE on it.
+                        SeenDevices                = [System.Collections.Generic.HashSet[int]]::new()
+                        # Fragment indexes in first-seen order - the order the row lists them in.
+                        Devices                    = [System.Collections.Generic.List[int]]::new()
                     }
                 }
 
-                # Extract this device instance and fold it in as serialised text immediately.
-                #
-                # The aggregation itself is unavoidable: TVM returns one record per
-                # (device x software x CVE), so a CVE's records are scattered across the whole
-                # stream and its row cannot be written until the stream ends. What IS avoidable is
-                # keeping every record as a live object until then. This previously held one
-                # hashtable per record in a List per CVE - on a large tenant that is hundreds of
-                # thousands of hashtables, each carrying its own dictionary overhead plus six
-                # strings, and it is the single largest thing this job retains.
-                #
-                # Serialising on arrival keeps the same bytes in one allocation instead of eight,
-                # and lets the source record become collectable straight away. It also removes the
-                # second copy that used to exist at emit time, where a CVE's whole device List and
-                # the JSON produced from it were both live at once.
-                #
                 # Minimal per-device payload: only the id and name are consumed downstream.
                 $DeviceId = ($Vuln.deviceId -join ',') ?? ''
                 $DeviceName = ($Vuln.deviceName -join ',') ?? ''
 
-                # Dedupe on the device id (falling back to the name) so one device that reports
-                # the same CVE across several software packages is stored and counted once.
+                # Dedupe on the device id (falling back to the name).
                 $DeviceKey = if ($DeviceId) { $DeviceId } else { $DeviceName }
-                $Bucket = $CveAggregator[$CveId]
-                if ($DeviceKey -and $Bucket.SeenDevices.Add($DeviceKey)) {
-                    # ConvertTo-Json builds the fragment rather than string interpolation, so
-                    # escaping of device names stays correct.
-                    $Fragment = @{
-                        deviceId   = $DeviceId
-                        deviceName = $DeviceName
-                    } | ConvertTo-Json -Compress
+                if (-not $DeviceKey) { return }
 
-                    # Appended only after the fragment is fully built, so a record that fails
-                    # mid-extraction cannot leave a partial payload attached to the wrong CVE.
-                    if ($Bucket.DeviceCount -gt 0) { [void]$Bucket.DeviceJson.Append(',') }
-                    [void]$Bucket.DeviceJson.Append($Fragment)
-                    $Bucket.DeviceCount++
+                $KeyIndex = $DeviceKeyIndex[$DeviceKey]
+                if ($null -eq $KeyIndex) {
+                    $KeyIndex = $DeviceKeyIndex.Count
+                    $DeviceKeyIndex[$DeviceKey] = $KeyIndex
+                }
+
+                $Bucket = $CveAggregator[$CveId]
+                if ($Bucket.SeenDevices.Add($KeyIndex)) {
+                    $FragmentKey = "$DeviceId`0$DeviceName"
+                    $Fragment = $FragmentIndex[$FragmentKey]
+                    if ($null -eq $Fragment) {
+                        # ConvertTo-Json builds the fragment rather than string interpolation, so
+                        # escaping of device names stays correct. Built once per device, not per
+                        # CVE x device pair.
+                        $DeviceFragments.Add((@{
+                                    deviceId   = $DeviceId
+                                    deviceName = $DeviceName
+                                } | ConvertTo-Json -Compress))
+                        $Fragment = $DeviceFragments.Count - 1
+                        $FragmentIndex[$FragmentKey] = $Fragment
+                    }
+                    $Bucket.Devices.Add($Fragment)
                 }
             } catch {
                 $SkippedCount++
@@ -159,12 +167,10 @@ function Set-CIPPDBCacheDefenderCVEs {
                     # A single-device CVE stays a bare object and a multi-device CVE becomes an
                     # array, which is what piping a List through ConvertTo-Json used to produce and
                     # what Get-CIPPCVEReport and the CVE management endpoint parse.
-                    $CompactDeviceJson = if ($CveData.DeviceCount -eq 1) {
-                        $CveData.DeviceJson.ToString()
-                    } else {
-                        [void]$CveData.DeviceJson.Insert(0, '[').Append(']')
-                        $CveData.DeviceJson.ToString()
-                    }
+                    $DeviceCount = $CveData.Devices.Count
+                    $Parts = [string[]]::new($DeviceCount)
+                    for ($i = 0; $i -lt $DeviceCount; $i++) { $Parts[$i] = $DeviceFragments[$CveData.Devices[$i]] }
+                    $CompactDeviceJson = if ($DeviceCount -eq 1) { $Parts[0] } else { '[' + [string]::Join(',', $Parts) + ']' }
 
                     @{
                         PartitionKey               = $CveKey
@@ -182,7 +188,7 @@ function Set-CIPPDBCacheDefenderCVEs {
                         exploitabilityLevel        = $CveData.exploitabilityLevel
 
                         # Unique affected-device count for this CVE in this tenant.
-                        deviceCount                = $CveData.DeviceCount
+                        deviceCount                = $DeviceCount
 
                         # Minimal per-device detail ({deviceId, deviceName}) as one JSON string.
                         deviceDetailsJson          = $CompactDeviceJson
@@ -190,7 +196,7 @@ function Set-CIPPDBCacheDefenderCVEs {
                         lastUpdated                = $LastUpdated
                     }
 
-                    # The row is built; drop the bucket so its device list is collectable
+                    # The row is built; drop the bucket so its index lists are collectable
                     # before the next CVE is serialised.
                     $CveAggregator.Remove($CveKey)
                 }

@@ -219,6 +219,16 @@
     "IsSystem": true
   },
   {
+    "Id": "9792e664-002b-475e-a1c2-fd5d04b19a3f",
+    "Command": "Start-ReportAttachmentRetentionCleanup",
+    "Description": "Timer to cleanup report attachments uploaded to blob storage based on retention policy",
+    "Cron": "0 30 2 * * *",
+    "Priority": 23,
+    "RunOnProcessor": true,
+    "TZOffset": true,
+    "IsSystem": true
+  },
+  {
     "Id": "5e8a9b4c-2d6f-4a3e-b7c1-9d0e5f3a8b2c",
     "Command": "Start-IntuneReportExportOrchestrator",
     "Description": "Submit Intune report-export jobs ahead of nightly DB cache run",

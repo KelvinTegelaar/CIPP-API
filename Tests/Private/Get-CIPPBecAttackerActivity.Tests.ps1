@@ -71,6 +71,17 @@ Describe 'Get-CIPPBecAttackerActivity' {
         $Result.Mail.Summary.Unattributed | Should -Be 1 -Because 'a record tied to nothing is counted, not guessed'
     }
 
+    It 'keeps a record on its own address when that address has a verdict, however bad its session partners are' {
+        # the user's own mail client shares the Entra session with the attacker address
+        $Own = New-Mail 'MailItemsAccessed' '203.0.113.10' @{ AppAccessContext = [pscustomobject]@{ AADSessionId = 'ENTRA-1' }; Folders = @([pscustomobject]@{ Path = '\Inbox'; FolderItems = @([pscustomobject]@{ InternetMessageId = '<own@x>' }) }) }
+        $Unknown = New-Mail 'MailItemsAccessed' '192.0.2.44' @{ AppAccessContext = [pscustomobject]@{ UniqueTokenId = 'TOK-ATTACKER' }; Folders = @([pscustomobject]@{ Path = '\Inbox'; FolderItems = @([pscustomobject]@{ InternetMessageId = '<unk@x>' }) }) }
+        $Result = Invoke-Attacker -MailRecords @($Own, $Unknown)
+        @($Result.Mail.Data.InternetMessageId) | Should -Not -Contain '<own@x>' -Because 'it came from the address of the user'
+        $Row = $Result.Mail.Data | Where-Object InternetMessageId -EQ '<unk@x>'
+        $Row.IPSource | Should -Be 'record'
+        $Row.IPVerdict | Should -Be 'Unknown'
+    }
+
     It 'searches files only for the attacker-side addresses and link usage by item' {
         Mock Search-CIPPBecAuditLog -ParameterFilter { $IPAddresses } {
             [pscustomobject]@{ Complete = $true; Records = @([pscustomobject]@{ AuditData = [pscustomobject]@{ Operation = 'FileDownloaded'; CreationTime = '2026-09-20T02:00:00Z'; SourceFileName = 'payroll.xlsx'; ObjectId = 'https://contoso-my.sharepoint.com/personal/victim/Documents/payroll.xlsx'; SiteUrl = 'https://contoso-my.sharepoint.com/personal/victim'; ClientIP = '198.51.100.7'; UserAgent = 'python-requests/2.31' } }) }
