@@ -708,8 +708,11 @@ function Invoke-CIPPBaselineStandard {
                 }
                 & $ExecutorName -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current
             } catch {
-                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to change `"$Label`" to $ExpectedJson`: $($_.Exception.Message) - Run $RunId" -Sev 'Error'
+                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to change `"$Label`" to $ExpectedJson`: $($_.Exception.Message) - Run $RunId" -Sev 'Error' -LogData (Get-CippException -Exception $_)
                 $Result.Outcome = 'Error'
+                # A failed write is not tenant drift: the row must not show Drift with an
+                # empty diff. A pending deny is an operator order and survives the failure.
+                $Result.Status = if ("$PriorStatus".StartsWith('Denied')) { $PriorStatus } else { 'Error' }
                 Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
                 return $Result
             }
@@ -722,7 +725,9 @@ function Invoke-CIPPBaselineStandard {
             $Result.Remediated = $true
             $Result.Outcome = 'Remediated'
             $Result.Status = 'Compliant'
-            if ($Item.AlertOnRemediate) { $Result.AlertEvent = 'Remediated' }
+            # Edge-triggered like the Drift alert: checkBeforeRun:false standards write every
+            # run, so alerting on a steady-state rewrite would fire forever with nothing changed.
+            if ($Item.AlertOnRemediate -and $PriorStatus -ne 'Compliant') { $Result.AlertEvent = 'Remediated' }
         } elseif ($Compliant) {
             $Result.Compliant = $true
             $Result.Outcome = 'Compliant'

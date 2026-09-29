@@ -7,7 +7,7 @@ function Set-CIPPBaselineResult {
         ExpectedValue/CurrentValue/AcceptedPaths/Inheritance as JSON columns, flat PascalCase
         for the rest, StandardName/TenantName/SourceTemplate as view aids. ONE Status column
         (Compliant / Drift / Accepted / Partially Accepted / Denied - Remediate Pending /
-        Denied - Delete Pending / Skipped - No License / No Data) - the per-run outcome lives on the
+        Denied - Delete Pending / Skipped - No License / No Data / Error) - the per-run outcome lives on the
         history rows only. Triage
         metadata (reason/by/at/expires) survives while the status is a triaged one; the engine
         clears it when a row returns to Compliant or plain Drift. History keys
