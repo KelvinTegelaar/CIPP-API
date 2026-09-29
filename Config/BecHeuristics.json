@@ -13,14 +13,14 @@
     },
     "newUsersThreshold": 5,
     "weights": {
-      "NewRules": 3,
+      "NewRules": 1,
       "InboxRuleChanges": 3,
       "PermissionChangesTargetingUser": 2,
       "PermissionChanges": 1,
       "NewApps": 1,
       "NewUsers": 1,
       "SafelistChanges": 2,
-      "SuspiciousRules": 5,
+      "SuspiciousRules": 4,
       "MaliciousApps": 5,
       "ForeignSuccessfulSignIns": 3,
       "ForeignActivity": 3,
@@ -55,7 +55,7 @@
     "suspiciousFolderPattern": "RSS",
     "lowVisibilityFolderRegex": "(?i)(rss|archive|deleted|junk|conversation history|notes|sync issues)",
     "sensitiveNameRegex": "(?i)(invoice|payment|security|alert|verify|microsoft|admin)",
-    "sensitiveKeywordRegex": "(?i)(invoice|payment|wire|remittance|bank|swift|iban|ach|routing|account number|beneficiary|payroll|password|credential|verif|urgent|confidential)"
+    "sensitiveKeywordRegex": "(?i)(invoice|payment|wire|remittance|bank|swift|iban|ach|routing|account number|beneficiary|payroll|password|credential|verif|urgent|confidential|hack|phish|compromis|fraud|scam|virus|malware|suspicious)"
   },
   "phishingSubjectPatterns": {
     "Urgent action language": "(?i)urgent.{0,25}(action|response).{0,25}required",
@@ -85,6 +85,7 @@
     "descriptionRegex": "(?i)(redirect|blind copy|bcc|delete|quarantine|set the spam confidence)"
   },
   "directoryAudit": {
+    "sensitiveUpdateRegex": "(?i)StrongAuthentication|AlternativeSecurityId|otherMails",
     "flaggedActivities": [
       "User registered security info",
       "User registered all required security info",
@@ -92,7 +93,6 @@
       "User changed default security info",
       "User deleted security info",
       "Admin registered security info",
-      "Update user",
       "Reset password (by admin)",
       "Change user password",
       "Reset user password",
@@ -188,7 +188,7 @@
       "baselineSeen": -2,
       "knownNetwork": -1,
       "knownLocation": -1,
-      "compliantDevice": -2,
+      "compliantDevice": -4,
       "colleagues": -2,
       "trustedNamedLocation": -4,
       "technicianAddress": -4,

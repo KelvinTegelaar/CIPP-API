@@ -93,9 +93,12 @@ function Invoke-CIPPBecIPAnalysis {
 
     # without the list, Microsoft front ends fall back to the network-name rule (only when never signed in from)
     $ServiceRanges = try { @(Get-CIPPMicrosoft365IPRanges) } catch { Write-Information "BEC IP analysis: Microsoft 365 range list failed: $($_.Exception.Message)"; @() }
+    # without it, an unannounced Microsoft-registered address is still judged a service by its owner alone
+    $AzureRanges = try { @(Get-CIPPAzureCloudRanges) } catch { Write-Information "BEC IP analysis: Azure service tag list failed: $($_.Exception.Message)"; @() }
 
     $VerdictParams = @{
         ServiceRanges         = $ServiceRanges
+        AzureRanges           = $AzureRanges
         SignIns               = $SignIns
         NonInteractiveSignIns = $NonInteractive
         Events                = $Events

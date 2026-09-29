@@ -24,7 +24,7 @@ BeforeAll {
     function Get-CIPPBecMessageTrace { param($TenantFilter, $SenderAddress, $RecipientAddress, $StartDate, $EndDate, $Anchor, $PageSize, $MaxPages) }
     # Full-scope collectors
     function Get-CIPPBecMailboxInventory { param($TenantFilter, $UserPrincipalName, $Heuristics, $AcceptedDomains) }
-    function Get-CIPPBecUserGrants { param($TenantFilter, $UserId, $Heuristics, $RogueAppFeed) }
+    function Get-CIPPBecUserGrants { param($TenantFilter, $UserId, $Heuristics, $RogueAppFeed, $StartDate) }
     function Get-CIPPBecTransportRules { param($TenantFilter, $StartDate, $EndDate, $Heuristics, $Anchor) }
     function Get-CIPPBecReceivedMailFindings { param($TenantFilter, $UserPrincipalName, $StartDate, $EndDate, $Heuristics, $AcceptedDomains, $Anchor, [switch]$IncludeDefender) }
     function Get-CIPPBecDirectoryAudits { param($TenantFilter, $UserId, $StartDate, $Heuristics, $Cap) }
@@ -206,8 +206,8 @@ Describe 'Push-BECRun' {
         $R.BlastRadius[0].UserPrincipalName | Should -Be 'cfo@contoso.com'
         $R.Completeness.BlastRadius.Complete | Should -BeTrue
         $script:BlastPeers | Should -BeOfType [hashtable] -Because "the analysis' tenant-wide sign-in lookup is reused"
-        # Quick score 21 + flagged delegation 2 + catalog grant 5 + risky transport change 4 + attacker IP 4 + attacker mail 3
-        $R.Score.Value | Should -Be 39
+        # Quick score 18 + flagged delegation 2 + catalog grant 5 + risky transport change 4 + attacker IP 4 + attacker mail 3
+        $R.Score.Value | Should -Be 36
     }
 
     It 'resolves a missing UPN from the object id, writes it back, and runs the investigation' {
@@ -389,5 +389,43 @@ Describe 'Push-BECRun' {
         $Rule.RiskReasons | Should -Contain 'Forwards or redirects mail to an external address'
         $Rule.RiskReasons | Should -Contain 'Deletes messages'
         $Rule.RiskReasons | Should -Contain 'Acts on all incoming mail'
+    }
+
+    It 'marks a rule suspicious only when it hides mail with a reason to, not for an ordinary delete or archive rule' {
+        Mock New-ExoRequest {
+            switch ($cmdlet) {
+                'Get-AdminAuditLogConfig' { [pscustomobject]@{ UnifiedAuditLogIngestionEnabled = $true } }
+                'Get-InboxRule' {
+                    [pscustomobject]@{ Name = 'Newsletters'; Identity = 'n'; Enabled = $true; From = @('news@example.org'); DeleteMessage = $true }
+                    [pscustomobject]@{ Name = 'Receipts'; Identity = 'r'; Enabled = $true; From = @('shop@example.org'); MoveToFolder = 'Archive'; MarkAsRead = $true }
+                    [pscustomobject]@{ Name = 'Team'; Identity = 't'; Enabled = $true; From = @('boss@contoso.com'); ForwardTo = @('"Colleague" [SMTP:colleague@contoso.com]') }
+                    [pscustomobject]@{ Name = '..'; Identity = 'd'; Enabled = $true; From = @('boss@contoso.com'); MoveToFolder = 'Archive'; MarkAsRead = $true }
+                    [pscustomobject]@{ Name = 'Warnings'; Identity = 'w'; Enabled = $true; SubjectOrBodyContainsWords = @('hacked', 'phishing'); DeleteMessage = $true }
+                    [pscustomobject]@{ Name = 'Everything'; Identity = 'e'; Enabled = $true; MoveToFolder = 'Archive' }
+                }
+                'Get-MailboxJunkEmailConfiguration' { [pscustomobject]@{ TrustedSendersAndDomains = @(); BlockedSendersAndDomains = @() } }
+                'Get-AcceptedDomain' { [pscustomobject]@{ DomainName = 'contoso.com' } }
+                default { @() }
+            }
+        }
+        Push-BECRun -Item $script:Item
+        $Rules = @($script:Saved.Results.NewRules)
+        foreach ($Name in 'Newsletters', 'Receipts', 'Team') { ($Rules | Where-Object Name -EQ $Name).Suspicious | Should -BeFalse -Because "'$Name' is an ordinary rule" }
+        foreach ($Name in '..', 'Warnings', 'Everything') { ($Rules | Where-Object Name -EQ $Name).Suspicious | Should -BeTrue -Because "'$Name' hides mail for a reason" }
+        ($Rules | Where-Object Name -EQ '..').RiskReasons | Should -Contain 'Blank or punctuation-only rule name'
+    }
+
+    It 'does not count activity from a relay or Microsoft service address as foreign' {
+        Mock Invoke-CIPPBecIPAnalysis {
+            [pscustomobject]@{
+                Baseline = New-CIPPBecCollectorResult -Data ([pscustomobject]@{ Successful = 12 }) -Count 12; Guidance = New-CIPPBecCollectorResult -Data @(); PeersResult = New-CIPPBecCollectorResult -Data @(); Peers = @{}; Geo = @{}; Events = @()
+                Verdicts = @([pscustomobject]@{ IP = '203.0.113.10'; Verdict = 'Service'; SuccessfulSignIns = 0; Activities = 1; Reasons = @() })
+            }
+        }
+        Push-BECRun -Item $script:Item
+        $R = $script:Saved.Results
+        $R.SentMessages[0].ForeignLocation | Should -BeTrue -Because 'the row still says where the address is'
+        $R.LocationAnalysis.ForeignSentMessageCount | Should -Be 0
+        $R.LocationAnalysis.ForeignRuleChangeCount | Should -Be 0
     }
 }

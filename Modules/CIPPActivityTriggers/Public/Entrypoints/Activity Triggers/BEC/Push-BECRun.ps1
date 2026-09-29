@@ -169,6 +169,8 @@ function Push-BECRun {
                 @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
                 @{ Name = 'ClientAppUsed'; Expression = { $_.clientAppUsed } },
                 @{ Name = 'Status'; Expression = $SignInStatus },
+                @{ Name = 'ErrorCode'; Expression = { $_.status.errorCode } },
+                @{ Name = 'FailureReason'; Expression = { $_.status.failureReason } },
                 @{ Name = 'IPAddress'; Expression = { $_.ipAddress } },
                 @{ Name = 'Country'; Expression = { $_.location.countryOrRegion } },
                 @{ Name = 'City'; Expression = { $_.location.city } },
@@ -331,7 +333,7 @@ function Push-BECRun {
                 if ($Rule.StopProcessingRules -eq $true) { $Reasons.Add('Stops processing other rules') }
                 $KeywordHit = $false
                 if ($SensitiveKeywordRegex) { foreach ($KP in $RuleKeywordProps) { if ((@($Rule.$KP) -join ' ') -match $SensitiveKeywordRegex) { $KeywordHit = $true; break } } }
-                if ($KeywordHit) { $Reasons.Add('Targets financial or sensitive keywords') }
+                if ($KeywordHit) { $Reasons.Add('Targets financial, security or sensitive keywords') }
                 # Acts on all mail: a hiding/exfil action (forward, delete, move) with no scoping condition.
                 $HasCondition = $false
                 foreach ($CP in $RuleConditionProps) { $CV = $Rule.$CP; if (($CV -is [bool] -and $CV) -or (@($CV | Where-Object { $_ }).Count -gt 0)) { $HasCondition = $true; break } }
@@ -339,8 +341,13 @@ function Push-BECRun {
                 $ActsOnAll = ($HidingAction -and -not $HasCondition)
                 if ($ActsOnAll) { $Reasons.Add('Acts on all incoming mail') }
                 if ($SensitiveNameRegex -and [string]$Rule.Name -match $SensitiveNameRegex) { $Reasons.Add('Security-sensitive rule name') }
-                # Strong indicators mark a rule 'suspicious' for the score's +5 signal (RSS stays, plus these).
-                $Suspicious = [bool]($ExternalForward -or ($Rule.DeleteMessage -eq $true) -or $MovesToLowVis -or $ActsOnAll -or ([string]$Rule.MoveToFolder -clike "*$SuspiciousFolder*"))
+                # attackers name rules '.', '..' or ',' so they read as blank in Outlook
+                $JunkName = [string]$Rule.Name -notmatch '[\p{L}\p{N}]{2}'
+                if ($JunkName) { $Reasons.Add('Blank or punctuation-only rule name') }
+                $HidesMail = ($Rule.DeleteMessage -eq $true) -or $MovesToLowVis
+                $ToRss = $SuspiciousFolder -and [string]$Rule.MoveToFolder -clike "*$SuspiciousFolder*"
+                # an ordinary delete or archive rule is not enough: hiding mail must come with a reason to hide it
+                $Suspicious = [bool]($ExternalForward -or $ToRss -or ($HidesMail -and ($ActsOnAll -or $KeywordHit -or $JunkName)) -or ($JunkName -and ($HidingAction -or $Rule.MarkAsRead -eq $true)))
                 $Rule | Select-Object *,
                 @{ Name = 'RecentlyChanged'; Expression = { $_.Name -in $RecentRuleNames } },
                 @{ Name = 'RiskReasons'; Expression = { $Reasons.ToArray() } },
@@ -713,7 +720,7 @@ function Push-BECRun {
 
         & $Phase 'Grants' 'Reading application consents'
         Write-Information 'Full scope: user grants'
-        $Grants = & $Collect 'UserGrants' { Get-CIPPBecUserGrants -TenantFilter $TenantFilter -UserId $SuspectUser -Heuristics $Heuristics -RogueAppFeed $RogueAppFeed }
+        $Grants = & $Collect 'UserGrants' { Get-CIPPBecUserGrants -TenantFilter $TenantFilter -UserId $SuspectUser -Heuristics $Heuristics -RogueAppFeed $RogueAppFeed -StartDate $startDate }
         & $Mark 'UserGrants' $Grants
         $UserGrants = @($Grants.Data)
 
@@ -916,6 +923,8 @@ function Push-BECRun {
             $Row | Add-Member -NotePropertyName 'ForeignLocation' -NotePropertyValue (& $TestForeign $Row.Country) -Force
         }
 
+        # activity from a relay, a Microsoft service or the user's own device is not foreign activity, wherever it geolocates
+        $ForeignAct = { param($Rows) @($Rows | Where-Object { $_.ForeignLocation -eq $true -and $_.IPVerdict -notin @('Service', 'Safe', 'LikelyUser') }).Count }
         $SignInCountries = @($SuspectUserSignIns | Where-Object { $_.Country } | Group-Object -Property Country | Sort-Object -Property Count -Descending | ForEach-Object {
                 [PSCustomObject]@{ Country = $_.Name; Count = $_.Count }
             })
@@ -926,14 +935,14 @@ function Push-BECRun {
             ForeignSignInCount                = @($SuspectUserSignIns | Where-Object { $_.ForeignLocation -eq $true }).Count
             # failed foreign attempts are password-spray background noise; only a success proves access
             ForeignSuccessfulSignInCount      = @($SuspectUserSignIns | Where-Object { $_.ForeignLocation -eq $true -and $_.Status -eq 'Success' }).Count
-            ForeignRuleChangeCount            = @($RuleChangesLog | Where-Object { $_.ForeignLocation -eq $true }).Count
-            ForeignSafelistChangeCount        = @($SafelistChanges | Where-Object { $_.ForeignLocation -eq $true }).Count
-            ForeignSharingChangeCount         = @($SharingChanges | Where-Object { $_.ForeignLocation -eq $true }).Count
-            ForeignSentMessageCount           = @($SentMessages | Where-Object { $_.ForeignLocation -eq $true }).Count
+            ForeignRuleChangeCount            = (& $ForeignAct $RuleChangesLog)
+            ForeignSafelistChangeCount        = (& $ForeignAct $SafelistChanges)
+            ForeignSharingChangeCount         = (& $ForeignAct $SharingChanges)
+            ForeignSentMessageCount           = (& $ForeignAct $SentMessages)
             ForeignNonInteractiveSignInCount  = @($NonInteractiveSignIns | Where-Object { $_.ForeignLocation -eq $true -and $_.Status -eq 'Success' }).Count
-            ForeignTransportRuleChangeCount   = @($TransportRuleChanges | Where-Object { $_.ForeignLocation -eq $true }).Count
-            ForeignDirectoryAuditCount        = @($DirectoryAudits | Where-Object { $_.ForeignLocation -eq $true }).Count
-            ForeignMailActivityCount          = @($MailActivity | Where-Object { $_.ForeignLocation -eq $true }).Count
+            ForeignTransportRuleChangeCount   = (& $ForeignAct $TransportRuleChanges)
+            ForeignDirectoryAuditCount        = (& $ForeignAct $DirectoryAudits)
+            ForeignMailActivityCount          = (& $ForeignAct $MailActivity)
             Note                              = if (-not $UsageLocation) { 'The user has no usage location assigned in Entra ID, so activity cannot be compared against an expected country. Countries are still listed for manual review.' } else { $null }
         }
 

@@ -13440,6 +13440,13 @@
                   "AppId": {
                     "type": "string"
                   },
+                  "DisplayName": {
+                    "type": "string",
+                    "description": "Entra generates the key pair server-side and adds it alongside the current one. Nothing signs with it until SetPreferredSigningKey. The display name becomes the immutable certificate subject and relying parties may show it, so default to Entra's own subject rather than branding it."
+                  },
+                  "EndDateTime": {
+                    "type": "string"
+                  },
                   "Id": {
                     "type": "string"
                   },
@@ -13457,6 +13464,9 @@
                   },
                   "tenantFilter": {
                     "type": "string"
+                  },
+                  "Thumbprint": {
+                    "$ref": "#/components/schemas/LabelValue"
                   },
                   "Type": {
                     "type": "string"

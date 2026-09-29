@@ -44,6 +44,7 @@ function Get-CIPPBecNonInteractiveSignIns {
             ClientAppUsed       = $SignIn.clientAppUsed
             Status              = if ($SignIn.conditionalAccessStatus -in @('success', 'notApplied') -and $SignIn.status.errorCode -eq 0) { 'Success' } else { 'Failed' }
             ErrorCode           = $SignIn.status.errorCode
+            FailureReason       = $SignIn.status.failureReason
             IPAddress           = $SignIn.ipAddress
             Country             = $Country
             City                = $SignIn.location.city

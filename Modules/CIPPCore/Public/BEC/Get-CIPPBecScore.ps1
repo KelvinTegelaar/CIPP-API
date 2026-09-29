@@ -34,6 +34,8 @@ function Get-CIPPBecScore {
     $NewUsersThreshold = [int]($Heuristics.score.newUsersThreshold ?? 5)
     $WindowDays = [int]($Results.AnalysisWindowDays ?? $Heuristics.window.days ?? 7)
     $SuspiciousFolder = [string]($Heuristics.inboxRules.suspiciousFolderPattern ?? 'RSS')
+    # Exchange's own system mailboxes, which the service re-grants itself (Discovery Management on the search mailbox)
+    $SystemMailbox = '(?i)DiscoverySearchMailbox|SystemMailbox\{|FederatedEmail\.4c1f4d8b|Migration\.8f3e7716'
 
     $ExtractedAt = try { ([datetime]$Results.ExtractedAt).ToUniversalTime() } catch { (Get-Date).ToUniversalTime() }
     $WindowStart = $ExtractedAt.AddDays(-$WindowDays)
@@ -46,7 +48,7 @@ function Get-CIPPBecScore {
     $Stats = [ordered]@{
         NewRules                       = & $Count $Results.NewRules
         InboxRuleChanges               = & $Count $Results.InboxRuleChanges
-        PermissionChanges              = & $Count $Results.MailboxPermissionChanges
+        PermissionChanges              = @($Results.MailboxPermissionChanges | Where-Object { $_ -and [string]$_.ObjectId -notmatch $SystemMailbox }).Count
         PermissionChangesTargetingUser = @($Results.MailboxPermissionChanges | Where-Object { $_.TargetsSuspect -eq $true }).Count
         NewApps                        = & $Count $Results.AddedApps
         NewUsers                       = & $Count $Results.NewUsers
@@ -89,11 +91,11 @@ function Get-CIPPBecScore {
         NewRules                       = 'Inbox rules exist on the mailbox'
         InboxRuleChanges               = 'Inbox rules were created, changed or removed in the window'
         PermissionChangesTargetingUser = 'Mailbox permission changes targeted this mailbox'
-        PermissionChanges              = 'Mailbox permission changes elsewhere in the tenant'
+        PermissionChanges              = 'Mailbox permission changes elsewhere in the tenant (not on system mailboxes)'
         NewApps                        = 'New service principals appeared in the tenant'
         NewUsers                       = "More than $NewUsersThreshold users were created in the window"
         SafelistChanges                = 'Trusted/blocked sender lists were changed'
-        SuspiciousRules                = 'An inbox rule hides, forwards or deletes mail (or acts on all incoming mail)'
+        SuspiciousRules                = 'An inbox rule forwards externally, feeds RSS, or hides mail with a reason to (all mail, sensitive keywords, blank name)'
         MaliciousApps                  = 'Applications match the known-malicious catalog'
         ForeignSuccessfulSignIns       = 'Successful sign-ins from outside the usage location'
         ForeignActivity                = 'Rule, safelist, sharing or mail activity from outside the usage location'
@@ -101,11 +103,11 @@ function Get-CIPPBecScore {
         MassMail                       = 'Mass-mail pattern in sent messages'
         RecentMfaMethods               = 'MFA methods registered in the window'
         RecentIntuneDevices            = 'Intune devices enrolled in the window'
-        FlaggedDelegations             = 'External, guest or catch-all mailbox delegations'
-        RiskyUserGrants                = 'Consent grants with high-risk scopes from unverified publishers'
+        FlaggedDelegations             = 'External, guest, recently granted or exposing catch-all mailbox delegations'
+        RiskyUserGrants                = 'Consent grants with high-risk scopes from unverified publishers, for apps new in the window'
         CatalogUserGrants              = 'Consent grants to applications in the rogue-app catalog'
         RiskyTransportRuleChanges      = 'Transport rules with diversion or suppression actions changed in the window'
-        FlaggedMailboxAddIns           = 'User-installed non-Microsoft mailbox add-ins'
+        FlaggedMailboxAddIns           = 'Side-loaded non-Microsoft mailbox add-ins'
         TyposquatSenders               = 'Mail received from look-alike sender domains'
         DefenderDetections             = 'Defender-classified threats delivered to the mailbox'
         FlaggedDirectoryAudits         = 'Security-info, consent or device registration events in the directory audit'

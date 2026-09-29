@@ -7,6 +7,7 @@ BeforeAll {
     function Get-CIPPBecCorrelatedUserPeers { param($TenantFilter, $UserIds, $IPs, $StartDate, $WindowStart) }
     function Get-CIPPGeoIPLocationBatch { param([string[]]$IPs) }
     function Get-CIPPMicrosoft365IPRanges { }
+    function Get-CIPPAzureCloudRanges { }
     function Get-NormalizedError { param($message) $message }
     foreach ($File in @('Authentication/ConvertTo-CIPPIPRange.ps1', 'Authentication/Test-IpInRange.ps1', 'Authentication/Resolve-CIPPIPAllowBlockList.ps1', 'BEC/ConvertTo-CIPPBecHostAddress.ps1', 'BEC/New-CIPPBecCollectorResult.ps1', 'BEC/Get-CIPPBecIPVerdicts.ps1', 'BEC/ConvertTo-CIPPBecIPEvents.ps1', 'BEC/Invoke-CIPPBecIPAnalysis.ps1')) {
         . (Join-Path $RepoRoot "Modules/CIPPCore/Public/$File")

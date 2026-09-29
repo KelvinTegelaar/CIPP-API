@@ -5,7 +5,8 @@ function Get-CIPPBecUserGrants {
     .DESCRIPTION
         Reads users/{id}/oauth2PermissionGrants and users/{id}/appRoleAssignments, resolves the client
         and resource service principals, and flags each entry when it carries a high-risk delegated
-        scope from an unverified, non-Microsoft publisher or when the application matches the rogue-app
+        scope from an unverified, non-Microsoft publisher whose application first appeared in the tenant
+        on or after StartDate (older ones are listed as Review), or when the application matches the rogue-app
         catalog (CIPP MaliciousApps.json + Huntress). Consent-based access survives a password reset,
         which is why this check exists. Metadata only: application identity, scopes and publisher.
     .PARAMETER TenantFilter
@@ -16,6 +17,8 @@ function Get-CIPPBecUserGrants {
         The BEC heuristics object (riskyScopes regex + catalogNames).
     .PARAMETER RogueAppFeed
         Output of Get-CIPPBecRogueAppFeed. Fetched when not supplied.
+    .PARAMETER StartDate
+        Start of the analysis window. Without it every high-risk grant is flagged.
     .FUNCTIONALITY
         Internal
     #>
@@ -24,7 +27,8 @@ function Get-CIPPBecUserGrants {
         [Parameter(Mandatory = $true)][string]$TenantFilter,
         [Parameter(Mandatory = $true)][string]$UserId,
         [Parameter(Mandatory = $true)]$Heuristics,
-        $RogueAppFeed
+        $RogueAppFeed,
+        [datetime]$StartDate
     )
 
     if (-not $RogueAppFeed) { $RogueAppFeed = Get-CIPPBecRogueAppFeed }
@@ -95,7 +99,8 @@ function Get-CIPPBecUserGrants {
         $Resource = $ServicePrincipals[[string]$Grant.resourceId]
         $Scopes = @(([string]$Grant.scope) -split '\s+' | Where-Object { $_ })
         $HighRisk = @($Scopes | Where-Object { ($ScopeRegex -and $_ -match $ScopeRegex) -or ($_ -in $CatalogScopes) })
-        $Risk = if ($Client.CatalogMatch) { 'CatalogMatch' } elseif ($HighRisk.Count -gt 0 -and -not $Client.PublisherVerified -and -not $Client.IsMicrosoft) { 'High' } elseif ($HighRisk.Count -gt 0) { 'Review' } else { 'Low' }
+        $NewApp = -not $StartDate -or ($Client.CreatedDateTime -and ([datetime]$Client.CreatedDateTime).ToUniversalTime() -ge $StartDate.ToUniversalTime())
+        $Risk = if ($Client.CatalogMatch) { 'CatalogMatch' } elseif ($HighRisk.Count -gt 0 -and -not $Client.PublisherVerified -and -not $Client.IsMicrosoft -and $NewApp) { 'High' } elseif ($HighRisk.Count -gt 0) { 'Review' } else { 'Low' }
         $Rows.Add([pscustomobject]@{
                 Type                     = 'DelegatedGrant'
                 Id                       = $Grant.id

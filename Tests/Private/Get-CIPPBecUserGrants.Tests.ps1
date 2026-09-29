@@ -83,6 +83,15 @@ Describe 'Get-CIPPBecUserGrants' {
         $Result.Data[0].ResourceDisplayName | Should -Be 'Microsoft Graph'
     }
 
+    It 'flags a risky grant only for an app new to the tenant in the window, and keeps older ones for review' {
+        $script:GrantsFixture = @([pscustomobject]@{ id = 'g2'; clientId = 'sp-shady'; resourceId = 'sp-graph'; consentType = 'Principal'; scope = 'Mail.ReadWrite offline_access' })
+        $New = Get-CIPPBecUserGrants -TenantFilter 'contoso.com' -UserId 'user-1' -Heuristics $script:Heuristics -StartDate ([datetime]'2026-08-01T00:00:00Z')
+        $New.Data[0].Risk | Should -Be 'High'
+        $Old = Get-CIPPBecUserGrants -TenantFilter 'contoso.com' -UserId 'user-1' -Heuristics $script:Heuristics -StartDate ([datetime]'2026-09-01T00:00:00Z')
+        $Old.Data[0].Risk | Should -Be 'Review'
+        $Old.Data[0].Flagged | Should -BeFalse
+    }
+
     It 'matches scope names from the RiskyPermissions catalog as well as the regex' {
         $script:GrantsFixture = @([pscustomobject]@{ id = 'g1'; clientId = 'sp-shady'; resourceId = 'sp-graph'; consentType = 'Principal'; scope = 'EWS.AccessAsUser.All' })
         $Result = Get-CIPPBecUserGrants -TenantFilter 'contoso.com' -UserId 'user-1' -Heuristics $script:Heuristics

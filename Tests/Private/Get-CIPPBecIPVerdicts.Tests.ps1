@@ -20,10 +20,12 @@ BeforeAll {
         '198.51.100.7' = [pscustomobject]@{ CountryOrRegion = 'NG'; City = 'Lagos'; Proxy = $false; Hosting = $true; ASName = 'DIGITALOCEAN-ASN' }
         '203.0.113.10' = [pscustomobject]@{ CountryOrRegion = 'AU'; City = 'Sydney'; Proxy = $false; Hosting = $false; ASName = 'TELSTRA' }
         '40.107.1.1'   = [pscustomobject]@{ CountryOrRegion = 'US'; City = 'Boydton'; Proxy = $false; Hosting = $true; ASName = 'MICROSOFT-CORP-MSN-AS-BLOCK' }
+        # an Exchange mailbox server: no network announces the range, ip-api only knows the owner
+        '2603:10a6:102:488::5' = [pscustomobject]@{ CountryOrRegion = 'CA'; City = 'Toronto'; Proxy = $false; Hosting = $true; ASName = 'Unknown'; Org = 'Microsoft Corporation' }
     }
     function Get-Verdicts {
-        param($SignIns = @(), $NonInteractive = @(), $Events = @(), $Guidance = @(), $Overrides = @(), $Peers = @{}, $Baseline = $script:Baseline, $ServiceRanges = @())
-        Get-CIPPBecIPVerdicts -SignIns $SignIns -NonInteractiveSignIns $NonInteractive -Events $Events -Baseline $Baseline -Guidance $Guidance -Overrides $Overrides -Peers $Peers -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -ServiceRanges $ServiceRanges
+        param($SignIns = @(), $NonInteractive = @(), $Events = @(), $Guidance = @(), $Overrides = @(), $Peers = @{}, $Baseline = $script:Baseline, $ServiceRanges = @(), $AzureRanges = @())
+        Get-CIPPBecIPVerdicts -SignIns $SignIns -NonInteractiveSignIns $NonInteractive -Events $Events -Baseline $Baseline -Guidance $Guidance -Overrides $Overrides -Peers $Peers -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -ServiceRanges $ServiceRanges -AzureRanges $AzureRanges
     }
     function Get-Row { param($Rows, $IP) $Rows | Where-Object IP -EQ $IP }
 }
@@ -72,6 +74,27 @@ Describe 'Get-CIPPBecIPVerdicts' {
         $Rented = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '40.107.1.1' -Country 'US' -ASN '8075')) '40.107.1.1'
         $Rented.Verdict | Should -Not -Be 'Service'
         @($Rented.Reasons.Code) | Should -Contain 'HostingOrProxy'
+    }
+
+    It 'classes an unannounced Microsoft-registered address as a service by its owner, unless it is Azure compute' {
+        $Access = @([pscustomobject]@{ IP = '2603:10a6:102:488::5'; Kind = 'Mailbox AttachmentAccess'; Flagged = $false; ActorKind = 'User' })
+        $Row = Get-Row (Get-Verdicts -Events $Access -AzureRanges @('20.0.0.0/8', '2603:1030::/32')) '2603:10a6:102:488::5'
+        $Row.Verdict | Should -Be 'Service'
+        $Row.Source | Should -Match 'Microsoft-operated address \(Microsoft Corporation'
+        $Row.Org | Should -Be 'Microsoft Corporation'
+
+        $Azure = Get-Row (Get-Verdicts -Events $Access -AzureRanges @('2603:10a6::/32')) '2603:10a6:102:488::5'
+        $Azure.Verdict | Should -Not -Be 'Service' -Because 'an address in Azure compute can be rented'
+        @($Azure.Reasons | Where-Object Code -EQ 'HostingOrProxy').Text | Should -Be 'Hosting network (Microsoft Corporation)'
+
+        $SignedIn = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '2603:10a6:102:488::5' -Country 'CA')) '2603:10a6:102:488::5'
+        $SignedIn.Verdict | Should -Not -Be 'Service'
+    }
+
+    It 'takes a compliant device on a new address in the usual network and city for the user' {
+        $Compliant = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '203.0.113.50' -Compliant $true)) '203.0.113.50'
+        $Compliant.Verdict | Should -Be 'LikelyUser'
+        (Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '203.0.113.50')) '203.0.113.50').Verdict | Should -Be 'Unknown'
     }
 
     It 'classes an address in the Microsoft 365 ranges as a service even when the user signed in from it' {

@@ -1,7 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Management.Automation;
 using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace CIPP
 {
@@ -107,6 +111,82 @@ namespace CIPP
                     return el.GetDouble();
 
                 default: return null;
+            }
+        }
+
+        /// <summary>
+        /// Serializes like `ConvertTo-Json -InputObject $value -Depth $depth -Compress`, for the values
+        /// ConvertFrom-Json and PowerShell-built rows hold: PSCustomObject, IDictionary, IList, string,
+        /// bool, numbers, DateTime, Guid, enums and null. Returns null for anything else, or anything
+        /// nested deeper than depth, so the caller can fall back to ConvertTo-Json.
+        /// </summary>
+        public static string? ToJson(object? value, int depth = 100)
+        {
+            var sw = new StringWriter(CultureInfo.InvariantCulture);
+            using (var w = new JsonTextWriter(sw) { Formatting = Formatting.None })
+            {
+                if (!TryWrite(w, value, depth)) return null;
+            }
+            return sw.ToString();
+        }
+
+        private static bool TryWrite(JsonTextWriter w, object? v, int depth)
+        {
+            if (v is PSObject pso)
+            {
+                if (pso.BaseObject is PSCustomObject)
+                {
+                    if (depth < 0) return false;
+                    w.WriteStartObject();
+                    foreach (var p in pso.Properties)
+                    {
+                        object? pv;
+                        try { pv = p.Value; } catch { return false; }
+                        w.WritePropertyName(p.Name);
+                        if (!TryWrite(w, pv, depth - 1)) return false;
+                    }
+                    w.WriteEndObject();
+                    return true;
+                }
+                // ConvertTo-Json ignores note properties on strings and dates only; anything else with
+                // them is written as {"value":...}. Members is not enumerated: that builds every adapted member.
+                var baseObject = pso.BaseObject;
+                if (!(baseObject is string || baseObject is DateTime)
+                    && pso.Properties.Match("*", PSMemberTypes.NoteProperty).Count > 0) return false;
+                v = baseObject;
+            }
+
+            switch (v)
+            {
+                case null: w.WriteNull(); return true;
+                case string s: w.WriteValue(s); return true;
+                case bool b: w.WriteValue(b); return true;
+                case long l: w.WriteValue(l); return true;
+                case int i: w.WriteValue(i); return true;
+                case double d: w.WriteValue(d); return true;
+                case decimal m: w.WriteValue(m); return true;
+                case DateTime dt: w.WriteValue(dt); return true;
+                case Guid g: w.WriteValue(g.ToString()); return true;
+                case Enum e: w.WriteValue(Convert.ToInt64(e, CultureInfo.InvariantCulture)); return true;
+                case IDictionary dict:
+                    if (depth < 0) return false;
+                    w.WriteStartObject();
+                    foreach (DictionaryEntry e in dict)
+                    {
+                        w.WritePropertyName(e.Key.ToString() ?? string.Empty);
+                        if (!TryWrite(w, e.Value, depth - 1)) return false;
+                    }
+                    w.WriteEndObject();
+                    return true;
+                case IList list:
+                    if (depth < 0) return false;
+                    w.WriteStartArray();
+                    foreach (var x in list)
+                        if (!TryWrite(w, x, depth - 1)) return false;
+                    w.WriteEndArray();
+                    return true;
+                default:
+                    return false;
             }
         }
     }

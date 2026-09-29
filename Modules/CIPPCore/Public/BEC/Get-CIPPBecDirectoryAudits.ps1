@@ -38,6 +38,7 @@ function Get-CIPPBecDirectoryAudits {
     $Responses = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true
 
     $Flagged = @($Heuristics.directoryAudit.flaggedActivities)
+    $SensitiveUpdate = [string]($Heuristics.directoryAudit.sensitiveUpdateRegex ?? '(?i)StrongAuthentication|AlternativeSecurityId|otherMails')
     $Errors = [System.Collections.Generic.List[string]]::new()
     $Seen = [System.Collections.Generic.HashSet[string]]::new()
     $Rows = [System.Collections.Generic.List[object]]::new()
@@ -64,6 +65,12 @@ function Get-CIPPBecDirectoryAudits {
                 })
             $Activity = [string]$Item.activityDisplayName
             $IsFlagged = ($Activity -in $Flagged) -or ($Activity -like 'User registered*security info*') -or ($Activity -like '*Strong Authentication*')
+            # a plain 'Update user' counts only when it touches sign-in methods, and not when the MFA service
+            # itself refreshes the Authenticator device token (new methods also log a security-info event)
+            if (-not $IsFlagged -and $Activity -eq 'Update user' -and $Actor -notmatch '(?i)StrongAuthenticationService') {
+                $ChangedNames = @(foreach ($T in @($Item.targetResources)) { foreach ($P in @($T.modifiedProperties)) { [string]$P.displayName } })
+                $IsFlagged = [bool](@($ChangedNames | Where-Object { $_ -match $SensitiveUpdate -and $_ -ne 'Included Updated Properties' }).Count)
+            }
             $Rows.Add([pscustomobject]@{
                     Id                  = $Item.id
                     ActivityDateTime    = if ($Item.activityDateTime) { ([datetime]$Item.activityDateTime).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null }

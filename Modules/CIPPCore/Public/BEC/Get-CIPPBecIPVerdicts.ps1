@@ -10,7 +10,8 @@ function Get-CIPPBecIPVerdicts {
         - Service: an address in Microsoft 365's published service ranges (ServiceRanges - Microsoft
           acting for the user, whether or not it shows in the user's sign-ins), a Microsoft network
           address the user never signed in from (Exchange and other
-          services act from their own addresses), one whose sign-ins are all by a service
+          services act from their own addresses; an address no network announces counts by its
+          registered owner when it is outside Azure's rentable AzureRanges), one whose sign-ins are all by a service
           application (CIPP's own, or Microsoft's Partner Customer Delegated Administration - see
           ipVerdict.serviceAppIds), or one seen only on CIPP or partner actions. An
           address the user signed in from is scored normally even on Microsoft's network - attackers
@@ -59,6 +60,8 @@ function Get-CIPPBecIPVerdicts {
         The CIPP application id; sign-ins by it (and by ipVerdict.serviceAppIds) are service sign-ins.
     .PARAMETER ServiceRanges
         Microsoft 365's published service ranges (Get-CIPPMicrosoft365IPRanges), as CIDRs.
+    .PARAMETER AzureRanges
+        Azure's public compute ranges (Get-CIPPAzureCloudRanges), as CIDRs.
     .FUNCTIONALITY
         Internal
     #>
@@ -76,7 +79,8 @@ function Get-CIPPBecIPVerdicts {
         $Heuristics,
         [object[]]$TechnicianIPs = @(),
         [string]$CippAppId = $env:ApplicationID,
-        [string[]]$ServiceRanges = @()
+        [string[]]$ServiceRanges = @(),
+        [string[]]$AzureRanges = @()
     )
 
     $Cfg = $Heuristics.ipVerdict
@@ -101,20 +105,26 @@ function Get-CIPPBecIPVerdicts {
 
     # the service ranges are parsed once and matched by bytes (Test-IpInRange costs ~0.4 ms a call,
     # and ~90 ranges are checked for every address)
-    $ServiceNets = @(foreach ($Range in @($ServiceRanges | Where-Object { $_ })) {
-            $Net, $Bits = ([string]$Range) -split '/', 2
-            $Parsed = $null
-            if (-not [System.Net.IPAddress]::TryParse($Net, [ref]$Parsed)) { continue }
-            $NetBytes = $Parsed.GetAddressBytes()
-            $Length = if ($Bits) { [int]$Bits } else { $NetBytes.Length * 8 }
-            [pscustomobject]@{ Range = [string]$Range; Bytes = $NetBytes; Whole = [int][Math]::Truncate($Length / 8); Mask = (0xFF -shl (8 - $Length % 8)) -band 0xFF; Partial = ($Length % 8) -ne 0 }
-        })
-    $ServiceRangeOf = {
-        param($IP)
+    $ParseNets = {
+        param($Ranges)
+        @(foreach ($Range in @($Ranges | Where-Object { $_ })) {
+                $Net, $Bits = ([string]$Range) -split '/', 2
+                $Parsed = $null
+                if (-not [System.Net.IPAddress]::TryParse($Net, [ref]$Parsed)) { continue }
+                $NetBytes = $Parsed.GetAddressBytes()
+                $Length = if ($Bits) { [int]$Bits } else { $NetBytes.Length * 8 }
+                [pscustomobject]@{ Range = [string]$Range; Bytes = $NetBytes; Whole = [int][Math]::Truncate($Length / 8); Mask = (0xFF -shl (8 - $Length % 8)) -band 0xFF; Partial = ($Length % 8) -ne 0 }
+            })
+    }
+    $ServiceNets = & $ParseNets $ServiceRanges
+    # thousands of Azure ranges, parsed only if an address needs them
+    $Lazy = @{ AzureNets = $null }
+    $RangeOf = {
+        param($Nets, $IP)
         $Parsed = $null
-        if ($ServiceNets.Count -eq 0 -or -not [System.Net.IPAddress]::TryParse([string]$IP, [ref]$Parsed)) { return $null }
+        if ($Nets.Count -eq 0 -or -not [System.Net.IPAddress]::TryParse([string]$IP, [ref]$Parsed)) { return $null }
         $Bytes = $Parsed.GetAddressBytes()
-        foreach ($Net in $ServiceNets) {
+        foreach ($Net in $Nets) {
             if ($Net.Bytes.Length -ne $Bytes.Length) { continue }
             $Match = $true
             for ($i = 0; $i -lt $Net.Whole; $i++) { if ($Bytes[$i] -ne $Net.Bytes[$i]) { $Match = $false; break } }
@@ -122,6 +132,12 @@ function Get-CIPPBecIPVerdicts {
             if ($Match) { return $Net.Range }
         }
         return $null
+    }
+    $ServiceRangeOf = { param($IP) & $RangeOf $ServiceNets $IP }
+    $AzureRangeOf = {
+        param($IP)
+        if ($null -eq $Lazy.AzureNets) { $Lazy.AzureNets = & $ParseNets $AzureRanges }
+        & $RangeOf $Lazy.AzureNets $IP
     }
 
     # --- gather everything known about each address ---
@@ -228,6 +244,8 @@ function Get-CIPPBecIPVerdicts {
         if ($Country -eq 'Unknown') { $Country = $null }
         $City = if ($Entry.City) { $Entry.City } else { [string]$GeoInfo.City }
         $AsName = [string]$GeoInfo.ASName
+        $Org = [string]$GeoInfo.Org
+        $NetworkName = if ($AsName -and $AsName -ne 'Unknown') { $AsName } elseif ($Org -and $Org -ne 'Unknown') { $Org }
         $Hosting = & $Truthy $GeoInfo.Hosting
         $Proxy = & $Truthy $GeoInfo.Proxy
         $Peer = $Peers[$IP]
@@ -241,7 +259,7 @@ function Get-CIPPBecIPVerdicts {
         # an address the user signed in from is scored even on Microsoft's network (attackers rent Azure
         # machines); a Microsoft address with no sign-ins is classed as a service before the score counts
         if ($Hosting -or $Proxy) {
-            & $Add 'HostingOrProxy' (& $Weight 'hostingOrProxy' 3) "$(if ($Proxy) { 'Proxy/VPN' } else { 'Hosting' }) network$(if ($AsName) { " ($AsName)" })"
+            & $Add 'HostingOrProxy' (& $Weight 'hostingOrProxy' 3) "$(if ($Proxy) { 'Proxy/VPN' } else { 'Hosting' }) network$(if ($NetworkName) { " ($NetworkName)" })"
         }
         if ($UsageLocation -and $Country -and $Country -ne $UsageLocation) {
             & $Add 'Foreign' (& $Weight 'foreign' 2) "Outside the usage location ($Country, expected $UsageLocation)"
@@ -275,7 +293,7 @@ function Get-CIPPBecIPVerdicts {
             if ($Place -and [double]$Place.Share -ge $KnownLocationShare) { & $Add 'KnownLocation' (& $Weight 'knownLocation' -1) "The user's usual location ($City, $Country)" }
             elseif (-not $BaselineCountries.ContainsKey($Country) -and -not $Known) { & $Add 'NewLocation' (& $Weight 'newLocation' 1) "A country ($Country) the user never signed in from" }
         }
-        if ($Entry.Compliant) { & $Add 'CompliantDevice' (& $Weight 'compliantDevice' -2) 'Signed in from a compliant device' }
+        if ($Entry.Compliant) { & $Add 'CompliantDevice' (& $Weight 'compliantDevice' -4) 'Signed in from a compliant device' }
         if ($Peer) {
             $PeerOn = if ($Peer.Network) { "its IPv6 network ($($Peer.Network))" } else { 'it' }
             if ([int]$Peer.OtherUsersBefore -ge 2 -and -not ($Hosting -or $Proxy)) {
@@ -300,7 +318,7 @@ function Get-CIPPBecIPVerdicts {
         $Score = [int](($Reasons | Measure-Object -Property Weight -Sum).Sum)
         $Rows.Add([pscustomobject]@{
                 IP = $IP; Entry = $Entry; Reasons = $Reasons; Score = $Score; OnlyFailed = $OnlyFailed
-                Country = $Country; City = $City; ASName = $AsName; Hosting = $Hosting; Proxy = $Proxy; Peer = $Peer
+                Country = $Country; City = $City; ASName = $AsName; Org = $Org; Hosting = $Hosting; Proxy = $Proxy; Peer = $Peer
                 Known = $Known; ServiceRange = & $ServiceRangeOf $IP
             })
     }
@@ -318,6 +336,11 @@ function Get-CIPPBecIPVerdicts {
         if ($Row.ServiceRange) { return [pscustomobject]@{ Verdict = 'Service'; Source = "Microsoft 365 service address ($($Row.ServiceRange))" } }
         $SignInCount = $Row.Entry.SignIns + $Row.Entry.NonInteractive
         if ($SignInCount -eq 0 -and $Row.ASName -match $ServiceAsn) { return [pscustomobject]@{ Verdict = 'Service'; Source = "Microsoft service address ($($Row.ASName))" } }
+        # Microsoft's internal ranges (Exchange's mailbox servers) are announced by no network, so ip-api
+        # has no network name, only the registered owner; Azure compute anyone can rent is excluded
+        if ($SignInCount -eq 0 -and $Row.ASName -in @('', 'Unknown') -and $Row.Org -match $ServiceAsn -and -not (& $AzureRangeOf $Row.IP)) {
+            return [pscustomobject]@{ Verdict = 'Service'; Source = "Microsoft-operated address ($($Row.Org), not publicly routed and outside Azure compute)" }
+        }
         $OnlyServiceActors = @($Row.Entry.ActorKinds | Where-Object { $_ -notin $ServiceActors }).Count -eq 0
         if ($SignInCount -gt 0 -and $Row.Entry.CippSignIns -eq $SignInCount -and $OnlyServiceActors) {
             return [pscustomobject]@{ Verdict = 'Service'; Source = 'Sign-ins only by CIPP or partner delegated administration, not by the user' }
@@ -363,6 +386,7 @@ function Get-CIPPBecIPVerdicts {
                 City                   = $_.City
                 ASN                    = $_.Entry.ASN
                 ASName                 = $_.ASName
+                Org                    = $_.Org
                 Hosting                = $_.Hosting
                 Proxy                  = $_.Proxy
                 SignIns                = $_.Entry.SignIns

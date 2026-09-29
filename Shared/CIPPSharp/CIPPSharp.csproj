@@ -21,6 +21,8 @@
     <!-- Compile-only: ExcludeAssets="runtime" keeps the System.Management.Automation facade out of bin\
          (PowerShell supplies the real assembly at runtime) while still compiling against its types. -->
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.1" PrivateAssets="all" ExcludeAssets="runtime" />
+    <!-- Compile-only: PowerShell ships Newtonsoft.Json and uses it for ConvertTo-Json; CippJson.ToJson writes with the same library. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
   <ItemGroup>
     <!-- Server-side PDF renderer. MIT, zero third-party deps: only OfficeIMO.Pdf.dll + OfficeIMO.Core.dll land in bin\.
