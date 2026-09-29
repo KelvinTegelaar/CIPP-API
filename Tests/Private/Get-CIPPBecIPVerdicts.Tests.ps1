@@ -1,6 +1,6 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    foreach ($File in @('Authentication/ConvertTo-CIPPIPRange.ps1', 'Authentication/Test-IpInRange.ps1', 'Authentication/Resolve-CIPPIPAllowBlockList.ps1', 'BEC/ConvertTo-CIPPBecHostAddress.ps1', 'BEC/Get-CIPPBecIPVerdicts.ps1', 'BEC/ConvertTo-CIPPBecIPEvents.ps1')) {
+    foreach ($File in @('Authentication/ConvertTo-CIPPIPRange.ps1', 'Authentication/Test-IpInRange.ps1', 'Authentication/Resolve-CIPPIPAllowBlockList.ps1', 'BEC/ConvertTo-CIPPBecHostAddress.ps1', 'BEC/Get-CIPPBecIPVerdicts.ps1', 'BEC/Find-CIPPBecApprovedTravel.ps1', 'BEC/ConvertTo-CIPPBecIPEvents.ps1')) {
         . (Join-Path $RepoRoot "Modules/CIPPCore/Public/$File")
     }
     $script:Heuristics = Get-Content (Join-Path $RepoRoot 'Config/BecHeuristics.json') -Raw | ConvertFrom-Json
@@ -24,8 +24,8 @@ BeforeAll {
         '2603:10a6:102:488::5' = [pscustomobject]@{ CountryOrRegion = 'CA'; City = 'Toronto'; Proxy = $false; Hosting = $true; ASName = 'Unknown'; Org = 'Microsoft Corporation' }
     }
     function Get-Verdicts {
-        param($SignIns = @(), $NonInteractive = @(), $Events = @(), $Guidance = @(), $Overrides = @(), $Peers = @{}, $Baseline = $script:Baseline, $ServiceRanges = @(), $AzureRanges = @())
-        Get-CIPPBecIPVerdicts -SignIns $SignIns -NonInteractiveSignIns $NonInteractive -Events $Events -Baseline $Baseline -Guidance $Guidance -Overrides $Overrides -Peers $Peers -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -ServiceRanges $ServiceRanges -AzureRanges $AzureRanges
+        param($SignIns = @(), $NonInteractive = @(), $Events = @(), $Guidance = @(), $Overrides = @(), $Peers = @{}, $Baseline = $script:Baseline, $ServiceRanges = @(), $AzureRanges = @(), $TravelWindows = @())
+        Get-CIPPBecIPVerdicts -SignIns $SignIns -NonInteractiveSignIns $NonInteractive -Events $Events -Baseline $Baseline -Guidance $Guidance -Overrides $Overrides -Peers $Peers -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -ServiceRanges $ServiceRanges -AzureRanges $AzureRanges -TravelWindows $TravelWindows
     }
     function Get-Row { param($Rows, $IP) $Rows | Where-Object IP -EQ $IP }
 }
@@ -199,6 +199,22 @@ Describe 'Get-CIPPBecIPVerdicts' {
         $Row.Verdict | Should -Be 'Suspicious'
         $Row.Source | Should -Match 'Investigator .*hotel wifi'
         @($Row.Reasons.Code) | Should -Not -Contain 'SharedSession'
+    }
+
+    It 'does not count the location of an address used on an approved trip, but still judges the rest' {
+        $Trips = @([pscustomobject]@{ PolicyName = 'Travel Policy victim - Spain'; Countries = @('ES'); Start = '2026-09-18T00:00:00Z'; End = '2026-09-25T00:00:00Z' })
+        $OnTrip = New-SignIn -IP '192.0.2.50' -Country 'ES' -City 'Madrid' -ASN '3352'
+        $Row = Get-Row (Get-Verdicts -SignIns @($OnTrip) -TravelWindows $Trips) '192.0.2.50'
+        @($Row.Reasons.Code) | Should -Contain 'ApprovedTravel'
+        @($Row.Reasons.Code) | Should -Not -Contain 'Foreign'
+        @($Row.Reasons.Code) | Should -Not -Contain 'NewLocation'
+        @($Row.Reasons.Code) | Should -Contain 'NewToUser'
+
+        $Vps = New-SignIn -IP '198.51.100.7' -Country 'ES' -City 'Madrid' -ASN '14061'
+        @((Get-Row (Get-Verdicts -SignIns @($Vps) -TravelWindows $Trips) '198.51.100.7').Reasons.Code) | Should -Contain 'HostingOrProxy' -Because 'a trip only explains the country'
+
+        $After = New-SignIn -IP '192.0.2.50' -Country 'ES' -City 'Madrid' -ASN '3352' -When '2026-09-27T01:00:00Z'
+        @((Get-Row (Get-Verdicts -SignIns @($After) -TravelWindows $Trips) '192.0.2.50').Reasons.Code) | Should -Contain 'Foreign' -Because 'the trip is over'
     }
 
     It 'lifts an unknown address that shares an Entra session with a likely-attacker address' {

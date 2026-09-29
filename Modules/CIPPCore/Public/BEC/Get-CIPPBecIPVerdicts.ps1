@@ -28,7 +28,9 @@ function Get-CIPPBecIPVerdicts {
         ran or reviewed the investigation (most likely the partner's own, so a strong start towards
         trusted - but still judged, since a technician's address can be shared or wrong), or an address
         with only failed sign-ins or unfinished self-service password resets (spray noise, which is
-        also capped at Suspicious). An IPv6 address counts as known to the user when its /64 was used
+        also capped at Suspicious). An address used from a country on an approved trip (vacation mode
+        travel policy, TravelWindows) during that trip is not counted as foreign or a new country;
+        everything else about it is still judged. An IPv6 address counts as known to the user when its /64 was used
         before the window: devices rotate through privacy addresses inside their /64.
         A final pass lifts addresses that share an Entra or mailbox session with a likely-attacker
         address, because one session moving between addresses is one actor - but never an address
@@ -64,6 +66,8 @@ function Get-CIPPBecIPVerdicts {
         Microsoft 365's published service ranges (Get-CIPPMicrosoft365IPRanges), as CIDRs.
     .PARAMETER AzureRanges
         Azure's public compute ranges (Get-CIPPAzureCloudRanges), as CIDRs.
+    .PARAMETER TravelWindows
+        The user's approved trips (Get-CIPPBecTravelWindows): { PolicyName, Countries, Start, End }.
     .FUNCTIONALITY
         Internal
     #>
@@ -82,7 +86,8 @@ function Get-CIPPBecIPVerdicts {
         [object[]]$TechnicianIPs = @(),
         [string]$CippAppId = $env:ApplicationID,
         [string[]]$ServiceRanges = @(),
-        [string[]]$AzureRanges = @()
+        [string[]]$AzureRanges = @(),
+        [object[]]$TravelWindows = @()
     )
 
     $Cfg = $Heuristics.ipVerdict
@@ -152,7 +157,7 @@ function Get-CIPPBecIPVerdicts {
                 IP = $IP; SignIns = 0; NonInteractive = 0; Successful = 0; Failed = 0; ResetAttempts = 0; PasswordAccepted = 0; FirstSeen = $null; LastSeen = $null
                 Country = $null; City = $null; ASN = $null; Risk = 'none'; Scripted = $false; Compliant = $false
                 Kinds = [System.Collections.Generic.HashSet[string]]::new(); FlaggedKinds = [System.Collections.Generic.HashSet[string]]::new()
-                Events = 0; ActorKinds = [System.Collections.Generic.HashSet[string]]::new(); Sessions = [System.Collections.Generic.HashSet[string]]::new(); CippSignIns = 0
+                Events = 0; ActorKinds = [System.Collections.Generic.HashSet[string]]::new(); Sessions = [System.Collections.Generic.HashSet[string]]::new(); CippSignIns = 0; Trip = $null
             }
         }
         $IPs[$IP]
@@ -183,6 +188,7 @@ function Get-CIPPBecIPVerdicts {
             if ($SignIn.UserAgent -and [string]$SignIn.UserAgent -match $ScriptedAgent) { $Entry.Scripted = $true }
             if (& $Truthy $SignIn.DeviceCompliant) { $Entry.Compliant = $true }
             if ($SignIn.SessionId) { $null = $Entry.Sessions.Add("entra:$($SignIn.SessionId)") }
+            if (-not $Entry.Trip) { $Entry.Trip = Find-CIPPBecApprovedTravel -TravelWindows $TravelWindows -Country ([string]$SignIn.Country) -When $SignIn.CreatedDateTime }
         }
     }
     foreach ($Activity in @($Events | Where-Object { $_ })) {
@@ -194,6 +200,7 @@ function Get-CIPPBecIPVerdicts {
         if ($Activity.Flagged -eq $true -and $Activity.Kind) { $null = $Entry.FlaggedKinds.Add([string]$Activity.Kind) }
         $null = $Entry.ActorKinds.Add([string]($Activity.ActorKind ?? 'User'))
         foreach ($Session in @($Activity.SessionIds | Where-Object { $_ })) { $null = $Entry.Sessions.Add("mailbox:$Session") }
+        if (-not $Entry.Trip) { $Entry.Trip = Find-CIPPBecApprovedTravel -TravelWindows $TravelWindows -Country ([string]$Geo[$IP].CountryOrRegion) -When $Activity.When }
         & $Seen $Entry $Activity.When
     }
 
@@ -266,7 +273,10 @@ function Get-CIPPBecIPVerdicts {
         if ($Hosting -or $Proxy) {
             & $Add 'HostingOrProxy' (& $Weight 'hostingOrProxy' 3) "$(if ($Proxy) { 'Proxy/VPN' } else { 'Hosting' }) network$(if ($NetworkName) { " ($NetworkName)" })"
         }
-        if ($UsageLocation -and $Country -and $Country -ne $UsageLocation) {
+        $Trip = if ($Entry.Trip -and $Country -in @($Entry.Trip.Countries)) { $Entry.Trip }
+        if ($Trip) {
+            & $Add 'ApprovedTravel' (& $Weight 'approvedTravel' 0) "Approved travel to $Country ($($Trip.PolicyName)), so the location is not counted"
+        } elseif ($UsageLocation -and $Country -and $Country -ne $UsageLocation) {
             & $Add 'Foreign' (& $Weight 'foreign' 2) "Outside the usage location ($Country, expected $UsageLocation)"
         }
         if ($Entry.Risk -in @('medium', 'high')) { & $Add 'RiskySignIn' (& $Weight 'riskySignIn' 3) "Entra rated a sign-in $($Entry.Risk) risk" }
@@ -300,7 +310,7 @@ function Get-CIPPBecIPVerdicts {
         if ($BaselineOk -and $Country) {
             $Place = $BaselinePlaces["$Country|$City"]
             if ($Place -and [double]$Place.Share -ge $KnownLocationShare) { & $Add 'KnownLocation' (& $Weight 'knownLocation' -1) "The user's usual location ($City, $Country)" }
-            elseif (-not $BaselineCountries.ContainsKey($Country) -and -not $Known) { & $Add 'NewLocation' (& $Weight 'newLocation' 1) "A country ($Country) the user never signed in from" }
+            elseif (-not $BaselineCountries.ContainsKey($Country) -and -not $Known -and -not $Trip) { & $Add 'NewLocation' (& $Weight 'newLocation' 1) "A country ($Country) the user never signed in from" }
         }
         if ($Entry.Compliant) { & $Add 'CompliantDevice' (& $Weight 'compliantDevice' -4) 'Signed in from a compliant device' }
         if ($Peer) {

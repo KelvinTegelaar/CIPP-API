@@ -183,6 +183,7 @@
       "riskySignInLow": 1,
       "scriptedClient": 3,
       "passwordAccepted": 4,
+      "approvedTravel": 0,
       "widerAttack": 2,
       "sharedSession": 3,
       "blockListHint": 2,

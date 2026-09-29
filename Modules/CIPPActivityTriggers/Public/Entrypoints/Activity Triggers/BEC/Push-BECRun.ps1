@@ -760,6 +760,11 @@ function Push-BECRun {
         & $Mark 'RegisteredDevices' $Registered
         $RegisteredDevices = @($Registered.Data)
 
+        Write-Information 'Full scope: approved travel'
+        $Travel = & $Collect 'TravelWindows' { Get-CIPPBecTravelWindows -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName }
+        & $Mark 'TravelWindows' $Travel
+        $TravelWindows = @($Travel.Data)
+
         Write-Information 'Full scope: non-interactive sign-ins'
         $NonInteractive = & $Collect 'NonInteractiveSignIns' { Get-CIPPBecNonInteractiveSignIns -TenantFilter $TenantFilter -UserId $SuspectUser -UsageLocation $UsageLocation -StartDate $startDate }
         & $Mark 'NonInteractiveSignIns' $NonInteractive
@@ -823,7 +828,7 @@ function Push-BECRun {
         }
         # the technician who started the run: their address is theirs, not the user's or the attacker's
         $TechnicianIPs = @(if ($Item.RequestedFromIP) { [pscustomobject]@{ IP = [string]$Item.RequestedFromIP; By = [string]$Item.RequestedBy } })
-        $IPAnalysis = & $Collect 'IPAnalysis' { Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Results $IPDraft -Heuristics $Heuristics -WindowStart $startDate -UsageLocation $UsageLocation -Anchor $UserName -SampleColleagues -TechnicianIPs $TechnicianIPs }
+        $IPAnalysis = & $Collect 'IPAnalysis' { Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Results $IPDraft -Heuristics $Heuristics -WindowStart $startDate -UsageLocation $UsageLocation -Anchor $UserName -SampleColleagues -TechnicianIPs $TechnicianIPs -TravelWindows $TravelWindows }
         if ($IPAnalysis.PSObject.Properties['Verdicts']) {
             & $Mark 'SignInBaseline' $IPAnalysis.Baseline
             & $Mark 'IPGuidance' $IPAnalysis.Guidance
@@ -896,10 +901,12 @@ function Push-BECRun {
             if ([string]::IsNullOrWhiteSpace($Clean)) { return $null }
             return $GeoMap[$Clean]
         }
-        # $null when either side of the comparison is unknown - only a definite mismatch counts as foreign
+        # $null when either side of the comparison is unknown - only a definite mismatch counts as foreign,
+        # and a country on an approved trip is not foreign while the trip lasts
         $TestForeign = {
-            param($Country)
+            param($Country, $When)
             if (-not $UsageLocation -or [string]::IsNullOrWhiteSpace($Country) -or $Country -eq 'Unknown') { return $null }
+            if ($Country -ne $UsageLocation -and (Find-CIPPBecApprovedTravel -TravelWindows $TravelWindows -Country $Country -When $When)) { return $false }
             return ($Country -ne $UsageLocation)
         }
 
@@ -908,7 +915,7 @@ function Push-BECRun {
             $Row | Add-Member -NotePropertyMembers ([ordered]@{
                     Country         = $Geo.CountryOrRegion
                     City            = $Geo.City
-                    ForeignLocation = (& $TestForeign $Geo.CountryOrRegion)
+                    ForeignLocation = (& $TestForeign $Geo.CountryOrRegion ($Row.ActivityDateTime ?? $Row.Date ?? $Row.FirstSeen ?? $Row.CreationTime))
                 }) -Force
         }
         foreach ($Row in @($SentMessages)) {
@@ -916,11 +923,11 @@ function Push-BECRun {
             $Row | Add-Member -NotePropertyMembers ([ordered]@{
                     Country         = $Geo.CountryOrRegion
                     City            = $Geo.City
-                    ForeignLocation = (& $TestForeign $Geo.CountryOrRegion)
+                    ForeignLocation = (& $TestForeign $Geo.CountryOrRegion $Row.Received)
                 }) -Force
         }
-        foreach ($Row in @($SuspectUserSignIns)) {
-            $Row | Add-Member -NotePropertyName 'ForeignLocation' -NotePropertyValue (& $TestForeign $Row.Country) -Force
+        foreach ($Row in @($SuspectUserSignIns) + @($NonInteractiveSignIns)) {
+            if ($Row) { $Row | Add-Member -NotePropertyName 'ForeignLocation' -NotePropertyValue (& $TestForeign $Row.Country $Row.CreatedDateTime) -Force }
         }
 
         # activity from a relay, a Microsoft service or the user's own device is not foreign activity, wherever it geolocates
@@ -992,6 +999,7 @@ function Push-BECRun {
             IPPeers                  = @($IPPeers)
             IPOverrides              = @()
             IPTechnicians            = @($TechnicianIPs)
+            TravelWindows            = @($TravelWindows)
             # item-level detail of the attacker-side addresses, and the mailboxes the account reaches
             AttackerMailActivity     = @($AttackerMailActivity)
             AttackerMailSummary      = $AttackerMailSummary

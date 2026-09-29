@@ -121,7 +121,7 @@ function Invoke-CIPPBecIPReview {
 
         $Current = 3
         & $Step 3 'running' 'In progress'
-        $Analysis = Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -Results $Results -Heuristics $Heuristics -WindowStart $StartDate -UsageLocation $UsageLocation -Anchor $UserName -Baseline $Results.IPBaseline -KnownPeers @($Results.IPPeers) -Overrides $CaseOverrides -ExtraPeers $ExtraPeers -TechnicianIPs $TechnicianIPs
+        $Analysis = Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -Results $Results -Heuristics $Heuristics -WindowStart $StartDate -UsageLocation $UsageLocation -Anchor $UserName -Baseline $Results.IPBaseline -KnownPeers @($Results.IPPeers) -Overrides $CaseOverrides -ExtraPeers $ExtraPeers -TechnicianIPs $TechnicianIPs -TravelWindows @($Results.TravelWindows | Where-Object { $_ })
         & $Mark 'SignInBaseline' $Analysis.Baseline
         & $Mark 'IPGuidance' $Analysis.Guidance
         & $Mark 'IPPeers' $Analysis.PeersResult
