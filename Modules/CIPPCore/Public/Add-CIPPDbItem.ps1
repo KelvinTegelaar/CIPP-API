@@ -232,7 +232,7 @@ function Add-CIPPDbItem {
                 RowKey       = "$Type-Count"
                 DataCount    = [int]$NewCount
                 Type         = $Type
-                Shape        = $ShapeJson
+                Shape        = [string]$ShapeJson
             } -Force
         }
 

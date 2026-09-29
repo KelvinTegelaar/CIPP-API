@@ -11,7 +11,8 @@ function Set-CIPPDBCacheTeamsVoice {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Teams Voice phone numbers' -sev Debug
 
         $TenantId = (Get-Tenants -TenantFilter $TenantFilter).customerId
-        $Users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=id,userPrincipalName,displayName" -tenantid $TenantFilter
+        $UserById = @{}
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=id,userPrincipalName,displayName" -tenantid $TenantFilter -Stream | ForEach-Object { $UserById[$_.id] = $_ }
         # Keep the cached rows in step with the live list, which resolves LocationId to a label.
         $LocationLookup = Get-CippTeamsLocationLookup -TenantFilter $TenantFilter
         $Skip = 0
@@ -23,7 +24,7 @@ function Set-CIPPDBCacheTeamsVoice {
                 -AdditionalHeaders @{ 'x-ms-tnm-applicationid' = '045268c0-445e-4ac1-9157-d58f67b167d9' }
             $Data = @($Results.TelephoneNumbers | ForEach-Object {
                     $CompleteRequest = $_ | Select-Object *,
-                    @{Name = 'AssignedTo'; Expression = { $Users | Where-Object -Property id -EQ $_.TargetId } },
+                    @{Name = 'AssignedTo'; Expression = { if ($_.TargetId) { $UserById[[string]$_.TargetId] } } },
                     @{Name = 'EmergencyLocation'; Expression = { if ($_.LocationId) { $LocationLookup[[string]$_.LocationId] } } }
                     if ($CompleteRequest.AcquisitionDate) {
                         $CompleteRequest.AcquisitionDate = $_.AcquisitionDate -split 'T' | Select-Object -First 1

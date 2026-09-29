@@ -40,16 +40,24 @@ function Set-CIPPDBCacheCopilotPolicySettings {
         $Values = [ordered]@{}
         $PolicyIds = [ordered]@{}
         $SucceededSettings = 0
+        $Responses = @{}
+        try {
+            foreach ($Response in @(New-GraphBulkRequest -tenantid $TenantFilter -Requests @(foreach ($Key in $SettingMap.Keys) { @{ id = $Key; method = 'GET'; url = "/copilot/admin/policySettings/$($SettingMap[$Key])" } }))) {
+                $Responses[$Response.id] = $Response
+            }
+        } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to get Copilot policy settings: $($_.Exception.Message)" -sev Warning
+        }
         foreach ($Key in $SettingMap.Keys) {
-            try {
-                $Current = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/copilot/admin/policySettings/$($SettingMap[$Key])" -tenantid $TenantFilter -SkipValueExtraction
+            $Current = $Responses[$Key]
+            if ($Current.status -eq 200) {
                 # Graph returns these as opaque strings; keep them as strings so the compare
                 # never turns "0" into a number and stops matching the configured value.
-                $Values[$Key] = if ($null -eq $Current.value) { $null } else { [string]$Current.value }
-                $PolicyIds[$Key] = $Current.policyId
+                $Values[$Key] = if ($null -eq $Current.body.value) { $null } else { [string]$Current.body.value }
+                $PolicyIds[$Key] = $Current.body.policyId
                 $SucceededSettings++
-            } catch {
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to get Copilot policy setting '$($SettingMap[$Key])': $($_.Exception.Message)" -sev Warning
+            } else {
+                if ($Current) { Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to get Copilot policy setting '$($SettingMap[$Key])': HTTP $($Current.status) $($Current.body.error.message)" -sev Warning }
                 $Values[$Key] = $null
                 $PolicyIds[$Key] = $null
             }

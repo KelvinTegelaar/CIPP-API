@@ -20,7 +20,7 @@ function Set-CIPPDBCacheCASMailboxes {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching CAS mailboxes' -sev Debug
 
         # Stream CAS mailboxes directly to batch processor
-        New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CasMailbox' |
+        New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CasMailbox' -StreamPages | ForEach-Object { $_.Value } |
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached CAS mailboxes successfully' -sev Debug
