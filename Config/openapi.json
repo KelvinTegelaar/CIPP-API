@@ -15271,7 +15271,7 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Advances a tenant to the next stage of a baseline (manual stage approval). The tenant\nreceives all standards from the new stage on the next engine run.",
+        "description": "Advances a tenant to the next stage of a baseline (manual stage approval), or with\naction 'evaluate' re-checks the next stage's conditions now instead of waiting for the\nscheduled run. The tenant receives all standards from the new stage on the next engine run.",
         "requestBody": {
           "required": true,
           "content": {
@@ -15279,6 +15279,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "evaluate: re-check the next stage's conditions now; anything else is a manual advance"
+                  },
                   "templateId": {
                     "type": "string"
                   },

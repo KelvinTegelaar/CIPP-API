@@ -25,7 +25,7 @@ function Start-CIPPBaselineOrchestrator {
 
     # A scoped on-demand run should not advance rollouts; the scheduled run does.
     if ($TriggeredBy -eq 'schedule') {
-        try { Invoke-CIPPBaselineGraduation } catch { Write-LogMessage -API 'Baselines' -message "Baseline graduation evaluation failed: $($_.Exception.Message)" -Sev 'Error' }
+        try { $null = Invoke-CIPPBaselineGraduation } catch { Write-LogMessage -API 'Baselines' -message "Baseline graduation evaluation failed: $($_.Exception.Message)" -Sev 'Error' }
     }
 
     # The run scope may arrive as a tenant group (the selector sends the group ID) -
