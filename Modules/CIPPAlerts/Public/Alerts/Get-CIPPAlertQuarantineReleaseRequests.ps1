@@ -55,6 +55,11 @@
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        # EXO throttling/timeouts are transient; don't page the MSP for a blip that clears on the next run.
+        if (Test-CippTransientError -Message $ErrorMessage.NormalizedError) {
+            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $($ErrorMessage.NormalizedError) (transient, will retry next run)" -sev Warning -LogData $ErrorMessage
+        } else {
+            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        }
     }
 }
