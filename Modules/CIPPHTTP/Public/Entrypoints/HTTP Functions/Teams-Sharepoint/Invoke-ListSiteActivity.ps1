@@ -54,15 +54,13 @@ function Invoke-ListSiteActivity {
         $AllResults = [System.Collections.Generic.List[object]]::new()
 
         if ($TenantFilter -eq 'AllTenants') {
-            $AnyItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'SiteActivity'
-            $Tenants = @($AnyItems | Where-Object { $_.RowKey -notlike '*-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'SiteActivity' -ByTenant
 
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
-
-            foreach ($Tenant in $Tenants) {
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
                 try {
-                    $TenantRows = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'SiteActivity')
+                    $TenantRows = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'SiteActivity' -Rows $TenantItems)
                     if (-not $TenantRows) { continue }
 
                     $CountRow = Get-CIPPDbItem -TenantFilter $Tenant -Type 'SiteActivity' -CountsOnly | Select-Object -First 1

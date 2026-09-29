@@ -13,21 +13,23 @@ function Get-CIPPOneDriveUsageReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     try {
         if ($TenantFilter -eq 'AllTenants') {
-            $AllSiteItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'OneDriveSiteListing'
-            $Tenants = @($AllSiteItems | Where-Object { $_.RowKey -ne 'OneDriveSiteListing-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
-
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'OneDriveSiteListing' -ByTenant
 
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
                 try {
-                    $TenantResults = Get-CIPPOneDriveUsageReport -TenantFilter $Tenant
+                    $TenantResults = Get-CIPPOneDriveUsageReport -TenantFilter $Tenant -DbItems @{ OneDriveSiteListing = $TenantItems }
                     foreach ($Result in $TenantResults) {
                         $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                         $AllResults.Add($Result)
@@ -39,7 +41,7 @@ function Get-CIPPOneDriveUsageReport {
             return $AllResults
         }
 
-        $SiteItems = @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveSiteListing' | Where-Object { $_.RowKey -ne 'OneDriveSiteListing-Count' })
+        $SiteItems = @($(if ($DbItems) { $DbItems['OneDriveSiteListing'] } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveSiteListing' }) | Where-Object { $_.RowKey -ne 'OneDriveSiteListing-Count' })
         if (-not $SiteItems) {
             throw 'No OneDrive site listing data found in reporting database. Sync OneDriveUsage cache first.'
         }

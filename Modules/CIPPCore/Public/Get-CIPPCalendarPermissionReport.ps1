@@ -27,23 +27,25 @@ function Get-CIPPCalendarPermissionReport {
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $false)]
-        [switch]$ByUser
+        [switch]$ByUser,
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     try {
         # Handle AllTenants
         if ($TenantFilter -eq 'AllTenants') {
             # Get all tenants that have calendar data
-            $AllCalendarItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'CalendarPermissions'
-            $Tenants = @($AllCalendarItems | Where-Object { $_.RowKey -ne 'CalendarPermissions-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
-
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'CalendarPermissions' -ByTenant
 
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
                 try {
-                    $TenantResults = Get-CIPPCalendarPermissionReport -TenantFilter $Tenant -ByUser:$ByUser
+                    $TenantResults = Get-CIPPCalendarPermissionReport -TenantFilter $Tenant -DbItems @{ CalendarPermissions = $TenantItems } -ByUser:$ByUser
                     foreach ($Result in $TenantResults) {
                         # Add Tenant property to each result
                         $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
@@ -86,7 +88,7 @@ function Get-CIPPCalendarPermissionReport {
         }
 
         # Get calendar permissions from reporting DB
-        $PermissionItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions'
+        $PermissionItems = $(if ($DbItems) { $DbItems['CalendarPermissions']; Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' -CountsOnly } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' })
         if (-not $PermissionItems) {
             throw 'No calendar permission data found in reporting database. Run a scan first.'
         }

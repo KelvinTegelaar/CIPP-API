@@ -4,23 +4,25 @@ function Get-CIPPTeamsActivityReport {
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
 
-        [string]$Type = 'TeamsUserActivityUser'
+        [string]$Type = 'TeamsUserActivityUser',
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     try {
         $DbType = "TeamsActivity$Type"
 
         if ($TenantFilter -eq 'AllTenants') {
-            $AnyItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type $DbType
-            $Tenants = @($AnyItems | Where-Object { $_.RowKey -notlike '*-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
-
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type $DbType -ByTenant
 
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
                 try {
-                    $TenantResults = Get-CIPPTeamsActivityReport -TenantFilter $Tenant -Type $Type
+                    $TenantResults = Get-CIPPTeamsActivityReport -TenantFilter $Tenant -Type $Type -DbItems @{ $DbType = $TenantItems }
                     foreach ($Result in $TenantResults) {
                         $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                         $AllResults.Add($Result)
@@ -32,7 +34,7 @@ function Get-CIPPTeamsActivityReport {
             return $AllResults | Sort-Object -Property UPN
         }
 
-        $Items = Get-CIPPDbItem -TenantFilter $TenantFilter -Type $DbType | Where-Object { $_.RowKey -notlike '*-Count' }
+        $Items = $(if ($DbItems) { $DbItems[$DbType] } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $DbType }) | Where-Object { $_.RowKey -notlike '*-Count' }
         if (-not $Items) {
             throw "No cached Teams activity data found for $TenantFilter. Run a cache sync first."
         }
