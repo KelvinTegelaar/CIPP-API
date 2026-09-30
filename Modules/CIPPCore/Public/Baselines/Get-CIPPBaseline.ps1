@@ -142,7 +142,8 @@ function Get-CIPPBaseline {
                     name            = $StageDefinition.name
                     logic           = $StageDefinition.logic
                     conditions      = @($StageDefinition.conditions)
-                    standards       = @($StageDeltas.standardName)
+                    # Enumerated explicitly: member access on an empty array yields a lone $null.
+                    standards       = @($StageDeltas | ForEach-Object { $_.standardName })
                     standardsConfig = @($StageDeltas | ForEach-Object {
                             [PSCustomObject]@{
                                 standard         = (($_.standardName) -split '#')[0]

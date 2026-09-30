@@ -113,6 +113,37 @@ Describe 'Get-CIPPBaseline source/isSynced projection' {
     }
 }
 
+Describe 'Get-CIPPBaseline empty stages' {
+    BeforeEach {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            param($Context, $Filter)
+            if ($Filter -like "*PartitionKey eq 'rollout'*") {
+                @(
+                    [pscustomobject]@{
+                        RowKey       = 'baseline-7'
+                        templateName = 'Empty Stage Baseline'
+                        Stages       = '[{"name":"Default","logic":"and","conditions":[]},{"name":"Stage 2","logic":"and","conditions":[]}]'
+                    }
+                )
+            } elseif ($Filter -like "*standardItem*") {
+                @(
+                    [pscustomobject]@{ scope = 'tenant'; scopeId = 'tenant1.onmicrosoft.com'; scopeName = 'tenant1.onmicrosoft.com'; stage = 1; standardName = 'Standard1'; expectedValue = '{}'; remediateEnabled = $false }
+                )
+            } else {
+                @()
+            }
+        }
+    }
+
+    It 'returns an empty standards list for a stage with no standards, never a null entry' {
+        $Result = Get-CIPPBaseline -ID 'baseline-7'
+        @($Result.stages).Count | Should -Be 2
+        @($Result.stages[0].standards) | Should -Be @('Standard1')
+        @($Result.stages[1].standards).Count | Should -Be 0
+        @($Result.stages[1].standardsConfig).Count | Should -Be 0
+    }
+}
+
 Describe 'Get-CIPPBaseline excluded tenant group expansion' {
     BeforeEach {
         Mock -CommandName Get-TenantGroups -MockWith {
