@@ -22,6 +22,7 @@ BeforeAll {
 Describe 'New-GradientServiceSyncRun licence sync' {
     BeforeEach {
         $script:CountPosts = [System.Collections.Generic.List[object]]::new()
+        $script:Sessions = [System.Collections.Generic.List[object]]::new()
 
         Mock Get-CIPPTable { @{} }
         Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ config = '{"Gradient":{}}' } }
@@ -40,6 +41,7 @@ Describe 'New-GradientServiceSyncRun licence sync' {
             }
         }
         Mock Invoke-RestMethod {
+            $script:Sessions.Add($WebSession)
             if ($Uri -like '*/organization/accounts') { return @() }
             if ($Uri -like '*/vendor-api/organization') { return [pscustomobject]@{ Status = 'active' } }
             if ($Uri -like '*/vendor-api') { return [pscustomobject]@{ data = [pscustomobject]@{ skus = @([pscustomobject]@{ name = 'Microsoft 365 E3'; id = 'svc-1' }) } } }
@@ -56,6 +58,15 @@ Describe 'New-GradientServiceSyncRun licence sync' {
         $script:CountPosts[0].unitCount | Should -BeOfType [long]
         Should -Invoke New-GraphGetRequest -Times 0 -Exactly
         Should -Invoke New-CIPPDbRequest -ParameterFilter { $Type -eq 'LicenseOverview' } -Times 2 -Exactly
+    }
+
+    It 'sends every Gradient call on one shared web session' {
+        New-GradientServiceSyncRun
+
+        $script:Sessions.Count | Should -BeGreaterThan 3
+        @($script:Sessions | Where-Object { $null -eq $_ }).Count | Should -Be 0
+        $script:Sessions[0] | Should -BeOfType [Microsoft.PowerShell.Commands.WebRequestSession]
+        @($script:Sessions | Where-Object { -not [object]::ReferenceEquals($_, $script:Sessions[0]) }).Count | Should -Be 0
     }
 
     It 'skips a tenant with no cached licence data and says so' {
