@@ -88,7 +88,7 @@ Describe 'Invoke-ExecBECCheck' {
             $Response.Body.Status | Should -Be 'Waiting'
             Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $Replace.IsPresent -and $Properties.Status -eq 'Waiting' -and $Properties.UserId -eq 'u1' -and $Properties.RequestedBy -eq 'tech@msp.com' -and $CaseId -eq 'BEC-20260820120000-new001' }
             Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-new001' -and $Names -contains 'user@contoso.com' -and @($StepTitles).Count -eq 14 -and $Source -eq 'BEC' }
-            Should -Invoke Start-CIPPOrchestrator -Times 1 -ParameterFilter { $InputObject.OrchestratorName -eq 'BECRunOrchestrator' -and $InputObject.Batch[0].FunctionName -eq 'BECRun' -and $InputObject.Batch[0].CaseId -eq 'BEC-20260820120000-new001' -and $InputObject.Batch[0].UserID -eq 'u1' -and $InputObject.Batch[0].RequestedFromIP -eq '2001:db8::77' }
+            Should -Invoke Start-CIPPOrchestrator -Times 1 -ParameterFilter { $InputObject.Sequential -and @($InputObject.Batch).Count -eq 14 -and $InputObject.Batch[0].FunctionName -eq 'BECRun' -and $InputObject.Batch[0].Step -eq 'AuditLog' -and $InputObject.Batch[0].CaseId -eq 'BEC-20260820120000-new001' -and $InputObject.Batch[0].UserID -eq 'u1' -and $InputObject.Batch[0].RequestedFromIP -eq '2001:db8::77' }
             Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $Properties.RequestedFromIP -eq '2001:db8::77' } -Because "the requester's first x-forwarded-for hop, without port or brackets, is recorded as the technician's address"
         }
 
@@ -115,6 +115,15 @@ Describe 'Invoke-ExecBECCheck' {
             Should -Invoke Get-CIPPBecReport -Times 1 -ParameterFilter { $CaseId -eq 'BEC-w' -and $IncludeResults.IsPresent }
             Should -Invoke Get-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-w' }
             Should -Invoke Set-CIPPBecReport -Times 0 -Because 'a run that progressed a minute ago is not stale'
+        }
+
+        It 'returns containment already run against the case while it is still running' {
+            Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'BEC-w'; Status = 'Running'; StartedAt = (Get-Date).ToUniversalTime().ToString('o'); Containment = @([pscustomobject]@{ At = '2026-08-20T12:00:00Z'; By = 'tech@msp.com'; Actions = @('RevokeSessions') }) } }
+            Mock Get-CIPPAsyncDeployment { @() }
+            $Response = Invoke-ExecBECCheck -Request (New-Request @{ tenantFilter = 'contoso.com'; GUID = 'BEC-w' }) -TriggerMetadata $null
+            $Response.Body.Waiting | Should -BeTrue
+            @($Response.Body.Containment).Count | Should -Be 1
+            $Response.Body.Containment[0].Actions | Should -Be @('RevokeSessions')
         }
 
         It 'marks a run with no progress for longer than 20 minutes as failed, on the job rows too, and says why' {

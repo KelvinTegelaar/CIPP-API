@@ -67,20 +67,22 @@ Describe 'Invoke-ExecBECBulkCheck' {
         $script:Rows[0].Properties.Status | Should -Be 'Waiting'
         $script:Rows[0].Properties.QueueId | Should -Be 'queue-1'
         $script:Rows[0].Properties.RequestedBy | Should -Be 'tech@msp.com'
-        $script:Orchestrations.Count | Should -Be 1
+        $script:Orchestrations.Count | Should -Be 2 -Because 'each investigation is its own sequential orchestration'
+        $script:Orchestrations[0].Sequential | Should -BeTrue
         $Batch = @($script:Orchestrations[0].Batch)
-        $Batch.Count | Should -Be 2
+        $Batch.Count | Should -Be 14
         $Batch[0].FunctionName | Should -Be 'BECRun'
         $Batch[0].QueueId | Should -Be 'queue-1'
         $Batch[0].userName | Should -Be 'a@contoso.com'
         $Batch[0].CaseId | Should -Be $script:Rows[0].CaseId
+        @($script:Orchestrations[1].Batch)[0].CaseId | Should -Be $script:Rows[1].CaseId
         Should -Invoke New-CippQueueEntry -Times 1 -ParameterFilter { $TotalTasks -eq 2 }
     }
 
     It 'accepts a single object with UserIds[] and always queues the full investigation' {
         $Response = Invoke-ExecBECBulkCheck -Request (New-Request ([pscustomobject]@{ tenantFilter = 'contoso.com'; UserIds = @('u1', 'u3', 'u1'); Scope = 'Quick' })) -TriggerMetadata $null
         $Response.StatusCode | Should -Be 200
-        @($script:Orchestrations[0].Batch).Count | Should -Be 2 -Because 'duplicates are collapsed'
+        $script:Orchestrations.Count | Should -Be 2 -Because 'duplicates are collapsed'
         $Response.Body.Results | Should -Match 'Queued 2 BEC investigation'
     }
 
@@ -88,14 +90,14 @@ Describe 'Invoke-ExecBECBulkCheck' {
         $Response = Invoke-ExecBECBulkCheck -Request (New-Request ([pscustomobject]@{ tenantFilter = 'contoso.com'; UserIds = @('u1', 'ghost') })) -TriggerMetadata $null
         $Response.StatusCode | Should -Be 200
         ($Response.Body.Cases | Where-Object { $_.UserId -eq 'ghost' }).Error | Should -Be 'User not found'
-        @($script:Orchestrations[0].Batch).Count | Should -Be 1
+        $script:Orchestrations.Count | Should -Be 1
     }
 
     It 'does not cap the user count - a list over 50 is accepted and every resolvable user is queued' {
         $Response = Invoke-ExecBECBulkCheck -Request (New-Request ([pscustomobject]@{ tenantFilter = 'contoso.com'; UserIds = @(1..51 | ForEach-Object { "u$_" }) })) -TriggerMetadata $null
         $Response.StatusCode | Should -Be 200
         # only u1/u2/u3 resolve in the mock; the other 48 are reported as not found, none refused
-        @($script:Orchestrations[0].Batch).Count | Should -Be 3
+        $script:Orchestrations.Count | Should -Be 3
         @($Response.Body.Cases | Where-Object { $_.Error -eq 'User not found' }).Count | Should -Be 48
         $Response.Body.Results | Should -Match '48 selected user\(s\) could not be found and were skipped'
     }

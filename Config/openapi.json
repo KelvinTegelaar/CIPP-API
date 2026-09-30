@@ -15339,7 +15339,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Queues one BEC investigation per user as a single orchestration with a queue entry for progress. Accepts either an array of { UserIds, tenantFilter } items (the Users table bulk action) or one object with UserIds[]. Each run gets its own case id; results appear on the BEC Reports page and each user's Compromise Remediation tab.",
+        "description": "Queues one BEC investigation per user, each its own sequential orchestration, with a queue entry for progress. Accepts either an array of { UserIds, tenantFilter } items (the Users table bulk action) or one object with UserIds[]. Each run gets its own case id; results appear on the BEC Reports page and each user's Compromise Remediation tab.",
         "responses": {
           "200": {
             "description": "Success",

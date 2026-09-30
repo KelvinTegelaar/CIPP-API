@@ -81,6 +81,12 @@ Describe 'Invoke-CIPPBecContainment' {
         Should -Invoke Remove-CIPPUserOAuthGrant -Times 1 -ParameterFilter { @($GrantIds) -contains 'g-bad' -and @($AppRoleAssignmentIds) -contains 'a-bad' }
     }
 
+    It 'records containment on a case that is still being investigated' {
+        Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'BEC-1'; Status = 'Running'; Containment = @() } }
+        $null = Invoke-CIPPBecContainment -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -Actions @('RevokeSessions') -Confirmed -CaseId 'BEC-1'
+        Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $CaseId -eq 'BEC-1' -and @($Properties.Containment).Count -eq 1 -and @($Properties.Containment)[0].Actions -contains 'RevokeSessions' }
+    }
+
     It 'touches no progress row without a DeploymentId' {
         Mock Set-CIPPAsyncDeploymentStep { }
         Mock Set-CIPPAsyncDeploymentStatus { }

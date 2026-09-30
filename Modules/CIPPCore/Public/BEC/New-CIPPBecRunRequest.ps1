@@ -1,13 +1,14 @@
 function New-CIPPBecRunRequest {
     <#
     .SYNOPSIS
-        Prepares a BEC investigation: the history row, the live-progress job and the queue item.
+        Prepares a BEC investigation: the history row, the live-progress job and its orchestration.
     .DESCRIPTION
         Every way of starting a run (the user's page, the bulk action) goes through here so the run
         is visible the same way everywhere: a Waiting row in BecReports (the history), an
         async-deployment job keyed on the case id (the live progress the page polls; Queued until a
-        worker picks it up) and the batch item to hand to Start-CIPPOrchestrator. Nothing is queued
-        here; the caller queues one or many items. Every run is the full investigation.
+        worker picks it up) and the input to hand to Start-CIPPOrchestrator: one Push-BECRun job per
+        phase, run in order on one worker (Sequential). Nothing is queued here; the caller starts one
+        orchestration per investigation. Every run is the full investigation.
     .PARAMETER TenantFilter
         Tenant default domain name.
     .PARAMETER UserId
@@ -52,6 +53,7 @@ function New-CIPPBecRunRequest {
     }
 
     $CaseId = New-CIPPBecCaseId
+    $RunSteps = @(Get-CIPPBecRunSteps)
     $Name = if ([string]::IsNullOrWhiteSpace($UserPrincipalName)) { $UserId } else { $UserPrincipalName }
     if ($PSCmdlet.ShouldProcess("$Name in $TenantFilter", "Prepare BEC investigation $CaseId")) {
         $Properties = @{
@@ -66,7 +68,7 @@ function New-CIPPBecRunRequest {
         if ($RequestedFromIP) { $Properties.RequestedFromIP = $RequestedFromIP }
         $null = Set-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -Replace -Properties $Properties
         # The progress job: every step pending, row status queued, until Push-BECRun takes over.
-        $null = New-CIPPAsyncDeployment -JobId $CaseId -Names @($Name) -StepTitles @((Get-CIPPBecRunSteps).Title) -Source 'BEC' -TenantFilter $TenantFilter
+        $null = New-CIPPAsyncDeployment -JobId $CaseId -Names @($Name) -StepTitles @($RunSteps.Title) -Source 'BEC' -TenantFilter $TenantFilter
     }
 
     $Item = @{
@@ -83,7 +85,15 @@ function New-CIPPBecRunRequest {
     }
 
     return [pscustomobject]@{
-        CaseId = $CaseId
-        Item   = $Item
+        CaseId      = $CaseId
+        Item        = $Item
+        InputObject = [pscustomobject]@{
+            OrchestratorName = "BECRun_$CaseId"
+            Batch            = @($RunSteps | ForEach-Object { $Item + @{ Step = $_.Key } })
+            # each phase is its own job with its own timeout, run in order on one worker
+            Sequential       = $true
+            DurableMode      = 'Sequence'
+            SkipLog          = $true
+        }
     }
 }
