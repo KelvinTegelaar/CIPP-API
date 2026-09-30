@@ -14,6 +14,7 @@ Describe 'CippJson.ToJson matches ConvertTo-Json -Compress' {
         @{ Name = 'Get-Date output'; Value = Get-Date }
         @{ Name = 'noted strings and dates inside a row'; Value = [pscustomobject]@{ When = Get-Date; S = (Add-Member -InputObject 'abc' -NotePropertyName X -NotePropertyValue 1 -PassThru) } }
         @{ Name = 'a row from Select-Object over parsed JSON'; Value = ('{"a":"x","b":[1,"y"],"c":{"d":2}}' | ConvertFrom-Json | Select-Object a, b, c) }
+        @{ Name = 'an empty foreach result held in a row'; Value = & { $Empty = foreach ($x in @()) { $x }; [pscustomobject]@{ G = $Empty; N = 1 } } }
     ) {
         [CIPP.CippJson]::ToJson($Value, 100) | Should -BeExactly (Get-Expected $Value)
     }

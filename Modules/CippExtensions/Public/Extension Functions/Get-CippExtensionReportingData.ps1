@@ -18,6 +18,9 @@ function Get-CippExtensionReportingData {
         With -IncludeMailboxes, leave out MailboxPermissions (the whole tenant's permission set) for callers that
         do not read it.
 
+    .PARAMETER Properties
+        Cache type -> property names to keep on each row, for callers that read only a few fields of a wide type.
+
     .EXAMPLE
         $ExtensionCache = Get-CippExtensionReportingData -TenantFilter 'contoso.onmicrosoft.com'
 
@@ -36,7 +39,10 @@ function Get-CippExtensionReportingData {
         [switch]$IncludeMailboxes,
 
         [Parameter(Mandatory = $false)]
-        [switch]$SkipMailboxPermissions
+        [switch]$SkipMailboxPermissions,
+
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Properties
     )
 
     try {
@@ -45,9 +51,14 @@ function Get-CippExtensionReportingData {
         # Parse each type straight off the row stream, so a type's raw rows are released before the next type
         # is read instead of every type's raw rows staying pinned beside the parsed objects until return.
         # Same shapes as before: no rows -> $null, one row -> the object, several -> an array.
+        $Projections = @{}
+        if ($Properties) { foreach ($Key in $Properties.Keys) { $Projections[$Key] = [string[]]$Properties[$Key] } }
         $Read = {
             param($Type)
-            Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type | Where-Object { $_.RowKey -notlike '*-Count' } | ForEach-Object { $_.Data | ConvertFrom-Json }
+            $Keep = $Projections[$Type]
+            Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type | Where-Object { $_.RowKey -notlike '*-Count' } | ForEach-Object {
+                if ($Keep) { [CIPP.CippJson]::ConvertFromJson($_.Data, $Keep) } else { $_.Data | ConvertFrom-Json }
+            }
         }
 
         $Return.Users = & $Read 'Users'
