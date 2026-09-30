@@ -71,11 +71,13 @@ Function Invoke-ExecExtensionTest {
             }
             'Hudu' {
                 Connect-HuduAPI -configuration $Configuration
-                $Version = Get-HuduAppInfo
-                if ($Version.version) {
+                $HuduInfoErrors = $null
+                $Version = Get-HuduAppInfo -ErrorAction SilentlyContinue -ErrorVariable HuduInfoErrors 3>$null
+                if ($Version.version -and $Version.version -ne '0.0.0.0') {
                     $Results = [pscustomobject]@{'Results' = ('Successfully Connected to Hudu, version: {0}' -f $Version.version) }
                 } else {
-                    $Results = [pscustomobject]@{'Results' = 'Failed to connect to Hudu, check your API credentials and try again.' }
+                    $Reason = (@($HuduInfoErrors) | ForEach-Object { "$_" } | Where-Object { $_ } | Select-Object -Last 1) -replace '\s+', ' '
+                    $Results = [pscustomobject]@{'Results' = "Failed to connect to Hudu, check your API credentials and try again.$(if ($Reason) { " Error: $Reason" })" }
                 }
             }
             'Sherweb' {

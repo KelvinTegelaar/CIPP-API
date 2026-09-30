@@ -23,6 +23,14 @@ function Invoke-HuduExtensionSync {
             Logs    = [System.Collections.Generic.List[string]]@()
         }
 
+        # Get-HuduAppInfo swallows failures (no result, or version 0.0.0.0), so check it before any sync work.
+        $HuduInfoErrors = $null
+        $HuduInfo = Get-HuduAppInfo -ErrorAction SilentlyContinue -ErrorVariable HuduInfoErrors 3>$null
+        if (-not $HuduInfo.version -or $HuduInfo.version -eq '0.0.0.0') {
+            $Reason = (@($HuduInfoErrors) | ForEach-Object { "$_" } | Where-Object { $_ } | Select-Object -Last 1) -replace '\s+', ' '
+            throw "Hudu API check failed, sync skipped: $(if ($Reason) { $Reason } else { 'no version returned from /api/v1/api_info' })"
+        }
+
         $AssignedNameMap = Get-AssignedNameMap
         $AssignedMap = Get-AssignedMap
 

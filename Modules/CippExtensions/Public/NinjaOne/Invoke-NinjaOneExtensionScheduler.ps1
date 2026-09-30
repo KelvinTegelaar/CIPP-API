@@ -33,8 +33,19 @@ function Invoke-NinjaOneExtensionScheduler {
     $Filter = "PartitionKey eq 'NinjaOneMapping'"
     $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.IntegrationId -and $_.IntegrationId -ne '' }
 
+    # Same check as the integration test button, once, before queuing a task per mapped tenant.
+    $ApiCheck = {
+        $ExtTable = Get-CIPPTable -TableName Extensionsconfig
+        $NinjaConfig = ((Get-AzDataTableEntity @ExtTable).config | ConvertFrom-Json).NinjaOne
+        [bool](Get-NinjaOneToken -configuration $NinjaConfig).access_token
+    }
+
     if ($Null -eq $LastRunTime -or $LastRunTime -le (Get-Date).addhours(-25) -or $TimeSetting -eq $CurrentInterval) {
         Write-Host 'Executing'
+        if ($TenantsToProcess -and -not (& $ApiCheck)) {
+            Write-LogMessage -API 'NinjaOneSync' -message "NinjaOne API check failed, daily synchronization not queued for $(($TenantsToProcess | Measure-Object).count) tenants. Test the NinjaOne integration in Extensions." -Sev 'Error'
+            $TenantsToProcess = @()
+        }
         $Batch = foreach ($Tenant in $TenantsToProcess | Sort-Object lastEndTime) {
             [PSCustomObject]@{
                 'NinjaAction'  = 'SyncTenant'
@@ -79,6 +90,10 @@ function Invoke-NinjaOneExtensionScheduler {
                 }
             }
             $CatchupTenants = $TenantsToProcess | Where-Object { ((($Null -eq $_.lastEndTime) -or ($_.lastStartTime -gt $_.lastEndTime)) -and ($_.lastStartTime -lt (Get-Date).AddHours(-3))) -or (($_.lastStartTime -lt $LastRunTime) -and ($Null -eq $_.lastEndTime -or $_.lastEndTime -lt $LastRunTime)) }
+            if ($CatchupTenants -and -not (& $ApiCheck)) {
+                Write-LogMessage -API 'NinjaOneSync' -message "NinjaOne API check failed, catchup synchronization not queued for $(($CatchupTenants | Measure-Object).count) tenants. Test the NinjaOne integration in Extensions." -Sev 'Warning'
+                $CatchupTenants = @()
+            }
             $Batch = foreach ($Tenant in $CatchupTenants) {
                 [PSCustomObject]@{
                     NinjaAction  = 'SyncTenant'
