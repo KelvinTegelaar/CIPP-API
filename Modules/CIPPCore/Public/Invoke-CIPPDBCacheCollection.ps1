@@ -90,6 +90,9 @@ function Invoke-CIPPDBCacheCollection {
             'SelfServicePurchaseProducts'
             'MoeraDmarc'
             'DomainAnalyser'
+            'ServiceHealthOverviews'
+            'ServiceHealthIssues'
+            'MessageCenterMessages'
         )
         ExchangeConfig     = @(
             'ExoAntiPhishPolicies'

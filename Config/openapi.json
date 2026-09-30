@@ -54678,6 +54678,127 @@
         "x-cipp-role": "Security.Defender.Read"
       }
     },
+    "/api/ListMessageCenterMessages": {
+      "get": {
+        "summary": "ListMessageCenterMessages",
+        "operationId": "ListMessageCenterMessages",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Lists Microsoft 365 message center messages for a tenant: the change notices, announcements of new and retiring features, planned changes and action-required posts Microsoft publishes, with category, severity, services, tags and action-required-by dates. For AllTenants each message is returned once with the tenants it was posted to (Tenants, TenantCount). Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "properties": {
+                      "actionRequiredByDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "attachmentsArchive": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "body": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "category": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "details": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "endDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "hasAttachments": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "isMajorChange": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "lastModifiedDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "services": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "severity": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "startDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "tags": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "title": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "viewPoint": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Administration.Read"
+      }
+    },
     "/api/ListMessageTrace": {
       "post": {
         "summary": "ListMessageTrace",
@@ -58449,6 +58570,192 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Administration.Read"
+      }
+    },
+    "/api/ListServiceHealthIssues": {
+      "get": {
+        "summary": "ListServiceHealthIssues",
+        "operationId": "ListServiceHealthIssues",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Lists Microsoft 365 service health issues for a tenant: the incidents and advisories Microsoft has posted about service outages, degradations and their status, impact, affected services and timeline. For AllTenants each issue is returned once with the tenants it affects (Tenants, TenantCount). Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "properties": {
+                      "classification": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "details": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "endDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "feature": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "featureGroup": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "impactDescription": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "isResolved": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "lastModifiedDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "origin": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "posts": {
+                        "type": "array",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "service": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "startDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "status": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "title": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Administration.Read"
+      }
+    },
+    "/api/ListServiceHealthOverviews": {
+      "get": {
+        "summary": "ListServiceHealthOverviews",
+        "operationId": "ListServiceHealthOverviews",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Lists the Microsoft 365 service health overview for a tenant: the current health status of each cloud service (Exchange Online, SharePoint Online, Microsoft Teams, Entra ID, Intune and others), for example serviceOperational, serviceDegradation or serviceInterruption. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "service": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "status": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [

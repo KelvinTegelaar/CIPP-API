@@ -65,6 +65,21 @@
     "description": "Azure AD directory recommendations"
   },
   {
+    "type": "ServiceHealthOverviews",
+    "friendlyName": "Service Health Overviews",
+    "description": "Microsoft 365 service health status per workload"
+  },
+  {
+    "type": "ServiceHealthIssues",
+    "friendlyName": "Service Health Issues",
+    "description": "Microsoft 365 service health incidents and advisories, including their post history"
+  },
+  {
+    "type": "MessageCenterMessages",
+    "friendlyName": "Message Center Posts",
+    "description": "Microsoft 365 message center announcements, including body and rollout details"
+  },
+  {
     "type": "CrossTenantAccessPolicy",
     "friendlyName": "Cross-Tenant Access Policy",
     "description": "Cross-tenant access policy configuration"
