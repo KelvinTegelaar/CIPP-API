@@ -29,7 +29,20 @@ function New-GradientServiceSyncRun {
             Write-LogMessage -API $APIName -message "Failed to create tenants in Gradient API. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
         }
 
-        $ConvertTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
+        # GUID -> display name, last row wins like the Where-Object | Select-Object -Last 1 it replaces
+        $SkuDisplayNames = @{}
+        foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) { $SkuDisplayNames[$Row.GUID] = $Row.Product_Display_Name }
+
+        # A failed read must stop the sync: an empty catalogue would create a duplicate service for every SKU.
+        try {
+            $ServicesByName = @{}
+            foreach ($Service in (Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api' -Method GET -Headers $GradientToken).data.skus) {
+                if ($Service.name -and -not $ServicesByName.ContainsKey($Service.name)) { $ServicesByName[$Service.name] = $Service }
+            }
+        } catch {
+            Write-LogMessage -API $APIName -message "Failed to read the Gradient service catalogue, licence sync skipped. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
+            return
+        }
 
         # Licence counts come from the reporting DB (LicenseOverview), which already drops licences
         # excluded everywhere, rather than a live subscribedSkus call per tenant.
@@ -42,10 +55,9 @@ function New-GradientServiceSyncRun {
             }
             foreach ($sku in $Licenses) {
                 try {
-                    $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuId }).'Product_Display_Name' | Select-Object -Last 1
+                    $PrettyName = $SkuDisplayNames["$($sku.skuId)"]
                     if (!$PrettyName) { $PrettyName = $sku.License }
-                    #Check if serviceID exists by SKUID in gradient
-                    $ExistingService = (Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api' -Method GET -Headers $GradientToken).data.skus | Where-Object name -EQ $PrettyName
+                    $ExistingService = if ($PrettyName) { $ServicesByName[$PrettyName] }
                     if (!$ExistingService) {
                         #Create service
                         $ServiceBody = [PSCustomObject]@{
@@ -54,7 +66,8 @@ function New-GradientServiceSyncRun {
                             category    = 'infrastructure'
                             subcategory = 'hosted email'
                         } | ConvertTo-Json -Depth 10
-                        $ExistingService = (Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api/service' -Method POST -Headers $GradientToken -Body $ServiceBody -ContentType 'application/json').skus | Where-Object name -EQ $PrettyName
+                        $ExistingService = (Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api/service' -Method POST -Headers $GradientToken -Body $ServiceBody -ContentType 'application/json').skus | Where-Object name -EQ $PrettyName | Select-Object -First 1
+                        if ($ExistingService -and $PrettyName) { $ServicesByName[$PrettyName] = $ExistingService }
                     }
                     #Post the purchased licence count to the service
                     $ServiceBody = [PSCustomObject]@{
