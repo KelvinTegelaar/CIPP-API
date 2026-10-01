@@ -31,8 +31,8 @@ function Set-CIPPDefenderCompliancePolicy {
         allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.allowPartnerToCollectIosPersonalApplicationMetadata
         androidDeviceBlockedOnMissingPartnerData            = [bool]$Compliance.androidDeviceBlockedOnMissingPartnerData
         iosDeviceBlockedOnMissingPartnerData                = [bool]$Compliance.iosDeviceBlockedOnMissingPartnerData
-        windowsDeviceBlockedOnMissingPartnerData            = [bool]$Compliance.windowsDeviceBlockedOnMissingPartnerData
-        macDeviceBlockedOnMissingPartnerData                = [bool]$Compliance.macDeviceBlockedOnMissingPartnerData
+        windowsDeviceBlockedOnMissingPartnerData            = if ([bool]$Compliance.ConnectWindows) { $true } else { [bool]$Compliance.windowsDeviceBlockedOnMissingPartnerData }
+        macDeviceBlockedOnMissingPartnerData                = if ([bool]$Compliance.ConnectMac) { $true } else { [bool]$Compliance.macDeviceBlockedOnMissingPartnerData }
         androidMobileApplicationManagementEnabled           = [bool]$Compliance.ConnectAndroidCompliance
         iosMobileApplicationManagementEnabled               = [bool]$Compliance.ConnectIosCompliance
         windowsMobileApplicationManagementEnabled           = [bool]$Compliance.windowsMobileApplicationManagementEnabled
