@@ -64,7 +64,7 @@
   "tokenProtectionDeviceFilterPatterns": [
     { "pattern": "cloudpc", "label": "Cloud PCs" },
     { "pattern": "azurevirtualdesktop", "label": "Azure Virtual Desktop" },
-    { "pattern": "powerapautomate", "label": "Power Automate hosted machines" },
+    { "pattern": "powerautomate", "label": "Power Automate hosted machines" },
     { "pattern": "autopilot", "label": "Autopilot self-deploying devices" },
     { "pattern": "securevm", "label": "Azure virtual machines" }
   ],

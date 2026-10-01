@@ -30,7 +30,9 @@ function Test-CIPPCAGapMicrosoftGuidance {
     $DefenderAtp = "$($Apps.defenderAtpXplat)".ToLowerInvariant()
     $DefenderTvm = "$($Apps.defenderTvm)".ToLowerInvariant()
     $WindowsCloudLogin = "$($Apps.windowsCloudLogin)".ToLowerInvariant()
+    $TokenProtectionSupportedApple = @($ExchangeOnline, $SharePointOnline, $TeamsService)
     $TokenProtectionSupported = @($ExchangeOnline, $SharePointOnline, $TeamsService, "$($Apps.azureVirtualDesktop)".ToLowerInvariant(), "$($Apps.windows365)".ToLowerInvariant(), $WindowsCloudLogin)
+    $TokenProtectionPlatforms = @('windows', 'ios', 'macos')
     $DirSyncRoleId = "$($Reference.directorySyncRoleTemplateId)"
 
     $IsActive = { param($P) $P.state -in @('enabled', 'enabledForReportingButNotEnforced') }
@@ -50,6 +52,18 @@ function Test-CIPPCAGapMicrosoftGuidance {
         $false
     }
     $LowerApps = { param($Values) , [string[]]@(@($Values) | ForEach-Object { "$_".ToLowerInvariant() }) }
+    # Platforms the policy reaches: every platform when the condition is absent or set to 'all', otherwise the
+    # included platforms minus the excluded ones. Lower-cased so the Graph casing (iOS, macOS) does not matter.
+    $EffectivePlatforms = {
+        param($P)
+        $Platforms = $P.conditions.platforms
+        $AllPlatforms = @('android', 'ios', 'windows', 'windowsphone', 'macos', 'linux')
+        if ($null -eq $Platforms) { return , [string[]]$AllPlatforms }
+        $Included = & $LowerApps $Platforms.includePlatforms
+        $Excluded = & $LowerApps $Platforms.excludePlatforms
+        if ($Included -contains 'all') { $Included = $AllPlatforms }
+        , [string[]]@($Included | Where-Object { $Excluded -notcontains $_ })
+    }
 
     $Results = [System.Collections.Generic.List[object]]::new()
     $AddResult = {
@@ -80,36 +94,45 @@ function Test-CIPPCAGapMicrosoftGuidance {
         $Session = $Policy.sessionControls
         $SignInFrequency = $Session.signInFrequency
         $TokenProtection = & $HasTokenProtection $Policy
+        $PolicyPlatforms = & $EffectivePlatforms $Policy
+        $CoversWindows = $PolicyPlatforms -contains 'windows'
 
         if ($Active -and $TokenProtection) {
             if ($IncludeApps -contains 'all') {
                 & $AddResult 'TokenProtectionApps' $Policy 'This token-protection policy applies to every application, although only a few Microsoft services support the feature. People using unsupported tools such as Power Query, developer extensions and older Office installations will be blocked.' @('PowerShell modules accessing SharePoint', 'PowerQuery extension for Excel', 'VS Code extensions accessing Exchange/SharePoint', 'Office perpetual clients')
             } elseif ($IncludeApps -contains $Office365Group) {
                 & $AddResult 'TokenProtectionApps' $Policy 'This token-protection policy applies to the Office 365 application group as a whole, which Microsoft warns can cause unexpected failures because not every service in the group supports the feature.' @('Office 365 application group members')
-            } else {
+            } elseif ($CoversWindows) {
                 $Unsupported = @($IncludeApps | Where-Object { $TokenProtectionSupported -notcontains $_ })
                 if ($Unsupported.Count -gt 0) {
                     & $AddResult 'TokenProtectionApps' $Policy "This token-protection policy applies to $($Unsupported.Count) application(s) that may not support the feature; only Exchange Online, SharePoint Online, Teams, Azure Virtual Desktop, Windows 365 and Windows Cloud Login do." $Unsupported
+                }
+            } else {
+                $Unsupported = @($IncludeApps | Where-Object { $TokenProtectionSupportedApple -notcontains $_ })
+                if ($Unsupported.Count -gt 0) {
+                    & $AddResult 'TokenProtectionApps' $Policy "This token-protection policy applies to $($Unsupported.Count) application(s) that may not support the feature on iOS and macOS; only Exchange Online, SharePoint Online and Teams do there." $Unsupported
                 }
             }
         }
 
         if ($Active -and $TokenProtection) {
             $Issues = [System.Collections.Generic.List[string]]::new()
-            $Platforms = $Policy.conditions.platforms
-            if ($null -eq $Platforms -or -not (@($Platforms.includePlatforms) -contains 'windows')) {
-                $Issues.Add('The policy is not limited to Windows devices, although token protection only works there.')
+            $UnsupportedPlatforms = @($PolicyPlatforms | Where-Object { $TokenProtectionPlatforms -notcontains $_ })
+            if ($UnsupportedPlatforms.Count -gt 0) {
+                $Issues.Add('The policy is not limited to Windows, iOS and macOS devices, although token protection only works there.')
             }
             $ClientTypes = @($Policy.conditions.clientAppTypes)
             if ($ClientTypes.Count -eq 0 -or ($ClientTypes -contains 'browser')) {
                 $Issues.Add('The policy also applies to web browsers, which do not support token protection, so browser-based tools such as Teams on the web will be blocked.')
             }
             if ($Issues.Count -gt 0) {
-                & $AddResult 'TokenProtectionPlatforms' $Policy ($Issues -join ' ') @('macOS / iOS / Android / Linux users', 'Teams Web (MSAL.js)', 'Browser-based applications')
+                & $AddResult 'TokenProtectionPlatforms' $Policy ($Issues -join ' ') @('Android / Linux users', 'Teams Web (MSAL.js)', 'Browser-based applications')
             }
         }
 
-        if ($Active -and $TokenProtection) {
+        # The device types below are Windows registration types from the Windows deployment guide; a policy
+        # scoped to iOS and macOS never reaches them, so the exemption checklist only applies when Windows is in scope.
+        if ($Active -and $TokenProtection -and $CoversWindows) {
             $DeviceFilter = $Policy.conditions.devices.deviceFilter
             if ($null -eq $DeviceFilter) {
                 & $AddResult 'TokenProtectionDevices' $Policy 'This token-protection policy does not exempt the device types that cannot support it. Meeting-room devices, Cloud PCs, virtual desktop hosts, self-deploying and bulk-enrolled devices and Azure virtual machines will be blocked with unclear error messages.' @('Surface Hub', 'Teams Rooms (MTR) on Windows', 'Cloud PCs (Microsoft Entra joined)', 'Azure Virtual Desktop session hosts (Microsoft Entra joined)', 'Windows Autopilot self-deploying devices', 'Bulk-enrolled Windows devices', 'Azure VMs with Entra ID auth')

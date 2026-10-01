@@ -5,7 +5,7 @@ function Get-CIPPCAPersonaMatrix {
     .DESCRIPTION
         Personas come from how policies TARGET identities, never from policy names, so the matrix is
         truthful for tenants that follow no naming convention: Admins              - policies that include
-        privileged roles, or All users without excluding roles Users               - policies that include
+        privileged roles, or All users without excluding a privileged role Users               - policies that include
         All users (group-scoped policies never prove everyone is covered) Guests              - policies
         that include guests/external users, or All users without excluding them Workload identities -
         policies that include service principals A cell is Enforced when an enabled policy in the persona's
@@ -38,6 +38,7 @@ function Get-CIPPCAPersonaMatrix {
     if ($Licenses.HasIntunePlan1 -ne $true) { $Unavailable.Add('RequireCompliantDevice') }
     $WorkloadRiskAvailable = $Licenses.HasWorkloadIdPremium -eq $true
 
+    $PrivilegedRoleIds = @($Context.Data.HighPrivilegeRoleNames.Keys)
     $PolicyPersonas = {
         param($P)
         $Out = [System.Collections.Generic.List[string]]::new()
@@ -45,7 +46,10 @@ function Get-CIPPCAPersonaMatrix {
         $All = @($U.includeUsers) -contains 'All'
         $ExcludesGuests = ($null -ne $U.excludeGuestsOrExternalUsers -and "$($U.excludeGuestsOrExternalUsers.guestOrExternalUserTypes)") -or (@($U.excludeUsers) -contains 'GuestsOrExternalUsers')
         $IncludesGuests = ($null -ne $U.includeGuestsOrExternalUsers -and "$($U.includeGuestsOrExternalUsers.guestOrExternalUserTypes)") -or (@($U.includeUsers) -contains 'GuestsOrExternalUsers')
-        if (@($U.includeRoles).Count -gt 0 -or ($All -and @($U.excludeRoles).Count -eq 0)) { $Out.Add('admins') }
+        # An All-users policy still covers admins when the roles it excludes are not privileged ones (a
+        # directory-synchronization exemption, say). Excluding a privileged role carves admins out of it.
+        $ExcludesPrivilegedRole = @($U.excludeRoles | Where-Object { $PrivilegedRoleIds -contains "$_".ToLowerInvariant() }).Count -gt 0
+        if (@($U.includeRoles).Count -gt 0 -or ($All -and -not $ExcludesPrivilegedRole)) { $Out.Add('admins') }
         if ($All) { $Out.Add('users') }
         if ($IncludesGuests -or ($All -and -not $ExcludesGuests)) { $Out.Add('guests') }
         if (@($P.conditions.clientApplications.includeServicePrincipals).Count -gt 0) { $Out.Add('workloadIdentities') }
