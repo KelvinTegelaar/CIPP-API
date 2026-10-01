@@ -34,12 +34,37 @@ function Build-CippBecReportTree {
     $windowDays = if ($bec.AnalysisWindowDays) { [int]$bec.AnalysisWindowDays } else { 7 }
 
     # -- formatting/utility helpers --
+    # Display times in the instance timezone (CIPP_TIMEZONE), matching the cover date and other
+    # server reports. The case UI formats in the viewer's browser zone; without this conversion the
+    # PDF prints Graph's UTC clock values and disagrees with the on-screen case.
+    $reportZone = [TimeZoneInfo]::Utc
+    if ($env:CIPP_TIMEZONE) {
+        try {
+            $reportZone = [TimeZoneInfo]::FindSystemTimeZoneById($env:CIPP_TIMEZONE)
+        } catch {
+            Write-Information "BEC report: unknown timezone '$($env:CIPP_TIMEZONE)', dating events in UTC"
+        }
+    }
     function Cnt($x) { if ($null -eq $x) { return 0 }; @($x).Count }
     function AsInt($v) { if ($null -eq $v) { return 0 }; try { [int]$v } catch { 0 } }
     function ToDate($v) { if (-not $v) { return $null }; try { [datetime]$v } catch { $null } }
     function FmtDate($d) {
         if (-not $d) { return 'N/A' }
-        try { return ([datetime]$d).ToString('MMM d, yyyy, hh:mm tt', [Globalization.CultureInfo]::InvariantCulture) } catch { return "$d" }
+        try {
+            $dto = if ($d -is [DateTimeOffset]) {
+                $d
+            } elseif ($d -is [datetime]) {
+                # Graph timestamps arrive as UTC; Unspecified Kind on the server is still UTC wall time.
+                if ($d.Kind -eq [DateTimeKind]::Unspecified) {
+                    [DateTimeOffset]::new([DateTime]::SpecifyKind($d, [DateTimeKind]::Utc))
+                } else {
+                    [DateTimeOffset]$d
+                }
+            } else {
+                [DateTimeOffset]::Parse("$d", [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
+            }
+            return [TimeZoneInfo]::ConvertTime($dto, $reportZone).ToString('MMM d, yyyy, hh:mm tt', [Globalization.CultureInfo]::InvariantCulture)
+        } catch { return "$d" }
     }
     function FmtSafelist($v) {
         if (-not $v) { return 'unchanged' }
