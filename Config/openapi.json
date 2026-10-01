@@ -7331,6 +7331,9 @@
                       "PSA": {
                         "type": "boolean"
                       },
+                      "Push": {
+                        "type": "boolean"
+                      },
                       "Webhook": {
                         "type": "boolean"
                       }
@@ -11323,6 +11326,9 @@
                         "type": "boolean"
                       },
                       "PSA": {
+                        "type": "boolean"
+                      },
+                      "Push": {
                         "type": "boolean"
                       },
                       "Webhook": {
@@ -29575,6 +29581,9 @@
                       "psa": {
                         "type": "boolean"
                       },
+                      "push": {
+                        "type": "boolean"
+                      },
                       "webhook": {
                         "type": "boolean"
                       }
@@ -30861,6 +30870,75 @@
           }
         ],
         "x-cipp-role": "CIPP.ReportBuilder.ReadWrite"
+      }
+    },
+    "/api/ExecPushSubscription": {
+      "post": {
+        "summary": "ExecPushSubscription",
+        "operationId": "ExecPushSubscription",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Registers, removes or tests a Web Push subscription for the signed-in user's device.\nSubscriptions are per user: the row belongs to the principal that sent it and only that\nprincipal can remove it. Refused while impersonating, so a superadmin trying a role never\nbinds their own device to a browser session that is pretending to be someone else.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "DeviceName": {
+                    "type": "string"
+                  },
+                  "RowKey": {
+                    "type": "string"
+                  },
+                  "Subscription": {
+                    "type": "object",
+                    "properties": {
+                      "endpoint": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Core.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecQuarantineManagement": {
@@ -56415,6 +56493,48 @@
           }
         ],
         "x-cipp-role": "Endpoint.Application.Read"
+      }
+    },
+    "/api/ListPushSubscriptions": {
+      "get": {
+        "summary": "ListPushSubscriptions",
+        "operationId": "ListPushSubscriptions",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Lists the signed-in user's registered push notification devices and the instance's VAPID public key.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListQuarantinePolicy": {

@@ -105,7 +105,7 @@ function Add-CIPPScheduledTask {
                 return "Error - The command '$RequestedCommand' is not permitted to run as a scheduled task."
             }
 
-            $propertiesToCheck = @('Webhook', 'Email', 'PSA')
+            $propertiesToCheck = @('Webhook', 'Email', 'PSA', 'Push')
             $PostExecutionObject = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true })
             $PostExecution = $PostExecutionObject ? @($PostExecutionObject -join ',') : ($Task.PostExecution.value -join ',')
             $Parameters = [System.Collections.Hashtable]@{}
