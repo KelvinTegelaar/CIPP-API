@@ -64,6 +64,7 @@ function Send-CIPPAlert {
                         # The browser dropped the subscription; the row is dead weight.
                         Remove-AzDataTableEntity @SubTable -Entity $Sub -Force | Out-Null
                         $Pruned++
+                        Write-LogMessage -API $APIName -message "Removed expired push subscription '$($Sub.DeviceName)' for $TargetUser (push service returned HTTP $($Result.StatusCode): $($Result.Content))" -Sev 'Info'
                     } else {
                         Write-LogMessage -API $APIName -message "Push to '$($Sub.DeviceName)' for $TargetUser failed with HTTP $($Result.StatusCode): $($Result.Content)" -Sev 'Warning'
                     }

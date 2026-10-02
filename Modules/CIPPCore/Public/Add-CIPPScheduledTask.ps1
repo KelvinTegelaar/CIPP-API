@@ -108,6 +108,16 @@ function Add-CIPPScheduledTask {
             $propertiesToCheck = @('Webhook', 'Email', 'PSA', 'Push')
             $PostExecutionObject = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true })
             $PostExecution = $PostExecutionObject ? @($PostExecutionObject -join ',') : ($Task.PostExecution.value -join ',')
+            # Push goes to the creating user's own devices, so a task asking for it from a user with
+            # none registered would silently notify nobody. Refuse up front; the Preferences page is
+            # where they enrol. Headers are absent for system-created tasks, which never ask for Push.
+            if ($PostExecution -match '(^|,)Push(,|$)' -and $Headers.'x-ms-client-principal') {
+                $PushUser = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
+                $PushTable = Get-CIPPTable -TableName 'PushSubscriptions'
+                if (-not (Get-CIPPAzDataTableEntity @PushTable -Filter "PartitionKey eq '$PushUser'" -First 1)) {
+                    return 'Error - Push (notify me) was selected but you have no push notification devices registered. Enable notifications under Preferences > Push Notifications first, or remove Push from the post execution actions.'
+                }
+            }
             $Parameters = [System.Collections.Hashtable]@{}
             foreach ($Key in $task.Parameters.PSObject.Properties.Name) {
                 $Param = $task.Parameters.$Key
