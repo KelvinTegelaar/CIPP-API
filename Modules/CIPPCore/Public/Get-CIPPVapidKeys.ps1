@@ -14,6 +14,7 @@ function Get-CIPPVapidKeys {
     .FUNCTIONALITY
         Internal
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'Wraps the freshly generated private key in a SecureString only to satisfy Set-CippKeyVaultSecret; the value is written to Azure Key Vault (encrypted at rest)')]
     [CmdletBinding()]
     param([switch]$PublicOnly)
 
