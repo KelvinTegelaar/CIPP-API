@@ -36,7 +36,7 @@ function Invoke-AddGuest {
         }
 
         $BodyToShipJson = ConvertTo-Json -Depth 5 -InputObject $BodyToShip
-        $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/invitations' -tenantid $TenantFilter -type POST -body $BodyToShipJson
+        $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/invitations' -tenantid $TenantFilter -type POST -body $BodyToShipJson -AsApp $true
         if ($SendInvite -eq $true) {
             $Result = "Invited Guest $($DisplayName) with Email Invite"
         } else {
