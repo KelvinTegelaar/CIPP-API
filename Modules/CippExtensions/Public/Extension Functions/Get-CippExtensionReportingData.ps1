@@ -21,6 +21,9 @@ function Get-CippExtensionReportingData {
     .PARAMETER Properties
         Cache type -> property names to keep on each row, for callers that read only a few fields of a wide type.
 
+    .PARAMETER Exclude
+        Cache types to leave out, for callers that do not read them.
+
     .EXAMPLE
         $ExtensionCache = Get-CippExtensionReportingData -TenantFilter 'contoso.onmicrosoft.com'
 
@@ -42,7 +45,10 @@ function Get-CippExtensionReportingData {
         [switch]$SkipMailboxPermissions,
 
         [Parameter(Mandatory = $false)]
-        [hashtable]$Properties
+        [hashtable]$Properties,
+
+        [Parameter(Mandatory = $false)]
+        [string[]]$Exclude
     )
 
     try {
@@ -55,6 +61,7 @@ function Get-CippExtensionReportingData {
         if ($Properties) { foreach ($Key in $Properties.Keys) { $Projections[$Key] = [string[]]$Properties[$Key] } }
         $Read = {
             param($Type)
+            if ($Exclude -contains $Type) { return }
             $Keep = $Projections[$Type]
             Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type | Where-Object { $_.RowKey -notlike '*-Count' } | ForEach-Object {
                 if ($Keep) { [CIPP.CippJson]::ConvertFromJson($_.Data, $Keep) } else { $_.Data | ConvertFrom-Json }

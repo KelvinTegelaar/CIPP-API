@@ -18,6 +18,9 @@ function Invoke-CippTestZTNA21813 {
         $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
         $RoleEligibilitySchedules = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleEligibilitySchedules'
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
+        $UserById = [CIPP.CippIndex]::Build($Users, @(foreach ($U in $Users) { , ($($U.id) ?? $null) }))
+        $AssignmentsByRole = [CIPP.CippIndex]::Build($RoleAssignmentScheduleInstances, @(foreach ($A in $RoleAssignmentScheduleInstances) { , ($($A.roleDefinitionId) ?? $null) }))
+        $EligibilitiesByRole = [CIPP.CippIndex]::Build($RoleEligibilitySchedules, @(foreach ($E in $RoleEligibilitySchedules) { , ($($E.roleDefinitionId) ?? $null) }))
 
         $AllGAUsers = @{}
         $AllPrivilegedUsers = @{}
@@ -27,17 +30,13 @@ function Invoke-CippTestZTNA21813 {
             # 'roleTemplateId', not 'templateId' — the Roles cache has no templateId field at all
             # (description, displayName, id, memberCount, members, roleTemplateId), so both filters
             # below compared against $null and matched nothing.
-            $ActiveAssignments = $RoleAssignmentScheduleInstances | Where-Object {
-                $_.roleDefinitionId -eq $Role.roleTemplateId -and $_.assignmentType -eq 'Assigned'
-            }
-            $EligibleAssignments = $RoleEligibilitySchedules | Where-Object {
-                $_.roleDefinitionId -eq $Role.roleTemplateId
-            }
+            $ActiveAssignments = $AssignmentsByRole.Find($Role.roleTemplateId) | Where-Object { $_.assignmentType -eq 'Assigned' }
+            $EligibleAssignments = $EligibilitiesByRole.Find($Role.roleTemplateId)
 
             $AllAssignments = @($ActiveAssignments) + @($EligibleAssignments)
 
             foreach ($Assignment in $AllAssignments) {
-                $User = $Users | Where-Object { $_.id -eq $Assignment.principalId } | Select-Object -First 1
+                $User = $UserById.Find($Assignment.principalId) | Select-Object -First 1
                 if (-not $User) { continue }
 
                 $UserId = $User.id

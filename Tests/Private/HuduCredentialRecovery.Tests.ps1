@@ -1,4 +1,5 @@
 BeforeAll {
+    Add-Type -Path "$PSScriptRoot/../../Shared/CIPPSharp/bin/CIPPSharp.dll"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Get-HuduBitLockerKeySlot.ps1"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Get-HuduBitLockerSyncField.ps1"
     $Source = Get-Content -Raw "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Invoke-HuduExtensionSync.ps1"
@@ -32,6 +33,7 @@ Describe 'Hudu missing credential recovery' {
         $LAPSMetadataByDeviceId = @{ 'device-1' = @{ lastBackupDateTime = '2026-09-07T00:00:00Z' } }
         $BitLockerMetadataAvailable = $true
         $BitLockerKeyMetadata = @(@{ deviceId = 'device-1'; id = 'key-1'; volumeType = 1 })
+        $BitLockerKeysByDevice = [CIPP.CippIndex]::Build($BitLockerKeyMetadata, @(foreach ($Key in $BitLockerKeyMetadata) { , ($($Key.deviceId) ?? $null) }))
         $ExistingAsset = @{ Hash = 'unchanged' }
         $NewHash = 'unchanged'
         Mock Get-CIPPLapsPassword { @{ state = 'success'; accountName = 'Administrator'; copyField = 'test-password'; backupDateTime = '2026-09-07T00:00:00Z' } }

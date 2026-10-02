@@ -6,6 +6,8 @@ function Find-HuduDeviceMatch {
         .DESCRIPTION
         Uses a usable serial number first and falls back to the device name. Blank
         and excluded serial numbers never participate in serial matching.
+        Pass SerialIndex and NameIndex (built from Get-HuduDeviceMatchKey) when matching many devices against the
+        same assets; without them the assets are indexed on each call.
     #>
     [CmdletBinding()]
     param(
@@ -18,22 +20,27 @@ function Find-HuduDeviceMatch {
 
         [Parameter(Mandatory = $false)]
         [AllowEmptyCollection()]
-        [string[]]$ExcludeSerials = @()
+        [string[]]$ExcludeSerials = @(),
+
+        [Parameter(Mandatory = $false)]
+        $SerialIndex,
+
+        [Parameter(Mandatory = $false)]
+        $NameIndex
     )
+
+    if (-not $SerialIndex -or -not $NameIndex) {
+        $Keys = @(foreach ($HuduDevice in $HuduDevices) { Get-HuduDeviceMatchKey -HuduDevice $HuduDevice })
+        $SerialIndex = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $Keys) { , $Key.Serial }))
+        $NameIndex = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $Keys) { , $Key.Name }))
+    }
 
     $SerialNumber = [string]$Device.serialNumber
     $DeviceName = [string]$Device.deviceName
     $SerialIsUsable = -not [string]::IsNullOrWhiteSpace($SerialNumber) -and $SerialNumber -notin $ExcludeSerials
 
     if ($SerialIsUsable) {
-        $SerialMatches = @(
-            $HuduDevices | Where-Object {
-                $_.primary_serial -eq $SerialNumber -or
-                ($_.cards | Where-Object {
-                        $_.integrator_name -eq 'cw_manage' -and $_.data.serialNumber -eq $SerialNumber
-                    })
-            }
-        )
+        $SerialMatches = @($SerialIndex.Find($SerialNumber))
         if ($SerialMatches.Count -gt 0) {
             return $SerialMatches
         }
@@ -43,12 +50,5 @@ function Find-HuduDeviceMatch {
         return @()
     }
 
-    return @(
-        $HuduDevices | Where-Object {
-            $_.name -eq $DeviceName -or
-            ($_.cards | Where-Object {
-                    $_.integrator_name -eq 'cw_manage' -and $_.data.name -contains $DeviceName
-                })
-        }
-    )
+    return @($NameIndex.Find($DeviceName))
 }

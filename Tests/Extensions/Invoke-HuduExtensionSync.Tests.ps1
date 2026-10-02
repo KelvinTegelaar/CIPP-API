@@ -1,5 +1,7 @@
 BeforeAll {
+    Add-Type -Path "$PSScriptRoot/../../Shared/CIPPSharp/bin/CIPPSharp.dll"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Find-HuduDeviceMatch.ps1"
+    . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Get-HuduDeviceMatchKey.ps1"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Get-HuduBitLockerKeySlot.ps1"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Get-HuduBitLockerSyncField.ps1"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Invoke-HuduExtensionSync.ps1"
@@ -11,9 +13,9 @@ BeforeAll {
     function Get-AssignedMap { }
     function Get-CIPPTable { param($TableName) }
     function Get-CIPPAzDataTableEntity { param($Filter) }
-    function Get-CippExtensionReportingData { param($TenantFilter, [switch]$IncludeMailboxes) }
+    function Get-CippExtensionReportingData { param($TenantFilter, [switch]$IncludeMailboxes, [string[]]$Exclude) }
     function Get-HuduCompanies { param($Id) }
-    function Add-HuduAssetLayoutField { param($AssetLayoutId, $Label, $FieldType, $Position, $ShowInList) }
+    function Add-HuduAssetLayoutField { param($AssetLayoutId, $Label, $FieldType, $Position, $ShowInList, $AssetLayout) }
     function Get-HuduAssetLayouts { param($Id, $LayoutId) }
     function Get-HuduAssets { param($CompanyId, $AssetLayoutId) }
     function Get-HuduRelations { }
@@ -27,7 +29,7 @@ BeforeAll {
     function Get-HuduFormattedField { param($Title, $Value) }
     function Get-HuduFormattedBlock { param($Heading, $Body) }
     function Get-StringHash { param($String) }
-    function Set-HuduAsset { param($AssetId, $Name, $CompanyId, $AssetLayoutId, $Fields, $PrimarySerial) }
+    function Set-HuduAsset { param($AssetId, $Name, $CompanyId, $AssetLayoutId, $Fields, $PrimarySerial, $ExistingAsset) }
     function New-HuduAsset { param($Name, $CompanyId, $AssetLayoutId, $Fields, $PrimarySerial) }
     function New-HuduRelation { param($FromableType, $FromableID, $ToableType, $ToableID) }
     function Set-HuduMagicDash { param($Title, $CompanyName, $Message, $Icon, $Content, $Shade) }

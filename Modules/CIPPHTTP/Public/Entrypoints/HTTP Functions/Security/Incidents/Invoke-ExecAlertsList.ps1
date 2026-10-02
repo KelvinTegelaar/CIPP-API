@@ -20,7 +20,7 @@ function Invoke-ExecAlertsList {
         # Interact with query parameters or the body of the request.
         $TenantFilter = $Request.Query.tenantFilter
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-            $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $TenantFilter
+            $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts_v2' -tenantid $TenantFilter
             $AlertsObj = foreach ($Alert in $Alerts) {
                 @{
                     Tenant        = $TenantFilter
@@ -28,11 +28,11 @@ function Invoke-ExecAlertsList {
                     Id            = $Alert.Id
                     Title         = $Alert.Title
                     Category      = $Alert.category
-                    EventDateTime = $Alert.eventDateTime
+                    EventDateTime = $Alert.firstActivityDateTime
                     Severity      = $Alert.Severity
                     Status        = $Alert.Status
-                    RawResult     = $($Alerts | Where-Object { $_.Id -eq $Alert.Id })
-                    InvolvedUsers = $($Alerts | Where-Object { $_.Id -eq $Alert.Id }).userStates
+                    RawResult     = $Alert
+                    InvolvedUsers = @($Alert.evidence | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.security.userEvidence' }).userAccount
                 }
             }
 
@@ -43,12 +43,12 @@ function Invoke-ExecAlertsList {
             $Metadata = [PSCustomObject]@{}
 
             [PSCustomObject]@{
-                NewAlertsCount             = $DisplayableAlerts | Where-Object { $_.Status -eq 'newAlert' } | Measure-Object | Select-Object -ExpandProperty Count
+                NewAlertsCount             = $DisplayableAlerts | Where-Object { $_.Status -eq 'new' } | Measure-Object | Select-Object -ExpandProperty Count
                 InProgressAlertsCount      = $DisplayableAlerts | Where-Object { $_.Status -eq 'inProgress' } | Measure-Object | Select-Object -ExpandProperty Count
-                SeverityHighAlertsCount    = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'high' } | Measure-Object | Select-Object -ExpandProperty Count
-                SeverityMediumAlertsCount  = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'medium' } | Measure-Object | Select-Object -ExpandProperty Count
-                SeverityLowAlertsCount     = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'low' } | Measure-Object | Select-Object -ExpandProperty Count
-                SeverityInformationalCount = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'informational' } | Measure-Object | Select-Object -ExpandProperty Count
+                SeverityHighAlertsCount    = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'new') } | Where-Object { $_.Severity -eq 'high' } | Measure-Object | Select-Object -ExpandProperty Count
+                SeverityMediumAlertsCount  = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'new') } | Where-Object { $_.Severity -eq 'medium' } | Measure-Object | Select-Object -ExpandProperty Count
+                SeverityLowAlertsCount     = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'new') } | Where-Object { $_.Severity -eq 'low' } | Measure-Object | Select-Object -ExpandProperty Count
+                SeverityInformationalCount = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'new') } | Where-Object { $_.Severity -eq 'informational' } | Measure-Object | Select-Object -ExpandProperty Count
                 MSResults                  = @($DisplayableAlerts)
             }
         } else {
@@ -99,21 +99,21 @@ function Invoke-ExecAlertsList {
                         Id            = $AlertInfo.Id
                         Title         = $AlertInfo.Title
                         Category      = $AlertInfo.category
-                        EventDateTime = $AlertInfo.eventDateTime
+                        EventDateTime = $AlertInfo.firstActivityDateTime
                         Severity      = $AlertInfo.Severity
                         Status        = $AlertInfo.Status
                         RawResult     = $AlertInfo
-                        InvolvedUsers = $AlertInfo.userStates
+                        InvolvedUsers = @($AlertInfo.evidence | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.security.userEvidence' }).userAccount
                     }
                 }
                 $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $null -ne $_.Id } | Sort-Object -Property EventDateTime -Descending
                 [PSCustomObject]@{
-                    NewAlertsCount             = $DisplayableAlerts | Where-Object { $_.Status -eq 'newAlert' } | Measure-Object | Select-Object -ExpandProperty Count
+                    NewAlertsCount             = $DisplayableAlerts | Where-Object { $_.Status -eq 'new' } | Measure-Object | Select-Object -ExpandProperty Count
                     InProgressAlertsCount      = $DisplayableAlerts | Where-Object { $_.Status -eq 'inProgress' } | Measure-Object | Select-Object -ExpandProperty Count
-                    SeverityHighAlertsCount    = ($DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'high' } | Measure-Object | Select-Object -ExpandProperty Count)
-                    SeverityMediumAlertsCount  = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'medium' } | Measure-Object | Select-Object -ExpandProperty Count
-                    SeverityLowAlertsCount     = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'low' } | Measure-Object | Select-Object -ExpandProperty Count
-                    SeverityInformationalCount = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'informational' } | Measure-Object | Select-Object -ExpandProperty Count
+                    SeverityHighAlertsCount    = ($DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'new') } | Where-Object { $_.Severity -eq 'high' } | Measure-Object | Select-Object -ExpandProperty Count)
+                    SeverityMediumAlertsCount  = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'new') } | Where-Object { $_.Severity -eq 'medium' } | Measure-Object | Select-Object -ExpandProperty Count
+                    SeverityLowAlertsCount     = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'new') } | Where-Object { $_.Severity -eq 'low' } | Measure-Object | Select-Object -ExpandProperty Count
+                    SeverityInformationalCount = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'new') } | Where-Object { $_.Severity -eq 'informational' } | Measure-Object | Select-Object -ExpandProperty Count
                     MSResults                  = ($DisplayableAlerts | Sort-Object -Property EventDateTime -Descending)
                 }
             }

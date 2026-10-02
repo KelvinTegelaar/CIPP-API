@@ -1,5 +1,7 @@
 BeforeAll {
+    Add-Type -Path "$PSScriptRoot/../../Shared/CIPPSharp/bin/CIPPSharp.dll"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Find-HuduDeviceMatch.ps1"
+    . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Get-HuduDeviceMatchKey.ps1"
 
     function New-TestHuduDevice {
         param($Id, $Name, $Serial, $ManageName, $ManageSerial)
@@ -63,5 +65,25 @@ Describe 'Find-HuduDeviceMatch' {
         $Result = @(Find-HuduDeviceMatch -Device @{ deviceName = 'DEVICE-01'; serialNumber = '' } -HuduDevices $HuduDevices)
         $Result.Count | Should -Be 2
         $Result.id | Should -Be 1, 3
+    }
+
+    It 'matches the same assets, case-insensitively, through prebuilt indexes' {
+        $HuduDevices += New-TestHuduDevice -Id 3 -Name 'DEVICE-01' -Serial 'OTHER' -ManageName @() -ManageSerial 'OTHER'
+        $Keys = @(foreach ($HuduDevice in $HuduDevices) { Get-HuduDeviceMatchKey -HuduDevice $HuduDevice })
+        $Indexes = @{
+            SerialIndex = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $Keys) { , $Key.Serial }))
+            NameIndex   = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $Keys) { , $Key.Name }))
+        }
+        foreach ($Device in @(
+                @{ deviceName = 'device-01'; serialNumber = '' }
+                @{ deviceName = 'DEVICE-01'; serialNumber = 'serial-02' }
+                @{ deviceName = 'UNKNOWN'; serialNumber = 'CW-SERIAL-02' }
+                @{ deviceName = 'OLD-NAME'; serialNumber = 'NO-MATCH' }
+                @{ deviceName = 'UNKNOWN'; serialNumber = '' }
+            )) {
+            $Scan = @(Find-HuduDeviceMatch -Device $Device -HuduDevices $HuduDevices)
+            $Indexed = @(Find-HuduDeviceMatch -Device $Device -HuduDevices $HuduDevices @Indexes)
+            "$($Indexed.id)" | Should -Be "$($Scan.id)"
+        }
     }
 }

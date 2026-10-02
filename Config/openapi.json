@@ -12564,60 +12564,68 @@
                   "type": "object",
                   "description": "Derived from the Microsoft Graph entity it queries, and the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
                   "properties": {
-                    "activityGroupName": {
+                    "actorDisplayName": {
                       "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "additionalData": {
+                      "type": "object",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "Alert": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
-                    "alertDetections": {
-                      "type": "array",
+                    "alertPolicyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "alertWebUrl": {
+                      "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "assignedTo": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "azureSubscriptionId": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "azureTenantId": {
-                      "type": "string",
+                    "categories": {
+                      "type": "array",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "Category": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity,frontend"
                     },
-                    "closedDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "cloudAppStates": {
-                      "type": "array",
+                    "classification": {
+                      "type": "object",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "comments": {
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "confidence": {
-                      "type": "integer",
-                      "x-cipp-field-source": "graph-entity"
-                    },
                     "createdDateTime": {
                       "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "customDetails": {
+                      "type": "object",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "description": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "detectionIds": {
-                      "type": "array",
+                    "detectionSource": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "detectorId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "determination": {
+                      "type": "object",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "DurableName": {
@@ -12628,27 +12636,18 @@
                       "x-cipp-field-source": "storage"
                     },
                     "EventDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity,frontend"
+                      "x-cipp-field-source": "frontend"
                     },
-                    "feedback": {
-                      "type": "object",
+                    "evidence": {
+                      "type": "array",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "fileStates": {
-                      "type": "array",
+                    "firstActivityDateTime": {
+                      "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "FunctionName": {
                       "x-cipp-field-source": "backend"
-                    },
-                    "historyStates": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "hostStates": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
                     },
                     "id": {
                       "type": "string",
@@ -12658,43 +12657,39 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
-                    "incidentIds": {
-                      "type": "array",
+                    "incidentId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "incidentWebUrl": {
+                      "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "InProgressAlertsCount": {
                       "x-cipp-field-source": "backend"
                     },
-                    "investigationSecurityStates": {
-                      "type": "array",
+                    "investigationState": {
+                      "type": "object",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "lastEventDateTime": {
+                    "lastActivityDateTime": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "lastModifiedDateTime": {
+                    "lastUpdateDateTime": {
                       "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "malwareStates": {
-                      "type": "array",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "MdoAlert": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
-                    "messageSecurityStates": {
+                    "mitreTechniques": {
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "MSResults": {
                       "x-cipp-field-source": "backend"
-                    },
-                    "networkConnections": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
                     },
                     "NewAlertsCount": {
                       "x-cipp-field-source": "backend"
@@ -12705,8 +12700,12 @@
                     "PartitionKey": {
                       "x-cipp-field-source": "storage"
                     },
-                    "processes": {
-                      "type": "array",
+                    "productName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "providerAlertId": {
+                      "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "QueueFunction": {
@@ -12719,19 +12718,19 @@
                       "x-cipp-field-source": "backend"
                     },
                     "recommendedActions": {
-                      "type": "array",
+                      "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "registryKeyStates": {
-                      "type": "array",
+                    "resolvedDateTime": {
+                      "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "RowKey": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
-                    "securityResources": {
-                      "type": "array",
+                    "serviceSource": {
+                      "type": "object",
                       "x-cipp-field-source": "graph-entity"
                     },
                     "Severity": {
@@ -12753,15 +12752,11 @@
                     "SkipLog": {
                       "x-cipp-field-source": "backend"
                     },
-                    "sourceMaterials": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
                     "Status": {
                       "type": "object",
                       "x-cipp-field-source": "graph-entity,frontend"
                     },
-                    "tags": {
+                    "systemTags": {
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
                     },
@@ -12769,8 +12764,20 @@
                       "type": "string",
                       "x-cipp-field-source": "storage,frontend"
                     },
+                    "tenantId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
                     "TenantParams": {
                       "x-cipp-field-source": "backend"
+                    },
+                    "threatDisplayName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "threatFamilyName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
                     },
                     "Timestamp": {
                       "type": "string",
@@ -12779,26 +12786,6 @@
                     "Title": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity,frontend"
-                    },
-                    "triggers": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "uriClickSecurityStates": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "userStates": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "vendorInformation": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "vulnerabilityStates": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
                     }
                   }
                 }
@@ -25873,7 +25860,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Finds which tenants hold the given licence SKUs, searching the cached licence overview rather than querying each tenant live. Takes an array of skuIds in the body.",
+        "description": "Resolves licence SKU ids to display names from the licence name table, falling back to the given tenant's cached licence overview. Takes an array of skuIds in the body.",
         "requestBody": {
           "required": false,
           "content": {
@@ -25885,8 +25872,11 @@
                     "type": "array",
                     "items": {
                       "type": "string"
-                    },
-                    "description": "Get skuIds from POST body"
+                    }
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant whose cached licence overview is checked for SKUs the name table does not hold yet"
                   }
                 }
               }
@@ -29946,38 +29936,19 @@
     },
     "/api/ExecOneDriveShortCut": {
       "post": {
-        "summary": "ExecOneDriveShortCut",
+        "summary": "Creates a OneDrive shortcut to a SharePoint library for one or more users.",
         "operationId": "ExecOneDriveShortCut",
         "tags": [
           "Identity > Administration > Users"
         ],
+        "description": "Accepts one { username, userid, siteUrl, destination, tenantFilter } object or an array of them (the Users table bulk action). Every user is attempted: a failure for one user (for example a shortcut that already exists) is reported in its place and does not stop the remaining users, so a bulk rollout never has to be re-run to find out where it got to. The response is one result per user plus a summary line, and only returns an error status when no user succeeded.",
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "destination": {
-                    "$ref": "#/components/schemas/LabelValue"
-                  },
-                  "siteUrl": {
-                    "$ref": "#/components/schemas/LabelValue"
-                  },
-                  "tenantFilter": {
-                    "type": "string",
-                    "description": "Interact with the body of the request"
-                  },
-                  "userid": {
-                    "type": "string"
-                  },
-                  "username": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "tenantFilter"
-                ]
+                "properties": {}
               }
             }
           }
@@ -29992,6 +29963,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -36618,18 +36592,12 @@
                   "GUID": {
                     "type": "string"
                   },
-                  "Provider": {
-                    "type": "string"
-                  },
                   "Status": {
                     "type": "string"
                   },
                   "tenantFilter": {
                     "type": "string",
                     "description": "Interact with query parameters or the body of the request."
-                  },
-                  "Vendor": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -36649,14 +36617,6 @@
             }
           },
           {
-            "name": "Provider",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "Status",
             "in": "query",
             "required": false,
@@ -36666,14 +36626,6 @@
           },
           {
             "$ref": "#/components/parameters/tenantFilter"
-          },
-          {
-            "name": "Vendor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -65256,7 +65208,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Lists Entra ID users for a tenant with license and sign-in details, or retrieves a specific user by ID. For AllTenants or cached data, consider using ListDBCache with type=Users for significantly better performance.",
+        "description": "Lists Entra ID users for a tenant with license and sign-in details, or retrieves a specific user by ID. Supports UseReportDB=true to serve cached users from the reporting database; AllTenants always uses the cache. When manualPagination is set on a cached read, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
           {
             "name": "graphFilter",
@@ -65275,7 +65227,42 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve from the reporting database cache instead of live Graph. AllTenants always uses the cache.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           },
           {
             "name": "UserID",
@@ -65508,9 +65495,6 @@
                         "type": "string",
                         "x-cipp-field-source": "graph-entity"
                       },
-                      "Message": {
-                        "x-cipp-field-source": "backend"
-                      },
                       "mobilePhone": {
                         "type": "string",
                         "x-cipp-field-source": "graph-entity"
@@ -65685,6 +65669,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [

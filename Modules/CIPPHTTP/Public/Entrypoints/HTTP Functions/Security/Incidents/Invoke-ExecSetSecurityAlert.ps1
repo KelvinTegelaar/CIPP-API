@@ -16,12 +16,10 @@ Function Invoke-ExecSetSecurityAlert {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $AlertFilter = $Request.Query.GUID ?? $Request.Body.GUID
     $Status = $Request.Query.Status ?? $Request.Body.Status
-    $Vendor = $Request.Query.Vendor ?? $Request.Body.Vendor
-    $Provider = $Request.Query.Provider ?? $Request.Body.Provider
-    $AssignBody = '{"status":"' + $Status + '","vendorInformation":{"provider":"' + $Provider + '","vendor":"' + $Vendor + '"}}'
+    $AssignBody = ConvertTo-Json -Compress -InputObject @{ status = $Status }
 
     try {
-        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/security/alerts/$AlertFilter" -type PATCH -tenantid $TenantFilter -body $AssignBody
+        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/security/alerts_v2/$AlertFilter" -type PATCH -tenantid $TenantFilter -body $AssignBody
         $Result = "Set alert $AlertFilter to status $Status"
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
