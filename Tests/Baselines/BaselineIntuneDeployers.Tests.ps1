@@ -530,9 +530,11 @@ Describe 'Get-CIPPBaselineDeployCheckChromeExtensionState' {
             if ($uri -like '*mobileApps*') { @([PSCustomObject]@{ id = 'app-1'; displayName = 'Check by CyberDrain - Browser Extension'; description = $script:DeployedDescription; '@odata.type' = '#microsoft.graph.win32LobApp' }) }
             else { @() }
         }
-        Invoke-CIPPBaselineDeployCheckChromeExtension -Remediate $Remediate -TenantFilter $script:Tenant -Current $null
+        $Skipped = Invoke-CIPPBaselineDeployCheckChromeExtension -Remediate $Remediate -TenantFilter $script:Tenant -Current $null
         Should -Invoke Add-CIPPW32ScriptApplication -Times 1 -Exactly
         Should -Invoke New-GraphPostRequest -Times 0 -Exactly -ParameterFilter { $type -eq 'DELETE' }
+        # The engine records this run as Compliant only if the executor says nothing changed.
+        $Skipped.Changed | Should -Be $false
     }
 }
 

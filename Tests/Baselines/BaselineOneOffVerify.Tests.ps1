@@ -561,6 +561,19 @@ Describe 'Invoke-CIPPBaselineStandard remediation alerting and write failures' {
         Should -Invoke Send-CIPPBaselineAlert -Times 0 -Exactly
     }
 
+    It 'an executor that reports Changed=$false records Compliant, not Remediated, and never alerts' {
+        Mock Get-CIPPAzDataTableEntity { @(& $script:PriorRow 'Drift') }
+        Mock Invoke-CIPPBaselineTestWrite { [PSCustomObject]@{ Changed = $false } }
+        $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'
+        Should -Invoke Invoke-CIPPBaselineTestWrite -Times 1 -Exactly
+        $Result.Outcome | Should -Be 'Compliant'
+        $Result.Status | Should -Be 'Compliant'
+        $Result.Remediated | Should -Not -Be $true
+        $Result.AlertEvent | Should -BeNullOrEmpty
+        Should -Invoke Send-CIPPBaselineAlert -Times 0 -Exactly
+        Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $message -like 'Successfully changed*' }
+    }
+
     It 'alerts on the transition INTO remediation - a drifted prior still fires once' {
         Mock Get-CIPPAzDataTableEntity { @(& $script:PriorRow 'Drift') }
         $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'

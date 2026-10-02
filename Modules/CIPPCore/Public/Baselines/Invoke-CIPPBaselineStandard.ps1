@@ -706,7 +706,7 @@ function Invoke-CIPPBaselineStandard {
                 if ($Definition.remediate.executor -notmatch '^[A-Za-z0-9]+$' -or -not (Get-Command -Name $ExecutorName -ErrorAction SilentlyContinue)) {
                     throw "Unknown remediate executor '$($Definition.remediate.executor)' on $($Definition.name)."
                 }
-                & $ExecutorName -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current
+                $ExecutorOutput = & $ExecutorName -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current
             } catch {
                 Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to change `"$Label`" to $ExpectedJson`: $($_.Exception.Message) - Run $RunId" -Sev 'Error' -LogData (Get-CippException -Exception $_)
                 $Result.Outcome = 'Error'
@@ -716,18 +716,27 @@ function Invoke-CIPPBaselineStandard {
                 Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
                 return $Result
             }
-            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Successfully changed `"$Label`" to $ExpectedJson - Run $RunId" -Sev 'Info'
-            # Optimistic post-write: the next run's cache read verifies it.
-            $Result.CurrentValue = $Expected
-            $Result.Compliant = $true
-            $Result.RowDiff = @()
-            $Result.PendingVerification = $true
-            $Result.Remediated = $true
-            $Result.Outcome = 'Remediated'
-            $Result.Status = 'Compliant'
-            # Edge-triggered like the Drift alert: checkBeforeRun:false standards write every
-            # run, so alerting on a steady-state rewrite would fire forever with nothing changed.
-            if ($Item.AlertOnRemediate -and $PriorStatus -ne 'Compliant') { $Result.AlertEvent = 'Remediated' }
+            # A self-gating executor (checkBeforeRun:false, fingerprint-compared) returns
+            # Changed=$false when it wrote nothing; that run is Compliant, not Remediated.
+            $ExecutorSkipped = $null -ne $ExecutorOutput -and $ExecutorOutput.PSObject.Properties['Changed'] -and $ExecutorOutput.Changed -eq $false
+            if ($ExecutorSkipped) {
+                $Result.Compliant = $true
+                $Result.Outcome = 'Compliant'
+                $Result.Status = 'Compliant'
+            } else {
+                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Successfully changed `"$Label`" to $ExpectedJson - Run $RunId" -Sev 'Info'
+                # Optimistic post-write: the next run's cache read verifies it.
+                $Result.CurrentValue = $Expected
+                $Result.Compliant = $true
+                $Result.RowDiff = @()
+                $Result.PendingVerification = $true
+                $Result.Remediated = $true
+                $Result.Outcome = 'Remediated'
+                $Result.Status = 'Compliant'
+                # Edge-triggered like the Drift alert: checkBeforeRun:false standards write every
+                # run, so alerting on a steady-state rewrite would fire forever with nothing changed.
+                if ($Item.AlertOnRemediate -and $PriorStatus -ne 'Compliant') { $Result.AlertEvent = 'Remediated' }
+            }
         } elseif ($Compliant) {
             $Result.Compliant = $true
             $Result.Outcome = 'Compliant'
