@@ -27,8 +27,8 @@ function Set-CIPPDBCacheManagedDeviceEncryptionStates {
         # devices cache is missing the set stays empty and rows pass through untouched.
         $CloudPCIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         try {
-            foreach ($Device in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ManagedDevices' -Fields 'id', 'isCloudPC', 'deviceType', 'chassisType', 'model', 'manufacturer')) {
-                if ($Device.id -and (Test-CIPPCloudPCDevice -Device $Device)) { $null = $CloudPCIds.Add([string]$Device.id) }
+            New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ManagedDevices' -Fields 'id', 'isCloudPC', 'deviceType', 'chassisType', 'model', 'manufacturer' | ForEach-Object {
+                if ($_.id -and (Test-CIPPCloudPCDevice -Device $_)) { $null = $CloudPCIds.Add([string]$_.id) }
             }
         } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Could not load the managed devices cache; Cloud PCs will not be marked platform-encrypted: $($_.Exception.Message)" -sev Warning

@@ -64,7 +64,7 @@ function Add-CIPPDbItem {
         # only some rows carry may be missed, which the picker tolerates by accepting a typed name.
         $ShapeFields = [ordered]@{}
         $ShapeSampled = 0
-        $ShapeSampleSize = 50
+        $ShapeSampleSize = 10
         $ShapeMaxFields = 300
         $TypeOf = {
             param($Value)
@@ -91,8 +91,6 @@ function Add-CIPPDbItem {
         }
         $NoteShape = {
             param($Item)
-            if ($ShapeSampled -ge $ShapeSampleSize) { return }
-            $ShapeSampled++
             foreach ($Property in @(& $PropertiesOf $Item)) {
                 $Kind = & $NoteField $Property.Name $Property.Value
                 # one level in: an object's own fields, or the fields of an array's first object
@@ -107,6 +105,7 @@ function Add-CIPPDbItem {
         # Two passes preserve the original semantics: path/wildcard chars → '_', control chars → stripped.
         $RowKeyPathRegex = [regex]::new('[/\\#?]')
         $RowKeyControlRegex = [regex]::new('[\u0000-\u001F\u007F-\u009F]')
+        $HasToJson = [bool](('CIPP.CippJson' -as [type])?.GetMethod('ToJson'))
 
         if ($TenantFilter -match '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
             try {
@@ -129,7 +128,14 @@ function Add-CIPPDbItem {
             $ItemId = $Item.ExternalDirectoryObjectId ?? $Item.id ?? $Item.Identity ?? $Item.skuId ?? $Item.userPrincipalName ?? [guid]::NewGuid().ToString()
             $RowKey = $RowKeyControlRegex.Replace($RowKeyPathRegex.Replace("$Type-$ItemId", '_'), '')
             if ($SeenInBatch.Add($RowKey)) {
-                & $NoteShape $Item
+                # Piping a list into ConvertTo-Json unrolls it, so lists keep the old path
+                $Data = if ($HasToJson -and $Item -isnot [System.Collections.IList]) { [CIPP.CippJson]::ToJson($Item, 100) }
+                if ($null -eq $Data) { $Data = [string]($Item | ConvertTo-Json -Depth 100 -Compress) }
+                # Counted here: an increment inside $NoteShape ('&', child scope) would never land.
+                if ($ShapeSampled -lt $ShapeSampleSize) {
+                    $ShapeSampled++
+                    & $NoteShape $Item
+                }
                 $Batch.Add(@{
                         PartitionKey = $TenantFilter
                         RowKey       = $RowKey
@@ -137,7 +143,7 @@ function Add-CIPPDbItem {
                         # Platform SSO) nest deeper than 10 levels - a lower depth
                         # silently strips @odata.type/settingDefinitionId from deep
                         # children and every consumer sees a mangled object.
-                        Data         = [string]($Item | ConvertTo-Json -Depth 100 -Compress)
+                        Data         = $Data
                         Type         = $Type
                         RunId        = $RunId
                     })
@@ -226,7 +232,7 @@ function Add-CIPPDbItem {
                 RowKey       = "$Type-Count"
                 DataCount    = [int]$NewCount
                 Type         = $Type
-                Shape        = $ShapeJson
+                Shape        = [string]$ShapeJson
             } -Force
         }
 

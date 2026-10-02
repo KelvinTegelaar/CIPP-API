@@ -5,7 +5,7 @@ function Invoke-CIPPBecIPReview {
     .DESCRIPTION
         The background half of ExecBECIPReview. For a completed case it keeps the original window and
         everything that does not depend on the verdicts, and replaces what does:
-        - the investigator's overrides (Safe / Compromised per address or CIDR range) become the case's
+        - the investigator's overrides (Safe / Suspicious / Compromised per address or CIDR range) become the case's
           IPOverrides and decide those addresses outright;
         - chosen accounts are correlated (Get-CIPPBecCorrelatedUserPeers) and added to the peers;
         - the address lists are re-read, so an entry just added to CIPP's IP allow/block list counts;
@@ -19,7 +19,7 @@ function Invoke-CIPPBecIPReview {
     .PARAMETER CaseId
         The BEC case (run) to review.
     .PARAMETER Overrides
-        { IP (address or CIDR range), Verdict (Safe|Compromised), Note } - the complete set for the case.
+        { IP (address or CIDR range), Verdict (Safe|Suspicious|Compromised), Note } - the complete set for the case.
     .PARAMETER CorrelateUserIds
         Object ids of accounts whose sign-ins to correlate with the case's addresses.
     .PARAMETER DeploymentId
@@ -77,7 +77,7 @@ function Invoke-CIPPBecIPReview {
         )
         $CaseOverrides = @(foreach ($Override in @($Overrides | Where-Object { $_ })) {
                 $Verdict = [string]($Override.Verdict.value ?? $Override.Verdict)
-                if ($Verdict -notin @('Safe', 'Compromised')) { continue }
+                if ($Verdict -notin @('Safe', 'Suspicious', 'Compromised')) { continue }
                 [pscustomobject]@{ Range = ConvertTo-CIPPIPRange -Value ([string]($Override.IP ?? $Override.Range)); Verdict = $Verdict; Note = [string]$Override.Note }
             })
         $Completeness = $Results.Completeness
@@ -121,7 +121,7 @@ function Invoke-CIPPBecIPReview {
 
         $Current = 3
         & $Step 3 'running' 'In progress'
-        $Analysis = Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -Results $Results -Heuristics $Heuristics -WindowStart $StartDate -UsageLocation $UsageLocation -Anchor $UserName -Baseline $Results.IPBaseline -KnownPeers @($Results.IPPeers) -Overrides $CaseOverrides -ExtraPeers $ExtraPeers -TechnicianIPs $TechnicianIPs
+        $Analysis = Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -Results $Results -Heuristics $Heuristics -WindowStart $StartDate -UsageLocation $UsageLocation -Anchor $UserName -Baseline $Results.IPBaseline -KnownPeers @($Results.IPPeers) -Overrides $CaseOverrides -ExtraPeers $ExtraPeers -TechnicianIPs $TechnicianIPs -TravelWindows @($Results.TravelWindows | Where-Object { $_ })
         & $Mark 'SignInBaseline' $Analysis.Baseline
         & $Mark 'IPGuidance' $Analysis.Guidance
         & $Mark 'IPPeers' $Analysis.PeersResult

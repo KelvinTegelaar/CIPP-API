@@ -14,7 +14,7 @@ function Get-CIPPBecScore {
         five times over. AttackerIPs always counts; the ones derived from it (mail, files, forms,
         delegated mailboxes, other accounts reached) count only when an attacker address is backed by
         evidence of its own - an investigator or CIPP-list verdict (Compromised), an attacker action
-        from it, or a medium/high Entra sign-in risk. Otherwise they are listed, unapplied.
+        from it, a medium/high Entra sign-in risk, or a password accepted from it. Otherwise they are listed, unapplied.
     .PARAMETER Results
         The BEC results object.
     .PARAMETER Heuristics
@@ -34,6 +34,8 @@ function Get-CIPPBecScore {
     $NewUsersThreshold = [int]($Heuristics.score.newUsersThreshold ?? 5)
     $WindowDays = [int]($Results.AnalysisWindowDays ?? $Heuristics.window.days ?? 7)
     $SuspiciousFolder = [string]($Heuristics.inboxRules.suspiciousFolderPattern ?? 'RSS')
+    # Exchange's own system mailboxes, which the service re-grants itself (Discovery Management on the search mailbox)
+    $SystemMailbox = '(?i)DiscoverySearchMailbox|SystemMailbox\{|FederatedEmail\.4c1f4d8b|Migration\.8f3e7716'
 
     $ExtractedAt = try { ([datetime]$Results.ExtractedAt).ToUniversalTime() } catch { (Get-Date).ToUniversalTime() }
     $WindowStart = $ExtractedAt.AddDays(-$WindowDays)
@@ -46,7 +48,7 @@ function Get-CIPPBecScore {
     $Stats = [ordered]@{
         NewRules                       = & $Count $Results.NewRules
         InboxRuleChanges               = & $Count $Results.InboxRuleChanges
-        PermissionChanges              = & $Count $Results.MailboxPermissionChanges
+        PermissionChanges              = @($Results.MailboxPermissionChanges | Where-Object { $_ -and [string]$_.ObjectId -notmatch $SystemMailbox }).Count
         PermissionChangesTargetingUser = @($Results.MailboxPermissionChanges | Where-Object { $_.TargetsSuspect -eq $true }).Count
         NewApps                        = & $Count $Results.AddedApps
         NewUsers                       = & $Count $Results.NewUsers
@@ -75,8 +77,8 @@ function Get-CIPPBecScore {
         RiskyUserMedium                = if ($Results.RiskState.Listed -eq $true -and $Results.RiskState.RiskState -eq 'atRisk' -and $Results.RiskState.RiskLevel -eq 'medium') { 1 } else { 0 }
         RiskyUserLow                   = if ($Results.RiskState.Listed -eq $true -and $Results.RiskState.RiskState -eq 'atRisk' -and $Results.RiskState.RiskLevel -eq 'low') { 1 } else { 0 }
         ConfirmedCompromised           = if ($Results.RiskState.RiskState -eq 'confirmedCompromised') { 1 } else { 0 }
-        # addresses judged the attacker's (by an investigator, the CIPP list or the heuristics) that got in or acted
-        AttackerIPs                    = @($Results.IPVerdicts | Where-Object { $_.Verdict -in @('Compromised', 'LikelyAttacker') -and ([int]$_.SuccessfulSignIns -gt 0 -or [int]$_.Activities -gt 0) }).Count
+        # addresses judged the attacker's (by an investigator, the CIPP list or the heuristics) that got in, acted or had the password
+        AttackerIPs                    = @($Results.IPVerdicts | Where-Object { $_.Verdict -in @('Compromised', 'LikelyAttacker') -and ([int]$_.SuccessfulSignIns -gt 0 -or [int]$_.Activities -gt 0 -or [int]$_.PasswordAccepted -gt 0) }).Count
         # item-level activity counts only from addresses judged the attacker's, not merely suspicious or unknown
         AttackerMailAccess             = @($Results.AttackerMailActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
         AttackerFileAccess             = @($Results.AttackerFileActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
@@ -89,11 +91,11 @@ function Get-CIPPBecScore {
         NewRules                       = 'Inbox rules exist on the mailbox'
         InboxRuleChanges               = 'Inbox rules were created, changed or removed in the window'
         PermissionChangesTargetingUser = 'Mailbox permission changes targeted this mailbox'
-        PermissionChanges              = 'Mailbox permission changes elsewhere in the tenant'
+        PermissionChanges              = 'Mailbox permission changes elsewhere in the tenant (not on system mailboxes)'
         NewApps                        = 'New service principals appeared in the tenant'
         NewUsers                       = "More than $NewUsersThreshold users were created in the window"
         SafelistChanges                = 'Trusted/blocked sender lists were changed'
-        SuspiciousRules                = 'An inbox rule hides, forwards or deletes mail (or acts on all incoming mail)'
+        SuspiciousRules                = 'An inbox rule forwards externally, feeds RSS, or hides mail with a reason to (all mail, sensitive keywords, blank name)'
         MaliciousApps                  = 'Applications match the known-malicious catalog'
         ForeignSuccessfulSignIns       = 'Successful sign-ins from outside the usage location'
         ForeignActivity                = 'Rule, safelist, sharing or mail activity from outside the usage location'
@@ -101,11 +103,11 @@ function Get-CIPPBecScore {
         MassMail                       = 'Mass-mail pattern in sent messages'
         RecentMfaMethods               = 'MFA methods registered in the window'
         RecentIntuneDevices            = 'Intune devices enrolled in the window'
-        FlaggedDelegations             = 'External, guest or catch-all mailbox delegations'
-        RiskyUserGrants                = 'Consent grants with high-risk scopes from unverified publishers'
+        FlaggedDelegations             = 'External, guest, recently granted or exposing catch-all mailbox delegations'
+        RiskyUserGrants                = 'Consent grants with high-risk scopes from unverified publishers, for apps new in the window'
         CatalogUserGrants              = 'Consent grants to applications in the rogue-app catalog'
         RiskyTransportRuleChanges      = 'Transport rules with diversion or suppression actions changed in the window'
-        FlaggedMailboxAddIns           = 'User-installed non-Microsoft mailbox add-ins'
+        FlaggedMailboxAddIns           = 'Side-loaded non-Microsoft mailbox add-ins'
         TyposquatSenders               = 'Mail received from look-alike sender domains'
         DefenderDetections             = 'Defender-classified threats delivered to the mailbox'
         FlaggedDirectoryAudits         = 'Security-info, consent or device registration events in the directory audit'
@@ -116,7 +118,7 @@ function Get-CIPPBecScore {
         RiskyUserMedium                = 'Identity Protection: user at medium risk'
         RiskyUserLow                   = 'Identity Protection: user at low risk'
         ConfirmedCompromised           = 'Identity Protection: user confirmed compromised'
-        AttackerIPs                    = 'Sign-ins or activity from addresses judged to be the attacker'
+        AttackerIPs                    = 'Sign-ins, activity or an accepted password from addresses judged to be the attacker'
         AttackerMailAccess             = 'Mail opened, synced, deleted, moved or sent from an attacker address'
         AttackerFileAccess             = 'OneDrive/SharePoint files touched from an attacker address'
         AttackerForms                  = 'Microsoft Forms created, edited or shared from an attacker address'
@@ -126,7 +128,7 @@ function Get-CIPPBecScore {
 
     # an attacker address backed by more than network heuristics (see DESCRIPTION)
     $Corroborated = @($Results.IPVerdicts | Where-Object {
-            $_.Verdict -eq 'Compromised' -or ($_.Verdict -eq 'LikelyAttacker' -and @($_.Reasons | Where-Object { $_.Code -in @('FlaggedAction', 'RiskySignIn') }).Count -gt 0)
+            $_.Verdict -eq 'Compromised' -or ($_.Verdict -eq 'LikelyAttacker' -and @($_.Reasons | Where-Object { $_.Code -in @('FlaggedAction', 'RiskySignIn', 'PasswordAccepted') }).Count -gt 0)
         }).Count -gt 0
     $Derived = @('AttackerMailAccess', 'AttackerFileAccess', 'AttackerForms', 'OtherAccountsReached', 'DelegatedMailboxAttackerAccess')
 

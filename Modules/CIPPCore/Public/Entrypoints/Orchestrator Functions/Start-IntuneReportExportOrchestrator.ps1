@@ -50,6 +50,7 @@ function Start-IntuneReportExportOrchestrator {
         Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
             Batch            = @($Batch)
             OrchestratorName = 'IntuneReportExportOrchestrator'
+            Priority         = 3
             SkipLog          = $false
         })
 

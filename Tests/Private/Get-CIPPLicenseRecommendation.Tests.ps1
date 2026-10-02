@@ -210,6 +210,41 @@ Describe 'Get-CIPPLicenseRecommendation' {
         $Row.UnitSaving | Should -Be 30.0
     }
 
+    It 'still builds the report when a removal candidate carries a plan no capability describes' {
+        # Copilot gains an unmapped plan; the Remove row has no target SKU, so the loss list is
+        # computed against an empty target and must name that plan instead of failing.
+        $PlanOpaque = 'cccccccc-1111-1111-1111-111111111111'
+        $PlanIds = $script:PlanIds.Clone()
+        $PlanIds[$script:Copilot] = @($script:PlanCopilot, $PlanOpaque)
+
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $script:Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds -PlanNamesById @{ $PlanOpaque = 'Copilot Extra' }
+
+        $Row = $Report.Downgrades | Where-Object { $_.FromSkuId -eq $script:Copilot }
+        $Row.Action | Should -Be 'Remove'
+        $Row.Loses | Should -Contain 'Copilot Extra'
+    }
+
+    It 'does not list plans the user has disabled as a downgrade loss' {
+        # Two disabled plans: the whole disabled set must reach the loss check, not just its first entry.
+        $PlanOpaque1 = 'cccccccc-2222-2222-2222-222222222222'
+        $PlanOpaque2 = 'cccccccc-3333-3333-3333-333333333333'
+        $PlanIds = $script:PlanIds.Clone()
+        $PlanIds[$script:Copilot] = @($script:PlanCopilot, $PlanOpaque1, $PlanOpaque2)
+        $Users = @($script:Users | ForEach-Object {
+                if ($_.userPrincipalName -eq 'copilot@contoso.com') {
+                    foreach ($A in $_.assignedLicenses) { if ($A.skuId -eq $script:Copilot) { $A.disabledPlans = @($PlanOpaque1, $PlanOpaque2) } }
+                }
+                $_
+            })
+
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds -PlanNamesById @{ $PlanOpaque1 = 'Copilot Extra One'; $PlanOpaque2 = 'Copilot Extra Two' }
+
+        $Row = $Report.Downgrades | Where-Object { $_.FromSkuId -eq $script:Copilot }
+        $Row | Should -Not -BeNullOrEmpty
+        $Row.Loses | Should -Not -Contain 'Copilot Extra One'
+        $Row.Loses | Should -Not -Contain 'Copilot Extra Two'
+    }
+
     It 'consolidates Basic + Apps for Business into Standard' {
         $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $script:Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $script:PlanIds
 

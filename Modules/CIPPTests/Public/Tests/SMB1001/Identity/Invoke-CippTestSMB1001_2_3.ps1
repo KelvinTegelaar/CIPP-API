@@ -24,9 +24,15 @@ function Invoke-CippTestSMB1001_2_3 {
 
         $Shared = @($Mailboxes | Where-Object { $_.recipientTypeDetails -in @('SharedMailbox', 'SchedulingMailbox', 'EquipmentMailbox', 'RoomMailbox') })
 
+        # List positions by id and by UPN, so the lookup keeps the first user matching either
+        $UserList = @($Users)
+        $Positions = [object[]](0..($UserList.Count - 1))
+        $PositionById = [CIPP.CippIndex]::Build($Positions, @(foreach ($U in $UserList) { , ($($U.id) ?? $null) }))
+        $PositionByUpn = [CIPP.CippIndex]::Build($Positions, @(foreach ($U in $UserList) { , ($($U.userPrincipalName) ?? $null) }))
         $EnabledShared = @(
             foreach ($Mbx in $Shared) {
-                $User = $Users | Where-Object { $_.id -eq $Mbx.ExternalDirectoryObjectId -or $_.userPrincipalName -eq $Mbx.UPN } | Select-Object -First 1
+                $First = @($PositionById.Find($Mbx.ExternalDirectoryObjectId)) + @($PositionByUpn.Find($Mbx.UPN)) | Measure-Object -Minimum
+                $User = if ($First.Count) { $UserList[[int]$First.Minimum] }
                 if ($User -and $User.accountEnabled -eq $true -and $User.onPremisesSyncEnabled -ne $true) {
                     [PSCustomObject]@{
                         UPN                  = $Mbx.UPN

@@ -14,7 +14,11 @@ function Add-HuduAssetLayoutField {
         [int]$Position = 0,
 
         [Parameter(Mandatory = $false)]
-        [bool]$ShowInList = $false
+        [bool]$ShowInList = $false,
+
+        # The layout as already fetched; it is returned unchanged when the field needs no update
+        [Parameter(Mandatory = $false)]
+        [object]$AssetLayout
     )
 
     $DesiredField = @{
@@ -26,7 +30,7 @@ function Add-HuduAssetLayoutField {
         expiration   = $false
     }
 
-    $AssetLayout = Get-HuduAssetLayouts -LayoutId $AssetLayoutId -ErrorAction Stop
+    if (-not $AssetLayout) { $AssetLayout = Get-HuduAssetLayouts -LayoutId $AssetLayoutId -ErrorAction Stop }
 
     $AssetLayoutFields = [System.Collections.Generic.List[object]]::new()
     $ExistingField = $AssetLayout.fields | Where-Object { $_.label -eq $Label } | Select-Object -First 1

@@ -257,7 +257,8 @@ function Initialize-CIPPAuth {
                     $McpResourceObjectId = $null
                     $McpResourceScopeId = $null
                     try {
-                        $McpResRow = Get-CIPPAzDataTableEntity @(Get-CippTable -tablename 'CippMcpResource') -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
+                        $McpResTable = Get-CippTable -tablename 'CippMcpResource'
+                        $McpResRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
                         if (-not [string]::IsNullOrWhiteSpace($McpResRow.ObjectId)) { $McpResourceObjectId = "$($McpResRow.ObjectId)" }
                         if (-not [string]::IsNullOrWhiteSpace($McpResRow.ScopeId)) { $McpResourceScopeId = "$($McpResRow.ScopeId)" }
                     } catch {

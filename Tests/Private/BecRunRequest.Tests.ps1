@@ -19,7 +19,7 @@ Describe 'New-CIPPBecRunRequest requester address' {
 }
 
 Describe 'Get-CIPPBecRunSteps' {
-    It 'defines the twelve phases of the investigation in order, with the score last' {
+    It 'defines the fourteen phases of the investigation in order, with the score last' {
         $Steps = @(Get-CIPPBecRunSteps)
         $Steps.Key | Should -Be @('AuditLog', 'SignIns', 'MailboxRules', 'SentMail', 'Tenant', 'MailboxInventory', 'Grants', 'TransportRules', 'ReceivedMail', 'Directory', 'Activity', 'IPAnalysis', 'AttackerActivity', 'Score')
         $Steps | ForEach-Object { $_.Title | Should -Not -BeNullOrEmpty }
@@ -58,11 +58,21 @@ Describe 'New-CIPPBecRunRequest' {
         $Prepared.Item.ContainsKey('QueueId') | Should -BeFalse
     }
 
+    It 'returns one sequential orchestration with a job per phase, in order' {
+        $Prepared = New-CIPPBecRunRequest -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com'
+        $Prepared.InputObject.OrchestratorName | Should -Be "BECRun_$($Prepared.CaseId)"
+        $Prepared.InputObject.Sequential | Should -BeTrue -Because 'each phase runs after the one before it, on one worker'
+        $Batch = @($Prepared.InputObject.Batch)
+        @($Batch.Step) | Should -Be @((Get-CIPPBecRunSteps).Key)
+        $Batch | ForEach-Object { $_.FunctionName | Should -Be 'BECRun'; $_.CaseId | Should -Be $Prepared.CaseId; $_.userName | Should -Be 'victim@contoso.com' }
+    }
+
     It 'carries the queue id for bulk runs and falls back to the object id as the progress name' {
         $Prepared = New-CIPPBecRunRequest -TenantFilter 'contoso.com' -UserId 'u2' -QueueId 'q-1'
         $script:Rows[0].Properties.QueueId | Should -Be 'q-1'
         $script:Jobs[0].Names | Should -Be @('u2')
         $Prepared.Item.QueueId | Should -Be 'q-1'
         $Prepared.Item.QueueName | Should -Be 'BEC investigation u2'
+        @($Prepared.InputObject.Batch | Where-Object { $_.QueueId -eq 'q-1' }).Count | Should -Be 14
     }
 }

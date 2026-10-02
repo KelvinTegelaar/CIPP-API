@@ -63,8 +63,8 @@ Describe 'Get-CIPPBecScore' {
             LocationAnalysis         = [pscustomobject]@{ ForeignSuccessfulSignInCount = 2; ForeignRuleChangeCount = 1; ForeignSafelistChangeCount = 0; ForeignSharingChangeCount = 0; ForeignSentMessageCount = 0 }
         }
         $Score = Get-CIPPBecScore -Results $Results -Heuristics $script:Heuristics
-        # 3+3+2+1+1+2+5+5+3+3+3+3+2+2 - the PDF's additive score with 'targeting' taking precedence over 'other'
-        $Score.Value | Should -Be 38
+        # 1+3+2+1+1+2+4+5+3+3+3+3+2+2 - the additive score with 'targeting' taking precedence over 'other'
+        $Score.Value | Should -Be 35
         $Score.Level | Should -Be 'High'
         ($Score.Breakdown | Where-Object { $_.Signal -eq 'PermissionChanges' }).Applied | Should -BeFalse
         ($Score.Breakdown | Where-Object { $_.Signal -eq 'PermissionChangesTargetingUser' }).Applied | Should -BeTrue
@@ -75,6 +75,13 @@ Describe 'Get-CIPPBecScore' {
         $Other.Value | Should -Be 1
         $Target = Get-CIPPBecScore -Results (New-Results @{ MailboxPermissionChanges = @([pscustomobject]@{ TargetsSuspect = $true }, [pscustomobject]@{ TargetsSuspect = $false }) }) -Heuristics $script:Heuristics
         $Target.Value | Should -Be 2
+    }
+
+    It 'leaves out permission changes on Exchange system mailboxes, whoever made them' {
+        $System = [pscustomobject]@{ TargetsSuspect = $false; ObjectId = 'DiscoverySearchMailbox {D919BA05-46A6-415f-80AD-7E09334BB852}'; UserId = 'NT SERVICE\MSExchangeAdminApiNetCore' }
+        (Get-CIPPBecScore -Results (New-Results @{ MailboxPermissionChanges = @($System) }) -Heuristics $script:Heuristics).Value | Should -Be 0
+        $Shared = [pscustomobject]@{ TargetsSuspect = $false; ObjectId = 'finance'; UserId = 'NT SERVICE\MSExchangeAdminApiNetCore' }
+        (Get-CIPPBecScore -Results (New-Results @{ MailboxPermissionChanges = @($System, $Shared) }) -Heuristics $script:Heuristics).Value | Should -Be 1 -Because 'a grant on a real mailbox counts even from a service identity'
     }
 
     It 'only counts new users above the threshold' {
@@ -93,10 +100,13 @@ Describe 'Get-CIPPBecScore' {
     }
 
     It 'applies the thresholds: 4 is Medium, 7 is High, 3 is Low' {
-        # rules(3) + anonymous link(3) = 6... use perm change other (1) + rules (3) = 4
-        (Get-CIPPBecScore -Results (New-Results @{ NewRules = @([pscustomobject]@{ Name = 'a' }); MailboxPermissionChanges = @([pscustomobject]@{ TargetsSuspect = $false }) }) -Heuristics $script:Heuristics).Level | Should -Be 'Medium'
-        (Get-CIPPBecScore -Results (New-Results @{ NewRules = @([pscustomobject]@{ Name = 'a' }) }) -Heuristics $script:Heuristics).Level | Should -Be 'Low'
-        (Get-CIPPBecScore -Results (New-Results @{ NewRules = @([pscustomobject]@{ Name = 'a' }); InboxRuleChanges = @([pscustomobject]@{ Operation = 'x' }); MailboxPermissionChanges = @([pscustomobject]@{ TargetsSuspect = $false }) }) -Heuristics $script:Heuristics).Level | Should -Be 'High'
+        $Rules = [pscustomobject]@{ Name = 'a' }
+        $RuleChange = [pscustomobject]@{ Operation = 'x' }
+        # existing rules (1) + a rule change (3) = 4
+        (Get-CIPPBecScore -Results (New-Results @{ NewRules = @($Rules); InboxRuleChanges = @($RuleChange) }) -Heuristics $script:Heuristics).Level | Should -Be 'Medium'
+        (Get-CIPPBecScore -Results (New-Results @{ InboxRuleChanges = @($RuleChange) }) -Heuristics $script:Heuristics).Level | Should -Be 'Low'
+        # + a safelist change (2) + tenant permission churn (1) = 7
+        (Get-CIPPBecScore -Results (New-Results @{ NewRules = @($Rules); InboxRuleChanges = @($RuleChange); SafelistChanges = @($RuleChange); MailboxPermissionChanges = @([pscustomobject]@{ TargetsSuspect = $false }) }) -Heuristics $script:Heuristics).Level | Should -Be 'High'
     }
 
     It 'weights the full-scope signals' {
@@ -117,6 +127,8 @@ Describe 'Get-CIPPBecScore' {
             @{ Key = 'RiskState'; Value = [pscustomobject]@{ Listed = $true; RiskState = 'confirmedCompromised'; RiskLevel = 'high' }; Expected = 5; Signal = 'ConfirmedCompromised' }
             # an attacker address that only failed to sign in, or a suspicious one, does not count
             @{ Key = 'IPVerdicts'; Value = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 1; Activities = 0 }, [pscustomobject]@{ Verdict = 'Compromised'; SuccessfulSignIns = 0; Activities = 0 }, [pscustomobject]@{ Verdict = 'Suspicious'; SuccessfulSignIns = 3; Activities = 2 }); Expected = 4; Signal = 'AttackerIPs' }
+            # an attacker address that had the password counts even though MFA stopped it
+            @{ Key = 'IPVerdicts'; Value = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 0; Activities = 0; PasswordAccepted = 2 }); Expected = 4; Signal = 'AttackerIPs' }
             # item-level activity counts only from addresses judged the attacker's
             @{ Key = 'AttackerMailActivity'; Value = @([pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'victim@contoso.com' }, [pscustomobject]@{ IPVerdict = 'Unknown'; MailboxOwner = 'victim@contoso.com' }); Expected = 3; Signal = 'AttackerMailAccess'; Backed = $true }
             @{ Key = 'AttackerFileActivity'; Value = @([pscustomobject]@{ IPVerdict = 'Compromised' }); Expected = 2; Signal = 'AttackerFileAccess'; Backed = $true }
@@ -167,7 +179,7 @@ Describe 'Get-CIPPBecScore' {
         @($Held | Where-Object { $_.Description -like '*not counted*' }).Count | Should -Be 4 -Because 'each held-back signal says why'
 
         # the same address behind an attacker action, or rated risky by Entra, backs them
-        foreach ($Code in @('FlaggedAction', 'RiskySignIn')) {
+        foreach ($Code in @('FlaggedAction', 'RiskySignIn', 'PasswordAccepted')) {
             $Payload.IPVerdicts = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 3; Activities = 5; Reasons = @([pscustomobject]@{ Code = $Code }) })
             (Get-CIPPBecScore -Results (New-Results $Payload) -Heuristics $script:Heuristics).Value | Should -Be 15 -Because "$Code corroborates the verdict"
         }
@@ -181,7 +193,8 @@ Describe 'Get-CIPPBecScore' {
     It 'scores an old cached payload that has none of the full-scope keys' {
         $Legacy = [pscustomobject]@{ ExtractedAt = '2026-08-20T12:00:00Z'; NewRules = @([pscustomobject]@{ Name = 'a'; MoveToFolder = 'RSS' }) }
         $Score = Get-CIPPBecScore -Results $Legacy -Heuristics $script:Heuristics
-        $Score.Value | Should -Be 8
-        $Score.Level | Should -Be 'High'
+        # a suspicious rule alone is worth a look; High needs something else, like the rule being made in the window
+        $Score.Value | Should -Be 5
+        $Score.Level | Should -Be 'Medium'
     }
 }

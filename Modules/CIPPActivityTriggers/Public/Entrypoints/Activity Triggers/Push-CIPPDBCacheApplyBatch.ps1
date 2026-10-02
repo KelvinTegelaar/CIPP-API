@@ -36,6 +36,25 @@ function Push-CIPPDBCacheApplyBatch {
 
         # Start a single flat orchestrator to execute all cache tasks
         $TenantSuffix = if ($Item.Parameters.TenantFilter) { "_$($Item.Parameters.TenantFilter)" } else { '' }
+
+        # Intune runs a band ahead so it reads the report exports before their downloads expire
+        if (-not $TenantSuffix) {
+            $IntuneTasks = @($AllTasks | Where-Object { $_.CollectionType -eq 'Intune' })
+            if ($IntuneTasks.Count -gt 0) {
+                $OpContext = Get-Variable -Name 'CraftOperationContext' -Scope Global -ValueOnly -ErrorAction SilentlyContinue
+                $IntunePriority = [math]::Max(0, (Resolve-CIPPOrchestratorPriority -InputObject $null -OpContext $OpContext) - 1)
+                $IntuneId = Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
+                        OrchestratorName = 'CIPPDBCacheExecuteIntune'
+                        Batch            = $IntuneTasks
+                        Priority         = $IntunePriority
+                        SkipLog          = $true
+                    })
+                Write-Information "Started Intune cache execution orchestrator with ID = '$IntuneId' for $($IntuneTasks.Count) tasks at P$IntunePriority"
+                $AllTasks = [System.Collections.Generic.List[object]]@($AllTasks | Where-Object { $_.CollectionType -ne 'Intune' })
+                if ($AllTasks.Count -eq 0) { return @{ Success = $true; TaskCount = $IntuneTasks.Count; InstanceId = $IntuneId } }
+            }
+        }
+
         $InputObject = [PSCustomObject]@{
             OrchestratorName = "CIPPDBCacheExecute$TenantSuffix"
             Batch            = @($AllTasks)

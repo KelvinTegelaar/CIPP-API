@@ -51,6 +51,7 @@ BeforeAll {
                     [pscustomobject]@{ Identity = 'a2'; DisplayName = 'Mail Harvester'; AppId = 'a2'; Enabled = $true; ProviderName = 'Unknown Dev'; Scope = 'User'; Type = 'Private'; AppVersion = '0.1' }
                     [pscustomobject]@{ Identity = 'a3'; DisplayName = 'Disabled Thing'; AppId = 'a3'; Enabled = $false; ProviderName = 'Unknown Dev'; Scope = 'User'; Type = 'Private'; AppVersion = '0.1' }
                     [pscustomobject]@{ Identity = 'a4'; DisplayName = 'Stringly Disabled'; AppId = 'a4'; Enabled = 'False'; ProviderName = 'Unknown Dev'; Scope = 'User'; Type = 'Private'; AppVersion = '0.1' }
+                    [pscustomobject]@{ Identity = 'a5'; DisplayName = 'Signature Tool'; AppId = 'a5'; Enabled = $true; ProviderName = 'Exclaimer'; Scope = 'User'; Type = 'MarketPlace'; AppVersion = '2.0' }
                 ) }
         }
         if ($ErrorPermissions) {
@@ -59,9 +60,10 @@ BeforeAll {
         New-BulkResult -Rows $Rows
     }
     function New-Round2 {
+        param($CalendarDefault = 'AvailabilityOnly')
         New-BulkResult -Rows @{
             'FolderPermission-Calendar' = @{ Cmdlet = 'Get-MailboxFolderPermission'; Rows = @(
-                    [pscustomobject]@{ User = [pscustomobject]@{ DisplayName = 'Default' }; AccessRights = @('AvailabilityOnly') }
+                    [pscustomobject]@{ User = [pscustomobject]@{ DisplayName = 'Default' }; AccessRights = @($CalendarDefault) }
                     [pscustomobject]@{ User = [pscustomobject]@{ DisplayName = 'Anonymous' }; AccessRights = @('None') }
                     [pscustomobject]@{ User = [pscustomobject]@{ DisplayName = 'Assistant One'; ADRecipient = [pscustomobject]@{ PrimarySmtpAddress = 'assistant@contoso.com' } }; AccessRights = @('Editor') }
                 ) }
@@ -102,6 +104,16 @@ Describe 'Get-CIPPBecMailboxInventory' {
         $D[0].Flagged | Should -BeTrue -Because 'flagged delegations sort first'
     }
 
+    It 'lets everyone read the calendar without a flag, but flags everyone being able to write to it' {
+        foreach ($Case in @(@{ Rights = 'Reviewer'; Flagged = $false }, @{ Rights = 'Editor'; Flagged = $true })) {
+            $script:Round = 0
+            $script:CalendarDefault = $Case.Rights
+            Mock New-ExoBulkRequest { $script:Round++; if ($script:Round -eq 1) { New-Round1 } else { New-Round2 -CalendarDefault $script:CalendarDefault } }
+            $D = (Get-CIPPBecMailboxInventory -TenantFilter 'contoso.com' -UserPrincipalName $script:Upn -Heuristics $script:Heuristics -AcceptedDomains @('contoso.com')).Delegations.Data
+            ($D | Where-Object { $_.Resource -like '*Calendar' -and $_.Trustee -eq 'Default' }).Flagged | Should -Be $Case.Flagged -Because "Default: $($Case.Rights) on the calendar"
+        }
+    }
+
     It 'reads folder permissions by folder id, not by localised folder name' {
         $script:Round = 0
         $script:Round2Array = $null
@@ -135,13 +147,14 @@ Describe 'Get-CIPPBecMailboxInventory' {
         Mock New-ExoBulkRequest { $script:Round++; if ($script:Round -eq 1) { New-Round1 } else { New-Round2 } }
         $Result = Get-CIPPBecMailboxInventory -TenantFilter 'contoso.com' -UserPrincipalName $script:Upn -Heuristics $script:Heuristics -AcceptedDomains @('contoso.com')
         $Result.AddIns.Complete | Should -BeTrue
-        $Result.AddIns.Data.Count | Should -Be 4
+        $Result.AddIns.Data.Count | Should -Be 5
         ($Result.AddIns.Data | Where-Object { $_.DisplayName -eq 'Mail Harvester' }).Flagged | Should -BeTrue
         $Stringly = $Result.AddIns.Data | Where-Object { $_.DisplayName -eq 'Stringly Disabled' }
         $Stringly.Enabled | Should -BeFalse -Because 'Enabled "False" (a string) is disabled'
         $Stringly.Flagged | Should -BeFalse
         ($Result.AddIns.Data | Where-Object { $_.DisplayName -eq 'Contoso Connector' }).Flagged | Should -BeFalse
         ($Result.AddIns.Data | Where-Object { $_.DisplayName -eq 'Disabled Thing' }).Flagged | Should -BeFalse
+        ($Result.AddIns.Data | Where-Object { $_.DisplayName -eq 'Signature Tool' }).Flagged | Should -BeFalse -Because 'a Marketplace add-in is vetted by Microsoft'
     }
 
     It 'reports a missing sub-request as incomplete instead of an empty list' {

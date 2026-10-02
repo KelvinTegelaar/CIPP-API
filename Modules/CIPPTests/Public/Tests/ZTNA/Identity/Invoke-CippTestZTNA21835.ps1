@@ -27,12 +27,13 @@ function Invoke-CippTestZTNA21835 {
 
         # Get Users data to check sync status
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
+        $UserById = [CIPP.CippIndex]::Build($Users, @(foreach ($U in $Users) { , ($($U.id) ?? $null) }))
 
         $EmergencyAccountCandidates = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Member in $PermanentGAMembers) {
             # Get-CippDbRoleMembers returns the principal object id as 'id', not 'principalId'.
-            $User = $Users | Where-Object { $_.id -eq $Member.id }
+            $User = $UserById.Find($Member.id)
 
             # Only process cloud-only accounts
             if ($User -and $User.onPremisesSyncEnabled -ne $true) {
@@ -171,7 +172,7 @@ function Invoke-CippTestZTNA21835 {
             foreach ($Member in $PermanentGAMembers) {
                 # 'id', not 'principalId' — see the note above; this lookup silently matched
                 # nothing and every row was skipped by the -not $User guard below.
-                $User = $Users | Where-Object { $_.id -eq $Member.id }
+                $User = $UserById.Find($Member.id)
                 if (-not $User) { continue }
 
                 $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)"

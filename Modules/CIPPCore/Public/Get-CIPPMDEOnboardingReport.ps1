@@ -8,25 +8,27 @@ function Get-CIPPMDEOnboardingReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     try {
         if ($TenantFilter -eq 'AllTenants') {
-            $AllItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MDEOnboarding'
-            $Tenants = @($AllItems | Where-Object { $_.RowKey -ne 'MDEOnboarding-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MDEOnboarding' -ByTenant
 
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
-
-            if (-not $Tenants) {
+            if ($ItemsByTenant.Count -eq 0) {
                 throw 'No MDE onboarding data found in reporting database for any tenant. Sync the report data first.'
             }
 
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
                 try {
-                    $TenantResults = Get-CIPPMDEOnboardingReport -TenantFilter $Tenant
+                    $TenantResults = Get-CIPPMDEOnboardingReport -TenantFilter $Tenant -DbItems @{ MDEOnboarding = $TenantItems }
                     foreach ($Result in $TenantResults) {
                         $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                         $AllResults.Add($Result)
@@ -38,7 +40,7 @@ function Get-CIPPMDEOnboardingReport {
             return $AllResults
         }
 
-        $Items = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'MDEOnboarding' | Where-Object { $_.RowKey -ne 'MDEOnboarding-Count' }
+        $Items = $(if ($DbItems) { $DbItems['MDEOnboarding'] } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'MDEOnboarding' }) | Where-Object { $_.RowKey -ne 'MDEOnboarding-Count' }
         if (-not $Items) {
             throw 'No MDE onboarding data found in reporting database. Sync the report data first.'
         }

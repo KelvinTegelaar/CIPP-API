@@ -20,7 +20,10 @@ function Start-CIPPDBTestsRun {
         # Optional subset of suites to run (e.g. 'Custom'). Omit to run every suite.
         # Suite names must match the ValidateSet in Invoke-CIPPTestCollection.
         [Parameter(Mandatory = $false)]
-        [string[]]$Suites
+        [string[]]$Suites,
+
+        [Parameter(Mandatory = $false)]
+        [int]$Priority
     )
 
     Write-Information "Starting tests run for tenant: $TenantFilter"
@@ -103,6 +106,10 @@ function Start-CIPPDBTestsRun {
                     TenantFilter = $TenantFilter
                 }
             }
+        }
+
+        if ($PSBoundParameters.ContainsKey('Priority')) {
+            $InputObject | Add-Member -NotePropertyName Priority -NotePropertyValue $Priority
         }
 
         $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject

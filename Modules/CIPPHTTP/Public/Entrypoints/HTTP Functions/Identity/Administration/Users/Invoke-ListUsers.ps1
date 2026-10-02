@@ -5,21 +5,38 @@ Function Invoke-ListUsers {
     .ROLE
         Identity.User.Read
     .DESCRIPTION
-        Lists Entra ID users for a tenant with license and sign-in details, or retrieves a specific user by ID. For AllTenants or cached data, consider using ListDBCache with type=Users for significantly better performance.
+        Lists Entra ID users for a tenant with license and sign-in details, or retrieves a specific user by ID. Supports UseReportDB=true to serve cached users from the reporting database; AllTenants always uses the cache. When manualPagination is set on a cached read, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $ConversionTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $GraphFilter = $Request.Query.graphFilter
     $userid = $Request.Query.UserID
+    # Serve from the reporting database cache instead of live Graph. AllTenants always uses the cache.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
+    # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.
+    $ManualPagination = $Request.Query.manualPagination -and [System.Convert]::ToBoolean($Request.Query.manualPagination)
+    $FromCache = -not $userid -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)
+    $NextToken = $null
+
+    if ($userid -and (-not $TenantFilter -or $TenantFilter -eq 'AllTenants')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'A specific tenant is required when requesting a single user.' }
+            })
+    }
+    # GUID -> display name, first row wins
+    $SkuNames = @{}
+    foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) {
+        if (-not $SkuNames.ContainsKey($Row.GUID)) { $SkuNames[$Row.GUID] = $Row.Product_Display_Name }
+    }
 
     # When fetching a single user, use an explicit $select so directory/schema extension properties are
     # returned. Covers the properties the user view and edit form consume, any attributes added via
     # Preferences > Added Attributes, and custom data attributes mapped for manual entry on users.
     $SelectParam = ''
-    if ($userid -and $TenantFilter -ne 'AllTenants') {
+    if ($userid) {
         $BaseProperties = @(
             'id', 'accountEnabled', 'ageGroup', 'assignedLicenses', 'businessPhones', 'city', 'companyName',
             'consentProvidedForMinor', 'country', 'createdDateTime', 'department', 'displayName',
@@ -62,7 +79,7 @@ Function Invoke-ListUsers {
         Write-Information $SelectParam
     }
 
-    $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
+    if (-not $FromCache) {
         try {
             $UserData = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$filter=$GraphFilter&`$count=true&`$expand=manager(`$select=id,userPrincipalName,displayName)$SelectParam" -tenantid $TenantFilter -ComplexFilter
         } catch {
@@ -75,43 +92,45 @@ Function Invoke-ListUsers {
                 throw
             }
         }
-        $UserData | ForEach-Object {
-            $SkuID = $_.AssignedLicenses.skuid
-            $_ | Add-Member -NotePropertyMembers ([ordered]@{
-                    onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
-                    username              = ($_.userPrincipalName -split '@' | Select-Object -First 1)
-                    Aliases               = ($_.ProxyAddresses -join ', ')
-                    LicJoined             = ((@($SkuID | ForEach-Object { ($ConversionTable | Where-Object guid -EQ ([string]$_) | Select-Object -First 1 -ExpandProperty Product_Display_Name) }) -join ', '))
-                    primDomain            = @{value = ($_.userPrincipalName -split '@' | Select-Object -Last 1); label = ($_.userPrincipalName -split '@' | Select-Object -Last 1); }
-                }) -Force
-            $_
-        }
-    } elseif ($null -ne (Get-CippRequestContext).AllowedTenants) {
-        # Deprecated cacheusers blob has no reliable per-tenant column, so it cannot be safely
-        # narrowed for a tenant-restricted caller - including one whose scope resolved to zero
-        # tenants, whose empty array is falsy and would otherwise fall through to the legacy
-        # path. Return the deprecation message instead of leaking every tenant's users.
-        # Unrestricted callers ($null scope) keep the legacy behavior below.
-        [PSCustomObject]@{
-            Message = 'This function has been deprecated for all users, please use ListGraphRequest instead'
-        }
     } else {
-        $Table = Get-CIPPTable -TableName 'cacheusers'
-        $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
-        if (!$Rows) {
-            [PSCustomObject]@{
-                Message = 'This function has been deprecated for all users, please use ListGraphRequest instead'
+        if ($ManualPagination) {
+            # Rows per page, clamped between 250 and 10000. Defaults to 5000.
+            $PageSize = 5000
+            if ($Request.Query.PageSize -as [int]) {
+                $PageSize = [Math]::Min([Math]::Max([int]$Request.Query.PageSize, 250), 10000)
             }
+            # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+            $Page = Get-CIPPDbItemPage -TenantFilter $TenantFilter -Type 'Users' -PageSize $PageSize -ContinuationToken $Request.Query.nextLink
+            $Rows = $Page.Items
+            $NextToken = $Page.NextToken
         } else {
-            $Rows.Data | ConvertFrom-Json | Select-Object $SelectList | ForEach-Object {
-                $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
-                $_.Aliases = $_.proxyAddresses -join ', '
-                $SkuID = $_.AssignedLicenses.skuid
-                $_.LicJoined = (@($SkuID | ForEach-Object { ($ConversionTable | Where-Object guid -EQ ([string]$_) | Select-Object -First 1 -ExpandProperty Product_Display_Name) }) -join ', ')
-                $_.primDomain = @{value = ($_.userPrincipalName -split '@' | Select-Object -Last 1) }
-                $_
-            }
+            $ByTenant = Get-CIPPDbItem -TenantFilter $(if ($TenantFilter -eq 'AllTenants') { 'allTenants' } else { $TenantFilter }) -Type 'Users' -ByTenant
+            $Rows = foreach ($Tenant in @($ByTenant.Keys)) { $ByTenant[$Tenant] }
         }
+        if ($TenantFilter -ne 'AllTenants' -and -not $Request.Query.nextLink -and -not $Rows -and -not $NextToken) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::InternalServerError
+                    Body       = @{ Error = "No user data found in reporting database for $TenantFilter. Sync the report data first." }
+                })
+        }
+        $UserData = foreach ($Row in $Rows) {
+            $User = [CIPP.CippJson]::ConvertFromJson($Row.Data, $null)
+            $User.PSObject.Properties.Add([psnoteproperty]::new('CacheTimestamp', $Row.Timestamp))
+            if ($TenantFilter -eq 'AllTenants') { $User.PSObject.Properties.Add([psnoteproperty]::new('Tenant', $Row.PartitionKey)) }
+            $User
+        }
+    }
+
+    $GraphRequest = foreach ($User in $UserData) {
+        $SkuID = $User.AssignedLicenses.skuid
+        $User | Add-Member -NotePropertyMembers ([ordered]@{
+                onPremisesSyncEnabled = [bool]($User.onPremisesSyncEnabled)
+                username              = ($User.userPrincipalName -split '@' | Select-Object -First 1)
+                Aliases               = ($User.ProxyAddresses -join ', ')
+                LicJoined             = (@(foreach ($Sku in $SkuID) { if ($SkuNames.ContainsKey([string]$Sku)) { $SkuNames[[string]$Sku] } }) -join ', ')
+                primDomain            = @{value = ($User.userPrincipalName -split '@' | Select-Object -Last 1); label = ($User.userPrincipalName -split '@' | Select-Object -Last 1); }
+            }) -Force
+        $User
     }
 
 
@@ -141,6 +160,19 @@ Function Invoke-ListUsers {
         @{ Name = 'LastSigninStatus'; Expression = { $AuditlogsLogon.operation } },
         @{ Name = 'LastSigninResult'; Expression = { $LastSignIn.status } },
         @{ Name = 'LastSigninFailureReason'; Expression = { if ($LastSignIn.Id -eq 0) { 'Successfully signed in' } else { $LastSignIn.Id } } }
+    }
+
+    # Paged cached reads return { Results, Metadata }; everything else keeps the bare array.
+    if ($FromCache -and $ManualPagination) {
+        $Metadata = @{}
+        if ($NextToken) { $Metadata.nextLink = $NextToken }
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = [PSCustomObject]@{
+                    Results  = @($GraphRequest)
+                    Metadata = $Metadata
+                }
+            })
     }
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

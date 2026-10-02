@@ -4,7 +4,7 @@ function Send-CIPPScheduledTaskAlert {
         Send post-execution alerts for scheduled tasks
 
     .DESCRIPTION
-        Handles sending alerts (PSA, Email, Webhook) for scheduled task completion
+        Handles sending alerts (PSA, Email, Webhook, Push) for scheduled task completion
 
     .PARAMETER Results
         The results to send in the alert
@@ -392,6 +392,23 @@ function Send-CIPPScheduledTaskAlert {
                     if ($TaskPsaPriority) { $PsaParams.PsaTicketPriority = $TaskPsaPriority }
                     $Outcomes.Add([pscustomobject]@{ Channel = 'PSA'; Result = [string]((Send-CIPPAlert @PsaParams) -join ' ') })
                 }
+            }
+            '*push*' {
+                # Only the CIPP operator who created the task gets the push; there is no tenant-wide push
+                # channel and the affected M365 user is never the target. Devices are keyed on the decoded
+                # principal's userDetails (see Invoke-ExecPushSubscription), so resolve the same value here
+                # rather than trusting the separate -name header, which is the app id for API clients.
+                $PushTarget = $ExecutingUser
+                try {
+                    $Principal = $TaskParameters.Headers.'x-ms-client-principal'
+                    if ($Principal) {
+                        $Decoded = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Principal)) | ConvertFrom-Json).userDetails
+                        if ($Decoded) { $PushTarget = $Decoded }
+                    }
+                } catch { Write-Information "Could not decode the task principal for push: $($_.Exception.Message)" }
+                $PushCount = if ($Results -is [array]) { $Results.Count } else { 1 }
+                $TaskUrl = if ($TaskInfo.RowKey) { "/cipp/scheduler/task?id=$($TaskInfo.RowKey)" } else { '/cipp/scheduler' }
+                $Outcomes.Add([pscustomobject]@{ Channel = 'Push'; Result = [string]((Send-CIPPAlert -Type 'push' -TargetUser $PushTarget -Title $title -PushMessage "$TaskType finished for $TenantFilter with $PushCount result(s)" -Url $TaskUrl -APIName 'Scheduled Task Alerts') -join ' ') })
             }
             '*email*' {
                 # Deliberately untouched by PsaTicketId: that field drives the PSA note only. What a

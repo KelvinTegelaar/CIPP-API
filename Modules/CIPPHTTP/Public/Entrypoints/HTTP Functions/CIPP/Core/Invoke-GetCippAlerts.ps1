@@ -26,24 +26,36 @@ function Invoke-GetCippAlerts {
 
     $CIPPVersion = $Request.Query.localversion
     $Version = Assert-CippVersion -CIPPVersion $CIPPVersion
+    # a container instance with auto-restart on updates itself at its scheduled restart time
+    $UpdateAction = 'Please update to the latest version.'
+    if (($Version.OutOfDateCIPP -or $Version.OutOfDateCIPPAPI) -and $env:CIPPNG -eq 'true') {
+        try {
+            $UpdateSettings = Sync-CippContainerUpdateState
+            if ($UpdateSettings.AutoUpdate -eq 'true' -and $UpdateSettings.CheckInterval -ne '0' -and -not [string]::IsNullOrWhiteSpace([string]$UpdateSettings.CheckTime)) {
+                $UpdateAction = "It will update automatically at the instance's scheduled restart time, {0:d2}:00 ({1})." -f [int]$UpdateSettings.CheckTime, ($env:CIPP_TIMEZONE ?? 'UTC')
+            }
+        } catch {
+            Write-Information "Could not read the container restart schedule: $($_.Exception.Message)"
+        }
+    }
     if ($Version.OutOfDateCIPP) {
         $Alerts.Add(@{
                 title = 'CIPP Frontend Out of Date'
-                Alert = 'Your CIPP Frontend is out of date. Please update to the latest version. Find more on the following '
+                Alert = "Your CIPP Frontend is out of date. $UpdateAction Find more on the following "
                 link  = 'https://docs.cipp.app/setup/self-hosting-guide/updating'
                 type  = 'warning'
             })
-        Write-LogMessage -message 'Your CIPP Frontend is out of date. Please update to the latest version' -API 'Updates' -tenant 'All Tenants' -sev Alert
+        Write-LogMessage -message "Your CIPP Frontend is out of date. $UpdateAction" -API 'Updates' -tenant 'All Tenants' -sev Alert
 
     }
     if ($Version.OutOfDateCIPPAPI) {
         $Alerts.Add(@{
                 title = 'CIPP API Out of Date'
-                Alert = 'Your CIPP API is out of date. Please update to the latest version. Find more on the following'
+                Alert = "Your CIPP API is out of date. $UpdateAction Find more on the following"
                 link  = 'https://docs.cipp.app/setup/self-hosting-guide/updating'
                 type  = 'warning'
             })
-        Write-LogMessage -message 'Your CIPP API is out of date. Please update to the latest version' -API 'Updates' -tenant 'All Tenants' -sev Alert
+        Write-LogMessage -message "Your CIPP API is out of date. $UpdateAction" -API 'Updates' -tenant 'All Tenants' -sev Alert
     }
 
     if ($role -like '*superadmin*') {

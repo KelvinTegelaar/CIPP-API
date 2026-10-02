@@ -140,6 +140,17 @@ Describe 'Baseline definition catalog' {
         $Broken | Should -BeNullOrEmpty
     }
 
+    It 'lets every quarantine tag picker accept a custom policy name' {
+        # Tenants run their own quarantine policies; a fixed list would block rebuilding a
+        # policy standard in baselines that the classic standard accepted.
+        $Fixed = foreach ($Entry in $script:Definitions) {
+            foreach ($Property in @($Entry.Definition.variables.PSObject.Properties)) {
+                if ($Property.Name -match 'QuarantineTag$' -and $Property.Value.creatable -ne $true) { "$($Entry.Definition.name).$($Property.Name)" }
+            }
+        }
+        @($Fixed) | Should -BeNullOrEmpty
+    }
+
     It 'requires a value for every variable that has no default' {
         # An unrequired variable with no default renders as the literal "%var%" token: the
         # engine only gates variables marked required, so an unmarked one reaches the compare

@@ -17,6 +17,8 @@ function Invoke-ListGraphRequest {
     Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Debug'
 
     $CippLink = ([System.Uri]$TriggerMetadata.Headers.Referer).PathAndQuery
+    # Craft breaks egress accounting out per Graph resource on this header.
+    $EgressHeaders = @{ 'X-Craft-Endpoint' = (Get-CippGraphEndpointLabel -Endpoint $Request.Query.Endpoint) }
 
     $Parameters = @{}
     if ($Request.Query.'$filter') {
@@ -198,6 +200,7 @@ function Invoke-ListGraphRequest {
             return ([HttpResponseContext]@{
                     StatusCode  = [HttpStatusCode]::OK
                     ContentType = 'application/json'
+                    Headers     = $EgressHeaders
                     Body        = $GraphRequestData
                 })
         }
@@ -214,6 +217,7 @@ function Invoke-ListGraphRequest {
             return ([HttpResponseContext]@{
                     StatusCode  = $StatusCode
                     ContentType = 'application/json'
+                    Headers     = $EgressHeaders
                     Body        = $GraphRequestData
                 })
         }
@@ -264,6 +268,7 @@ function Invoke-ListGraphRequest {
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
+            Headers    = $EgressHeaders
             Body       = $GraphRequestData
         })
 }

@@ -105,8 +105,7 @@ function Get-CIPPBecMailboxInventory {
         }
     }
 
-    # A trustee is flagged when it is a guest, an address outside the accepted domains, or a
-    # catch-all folder principal with more than availability rights.
+    # A trustee is flagged when it is a guest or an address outside the accepted domains.
     $TrusteeFlag = {
         param($Trustee)
         $T = [string]$Trustee
@@ -166,6 +165,8 @@ function Get-CIPPBecMailboxInventory {
             $IsCatchAll = $User -in @('Default', 'Anonymous')
             if ($IsCatchAll -and ($Rights -in @('None', 'AvailabilityOnly', 'LimitedDetails') -or [string]::IsNullOrWhiteSpace($Rights))) { continue }
             if ((& $IsSelf $User)) { continue }
+            # everyone reading a calendar is a common org setting; a catch-all on the inbox, or one that can write, is not
+            $CatchAllExposed = $IsCatchAll -and ($FolderType -ne 'Calendar' -or $Rights -match '(?i)Owner|Editor|Author|Contributor|CreateItems|EditAllItems|EditOwnedItems|DeleteAllItems|DeleteOwnedItems')
             $Delegations.Add([pscustomobject]@{
                     PermissionType = 'Folder'
                     Resource       = "$Upn`:\$FolderType"
@@ -173,7 +174,7 @@ function Get-CIPPBecMailboxInventory {
                     Trustee        = $User
                     AccessRights   = $Rights
                     Deny           = $false
-                    Flagged        = ($IsCatchAll -or (& $TrusteeFlag $User) -or (& $TrusteeFlag $Permission.User.ADRecipient.PrimarySmtpAddress))
+                    Flagged        = ($CatchAllExposed -or (& $TrusteeFlag $User) -or (& $TrusteeFlag $Permission.User.ADRecipient.PrimarySmtpAddress))
                 })
         }
     }
@@ -205,7 +206,8 @@ function Get-CIPPBecMailboxInventory {
                 Scope              = $App.Scope
                 DefaultStateForUser = $App.DefaultStateForUser
                 MarketplaceAssetId = $App.MarketplaceAssetId
-                Flagged            = (([string]$App.Enabled -eq 'True') -and $UserScoped -and -not ($TrustedProvider -and $Provider -match $TrustedProvider))
+                # Marketplace add-ins are vetted by Microsoft; one side-loaded from a manifest is the risky kind
+                Flagged            = (([string]$App.Enabled -eq 'True') -and $UserScoped -and [string]$App.Type -notmatch '(?i)^(MarketPlace|Default)' -and -not ($TrustedProvider -and $Provider -match $TrustedProvider))
             }
         })
 

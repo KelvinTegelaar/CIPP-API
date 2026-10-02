@@ -207,6 +207,21 @@ Describe 'Get-CIPPBaselineDefenderCompliancePolicyState' {
         $Prepared.Expected.microsoftDefenderForEndpointAttachEnabled | Should -BeTrue
     }
 
+    It 'connecting macOS FORCES the macOS partner-data block on - Microsoft enforces it (issue 785)' {
+        Mock New-GraphGetRequest { [PSCustomObject]@{ macEnabled = $true; macDeviceBlockedOnMissingPartnerData = $true; microsoftDefenderForEndpointAttachEnabled = $true } }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ConnectMac = $true; macDeviceBlockedOnMissingPartnerData = $false } }
+        $Prepared = Get-CIPPBaselineDefenderCompliancePolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.macDeviceBlockedOnMissingPartnerData | Should -BeTrue
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'leaves the macOS partner-data block alone when macOS is not connected' {
+        Mock New-GraphGetRequest { [PSCustomObject]@{ macEnabled = $false; macDeviceBlockedOnMissingPartnerData = $false; microsoftDefenderForEndpointAttachEnabled = $true } }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ConnectMac = $false; macDeviceBlockedOnMissingPartnerData = $false } }
+        $Prepared = Get-CIPPBaselineDefenderCompliancePolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.macDeviceBlockedOnMissingPartnerData | Should -BeFalse
+    }
+
     It 'a missing connector grades every surface false, not an error' {
         Mock New-GraphGetRequest { throw 'not found' }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ConnectWindows = $true } }
@@ -515,9 +530,11 @@ Describe 'Get-CIPPBaselineDeployCheckChromeExtensionState' {
             if ($uri -like '*mobileApps*') { @([PSCustomObject]@{ id = 'app-1'; displayName = 'Check by CyberDrain - Browser Extension'; description = $script:DeployedDescription; '@odata.type' = '#microsoft.graph.win32LobApp' }) }
             else { @() }
         }
-        Invoke-CIPPBaselineDeployCheckChromeExtension -Remediate $Remediate -TenantFilter $script:Tenant -Current $null
+        $Skipped = Invoke-CIPPBaselineDeployCheckChromeExtension -Remediate $Remediate -TenantFilter $script:Tenant -Current $null
         Should -Invoke Add-CIPPW32ScriptApplication -Times 1 -Exactly
         Should -Invoke New-GraphPostRequest -Times 0 -Exactly -ParameterFilter { $type -eq 'DELETE' }
+        # The engine records this run as Compliant only if the executor says nothing changed.
+        $Skipped.Changed | Should -Be $false
     }
 }
 

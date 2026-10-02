@@ -70,8 +70,9 @@
   {
     "Id": "Baselines",
     "Name": "Baselines",
-    "Description": "This is currently in public beta. The drift-first baseline engine that replaces classic Standards and Drift. Enables the scheduled baseline run and the Baselines menu, hides the classic Standards and Drift pages, and skips the scheduled classic Standards and Drift runs - the two systems never run side by side.",
+    "Description": "This is currently in public beta. The drift-first baseline engine that replaces classic Standards and Drift. Enables the scheduled baseline run and the Baselines menu, hides the classic Standards and Drift pages, and skips the scheduled classic Standards and Drift runs - the two systems never run side by side. On by default for installs that have no classic Standards templates.",
     "Enabled": false,
+    "EnabledWhen": "NoClassicStandards",
     "AllowUserToggle": true,
     "Timers": ["9f2c7b1e-4a6d-4c3f-8b9a-5e1d2f7c0a44"],
     "Endpoints": [],
@@ -87,8 +88,9 @@
   {
     "Id": "SecuritySimulations",
     "Name": "Security Simulations",
-    "Description": "This is currently in public beta. Play security events (a stolen token, an admin on an unmanaged device, a mass deletion, an anonymous sharing link) against a tenant to see what an attacker would experience today and which standards close each gap, plus a live Conditional Access gap analysis. Read-only: nothing is changed in the tenant.",
+    "Description": "This is currently in public beta. Play security events (a stolen token, an admin on an unmanaged device, a mass deletion, an anonymous sharing link) against a tenant to see what an attacker would experience today and which standards close each gap, plus a live Conditional Access gap analysis. Read-only: nothing is changed in the tenant. On by default for installs that have no classic Standards templates.",
     "Enabled": false,
+    "EnabledWhen": "NoClassicStandards",
     "AllowUserToggle": true,
     "Timers": [],
     "Endpoints": [],

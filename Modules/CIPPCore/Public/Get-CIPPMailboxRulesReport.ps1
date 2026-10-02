@@ -21,55 +21,25 @@ function Get-CIPPMailboxRulesReport {
 
     try {
 
-        # Handle AllTenants
-        if ($TenantFilter -eq 'AllTenants') {
-            # Get all tenants that have mailbox rules data
-            $AllRulesItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MailboxRules'
-            $Tenants = @($AllRulesItems | Where-Object { $_.RowKey -ne 'MailboxRules-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
-
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
-
-            $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
-                try {
-                    $TenantResults = Get-CIPPMailboxRulesReport -TenantFilter $Tenant
-                    foreach ($Result in $TenantResults) {
-                        # Add Tenant property to each result if not already present
-                        if (-not $Result.Tenant) {
-                            $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
-                        }
-                        $AllResults.Add($Result)
-                    }
-                } catch {
-                    Write-LogMessage -API 'MailboxRulesReport' -tenant $Tenant -message "Failed to get report for tenant: $($_.Exception.Message)" -sev Warning
-                }
-            }
-            return $AllResults
-        }
-
-        # Get mailbox rules from reporting DB
-        $RulesItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxRules' | Where-Object { $_.RowKey -ne 'MailboxRules-Count' }
-        if (-not $RulesItems) {
+        $RulesByTenant = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxRules' -ByTenant
+        if ($TenantFilter -ne 'AllTenants' -and $RulesByTenant.Count -eq 0) {
             throw 'No mailbox rules data found in reporting database. Sync the report data first.'
         }
 
-        # Get the most recent cache timestamp
-        $CacheTimestamp = ($RulesItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
-
-        # Parse mailbox rules data
         $AllRules = [System.Collections.Generic.List[PSCustomObject]]::new()
-        foreach ($Item in $RulesItems | Where-Object { $_.RowKey -ne 'MailboxRules-Count' }) {
-            $Rule = $Item.Data | ConvertFrom-Json
-
-            # Add cache timestamp to the rule; ensure Tenant property is set
-            $RuleProps = [ordered]@{ CacheTimestamp = $CacheTimestamp }
-            if (-not $Rule.Tenant) {
-                $RuleProps['Tenant'] = $TenantFilter
+        foreach ($Tenant in @($RulesByTenant.Keys)) {
+            # Take each tenant's rows and drop them here so they can be freed once processed
+            $RulesItems = $RulesByTenant[$Tenant]; $RulesByTenant[$Tenant] = $null
+            $CacheTimestamp = ($RulesItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
+            foreach ($Item in $RulesItems) {
+                $Rule = $Item.Data | ConvertFrom-Json
+                $RuleProps = [ordered]@{ CacheTimestamp = $CacheTimestamp }
+                if (-not $Rule.Tenant) {
+                    $RuleProps['Tenant'] = $Tenant
+                }
+                $Rule | Add-Member -NotePropertyMembers $RuleProps -Force -ErrorAction SilentlyContinue
+                $AllRules.Add($Rule)
             }
-            $Rule | Add-Member -NotePropertyMembers $RuleProps -Force -ErrorAction SilentlyContinue
-
-            $AllRules.Add($Rule)
         }
 
         return $AllRules

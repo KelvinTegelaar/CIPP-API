@@ -263,6 +263,7 @@ function Invoke-ExecJITAdmin {
                 Webhook = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'webhook')
                 Email   = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'email')
                 PSA     = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'PSA')
+                Push    = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'Push')
             }
         }
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
@@ -305,6 +306,7 @@ function Invoke-ExecJITAdmin {
             Webhook = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'webhook')
             Email   = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'email')
             PSA     = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'PSA')
+            Push    = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'Push')
         }
         ScheduledTime = $Request.Body.EndDate
     }

@@ -41,6 +41,8 @@ function Invoke-CIPPBecIPAnalysis {
         Hashtable of peer evidence gathered for users the investigator chose to correlate, merged in.
     .PARAMETER TechnicianIPs
         The addresses of the technicians who ran or reviewed the case ({ IP, By }).
+    .PARAMETER TravelWindows
+        The user's approved trips (Get-CIPPBecTravelWindows).
     .PARAMETER SampleColleagues
         Correlate a random sample of recently active colleagues (the first run; a review re-uses the
         peers stored on the case, which already include them).
@@ -62,6 +64,7 @@ function Invoke-CIPPBecIPAnalysis {
         [object[]]$Overrides = @(),
         [hashtable]$ExtraPeers = @{},
         [object[]]$TechnicianIPs = @(),
+        [object[]]$TravelWindows = @(),
         [switch]$SampleColleagues
     )
 
@@ -93,9 +96,12 @@ function Invoke-CIPPBecIPAnalysis {
 
     # without the list, Microsoft front ends fall back to the network-name rule (only when never signed in from)
     $ServiceRanges = try { @(Get-CIPPMicrosoft365IPRanges) } catch { Write-Information "BEC IP analysis: Microsoft 365 range list failed: $($_.Exception.Message)"; @() }
+    # without it, an unannounced Microsoft-registered address is still judged a service by its owner alone
+    $AzureRanges = try { @(Get-CIPPAzureCloudRanges) } catch { Write-Information "BEC IP analysis: Azure service tag list failed: $($_.Exception.Message)"; @() }
 
     $VerdictParams = @{
         ServiceRanges         = $ServiceRanges
+        AzureRanges           = $AzureRanges
         SignIns               = $SignIns
         NonInteractiveSignIns = $NonInteractive
         Events                = $Events
@@ -106,6 +112,7 @@ function Invoke-CIPPBecIPAnalysis {
         UsageLocation         = $UsageLocation
         Heuristics            = $Heuristics
         TechnicianIPs         = @($TechnicianIPs)
+        TravelWindows         = @($TravelWindows)
     }
     $Preliminary = @(Get-CIPPBecIPVerdicts @VerdictParams -Peers $ExtraPeers)
 

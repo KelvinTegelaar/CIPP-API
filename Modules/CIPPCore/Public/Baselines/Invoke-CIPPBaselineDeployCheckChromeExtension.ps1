@@ -307,7 +307,8 @@ exit 0
         if ("$($ExistingApps[0].description)" -match '\[cfg:([0-9A-Fa-f]{16})\]') { $ExistingHash = $Matches[1] }
         if ($ExistingHash -eq $SettingsHash) {
             Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "$AppDisplayName settings unchanged - skipped the redeploy." -Sev 'Info'
-            return
+            # Tells the engine nothing was written, so the run records Compliant, not Remediated.
+            return [PSCustomObject]@{ Changed = $false }
         }
         foreach ($App in $ExistingApps) {
             $null = New-GraphPostRequest -uri "$Baseuri/$($App.id)" -type DELETE -tenantid $TenantFilter

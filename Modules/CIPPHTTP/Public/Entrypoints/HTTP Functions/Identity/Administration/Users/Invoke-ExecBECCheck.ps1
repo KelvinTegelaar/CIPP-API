@@ -79,6 +79,8 @@ function Invoke-ExecBECCheck {
                     RequestedBy = $Run.RequestedBy
                     StartedAt   = $Run.StartedAt
                     Progress    = $Progress
+                    # containment run while the investigation is still going is recorded on the case already
+                    Containment = @($Run.Containment | Where-Object { $_ })
                 }
                 if ($Run.Status -eq 'Error') {
                     $Summary.Waiting = $false
@@ -105,12 +107,7 @@ function Invoke-ExecBECCheck {
             # the technician's own address (first x-forwarded-for hop) is never the user's or the attacker's
             $RequestedFromIP = ConvertTo-CIPPBecHostAddress -Address ([string](([string]$Headers.'x-forwarded-for' -split ',')[0])).Trim()
             $Prepared = New-CIPPBecRunRequest -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -RequestedBy ([string]$RequestedBy) -RequestedFromIP ([string]$RequestedFromIP)
-            $InputObject = [PSCustomObject]@{
-                OrchestratorName = 'BECRunOrchestrator'
-                Batch            = @($Prepared.Item)
-                SkipLog          = $true
-            }
-            $null = Start-CIPPOrchestrator -InputObject $InputObject
+            $null = Start-CIPPOrchestrator -InputObject $Prepared.InputObject
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Queued a BEC investigation for $UserName [case $($Prepared.CaseId)]" -Sev 'Info'
             $Body = @{ GUID = $Prepared.CaseId; CaseId = $Prepared.CaseId; Status = 'Waiting' }
         } else {

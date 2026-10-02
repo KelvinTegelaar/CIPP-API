@@ -103,7 +103,21 @@ Describe 'Get-CIPPBecDirectoryAudits' {
         $Row.Targets | Should -Be 'victim@contoso.com, Finance'
         $Row.ModifiedProperties | Should -Match '^StrongAuthenticationMethod=\[\{"MethodType":6\}\]; Included Updated Properties=x{200}\.\.\.$' -Because 'unnamed properties are dropped and long values are cut at 200 characters'
         $Row.Direction | Should -Be 'Target'
-        $Row.Flagged | Should -BeTrue -Because 'Update user is in the heuristics flag list'
+        $Row.Flagged | Should -BeTrue -Because 'an admin changed the sign-in methods'
+    }
+
+    It 'leaves ordinary profile updates and the MFA service refreshing its device token unflagged' {
+        $Mfa = [pscustomobject]@{ user = $null; app = [pscustomobject]@{ appId = $null; servicePrincipalId = 'sp-mfa'; displayName = 'Azure MFA StrongAuthenticationService' } }
+        $Victim = { param($Name) [pscustomobject]@{ id = $script:UserId; userPrincipalName = 'victim@contoso.com'; modifiedProperties = @([pscustomobject]@{ displayName = $Name; newValue = 'x' }, [pscustomobject]@{ displayName = 'Included Updated Properties'; newValue = $Name }) } }
+        $script:TargetFixture = @(
+            Get-AuditFixture -Id 'token' -Activity 'Update user' -InitiatedBy $Mfa -Targets @(& $Victim 'StrongAuthenticationPhoneAppDetail')
+            Get-AuditFixture -Id 'profile' -Activity 'Update user' -Targets @(& $Victim 'Department')
+            Get-AuditFixture -Id 'altmail' -Activity 'Update user' -Targets @(& $Victim 'otherMails')
+        )
+        $Rows = (Get-CIPPBecDirectoryAudits -TenantFilter 'contoso.com' -UserId $script:UserId -StartDate $script:Start -Heuristics $script:Heuristics).Data
+        ($Rows | Where-Object Id -EQ 'token').Flagged | Should -BeFalse
+        ($Rows | Where-Object Id -EQ 'profile').Flagged | Should -BeFalse
+        ($Rows | Where-Object Id -EQ 'altmail').Flagged | Should -BeTrue -Because 'the recovery email decides where a password reset goes'
     }
 
     It 'flags listed and security-info activities, sorts flagged newest-first, de-duplicates across directions and skips rows without an id' {

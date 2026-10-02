@@ -10,17 +10,17 @@
   },
   {
     "id": "TokenProtectionPlatforms",
-    "title": "Token protection is applied beyond Windows desktop apps",
+    "title": "Token protection is applied beyond the platforms and apps that support it",
     "appliesWhen": "A policy turns on token protection.",
-    "requirement": "Token protection works only on Windows devices and only for desktop and mobile apps. Applying it to other platforms or to web browsers locks out people who cannot meet it.",
+    "requirement": "Token protection works only for desktop and mobile apps on Windows, iOS, iPadOS and macOS devices. Applying it to other platforms or to web browsers locks out people who cannot meet it.",
     "severity": "high",
     "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-token-protection#deployment",
-    "remediation": "Limit the token-protection policy to Windows devices and to desktop and mobile apps, and leave web browsers out of scope."
+    "remediation": "Limit the token-protection policy to Windows, iOS and macOS devices and to desktop and mobile apps, and leave web browsers out of scope."
   },
   {
     "id": "TokenProtectionDevices",
     "title": "Token protection does not exempt devices that cannot support it",
-    "appliesWhen": "A policy turns on token protection.",
+    "appliesWhen": "A policy turns on token protection for Windows devices.",
     "requirement": "Several device types cannot support token protection, including Surface Hub, Teams Rooms, Cloud PCs, virtual desktop hosts, self-deploying and bulk-enrolled devices and Azure virtual machines. Unless they are exempt, they are locked out.",
     "severity": "high",
     "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-token-protection#known-limitations",

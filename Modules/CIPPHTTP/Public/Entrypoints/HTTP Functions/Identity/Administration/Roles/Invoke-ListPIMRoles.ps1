@@ -7,7 +7,7 @@ function Invoke-ListPIMRoles {
     .SYNOPSIS
         List Entra directory roles grouped with their PIM assignment breakdown.
     .DESCRIPTION
-        Returns one row per role (per tenant when AllTenants is selected) with the role's definition details, how many principals hold it permanently, eligibly or with a time-bound active assignment, the role's PIM policy summary, a slim Members list and the full assignment rows for drill-in. Roles nobody holds are included for a single tenant so the result is also the role catalogue. Powers the Roles & PIM page; ListRoles keeps its original per-definition shape and ListRoleAssignments stays one flat row per assignment.
+        Returns one row per role (per tenant when AllTenants is selected) with the role's definition details, how many principals hold it permanently, eligibly or with a time-bound active assignment, the role's PIM policy summary, a slim Members list and the full assignment rows for drill-in. Roles nobody holds are included for a single tenant so the result is also the role catalogue. Supports UseReportDB=true to read a single tenant from the reporting database cache (sync with ExecCIPPDBCache Name=RolesAndAssignments); AllTenants always reads the cache. Powers the Roles & PIM page; ListRoles keeps its original per-definition shape and ListRoleAssignments stays one flat row per assignment.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -18,25 +18,39 @@ function Invoke-ListPIMRoles {
     $RoleTemplateId = $Request.Query.roleTemplateId
     # Restrict to the roles one principal (object id) holds.
     $PrincipalId = $Request.Query.principalId
+    # Serve from the reporting database cache instead of live Graph. AllTenants always reads the cache.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
 
     try {
-        if ($TenantFilter -eq 'AllTenants') {
+        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {
+            $CountTenant = if ($TenantFilter -eq 'AllTenants') { 'allTenants' } else { $TenantFilter }
             $Counts = @(
-                Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'RoleAssignmentScheduleInstances' -CountsOnly
-                Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'Roles' -CountsOnly
+                foreach ($Type in @('RoleAssignmentScheduleInstances', 'RoleAssignments', 'RoleDefinitions', 'Roles')) {
+                    Get-CIPPDbItem -TenantFilter $CountTenant -Type $Type -CountsOnly
+                }
             ) | Where-Object { $_ }
             $RefreshedAt = @{}
             foreach ($Count in $Counts) {
                 $Existing = $RefreshedAt[$Count.PartitionKey]
                 if (-not $Existing -or $Count.Timestamp -gt $Existing) { $RefreshedAt[$Count.PartitionKey] = $Count.Timestamp }
             }
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = @($RefreshedAt.Keys | Where-Object { $TenantList.defaultDomainName -contains $_ })
+            if ($TenantFilter -eq 'AllTenants') {
+                $TenantList = Get-Tenants -IncludeErrors
+                $Tenants = @($RefreshedAt.Keys | Where-Object { $TenantList.defaultDomainName -contains $_ })
+            } else {
+                $Tenants = @($RefreshedAt.Keys)
+                if ($Tenants.Count -eq 0) {
+                    throw "No roles data found in reporting database for $TenantFilter. Sync the report data first."
+                }
+            }
 
+            # A single cached tenant lists roles nobody holds too, like the live read. AllTenants
+            # stays assigned-only: the catalogue is the same ~100 built-in roles in every tenant.
+            $IncludeUnassigned = ($TenantFilter -ne 'AllTenants') -and [string]::IsNullOrWhiteSpace($PrincipalId)
             $Rows = [System.Collections.Generic.List[object]]::new()
             foreach ($Tenant in $Tenants) {
                 try {
-                    foreach ($Row in Get-CIPPPIMRoleAssignments -TenantFilter $Tenant -FromCache -IncludePolicy) {
+                    foreach ($Row in Get-CIPPPIMRoleAssignments -TenantFilter $Tenant -FromCache -IncludePolicy -IncludeUnassignedRoles:$IncludeUnassigned) {
                         $Row | Add-Member -NotePropertyName 'LastRefreshed' -NotePropertyValue $RefreshedAt[$Tenant] -Force
                         $Rows.Add($Row)
                     }
@@ -97,6 +111,7 @@ function Invoke-ListPIMRoles {
                         })
                     Assignments         = @($Assignments)
                     LastRefreshed       = $Meta.LastRefreshed
+                    CacheTimestamp      = $Meta.LastRefreshed
                 }
             }
         )

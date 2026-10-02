@@ -23,20 +23,21 @@ function Invoke-CIPPBaselineDefenderCompliancePolicy {
     }
 
     $ConnectWindows = [bool]$Remediate.connectWindows
+    $ConnectMac = [bool]$Remediate.connectMac
     $SettingsObj = @{
         id                                                  = 'fc780465-2017-40d4-a0c5-307022471b92'
         partnerUnresponsivenessThresholdInDays              = 7
         androidEnabled                                      = [bool]$Remediate.connectAndroid
         iosEnabled                                          = [bool]$Remediate.connectIos
         windowsEnabled                                      = $ConnectWindows
-        macEnabled                                          = [bool]$Remediate.connectMac
+        macEnabled                                          = $ConnectMac
         partnerUnsupportedOsVersionBlocked                  = [bool]$Remediate.blockUnsupportedOS
         allowPartnerToCollectIOSApplicationMetadata         = [bool]$Remediate.appSync
         allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Remediate.allowPartnerToCollectIosPersonalApplicationMetadata
         androidDeviceBlockedOnMissingPartnerData            = [bool]$Remediate.androidDeviceBlockedOnMissingPartnerData
         iosDeviceBlockedOnMissingPartnerData                = [bool]$Remediate.iosDeviceBlockedOnMissingPartnerData
         windowsDeviceBlockedOnMissingPartnerData            = $(if ($ConnectWindows) { $true } else { [bool]$Remediate.windowsDeviceBlockedOnMissingPartnerData })
-        macDeviceBlockedOnMissingPartnerData                = [bool]$Remediate.macDeviceBlockedOnMissingPartnerData
+        macDeviceBlockedOnMissingPartnerData                = $(if ($ConnectMac) { $true } else { [bool]$Remediate.macDeviceBlockedOnMissingPartnerData })
         androidMobileApplicationManagementEnabled           = [bool]$Remediate.connectAndroidCompliance
         iosMobileApplicationManagementEnabled               = [bool]$Remediate.connectIosCompliance
         windowsMobileApplicationManagementEnabled           = [bool]$Remediate.windowsMobileApplicationManagementEnabled

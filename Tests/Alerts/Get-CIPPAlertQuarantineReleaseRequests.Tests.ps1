@@ -14,6 +14,8 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $AlertPath = Join-Path $RepoRoot 'Modules/CIPPAlerts/Public/Alerts/Get-CIPPAlertQuarantineReleaseRequests.ps1'
     if (-not (Test-Path $AlertPath)) { throw "Could not locate Get-CIPPAlertQuarantineReleaseRequests.ps1 at $AlertPath" }
+    $TransientErrorPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Test-CippTransientError.ps1'
+    if (-not (Test-Path $TransientErrorPath)) { throw "Could not locate Test-CippTransientError.ps1 at $TransientErrorPath" }
 
     function Test-CIPPStandardLicense { [CmdletBinding()] param($StandardName, $TenantFilter, $Preset) }
     function New-ExoRequest { [CmdletBinding()] param($tenantid, $cmdlet, $cmdParams) }
@@ -23,6 +25,7 @@ BeforeAll {
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { [CmdletBinding()] param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
 
+    . $TransientErrorPath
     . $AlertPath
 
     $script:Tenant = 'contoso.onmicrosoft.com'
@@ -34,6 +37,7 @@ Describe 'Get-CIPPAlertQuarantineReleaseRequests' {
         $script:CapturedData = $null
         $script:CapturedTenant = $null
         $script:CapturedErrorMessage = $null
+        $script:CapturedSeverity = $null
 
         Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
         Mock -CommandName Get-CippTable -MockWith { @{} }
@@ -41,6 +45,7 @@ Describe 'Get-CIPPAlertQuarantineReleaseRequests' {
         Mock -CommandName Write-LogMessage -MockWith {
             param($API, $tenant, $message, $sev, $LogData)
             $script:CapturedErrorMessage = $message
+            $script:CapturedSeverity = $sev
         }
         Mock -CommandName Write-AlertTrace -MockWith {
             param($cmdletName, $tenantFilter, $data)
@@ -117,5 +122,23 @@ Describe 'Get-CIPPAlertQuarantineReleaseRequests' {
         Should -Invoke Write-AlertTrace -Times 0
         $script:CapturedErrorMessage | Should -Match 'QuarantineReleaseRequests'
         $script:CapturedErrorMessage | Should -Match 'EXO unavailable'
+    }
+
+    It 'logs a transient EXO failure as a warning, not an error' {
+        Mock -CommandName New-ExoRequest -MockWith { throw "The request to '...InvokeCommand' timed out after 100s" }
+
+        Get-CIPPAlertQuarantineReleaseRequests -TenantFilter $script:Tenant
+
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -ieq 'Warning' }
+        Should -Invoke Write-LogMessage -Times 0 -ParameterFilter { $sev -ieq 'Error' }
+    }
+
+    It 'still logs a non-transient EXO failure as an error' {
+        Mock -CommandName New-ExoRequest -MockWith { throw 'Access denied' }
+
+        Get-CIPPAlertQuarantineReleaseRequests -TenantFilter $script:Tenant
+
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -ieq 'Error' }
+        Should -Invoke Write-LogMessage -Times 0 -ParameterFilter { $sev -ieq 'Warning' }
     }
 }

@@ -142,7 +142,8 @@ function Get-CIPPBaseline {
                     name            = $StageDefinition.name
                     logic           = $StageDefinition.logic
                     conditions      = @($StageDefinition.conditions)
-                    standards       = @($StageDeltas.standardName)
+                    # Enumerated explicitly: member access on an empty array yields a lone $null.
+                    standards       = @($StageDeltas | ForEach-Object { $_.standardName })
                     standardsConfig = @($StageDeltas | ForEach-Object {
                             [PSCustomObject]@{
                                 standard         = (($_.standardName) -split '#')[0]
@@ -278,8 +279,11 @@ function Get-CIPPBaseline {
                 baselineName       = $RolloutRow.templateName
                 description        = $RolloutRow.description
                 assignedTenants    = $AssignedTenants
-                assignments        = $(if ($AssignedTo.Count -gt 0) { $AssignedTo } else { $Assignments })
-                exclusions         = $(if ($ExcludedTo.Count -gt 0) { $ExcludedTo } else { @($ExcludedTenants | ForEach-Object { [PSCustomObject]@{ label = $_; value = $_ } }) })
+                # @() not $(): a subexpression unrolls a one-item list into a bare object, which
+                # the table then flattens into "Exclusions - Label" columns that go blank as soon
+                # as a second entry exists (#771). Always ship a real array.
+                assignments        = @(if ($AssignedTo.Count -gt 0) { $AssignedTo } else { $Assignments })
+                exclusions         = @(if ($ExcludedTo.Count -gt 0) { $ExcludedTo } else { $ExcludedTenants | ForEach-Object { [PSCustomObject]@{ label = $_; value = $_ } } })
                 excludedTenants    = $ExpandedExcludedTenants
                 alertEmails        = $RolloutRow.alertEmails
                 alertWebhookUrl    = $RolloutRow.alertWebhookUrl
