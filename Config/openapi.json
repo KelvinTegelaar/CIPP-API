@@ -45388,6 +45388,7 @@
           {
             "name": "period",
             "in": "query",
+            "description": "Prefer D30 (Copilot reports v1). Some tenants are already on v2, which rejects D30 (as RL30) and wants D28 (RL28) instead. Get-CopilotReportPeriod falls back on that Graph error.",
             "required": false,
             "schema": {
               "type": "string"
