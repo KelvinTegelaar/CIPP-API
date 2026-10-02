@@ -64,6 +64,7 @@ function Invoke-CIPPDBCacheCollection {
             'DirectoryRecommendations'
             'CrossTenantAccessPolicy'
             'DefaultAppManagementPolicy'
+            'ActivityBasedTimeoutPolicy'
             'Settings'
             'SecureScore'
             'PIMSettings'
