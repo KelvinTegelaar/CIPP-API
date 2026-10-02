@@ -413,6 +413,7 @@ Describe 'Invoke-ListGraphRequest blocklist gate' {
         function Get-Tenants { @() }
 
         . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphRequests/Get-GraphRequestList.ps1')
+        . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-CippGraphEndpointLabel.ps1')
         . (Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/CIPP/Core/Invoke-ListGraphRequest.ps1')
     }
 

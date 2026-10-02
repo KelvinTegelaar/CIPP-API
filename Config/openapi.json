@@ -27300,15 +27300,18 @@
                     "type": "object",
                     "properties": {
                       "arguments": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Craft accounts MCP egress per tool (and per Graph resource) off X-Craft-Endpoint."
                       },
                       "name": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Craft accounts MCP egress per tool (and per Graph resource) off X-Craft-Endpoint."
                       },
                       "protocolVersion": {
                         "type": "string"
                       }
-                    }
+                    },
+                    "description": "Craft accounts MCP egress per tool (and per Graph resource) off X-Craft-Endpoint."
                   }
                 },
                 "required": [
@@ -40778,7 +40781,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Per-API-client egress usage for this instance against the daily cap. Reads the\nCraftEgressAccounting table that the Craft runtime mirrors its egress accounting into (the same\nstorage account, so this reads it directly): a per-day audit row per client plus an instance\ntotal, and 15-minute buckets for the trend. Returns today's instance summary (used-of-cap,\nenforcing, when the cap was first hit, how many requests were shed), the per-client breakdown,\nand the last-24h instance trend. When the table has no data for today - accounting off, a\nnon-hosted instance, or simply no app-only traffic yet - Enabled is false and the UI hides the\ncard. SuperAdmin only.",
+        "description": "Per-API-client egress usage for this instance against the daily cap. Reads the\nCraftEgressAccounting table that the Craft runtime mirrors its egress accounting into (the same\nstorage account, so this reads it directly): a per-day audit row per client plus an instance\ntotal, and 15-minute buckets for the trend. Returns today's instance summary (used-of-cap,\nenforcing, when the cap was first hit, how many requests were shed), the per-client breakdown,\nthe top endpoints by egress (instance-wide and per client), signed-in user traffic (reported,\nnever capped), and the last-24h instance trend. When the table has no data for today - accounting off, a\nnon-hosted instance, or simply no app-only traffic yet - Enabled is false and the UI hides the\ncard. SuperAdmin only.",
         "parameters": [
           {
             "name": "Hours",
@@ -50135,7 +50138,7 @@
           {
             "name": "Endpoint",
             "in": "query",
-            "description": "The Graph path to call, without the version prefix - 'users', 'deviceManagement/managedDevices', 'groups/<id>/members'. Use ListGraphSchema to check what an endpoint returns before spending a call on it.",
+            "description": "Craft breaks egress accounting out per Graph resource on this header.",
             "required": false,
             "schema": {
               "type": "string"

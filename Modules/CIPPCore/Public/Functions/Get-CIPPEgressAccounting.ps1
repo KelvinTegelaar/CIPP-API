@@ -29,9 +29,9 @@ function Get-CIPPEgressAccounting {
         $StartKey = 'bkt_{0}' -f $WindowStart.ToString('yyyyMMdd\THHmmss\Z')
 
         # 'bku_' sorts immediately after every 'bkt_' row, so the window stays a RowKey range scan
-        # across the handful of client partitions.
-        $BucketRows = @(Get-CIPPAzDataTableEntity @Table -Filter "RowKey ge '$StartKey' and RowKey lt 'bku_'")
-        $DayRows = @(Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'day_$($Now.ToString('yyyyMMdd'))'")
+        # across the handful of client partitions. Signed-in user traffic is excluded: it is not API egress.
+        $BucketRows = @(Get-CIPPAzDataTableEntity @Table -Filter "RowKey ge '$StartKey' and RowKey lt 'bku_' and PartitionKey ne 'interactive'")
+        $DayRows = @(Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'day_$($Now.ToString('yyyyMMdd'))' and PartitionKey ne 'interactive'")
 
         if ($BucketRows.Count -eq 0 -and $DayRows.Count -eq 0) { return $null }
 

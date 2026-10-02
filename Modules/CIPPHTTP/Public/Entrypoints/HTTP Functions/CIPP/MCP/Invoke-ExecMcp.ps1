@@ -60,6 +60,7 @@ function Invoke-ExecMcp {
         return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Accepted; Body = '' })
     }
 
+    $EgressTag = [string]$Rpc.method
     try {
         if (-not $Rpc.method) {
             throw [pscustomobject]@{ code = -32600; message = 'Invalid Request: missing method' }
@@ -88,6 +89,10 @@ function Invoke-ExecMcp {
             'ping' { $Result = @{} }
             'tools/list' { $Result = [ordered]@{ tools = @(Get-CippMcpToolList -Request $Request) } }
             'tools/call' {
+                # Craft accounts MCP egress per tool (and per Graph resource) off X-Craft-Endpoint.
+                $ToolCall = if ($Rpc.params.name -eq 'ExecTool') { $Rpc.params.arguments } else { $Rpc.params }
+                $EgressTag = [string]$ToolCall.name
+                if ($EgressTag -eq 'ListGraphRequest') { $EgressTag = ('ListGraphRequest:{0}' -f (Get-CippGraphEndpointLabel -Endpoint $ToolCall.arguments.Endpoint)).TrimEnd(':') }
                 $Result = Get-CippMcpToolResult -Request $Request -TriggerMetadata $TriggerMetadata -ToolName $Rpc.params.name -Arguments $Rpc.params.arguments
             }
             default { throw [pscustomobject]@{ code = -32601; message = "Method not found: $($Rpc.method)" } }
@@ -102,7 +107,7 @@ function Invoke-ExecMcp {
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Headers    = @{ 'Content-Type' = 'application/json' }
+            Headers    = @{ 'Content-Type' = 'application/json'; 'X-Craft-Endpoint' = $EgressTag }
             Body       = ($ResponseBody | ConvertTo-Json -Depth 30 -Compress)
         })
 }
