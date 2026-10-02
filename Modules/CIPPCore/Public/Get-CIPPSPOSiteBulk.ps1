@@ -33,6 +33,10 @@ function Get-CIPPSPOSiteBulk {
     Site reads packed into a single ProcessQuery (default 5). Kept small - SharePoint rejects large
     batched CSOM requests ("too many resources"); ~8 is the practical ceiling with SelectAllProperties.
 
+    .PARAMETER Properties
+    SiteProperties fields to return. Omit for every property. Url is always included so results can be
+    matched back to their input URLs.
+
     .PARAMETER UseCertificate
     Authenticate app-only with the SAM certificate (SharePoint app-only requires it).
 
@@ -48,6 +52,7 @@ function Get-CIPPSPOSiteBulk {
         [int]$MaxConcurrency = 4,
         [int]$MaxRetries = 3,
         [int]$BatchSize = 5,
+        [string[]]$Properties,
         [switch]$UseCertificate
     )
 
@@ -63,6 +68,13 @@ function Get-CIPPSPOSiteBulk {
     $CleanUrls = @($SiteUrls | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     if ($CleanUrls.Count -eq 0) { return @() }
 
+    $SiteQuery = if ($Properties) {
+        $Selected = @('Url') + @($Properties | Where-Object { $_ -and $_ -ne 'Url' }) | ForEach-Object { "<Property Name=`"$([System.Security.SecurityElement]::Escape($_))`" ScalarProperty=`"true`" />" }
+        "<Query SelectAllProperties=`"false`"><Properties>$($Selected -join '')</Properties></Query>"
+    } else {
+        '<Query SelectAllProperties="true"><Properties /></Query>'
+    }
+
     $Requests = [System.Collections.Generic.List[CIPP.CIPPConcurrentRequest]]::new()
     $BatchUrls = [System.Collections.Generic.List[object]]::new()
 
@@ -75,7 +87,7 @@ function Get-CIPPSPOSiteBulk {
         $Index = 0
         foreach ($Url in $Chunk) {
             $MethodId = 1000 + $Index; $PathId = 4000 + $Index; $QueryId = 7000 + $Index
-            [void]$Actions.Append("<ObjectPath Id=`"$PathId`" ObjectPathId=`"$MethodId`" /><Query Id=`"$QueryId`" ObjectPathId=`"$MethodId`"><Query SelectAllProperties=`"true`"><Properties /></Query></Query>")
+            [void]$Actions.Append("<ObjectPath Id=`"$PathId`" ObjectPathId=`"$MethodId`" /><Query Id=`"$QueryId`" ObjectPathId=`"$MethodId`">$SiteQuery</Query>")
             [void]$Paths.Append("<Method Id=`"$MethodId`" ParentId=`"1`" Name=`"GetSitePropertiesByUrl`"><Parameters><Parameter Type=`"String`">$([System.Security.SecurityElement]::Escape($Url))</Parameter><Parameter Type=`"Boolean`">true</Parameter></Parameters></Method>")
             $Index++
         }
