@@ -76,7 +76,11 @@ function New-CIPPMFAConnectorToken {
             try {
                 return (Invoke-RestMethod -Method Post -Uri $TokenUri -Body $ClientBody -ErrorAction Stop).access_token
             } catch {
-                if ($Attempt -ge $MaxAttempts) { throw }
+                if ($Attempt -ge $MaxAttempts) {
+                    $TokenError = $_
+                    $EntraError = try { ($TokenError.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop).error_description } catch { $null }
+                    throw "Failed to get a token for the Azure Multi-Factor Auth Client app: $($EntraError ?? $TokenError.Exception.Message)"
+                }
                 Start-Sleep 1
             }
         }
@@ -104,10 +108,12 @@ function New-CIPPMFAConnectorToken {
     }
 
     try {
-        $PolicyUpdate = Update-AppManagementPolicy -TenantFilter $TenantFilter -ApplicationId $MFAAppID -ServicePrincipal
-        Write-Information $PolicyUpdate.PolicyAction
+        $PolicyUpdate = Update-AppManagementPolicy -TenantFilter $TenantFilter -ApplicationId $MFAAppID -ServicePrincipal -headers $Headers
+        if ($PolicyUpdate.PolicyAction) {
+            Write-LogMessage -headers $Headers -API 'MFAConnector' -tenant $TenantFilter -message "App management policy for the Azure Multi-Factor Auth Client: $($PolicyUpdate.PolicyAction)" -sev Info
+        }
     } catch {
-        Write-Information "Failed to update app management policy: $($_.Exception.Message)"
+        Write-LogMessage -headers $Headers -API 'MFAConnector' -tenant $TenantFilter -message "Failed to update app management policy for the Azure Multi-Factor Auth Client: $($_.Exception.Message)" -sev Warn
     }
 
     $PassReqBody = @{

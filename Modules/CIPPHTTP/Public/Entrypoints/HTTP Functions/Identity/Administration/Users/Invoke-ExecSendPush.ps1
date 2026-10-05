@@ -28,7 +28,7 @@ function Invoke-ExecSendPush {
         $Connector = New-CIPPMFAConnectorToken -TenantFilter $TenantFilter -Headers $Request.Headers
     } catch {
         $Body = $_.Exception.Message
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed MFA request for $UserEmail - $Body" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Failed MFA request for $UserEmail - $Body" -Sev 'Error'
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = [pscustomobject]@{'Results' = @{ resultText = $Body; state = 'error' } }
@@ -116,7 +116,7 @@ function Invoke-ExecSendPush {
 
     $Results = [pscustomobject]@{'Results' = @{ resultText = $Body; state = $State } }
     $LogAction = if ($VerifyOtp) { 'Verified MFA code' } else { 'Sent push request' }
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message "$LogAction for $UserEmail - Result: $($ResultValue | Out-String)" -Sev 'Info'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "$LogAction for $UserEmail - Result: $($ResultValue | Out-String)" -Sev 'Info'
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

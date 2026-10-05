@@ -14,6 +14,7 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter) }
     function Get-CippKeyVaultSecret { param($Name, [switch]$AsPlainText) }
     function Set-CippKeyVaultSecret { param($Name, $SecretValue) }
+    function Write-LogMessage { param($headers, $API, $tenant, $message, $sev) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/New-CIPPMFAConnectorToken.ps1')
 
@@ -28,6 +29,7 @@ Describe 'New-CIPPMFAConnectorToken secret caching' {
         Mock Get-CIPPTable { @{ Context = 'stub' } }
         Mock Add-CIPPAzDataTableEntity {}
         Mock Update-AppManagementPolicy {}
+        Mock Write-LogMessage {}
         # Token exchange
         Mock Invoke-RestMethod { [pscustomobject]@{ access_token = 'TOKEN123' } }
         # SP lookup returns the MFA client SP so provisioning finds it (no SP create)
@@ -61,6 +63,19 @@ Describe 'New-CIPPMFAConnectorToken secret caching' {
         # addPassword is the only New-GraphPostRequest here (the SP already exists), and the new secret is cached.
         Should -Invoke New-GraphPostRequest -Times 1 -Exactly
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly
+    }
+
+    It 'surfaces the Entra error description when the token exchange keeps failing' {
+        Mock Get-CIPPAzDataTableEntity { $null }
+        Mock Start-Sleep {}
+        Mock Invoke-RestMethod {
+            $Record = [System.Management.Automation.ErrorRecord]::new([System.Exception]::new('Response status code does not indicate success: 400 (Bad Request).'), 'Token', 'InvalidOperation', $null)
+            $Record.ErrorDetails = [System.Management.Automation.ErrorDetails]::new('{"error":"invalid_request","error_description":"AADSTS53003: Access has been blocked by Conditional Access policies."}')
+            throw $Record
+        }
+
+        { New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid } | Should -Throw -ExpectedMessage '*AADSTS53003*'
+        Should -Not -Invoke Add-CIPPAzDataTableEntity
     }
 }
 
