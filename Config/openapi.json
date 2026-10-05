@@ -25758,41 +25758,24 @@
                       "RemovePrice",
                       "SetPrice"
                     ],
-                    "description": "SetPrice, RemovePrice, or BulkImport"
+                    "description": "SetPrice or RemovePrice"
                   },
                   "Currency": {
                     "type": "string",
-                    "description": "Overrides are currency-scoped: one row per (skuId, currency), so an AUD override and a USD override for the same SKU coexist. RowKey = \"{skuId}-{currency}\"."
+                    "description": "Overrides are currency-scoped: one row per (skuId, currency)."
+                  },
+                  "Mode": {
+                    "type": "string"
                   },
                   "MonthlyPrice": {
                     "type": "number",
                     "description": "Monthly price per seat, in the given currency"
                   },
-                  "Mode": {
-                    "type": "string",
-                    "enum": [
-                      "Validate",
-                      "Apply"
-                    ],
-                    "description": "BulkImport validation or apply operation"
-                  },
                   "Product_Display_Name": {
                     "type": "string"
                   },
                   "Rows": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "Currency": { "type": "string" },
-                        "CurrentPrice": { "type": ["number", "null"] },
-                        "MonthlyPrice": { "type": ["number", "string", "null"] },
-                        "Product_Display_Name": { "type": "string" },
-                        "skuId": { "type": "string" },
-                        "skuPartNumber": { "type": "string" }
-                      },
-                      "required": ["Currency", "MonthlyPrice", "Product_Display_Name", "skuId", "skuPartNumber"]
-                    }
+                    "type": "string"
                   },
                   "skuId": {
                     "type": "string",
@@ -25816,42 +25799,63 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Changes": {
+                      "x-cipp-field-source": "backend"
+                    },
                     "Currency": {
-                      "x-cipp-field-source": "storage"
+                      "x-cipp-field-source": "storage,backend"
+                    },
+                    "CurrentPrice": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "Errors": {
+                      "x-cipp-field-source": "backend"
                     },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "Failed": {
+                      "x-cipp-field-source": "backend"
+                    },
                     "MonthlyPrice": {
                       "type": "number",
-                      "x-cipp-field-source": "storage"
+                      "x-cipp-field-source": "storage,backend"
                     },
-                    "Updated": { "type": "integer" },
-                    "Unchanged": { "type": "integer" },
-                    "Failed": { "type": "integer" },
                     "PartitionKey": {
                       "x-cipp-field-source": "storage"
                     },
                     "Product_Display_Name": {
                       "type": "string",
-                      "x-cipp-field-source": "storage"
+                      "x-cipp-field-source": "storage,backend"
+                    },
+                    "Results": {
+                      "x-cipp-field-source": "backend"
                     },
                     "RowKey": {
                       "x-cipp-field-source": "storage"
                     },
                     "skuId": {
-                      "x-cipp-field-source": "storage"
+                      "x-cipp-field-source": "storage,backend"
                     },
                     "skuPartNumber": {
                       "type": "string",
-                      "x-cipp-field-source": "storage"
+                      "x-cipp-field-source": "storage,backend"
                     },
                     "Timestamp": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
+                    },
+                    "Unchanged": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "Updated": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "Valid": {
+                      "x-cipp-field-source": "backend"
                     }
                   }
                 }
