@@ -61,7 +61,7 @@ function New-ExoRequest {
         }
         $ExoBody = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $ExoBody -EscapeForJson
 
-        $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid -or $_.initialDomainName -eq $tenantid } | Select-Object -First 1
+        $Tenant = Get-Tenants -IncludeErrors -TenantFilter $tenantid | Select-Object -First 1
         if (-not $Tenant -and $NoAuthCheck -eq $true) {
             $Tenant = [PSCustomObject]@{
                 customerId = $tenantid
@@ -158,7 +158,7 @@ function New-ExoRequest {
                     $Return
                 } until ($null -eq $URL)
 
-                Write-Verbose "Response Headers: $($ResponseHeaders | ConvertTo-Json -Depth 5 -Compress)"
+                if ($VerbosePreference -ne 'SilentlyContinue') { Write-Verbose "Response Headers: $($ResponseHeaders | ConvertTo-Json -Depth 5 -Compress)" }
                 if ($ReturnedData.'@adminapi.warnings' -and $null -eq $ReturnedData.value) {
                     $ReturnedData.value = $ReturnedData.'@adminapi.warnings'
                 }

@@ -31,17 +31,16 @@ function Push-GetMailboxRulesBatch {
             }
         }
 
-        $Rules = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Request) -MaxConcurrency 5 | Where-Object { $_.Identity }
+        $Rules = @(New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Request) -MaxConcurrency 5).Where({ $_.Identity })
 
         Write-Information "Retrieved $($Rules.Count) rules from batch $BatchNumber/$TotalBatches"
 
         # Add metadata and return for aggregation
         if (($Rules | Measure-Object).Count -gt 0) {
             $RulesWithMetadata = foreach ($Rule in $Rules) {
-                $Rule | Add-Member -NotePropertyMembers ([ordered]@{
-                        Tenant            = $TenantFilter
-                        UserPrincipalName = $Rule.OperationGuid
-                    }) -Force
+                $Props = $Rule.PSObject.Properties
+                $Props.Remove('Tenant'); $Props.Add([psnoteproperty]::new('Tenant', $TenantFilter))
+                $Props.Remove('UserPrincipalName'); $Props.Add([psnoteproperty]::new('UserPrincipalName', $Rule.OperationGuid))
                 $Rule
             }
             return , $RulesWithMetadata

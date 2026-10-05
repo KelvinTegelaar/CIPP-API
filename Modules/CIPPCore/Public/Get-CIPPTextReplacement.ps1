@@ -88,6 +88,11 @@ function Get-CIPPTextReplacement {
         return $Text
     }
 
+    # Every token is %name%, so text without a '%' cannot change and needs no lookups
+    if (-not $Text.Contains('%')) {
+        return $Text
+    }
+
     $ReservedVariables = @(
         '%serial%',
         '%systemroot%',

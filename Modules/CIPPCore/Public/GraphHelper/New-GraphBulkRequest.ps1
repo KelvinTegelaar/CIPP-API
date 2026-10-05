@@ -45,7 +45,7 @@ function New-GraphBulkRequest {
                 $req = @{}
                 # Use select to create hashtables of id, method and url for each call
                 $req['requests'] = ($Requests[$i..($i + 19)])
-                $ReqBody = (ConvertTo-Json -InputObject $req -Compress -Depth 100)
+                $ReqBody = [CIPP.CippJson]::ToJson($req, 100) ?? (ConvertTo-Json -InputObject $req -Compress -Depth 100)
                 $Return = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
                 if ($Return.headers.'retry-after') {
                     #Revist this when we are pushing this data into our custom schema instead.
@@ -59,7 +59,7 @@ function New-GraphBulkRequest {
             # Retry-After they asked for, up to 30 s - before a caller sees a failure.
             $TransientStatus = @(429, 503, 504)
             for ($Attempt = 1; $Attempt -le 2; $Attempt++) {
-                $Transient = @($ReturnedData.responses | Where-Object { ($_.status -as [int]) -in $TransientStatus })
+                $Transient = @(@($ReturnedData.responses).Where({ ($_.status -as [int]) -in $TransientStatus }))
                 if ($Transient.Count -eq 0) { break }
                 $Wait = 1
                 foreach ($Throttled in $Transient) {
@@ -81,7 +81,7 @@ function New-GraphBulkRequest {
                     }
                 }
             }
-            foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
+            foreach ($MoreData in @($ReturnedData.Responses).Where({ $_.body.'@odata.nextLink' })) {
                 if ($NoPaginateIds -contains $MoreData.id) {
                     continue
                 }
@@ -200,10 +200,11 @@ function New-GraphBulkRequest {
 
         if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphError') {
             $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value '' -Force
-        } else {
+            Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
+        } elseif ($Tenant.LastGraphError -ne '') {
             $Tenant.LastGraphError = ''
+            Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         }
-        Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         return $ReturnedData.responses
     } else {
         Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Graph bulk request')

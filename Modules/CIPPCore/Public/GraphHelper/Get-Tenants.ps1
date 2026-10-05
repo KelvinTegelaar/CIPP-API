@@ -20,9 +20,8 @@ function Get-Tenants {
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
 
-    $SkipListCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $ExcludedFilter
     if ($SkipList) {
-        return $SkipListCache
+        return Get-CIPPAzDataTableEntity @TenantsTable -Filter $ExcludedFilter
     }
 
     if ($IncludeAll.IsPresent) {
@@ -89,8 +88,10 @@ function Get-Tenants {
             }
         }
     }
-    $PartnerModeTable = Get-CippTable -tablename 'tenantMode'
-    $PartnerTenantState = Get-CIPPAzDataTableEntity @PartnerModeTable
+    if ($BuildRequired -or $TriggerRefresh.IsPresent -or $IncludedTenantsCache.RowKey.count -eq 0) {
+        $PartnerModeTable = Get-CippTable -tablename 'tenantMode'
+        $PartnerTenantState = Get-CIPPAzDataTableEntity @PartnerModeTable
+    }
 
     if (($BuildRequired -or $TriggerRefresh.IsPresent) -and $PartnerTenantState.state -ne 'owntenant') {
         # Get TenantProperties table
@@ -122,6 +123,7 @@ function Get-Tenants {
             }
         }
 
+        $SkipListCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $ExcludedFilter
         $ActiveRelationships = $GDAPList | Where-Object $IncludedTenantFilter | Where-Object { $_.customerId -notin $SkipListCache.customerId }
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
 
@@ -297,9 +299,12 @@ function Get-Tenants {
     # $null means unrestricted; any non-null scope filters, so a restricted caller whose scope
     # resolved to zero tenants gets an empty list back rather than every tenant (an empty array
     # is falsy, so a plain truthiness check would silently skip the narrowing).
-    if ($script:CippAllowedTenantsStorage -and $null -ne $script:CippAllowedTenantsStorage.Value) {
-        $IncludedTenantsCache = $IncludedTenantsCache | Where-Object { $script:CippAllowedTenantsStorage.Value -contains $_.customerId }
+    $Scoped = $script:CippAllowedTenantsStorage -and $null -ne $script:CippAllowedTenantsStorage.Value
+    $Tenants = foreach ($Tenant in $IncludedTenantsCache) {
+        if ($Scoped -and $script:CippAllowedTenantsStorage.Value -notcontains $Tenant.customerId) { continue }
+        if ($null -ne $Tenant.defaultDomainName -and ($Tenant.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent)) { $Tenant }
     }
-
-    return $IncludedTenantsCache | Where-Object { ($null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent)) } | Where-Object $IncludedTenantFilter | Sort-Object -Property displayName
+    if ($TenantFilter) { $Tenants = @($Tenants).Where($IncludedTenantFilter) }
+    if (@($Tenants).Count -le 1) { return $Tenants }
+    return $Tenants | Sort-Object -Property displayName
 }

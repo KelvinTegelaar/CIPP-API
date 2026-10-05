@@ -643,6 +643,18 @@ Describe 'Get-CIPPTextReplacement' {
         }
     }
 
+    Context 'text without a token' {
+        It 'is returned unchanged without reading tenants or variables' {
+            $script:GlobalRows = @(New-VariableRow -Name 'sitename' -Value 'Contoso')
+            $Text = '{"requests":[{"id":"1","body":{"Identity":"user@contoso.com"}}]}'
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text $Text -EscapeForJson | Should -BeExactly $Text
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '' | Should -BeExactly ''
+            Should -Invoke Get-Tenants -Times 0 -Exactly
+            Should -Invoke Get-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+    }
+
     Context 'repeated resolution' {
         It 'is stable when the pipeline resolves the same text twice' {
             # Push-CIPPStandard resolves the settings, then the standard resolves its payload again.

@@ -45,11 +45,12 @@ function Set-CIPPDBCacheManagedDeviceEncryptionStates {
         try {
             New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceEncryptionStates?$top=999' -tenantid $TenantFilter -Stream | ForEach-Object {
                 $IsCloudPC = $CloudPCIds.Contains([string]$_.id)
-                $_ | Add-Member -NotePropertyName 'isCloudPC' -NotePropertyValue $IsCloudPC -Force
+                $Props = $_.PSObject.Properties
+                $Props.Remove('isCloudPC'); $Props.Add([psnoteproperty]::new('isCloudPC', $IsCloudPC))
                 # A distinct state rather than a rewrite to 'encrypted': the disk IS encrypted at
                 # rest, but by the Azure platform, not by a BitLocker policy this report tracks.
                 if ($IsCloudPC -and $_.encryptionState -eq 'notEncrypted') {
-                    $_ | Add-Member -NotePropertyName 'encryptionState' -NotePropertyValue 'encryptedByPlatform' -Force
+                    $Props.Remove('encryptionState'); $Props.Add([psnoteproperty]::new('encryptionState', 'encryptedByPlatform'))
                 }
                 $CachedCount++
                 $Writer.Process($_)

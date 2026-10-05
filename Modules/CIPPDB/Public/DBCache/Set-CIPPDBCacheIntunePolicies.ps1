@@ -82,7 +82,12 @@ function Set-CIPPDBCacheIntunePolicies {
 
         # Cache the group snapshot used by this report without overwriting the richer,
         # tenant-wide Groups cache used elsewhere.
-        $GroupResult = $PolicyResults | Where-Object { $_.id -eq 'Groups' } | Select-Object -First 1
+        $ResultById = @{}
+        foreach ($PolicyResult in $PolicyResults) {
+            $ResultKey = [string]$PolicyResult.id
+            if (-not $ResultById.ContainsKey($ResultKey)) { $ResultById[$ResultKey] = $PolicyResult }
+        }
+        $GroupResult = $ResultById['Groups']
         # Replace cached rows only after Graph confirms a successful 2xx response.
         if (-not $GroupResult) {
             & $AddWarning 'Intune policy group lookup returned no batch response; preserving the previous group snapshot'
@@ -99,7 +104,7 @@ function Set-CIPPDBCacheIntunePolicies {
         $SuccessfulPolicyTypes = 0
         $SuccessfulReportTypes = 0
         foreach ($PolicyType in $PolicyTypes) {
-            $Result = $PolicyResults | Where-Object { $_.id -eq $PolicyType.Type } | Select-Object -First 1
+            $Result = $ResultById[[string]$PolicyType.Type]
             if (-not $Result) {
                 & $AddWarning "No Graph batch response was returned for $($PolicyType.Type); preserving the previous cache"
                 continue
@@ -129,7 +134,7 @@ function Set-CIPPDBCacheIntunePolicies {
 
                 if ($PolicyType.CacheType -eq 'IntuneDeviceConfigurations') {
                     foreach ($Policy in $Policies) {
-                        if (@($Policy.omaSettings | Where-Object { $_.secretReferenceValueId }).Count -gt 0) {
+                        if (@($Policy.omaSettings).Where({ $_.secretReferenceValueId }).Count -gt 0) {
                             try {
                                 $null = Get-CIPPOmaSettingDecryptedValue -DeviceConfiguration $Policy -DeviceConfigurationId $Policy.id -TenantFilter $TenantFilter
                             } catch {
@@ -144,13 +149,18 @@ function Set-CIPPDBCacheIntunePolicies {
                 # remains identical to the live endpoint and does not use this fan-out.
                 if ($PolicyType.FetchAssignments -and $Policies.Count -gt 0) {
                     $BaseUri = ($PolicyType.Uri -split '\?')[0]
-                    $AssignmentRequests = @($Policies | ForEach-Object {
+                    $AssignmentRequests = @(foreach ($Policy in $Policies) {
                             [PSCustomObject]@{
-                                id     = $_.id
+                                id     = $Policy.id
                                 method = 'GET'
-                                url    = "$BaseUri/$($_.id)/assignments"
+                                url    = "$BaseUri/$($Policy.id)/assignments"
                             }
                         })
+                    $PolicyById = @{}
+                    foreach ($Policy in $Policies) {
+                        $PolicyKey = [string]$Policy.id
+                        if (-not $PolicyById.ContainsKey($PolicyKey)) { $PolicyById[$PolicyKey] = $Policy }
+                    }
 
                     try {
                         $AssignmentResults = @(New-GraphBulkRequest -Requests $AssignmentRequests -tenantid $TenantFilter)
@@ -163,7 +173,7 @@ function Set-CIPPDBCacheIntunePolicies {
                                 continue
                             }
 
-                            $Policy = $Policies | Where-Object { $_.id -eq $AssignResult.id } | Select-Object -First 1
+                            $Policy = $PolicyById[[string]$AssignResult.id]
                             if ($Policy) {
                                 $Assignments = @($AssignResult.body.value)
                                 $Policy | Add-Member -NotePropertyName assignments -NotePropertyValue $Assignments -Force
@@ -182,34 +192,38 @@ function Set-CIPPDBCacheIntunePolicies {
 
                 if ($PolicyType.FetchDeviceStatuses -and $Policies.Count -gt 0) {
                     $BaseUri = ($PolicyType.Uri -split '\?')[0]
-                    $DeviceStatusRequests = @($Policies | ForEach-Object {
+                    $DeviceStatusRequests = @(foreach ($Policy in $Policies) {
                             [PSCustomObject]@{
-                                id     = $_.id
+                                id     = $Policy.id
                                 method = 'GET'
-                                url    = "$BaseUri/$($_.id)/deviceStatuses?`$top=999"
+                                url    = "$BaseUri/$($Policy.id)/deviceStatuses?`$top=999"
                             }
                         })
 
-                    try {
-                        $DeviceStatusResults = @(New-GraphBulkRequest -Requests $DeviceStatusRequests -tenantid $TenantFilter)
-                        foreach ($StatusResult in $DeviceStatusResults) {
-                            if ($null -eq $StatusResult.status) {
-                                & $AddWarning "No HTTP status was returned while fetching device statuses for $($PolicyType.Type) policy $($StatusResult.id)"
-                                continue
-                            } elseif ([int]$StatusResult.status -lt 200 -or [int]$StatusResult.status -ge 300) {
-                                & $AddWarning "Failed to fetch device statuses for $($PolicyType.Type) policy $($StatusResult.id): HTTP $($StatusResult.status)"
-                                continue
-                            }
+                    # One $batch worth of policies at a time, so only those policies' statuses are held
+                    for ($Chunk = 0; $Chunk -lt $DeviceStatusRequests.Count; $Chunk += 20) {
+                        $DeviceStatusResults = $null
+                        try {
+                            $DeviceStatusResults = @(New-GraphBulkRequest -Requests @($DeviceStatusRequests[$Chunk..($Chunk + 19)]) -tenantid $TenantFilter)
+                            foreach ($StatusResult in $DeviceStatusResults) {
+                                if ($null -eq $StatusResult.status) {
+                                    & $AddWarning "No HTTP status was returned while fetching device statuses for $($PolicyType.Type) policy $($StatusResult.id)"
+                                    continue
+                                } elseif ([int]$StatusResult.status -lt 200 -or [int]$StatusResult.status -ge 300) {
+                                    & $AddWarning "Failed to fetch device statuses for $($PolicyType.Type) policy $($StatusResult.id): HTTP $($StatusResult.status)"
+                                    continue
+                                }
 
-                            $Data = @($StatusResult.body.value)
-                            if ($Data.Count -gt 0) {
-                                $StatusType = "$($PolicyType.CacheType)_$($StatusResult.id)"
-                                Add-CIPPDbItem -TenantFilter $TenantFilter -Type $StatusType -Data $Data
-                                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Data.Count) device statuses for policy ID $($StatusResult.id)" -sev Debug
+                                $Data = @($StatusResult.body.value)
+                                if ($Data.Count -gt 0) {
+                                    $StatusType = "$($PolicyType.CacheType)_$($StatusResult.id)"
+                                    Add-CIPPDbItem -TenantFilter $TenantFilter -Type $StatusType -Data $Data
+                                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Data.Count) device statuses for policy ID $($StatusResult.id)" -sev Debug
+                                }
                             }
+                        } catch {
+                            & $AddWarning "Failed to fetch device statuses for $($PolicyType.Type): $($_.Exception.Message)"
                         }
-                    } catch {
-                        & $AddWarning "Failed to fetch device statuses for $($PolicyType.Type): $($_.Exception.Message)"
                     }
                 }
             } catch {

@@ -24,7 +24,8 @@ function Set-CIPPDBCacheManagedDevices {
                 # their disks are platform-encrypted by Azure; the marker is stamped on every row
                 # so it is always available as a report column, not only when the first cached
                 # device happens to be a Cloud PC.
-                $_ | Add-Member -NotePropertyName 'isCloudPC' -NotePropertyValue ([bool](Test-CIPPCloudPCDevice -Device $_)) -Force
+                $Props = $_.PSObject.Properties
+                $Props.Remove('isCloudPC'); $Props.Add([psnoteproperty]::new('isCloudPC', [bool](Test-CIPPCloudPCDevice -Device $_)))
                 $_
             } |
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ManagedDevices' -AddCount

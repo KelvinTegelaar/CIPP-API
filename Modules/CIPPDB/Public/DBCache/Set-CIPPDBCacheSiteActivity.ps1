@@ -356,14 +356,11 @@ function Set-CIPPDBCacheSiteActivity {
             }
 
             if ($SiteType -eq 'SharePointAndTeams') {
-                # One call rather than four: each Add-Member rebuilds the object's property bag.
-                # [ordered] keeps the emitted JSON property order identical to the sequential adds.
-                $Record | Add-Member -NotePropertyMembers ([ordered]@{
-                        teamsTeamId           = $TeamsTeamId
-                        teamsTeamName         = $TeamsTeamName
-                        teamsLastActivityDate = $TeamsLastActivity
-                        teamsLinkStatus       = $TeamsLinkStatus
-                    }) -Force
+                $Props = $Record.PSObject.Properties
+                $Props.Add([psnoteproperty]::new('teamsTeamId', $TeamsTeamId))
+                $Props.Add([psnoteproperty]::new('teamsTeamName', $TeamsTeamName))
+                $Props.Add([psnoteproperty]::new('teamsLastActivityDate', $TeamsLastActivity))
+                $Props.Add([psnoteproperty]::new('teamsLinkStatus', $TeamsLinkStatus))
             }
 
             if (-not (Test-SiteActivityCacheComplete -SiteType $SiteType -WebUrl $WebUrl -DisplayName $DisplayName -TeamsTeamId $TeamsTeamId -TeamsTeamName $TeamsTeamName)) {

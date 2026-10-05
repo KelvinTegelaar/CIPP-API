@@ -94,7 +94,9 @@ function Set-CIPPDBCacheGroups {
                 $NoteProperties['groupType'] = $groupType
                 $NoteProperties['calculatedGroupType'] = $calculatedGroupType
 
-                $Group | Add-Member -NotePropertyMembers $NoteProperties -Force
+                # Same as Add-Member -Force without its pipeline: half the allocation per row
+                $Props = $Group.PSObject.Properties
+                foreach ($Name in $NoteProperties.Keys) { $Props.Remove($Name); $Props.Add([psnoteproperty]::new($Name, $NoteProperties[$Name])) }
                 $Count.Value++
                 $PipelineWriter.Process($Group)
             }
