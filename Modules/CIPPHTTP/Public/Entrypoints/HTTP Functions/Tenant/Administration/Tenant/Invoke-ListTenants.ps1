@@ -20,7 +20,8 @@ function Invoke-ListTenants {
 
     $AllTenantSelector = $Request.Query.AllTenantSelector
 
-    $IncludeOffboardingDefaults = $Request.Query.IncludeOffboardingDefaults
+    # IncludeOffboardingDefaults is the pre-rename query parameter and still accepted.
+    $IncludeTenantDefaults = $Request.Query.IncludeTenantDefaults ?? $Request.Query.IncludeOffboardingDefaults
 
     # Fuzzy tenant lookup: case-insensitive substring match over displayName, defaultDomainName,
     # initialDomainName and customerId. Arbitrary verified domains are not indexed by Get-Tenants and
@@ -109,11 +110,13 @@ function Invoke-ListTenants {
         }
 
         # If offboarding defaults are requested, fetch them
-        if ($IncludeOffboardingDefaults -eq 'true' -and $Tenants) {
+        if ($IncludeTenantDefaults -eq 'true' -and $Tenants) {
             $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
 
             # Get all offboarding defaults for all tenants in one query for performance
-            $AllOffboardingDefaults = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "RowKey eq 'OffboardingDefaults'"
+            $AllDefaultRows = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "RowKey eq 'OffboardingDefaults' or RowKey eq 'VacationDefaults'"
+            $AllOffboardingDefaults = $AllDefaultRows | Where-Object { $_.RowKey -eq 'OffboardingDefaults' }
+            $AllVacationDefaults = $AllDefaultRows | Where-Object { $_.RowKey -eq 'VacationDefaults' }
 
             # Add offboarding defaults to each tenant
             foreach ($Tenant in $Tenants) {
@@ -131,6 +134,20 @@ function Invoke-ListTenants {
                 } else {
                     $Tenant | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value $null -Force
                 }
+
+                $TenantVacation = $AllVacationDefaults | Where-Object { $_.PartitionKey -eq $Tenant.customerId } | Select-Object -First 1
+                if (-not $TenantVacation) {
+                    $TenantVacation = $AllVacationDefaults | Where-Object { $_.PartitionKey -eq $Tenant.initialDomainName } | Select-Object -First 1
+                }
+                $ParsedVacation = $null
+                if ($TenantVacation) {
+                    try {
+                        $ParsedVacation = $TenantVacation.Value | ConvertFrom-Json
+                    } catch {
+                        Write-LogMessage -headers $Headers -API $APIName -message "Failed to parse vacation defaults for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)" -sev 'Warning'
+                    }
+                }
+                $Tenant | Add-Member -MemberType NoteProperty -Name 'vacationDefaults' -Value $ParsedVacation -Force
             }
         }
 
@@ -145,8 +162,9 @@ function Invoke-ListTenants {
                 }
 
                 # Add offboarding defaults to AllTenants object if requested
-                if ($IncludeOffboardingDefaults -eq 'true') {
+                if ($IncludeTenantDefaults -eq 'true') {
                     $AllTenantsObject.offboardingDefaults = $null
+                    $AllTenantsObject.vacationDefaults = $null
                 }
 
                 $TenantList.Add($AllTenantsObject) | Out-Null

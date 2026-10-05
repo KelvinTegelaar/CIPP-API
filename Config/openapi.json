@@ -11089,6 +11089,91 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/EditTenantVacationDefaults": {
+      "post": {
+        "summary": "EditTenantVacationDefaults",
+        "operationId": "EditTenantVacationDefaults",
+        "tags": [
+          "Tenant > Administration > Tenant"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "customerId": {
+                    "type": "string",
+                    "description": "Interact with query parameters or the body of the request."
+                  },
+                  "defaultDomainName": {
+                    "type": "string"
+                  },
+                  "vacationDefaults": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Value": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Config.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/EditTransportRule": {
       "post": {
         "summary": "EditTransportRule",
@@ -63104,6 +63189,16 @@
           {
             "name": "IncludeOffboardingDefaults",
             "in": "query",
+            "description": "IncludeOffboardingDefaults is the pre-rename query parameter and still accepted.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "IncludeTenantDefaults",
+            "in": "query",
+            "description": "IncludeOffboardingDefaults is the pre-rename query parameter and still accepted.",
             "required": false,
             "schema": {
               "type": "string"
@@ -63208,6 +63303,16 @@
           {
             "name": "IncludeOffboardingDefaults",
             "in": "query",
+            "description": "IncludeOffboardingDefaults is the pre-rename query parameter and still accepted.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "IncludeTenantDefaults",
+            "in": "query",
+            "description": "IncludeOffboardingDefaults is the pre-rename query parameter and still accepted.",
             "required": false,
             "schema": {
               "type": "string"
