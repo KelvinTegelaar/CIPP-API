@@ -160,6 +160,14 @@ function Get-CIPPLicenseRecommendation {
     $MailboxUsage = @($MailboxUsage)
     $CopilotUsage = @($CopilotUsage)
 
+    # The overview (Get-CIPPLicenseOverview) already has the ExcludedLicenses table applied and tags
+    # every subscription with Microsoft's isTrial flag in TermInfo. Trial seats cost nothing, so a
+    # SKU held only on trial subscriptions is left out of every pass here; the licenses page still
+    # shows it. The waste engine receives the overview untouched and applies the same rule itself.
+    $OverviewKnown = $Licenses.Count -gt 0
+    $OverviewLicenses = $Licenses
+    $Licenses = @($Licenses | Where-Object { @($_.TermInfo).Count -eq 0 -or @($_.TermInfo | Where-Object { $_.IsTrial -ne $true }).Count -gt 0 })
+
     $Catalog = Get-CIPPLicenseCatalog
     $Uplift = if ($Catalog.meta.monthlyCommitmentUplift) { [double]$Catalog.meta.monthlyCommitmentUplift } else { 0.20 }
 
@@ -272,6 +280,29 @@ function Get-CIPPLicenseRecommendation {
             TermInfo = @($Lic.TermInfo)
         }
     }
+    # Who holds which license comes from the overview's AssignedUsers, never from the raw user
+    # objects, so exclusions and the trial rule above apply to every pass. Lowercased UPN -> skuIds.
+    $SkusOfUser = @{}
+    foreach ($Lic in $Licenses) {
+        if (-not $Lic.skuId) { continue }
+        $Key = ([string]$Lic.skuId).ToLowerInvariant()
+        foreach ($Holder in @($Lic.AssignedUsers)) {
+            if (-not $Holder.userPrincipalName) { continue }
+            $UpnKey = ([string]$Holder.userPrincipalName).ToLowerInvariant()
+            if (-not $SkusOfUser.ContainsKey($UpnKey)) { $SkusOfUser[$UpnKey] = [System.Collections.Generic.List[string]]::new() }
+            if (-not $SkusOfUser[$UpnKey].Contains($Key)) { $SkusOfUser[$UpnKey].Add($Key) }
+        }
+    }
+    # The overview does not carry per-user disabled plans; those come from the user object for a
+    # SKU the overview says the user holds.
+    $DisabledPlansOf = {
+        param($User, $Sku)
+        $Key = ([string]$Sku).ToLowerInvariant()
+        foreach ($Assigned in @($User.assignedLicenses)) {
+            if ($Assigned.skuId -and ([string]$Assigned.skuId).ToLowerInvariant() -eq $Key) { return , @($Assigned.disabledPlans) }
+        }
+        return , @()
+    }
     $NameOf = {
         param($Sku)
         $Key = ([string]$Sku).ToLowerInvariant()
@@ -300,9 +331,10 @@ function Get-CIPPLicenseRecommendation {
     $CopilotByUpn = @{}
     foreach ($Row in $CopilotUsage) { if ($Row.userPrincipalName) { $CopilotByUpn[([string]$Row.userPrincipalName).ToLowerInvariant()] = $Row } }
 
-    # Real (member, non-resource, licensed) users
+    # Real (member, non-resource) users the overview lists as holding a license. The user object
+    # only supplies account attributes (enabled, sign-in dates, assignment dates, disabled plans).
     $RealUsers = @($Users | Where-Object {
-            $_.assignedLicenses -and @($_.assignedLicenses).Count -gt 0 -and
+            $_.userPrincipalName -and $SkusOfUser.ContainsKey(([string]$_.userPrincipalName).ToLowerInvariant()) -and
             $_.userType -ne 'Guest' -and $_.isResourceAccount -ne $true
         })
     $LicensedUserCount = $RealUsers.Count
@@ -353,7 +385,7 @@ function Get-CIPPLicenseRecommendation {
     }
 
     # ------------------------------------------------------------------ waste tiers (existing engine)
-    $Optimization = Get-CIPPLicenseOptimization -TenantFilter $TenantFilter -Licenses $Licenses -Users $Users -ActivityDetail $ActivityDetail -InactiveDays $InactiveDays -Currency $Currency
+    $Optimization = Get-CIPPLicenseOptimization -TenantFilter $TenantFilter -Licenses $OverviewLicenses -Users $Users -ActivityDetail $ActivityDetail -InactiveDays $InactiveDays -Currency $Currency
 
     # Tenant-level SKUs (extra file storage, server protection, capacity) are consumed without a
     # user assignment, so their unassigned seats are not waste. Drop those findings and recount.
@@ -447,14 +479,12 @@ function Get-CIPPLicenseRecommendation {
             $Upn = [string]$User.userPrincipalName
             $Used = & $UsedCapsOf $Upn
             if ($null -eq $Used) { continue }
-            foreach ($Assigned in @($User.assignedLicenses)) {
-                if (-not $Assigned.skuId) { continue }
-                $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+            foreach ($Key in $SkusOfUser[$Upn.ToLowerInvariant()]) {
                 if (-not $ProductBySku.ContainsKey($Key)) { continue }
                 $Current = $ProductBySku[$Key]
                 if ($null -eq $Current.price) { continue }
                 $Disabled = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                foreach ($D in @($Assigned.disabledPlans)) { if ($D) { $null = $Disabled.Add(([string]$D).ToLowerInvariant()) } }
+                foreach ($D in (& $DisabledPlansOf $User $Key)) { if ($D) { $null = $Disabled.Add(([string]$D).ToLowerInvariant()) } }
                 $Held = & $CapsOfPlans (& $GetPlanSet $Key) $Disabled
                 if ($Held.Count -eq 0) { continue }
 
@@ -538,15 +568,13 @@ function Get-CIPPLicenseRecommendation {
             $DescUnionCaps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
             $DescFamilies = [System.Collections.Generic.List[string]]::new()
             $DescSum = 0.0
-            foreach ($Assigned in @($User.assignedLicenses)) {
-                if (-not $Assigned.skuId) { continue }
-                $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+            foreach ($Key in $SkusOfUser[$Upn.ToLowerInvariant()]) {
                 if (-not $ProductBySku.ContainsKey($Key)) { $Unpriced = $true; continue }
                 $Product = $ProductBySku[$Key]
                 if ($null -eq $Product.price) { $Unpriced = $true; continue }
                 $HeldProducts.Add($Product)
                 $Disabled = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                foreach ($D in @($Assigned.disabledPlans)) { if ($D) { $null = $Disabled.Add(([string]$D).ToLowerInvariant()) } }
+                foreach ($D in (& $DisabledPlansOf $User $Key)) { if ($D) { $null = $Disabled.Add(([string]$D).ToLowerInvariant()) } }
                 $UnionCaps.UnionWith((& $CapsOfPlans (& $GetPlanSet $Key) $Disabled))
                 if ($Product.caps.Count -gt 0) {
                     $DescProducts.Add($Product)
@@ -641,9 +669,7 @@ function Get-CIPPLicenseRecommendation {
                 if ($State.state -and $State.state -ne 'Active') { continue }
                 $StateBySku[([string]$State.skuId).ToLowerInvariant()] = $State
             }
-            foreach ($Assigned in @($User.assignedLicenses)) {
-                if (-not $Assigned.skuId) { continue }
-                $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+            foreach ($Key in $SkusOfUser[([string]$User.userPrincipalName).ToLowerInvariant()]) {
                 if (-not $AssignedActiveBySku.ContainsKey($Key)) { $AssignedActiveBySku[$Key] = 0; $StableBySku[$Key] = 0 }
                 $AssignedActiveBySku[$Key] = $AssignedActiveBySku[$Key] + 1
                 $Since = $null
@@ -778,9 +804,7 @@ function Get-CIPPLicenseRecommendation {
     $NoActivityMonthly = 0.0
     $NoActivitySeats = 0
     foreach ($User in $NoActivityUsers) {
-        foreach ($Assigned in @($User.assignedLicenses)) {
-            if (-not $Assigned.skuId) { continue }
-            $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+        foreach ($Key in $SkusOfUser[([string]$User.userPrincipalName).ToLowerInvariant()]) {
             $Unit = & $PriceOf $Key
             $Name = & $NameOf $Key
             & $AddSuggestion 'Remove license' $User.userPrincipalName $Name $Key '' "Remove $Name" "No activity in email, Teams, OneDrive or SharePoint for $InactiveDays days (sign-in dates need Entra ID P1, which this tenant does not report)" 1 ($Unit ?? 0) ($null -ne $Unit) @() @()
@@ -861,7 +885,7 @@ function Get-CIPPLicenseRecommendation {
         MonthlyCommitmentUplift   = $Uplift
         SuggestionCount           = $Suggestions.Count
         AnonymizedReports         = $AnonymizedReports
-        DataAvailable             = ($Licenses.Count -gt 0)
+        DataAvailable             = $OverviewKnown
         UsageDataAvailable        = ($ActivityDetail.Count -gt 0)
         AppUsageDataAvailable     = ($AppUsage.Count -gt 0)
         MailboxUsageDataAvailable = ($MailboxUsage.Count -gt 0)
