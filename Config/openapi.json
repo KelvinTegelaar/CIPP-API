@@ -57933,7 +57933,7 @@
         "tags": [
           "CIPP > Scheduler"
         ],
-        "description": "Lists scheduled tasks in CIPP, filterable by tenant or task ID. Returns task name, command, schedule, and last execution status.",
+        "description": "Lists scheduled tasks in CIPP, filterable by tenant, task ID, task state, or reference. Returns task name, command, schedule, and last execution status.",
         "parameters": [
           {
             "name": "Id",
@@ -57946,6 +57946,15 @@
           {
             "name": "Name",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Reference",
+            "in": "query",
+            "description": "Only tasks whose Reference contains this text, case-insensitive with no wildcards (e.g. '[ID:1528]').",
             "required": false,
             "schema": {
               "type": "string"
@@ -57966,6 +57975,15 @@
             "required": false,
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "TaskState",
+            "in": "query",
+            "description": "Only tasks in these states, comma-separated (e.g. 'Planned' or 'Planned,Running').",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           },
           {
