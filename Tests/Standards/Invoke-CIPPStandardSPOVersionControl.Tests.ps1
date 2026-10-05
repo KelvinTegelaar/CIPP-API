@@ -137,3 +137,41 @@ Describe 'Invoke-CIPPStandardSPOVersionControl report' {
         }
     }
 }
+
+Describe 'Invoke-CIPPStandardSPOVersionControl existing sites' {
+    BeforeEach {
+        $script:SitePayloads = [System.Collections.Generic.List[hashtable]]::new()
+        Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Set-CIPPStandardsCompareField -MockWith { }
+        Mock -CommandName Get-CIPPSPOTenant -MockWith {
+            [pscustomobject]@{ _ObjectIdentity_ = 'id'; TenantFilter = $script:Tenant; EnableAutoExpirationVersionTrim = $false; MajorVersionLimit = 500; ExpireVersionsAfterDays = 30 }
+        }
+        Mock -CommandName Set-CIPPSPOTenant -MockWith { }
+        Mock -CommandName New-GraphGetRequest -MockWith { @([pscustomobject]@{ webUrl = 'https://contoso.sharepoint.com/sites/a' }) }
+        Mock -CommandName Set-CIPPSPOSiteBulk -MockWith {
+            foreach ($Site in $Sites) { $script:SitePayloads.Add($Site.Properties) }
+            @([pscustomobject]@{ SiteUrl = $Sites[0].SiteUrl; Success = $true; Error = $null })
+        }
+    }
+
+    It 'sends an explicit policy for existing libraries and leaves new libraries inheriting' {
+        Invoke-CIPPStandardSPOVersionControl -Tenant $script:Tenant -Settings @{ EnableAutoTrim = $false; MajorVersionLimit = 100; ExpireVersionsAfterDays = 0; ApplyToExistingSites = $true; remediate = $true }
+
+        $P = $script:SitePayloads[0]
+        $P.InheritVersionPolicyFromTenant | Should -BeFalse
+        $P.ApplyToExistingDocumentLibraries | Should -BeTrue
+        $P.ContainsKey('ApplyToNewDocumentLibraries') | Should -BeFalse
+        $P.MajorVersionLimit | Should -Be 100
+        $P.ExpireVersionsAfterDays | Should -Be 0
+    }
+
+    It 'clears every limit when trimming automatically' {
+        Invoke-CIPPStandardSPOVersionControl -Tenant $script:Tenant -Settings @{ EnableAutoTrim = $true; ApplyToExistingSites = $true; remediate = $true }
+
+        $P = $script:SitePayloads[0]
+        $P.InheritVersionPolicyFromTenant | Should -BeFalse
+        $P.EnableAutoExpirationVersionTrim | Should -BeTrue
+        @($P.MajorVersionLimit, $P.ExpireVersionsAfterDays, $P.MajorWithMinorVersionsLimit) | Should -Be @(-1, -1, -1)
+    }
+}

@@ -171,8 +171,26 @@ Describe 'Get-CIPPBaselineSPOVersionControlState' {
         { Invoke-CIPPBaselineSPOVersionControl -Remediate ([PSCustomObject]@{ enableAutoTrim = $true; applyToExistingSites = $true }) -TenantFilter $script:Tenant -Current $null } | Should -Not -Throw
         Should -Invoke Set-CIPPSPOSiteBulk -Times 1 -Exactly
         Should -Invoke Set-CIPPSPOSiteBulk -Times 1 -Exactly -ParameterFilter {
-            @($Sites).Count -eq 2 -and @($Sites | Where-Object { $_.SiteUrl -like '*good' -and $_.Properties.InheritVersionPolicyFromTenant -eq $true }).Count -eq 1
+            @($Sites).Count -eq 2 -and @($Sites | Where-Object { $_.SiteUrl -like '*good' -and $_.Properties.InheritVersionPolicyFromTenant -eq $false }).Count -eq 1
         }
+    }
+
+    It 'queues existing libraries with an explicit policy and leaves new libraries inheriting' {
+        Mock Get-CIPPSPOTenant { [PSCustomObject]@{ _ObjectIdentity_ = 'fresh'; TenantFilter = $script:Tenant } }
+        Mock Set-CIPPSPOTenant { }
+        Mock New-GraphGetRequest { @([PSCustomObject]@{ webUrl = 'https://c.sharepoint.com/sites/a' }) }
+        $script:Sent = $null
+        Mock Set-CIPPSPOSiteBulk { $script:Sent = $Sites[0].Properties; @([PSCustomObject]@{ SiteUrl = $Sites[0].SiteUrl; Success = $true }) }
+
+        Invoke-CIPPBaselineSPOVersionControl -Remediate ([PSCustomObject]@{ enableAutoTrim = $true; applyToExistingSites = $true }) -TenantFilter $script:Tenant -Current $null
+        $script:Sent.ApplyToExistingDocumentLibraries | Should -BeTrue
+        $script:Sent.ContainsKey('ApplyToNewDocumentLibraries') | Should -BeFalse
+        @($script:Sent.MajorVersionLimit, $script:Sent.ExpireVersionsAfterDays, $script:Sent.MajorWithMinorVersionsLimit) | Should -Be @(-1, -1, -1)
+
+        Invoke-CIPPBaselineSPOVersionControl -Remediate ([PSCustomObject]@{ enableAutoTrim = $false; majorVersionLimit = 100; expireVersionsAfterDays = 0; applyToExistingSites = $true }) -TenantFilter $script:Tenant -Current $null
+        $script:Sent.EnableAutoExpirationVersionTrim | Should -BeFalse
+        $script:Sent.MajorVersionLimit | Should -Be 100
+        $script:Sent.ContainsKey('MajorWithMinorVersionsLimit') | Should -BeFalse
     }
 }
 

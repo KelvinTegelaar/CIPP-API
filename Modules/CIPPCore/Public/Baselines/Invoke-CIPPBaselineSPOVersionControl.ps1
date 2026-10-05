@@ -7,7 +7,7 @@ function Invoke-CIPPBaselineSPOVersionControl {
         The tenant write goes through the SPO SetFileVersionPolicy method with the
         classic's exact parameter shape (-1 sentinels for the limits when auto-trim is on),
         against a LIVE-read CSOM identity. When the baseline opts into existing sites, each
-        site inherits the tenant policy across new and existing document libraries - a
+        site queues SharePoint's job that applies the policy to its existing document libraries - a
         per-site fan-out that continues past individual site failures, as the classic did.
     .FUNCTIONALITY
         Internal
@@ -33,18 +33,22 @@ function Invoke-CIPPBaselineSPOVersionControl {
     } else {
         @(@{ Type = 'Boolean'; Value = $false }, @{ Type = 'Int32'; Value = $MajorLimit }, @{ Type = 'Int32'; Value = $ExpireDays })
     }
-    $State | Set-CIPPSPOTenant -MethodName 'SetFileVersionPolicy' -MethodParameters $MethodParams -UseCertificate
+    $null = $State | Set-CIPPSPOTenant -MethodName 'SetFileVersionPolicy' -MethodParameters $MethodParams -UseCertificate
     Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Set the file version policy (autoTrim=$AutoTrim$(if (-not $AutoTrim) { ", limit=$MajorLimit, expire=${ExpireDays}d" }))." -Sev 'Info'
 
     if ($Remediate.applyToExistingSites -eq $true -or "$($Remediate.applyToExistingSites)" -eq 'True') {
         $Sites = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/getAllSites?`$select=webUrl&`$top=999" -tenantid $TenantFilter -AsApp $true)
+        # SharePoint only queues the existing-library job for an explicit policy; leaving out ApplyToNewDocumentLibraries keeps new libraries inheriting the tenant
         $SiteProperties = @{
-            InheritVersionPolicyFromTenant   = $true
+            InheritVersionPolicyFromTenant   = $false
             EnableAutoExpirationVersionTrim  = $AutoTrim
-            ApplyToNewDocumentLibraries      = $true
             ApplyToExistingDocumentLibraries = $true
         }
-        if (-not $AutoTrim) {
+        if ($AutoTrim) {
+            $SiteProperties.MajorVersionLimit = -1
+            $SiteProperties.ExpireVersionsAfterDays = -1
+            $SiteProperties.MajorWithMinorVersionsLimit = -1
+        } else {
             $SiteProperties.MajorVersionLimit = $MajorLimit
             $SiteProperties.ExpireVersionsAfterDays = $ExpireDays
         }
@@ -55,6 +59,6 @@ function Invoke-CIPPBaselineSPOVersionControl {
         foreach ($FailedSite in $Failures) {
             Write-Information "Baselines: version policy on $($FailedSite.SiteUrl) continued past: $($FailedSite.Error)"
         }
-        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Applied the version policy to $(@($Sites).Count - $Failures.Count) of $(@($Sites).Count) existing site(s)." -Sev 'Info'
+        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Queued the version policy for existing document libraries on $(@($Sites).Count - $Failures.Count) of $(@($Sites).Count) site(s)." -Sev 'Info'
     }
 }

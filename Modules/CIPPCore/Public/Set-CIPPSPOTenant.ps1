@@ -144,7 +144,10 @@ function Set-CIPPSPOTenant {
         }
 
         if ($PSCmdlet.ShouldProcess($Description, 'Set Tenant Properties')) {
-            New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders @AuthSplat
+            $Response = New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders @AuthSplat
+            # CSOM reports a rejected write as HTTP 200 with ErrorInfo in the body
+            $CsomError = (@($Response).Where({ $_.ErrorInfo }) | Select-Object -First 1).ErrorInfo.ErrorMessage
+            if ($CsomError) { throw $CsomError }
 
             # Invalidate cached tenant data so subsequent reads reflect the change
             $Table = Get-CIPPTable -tablename 'cachespotenant'
@@ -153,6 +156,7 @@ function Set-CIPPSPOTenant {
             if ($CacheEntity) {
                 Remove-CIPPAzDataTableEntity @Table -Entity $CacheEntity
             }
+            $Response
         }
     }
 }
