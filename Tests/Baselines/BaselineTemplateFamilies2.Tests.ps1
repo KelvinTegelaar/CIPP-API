@@ -18,7 +18,7 @@ BeforeAll {
     function New-CIPPGroup { param($GroupObject, $TenantFilter, $APIName) }
     function New-GraphPostRequest { param($uri, $tenantid, $type, $body) }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Select, $Compliance, $AsApp) }
-    function Get-CIPPTextReplacement { param($Text, $TenantFilter) $Text }
+    function Get-CIPPTextReplacement { param($Text, $TenantFilter, [switch]$EscapeForJson) $Text }
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) $true }
     function Set-CIPPQuarantinePolicy { param($identity, $action, $EndUserQuarantinePermissions, $ESNEnabled, $IncludeMessagesFromBlockedSenderAddress, $tenantFilter, $APIName) }
 
@@ -159,6 +159,16 @@ Describe 'Get-CIPPBaselineGroupTemplateState' {
         }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ groupTemplate = 'tpl-g' } }
         (Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant).Current.deployed | Should -BeTrue
+    }
+
+    It 'matches a %token% name by its resolved value and hands the executor the resolved body' {
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ RowKey = 'tpl-g'; JSON = '{"displayName":"%shortname%-Sec","groupType":"security"}' } }
+        Mock Get-CIPPTextReplacement { $Text -replace '%shortname%', 'ctso' }
+        Mock New-CIPPDbRequest { @(@{ id = 'g1'; displayName = 'ctso-Sec' } | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ groupTemplate = 'tpl-g' } }
+        $Prepared = Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.deployed | Should -BeTrue
+        $Prepared.Current.templateBody.displayName | Should -Be 'ctso-Sec'
     }
 
     It 'reports a missing group as drift' {

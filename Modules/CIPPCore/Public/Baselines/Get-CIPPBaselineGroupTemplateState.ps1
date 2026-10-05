@@ -30,7 +30,10 @@ function Get-CIPPBaselineGroupTemplateState {
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'GroupTemplate' and RowKey eq '$SafeReference'" | Select-Object -First 1
-    $Template = $(if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) { try { $Entity.JSON | ConvertFrom-Json -Depth 20 -ErrorAction Stop } catch { $null } })
+    $TemplateJson = "$($Entity.JSON)"
+    # Writes resolve %tokens% on send, so the live group carries the resolved name.
+    if ($TemplateJson -match '%') { $TemplateJson = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $TemplateJson -EscapeForJson }
+    $Template = $(if (-not [string]::IsNullOrWhiteSpace($TemplateJson)) { try { $TemplateJson | ConvertFrom-Json -Depth 20 -ErrorAction Stop } catch { $null } })
     $GroupName = "$($Template.displayName)"
     if (-not $Template -or [string]::IsNullOrWhiteSpace($GroupName)) { return @{ Current = $null } }
 
