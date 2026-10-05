@@ -11,6 +11,7 @@ function Connect-HuduAPI {
         New-HuduCustomHeaders -Headers @{'CF-Access-Client-Id' = $Configuration.CFZTNA.ClientId; 'CF-Access-Client-Secret' = "$CFAPIKey" }
         Write-Information 'CF-Access-Client-Id and CF-Access-Client-Secret headers added to Hudu API request'
     }
+    $null = Set-HuduRequestOption -SkipPostRetry $true -RateLimitWindowSeconds 30
     New-HuduBaseURL -BaseURL $Configuration.Hudu.BaseURL
     New-HuduAPIKey -ApiKey $APIKey
 }
