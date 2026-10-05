@@ -94,7 +94,8 @@ function Invoke-ExecSetSiteProperties {
         # rejects the whole request if any other property is included. Filter to the
         # supported set and report what was skipped.
         $Site = Get-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $SiteUrl
-        $IsGroupSite = $Site.GroupId -and $Site.GroupId -notmatch '^0{8}-'
+        # GroupId comes back as /Guid(...)/, all zeros on a classic site
+        $IsGroupSite = $Site.GroupId -and $Site.GroupId -notmatch '0{8}-0{4}-0{4}-0{4}-0{12}'
         $Skipped = [System.Collections.Generic.List[string]]::new()
         if ($IsGroupSite) {
             $GroupSiteAllowed = @('SharingCapability', 'DefaultSharingLinkType', 'DefaultLinkPermission', 'LockState', 'StorageMaximumLevel', 'StorageWarningLevel')
@@ -109,17 +110,53 @@ function Invoke-ExecSetSiteProperties {
             }
         }
 
-        $Response = Set-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $SiteUrl -Properties $Properties
-        $CsomError = ($Response | Where-Object { $_.ErrorInfo } | Select-Object -First 1).ErrorInfo.ErrorMessage
-        if ($CsomError) {
-            throw $CsomError
+        $LockState = $Properties['LockState']
+        $CurrentLockState = [string]$Site.LockState
+        $IsLocked = $CurrentLockState -and $CurrentLockState -ne 'Unlock'
+        $LockSkipped = [System.Collections.Generic.List[string]]::new()
+        if ($IsLocked -and $LockState -ne 'Unlock') {
+            foreach ($Key in @($Properties.Keys)) {
+                if ($Key -ne 'LockState') {
+                    $Properties.Remove($Key)
+                    $LockSkipped.Add($Key)
+                }
+            }
+            if ($Properties.Count -eq 0) {
+                throw "The site is locked ($CurrentLockState). Unlock it before changing: $($LockSkipped -join ', ')."
+            }
         }
 
-        $AppliedChanges = $Changes | Where-Object { ($_ -split '=')[0] -in $Properties.Keys }
-        $Results = "Successfully updated site properties for $($SiteUrl): $($AppliedChanges -join ', ')"
-        if ($Skipped.Count -gt 0) {
-            $Results += " Skipped (not supported on group-connected sites): $($Skipped -join ', ')."
+        # A locked site rejects most writes, so the lock change is its own request: first when unlocking, last when locking
+        $Requests = [System.Collections.Generic.List[hashtable]]::new()
+        if ($LockState -and $Properties.Count -gt 1 -and ($IsLocked -or $LockState -ne 'Unlock')) {
+            $Properties.Remove('LockState')
+            if ($IsLocked) { $Requests.Add(@{ LockState = $LockState }) }
+            $Requests.Add($Properties)
+            if (-not $IsLocked) { $Requests.Add(@{ LockState = $LockState }) }
+        } else {
+            $Requests.Add($Properties)
         }
+
+        $Done = [System.Collections.Generic.List[string]]::new()
+        foreach ($Batch in $Requests) {
+            $Response = Set-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $SiteUrl -Properties $Batch
+            $CsomError = ($Response | Where-Object { $_.ErrorInfo } | Select-Object -First 1).ErrorInfo.ErrorMessage
+            if ($CsomError) {
+                throw $(if ($Done.Count -gt 0) { "$CsomError (already applied: $($Done -join ', '))" } else { $CsomError })
+            }
+            foreach ($Key in $Batch.Keys) { $Done.Add($Key) }
+        }
+
+        $AppliedChanges = $Changes.Where({ ($_ -split '=')[0] -in $Done })
+        $ResultParts = [System.Collections.Generic.List[string]]::new()
+        $ResultParts.Add("Successfully updated site properties for $($SiteUrl): $($AppliedChanges -join ', ')")
+        if ($Skipped.Count -gt 0) {
+            $ResultParts.Add("Skipped (not supported on group-connected sites): $($Skipped -join ', ').")
+        }
+        if ($LockSkipped.Count -gt 0) {
+            $ResultParts.Add("Skipped while the site is locked ($CurrentLockState), unlock it to change: $($LockSkipped -join ', ').")
+        }
+        $Results = $ResultParts -join ' '
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
