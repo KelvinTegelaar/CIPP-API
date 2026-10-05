@@ -50,6 +50,11 @@ function Invoke-ExecCommunityRepo {
                 } else {
                     $Repo = Invoke-GitHubApiRequest -Path "repos/$($Request.Body.FullName)"
                 }
+                # The anonymous fallback answers a 404 with a null result instead of throwing;
+                # writing that would create a row with an empty RowKey and no name.
+                if (-not $Repo.id) {
+                    throw "Repository '$($Request.Body.FullName ?? $Id)' was not found on GitHub. Check the owner/repo spelling; a private repository needs the GitHub integration configured with access to it."
+                }
                 $RepoEntity = @{
                     PartitionKey  = 'CommunityRepos'
                     RowKey        = [string]$Repo.id
@@ -100,6 +105,7 @@ function Invoke-ExecCommunityRepo {
         'Update' {
             if ($RepoEntity) {
                 $Repo = Invoke-GitHubApiRequest -Path "repositories/$($Id)"
+                if (-not $Repo.id) { throw "Repository $($Id) was not found on GitHub." }
                 $Update = @{
                     PartitionKey  = 'CommunityRepos'
                     RowKey        = [string]$Repo.id

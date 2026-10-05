@@ -22,6 +22,16 @@ function Invoke-ListCommunityRepos {
 
     $Repos = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
+    # Rows with an empty RowKey came from an Add that got no repository back from GitHub. They
+    # render as a nameless card and cannot be deleted by Id, so clear them here.
+    $Ghosts = @($Repos | Where-Object { [string]::IsNullOrEmpty($_.RowKey) })
+    if ($Ghosts.Count -gt 0) {
+        foreach ($Ghost in $Ghosts) {
+            Remove-AzDataTableEntity @Table -Entity ($Ghost | Select-Object PartitionKey, RowKey, ETag) -Force
+        }
+        $Repos = @($Repos | Where-Object { -not [string]::IsNullOrEmpty($_.RowKey) })
+    }
+
     if (!$Request.Query.WriteAccess) {
         $CommunityRepos = Join-Path $env:CIPPRootPath 'Config\CommunityRepos.json'
         $DefaultCommunityRepos = [System.IO.File]::ReadAllText($CommunityRepos) | ConvertFrom-Json
