@@ -25743,7 +25743,7 @@
         "tags": [
           "Tenant > Reports"
         ],
-        "description": "Manage MSP-global license price overrides used by the license optimization report.\nSetPrice upserts a per-SKU monthly price; RemovePrice deletes an override so the SKU falls\nback to the shipped MSRP estimate.",
+        "description": "Manage MSP-global license price overrides used by the license optimization report.\nSetPrice upserts a per-SKU monthly price; RemovePrice deletes an override so the SKU falls\nback to the shipped MSRP estimate. BulkImport validates or applies a pricing CSV batch.",
         "requestBody": {
           "required": true,
           "content": {
@@ -25754,10 +25754,11 @@
                   "Action": {
                     "type": "string",
                     "enum": [
+                      "BulkImport",
                       "RemovePrice",
                       "SetPrice"
                     ],
-                    "description": "SetPrice or RemovePrice"
+                    "description": "SetPrice, RemovePrice, or BulkImport"
                   },
                   "Currency": {
                     "type": "string",
@@ -25767,8 +25768,31 @@
                     "type": "number",
                     "description": "Monthly price per seat, in the given currency"
                   },
+                  "Mode": {
+                    "type": "string",
+                    "enum": [
+                      "Validate",
+                      "Apply"
+                    ],
+                    "description": "BulkImport validation or apply operation"
+                  },
                   "Product_Display_Name": {
                     "type": "string"
+                  },
+                  "Rows": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "Currency": { "type": "string" },
+                        "CurrentPrice": { "type": ["number", "null"] },
+                        "MonthlyPrice": { "type": ["number", "string", "null"] },
+                        "Product_Display_Name": { "type": "string" },
+                        "skuId": { "type": "string" },
+                        "skuPartNumber": { "type": "string" }
+                      },
+                      "required": ["Currency", "MonthlyPrice", "Product_Display_Name", "skuId", "skuPartNumber"]
+                    }
                   },
                   "skuId": {
                     "type": "string",
@@ -25805,6 +25829,9 @@
                       "type": "number",
                       "x-cipp-field-source": "storage"
                     },
+                    "Updated": { "type": "integer" },
+                    "Unchanged": { "type": "integer" },
+                    "Failed": { "type": "integer" },
                     "PartitionKey": {
                       "x-cipp-field-source": "storage"
                     },
