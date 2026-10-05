@@ -1,0 +1,54 @@
+{
+  "name": "CreateSharedMailbox",
+  "label": "Create Shared Mailbox",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Creates a shared mailbox with the configured display name and primary email address, then blocks sign-in for its Entra account. Add one instance per shared mailbox the baseline should guarantee. Drifts when no mailbox with that address exists in the tenant. Tenant tokens such as %defaultdomain% are supported in the address.",
+  "executiveText": "Guarantees that the standard shared mailboxes (for example info@ or support@) exist in every tenant, created with sign-in blocked so they can only be reached through delegated access.",
+  "docsDescription": "One instance per shared mailbox. The standard grades whether a mailbox with the configured primary email address exists, matched case-insensitively against the primary SMTP address and the user principal name in the cached mailbox list. Remediation creates the shared mailbox with New-Mailbox, waits three seconds for the directory object to settle, then disables the mailbox's Entra account through Microsoft Graph. An existing mailbox is never modified.",
+  "impactColour": "info",
+  "addedDate": "2026-10-05",
+  "powershellEquivalent": "New-Mailbox -Shared & Update-MgUser -AccountEnabled:$false",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "primarySmtpAddress",
+  "variables": {
+    "primarySmtpAddress": {
+      "type": "textField",
+      "label": "Primary email address (e.g. info@%defaultdomain%)",
+      "required": true
+    },
+    "displayName": {
+      "type": "textField",
+      "label": "Display name",
+      "required": true
+    }
+  },
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineCreateSharedMailboxState",
+  "remediate": {
+    "executor": "CreateSharedMailbox",
+    "primarySmtpAddress": "%primarySmtpAddress%",
+    "displayName": "%displayName%"
+  }
+}

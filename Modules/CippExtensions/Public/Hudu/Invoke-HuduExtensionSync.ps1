@@ -991,7 +991,7 @@ function Invoke-HuduExtensionSync {
                         # Hash is calculated before the timestamp is added, otherwise every asset would be rewritten on every sync
                         $NewHash = Get-StringHash -String $UserBody
                         $UserAssetFields = @{
-                            microsoft_365 = "$UserBody<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>"
+                            microsoft_365 = "<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>$UserBody"
                             email_address = $user.userPrincipalName
                             licenses      = $userLicenses
                         }
@@ -1213,7 +1213,7 @@ function Invoke-HuduExtensionSync {
                     $DeviceIntuneDetailshtml = "<div><div>$DeviceLinksBlock<br /><div class=`"nasa__content`">$($DeviceOverviewBlock)$($DeviceHardwareBlock)$($DeviceEnrollmentBlock)$($DevicePolicyBlock)$($DeviceAppsBlock)$($DeviceGroupsBlock)</div></div>"
 
                     $DeviceAssetFields = @{
-                        microsoft_365 = "$DeviceIntuneDetailshtml<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>"
+                        microsoft_365 = "<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>$DeviceIntuneDetailshtml"
                     }
                     # Exclude the timestamp from the hash so unchanged assets are not rewritten on every sync.
                     $DeviceHashMaterial = $DeviceIntuneDetailshtml
