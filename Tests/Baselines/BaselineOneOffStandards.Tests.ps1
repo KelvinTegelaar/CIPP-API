@@ -226,6 +226,92 @@ Describe 'Get-CIPPBaselineEnableAppConsentRequestsState' {
             $type -eq 'PUT' -and ([regex]::Matches($body, '33333333-dddd-eeee-ffff-444444444444')).Count -eq 1 -and $body -match '62e90394-69f5-4237-9190-012177145e10'
         }
     }
+
+    It 'grades a configured reviewer group present when the admin center shape carries its id' {
+        # The portal's Groups option writes /v1.0/groups/{id}/transitiveMembers/microsoft.graph.user;
+        # before groups were a variable this was a hand-added reviewer the merge preserved but
+        # the operator could not declare.
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'Groups') {
+                @(@{ id = '55555555-aaaa-bbbb-cccc-666666666666'; displayName = 'Consent Reviewers' } | ConvertTo-Cached)
+            } else {
+                @(@{ isEnabled = $true; reviewers = @(
+                            @{ query = "/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'" },
+                            @{ query = '/v1.0/groups/55555555-aaaa-bbbb-cccc-666666666666/transitiveMembers/microsoft.graph.user' }
+                        ) } | ConvertTo-Cached)
+            }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ReviewerGroups = @([PSCustomObject]@{ label = 'Consent Reviewers'; value = 'Consent Reviewers' }) } }
+        $Prepared = Get-CIPPBaselineEnableAppConsentRequestsState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.missingReviewerGroups).Count | Should -Be 0
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'reports drift when the configured group is absent from the reviewers or does not exist' {
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'Groups') {
+                @(@{ id = '55555555-aaaa-bbbb-cccc-666666666666'; displayName = 'Consent Reviewers' } | ConvertTo-Cached)
+            } else {
+                @(@{ isEnabled = $true; reviewers = @() } | ConvertTo-Cached)
+            }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ReviewerGroups = @('Consent Reviewers', 'Ghost Group') } }
+        $Prepared = Get-CIPPBaselineEnableAppConsentRequestsState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.missingReviewerGroups | Should -Contain 'Consent Reviewers'
+        $Prepared.Current.missingReviewerGroups | Should -Contain 'Ghost Group'
+    }
+
+    It 'leaves an unconfigured reviewer group alone instead of grading it' {
+        # A tenant where someone set a group reviewer by hand used to look like drift the
+        # merge could never clear. No ReviewerGroups configured means no group grade at all.
+        Mock New-CIPPDbRequest { @(@{ isEnabled = $true; reviewers = @(
+                    @{ query = "/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'" },
+                    @{ query = '/v1.0/groups/55555555-aaaa-bbbb-cccc-666666666666/transitiveMembers/microsoft.graph.user' }
+                ) } | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{} }
+        $Prepared = Get-CIPPBaselineEnableAppConsentRequestsState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.missingReviewerGroups).Count | Should -Be 0
+        Should -Invoke New-CIPPDbRequest -Times 0 -ParameterFilter { $Type -eq 'Groups' }
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'resolves reviewer groups by display name, writes the admin center shape and does not duplicate one already present' {
+        Mock New-GraphGetRequest {
+            if ($uri -match '/groups\?') {
+                @(@{ id = '55555555-aaaa-bbbb-cccc-666666666666'; displayName = 'Consent Reviewers' } | ConvertTo-Cached)
+            } else {
+                @{ isEnabled = $false; notifyReviewers = $false; remindersEnabled = $false; requestDurationInDays = 0; reviewers = @(
+                        @{ query = '/v1.0/groups/55555555-aaaa-bbbb-cccc-666666666666/transitiveMembers/microsoft.graph.user'; queryType = 'MicrosoftGraph'; queryRoot = 'null' },
+                        @{ query = '/v1.0/users/keepme@contoso.com'; queryType = 'MicrosoftGraph'; queryRoot = 'null' }
+                    ) } | ConvertTo-Cached
+            }
+        }
+        Mock New-GraphPostRequest { }
+        Invoke-CIPPBaselineEnableAppConsentRequests -Remediate ([PSCustomObject]@{ reviewerRoles = @(); reviewerGroups = @('Consent Reviewers') }) -TenantFilter $script:Tenant -Current $null
+        Should -Invoke New-GraphGetRequest -Times 0 -ParameterFilter { $uri -match '/users\?' }
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            $type -eq 'PUT' -and
+            ([regex]::Matches($body, '55555555-aaaa-bbbb-cccc-666666666666')).Count -eq 1 -and
+            $body -match '/v1\.0/groups/55555555-aaaa-bbbb-cccc-666666666666/transitiveMembers/microsoft\.graph\.user' -and
+            $body -match 'keepme@contoso.com' -and
+            $body -match '62e90394-69f5-4237-9190-012177145e10'
+        }
+    }
+
+    It 'skips a reviewer group name that matches no group and still writes the roles' {
+        Mock New-GraphGetRequest {
+            if ($uri -match '/groups\?') { @() } else {
+                @{ isEnabled = $false; notifyReviewers = $false; remindersEnabled = $false; requestDurationInDays = 0; reviewers = @() } | ConvertTo-Cached
+            }
+        }
+        Mock New-GraphPostRequest { }
+        Mock Write-LogMessage { }
+        Invoke-CIPPBaselineEnableAppConsentRequests -Remediate ([PSCustomObject]@{ reviewerRoles = @(); reviewerGroups = @('Ghost Group') }) -TenantFilter $script:Tenant -Current $null
+        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $Sev -eq 'Warning' -and $message -match 'Ghost Group' }
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            $type -eq 'PUT' -and $body -notmatch '/groups/' -and $body -match '62e90394-69f5-4237-9190-012177145e10'
+        }
+    }
 }
 
 Describe 'Get-CIPPBaselineTeamsFederationConfigurationState' {

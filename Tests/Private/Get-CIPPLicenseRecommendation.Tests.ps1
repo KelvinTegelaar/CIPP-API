@@ -59,6 +59,18 @@ BeforeAll {
             licenseAssignmentStates = @($Skus | ForEach-Object { [pscustomobject]@{ skuId = $_; state = 'Active'; lastUpdatedDateTime = $AssignedSince } })
         }
     }
+    # The function reads who holds a license from the overview's AssignedUsers (the shape
+    # Get-CIPPLicenseOverview builds), never from the user's assignedLicenses. Fill that list on
+    # each fixture license from the fixture users so both sides agree.
+    function Add-LicenseHolders { param($Licenses, $Users)
+        foreach ($Lic in @($Licenses)) {
+            $Holders = @($Users | Where-Object { @($_.assignedLicenses).skuId -contains $Lic.skuId } | ForEach-Object {
+                    [pscustomobject]@{ displayName = [string]$_.displayName; userPrincipalName = [string]$_.userPrincipalName; id = [string]$_.userPrincipalName }
+                })
+            $Lic | Add-Member -NotePropertyName AssignedUsers -NotePropertyValue $Holders -Force
+            $Lic
+        }
+    }
     function New-Activity { param($Upn, $Exchange, $Teams, $Files)
         $Recent = (Get-Date).AddDays(-3).ToString('yyyy-MM-dd')
         [pscustomobject]@{
@@ -149,6 +161,7 @@ Describe 'Get-CIPPLicenseRecommendation' {
             # Copilot never used -> remove
             New-User 'copilot@contoso.com' @($script:Copilot, $script:Premium) $script:Old
         )
+        $script:Licenses = @(Add-LicenseHolders $script:Licenses $script:Users)
         $script:Activity = @(
             New-Activity 'mailonly@contoso.com' $true $false $false
             New-Activity 'power@contoso.com' $true $true $true
@@ -287,7 +300,7 @@ Describe 'Get-CIPPLicenseRecommendation' {
     }
 
     It 'values monthly seats that should move to annual at the commitment uplift' {
-        $Licenses = @(New-Lic $script:Standard 'Business Standard' 4 4 @([pscustomobject]@{ Status = 'Enabled'; Term = 'Monthly'; TotalLicenses = 4; DaysUntilRenew = 12 }))
+        $Licenses = @(Add-LicenseHolders @(New-Lic $script:Standard 'Business Standard' 4 4 @([pscustomobject]@{ Status = 'Enabled'; Term = 'Monthly'; TotalLicenses = 4; DaysUntilRenew = 12 })) $script:Users)
         $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $Licenses -Users $script:Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $script:PlanIds
 
         $Row = $Report.Terms | Where-Object { $_.skuId -eq $script:Standard }
@@ -347,9 +360,10 @@ Describe 'Get-CIPPLicenseRecommendation' {
         $Idle = New-User 'idle@contoso.com' @($script:Standard) $script:Old
         $Idle.signInActivity = $null
         $Users = @($Users) + $Idle
+        $Licenses = @(Add-LicenseHolders $script:Licenses $Users)
         $Activity = @($script:Activity) + (New-Activity 'idle@contoso.com' $false $false $false)
 
-        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $Users -ActivityDetail $Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $script:PlanIds
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $Licenses -Users $Users -ActivityDetail $Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $script:PlanIds
 
         $Report.Summary.SignInDataAvailable | Should -BeFalse
         $Row = $Report.Suggestions | Where-Object { $_.User -eq 'idle@contoso.com' }
@@ -381,7 +395,7 @@ Describe 'Get-CIPPLicenseRecommendation' {
                 )
             }
         }
-        $Licenses = @($script:Licenses) + (New-Lic $Storage 'Office 365 Extra File Storage' 500 0)
+        $Licenses = @(Add-LicenseHolders (@($script:Licenses) + (New-Lic $Storage 'Office 365 Extra File Storage' 500 0)) $script:Users)
 
         $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -RecommendDowngrades $false -RecommendUpgrades $false -Licenses $Licenses -Users $script:Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $script:PlanIds
 
@@ -438,8 +452,10 @@ Describe 'Get-CIPPLicenseRecommendation' {
         $PlanIds = $script:PlanIds.Clone()
         $PlanIds[$Win365] = @($PlanWin365Opaque)
         $Users = @($script:Users) + (New-User 'combo-w365@contoso.com' @($script:Premium, $Win365) $script:Old)
+        # The add-on is held only if the overview lists it with its holder
+        $Licenses = @(Add-LicenseHolders (@($script:Licenses) + (New-Lic $Win365 'Windows 365' 1 1)) $Users)
 
-        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $Licenses -Users $Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds
 
         @($Report.Upgrades | Where-Object { $_.Type -eq 'Consolidate' -and $_.Users.userPrincipalName -contains 'combo-w365@contoso.com' }) | Should -BeNullOrEmpty
         @($Report.Suggestions | Where-Object { $_.Type -eq 'Combine licenses' -and $_.User -eq 'combo-w365@contoso.com' }) | Should -BeNullOrEmpty
@@ -496,8 +512,9 @@ Describe 'Get-CIPPLicenseRecommendation' {
         $Users = @($script:Users) + (New-User 'basic-w365@contoso.com' @($script:Basic, $Win365) $script:Old)
         $Activity = @($script:Activity) + (New-Activity 'basic-w365@contoso.com' $true $true $true)
         $Apps = @($script:Apps) + (New-AppUsage 'basic-w365@contoso.com' $true)
+        $Licenses = @(Add-LicenseHolders (@($script:Licenses) + (New-Lic $Win365 'Windows 365' 1 1)) $Users)
 
-        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $Users -ActivityDetail $Activity -AppUsage $Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $Licenses -Users $Users -ActivityDetail $Activity -AppUsage $Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds
 
         $Row = $Report.Upgrades | Where-Object { $_.Type -eq 'Protect' -and $_.Users.userPrincipalName -contains 'basic-w365@contoso.com' }
         $Row | Should -Not -BeNullOrEmpty
@@ -560,8 +577,9 @@ Describe 'Get-CIPPLicenseRecommendation' {
         $PlanIds[$WinE3] = @($PlanWinEnterprise, $PlanWinOpaque)
         $PlanNames = @{ $PlanWinOpaque = 'Windows 10/11 Enterprise (New)' }
         $Users = @($script:Users) + (New-User 'winE3user@contoso.com' @($script:Standard, $WinE3) $script:Old)
+        $Licenses = @(Add-LicenseHolders (@($script:Licenses) + (New-Lic $WinE3 'Windows 10/11 Enterprise E3' 1 1)) $Users)
 
-        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $script:Licenses -Users $Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds -PlanNamesById $PlanNames
+        $Report = Get-CIPPLicenseRecommendation -TenantFilter 'contoso.com' -Licenses $Licenses -Users $Users -ActivityDetail $script:Activity -AppUsage $script:Apps -MailboxUsage @() -CopilotUsage @() -PlanIdsBySku $PlanIds -PlanNamesById $PlanNames
 
         $Row = $Report.Upgrades | Where-Object { $_.Type -eq 'Consolidate' -and $_.Users.userPrincipalName -contains 'winE3user@contoso.com' }
         $Row | Should -Not -BeNullOrEmpty

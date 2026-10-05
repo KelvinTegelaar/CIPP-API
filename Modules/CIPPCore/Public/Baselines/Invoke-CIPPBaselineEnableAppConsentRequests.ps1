@@ -2,7 +2,7 @@ function Invoke-CIPPBaselineEnableAppConsentRequests {
     <#
     .SYNOPSIS
         EnableAppConsentRequests executor: enables the admin consent workflow with the
-        configured reviewer roles and users.
+        configured reviewer roles, users and groups.
     .DESCRIPTION
         Read-merge-write, ported whole from the classic: the policy is fetched LIVE, flipped
         on with the fixed notification settings, and the configured roles become
@@ -15,6 +15,11 @@ function Invoke-CIPPBaselineEnableAppConsentRequests {
         nowhere depending on how the account was created, while the display name is
         whatever the operator typed regardless of creation path. A name that resolves to
         nothing is logged and skipped so the roles still land.
+
+        Reviewer groups are resolved the same way and written as the group's transitive user
+        members (/v1.0/groups/{id}/transitiveMembers/microsoft.graph.user), the exact shape the
+        Entra admin center's Groups option produces, so a group added by hand and the same
+        group configured here are one reviewer, not two.
 
         No role configured defaults to Global Administrator, matching the hook's grade.
     .FUNCTIONALITY
@@ -45,12 +50,24 @@ function Invoke-CIPPBaselineEnableAppConsentRequests {
         foreach ($User in $Matched) { $Users.Add($User) }
     }
 
+    $GroupNames = @(@($Remediate.reviewerGroups) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $Groups = [System.Collections.Generic.List[object]]::new()
+    foreach ($Name in $GroupNames) {
+        $GroupFilter = [System.Uri]::EscapeDataString("displayName eq '$($Name -replace "'", "''")'")
+        $Matched = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$filter=$GroupFilter" -tenantid $TenantFilter)
+        if ($Matched.Count -eq 0) {
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "EnableAppConsentRequests: no group found with display name '$Name' - not added as reviewer." -Sev 'Warning'
+            continue
+        }
+        foreach ($Group in $Matched) { $Groups.Add($Group) }
+    }
+
     $Policy.isEnabled = $true
     $Policy.notifyReviewers = $true
     $Policy.remindersEnabled = $true
     $Policy.requestDurationInDays = 30
 
-    $ManagedIds = @($Roles) + @($Users | ForEach-Object { "$($_.id)" })
+    $ManagedIds = @($Roles) + @($Users | ForEach-Object { "$($_.id)" }) + @($Groups | ForEach-Object { "$($_.id)" })
     $Reviewers = [System.Collections.Generic.List[object]]::new()
     foreach ($Reviewer in @($Policy.reviewers)) {
         $Found = $false
@@ -73,8 +90,15 @@ function Invoke-CIPPBaselineEnableAppConsentRequests {
                 queryRoot = 'null'
             })
     }
+    foreach ($Group in $Groups) {
+        $Reviewers.Add(@{
+                query     = "/v1.0/groups/$($Group.id)/transitiveMembers/microsoft.graph.user"
+                queryType = 'MicrosoftGraph'
+                queryRoot = 'null'
+            })
+    }
     $Policy.reviewers = @($Reviewers)
 
     $null = New-GraphPostRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -type PUT -body (ConvertTo-Json -Compress -Depth 10 -InputObject $Policy)
-    Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Enabled app consent requests with $($Roles.Count) reviewer role(s) and $($Users.Count) reviewer user(s)." -Sev 'Info'
+    Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Enabled app consent requests with $($Roles.Count) reviewer role(s), $($Users.Count) reviewer user(s) and $($Groups.Count) reviewer group(s)." -Sev 'Info'
 }

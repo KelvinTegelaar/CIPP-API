@@ -36,6 +36,18 @@ BeforeAll {
             assignedLicenses  = @($Skus | ForEach-Object { [pscustomobject]@{ skuId = $_; disabledPlans = @() } })
         }
     }
+    # The function reads who holds a license from the overview's AssignedUsers (the shape
+    # Get-CIPPLicenseOverview builds), never from the user's assignedLicenses. Fill that list on
+    # each fixture license from the fixture users so both sides agree.
+    function Add-LicenseHolders { param($Licenses, $Users)
+        foreach ($Lic in @($Licenses)) {
+            $Holders = @($Users | Where-Object { @($_.assignedLicenses).skuId -contains $Lic.skuId } | ForEach-Object {
+                    [pscustomobject]@{ displayName = [string]$_.userPrincipalName; userPrincipalName = [string]$_.userPrincipalName; id = [string]$_.userPrincipalName }
+                })
+            $Lic | Add-Member -NotePropertyName AssignedUsers -NotePropertyValue $Holders -Force
+            $Lic
+        }
+    }
 }
 
 Describe 'Get-CIPPLicenseOptimization' {
@@ -66,6 +78,7 @@ Describe 'Get-CIPPLicenseOptimization' {
             New-User 'guest@ext.com' $true $script:Recent @($script:E5) 'Guest'        # excluded
             New-User 'room@contoso.com' $true $script:Recent @($script:E5) 'Member' $true # excluded (resource)
         )
+        $script:Licenses = @(Add-LicenseHolders $script:Licenses $script:Users)
         # u1 mailbox-only; u4 uses collaboration too (so not a downgrade candidate)
         $script:Activity = @(
             [pscustomobject]@{ userPrincipalName = 'u1@contoso.com'; exchangeLastActivityDate = $script:Recent; oneDriveLastActivityDate = ''; sharePointLastActivityDate = ''; teamsLastActivityDate = ''; yammerLastActivityDate = '' }

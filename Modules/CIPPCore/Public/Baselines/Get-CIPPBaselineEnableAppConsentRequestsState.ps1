@@ -4,8 +4,8 @@ function Get-CIPPBaselineEnableAppConsentRequestsState {
         Prepare hook for EnableAppConsentRequests: is the admin consent workflow on with the
         configured reviewers.
     .DESCRIPTION
-        Grades the policy enabled flag and whether each configured role and user is PRESENT
-        among the reviewers. The classic graded the reviewer COUNT, which never converges: a
+        Grades the policy enabled flag and whether each configured role, user and group is
+        PRESENT among the reviewers. The classic graded the reviewer COUNT, which never converges: a
         reviewer an operator added by hand bumps the count, and the remediation merge
         deliberately preserves that reviewer - so count-graded drift was permanent.
         Containment is what the merge write actually guarantees, the same reasoning that
@@ -17,6 +17,12 @@ function Get-CIPPBaselineEnableAppConsentRequestsState {
         cache. A name that resolves to no cached user is graded missing: the account the
         operator expects to review requests does not exist in the tenant. Reviewer queries
         are matched on both id and UPN since hand-added user reviewers can carry either.
+
+        Reviewer groups are likewise configured as display names (one shared "consent
+        reviewers" group created in every tenant has a different id per tenant) and resolved
+        against the Groups cache. The admin center's Groups option writes the reviewer as the
+        group's transitive user members (/v1.0/groups/{id}/transitiveMembers/microsoft.graph.user),
+        so a group is graded present when any reviewer query carries its id.
 
         No role configured defaults to Global Administrator, matching the classic in both
         the grade and the write.
@@ -56,12 +62,27 @@ function Get-CIPPBaselineEnableAppConsentRequestsState {
             })
     }
 
+    $GroupNames = @(@($Item.Variables.ReviewerGroups) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $MissingGroups = @()
+    if ($GroupNames.Count -gt 0) {
+        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
+        $MissingGroups = @($GroupNames | Where-Object {
+                $Name = $_
+                $Covered = @($Groups) | Where-Object { $_.displayName -eq $Name } | Where-Object {
+                    $Group = $_
+                    $ReviewerQueries | Where-Object { $_ -match [regex]::Escape("$($Group.id)") }
+                }
+                -not $Covered
+            })
+    }
+
     @{
-        Expected = [PSCustomObject]@{ appConsentRequestsEnabled = $true; missingReviewerRoles = @(); missingReviewerUsers = @() }
+        Expected = [PSCustomObject]@{ appConsentRequestsEnabled = $true; missingReviewerRoles = @(); missingReviewerUsers = @(); missingReviewerGroups = @() }
         Current  = [PSCustomObject]@{
             appConsentRequestsEnabled = [bool]$Policy.isEnabled
             missingReviewerRoles      = @($MissingRoles)
             missingReviewerUsers      = @($MissingUsers)
+            missingReviewerGroups     = @($MissingGroups)
         }
     }
 }
