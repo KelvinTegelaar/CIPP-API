@@ -39,6 +39,7 @@ function New-CIPPStandardsRun {
 
         $InputObject = [PSCustomObject]@{
             OrchestratorName = 'DriftStandardsOrchestrator'
+            AllowCollision   = $false
             Batch            = @($Batch)
             SkipLog          = $true
         }
@@ -94,6 +95,7 @@ function New-CIPPStandardsRun {
         # Start orchestrator with distributed batch and post-exec aggregation
         $InputObject = [PSCustomObject]@{
             OrchestratorName = $OrchestratorName
+            AllowCollision   = $false
             Batch            = @($Batch)
             PostExecution    = @{
                 FunctionName = 'CIPPStandardsApplyBatch'

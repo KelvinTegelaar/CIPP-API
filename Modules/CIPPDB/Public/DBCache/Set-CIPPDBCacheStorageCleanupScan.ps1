@@ -132,6 +132,7 @@ function Set-CIPPDBCacheStorageCleanupScan {
         $InputObject = [PSCustomObject]@{
             Batch            = @($Batches)
             OrchestratorName = "StorageCleanupScan_$TenantFilter"
+            AllowCollision   = $false
             SkipLog          = $true
             PostExecution    = @{
                 FunctionName = 'StoreStorageCleanupScan'

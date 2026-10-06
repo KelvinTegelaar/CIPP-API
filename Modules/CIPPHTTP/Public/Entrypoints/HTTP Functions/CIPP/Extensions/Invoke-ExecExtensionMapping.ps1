@@ -123,6 +123,7 @@ Function Invoke-ExecExtensionMapping {
         'NinjaOne' {
           $Batch = [PSCustomObject]@{
             'NinjaAction'  = 'StartAutoMapping'
+            'QueueName'    = 'AutoMapping'
             'FunctionName' = 'NinjaOneQueue'
           }
           $InputObject = [PSCustomObject]@{

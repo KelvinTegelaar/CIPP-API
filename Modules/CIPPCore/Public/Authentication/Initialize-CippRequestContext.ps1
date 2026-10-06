@@ -38,6 +38,9 @@ function Initialize-CippRequestContext {
     if (-not $script:CippUserRolesStorage) {
         $script:CippUserRolesStorage = [System.Threading.AsyncLocal[hashtable]]::new()
     }
+    if (-not $script:CippAllowedPermissionsStorage) {
+        $script:CippAllowedPermissionsStorage = [System.Threading.AsyncLocal[object]]::new()
+    }
 
     # Clear anything inherited from an earlier invocation on this worker. Consumers treat a null
     # scope as 'unrestricted', so a stale value can only ever hide data that the caller is
@@ -47,4 +50,5 @@ function Initialize-CippRequestContext {
     $script:CippAllowedTenantsStorage.Value = $null
     $script:CippAllowedGroupsStorage.Value = $null
     $script:CippUserRolesStorage.Value = @{}
+    $script:CippAllowedPermissionsStorage.Value = $null
 }

@@ -65,6 +65,7 @@ function Push-CIPPStandardsApplyBatch {
         # Start orchestrator to apply standards
         $InputObject = [PSCustomObject]@{
             OrchestratorName = $OrchestratorName
+            AllowCollision   = $false
             Batch            = @($AllStandards)
             SkipLog          = $true
         }

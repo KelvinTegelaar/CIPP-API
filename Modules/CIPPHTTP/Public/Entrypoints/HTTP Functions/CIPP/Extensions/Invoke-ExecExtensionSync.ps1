@@ -45,6 +45,7 @@ Function Invoke-ExecExtensionSync {
                     if (($Tenant | Measure-Object).count -eq 1) {
                         $Batch = [PSCustomObject]@{
                             'NinjaAction'  = 'SyncTenant'
+                            'TenantFilter' = $Request.Query.TenantFilter ?? $Tenant.RowKey
                             'MappedTenant' = $Tenant
                             'FunctionName' = 'NinjaOneQueue'
                         }
@@ -66,6 +67,7 @@ Function Invoke-ExecExtensionSync {
                 } else {
                     $Batch = [PSCustomObject]@{
                         'NinjaAction'  = 'SyncTenants'
+                        'QueueName'    = 'AllTenants'
                         'FunctionName' = 'NinjaOneQueue'
                     }
                     $InputObject = [PSCustomObject]@{

@@ -45,6 +45,7 @@ function Push-CIPPDBCacheApplyBatch {
                 $IntunePriority = [math]::Max(0, (Resolve-CIPPOrchestratorPriority -InputObject $null -OpContext $OpContext) - 1)
                 $IntuneId = Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
                         OrchestratorName = 'CIPPDBCacheExecuteIntune'
+                        AllowCollision   = $false
                         Batch            = $IntuneTasks
                         Priority         = $IntunePriority
                         SkipLog          = $true
@@ -57,6 +58,7 @@ function Push-CIPPDBCacheApplyBatch {
 
         $InputObject = [PSCustomObject]@{
             OrchestratorName = "CIPPDBCacheExecute$TenantSuffix"
+            AllowCollision   = $false
             Batch            = @($AllTasks)
             SkipLog          = $true
         }

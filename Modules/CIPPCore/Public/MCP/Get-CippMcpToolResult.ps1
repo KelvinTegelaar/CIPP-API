@@ -117,7 +117,7 @@ function Get-CippMcpToolResult {
                 $Near = @((Find-CippMcpTool -Request $Request -Query $TargetName -Limit 5).tools | ForEach-Object { $_.name })
                 $Hint = if ($Near.Count -gt 0) { " Did you mean: $($Near -join ', ')?" } else { ' Use SearchTools to discover valid tool names.' }
                 return [ordered]@{
-                    content = @(@{ type = 'text'; text = "No read-only tool named '$TargetName'.$Hint" })
+                    content = @(@{ type = 'text'; text = "No tool named '$TargetName' is available to you.$Hint" })
                     isError = $true
                 }
             }

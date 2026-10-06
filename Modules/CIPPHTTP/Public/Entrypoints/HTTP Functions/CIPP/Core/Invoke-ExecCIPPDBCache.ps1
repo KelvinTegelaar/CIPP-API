@@ -93,6 +93,7 @@ function Invoke-ExecCIPPDBCache {
             $InputObject = [PSCustomObject]@{
                 Batch            = @($Batch)
                 OrchestratorName = "CIPPDBCache_${Name}_AllTenants"
+                AllowCollision   = $false
                 SkipLog          = $false
             }
 
@@ -116,6 +117,7 @@ function Invoke-ExecCIPPDBCache {
             $InputObject = [PSCustomObject]@{
                 Batch            = @($BatchItem)
                 OrchestratorName = "CIPPDBCache_${Name}_$TenantFilter"
+                AllowCollision   = $false
                 SkipLog          = $false
             }
             Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name on tenant $TenantFilter" -sev Info

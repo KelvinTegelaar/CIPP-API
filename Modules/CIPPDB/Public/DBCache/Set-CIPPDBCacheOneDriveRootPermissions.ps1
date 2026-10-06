@@ -113,6 +113,7 @@ function Set-CIPPDBCacheOneDriveRootPermissions {
         $InputObject = [PSCustomObject]@{
             Batch            = @($Batches)
             OrchestratorName = "OneDriveRootPermissions_$TenantFilter"
+            AllowCollision   = $false
             PostExecution    = @{
                 FunctionName = 'StoreOneDriveRootPermissions'
                 Parameters   = @{

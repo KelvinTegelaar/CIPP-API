@@ -162,7 +162,7 @@ function Invoke-ExecApiClient {
 
                 # When this client is MCP-enabled it becomes one of the OAuth client apps that AI
                 # connectors sign in as. Several MCPAllowed clients may coexist (each with its own
-                # role/IP/redirects/CA); the dedicated CIPP-MCP app is the shared protected resource.
+                # redirects); the dedicated CIPP-MCP app is the shared protected resource.
                 # Configure this client (callbacks, public client flows, resource permissions +
                 # consent) and ensure the resource app exists (Set-CIPPMCPClientApp ->
                 # New-CIPPMcpResourceApp).

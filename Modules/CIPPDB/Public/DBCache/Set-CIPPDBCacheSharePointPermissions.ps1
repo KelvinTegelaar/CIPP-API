@@ -105,6 +105,7 @@ function Set-CIPPDBCacheSharePointPermissions {
         $InputObject = [PSCustomObject]@{
             Batch            = @($Batches)
             OrchestratorName = "SharePointPermissions_$TenantFilter"
+            AllowCollision   = $false
             SkipLog          = $true
             PostExecution    = @{
                 FunctionName = 'StoreSharePointPermissions'
