@@ -30,10 +30,10 @@ function Invoke-CippTestCopilotReady004 {
         }
 
         # Use licensed active users as the denominator — users absent from the report have never used M365
-        $LicensedUsers = @($AllUsers | Where-Object {
+        $LicensedUsers = @($AllUsers.Where({
                 $_.userPrincipalName -and $_.accountEnabled -eq $true -and
-                ($_.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' })
-            })
+                $_.assignedPlans.Where({ $_.capabilityStatus -eq 'Enabled' }, 'First').Count
+            }))
 
         if ($LicensedUsers.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady004' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No licensed active users found in the tenant.' -Risk 'Medium' -Name 'Users are actively using Exchange Online email' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

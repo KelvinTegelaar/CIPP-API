@@ -25,10 +25,10 @@ function Invoke-CippTestCopilotReady010 {
             $RegLookup[$Reg.userPrincipalName.ToLower()] = $Reg
         }
 
-        $LicensedUsers = @($AllUsers | Where-Object {
+        $LicensedUsers = @($AllUsers.Where({
                 $_.userPrincipalName -and $_.accountEnabled -eq $true -and
-                ($_.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' })
-            })
+                $_.assignedPlans.Where({ $_.capabilityStatus -eq 'Enabled' }, 'First').Count
+            }))
 
         if ($LicensedUsers.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady010' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No licensed active users found in the tenant.' -Risk 'High' -Name 'All licensed users have MFA registered' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

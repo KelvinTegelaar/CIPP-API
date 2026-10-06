@@ -29,6 +29,10 @@ function Get-CIPPAlertDefenderStatus {
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
     } catch {
+        if ($_.Exception.Message -eq 'Request not applicable to target tenant.') {
+            Write-Information "Skipping defender status for $($TenantFilter): Microsoft 365 Lighthouse is not available."
+            return
+        }
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not get defender status for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }

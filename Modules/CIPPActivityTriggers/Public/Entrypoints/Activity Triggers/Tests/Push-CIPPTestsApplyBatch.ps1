@@ -1,12 +1,12 @@
 function Push-CIPPTestsApplyBatch {
     <#
     .SYNOPSIS
-        Aggregate test tasks from all tenants and start one sequential execution orchestrator per tenant (Phase 2)
+        Aggregate test tasks from all tenants and start one execution orchestrator per tenant (Phase 2)
 
     .DESCRIPTION
         PostExecution function for the Tests pipeline. Receives aggregated results from the
-        per-tenant CIPPTestsList activities and starts one sequential orchestrator per tenant, so
-        tenants run in parallel while each tenant's suites run one at a time on one worker.
+        per-tenant CIPPTestsList activities and starts one orchestrator per tenant capped at one
+        task at a time, so tenants run in parallel while each tenant's suites run one at a time.
 
     .FUNCTIONALITY
         Entrypoint
@@ -43,18 +43,17 @@ function Push-CIPPTestsApplyBatch {
             $TenantGroups[$Tenant].Add($Task)
         }
 
-        # One sequential run per tenant: its suites share the tenant's cached data instead of parsing it concurrently
+        # One suite at a time per tenant so its suites share the cached data; not Sequential, so queued higher-priority work still interleaves
         $InstanceIds = foreach ($Tenant in $TenantGroups.Keys) {
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = if ($TenantGroups.Count -gt 1) { "CIPPTestsExecute$TenantSuffix-$Tenant" } else { "CIPPTestsExecute$TenantSuffix" }
                 Batch            = @($TenantGroups[$Tenant])
-                Sequential       = $true
-                DurableMode      = 'Sequence'
+                MaxConcurrency   = 1
                 SkipLog          = $true
             }
             Start-CIPPOrchestrator -InputObject $InputObject
         }
-        Write-Information "Started $(@($InstanceIds).Count) sequential tests execution orchestrators for $($AllTasks.Count) tasks"
+        Write-Information "Started $(@($InstanceIds).Count) tests execution orchestrators for $($AllTasks.Count) tasks"
 
         return @{
             Success    = $true

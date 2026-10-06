@@ -29,10 +29,16 @@ function Invoke-CippTestZTNA21811 {
 
         $misconfiguredUsers = @()
         if ($users) {
+            $DomainPolicies = [System.Collections.Generic.Dictionary[string, object]]::new()
             $misconfiguredUsers = foreach ($user in $users) {
                 $userDomain = $user.userPrincipalName.Split('@')[-1]
-                # Subdomain UPNs inherit the root domain's policy, so match on the suffix too
-                $domainPolicy = $misconfiguredDomains | Where-Object { $_.id -eq $userDomain -or $userDomain.EndsWith(".$($_.id)") }
+                if ($DomainPolicies.ContainsKey($userDomain)) {
+                    $domainPolicy = $DomainPolicies[$userDomain]
+                } else {
+                    # Subdomain UPNs inherit the root domain's policy, so match on the suffix too
+                    $domainPolicy = $misconfiguredDomains | Where-Object { $_.id -eq $userDomain -or $userDomain.EndsWith(".$($_.id)") }
+                    $DomainPolicies[$userDomain] = $domainPolicy
+                }
                 if (($user.passwordPolicies -notlike '*DisablePasswordExpiration*') -and ($domainPolicy)) {
                     [PSCustomObject]@{
                         id                     = $user.id

@@ -27,7 +27,7 @@ BeforeAll {
     . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
     . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
     foreach ($Name in @('PhishProtection', 'ColleagueImpersonationAlert', 'DisableOutlookAddins',
-            'RestrictThirdPartyStorageServices', 'IntuneAppTemplateDeploy')) {
+            'RestrictThirdPartyStorageServices', 'IntuneAppTemplateDeploy', 'MFAPushApps')) {
         . (Join-Path $Baselines "Get-CIPPBaseline${Name}State.ps1")
         . (Join-Path $Baselines "Invoke-CIPPBaseline${Name}.ps1")
     }
@@ -220,6 +220,41 @@ Describe 'Get-CIPPBaselineRestrictThirdPartyStorageServicesState' {
         Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
             $type -eq 'PATCH' -and $uri -like "*servicePrincipals(appId='c1f33bc0*" -and
             $AddedHeaders.Prefer -eq 'create-if-missing' -and ($body | ConvertFrom-Json).accountEnabled -eq $false
+        }
+    }
+}
+
+Describe 'Get-CIPPBaselineMFAPushAppsState' {
+    BeforeAll {
+        $script:ClientId = '981f26a1-7f43-403b-a875-f8b09b8cd720'
+        $script:ConnectorId = '1f5530b3-261a-47a9-b357-ded261e17918'
+    }
+
+    It 'missing service principals grade enabled - the platform default' {
+        Mock New-CIPPDbRequest { @(@{ appId = 'other'; accountEnabled = $false } | ConvertTo-Cached) }
+        $Prepared = Get-CIPPBaselineMFAPushAppsState -Item ([PSCustomObject]@{ Variables = [PSCustomObject]@{ Enabled = $true } }) -TenantFilter $script:Tenant
+        Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current | Should -BeNullOrEmpty
+    }
+
+    It 'grades each app on its own accountEnabled against the configured state' {
+        Mock New-CIPPDbRequest { @(@{ appId = $script:ClientId; accountEnabled = $false }, @{ appId = $script:ConnectorId; accountEnabled = $true } | ConvertTo-Cached) }
+        $Prepared = Get-CIPPBaselineMFAPushAppsState -Item ([PSCustomObject]@{ Variables = [PSCustomObject]@{ Enabled = $true } }) -TenantFilter $script:Tenant
+        $Prepared.Current.mfaClientEnabled | Should -BeFalse
+        $Prepared.Current.mfaConnectorEnabled | Should -BeTrue
+        $Prepared.Expected.mfaClientEnabled | Should -BeTrue
+        $Disable = Get-CIPPBaselineMFAPushAppsState -Item ([PSCustomObject]@{ Variables = [PSCustomObject]@{ Enabled = $false } }) -TenantFilter $script:Tenant
+        $Disable.Expected.mfaConnectorEnabled | Should -BeFalse
+    }
+
+    It 'writes the configured state to both apps through the appId upsert' -TestCases @(@{ Enabled = 'True'; Wire = $true }, @{ Enabled = $false; Wire = $false }) {
+        param($Enabled, $Wire)
+        Mock New-GraphPostRequest { }
+        Invoke-CIPPBaselineMFAPushApps -Remediate ([PSCustomObject]@{ enabled = $Enabled }) -TenantFilter $script:Tenant -Current $null
+        foreach ($AppId in @($script:ClientId, $script:ConnectorId)) {
+            Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+                $type -eq 'PATCH' -and $uri -like "*servicePrincipals(appId='$AppId')" -and
+                $AddedHeaders.Prefer -eq 'create-if-missing' -and ($body | ConvertFrom-Json).accountEnabled -eq $Wire
+            }
         }
     }
 }

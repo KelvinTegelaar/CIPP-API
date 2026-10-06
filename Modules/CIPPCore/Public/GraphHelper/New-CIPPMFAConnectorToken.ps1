@@ -76,9 +76,14 @@ function New-CIPPMFAConnectorToken {
             try {
                 return (Invoke-RestMethod -Method Post -Uri $TokenUri -Body $ClientBody -ErrorAction Stop).access_token
             } catch {
+                $TokenError = $_
+                $EntraError = try { ($TokenError.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop).error_description -replace '\s*Trace ID:[\s\S]*$' } catch { $null }
+                $EnableHint = "Enable it with the 'Azure MFA push notification apps' baseline standard, or in Entra under Enterprise applications."
+                switch -Regex ($EntraError) {
+                    '^AADSTS7000112\b' { throw [System.UnauthorizedAccessException]"The Azure Multi-Factor Auth Client app ($MFAAppID) is disabled in this tenant. $EnableHint" }
+                    '^AADSTS500014\b' { throw [System.UnauthorizedAccessException]"The Azure Multi-Factor Auth Connector app (1f5530b3-261a-47a9-b357-ded261e17918) is disabled in this tenant. $EnableHint" }
+                }
                 if ($Attempt -ge $MaxAttempts) {
-                    $TokenError = $_
-                    $EntraError = try { ($TokenError.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop).error_description } catch { $null }
                     throw "Failed to get a token for the Azure Multi-Factor Auth Client app: $($EntraError ?? $TokenError.Exception.Message)"
                 }
                 Start-Sleep 1
@@ -92,6 +97,8 @@ function New-CIPPMFAConnectorToken {
         if ($CachedSecret) {
             try {
                 return [pscustomobject]@{ AccessToken = (Get-ConnectorToken -Secret $CachedSecret) }
+            } catch [System.UnauthorizedAccessException] {
+                throw
             } catch {
                 # Cached secret is expired or revoked - fall through and reprovision.
                 Write-Information "Cached MFA connector secret for $TenantId failed token exchange; reprovisioning."

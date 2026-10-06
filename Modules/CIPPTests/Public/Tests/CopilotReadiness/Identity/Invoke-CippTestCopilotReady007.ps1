@@ -33,10 +33,10 @@ function Invoke-CippTestCopilotReady007 {
 
         # Filter to users with an active M365 Apps (desktop) license plan — update channel only
         # applies to users with a license that includes M365 Apps for desktop.
-        $LicensedUsers = @($AllUsers | Where-Object {
+        $LicensedUsers = @($AllUsers.Where({
             $_.userPrincipalName -and $_.accountEnabled -eq $true -and
-            ($_.assignedPlans | Where-Object { $_.service -eq 'MicrosoftOffice' -and $_.capabilityStatus -eq 'Enabled' })
-        })
+            $_.assignedPlans.Where({ $_.service -eq 'MicrosoftOffice' -and $_.capabilityStatus -eq 'Enabled' }, 'First').Count
+        }))
 
         if ($LicensedUsers.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady007' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No users with an active M365 Apps license were found. Update channel check is not applicable.' -Risk 'High' -Name 'Users are on a qualified M365 Apps update channel' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

@@ -34,10 +34,10 @@ function Invoke-CippTestCopilotReady003 {
         # Filter Users cache to those with an active M365 Apps (desktop) license plan.
         # assignedPlans entries with service 'MicrosoftOffice' and capabilityStatus 'Enabled'
         # indicate the user holds a license that includes M365 desktop applications.
-        $LicensedUsers = @($AllUsers | Where-Object {
+        $LicensedUsers = @($AllUsers.Where({
             $_.userPrincipalName -and $_.accountEnabled -eq $true -and
-            ($_.assignedPlans | Where-Object { $_.service -eq 'MicrosoftOffice' -and $_.capabilityStatus -eq 'Enabled' })
-        })
+            $_.assignedPlans.Where({ $_.service -eq 'MicrosoftOffice' -and $_.capabilityStatus -eq 'Enabled' }, 'First').Count
+        }))
 
         if ($LicensedUsers.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady003' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No users with an active M365 Apps license were found. Desktop activation check is not applicable.' -Risk 'High' -Name 'Users have M365 desktop apps activated' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

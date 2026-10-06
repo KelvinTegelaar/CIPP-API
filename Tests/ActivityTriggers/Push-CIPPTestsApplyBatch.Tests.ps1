@@ -14,7 +14,7 @@ Describe 'Push-CIPPTestsApplyBatch' {
         Mock Start-CIPPOrchestrator { $script:Started.Add($InputObject); "Craft-$($InputObject.OrchestratorName)" }
     }
 
-    It 'starts one sequential run per tenant, keeping suite order' {
+    It 'starts one run per tenant capped at one task at a time, keeping suite order' {
         $Item = @{
             Parameters = @{ TenantFilter = 'allTenants' }
             Results    = @(
@@ -27,8 +27,8 @@ Describe 'Push-CIPPTestsApplyBatch' {
 
         $Started.Count | Should -Be 2
         $Started.OrchestratorName | Should -Be @('CIPPTestsExecute_allTenants-a.com', 'CIPPTestsExecute_allTenants-b.com')
-        $Started.Sequential | Should -Be @($true, $true)
-        $Started.DurableMode | Should -Be @('Sequence', 'Sequence')
+        $Started.MaxConcurrency | Should -Be @(1, 1)
+        $Started.ForEach({ $_.PSObject.Properties.Name }) | Should -Not -Contain 'Sequential'
         $Started[0].Batch.SuiteName | Should -Be @('CIS', 'E8', 'CISA')
         $Started[1].Batch.SuiteName | Should -Be @('CIS', 'ORCA')
         $Result.TaskCount | Should -Be 5
