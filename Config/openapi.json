@@ -7192,13 +7192,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "GUID": {
+                    "type": "string",
+                    "description": "GUID overwrites that template, honoured only alongside PowerShellCommand: a posted rule row carries the rule's own Guid."
+                  },
                   "Name": {
                     "type": "string",
                     "description": "Posted from the row action; without a name the template lists blank and deploys with no parameters."
                   },
                   "PowerShellCommand": {
                     "type": "string",
-                    "description": "Posted from the row action; without a name the template lists blank and deploys with no parameters."
+                    "description": "GUID overwrites that template, honoured only alongside PowerShellCommand: a posted rule row carries the rule's own Guid."
                   }
                 },
                 "additionalProperties": true,

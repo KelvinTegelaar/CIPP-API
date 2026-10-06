@@ -49,6 +49,8 @@ function Get-CIPPBaselineTransportRuleTemplateState {
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TransportTemplate' and RowKey eq '$SafeReference'" | Select-Object -First 1
     $Body = $(if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) { try { $Entity.JSON | ConvertFrom-Json -Depth 20 -ErrorAction Stop } catch { $null } })
+    # Graded and deployed under the tenant's resolved %variables%, so a templated name matches the rule it created.
+    if ($Body) { $Body = Resolve-CIPPTransportRuleTemplate -Template $Body -TenantFilter $TenantFilter }
     $RuleName = "$($Body.name)"
     if (-not $Body -or [string]::IsNullOrWhiteSpace($RuleName)) { return @{ Current = $null } }
 

@@ -44,7 +44,14 @@ function Invoke-CIPPBaselineTransportRuleTemplate {
                 continue
             }
             $Parameters['Identity'] = $RuleName
+            # Set-TransportRule rejects Enabled; state changes go through Enable-/Disable-TransportRule.
+            $Enabled = $Parameters['Enabled']
+            $Parameters.Remove('Enabled')
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-TransportRule' -cmdParams $Parameters -useSystemMailbox $true
+            if ($null -ne $Enabled) {
+                $StateCmdlet = if ("$Enabled" -in @('True', 'Enabled')) { 'Enable-TransportRule' } else { 'Disable-TransportRule' }
+                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $StateCmdlet -cmdParams @{ Identity = $RuleName } -useSystemMailbox $true
+            }
         } else {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-TransportRule' -cmdParams $Parameters -useSystemMailbox $true
             [void]$Deployed.Add($RuleName)
