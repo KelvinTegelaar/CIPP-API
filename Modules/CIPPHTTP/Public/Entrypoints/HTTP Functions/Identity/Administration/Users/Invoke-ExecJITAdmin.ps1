@@ -248,24 +248,26 @@ function Invoke-ExecJITAdmin {
         Headers      = $Headers
         APIName      = $APIName
     }
-    if ($Start -gt (Get-Date)) {
-        $TaskBody = @{
-            TenantFilter  = $TenantFilter
-            Name          = "JIT Admin (enable): $Username"
-            AlertComment  = if (![string]::IsNullOrWhiteSpace($Request.Body.Reason)) { "JIT Reason: $($Request.Body.Reason)" } else { $null }
-            Command       = @{
-                value = 'Set-CIPPUserJITAdmin'
-                label = 'Set-CIPPUserJITAdmin'
-            }
-            Parameters    = [pscustomobject]$Parameters
-            ScheduledTime = $Request.Body.StartDate
-            PostExecution = @{
-                Webhook = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'webhook')
-                Email   = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'email')
-                PSA     = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'PSA')
-                Push    = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'Push')
-            }
+    $StartsLater = $Start -gt (Get-Date)
+    # Always enable via the scheduler so PostExecution notifications fire on creation too
+    $TaskBody = @{
+        TenantFilter  = $TenantFilter
+        Name          = "JIT Admin (enable): $Username"
+        AlertComment  = if (![string]::IsNullOrWhiteSpace($Request.Body.Reason)) { "JIT Reason: $($Request.Body.Reason)" } else { $null }
+        Command       = @{
+            value = 'Set-CIPPUserJITAdmin'
+            label = 'Set-CIPPUserJITAdmin'
         }
+        Parameters    = [pscustomobject]$Parameters
+        ScheduledTime = if ($StartsLater) { $Request.Body.StartDate } else { [string][DateTimeOffset]::UtcNow.ToUnixTimeSeconds() }
+        PostExecution = @{
+            Webhook = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'webhook')
+            Email   = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'email')
+            PSA     = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'PSA')
+            Push    = [bool]($Request.Body.PostExecution | Where-Object -Property value -EQ 'Push')
+        }
+    }
+    if ($StartsLater) {
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
         if ($Request.Body.userAction -ne 'create') {
             Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $Request.Body.existingUser.value -Expiration $Expiration -StartDate $Start -Reason $Request.Body.Reason -CreatedBy (([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails)
@@ -273,15 +275,9 @@ function Invoke-ExecJITAdmin {
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Scheduled JIT Admin enable task for $Username" -Sev 'Info'
         $Results.Add("Scheduling JIT Admin enable task for $Username")
     } else {
-        try {
-            $Results.Add("Executing JIT Admin enable task for $Username")
-            Set-CIPPUserJITAdmin @Parameters
-        } catch {
-            return ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
-                    Body       = @{'Results' = @("Failed to execute JIT Admin enable task: $($_.Exception.Message)") }
-                })
-        }
+        $null = Add-CIPPScheduledTask -Task $TaskBody -hidden $false -RunNow
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Queued JIT Admin enable task for $Username to run now" -Sev 'Info'
+        $Results.Add("Queued JIT Admin enable task for $Username to run now")
     }
 
     $DisableTaskBody = [pscustomobject]@{
