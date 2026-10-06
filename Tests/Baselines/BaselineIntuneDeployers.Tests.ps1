@@ -18,7 +18,7 @@ BeforeAll {
     function Set-CIPPDefenderEDRPolicy { param($TenantFilter, $EDR, $APIName) }
     function Set-CIPPDefenderExclusionPolicy { param($TenantFilter, $DefenderExclusions, $APIName) }
     function Enable-CIPPMDEConnector { param($TenantFilter) }
-    function Set-CIPPDefaultAPDeploymentProfile { param($TenantFilter, $DisplayName, $Description, $UserType, $DeploymentMode, $AssignTo, $DeviceNameTemplate, $AllowWhiteGlove, $CollectHash, $HideChangeAccount, $HidePrivacy, $HideTerms, $AutoKeyboard, $Language) }
+    function Set-CIPPDefaultAPDeploymentProfile { param($TenantFilter, $DisplayName, $Description, $UserType, $DeploymentMode, $AssignTo, $GroupIds, $ExcludeGroupIds, [switch]$Reconcile, $DeviceNameTemplate, $AllowWhiteGlove, $CollectHash, $HideChangeAccount, $HidePrivacy, $HideTerms, $AutoKeyboard, $Language) }
     function Get-CIPPIntuneAssignmentTarget { param($AssignTo, $PolicyType) }
     function Compare-CIPPIntuneAssignments { param($ExistingAssignments, $ExpectedAssignTo, $PolicyType, $TenantFilter) }
     function Add-CIPPW32ScriptApplication { param($TenantFilter, $Properties) }
@@ -298,6 +298,81 @@ Describe 'Get-CIPPBaselineAutopilotProfileState' {
         $Prepared = Get-CIPPBaselineAutopilotProfileState -Item $Item -TenantFilter $script:Tenant
         $Prepared.Current.locale | Should -Be 'en-US'
         $Prepared.Expected.locale | Should -Be 'os-default'
+    }
+
+    Context 'assignments' {
+        BeforeAll {
+            function New-ApItem {
+                param([hashtable]$Extra = @{})
+                $Variables = [ordered]@{ DisplayName = 'CIPP Autopilot'; Description = 'd'; SelfDeployingMode = $true; CollectHash = $true; HidePrivacy = $true; HideTerms = $true; AutoKeyboard = $true }
+                foreach ($Key in $Extra.Keys) { $Variables[$Key] = $Extra[$Key] }
+                [PSCustomObject]@{ Variables = [PSCustomObject]$Variables }
+            }
+            function New-ApAssignment { param($Type, $GroupId) @{ id = "a-$Type-$GroupId"; target = @{ '@odata.type' = "#microsoft.graph.$Type"; groupId = $GroupId } } }
+            function Set-ApAssignment { param($Assignments) $script:AssignedProfile = $script:ApProfile.Clone(); $script:AssignedProfile.assignments = @($Assignments) }
+        }
+        BeforeEach {
+            Mock New-CIPPDbRequest { @($script:AssignedProfile | ConvertTo-Cached) }
+            Mock New-GraphGetRequest -ParameterFilter { $uri -like '*/groups*' } -MockWith {
+                @(
+                    [PSCustomObject]@{ id = 'g-dev'; displayName = 'AP Devices' }
+                    [PSCustomObject]@{ id = 'g-ex'; displayName = 'AP Excluded' }
+                )
+            }
+        }
+
+        It 'legacy AssignToAllDevices=true against an all-devices assignment grades clean, and manual groups are left alone' {
+            Set-ApAssignment @((New-ApAssignment 'allDevicesAssignmentTarget'), (New-ApAssignment 'exclusionGroupAssignmentTarget' 'g-manual'))
+            $Prepared = Get-CIPPBaselineAutopilotProfileState -Item (New-ApItem @{ AssignToAllDevices = $true }) -TenantFilter $script:Tenant
+            (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+            $Prepared.StrictCompare | Should -Contain 'assignedToAllDevices'
+        }
+
+        It 'custom group mode against an all-devices assignment drifts on the assignment fields only' {
+            Set-ApAssignment @(New-ApAssignment 'allDevicesAssignmentTarget')
+            $Prepared = Get-CIPPBaselineAutopilotProfileState -Item (New-ApItem @{ AssignTo = [PSCustomObject]@{ label = 'Custom group(s)'; value = 'customGroup' }; customGroup = 'AP Dev*' }) -TenantFilter $script:Tenant
+            $Drift = @(Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current)
+            @($Drift.Property | Sort-Object) | Should -Be @('assignedToAllDevices', 'includeGroups')
+            $Prepared.Expected.includeGroups | Should -Be 'AP Devices (g-dev)'
+            @($Prepared.StrictCompare | Sort-Object) | Should -Be @('assignedToAllDevices', 'excludeGroups', 'includeGroups')
+        }
+
+        It 'a Graph failure while resolving groups mirrors the expected assignment instead of drifting' {
+            Set-ApAssignment @(New-ApAssignment 'allDevicesAssignmentTarget')
+            Mock New-GraphGetRequest -ParameterFilter { $uri -like '*/groups*' } -MockWith { throw 'graph down' }
+            $Prepared = Get-CIPPBaselineAutopilotProfileState -Item (New-ApItem @{ AssignTo = 'customGroup'; customGroup = 'AP Devices' }) -TenantFilter $script:Tenant
+            (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+        }
+
+        It 'compares exclude groups' {
+            Set-ApAssignment @(New-ApAssignment 'allDevicesAssignmentTarget')
+            $Item = New-ApItem @{ AssignTo = 'allDevices'; excludeGroup = 'AP Excl*' }
+            $Prepared = Get-CIPPBaselineAutopilotProfileState -Item $Item -TenantFilter $script:Tenant
+            @((Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Property) | Should -Be @('excludeGroups')
+            $Prepared.Expected.excludeGroups | Should -Be 'AP Excluded (g-ex)'
+
+            Set-ApAssignment @((New-ApAssignment 'allDevicesAssignmentTarget'), (New-ApAssignment 'exclusionGroupAssignmentTarget' 'g-ex'))
+            $Prepared = Get-CIPPBaselineAutopilotProfileState -Item $Item -TenantFilter $script:Tenant
+            (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+        }
+
+        It 'the executor resolves groups and reconciles through the helper' {
+            Mock Set-CIPPDefaultAPDeploymentProfile { }
+            Invoke-CIPPBaselineAutopilotProfile -Remediate ([PSCustomObject]@{ displayName = 'CIPP Autopilot'; assignTo = 'customGroup'; customGroup = 'AP Dev*'; excludeGroup = 'AP Excl*' }) -TenantFilter $script:Tenant -Current $null
+            Should -Invoke Set-CIPPDefaultAPDeploymentProfile -Times 1 -Exactly -ParameterFilter {
+                $AssignTo -eq $false -and $Reconcile -and (@($GroupIds) -join ',') -eq 'g-dev' -and (@($ExcludeGroupIds) -join ',') -eq 'g-ex'
+            }
+        }
+
+        It 'the executor never reconciles a legacy baseline or an unmatched custom group' {
+            Mock Set-CIPPDefaultAPDeploymentProfile { }
+            Mock Write-LogMessage { }
+            Invoke-CIPPBaselineAutopilotProfile -Remediate ([PSCustomObject]@{ displayName = 'CIPP Autopilot'; assignToAllDevices = $true }) -TenantFilter $script:Tenant -Current $null
+            Should -Invoke Set-CIPPDefaultAPDeploymentProfile -Times 1 -Exactly -ParameterFilter { $AssignTo -eq $true -and -not $Reconcile }
+            Invoke-CIPPBaselineAutopilotProfile -Remediate ([PSCustomObject]@{ displayName = 'CIPP Autopilot'; assignTo = 'customGroup'; customGroup = 'Nope' }) -TenantFilter $script:Tenant -Current $null
+            Should -Invoke Set-CIPPDefaultAPDeploymentProfile -Times 1 -Exactly -ParameterFilter { $AssignTo -eq $false -and -not $Reconcile -and @($GroupIds).Count -eq 0 }
+            Should -Invoke Write-LogMessage -ParameterFilter { $Sev -eq 'Warning' -and $message -like '*Nope*' }
+        }
     }
 }
 

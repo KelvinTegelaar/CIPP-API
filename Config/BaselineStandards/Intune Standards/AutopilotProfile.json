@@ -6,7 +6,7 @@
   "impact": "Low Impact",
   "helpText": "Assigns the appropriate Autopilot profile to streamline device deployment, including unique name templates, language options, and local admin privileges.",
   "executiveText": "Standardizes how new devices are provisioned, so every laptop arrives configured the same way with no manual setup.",
-  "docsDescription": "One instance per profile display name. Grades the classic's exact field set from the cached Autopilot profiles; self-deploying mode forces White Glove off and skips the user type, and an empty language matches an empty locale. Remediation deploys through Set-CIPPDefaultAPDeploymentProfile.",
+  "docsDescription": "One instance per profile display name. Grades the classic's exact field set from the cached Autopilot profiles; self-deploying mode forces White Glove off and skips the user type, and an empty language matches an empty locale. The assignment (none, all devices or custom groups, plus exclude groups) grades from the cached profile assignments. Remediation deploys through Set-CIPPDefaultAPDeploymentProfile.",
   "impactColour": "info",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Graph API - deviceManagement/windowsAutopilotDeploymentProfiles",
@@ -58,11 +58,37 @@
       "omitWhenBlank": true,
       "default": true
     },
-    "AssignToAllDevices": {
-      "type": "switch",
-      "label": "Assign to all devices",
+    "AssignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "multiple": false,
+      "label": "Assign the profile to",
       "omitWhenBlank": true,
-      "default": true
+      "options": [
+        {
+          "value": "none",
+          "label": "Do not assign"
+        },
+        {
+          "value": "allDevices",
+          "label": "All devices"
+        },
+        {
+          "value": "customGroup",
+          "label": "Custom group(s)"
+        }
+      ],
+      "default": "allDevices"
+    },
+    "customGroup": {
+      "type": "textField",
+      "label": "Group name(s) to assign (if assigning to custom groups; comma-separated, wildcards allowed)",
+      "default": ""
+    },
+    "excludeGroup": {
+      "type": "textField",
+      "label": "Exclude group(s) (comma-separated, wildcards allowed)",
+      "default": ""
     },
     "SelfDeployingMode": {
       "type": "switch",
@@ -118,6 +144,9 @@
     "deviceNameTemplate": "%DeviceNameTemplate%",
     "languages": "%Languages%",
     "collectHash": "%CollectHash%",
+    "assignTo": "%AssignTo%",
+    "customGroup": "%customGroup%",
+    "excludeGroup": "%excludeGroup%",
     "assignToAllDevices": "%AssignToAllDevices%",
     "selfDeployingMode": "%SelfDeployingMode%",
     "hideTerms": "%HideTerms%",

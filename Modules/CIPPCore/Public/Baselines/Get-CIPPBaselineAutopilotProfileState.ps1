@@ -9,6 +9,9 @@ function Get-CIPPBaselineAutopilotProfileState {
         comparing), and userType only grades outside shared mode. Locale grades
         empty-matches-empty, so a baseline with no language never drifts a profile without
         one.
+        The assignment grades from the cached profile assignments as three strict fields. A
+        failed or empty custom group lookup, or a row without assignments, mirrors the expected
+        value, so drift is never recorded that remediation cannot clear.
     .FUNCTIONALITY
         Internal
     #>
@@ -37,6 +40,45 @@ function Get-CIPPBaselineAutopilotProfileState {
     $AllowWhiteGlove = $(if ($SelfDeploying) { $false } else { [bool]$V.AllowWhiteGlove })
     $Locale = "$($V.Languages.value ?? $V.Languages)"
 
+    # Baselines saved before the AssignTo variable carry only the AssignToAllDevices switch, which never managed groups.
+    $AssignMode = "$($V.AssignTo.value ?? $V.AssignTo)"
+    $LegacyAssign = [string]::IsNullOrWhiteSpace($AssignMode)
+    if ($LegacyAssign) {
+        $AssignMode = if ($V.AssignToAllDevices -eq $true) { 'allDevices' } else { 'none' }
+    }
+    $IncludeNames = @(if ($AssignMode -eq 'customGroup' -and $V.customGroup) { "$($V.customGroup)".Split(',').Trim() | Where-Object { $_ } })
+    $ExcludeNames = @(if ($AssignMode -ne 'none' -and $V.excludeGroup) { "$($V.excludeGroup)".Split(',').Trim() | Where-Object { $_ } })
+    $IncludeGroupIds = @()
+    $ExcludeGroupIds = @()
+    $GroupNameById = @{}
+    $AssignmentsUnknown = $false
+    if ($IncludeNames.Count -gt 0 -or $ExcludeNames.Count -gt 0) {
+        try {
+            $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter
+            foreach ($Group in $Groups) { $GroupNameById[$Group.id] = $Group.displayName }
+            $IncludeGroupIds = @($Groups | ForEach-Object {
+                    foreach ($SingleName in $IncludeNames) {
+                        if ($_.displayName -like ($SingleName -replace '\[', '`[' -replace '\]', '`]')) {
+                            $_.id
+                        }
+                    }
+                } | Select-Object -Unique)
+            $ExcludeGroupIds = @($Groups | ForEach-Object {
+                    foreach ($SingleName in $ExcludeNames) {
+                        if ($_.displayName -like ($SingleName -replace '\[', '`[' -replace '\]', '`]')) {
+                            $_.id
+                        }
+                    }
+                } | Select-Object -Unique)
+        } catch {
+            Write-Information "Baselines: AutopilotProfile group lookup failed: $($_.Exception.Message)"
+            $AssignmentsUnknown = $true
+        }
+    }
+    # Remediation will not reconcile to an empty match, so grading against one would be drift it cannot clear.
+    if ($AssignMode -eq 'customGroup' -and $IncludeGroupIds.Count -eq 0) { $AssignmentsUnknown = $true }
+    $FormatGroups = { param($Ids) (@($Ids | Where-Object { $_ } | Sort-Object -Unique | ForEach-Object { if ($GroupNameById[$_]) { "$($GroupNameById[$_]) ($_)" } else { $_ } }) -join ', ') }
+
     $Expected = [PSCustomObject]@{
         profileExists                 = $true
         displayName                   = $DisplayName
@@ -49,6 +91,9 @@ function Get-CIPPBaselineAutopilotProfileState {
         privacySettingsHidden         = [bool]$V.HidePrivacy
         eulaHidden                    = [bool]$V.HideTerms
         keyboardSelectionPageSkipped  = [bool]$V.AutoKeyboard
+        assignedToAllDevices          = $AssignMode -eq 'allDevices'
+        includeGroups                 = & $FormatGroups $IncludeGroupIds
+        excludeGroups                 = & $FormatGroups $ExcludeGroupIds
     }
     $Current = [PSCustomObject]@{
         profileExists                 = ($null -ne $Profile)
@@ -62,6 +107,21 @@ function Get-CIPPBaselineAutopilotProfileState {
         privacySettingsHidden         = [bool]$Profile.outOfBoxExperienceSetting.privacySettingsHidden
         eulaHidden                    = [bool]$Profile.outOfBoxExperienceSetting.eulaHidden
         keyboardSelectionPageSkipped  = [bool]$Profile.outOfBoxExperienceSetting.keyboardSelectionPageSkipped
+        assignedToAllDevices          = $Expected.assignedToAllDevices
+        includeGroups                 = $Expected.includeGroups
+        excludeGroups                 = $Expected.excludeGroups
+    }
+    if (-not $AssignmentsUnknown -and $null -ne $Profile -and $Profile.PSObject.Properties.Name -contains 'assignments') {
+        $Assignments = @($Profile.assignments | Where-Object { $_ })
+        $Current.assignedToAllDevices = @($Assignments | Where-Object { $_.target.'@odata.type' -eq '#microsoft.graph.allDevicesAssignmentTarget' }).Count -gt 0
+        $Current.includeGroups = & $FormatGroups ($Assignments | Where-Object { $_.target.'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget' } | ForEach-Object { $_.target.groupId })
+        $Current.excludeGroups = & $FormatGroups ($Assignments | Where-Object { $_.target.'@odata.type' -eq '#microsoft.graph.exclusionGroupAssignmentTarget' } | ForEach-Object { $_.target.groupId })
+        # Legacy settings leave group assignments (and, when off, all assignments) to the tenant.
+        if ($LegacyAssign) {
+            $Expected.includeGroups = $Current.includeGroups
+            $Expected.excludeGroups = $Current.excludeGroups
+            if ($AssignMode -eq 'none') { $Expected.assignedToAllDevices = $Current.assignedToAllDevices }
+        }
     }
     # userType only grades outside shared mode - shared profiles carry no meaningful value.
     if ($DeploymentMode -ne 'shared') {
@@ -69,5 +129,6 @@ function Get-CIPPBaselineAutopilotProfileState {
         $Current | Add-Member -NotePropertyName 'userType' -NotePropertyValue "$($Profile.outOfBoxExperienceSetting.userType)"
     }
 
-    @{ Expected = $Expected; Current = $Current }
+    # Strict so the assignment fields are diffed even under the definition's subset compare.
+    @{ Expected = $Expected; Current = $Current; StrictCompare = @('assignedToAllDevices', 'includeGroups', 'excludeGroups') }
 }
