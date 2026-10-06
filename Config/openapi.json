@@ -34171,6 +34171,86 @@
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
+    "/api/ExecScheduleGroupMembershipVacation": {
+      "post": {
+        "summary": "Schedule group membership for a vacation period",
+        "operationId": "ExecScheduleGroupMembershipVacation",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Adds the selected users to each selected group at the start date and removes them again at the end date. Users who were already members of a group are left untouched.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endDate": {
+                    "type": "string",
+                    "description": "Unix timestamp for when the users are removed"
+                  },
+                  "Groups": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "The groups to add the users to, as { value = group id; label = display name }"
+                  },
+                  "postExecution": {
+                    "type": "string"
+                  },
+                  "reference": {
+                    "type": "string"
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "description": "Unix timestamp for when the users are added"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Users": {
+                    "type": "string",
+                    "description": "The users going on vacation"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Group.ReadWrite"
+      }
+    },
     "/api/ExecScheduleMailboxVacation": {
       "post": {
         "summary": "ExecScheduleMailboxVacation",
