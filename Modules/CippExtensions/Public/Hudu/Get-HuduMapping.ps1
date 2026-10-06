@@ -17,6 +17,7 @@ function Get-HuduMapping {
                 TenantDomain    = $Tenant.defaultDomainName
                 IntegrationId   = $Mapping.IntegrationId
                 IntegrationName = $Mapping.IntegrationName
+                SyncPasswords   = $Mapping.SyncPasswords -ne $false
             }
         }
     }

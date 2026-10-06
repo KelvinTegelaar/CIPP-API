@@ -40,6 +40,10 @@ function Invoke-HuduExtensionSync {
 
         $defaultdomain = $TenantFilter
         $TenantMap = $Mappings | Where-Object { $_.RowKey -eq $Tenant.customerId }
+        # Per-tenant opt-out of password data; the global switches still gate the feature.
+        $SyncPasswords = $TenantMap.SyncPasswords -ne $false
+        $IncludeLAPS = [bool]$Configuration.IncludeLAPS -and $SyncPasswords
+        $IncludeBitLocker = [bool]$Configuration.IncludeBitLocker -and $SyncPasswords
 
         # Get Asset cache
         $HuduAssetCache = Get-CippTable -tablename 'CacheHuduAssets'
@@ -55,6 +59,9 @@ function Invoke-HuduExtensionSync {
         $HuduRelationsCacheTTLMinutes = 15
 
         $CompanyResult.Logs.Add('Starting Hudu Extension Sync')
+        if (-not $SyncPasswords -and ($Configuration.IncludeLAPS -or $Configuration.IncludeBitLocker)) {
+            Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Password data excluded for this tenant by mapping' -level 'Information'
+        }
 
         # Get CIPP URL
         $ConfigTable = Get-Cipptable -tablename 'Config'
@@ -426,7 +433,7 @@ function Invoke-HuduExtensionSync {
 
         $LAPSMetadataAvailable = $true
         $LAPSMetadataByDeviceId = @{}
-        if ($Configuration.IncludeLAPS) {
+        if ($IncludeLAPS) {
             try {
                 $LAPSMetadata = @(New-GraphGetRequest -NoAuthCheck $true -uri 'https://graph.microsoft.com/v1.0/directory/deviceLocalCredentials?$select=id,deviceName,lastBackupDateTime,refreshDateTime' -tenantid $TenantFilter -ErrorAction Stop)
                 foreach ($LAPSMetadataItem in $LAPSMetadata) {
@@ -445,7 +452,7 @@ function Invoke-HuduExtensionSync {
         $BitLockerMetadataAvailable = $true
         $BitLockerKeyMetadata = @()
         $BitLockerKeysByDevice = [CIPP.CippIndex]::Build(@(), @())
-        if ($Configuration.IncludeBitLocker) {
+        if ($IncludeBitLocker) {
             try {
                 $BitLockerCacheRows = @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'BitlockerKeys' -ErrorAction Stop)
                 $BitLockerCountRow = $BitLockerCacheRows | Where-Object { $_.RowKey -eq 'BitlockerKeys-Count' } | Select-Object -First 1
@@ -1219,7 +1226,7 @@ function Invoke-HuduExtensionSync {
                     $DeviceHashMaterial = $DeviceIntuneDetailshtml
                     $CredentialRetrievalFailed = $false
                     $CredentialFieldsChanged = $false
-                    $CredentialSyncEnabled = $Configuration.IncludeLAPS -or $Configuration.IncludeBitLocker
+                    $CredentialSyncEnabled = $IncludeLAPS -or $IncludeBitLocker
                     $IsWindowsDevice = $Device.operatingSystem -eq 'Windows'
                     $IsNewHuduDevice = -not $HuduDevice
                     $SingleHuduDevice = if (($HuduDevice | Measure-Object).Count -eq 1) { $HuduDevice } else { $null }
@@ -1243,7 +1250,7 @@ function Invoke-HuduExtensionSync {
                                     Where-Object { $_.label -eq 'LAPS Password' -or $_.slug -eq 'laps_password' } |
                                     Select-Object -First 1 -ExpandProperty value
                             ))
-                        if ($Configuration.IncludeLAPS) {
+                        if ($IncludeLAPS) {
                             try {
                                 if (-not $LAPSMetadataAvailable) {
                                     throw 'LAPS metadata is unavailable.'
@@ -1293,7 +1300,7 @@ function Invoke-HuduExtensionSync {
                             }
                         }
 
-                        if ($Configuration.IncludeBitLocker) {
+                        if ($IncludeBitLocker) {
                             try {
                                 if (-not $BitLockerMetadataAvailable) {
                                     throw 'BitLocker key metadata is unavailable.'
@@ -1318,6 +1325,24 @@ function Invoke-HuduExtensionSync {
                                 $ErrorMessage = Get-CippException -Exception $_
                                 Write-Warning "Unable to retrieve BitLocker recovery keys for $($Device.deviceName): $($ErrorMessage.NormalizedError)"
                                 $CredentialRetrievalFailed = $true
+                            }
+                        }
+                    }
+
+                    if (-not $SyncPasswords -and $IsWindowsDevice -and $SingleHuduDevice -and ($Configuration.IncludeLAPS -or $Configuration.IncludeBitLocker)) {
+                        # Opted-out tenants get previously synced secrets blanked once; the hash marker forces that write.
+                        $DeviceHashMaterial += "`nPasswords:excluded"
+                        if ($Configuration.IncludeLAPS) {
+                            $DeviceAssetFields.laps_account = ''
+                            $DeviceAssetFields.laps_password = ''
+                            $DeviceAssetFields.laps_backup_date = ''
+                        }
+                        if ($Configuration.IncludeBitLocker) {
+                            foreach ($Field in $SingleHuduDevice.fields) {
+                                if ($Field.slug -match '^bitlocker_' -and -not [string]::IsNullOrWhiteSpace([string]$Field.value)) {
+                                    $DeviceAssetFields[[string]$Field.slug] = ''
+                                    $CredentialFieldsChanged = $true
+                                }
                             }
                         }
                     }

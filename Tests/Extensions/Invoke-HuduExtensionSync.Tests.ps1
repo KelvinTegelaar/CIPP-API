@@ -176,6 +176,35 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
             'SystemSerialNumber' -in $ExcludeSerials -and 'CUSTOM-PLACEHOLDER' -in $ExcludeSerials
         }
     }
+
+    It 'skips password retrieval and blanks stored secrets for a tenant opted out by mapping' {
+        $script:HuduDevice.fields += @(
+            [PSCustomObject]@{ label = 'LAPS Account'; slug = 'laps_account'; value = '.\Administrator' }
+            [PSCustomObject]@{ label = 'LAPS Password'; slug = 'laps_password'; value = 'laps-secret' }
+            [PSCustomObject]@{ label = 'BitLocker OS Drive 1 Recovery Key'; slug = 'bitlocker_os_drive_1_recovery_key'; value = 'bitlocker-secret' }
+        )
+        Mock Get-CIPPAzDataTableEntity {
+            if ($Filter -like "*PartitionKey eq 'HuduMapping'*") {
+                return @(
+                    [PSCustomObject]@{ PartitionKey = 'HuduMapping'; RowKey = 'tenant-1'; IntegrationId = 20; IntegrationName = 'Contoso'; SyncPasswords = $false }
+                    [PSCustomObject]@{ PartitionKey = 'HuduMapping'; RowKey = 'Devices'; IntegrationId = 10; IntegrationName = 'Computers' }
+                )
+            }
+            if ($Filter -like "*InstanceProperties*") { return [PSCustomObject]@{ Value = 'cipp.example.test' } }
+            if ($Filter -like "*CacheMetadata*") { return [PSCustomObject]@{ LastRefresh = (Get-Date).ToUniversalTime().ToString('o') } }
+            if ($Filter -like "*PartitionKey eq 'HuduRelation'*") { return @() }
+        }
+
+        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke New-GraphGetRequest -Times 0 -Exactly -ParameterFilter { $Uri -like '*deviceLocalCredentials*' }
+        Should -Invoke Get-CIPPLapsPassword -Times 0 -Exactly
+        Should -Invoke Get-CIPPBitLockerKey -Times 0 -Exactly
+        $script:HuduDevice.fields.Where({ $_.slug -eq 'laps_password' }).value | Should -Be ''
+        $script:HuduDevice.fields.Where({ $_.slug -eq 'laps_account' }).value | Should -Be ''
+        $script:HuduDevice.fields.Where({ $_.slug -eq 'bitlocker_os_drive_1_recovery_key' }).value | Should -Be ''
+        Should -Invoke Write-LogMessage -ParameterFilter { $Message -eq 'Password data excluded for this tenant by mapping' }
+    }
 }
 
 Describe 'Invoke-HuduExtensionSync user license sync' {
