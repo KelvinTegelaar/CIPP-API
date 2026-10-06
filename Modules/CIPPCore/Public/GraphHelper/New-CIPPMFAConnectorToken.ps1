@@ -107,15 +107,15 @@ function New-CIPPMFAConnectorToken {
     }
 
     # 2. Provision a fresh long-lived secret on the MFA client service principal.
-    $SPResult = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$top=999&`$select=id,appId" -tenantid $TenantFilter -AsApp $true
-    $SPID = ($SPResult | Where-Object { $_.appId -eq $MFAAppID }).id
+    $SP = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId eq '$MFAAppID'&`$select=id,passwordCredentials" -tenantid $TenantFilter -AsApp $true | Select-Object -First 1
+    $SPID = $SP.id
     if (!$SPID) {
         $SPBody = [pscustomobject]@{ appId = $MFAAppID } | ConvertTo-Json -Depth 5
         $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody -AsApp $true).id
     }
 
     try {
-        $PolicyUpdate = Update-AppManagementPolicy -TenantFilter $TenantFilter -ApplicationId $MFAAppID -ServicePrincipal -headers $Headers
+        $PolicyUpdate = Update-AppManagementPolicy -TenantFilter $TenantFilter -ApplicationId $MFAAppID -ServicePrincipal -PolicyName 'CIPP MFA Connector Exemption Policy' -ExemptPasswordLifetime -headers $Headers
         if ($PolicyUpdate.PolicyAction) {
             Write-LogMessage -headers $Headers -API 'MFAConnector' -tenant $TenantFilter -message "App management policy for the Azure Multi-Factor Auth Client: $($PolicyUpdate.PolicyAction)" -sev Info
         }
@@ -123,22 +123,41 @@ function New-CIPPMFAConnectorToken {
         Write-LogMessage -headers $Headers -API 'MFAConnector' -tenant $TenantFilter -message "Failed to update app management policy for the Azure Multi-Factor Auth Client: $($_.Exception.Message)" -sev Warn
     }
 
-    $PassReqBody = @{
-        'passwordCredential' = @{
-            'displayName'   = 'CIPP MFA Connector'
-            'endDateTime'   = $((Get-Date).AddDays(180))
-            'startDateTime' = $((Get-Date).AddMinutes(-5))
-        }
-    } | ConvertTo-Json -Depth 5
-
+    $SecretStart = (Get-Date).AddMinutes(-5)
+    $SecretLifetime = [timespan]::FromDays(180)
     $NewSecret = $null
     $AddSecretError = $null
     for ($Attempt = 1; $Attempt -le 5; $Attempt++) {
+        $PassReqBody = @{
+            'passwordCredential' = @{
+                'displayName'   = 'CIPP MFA Connector'
+                'endDateTime'   = $SecretStart + $SecretLifetime
+                'startDateTime' = $SecretStart
+            }
+        } | ConvertTo-Json -Depth 5
         try {
             $NewSecret = (New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SPID/addPassword" -tenantid $TenantFilter -type POST -body $PassReqBody -AsApp $true).secretText
             break
         } catch {
             $AddSecretError = $_.Exception.Message
+            $TenantMaxLifetime = ($PolicyUpdate.DefaultPolicy.applicationRestrictions.passwordCredentials | Where-Object { $_.restrictionType -eq 'passwordLifetime' -and $_.state -eq 'enabled' } | Select-Object -First 1).maxLifetime
+            if ($AddSecretError -match 'lifetime exceeds' -and $TenantMaxLifetime) {
+                $SecretLifetime = [System.Xml.XmlConvert]::ToTimeSpan($TenantMaxLifetime).Add([timespan]::FromHours(-1))
+                continue
+            }
+            $ExpiredSecrets = @($SP.passwordCredentials).Where({ $_.displayName -in @('CIPP MFA Connector', 'MFA Temporary Password') -and [datetime]$_.endDateTime -lt (Get-Date) })
+            $SP = $null
+            foreach ($ExpiredSecret in $ExpiredSecrets) {
+                try {
+                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SPID/removePassword" -tenantid $TenantFilter -type POST -body (@{ keyId = $ExpiredSecret.keyId } | ConvertTo-Json) -AsApp $true
+                } catch {
+                    Write-Information "Failed to remove expired MFA connector secret $($ExpiredSecret.keyId) for $($TenantId): $($_.Exception.Message)"
+                }
+            }
+            if ($ExpiredSecrets.Count -gt 0) {
+                Write-LogMessage -headers $Headers -API 'MFAConnector' -tenant $TenantFilter -message "Removed $($ExpiredSecrets.Count) expired MFA connector secret(s) from the Azure Multi-Factor Auth Client after a failed secret add" -sev Info
+                continue
+            }
             if ($Attempt -lt 5) { Start-Sleep -Seconds 4 }
         }
     }

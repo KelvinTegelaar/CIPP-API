@@ -7,7 +7,7 @@ BeforeAll {
 
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
     function New-GraphPostRequest { param($uri, $tenantid, $type, $body, $AsApp) }
-    function Update-AppManagementPolicy { param($TenantFilter, $ApplicationId, [switch]$ServicePrincipal) }
+    function Update-AppManagementPolicy { param($TenantFilter, $ApplicationId, [switch]$ServicePrincipal, $PolicyName, [switch]$ExemptPasswordLifetime, $headers) }
     function Get-CIPPTable { param($tablename) }
     function Get-CIPPAzDataTableEntity { param($Filter) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
@@ -153,5 +153,94 @@ Describe 'New-CIPPMFAConnectorToken Key Vault (production) storage path' {
 
         { New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid } | Should -Throw -ExpectedMessage '*403*'
         Should -Not -Invoke New-GraphPostRequest
+    }
+}
+
+Describe 'New-CIPPMFAConnectorToken provisioning hygiene' {
+    BeforeEach {
+        $env:NonLocalHostAzurite = 'true'
+        Mock Get-CIPPTable { @{ Context = 'stub' } }
+        Mock Get-CIPPAzDataTableEntity { $null }
+        Mock Add-CIPPAzDataTableEntity {}
+        Mock Write-LogMessage {}
+        Mock Start-Sleep {}
+        Mock Invoke-RestMethod { [pscustomobject]@{ access_token = 'TOKEN123' } }
+        Mock Update-AppManagementPolicy {}
+        $script:Posts = [System.Collections.Generic.List[object]]::new()
+        Mock New-GraphPostRequest {
+            $script:Posts.Add([pscustomobject]@{ uri = $uri; body = $body })
+            [pscustomobject]@{ secretText = 'NEWSECRET' }
+        }
+    }
+
+    AfterEach {
+        Remove-Item env:NonLocalHostAzurite -ErrorAction SilentlyContinue
+    }
+
+    It 'removes only expired CIPP secrets, and only after a secret add fails' {
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{ id = 'mfa-sp-id'; passwordCredentials = @(
+                    [pscustomobject]@{ keyId = 'expired-current'; displayName = 'CIPP MFA Connector'; endDateTime = (Get-Date).AddDays(-1).ToString('o') }
+                    [pscustomobject]@{ keyId = 'expired-legacy'; displayName = 'MFA Temporary Password'; endDateTime = (Get-Date).AddDays(-300).ToString('o') }
+                    [pscustomobject]@{ keyId = 'active'; displayName = 'CIPP MFA Connector'; endDateTime = (Get-Date).AddDays(100).ToString('o') }
+                    [pscustomobject]@{ keyId = 'customer'; displayName = 'Something else'; endDateTime = (Get-Date).AddDays(-300).ToString('o') }
+                ) }
+        }
+        $script:AddCount = 0
+        Mock New-GraphPostRequest {
+            $script:Posts.Add([pscustomobject]@{ uri = $uri; body = $body })
+            if ($uri -like '*/addPassword') {
+                $script:AddCount++
+                if ($script:AddCount -eq 1) { throw 'Too many credentials on this object.' }
+            }
+            [pscustomobject]@{ secretText = 'NEWSECRET' }
+        }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        $Removed = @($script:Posts | Where-Object { $_.uri -like '*/removePassword' } | ForEach-Object { ($_.body | ConvertFrom-Json).keyId })
+        $Removed | Should -Be @('expired-current', 'expired-legacy')
+        $script:AddCount | Should -Be 2
+        Should -Not -Invoke Start-Sleep
+    }
+
+    It 'leaves expired secrets alone when the secret add succeeds' {
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{ id = 'mfa-sp-id'; passwordCredentials = @([pscustomobject]@{ keyId = 'expired'; displayName = 'CIPP MFA Connector'; endDateTime = (Get-Date).AddDays(-1).ToString('o') }) }
+        }
+
+        $null = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $script:Posts | Where-Object { $_.uri -like '*/removePassword' } | Should -BeNullOrEmpty
+    }
+
+    It 'asks for its own exemption policy covering the password lifetime cap' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = 'mfa-sp-id'; passwordCredentials = @() } }
+
+        $null = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        Should -Invoke Update-AppManagementPolicy -Times 1 -Exactly -ParameterFilter { $PolicyName -eq 'CIPP MFA Connector Exemption Policy' -and $ExemptPasswordLifetime -and $ServicePrincipal }
+    }
+
+    It 'retries with the tenant maximum when the secret lifetime is rejected' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = 'mfa-sp-id'; passwordCredentials = @() } }
+        Mock Update-AppManagementPolicy {
+            [pscustomobject]@{ DefaultPolicy = [pscustomobject]@{ applicationRestrictions = [pscustomobject]@{ passwordCredentials = @([pscustomobject]@{ restrictionType = 'passwordLifetime'; state = 'enabled'; maxLifetime = 'P90D' }) } } }
+        }
+        Mock New-GraphPostRequest {
+            $script:Posts.Add([pscustomobject]@{ uri = $uri; body = $body })
+            $Credential = ($body | ConvertFrom-Json).passwordCredential
+            if (([datetime]$Credential.endDateTime - [datetime]$Credential.startDateTime).TotalDays -gt 90) {
+                throw "Credential lifetime exceeds the max value allowed as per assigned policy 'default'."
+            }
+            [pscustomobject]@{ secretText = 'NEWSECRET' }
+        }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        ($script:Posts | Where-Object { $_.uri -like '*/addPassword' }).Count | Should -Be 2
+        Should -Not -Invoke Start-Sleep
     }
 }

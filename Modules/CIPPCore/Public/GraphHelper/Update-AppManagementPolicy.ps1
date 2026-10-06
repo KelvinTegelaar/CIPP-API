@@ -23,7 +23,10 @@ function Update-AppManagementPolicy {
         # Target a service principal instead of an application registration. First-party apps (e.g. the
         # Azure MFA client) exist only as a service principal in the tenant, so the exemption must be
         # resolved and assigned via servicePrincipals rather than applications.
-        [switch]$ServicePrincipal
+        [switch]$ServicePrincipal,
+        # Apps other than CIPP-SAM get their own policy so the shared CIPP-SAM exemption is never rewritten for them.
+        [string]$PolicyName = 'CIPP Exemption Policy',
+        [switch]$ExemptPasswordLifetime
     )
 
     $TargetResource = if ($ServicePrincipal) { 'servicePrincipals' } else { 'applications' }
@@ -145,11 +148,21 @@ function Update-AppManagementPolicy {
 
         # Create/update an exemption when the default policy blocks credentials. In certificate mode a
         # password block is left in force, so only a key-credential block requires an exemption.
+        $DefaultPasswordLifetime = if ($ExemptPasswordLifetime -and -not $CertificateOnly) {
+            $DefaultPolicy.applicationRestrictions.passwordCredentials | Where-Object { $_.restrictionType -eq 'passwordLifetime' -and $_.state -eq 'enabled' } | Select-Object -First 1
+        }
+
         $PolicyAction = $null
-        $RequiresExemption = $DefaultPolicyBlocksKeyCredentials -or (-not $CertificateOnly -and $DefaultPolicyBlocksCredentials)
+        $RequiresExemption = $DefaultPolicyBlocksKeyCredentials -or (-not $CertificateOnly -and $DefaultPolicyBlocksCredentials) -or $DefaultPasswordLifetime
         if ($RequiresExemption -and $CIPPApp) {
-            # Check if a CIPP-SAM Exemption Policy already exists
-            $ExistingExemptionPolicy = $AppPolicies | Where-Object { $_.displayName -eq 'CIPP Exemption Policy' } | Select-Object -First 1
+            $AssignedPolicy = $AppPolicies | Where-Object { $_.id -eq $CIPPAppPolicyId }
+            if ($AssignedPolicy -and $PolicyName -ne 'CIPP Exemption Policy' -and $AssignedPolicy.displayName -eq 'CIPP Exemption Policy') {
+                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$TargetResource/$($CIPPApp.id)/appManagementPolicies/$CIPPAppPolicyId/`$ref" -type DELETE -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
+                $CIPPAppPolicyId = $null
+                $CIPPAppTargeted = $false
+            }
+
+            $ExistingExemptionPolicy = $AppPolicies | Where-Object { $_.displayName -eq $PolicyName } | Select-Object -First 1
 
             # Check if CIPP app has a policy that allows credentials
             $CIPPHasExemption = $false
@@ -166,6 +179,9 @@ function Update-AppManagementPolicy {
                 }
                 # When the default policy restricts key credentials, the exemption must explicitly
                 # disable those restriction types - otherwise certificate rotation stays blocked
+                if ($CIPPHasExemption -and $DefaultPasswordLifetime) {
+                    $CIPPHasExemption = [bool]($CIPPPolicy.restrictions.passwordCredentials | Where-Object { $_.restrictionType -eq 'passwordLifetime' -and $_.state -eq 'disabled' })
+                }
                 if ($CIPPHasExemption -and $DefaultPolicyBlocksKeyCredentials) {
                     foreach ($Restriction in $DefaultKeyRestrictions) {
                         $ExplicitlyDisabled = $CIPPPolicy.restrictions.keyCredentials | Where-Object { $_.restrictionType -eq $Restriction.restrictionType -and $_.state -eq 'disabled' }
@@ -183,8 +199,8 @@ function Update-AppManagementPolicy {
 
                     # Password restrictions are disabled only for secret installs; certificate mode leaves
                     # them blocked so secrets stay disallowed.
-                    if (-not $CertificateOnly -and $DefaultPolicyBlocksCredentials) {
-                        $Restrictions.passwordCredentials = @(
+                    $PasswordRestrictions = @(
+                        if (-not $CertificateOnly -and $DefaultPolicyBlocksCredentials) {
                             @{
                                 restrictionType                     = 'passwordAddition'
                                 state                               = 'disabled'
@@ -195,8 +211,17 @@ function Update-AppManagementPolicy {
                                 state                               = 'disabled'
                                 restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
                             }
-                        )
-                    }
+                        }
+                        if ($DefaultPasswordLifetime) {
+                            @{
+                                restrictionType                     = 'passwordLifetime'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                                maxLifetime                         = $DefaultPasswordLifetime.maxLifetime
+                            }
+                        }
+                    )
+                    if ($PasswordRestrictions) { $Restrictions.passwordCredentials = $PasswordRestrictions }
 
                     # Key restrictions are disabled so the SAM certificate can register. asymmetricKeyLifetime
                     # is a lifetime-type restriction; Graph rejects the whole policy body unless it carries a
@@ -221,7 +246,7 @@ function Update-AppManagementPolicy {
                         )
                     }
                     $PolicyBody = @{
-                        displayName  = 'CIPP Exemption Policy'
+                        displayName  = $PolicyName
                         description  = if ($CertificateOnly) { 'Allows CIPP app to register certificates (password addition intentionally left blocked)' } else { 'Allows CIPP app to manage credentials' }
                         isEnabled    = $true
                         restrictions = $Restrictions

@@ -134,3 +134,62 @@ Describe 'Update-AppManagementPolicy exemption body' {
         $result.PolicyAction | Should -Match 'assigned'
     }
 }
+
+Describe 'Update-AppManagementPolicy dedicated policy with password lifetime' {
+    BeforeAll {
+        $script:LifetimeOnly = @(
+            [PSCustomObject]@{ restrictionType = 'passwordAddition'; state = 'disabled' }
+            [PSCustomObject]@{ restrictionType = 'passwordLifetime'; state = 'enabled'; maxLifetime = 'P90D' }
+        )
+        $script:SharedPolicy = [PSCustomObject]@{ id = 'shared-id'; displayName = 'CIPP Exemption Policy'; isEnabled = $true; restrictions = [PSCustomObject]@{ passwordCredentials = @(); keyCredentials = @() } }
+    }
+
+    BeforeEach {
+        $script:Calls = [System.Collections.Generic.List[object]]::new()
+        Remove-Item env:CertificateAuthMode -ErrorAction SilentlyContinue
+        Mock New-GraphPostRequest {
+            $script:Calls.Add([PSCustomObject]@{ uri = $uri; type = $type; body = $body })
+            [PSCustomObject]@{ id = 'dedicated-id' }
+        }
+    }
+
+    It 'creates the named policy exempting the tenant password lifetime cap' {
+        Mock New-GraphBulkRequest { New-BulkResponse -PasswordRestrictions $script:LifetimeOnly }
+
+        $null = Update-AppManagementPolicy -TenantFilter 'contoso.onmicrosoft.com' -ApplicationId $script:AppId -ServicePrincipal -PolicyName 'CIPP MFA Connector Exemption Policy' -ExemptPasswordLifetime
+
+        $Create = $script:Calls | Where-Object { $_.type -eq 'POST' -and $_.uri -match 'policies/appManagementPolicies$' }
+        $Body = $Create.body | ConvertFrom-Json
+        $Body.displayName | Should -Be 'CIPP MFA Connector Exemption Policy'
+        $Lifetime = $Body.restrictions.passwordCredentials | Where-Object { $_.restrictionType -eq 'passwordLifetime' }
+        $Lifetime.state | Should -Be 'disabled'
+        $Lifetime.maxLifetime | Should -Be 'P90D'
+        @($Body.restrictions.passwordCredentials).Count | Should -Be 1
+    }
+
+    It 'leaves the lifetime cap alone for callers that do not ask to exempt it' {
+        Mock New-GraphBulkRequest { New-BulkResponse -PasswordRestrictions $script:LifetimeOnly }
+
+        $null = Update-AppManagementPolicy -TenantFilter 'contoso.onmicrosoft.com' -ApplicationId $script:AppId -CertificateOnly $false
+
+        $script:Calls.Count | Should -Be 0
+    }
+
+    It 'moves the app off the shared CIPP-SAM policy instead of rewriting it' {
+        Mock New-GraphBulkRequest {
+            if ($Requests[0].url -match 'appliesTo') {
+                @([PSCustomObject]@{ id = 'shared-id'; body = [PSCustomObject]@{ value = @([PSCustomObject]@{ appId = $script:AppId }) } })
+            } else {
+                $Response = New-BulkResponse -PasswordRestrictions $script:LifetimeOnly
+                $Response[1].body.value = @($script:SharedPolicy)
+                $Response
+            }
+        }
+
+        $null = Update-AppManagementPolicy -TenantFilter 'contoso.onmicrosoft.com' -ApplicationId $script:AppId -ServicePrincipal -PolicyName 'CIPP MFA Connector Exemption Policy' -ExemptPasswordLifetime
+
+        ($script:Calls | Where-Object { $_.type -eq 'DELETE' }).uri | Should -Be "https://graph.microsoft.com/beta/servicePrincipals/mfa-app-object-id/appManagementPolicies/shared-id/`$ref"
+        $script:Calls | Where-Object { $_.uri -match 'shared-id$' } | Should -BeNullOrEmpty
+        ($script:Calls | Where-Object { $_.uri -match 'appManagementPolicies/\$ref$' }).body | Should -Match 'dedicated-id'
+    }
+}
