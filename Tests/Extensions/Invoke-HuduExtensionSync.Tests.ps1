@@ -148,7 +148,7 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
             foreach ($Key in $Fields.Keys) {
                 $Existing = $script:HuduDevice.fields | Where-Object slug -eq $Key | Select-Object -First 1
                 if ($Existing) { $Existing.value = $Fields[$Key] }
-                else { $script:HuduDevice.fields += [PSCustomObject]@{ label = $Labels[$Key]; slug = $Key; value = $Fields[$Key] } }
+                else { $script:HuduDevice.fields = @($script:HuduDevice.fields; [PSCustomObject]@{ label = $Labels[$Key]; slug = $Key; value = $Fields[$Key] }) }
             }
         }
         Mock Set-HuduMagicDash { }
@@ -178,7 +178,7 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
     }
 
     It 'skips password retrieval and blanks stored secrets for a tenant opted out by mapping' {
-        $script:HuduDevice.fields += @(
+        $script:HuduDevice.fields = @($script:HuduDevice.fields
             [PSCustomObject]@{ label = 'LAPS Account'; slug = 'laps_account'; value = '.\Administrator' }
             [PSCustomObject]@{ label = 'LAPS Password'; slug = 'laps_password'; value = 'laps-secret' }
             [PSCustomObject]@{ label = 'BitLocker OS Drive 1 Recovery Key'; slug = 'bitlocker_os_drive_1_recovery_key'; value = 'bitlocker-secret' }

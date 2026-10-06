@@ -1223,7 +1223,7 @@ function Invoke-HuduExtensionSync {
                         microsoft_365 = "<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>$DeviceIntuneDetailshtml"
                     }
                     # Exclude the timestamp from the hash so unchanged assets are not rewritten on every sync.
-                    $DeviceHashMaterial = $DeviceIntuneDetailshtml
+                    $DeviceHashMaterial = [System.Collections.Generic.List[string]]@($DeviceIntuneDetailshtml)
                     $CredentialRetrievalFailed = $false
                     $CredentialFieldsChanged = $false
                     $CredentialSyncEnabled = $IncludeLAPS -or $IncludeBitLocker
@@ -1261,7 +1261,7 @@ function Invoke-HuduExtensionSync {
                                     $DeviceAssetFields.laps_account = ''
                                     $DeviceAssetFields.laps_password = ''
                                     $DeviceAssetFields.laps_backup_date = ''
-                                    $DeviceHashMaterial += "`nLAPS Account:`nLAPS Backup Date:"
+                                    $DeviceHashMaterial.Add("`nLAPS Account:`nLAPS Backup Date:")
                                 } else {
                                     $LAPSBackupDate = [string]$LAPSMetadata.lastBackupDateTime
                                     $LAPSAccount = ([string]$ExistingLAPSAccount) -replace '^\.\\', ''
@@ -1291,7 +1291,7 @@ function Invoke-HuduExtensionSync {
                                             throw "Unable to retrieve LAPS password: $LAPSResult"
                                         }
                                     }
-                                    $DeviceHashMaterial += "`nLAPS Account:$LAPSAccount`nLAPS Backup Date:$LAPSBackupDate"
+                                    $DeviceHashMaterial.Add("`nLAPS Account:$LAPSAccount`nLAPS Backup Date:$LAPSBackupDate")
                                 }
                             } catch {
                                 $ErrorMessage = Get-CippException -Exception $_
@@ -1312,7 +1312,7 @@ function Invoke-HuduExtensionSync {
                                         Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
                                         Sort-Object -Unique
                                 )
-                                $DeviceHashMaterial += "`nBitLocker Key IDs:$($BitLockerKeyIds -join ',')"
+                                $DeviceHashMaterial.Add("`nBitLocker Key IDs:$($BitLockerKeyIds -join ',')")
 
                                 $BitLockerFields = Get-HuduBitLockerSyncField -KeyMetadata @($BitLockerKeysByDevice.Find($Device.azureADDeviceId)) -ExistingFields $SingleHuduDevice.fields -DeviceId $Device.azureADDeviceId -TenantFilter $TenantFilter -ErrorAction Stop
                                 if ($BitLockerFields.Count -gt 0) {
@@ -1331,7 +1331,7 @@ function Invoke-HuduExtensionSync {
 
                     if (-not $SyncPasswords -and $IsWindowsDevice -and $SingleHuduDevice -and ($Configuration.IncludeLAPS -or $Configuration.IncludeBitLocker)) {
                         # Opted-out tenants get previously synced secrets blanked once; the hash marker forces that write.
-                        $DeviceHashMaterial += "`nPasswords:excluded"
+                        $DeviceHashMaterial.Add("`nPasswords:excluded")
                         if ($Configuration.IncludeLAPS) {
                             $DeviceAssetFields.laps_account = ''
                             $DeviceAssetFields.laps_password = ''
@@ -1347,7 +1347,7 @@ function Invoke-HuduExtensionSync {
                         }
                     }
 
-                    $NewHash = Get-StringHash -String $DeviceHashMaterial
+                    $NewHash = Get-StringHash -String ($DeviceHashMaterial -join '')
 
                     if ($CredentialRetrievalFailed) {
                         $CredentialFailureMessage = "Device $($Device.deviceName): Skipped Hudu asset and cache update because credential retrieval failed."
