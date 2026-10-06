@@ -9,6 +9,9 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($TableName, $Entity, [switch]$Force) }
     function Add-CIPPBaselineHistoryEvent { param($TenantFilter, $Standard, $Mode, $TriggeredBy, $Outcome, $Detail) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev) }
+    function Get-CIPPAzDataTableEntity { param($TableName, $Filter) }
+    function ConvertTo-CIPPODataFilterValue { param($Value) $Value }
+    function Expand-CIPPBaselineTemplatePackage { param($Definition, $Config) }
 
     $script:Baseline = [pscustomobject]@{
         GUID         = 'b1'
@@ -49,5 +52,44 @@ Describe 'Invoke-CIPPBaselineGraduation' {
         $Results[0].StageName | Should -Be 'Intune'
         Should -Invoke Get-CIPPBaseline -Times 1 -ParameterFilter { $ID -eq 'b1' }
         Should -Invoke Add-CIPPBaselineHistoryEvent -Times 1 -ParameterFilter { $TriggeredBy -eq 'admin@contoso.com' }
+    }
+
+    Context 'success condition' {
+        BeforeEach {
+            $script:Baseline = [pscustomobject]@{
+                GUID         = 'b2'
+                templateName = 'Rollout'
+                stages       = @(
+                    [pscustomobject]@{ name = 'Pilot'; conditions = @(); standardsConfig = @([pscustomobject]@{ instance = 'standards.A' }, [pscustomobject]@{ instance = 'standards.B' }) }
+                    [pscustomobject]@{ name = 'Next'; logic = 'and'; conditions = @([pscustomobject]@{ type = 'success' }) }
+                )
+                tenantStates = @([pscustomobject]@{ tenantFilter = 't.onmicrosoft.com'; currentStage = 1; totalStages = 2; stageName = 'Pilot'; enteredStageAt = 1 })
+            }
+            Mock Get-CIPPBaseline { $script:Baseline }
+        }
+
+        It 'treats a standard the tenant cannot license as aligned instead of blocking the stage' {
+            Mock Get-CIPPAzDataTableEntity {
+                @(
+                    [pscustomobject]@{ StandardName = 'standards.A'; Status = 'Compliant' }
+                    [pscustomobject]@{ StandardName = 'standards.B'; Status = 'Skipped - No License' }
+                )
+            }
+            $Result = @(Invoke-CIPPBaselineGraduation -TemplateId 'b2')[0]
+            $Result.Advanced | Should -BeTrue
+            $Result.Stage | Should -Be 2
+        }
+
+        It 'still holds the stage while a licensable standard drifts' {
+            Mock Get-CIPPAzDataTableEntity {
+                @(
+                    [pscustomobject]@{ StandardName = 'standards.A'; Status = 'Drift' }
+                    [pscustomobject]@{ StandardName = 'standards.B'; Status = 'Skipped - No License' }
+                )
+            }
+            $Result = @(Invoke-CIPPBaselineGraduation -TemplateId 'b2')[0]
+            $Result.Advanced | Should -BeFalse
+            $Result.Unmet | Should -Be @('success')
+        }
     }
 }

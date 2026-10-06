@@ -13,7 +13,8 @@ function Invoke-CIPPBaselineGraduation {
                     on every run - an 'All Tenants' baseline can gate a stage (say Intune
                     policies) on an 'Intune licensed' group
         - success:  every standard rolled out by the stages reached so far is aligned
-                    (Compliant or Accepted) on the tenant's resolved rows
+                    (Compliant or Accepted) on the tenant's resolved rows; a standard the
+                    tenant cannot license counts as aligned rather than blocking the stage
         - manual:   never auto-advances (operator uses ExecBaselineStage)
         A stage with no conditions does not auto-advance.
         -TenantFilter/-TemplateId scope an on-demand re-evaluation; one result is emitted per
@@ -95,7 +96,9 @@ function Invoke-CIPPBaselineGraduation {
                         $Aligned = 0
                         foreach ($Standard in $RolledOut) {
                             $Row = $Rows | Where-Object { $_.StandardName -eq $Standard } | Select-Object -First 1
-                            if ($Row -and $Row.Status -in @('Compliant', 'Accepted')) { $Aligned++ }
+                            # A standard the tenant cannot license is not drift it can fix, and the engine
+                            # rewrites that status every run so it cannot be accepted away either.
+                            if ($Row -and $Row.Status -in @('Compliant', 'Accepted', 'Skipped - No License')) { $Aligned++ }
                         }
                         $RolledOut.Count -gt 0 -and $Aligned -eq $RolledOut.Count
                     }
