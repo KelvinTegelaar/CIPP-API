@@ -36067,25 +36067,7 @@
                     "description": "Interact with query parameters or the body of the request."
                   },
                   "user": {
-                    "type": "object",
-                    "properties": {
-                      "x-forwarded-for": {
-                        "type": "string"
-                      },
-                      "x-ms-client-principal": {
-                        "type": "string"
-                      },
-                      "x-ms-client-principal-idp": {
-                        "type": "string",
-                        "x-cipp-observed-values": [
-                          "aad",
-                          "azureStaticWebApps"
-                        ]
-                      },
-                      "x-ms-client-principal-name": {
-                        "type": "string"
-                      }
-                    }
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -36121,10 +36103,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Exchange.Mailbox.ReadWrite",
-        "x-cipp-reads-via": [
-          "Write-LogMessage"
-        ]
+        "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
     "/api/ExecSetMailboxQuota": {
