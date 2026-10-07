@@ -59,7 +59,7 @@ function Invoke-ListMailboxes {
         if ($Minimal) {
             $Select = 'id,UserPrincipalName,DisplayName,PrimarySMTPAddress'
         } else {
-            $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,IsDirSynced,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,AutoExpandingArchiveEnabled'
+            $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,IsDirSynced,IsExchangeCloudManaged,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,AutoExpandingArchiveEnabled'
         }
         $ExoRequest = @{
             tenantid  = $TenantFilter
@@ -134,6 +134,7 @@ function Invoke-ListMailboxes {
             HiddenFromAddressListsEnabled,
             ExternalDirectoryObjectId,
             IsDirSynced,
+            IsExchangeCloudManaged,
             MessageCopyForSendOnBehalfEnabled,
             MessageCopyForSentAsEnabled,
             LitigationHoldEnabled,
