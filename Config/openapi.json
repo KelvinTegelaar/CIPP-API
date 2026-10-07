@@ -35910,6 +35910,70 @@
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
+    "/api/ExecSetMailboxCustomAttributes": {
+      "post": {
+        "summary": "ExecSetMailboxCustomAttributes",
+        "operationId": "ExecSetMailboxCustomAttributes",
+        "tags": [
+          "Email-Exchange > Administration"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Identity": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Interact with the query or body of the request"
+                  },
+                  "userid": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.ReadWrite"
+      }
+    },
     "/api/ExecSetMailboxEmailSize": {
       "post": {
         "summary": "ExecSetMailboxEmailSize",
@@ -53773,6 +53837,9 @@
                       "IsDirSynced": {
                         "x-cipp-field-source": "backend"
                       },
+                      "IsExchangeCloudManaged": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "LicensedForLitigationHold": {
                         "x-cipp-field-source": "backend"
                       },
@@ -64298,6 +64365,9 @@
                         "x-cipp-field-source": "backend"
                       },
                       "IsDirSynced": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "IsExchangeCloudManaged": {
                         "x-cipp-field-source": "backend"
                       },
                       "LicensedForLitigationHold": {
