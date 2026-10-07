@@ -792,6 +792,7 @@
                       "x-cipp-field-source": "storage"
                     },
                     "assignedTo": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "description": {
@@ -810,9 +811,11 @@
                       "x-cipp-field-source": "storage"
                     },
                     "excludedTenants": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "excludedTo": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "LocalChanges": {
@@ -841,6 +844,7 @@
                       "x-cipp-field-source": "storage"
                     },
                     "Stages": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "templateName": {
@@ -38748,6 +38752,7 @@
         "tags": [
           "Tenant > Tests"
         ],
+        "description": "Queues one or more tests for a tenant on the background workers and returns the QueueId to poll with ListCippQueue. Fresh results are in ListTests once the queue completes.",
         "requestBody": {
           "required": true,
           "content": {
@@ -38759,7 +38764,8 @@
                     "type": "string"
                   },
                   "testName": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "A test id (e.g. SecuritySimulation_MfaTampering), or an array of them to queue as one run."
                   }
                 },
                 "required": [
@@ -38776,6 +38782,7 @@
           {
             "name": "testName",
             "in": "query",
+            "description": "A test id (e.g. SecuritySimulation_MfaTampering), or an array of them to queue as one run.",
             "required": false,
             "schema": {
               "type": "string"

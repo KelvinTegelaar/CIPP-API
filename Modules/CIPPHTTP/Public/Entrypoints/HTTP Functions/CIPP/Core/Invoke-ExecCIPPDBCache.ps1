@@ -42,25 +42,9 @@ function Invoke-ExecCIPPDBCache {
             }
         }
 
-        # Validate the function exists — on HttpOnly workers CIPPDB module isn't loaded,
-        # so import it temporarily for validation (the actual execution runs on activity workers)
         $FunctionName = "Set-CIPPDBCache$Name"
-        $Function = Get-Command -Name $FunctionName -ErrorAction SilentlyContinue
-        $ImportedCIPPDB = $false
-        if (-not $Function) {
-            try {
-                if (-not (Get-Module -Name 'CIPPDB')) {
-                    Import-Module CIPPDB -ErrorAction Stop
-                    $ImportedCIPPDB = $true
-                }
-                $Function = Get-Command -Name $FunctionName -ErrorAction Stop
-            } catch {
-                throw "Cache function '$FunctionName' not found"
-            } finally {
-                if ($ImportedCIPPDB) {
-                    Remove-Module CIPPDB -ErrorAction SilentlyContinue
-                }
-            }
+        if (-not (Resolve-CIPPCommand -Name $FunctionName)) {
+            throw "Cache function '$FunctionName' not found"
         }
 
         # Create queue entry for tracking

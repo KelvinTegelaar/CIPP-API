@@ -36,6 +36,7 @@ BeforeAll {
     function Get-CIPPAlertSharepointQuota { }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-CIPPAlertLifecycleKey.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Resolve-CIPPCommand.ps1')
 
     . $FunctionPath
 
