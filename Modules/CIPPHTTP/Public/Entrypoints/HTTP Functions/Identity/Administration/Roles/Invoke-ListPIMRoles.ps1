@@ -22,6 +22,8 @@ function Invoke-ListPIMRoles {
     $UseReportDB = $Request.Query.UseReportDB -eq $true
 
     try {
+        # Tenant|roleTemplateId -> directoryRole object id; the role's SID derives from that, not the template id.
+        $RoleObjectIds = @{}
         if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {
             $CountTenant = if ($TenantFilter -eq 'AllTenants') { 'allTenants' } else { $TenantFilter }
             $Counts = @(
@@ -50,6 +52,9 @@ function Invoke-ListPIMRoles {
             $Rows = [System.Collections.Generic.List[object]]::new()
             foreach ($Tenant in $Tenants) {
                 try {
+                    foreach ($Role in @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'Roles')) {
+                        if ($Role.roleTemplateId) { $RoleObjectIds["$Tenant|$($Role.roleTemplateId)"] = $Role.id }
+                    }
                     foreach ($Row in Get-CIPPPIMRoleAssignments -TenantFilter $Tenant -FromCache -IncludePolicy -IncludeUnassignedRoles:$IncludeUnassigned) {
                         $Row | Add-Member -NotePropertyName 'LastRefreshed' -NotePropertyValue $RefreshedAt[$Tenant] -Force
                         $Rows.Add($Row)
@@ -66,6 +71,13 @@ function Invoke-ListPIMRoles {
             if (-not [string]::IsNullOrWhiteSpace($PrincipalId)) { $Params.PrincipalId = $PrincipalId }
             if (-not [string]::IsNullOrWhiteSpace($RoleTemplateId)) { $Params.RoleDefinitionId = $RoleTemplateId }
             $Rows = @(Get-CIPPPIMRoleAssignments @Params)
+            try {
+                foreach ($Role in @(New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/directoryRoles?$select=id,roleTemplateId' -tenantid $TenantFilter)) {
+                    if ($Role.roleTemplateId) { $RoleObjectIds["$TenantFilter|$($Role.roleTemplateId)"] = $Role.id }
+                }
+            } catch {
+                Write-Information "Could not list directory roles for $TenantFilter`: $($_.Exception.Message)"
+            }
         }
 
         if (-not [string]::IsNullOrWhiteSpace($PrincipalId)) { $Rows = @($Rows | Where-Object { $_.PrincipalId -eq $PrincipalId }) }
@@ -79,6 +91,7 @@ function Invoke-ListPIMRoles {
                 $Assignments = @($GroupRows | Where-Object { $_.PrincipalId })
                 $PermanentCount = @($Assignments | Where-Object { $_.AssignmentType -eq 'Permanent' }).Count
                 $EligibleCount = @($Assignments | Where-Object { $_.AssignmentType -eq 'Eligible' }).Count
+                $RoleObjectId = $RoleObjectIds["$($Meta.Tenant)|$($Meta.RoleDefinitionId)"]
                 $ActiveCount = @($Assignments | Where-Object { $_.AssignmentType -in @('Active', 'ActivatedFromEligible') }).Count
                 [PSCustomObject]@{
                     Tenant              = $Meta.Tenant
@@ -86,6 +99,7 @@ function Invoke-ListPIMRoles {
                     RoleDisplayName     = $Meta.RoleDisplayName
                     RoleDescription     = $Meta.RoleDescription
                     RoleIsBuiltIn       = $Meta.RoleIsBuiltIn
+                    SID                 = if ($RoleObjectId) { Convert-AzureAdObjectIdToSid -ObjectID $RoleObjectId } else { $null }
                     IsPrivilegedRole    = $Meta.IsPrivilegedRole
                     PIMCapable          = $Meta.PIMCapable
                     PolicySummary       = $Meta.PolicySummary

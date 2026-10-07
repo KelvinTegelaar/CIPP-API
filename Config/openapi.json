@@ -56445,7 +56445,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
                     "properties": {
                       "ActiveCount": {
                         "x-cipp-field-source": "frontend"
@@ -56453,11 +56453,27 @@
                       "AssignmentType": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "deletedDateTime": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "description": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
                       "EligibleCount": {
                         "x-cipp-field-source": "frontend"
                       },
                       "EndDateTime": {
                         "x-cipp-field-source": "frontend"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
                       },
                       "IsPrivilegedRole": {
                         "x-cipp-field-source": "frontend"
@@ -56485,6 +56501,10 @@
                       },
                       "RoleDisplayName": {
                         "x-cipp-field-source": "frontend"
+                      },
+                      "roleTemplateId": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
                       },
                       "Scope": {
                         "x-cipp-field-source": "frontend"

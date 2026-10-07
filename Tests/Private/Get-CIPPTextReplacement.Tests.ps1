@@ -18,8 +18,10 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Filter) }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Get-CIPPSchemaExtensions { }
+    function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields) }
 
     . $FunctionPath
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Tools/Convert-AzureAdObjectIdToSid.ps1')
 
     # A CippReplacemap row. Omitting -VariableType produces a row shaped like the ones that existed
     # before typing, which is what the backwards compatibility tests need.
@@ -665,6 +667,38 @@ Describe 'Get-CIPPTextReplacement' {
 
             $Twice | Should -Be $Once
             ($Twice | ConvertFrom-Json).v | Should -Be 'Contoso "HQ"'
+        }
+    }
+
+    Context 'directory role SIDs' {
+        BeforeEach {
+            $script:CachedRoles = @(
+                [pscustomobject]@{ id = '213b2724-13c2-4b72-b093-955d2e9f7320'; roleTemplateId = '62e90394-69f5-4237-9190-012177145e10' }
+            )
+            Mock -CommandName New-CIPPDbRequest -MockWith { $script:CachedRoles }
+        }
+
+        It 'resolves the role SID from the cached directoryRole object id' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"sid":"%globaladminsid%"}' -EscapeForJson |
+                Should -Be '{"sid":"S-1-12-1-557524772-1265767362-1570083760-544448302"}'
+            Should -Invoke New-CIPPDbRequest -Times 1 -Exactly -ParameterFilter { $Type -eq 'Roles' }
+        }
+
+        It 'throws instead of substituting an empty value when the role is not cached' {
+            { Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%deviceadminsid%' } |
+                Should -Throw '*%deviceadminsid%*'
+        }
+
+        It 'ignores a custom variable with the same name' {
+            $script:GlobalRows = @(New-VariableRow -Name 'globaladminsid' -Value 'S-1-12-1-1-2-3-4')
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%globaladminsid%' |
+                Should -Be 'S-1-12-1-557524772-1265767362-1570083760-544448302'
+        }
+
+        It 'does not read the cache when no role SID token is used' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%tenantname%' | Should -Be 'Contoso Ltd'
+            Should -Invoke New-CIPPDbRequest -Times 0 -Exactly
         }
     }
 }

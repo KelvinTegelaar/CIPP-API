@@ -116,7 +116,9 @@ function Get-CIPPTextReplacement {
         '%cippuserschema%',
         '%cippurl%',
         '%defaultdomain%',
-        '%organizationid%'
+        '%organizationid%',
+        '%globaladminsid%',
+        '%deviceadminsid%'
     )
 
     # The partner tenant is resolved like any other, so addressing it by ID reaches its per-tenant
@@ -211,6 +213,26 @@ function Get-CIPPTextReplacement {
         $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
         if ($Config) {
             $Text = Set-CIPPReplacementToken -Text $Text -Token '%cippurl%' -Value $Config.Value -Escape $EscapeForJson.IsPresent
+        }
+    }
+
+    if ($Text -match '%(globaladmin|deviceadmin)sid%') {
+        # A directory role's object id never changes once activated, so the Roles cache is authoritative.
+        $RoleSidTokens = @{
+            '%globaladminsid%' = '62e90394-69f5-4237-9190-012177145e10'
+            '%deviceadminsid%' = '9f06204d-73c1-4d4c-880a-6edb90606fd8'
+        }
+        $RoleObjectIds = @{}
+        foreach ($Role in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Roles' -Fields 'id', 'roleTemplateId')) {
+            if ($Role.roleTemplateId) { $RoleObjectIds[$Role.roleTemplateId] = $Role.id }
+        }
+        foreach ($Token in $RoleSidTokens.GetEnumerator()) {
+            if ($Text -notmatch $Token.Key) { continue }
+            $RoleObjectId = $RoleObjectIds[$Token.Value]
+            if (-not $RoleObjectId) {
+                throw "Cannot resolve $($Token.Key) for ${TenantFilter}: the role is not in the cached directory roles. Sync the Roles & Assignments cache and try again."
+            }
+            $Text = Set-CIPPReplacementToken -Text $Text -Token $Token.Key -Value (Convert-AzureAdObjectIdToSid -ObjectID $RoleObjectId) -Escape $EscapeForJson.IsPresent
         }
     }
     return $Text
