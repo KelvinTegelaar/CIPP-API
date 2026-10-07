@@ -100,22 +100,34 @@ function Set-CIPPSPOTenant {
             $SetProperty = [System.Collections.Generic.List[string]]::new()
             $x = 114
             foreach ($Property in $Properties.Keys) {
-                # Get property type
-                $PropertyType = $Properties[$Property].GetType().Name
-                if ($PropertyType -in $AllowedTypes) {
-                    if ($PropertyType -eq 'Boolean') {
-                        $PropertyToSet = $Properties[$Property].ToString().ToLower()
-                    } else {
-                        $PropertyToSet = $Properties[$Property]
-                    }
-                    $xml = @"
+                $Value = $Properties[$Property]
+                if ($null -eq $Value) { throw "Property '$Property' has no value" }
+
+                # Values that came through JSON arrive as Int64 (or a whole Double); CSOM only
+                # takes Int32 for numeric tenant properties, so coerce rather than drop them.
+                if ($Value -is [int64] -or $Value -is [int16] -or $Value -is [byte] -or ($Value -is [double] -and $Value -eq [math]::Truncate($Value))) {
+                    $Value = [int]$Value
+                }
+
+                $PropertyType = $Value.GetType().Name
+                if ($PropertyType -notin $AllowedTypes) {
+                    # Silently skipping leaves the caller logging success for a write that never
+                    # happened - surface it instead.
+                    throw "Property '$Property' has unsupported type '$PropertyType'. Supported: $($AllowedTypes -join ', ')"
+                }
+
+                if ($PropertyType -eq 'Boolean') {
+                    $PropertyToSet = $Value.ToString().ToLower()
+                } else {
+                    $PropertyToSet = [System.Security.SecurityElement]::Escape([string]$Value)
+                }
+                $xml = @"
     <SetProperty Id="$x" ObjectPathId="110" Name="$Property">
         <Parameter Type="$PropertyType">$($PropertyToSet)</Parameter>
     </SetProperty>
 "@
-                    $SetProperty.Add($xml)
-                    $x++
-                }
+                $SetProperty.Add($xml)
+                $x++
             }
 
             if (($SetProperty | Measure-Object).Count -eq 0) {
