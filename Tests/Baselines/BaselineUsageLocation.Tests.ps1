@@ -11,7 +11,7 @@ BeforeAll {
     function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields) }
     function Get-CIPPBaselineCacheRows { param($TenantFilter, $Type, $CollectorType, $CollectorArgs) }
     function New-GraphBulkRequest { param($tenantid, $Requests, $asapp, $Version, $scope) }
-    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineUsageLocationState.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/PrepareHooks/Get-CIPPBaselineUsageLocationState.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
     $script:Users = @(

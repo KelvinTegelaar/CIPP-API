@@ -19,17 +19,17 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineDeviceRegistrationPolicyState.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineDisableBasicAuthSMTPState.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineActivityBasedTimeoutState.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDeviceRegistrationPolicyState.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDisableBasicAuthSMTPState.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineActivityBasedTimeoutState.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
 
@@ -231,9 +231,9 @@ Describe 'Empty-but-collected caches' {
     # at No Data forever on a tenant that legitimately has nothing - the same permanent-No-Data
     # failure as the missing second cache, just triggered by an empty one.
     BeforeAll {
-        . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
-        . (Join-Path $Baselines 'Get-CIPPBaselineTeamsDisableResourceAccountsState.ps1')
-        . (Join-Path $Baselines 'Get-CIPPBaselineStaleEntraDevicesState.ps1')
+        . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineTeamsDisableResourceAccountsState.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineStaleEntraDevicesState.ps1')
         function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
     }
     BeforeEach { Mock New-CIPPDbRequest { @() } }
@@ -271,8 +271,8 @@ Describe 'Get-CIPPBaselineQuarantineRequestAlertState' {
     # address is ON the notify list. Recipients an operator added by hand are left alone.
     # An exact array compare would strip them, which is a behaviour change this must not make.
     BeforeAll {
-        . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
-        . (Join-Path $Baselines 'Get-CIPPBaselineQuarantineRequestAlertState.ps1')
+        . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineQuarantineRequestAlertState.ps1')
         function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
         $script:AlertName = 'CIPP User requested to release a quarantined message'
         $script:Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ NotifyUser = 'soc@contoso.com' } }
@@ -332,7 +332,7 @@ Describe 'Get-CIPPBaselineSafeAttachmentPolicyState' {
     # tenant already carries, remediation creates a SECOND policy instead of updating the one
     # that exists, and both then fight over the same rule.
     BeforeAll {
-        . (Join-Path $Baselines 'Get-CIPPBaselineSafeAttachmentPolicyState.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineSafeAttachmentPolicyState.ps1')
         $script:Domains = @([PSCustomObject]@{ Name = 'contoso.com' }, [PSCustomObject]@{ Name = 'contoso.mail.onmicrosoft.com' })
         function New-Item2 { param($Name, $Policy) [PSCustomObject]@{ Name = $Name; SafeAttachmentPolicy = $Policy; Priority = 0; RecipientDomainIs = @('contoso.com', 'contoso.mail.onmicrosoft.com') } }
         $script:Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{

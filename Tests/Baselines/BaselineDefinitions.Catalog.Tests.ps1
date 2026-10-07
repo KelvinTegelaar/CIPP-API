@@ -23,7 +23,7 @@ BeforeAll {
             Definition = Get-Content $_.FullName -Raw | ConvertFrom-Json
         }
     }
-    $script:BaselineFunctions = (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Baselines') -Filter '*.ps1').BaseName
+    $script:BaselineFunctions = (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules/CIPPBaselines/Public') -Filter '*.ps1' -Recurse).BaseName
     $script:CollectorFunctions = (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache') -Filter '*.ps1').BaseName
 }
 
@@ -114,7 +114,7 @@ Describe 'Baseline definition catalog' {
                 # run a template standard until every entry has been collected at least once,
                 # so those types need no collect-on-miss of their own.
                 $Declared = @("$($_.Definition.read.cacheType)") + @($_.Definition.read.requiredCaches | Where-Object { $_ })
-                $Path = Join-Path $script:RepoRoot "Modules/CIPPCore/Public/Baselines/$($_.Definition.prepare).ps1"
+                $Path = Join-Path $script:RepoRoot "Modules/CIPPBaselines/Public/PrepareHooks/$($_.Definition.prepare).ps1"
                 if (-not (Test-Path $Path)) { return }
                 $Ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$null, [ref]$null)
                 $Ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] }, $true) | ForEach-Object {
@@ -208,7 +208,7 @@ Describe 'Baseline executor contract' {
         $Executors.Count | Should -BeGreaterThan 0
 
         $Broken = @(foreach ($Executor in $Executors) {
-                $Path = Join-Path $script:RepoRoot "Modules/CIPPCore/Public/Baselines/$Executor.ps1"
+                $Path = Join-Path $script:RepoRoot "Modules/CIPPBaselines/Public/Executors/$Executor.ps1"
                 if (-not (Test-Path $Path)) { "$Executor (file missing)"; continue }
                 $Errors = $null
                 $Ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$null, [ref]$Errors)

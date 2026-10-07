@@ -5,7 +5,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
@@ -38,12 +38,12 @@ BeforeAll {
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPEnrollmentTimeDeviceMembershipTarget.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Set-CIPPEnrollmentTimeDeviceMembershipTarget.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Remove-CIPPEnrollmentTimeDeviceMembershipMarker.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
-    . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
+    . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
     foreach ($Name in @('DefenderAVPolicy', 'DefenderASRPolicy', 'DefenderEDRPolicy', 'DefenderExclusionPolicy',
             'DefenderCompliancePolicy', 'AutopilotProfile', 'DevicePrepProfile', 'DeployCheckChromeExtension', 'AppDeploy')) {
-        . (Join-Path $Baselines "Get-CIPPBaseline${Name}State.ps1")
-        . (Join-Path $Baselines "Invoke-CIPPBaseline${Name}.ps1")
+        . (Join-Path $Baselines "PrepareHooks/Get-CIPPBaseline${Name}State.ps1")
+        . (Join-Path $Baselines "Executors/Invoke-CIPPBaseline${Name}.ps1")
     }
 
     $script:Tenant = 'contoso.onmicrosoft.com'

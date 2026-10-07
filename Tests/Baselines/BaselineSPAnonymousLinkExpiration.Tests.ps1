@@ -33,7 +33,7 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineStandard.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Helpers/Invoke-CIPPBaselineStandard.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
     $script:DefinitionPath = Join-Path $script:RepoRoot 'Config/BaselineStandards/SharePoint Standards/SPAnonymousLinkExpiration.json'
@@ -168,7 +168,7 @@ Describe 'SPAnonymousLinkExpiration definition' {
 
 Describe 'SPOTenant executor wire shape' {
     BeforeAll {
-        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineSPOTenant.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Executors/Invoke-CIPPBaselineSPOTenant.ps1')
     }
 
     It 'sends the rendered properties to Set-CIPPSPOTenant as Int32 - the CSOM whitelist drops Int64 silently' {

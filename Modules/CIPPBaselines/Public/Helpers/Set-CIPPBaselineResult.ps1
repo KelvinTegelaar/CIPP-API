@@ -48,18 +48,18 @@ function Set-CIPPBaselineResult {
         SourceTemplate      = "$($Item.SourceTemplate)"
         Stage               = [int]($Item.Stage ?? 1)
         StageName           = "$($Item.StageName)"
-        ExpectedValue       = (ConvertTo-Json -Compress -Depth 100 -InputObject $Result.ExpectedValue)
-        CurrentValue        = $(if ($null -ne $Result.CurrentValue) { ConvertTo-Json -Compress -Depth 100 -InputObject $Result.CurrentValue } else { $Prior.CurrentValue ?? '' })
+        ExpectedValue       = [string](ConvertTo-Json -Compress -Depth 100 -InputObject $Result.ExpectedValue)
+        CurrentValue        = [string]$(if ($null -ne $Result.CurrentValue) { ConvertTo-Json -Compress -Depth 100 -InputObject $Result.CurrentValue } else { $Prior.CurrentValue ?? '' })
         Compliant           = [bool]$Result.Compliant
         PendingVerification = [bool]$Result.PendingVerification
         LicenseAvailable    = [bool]$Result.LicenseAvailable
-        Inheritance         = (ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.Inheritance))
+        Inheritance         = [string](ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.Inheritance))
         # The engine's per-property deviations (pre-acceptance): the frontend renders
         # these verbatim instead of re-deriving compares - single source of truth.
-        Diff                = (ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.RowDiff ?? @()))
+        Diff                = [string](ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.RowDiff ?? @()))
         # Manual tasks: the rendered task block, so the UI can show what the operator
         # must do (name, instructions, documentation link).
-        Manual              = $(if ($Result.Manual) { ConvertTo-Json -Compress -Depth 20 -InputObject $Result.Manual } else { $Prior.Manual ?? '' })
+        Manual              = [string]$(if ($Result.Manual) { ConvertTo-Json -Compress -Depth 20 -InputObject $Result.Manual } else { $Prior.Manual ?? '' })
         AcceptedPaths       = "$($Prior.AcceptedPaths ?? '{}')"
         Status              = "$($Result.Status ?? 'Drift')"
         DeviationReason     = $(if ($KeepTriage) { "$($Prior.DeviationReason)" } else { '' })
@@ -84,7 +84,7 @@ function Set-CIPPBaselineResult {
         TriggeredBy  = "$($Result.TriggeredBy)"
         Outcome      = "$($Result.Outcome)"
         Remediated   = [bool]$Result.Remediated
-        Diff         = $(if ($Result.Diff) { ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.Diff) } else { '' })
+        Diff         = [string]$(if ($Result.Diff) { ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.Diff) } else { '' })
         Detail       = "$Detail"
         # Whether this run raises an alert - the timeline shows delivery, not just drift.
         Alerted      = [bool]$Result.AlertEvent

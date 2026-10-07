@@ -27,7 +27,7 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineStandard.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Helpers/Invoke-CIPPBaselineStandard.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPActivityTriggers/Public/Entrypoints/Activity Triggers/Baselines/Push-CIPPBaselineStandard.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
@@ -151,7 +151,7 @@ Describe 'Invoke-CIPPBaselineStandard render option-unwrap' {
 
 Describe 'Invoke-CIPPBaselineGraphBulkSweep batch ids' {
     BeforeAll {
-        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineGraphBulkSweep.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Executors/Invoke-CIPPBaselineGraphBulkSweep.ps1')
         function New-GraphBulkRequest { param($tenantid, $Requests, $scope, $asapp, $Version) }
     }
 
@@ -196,7 +196,7 @@ Describe 'Get-CIPPBaselineDisableInactiveUsersState exclusions' {
         function Get-CIPPBaselineCacheRows { param($TenantFilter, $Type, $CollectorType, $CollectorArgs) }
         function Test-CIPPBaselineCacheCollected { param($TenantFilter, $Type) $true }
         function New-GraphGetRequest { param($uri, $tenantid, $AsApp, $scope) }
-        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineDisableInactiveUsersState.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/PrepareHooks/Get-CIPPBaselineDisableInactiveUsersState.ps1')
     }
 
     It 'excluded accounts are never offenders - a breakglass account must not be sweep-disabled' {
@@ -216,7 +216,7 @@ Describe 'Get-CIPPBaselineDisableInactiveUsersState exclusions' {
 Describe 'Invoke-CIPPBaselineExoPolicyRule extraPolicyParams' {
     BeforeAll {
         function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $useSystemMailbox) }
-        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineExoPolicyRule.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Executors/Invoke-CIPPBaselineExoPolicyRule.ps1')
     }
 
     It 'merges hook-derived policy params over the rendered spec - grade and write share one derivation' {
@@ -245,7 +245,7 @@ Describe 'Invoke-CIPPBaselineEnableFIDO2 passkey profile normalization' {
     BeforeAll {
         function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
         function New-GraphPostRequest { param($uri, $tenantid, $type, $body, $AsApp, $ContentType) }
-        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineEnableFIDO2.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Executors/Invoke-CIPPBaselineEnableFIDO2.ps1')
     }
 
     It 'gives profiles missing keyRestrictions the neutral shape before the PATCH - Graph validates the whole config' {
@@ -315,7 +315,7 @@ Describe 'Get-CIPPBaselineDetectCADriftState SharePoint side-effect policies' {
     BeforeAll {
         function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
         function Get-CIPPBaselineWorkItems { param($TenantFilter) }
-        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineDetectCADriftState.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/PrepareHooks/Get-CIPPBaselineDetectCADriftState.ps1')
     }
     BeforeEach {
         Mock Get-CIPPAzDataTableEntity { @() }

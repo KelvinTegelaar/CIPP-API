@@ -12,7 +12,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
@@ -30,17 +30,17 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
-    . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineSensitivityLabelTemplateState.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineRetentionCompliancePolicyTemplateState.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineSensitiveInfoTypeTemplateState.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
+    . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineSensitivityLabelTemplateState.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineRetentionCompliancePolicyTemplateState.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineSensitiveInfoTypeTemplateState.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Resolve-CIPPTransportRuleTemplate.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineTransportRuleTemplateState.ps1')
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineTransportRuleTemplate.ps1')
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineSensitivityLabelTemplate.ps1')
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineRetentionCompliancePolicyTemplate.ps1')
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineSensitiveInfoTypeTemplate.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineTransportRuleTemplateState.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineTransportRuleTemplate.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineSensitivityLabelTemplate.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineRetentionCompliancePolicyTemplate.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineSensitiveInfoTypeTemplate.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
 

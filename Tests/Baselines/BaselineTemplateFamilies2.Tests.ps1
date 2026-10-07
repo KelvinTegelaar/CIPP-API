@@ -5,7 +5,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
@@ -24,12 +24,12 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
-    . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
+    . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
     foreach ($Hook in @('AssignmentFilterTemplate', 'ReusableSettingsTemplate', 'GroupTemplate', 'ExchangeConnectorTemplate',
             'DeployContactTemplates', 'TenantAllowBlockListTemplate', 'QuarantineTemplate', 'SafeLinksTemplatePolicy')) {
-        . (Join-Path $Baselines "Get-CIPPBaseline${Hook}State.ps1")
-        . (Join-Path $Baselines "Invoke-CIPPBaseline${Hook}.ps1")
+        . (Join-Path $Baselines "PrepareHooks/Get-CIPPBaseline${Hook}State.ps1")
+        . (Join-Path $Baselines "Executors/Invoke-CIPPBaseline${Hook}.ps1")
     }
 
     $script:Tenant = 'contoso.onmicrosoft.com'

@@ -7,7 +7,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
@@ -15,8 +15,8 @@ BeforeAll {
     function New-GraphPostRequest { param($uri, $tenantid, $type, $body) }
     function Get-CippException { param($Exception) [PSCustomObject]@{ NormalizedError = "$($Exception.Exception.Message)" } }
 
-    . (Join-Path $Baselines 'Get-CIPPBaselineCreateSharedMailboxState.ps1')
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineCreateSharedMailbox.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineCreateSharedMailboxState.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineCreateSharedMailbox.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
     function ConvertTo-Cached { param([Parameter(ValueFromPipeline = $true)]$InputObject) process { $InputObject | ConvertTo-Json -Depth 10 | ConvertFrom-Json } }

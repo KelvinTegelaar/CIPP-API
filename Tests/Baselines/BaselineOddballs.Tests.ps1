@@ -5,7 +5,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
@@ -24,12 +24,12 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
-    . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
+    . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
     foreach ($Name in @('PhishProtection', 'ColleagueImpersonationAlert', 'DisableOutlookAddins',
             'RestrictThirdPartyStorageServices', 'IntuneAppTemplateDeploy', 'MFAPushApps')) {
-        . (Join-Path $Baselines "Get-CIPPBaseline${Name}State.ps1")
-        . (Join-Path $Baselines "Invoke-CIPPBaseline${Name}.ps1")
+        . (Join-Path $Baselines "PrepareHooks/Get-CIPPBaseline${Name}State.ps1")
+        . (Join-Path $Baselines "Executors/Invoke-CIPPBaseline${Name}.ps1")
     }
 
     $script:Tenant = 'contoso.onmicrosoft.com'
@@ -264,8 +264,8 @@ Describe 'Get-CIPPBaselineDlpCompliancePolicyTemplateState' {
         function Compare-CIPPDlpCompliancePolicy { param($TenantFilter, $Template) }
         function Set-CIPPDlpCompliancePolicy { param($TenantFilter, $Template, $APIName) }
         function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }
-        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineDlpCompliancePolicyTemplateState.ps1')
-        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Invoke-CIPPBaselineDlpCompliancePolicyTemplate.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/PrepareHooks/Get-CIPPBaselineDlpCompliancePolicyTemplateState.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Executors/Invoke-CIPPBaselineDlpCompliancePolicyTemplate.ps1')
         $script:DlpItem = [PSCustomObject]@{ Variables = [PSCustomObject]@{ dlpCompliancePolicyTemplate = [PSCustomObject]@{ value = 'dlp-guid-1' } } }
     }
     BeforeEach {

@@ -13,7 +13,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     # Parameter binding is case-insensitive, so one casing per name covers every call site.
     function New-GraphPostRequest { param($tenantid, $uri, $Type, $Body, $AsApp, $ContentType, $AddedHeaders) }
@@ -23,10 +23,10 @@ BeforeAll {
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Set-CIPPDBCacheUsers { param($TenantFilter) }
 
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineGraphRequest.ps1')
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineExoRequest.ps1')
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineDeviceRegistrationPolicy.ps1')
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineGraphBulkSweep.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineGraphRequest.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineExoRequest.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineDeviceRegistrationPolicy.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineGraphBulkSweep.ps1')
 
     # $batch answers one response per request, keyed by the id the caller supplied.
     function New-BulkSuccess { param($Requests) @($Requests | ForEach-Object { [PSCustomObject]@{ id = $_.id; status = 204 } }) }
@@ -418,7 +418,7 @@ Describe 'Number variable rendering' {
 
 Describe 'Invoke-CIPPBaselineExoBulkSweep' {
     BeforeAll {
-        . (Join-Path $Baselines 'Invoke-CIPPBaselineExoBulkSweep.ps1')
+        . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineExoBulkSweep.ps1')
         function New-ExoBulkRequest { param($tenantid, $cmdletArray, $useSystemMailbox, $Anchor, $NoAuthCheck, $Select, $ReturnWithCommand, [switch]$Compliance, [switch]$AsApp) }
         function Set-CIPPDBCacheMailboxes { param($TenantFilter, $Types) }
     }
@@ -497,7 +497,7 @@ Describe 'Invoke-CIPPBaselineQuarantineRequestAlert' {
     # The 'Allow extra addresses' switch decides whether the write preserves recipients it did
     # not add. Getting this wrong silently deletes somebody's notification address.
     BeforeAll {
-        . (Join-Path $Baselines 'Invoke-CIPPBaselineQuarantineRequestAlert.ps1')
+        . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineQuarantineRequestAlert.ps1')
         $script:AlertName = 'CIPP User requested to release a quarantined message'
     }
     BeforeEach {

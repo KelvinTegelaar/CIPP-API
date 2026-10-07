@@ -56,7 +56,7 @@ function Send-CIPPBaselineAlert {
                 }
             })
 
-        $RunId = if ($script:CippBaselineRunIdStorage) { $script:CippBaselineRunIdStorage.Value } else { '' }
+        $RunId = Get-CippBaselineRunContext
         $Table = Get-CippTable -tablename 'BaselineAlertQueue'
         Add-CIPPAzDataTableEntity @Table -Entity @{
             PartitionKey    = "$($Item.TenantFilter)"

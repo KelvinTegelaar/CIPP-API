@@ -7,13 +7,13 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-GraphGetRequest { param($uri, $tenantid, $scope, $AsApp) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPLastSignInDateTime.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineDisableGuestsState.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDisableGuestsState.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
     $script:Now = (Get-Date).ToUniversalTime()

@@ -5,7 +5,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
@@ -17,12 +17,12 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
-    . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
+    . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
     foreach ($Name in @('GlobalQuarantineSettings', 'GlobalQuarantineNotifications', 'UserSubmissions', 'RetentionPolicyTag',
             'SendReceiveLimitTenant', 'AddDKIM', 'RotateDKIM', 'PhishSimSpoofIntelligence', 'PhishingSimulations')) {
-        . (Join-Path $Baselines "Get-CIPPBaseline${Name}State.ps1")
-        . (Join-Path $Baselines "Invoke-CIPPBaseline${Name}.ps1")
+        . (Join-Path $Baselines "PrepareHooks/Get-CIPPBaseline${Name}State.ps1")
+        . (Join-Path $Baselines "Executors/Invoke-CIPPBaseline${Name}.ps1")
     }
 
     $script:Tenant = 'contoso.onmicrosoft.com'
@@ -289,7 +289,7 @@ Describe 'Get-CIPPBaselinePhishingSimulationsState' {
 
 Describe 'Get-CIPPBaselineSpamFilterPolicyState block-list write params' {
     BeforeAll {
-        . (Join-Path (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines') 'Get-CIPPBaselineSpamFilterPolicyState.ps1')
+        . (Join-Path (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public') 'PrepareHooks/Get-CIPPBaselineSpamFilterPolicyState.ps1')
         $script:SpamPolicy = @{ Name = 'CIPP Default Spam Filter Policy'; EnableRegionBlockList = $true; EnableLanguageBlockList = $false }
         $script:SpamRule = @{ Name = 'CIPP Default Spam Filter Policy'; State = 'Enabled'; Priority = 0; HostedContentFilterPolicy = 'CIPP Default Spam Filter Policy'; RecipientDomainIs = @('contoso.com') }
     }
