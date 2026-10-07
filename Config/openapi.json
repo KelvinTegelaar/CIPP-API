@@ -58884,8 +58884,17 @@
         "tags": [
           "Tenant > Reports"
         ],
-        "description": "Lists Microsoft 365 service health issues for a tenant: the incidents and advisories Microsoft has posted about service outages, degradations and their status, impact, affected services and timeline. For AllTenants each issue is returned once with the tenants it affects (Tenants, TenantCount). Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "description": "Lists Microsoft 365 service health issues for a tenant: the incidents and advisories Microsoft has posted about service outages, degradations and their status, impact, affected services and timeline. For AllTenants each issue is returned once with the tenants it affects (Tenants, TenantCount). Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. Pass Open=true to return only unresolved issues.",
         "parameters": [
+          {
+            "name": "Open",
+            "in": "query",
+            "description": "Set to true to return only unresolved issues (open incidents and advisories). Resolved issues carry their full post history, so this keeps the dashboard payload small.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },

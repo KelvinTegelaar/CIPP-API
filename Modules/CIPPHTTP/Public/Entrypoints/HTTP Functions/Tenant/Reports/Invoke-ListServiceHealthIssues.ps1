@@ -5,7 +5,7 @@ function Invoke-ListServiceHealthIssues {
     .ROLE
         Tenant.Administration.Read
     .DESCRIPTION
-        Lists Microsoft 365 service health issues for a tenant: the incidents and advisories Microsoft has posted about service outages, degradations and their status, impact, affected services and timeline. For AllTenants each issue is returned once with the tenants it affects (Tenants, TenantCount). Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
+        Lists Microsoft 365 service health issues for a tenant: the incidents and advisories Microsoft has posted about service outages, degradations and their status, impact, affected services and timeline. For AllTenants each issue is returned once with the tenants it affects (Tenants, TenantCount). Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. Pass Open=true to return only unresolved issues.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,6 +15,8 @@ function Invoke-ListServiceHealthIssues {
     $TenantFilter = $Request.Query.tenantFilter
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
+    # Set to true to return only unresolved issues (open incidents and advisories). Resolved issues carry their full post history, so this keeps the dashboard payload small.
+    $Open = $Request.Query.Open -eq $true
 
     if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {
         try {
@@ -29,6 +31,7 @@ function Invoke-ListServiceHealthIssues {
                 foreach ($Row in $RowsByTenant[$Tenant]) {
                     $Parsed = try { [CIPP.CippJson]::ConvertFromJson($Row.Data, $null) } catch { continue }
                     foreach ($Record in @($Parsed)) {
+                        if ($Open -and $Record.isResolved -eq $true) { continue }
                         $Entry = $ById[$Record.id]
                         if (-not $Entry) {
                             $Entry = @{ Record = $Record; Tenants = [System.Collections.Generic.List[string]]::new(); Details = [System.Collections.Generic.List[object]]::new(); CacheTimestamp = $Row.Timestamp }
@@ -67,7 +70,9 @@ function Invoke-ListServiceHealthIssues {
     }
 
     try {
-        $Results = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/issues' -tenantid $TenantFilter
+        $Uri = 'https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/issues'
+        if ($Open) { $Uri = "$Uri`?`$filter=isResolved eq false" }
+        $Results = New-GraphGetRequest -uri $Uri -tenantid $TenantFilter
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
