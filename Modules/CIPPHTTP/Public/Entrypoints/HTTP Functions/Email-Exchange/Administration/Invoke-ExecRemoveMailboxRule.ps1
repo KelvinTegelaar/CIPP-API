@@ -15,7 +15,6 @@ Function Invoke-ExecRemoveMailboxRule {
     $RuleId = $Request.Query.ruleId ?? $Request.Body.ruleId
     $Username = $Request.Query.userPrincipalName ?? $Request.Body.userPrincipalName
     $MailboxObjectId = $RuleId.Split('\\')[0]
-    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Accessed this API' -Sev 'Debug'
 
     try {
         # Remove the rule

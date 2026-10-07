@@ -46,7 +46,6 @@ function Invoke-ExecGDAPTrace {
     # Initialize API logging
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Extract query parameters
     # TenantFilter: The customer tenant ID or domain name to test access for

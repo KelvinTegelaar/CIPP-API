@@ -13,7 +13,6 @@ function Invoke-ListGraphRequest {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
     Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Debug'
 
     $CippLink = ([System.Uri]$TriggerMetadata.Headers.Referer).PathAndQuery

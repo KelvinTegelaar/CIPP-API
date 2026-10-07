@@ -11,7 +11,6 @@ Function Invoke-ExecEmailForward {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APINAME-message 'Accessed this API' -Sev 'Debug'
 
 
     $TenantFilter = $Request.Body.tenantFilter

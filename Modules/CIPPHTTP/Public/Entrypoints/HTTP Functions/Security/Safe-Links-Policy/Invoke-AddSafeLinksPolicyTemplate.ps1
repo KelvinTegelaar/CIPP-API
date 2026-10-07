@@ -9,7 +9,6 @@ Function Invoke-AddSafeLinksPolicyTemplate {
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     # Debug: Log the incoming request body
     Write-LogMessage -Headers $Headers -API $APINAME -message "Request body: $($Request.body | ConvertTo-Json -Depth 5 -Compress)" -Sev Debug

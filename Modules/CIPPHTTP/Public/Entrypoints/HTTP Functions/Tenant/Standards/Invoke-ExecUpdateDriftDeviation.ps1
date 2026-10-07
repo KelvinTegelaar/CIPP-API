@@ -9,7 +9,6 @@ function Invoke-ExecUpdateDriftDeviation {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -Headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     function Find-CIPPTagBundleEntry {
         param($Entries, $TemplateId, $TemplatePartition)

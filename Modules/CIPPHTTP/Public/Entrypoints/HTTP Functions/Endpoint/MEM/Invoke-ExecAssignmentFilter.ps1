@@ -9,9 +9,6 @@ function Invoke-ExecAssignmentFilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     $TenantFilter = $Request.Query.TenantFilter ?? $Request.Body.tenantFilter
 

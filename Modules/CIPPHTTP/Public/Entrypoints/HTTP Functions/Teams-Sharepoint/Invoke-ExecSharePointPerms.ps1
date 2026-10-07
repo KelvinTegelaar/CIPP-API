@@ -10,7 +10,6 @@ Function Invoke-ExecSharePointPerms {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
     $TenantFilter = $Request.Body.tenantFilter
 

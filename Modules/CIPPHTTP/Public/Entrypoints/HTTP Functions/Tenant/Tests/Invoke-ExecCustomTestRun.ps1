@@ -17,7 +17,6 @@ function Invoke-ExecCustomTestRun {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = 'allTenants'
     try {

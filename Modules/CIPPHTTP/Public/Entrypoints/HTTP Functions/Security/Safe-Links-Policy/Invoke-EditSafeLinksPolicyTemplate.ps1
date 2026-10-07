@@ -12,7 +12,6 @@ function Invoke-EditSafeLinksPolicyTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     try {
         $ID = $Request.Body.ID

@@ -12,7 +12,6 @@ Function Invoke-CreateSafeLinksPolicyTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     try {
         $GUID = (New-Guid).GUID

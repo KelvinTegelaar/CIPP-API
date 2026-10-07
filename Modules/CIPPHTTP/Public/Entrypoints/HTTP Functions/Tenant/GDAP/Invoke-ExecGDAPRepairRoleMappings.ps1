@@ -10,7 +10,6 @@ function Invoke-ExecGDAPRepairRoleMappings {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Results = [System.Collections.Generic.List[object]]::new()
 

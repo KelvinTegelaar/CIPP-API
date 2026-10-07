@@ -9,14 +9,11 @@ function Invoke-ExecSetMailboxCustomAttributes {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
 
     # Interact with the query or body of the request
     $TenantFilter = $Request.Body.tenantFilter
     $Identity = $Request.Body.Identity
     $UserPrincipalName = $Request.Body.userid
-
-    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Accessed this API' -Sev 'Debug'
 
     $CmdParams = @{
         Identity = $Identity

@@ -9,7 +9,6 @@ function Invoke-DeleteTestReport {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $ReportId = $Request.Body.ReportId

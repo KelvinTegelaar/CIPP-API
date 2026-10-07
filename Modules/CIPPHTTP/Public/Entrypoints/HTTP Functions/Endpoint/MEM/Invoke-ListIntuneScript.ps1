@@ -10,10 +10,6 @@ function Invoke-ListIntuneScript {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
-
     $TenantFilter = $Request.Query.tenantFilter
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
@@ -124,7 +120,6 @@ function Invoke-ListIntuneScript {
         Write-Host "$scriptId scripts count: $($scripts.Count)"
         $Results.AddRange(@($scripts))
     }
-
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

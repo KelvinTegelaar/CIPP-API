@@ -10,7 +10,6 @@ Function Invoke-RemoveTenantAllowBlockListTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
     $ID = $Request.query.ID ?? $Request.body.ID
     try {

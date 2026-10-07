@@ -10,8 +10,6 @@ function Invoke-ListCippQueue {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
-
     $QueueData = Get-CIPPQueueData -Request $Request -TriggerMetadata $TriggerMetadata
 
     return ([HttpResponseContext]@{

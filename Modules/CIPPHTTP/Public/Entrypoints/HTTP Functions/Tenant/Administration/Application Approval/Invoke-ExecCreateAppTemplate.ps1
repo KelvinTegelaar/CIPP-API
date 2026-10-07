@@ -11,7 +11,6 @@ function Invoke-ExecCreateAppTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -headers $Request.headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $TenantFilter = $Request.Body.TenantFilter

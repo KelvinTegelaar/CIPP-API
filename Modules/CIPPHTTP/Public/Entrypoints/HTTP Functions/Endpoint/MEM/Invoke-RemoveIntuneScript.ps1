@@ -10,7 +10,6 @@ function Invoke-RemoveIntuneScript {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Body.TenantFilter

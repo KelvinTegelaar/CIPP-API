@@ -10,7 +10,6 @@ function Invoke-AddTenantAllowBlockListTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
     try {
         $GUID = (New-Guid).GUID

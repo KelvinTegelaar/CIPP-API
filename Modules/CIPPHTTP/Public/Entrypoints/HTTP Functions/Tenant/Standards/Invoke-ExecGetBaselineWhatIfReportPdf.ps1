@@ -18,7 +18,6 @@ function Invoke-ExecGetBaselineWhatIfReportPdf {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
         # Required. The tenant (default domain) to report on.

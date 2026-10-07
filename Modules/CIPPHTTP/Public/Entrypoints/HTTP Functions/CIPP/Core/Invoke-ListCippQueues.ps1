@@ -24,8 +24,6 @@ function Invoke-ListCippQueues {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
-
     $RawIds = $Request.Query.QueueIds ?? $Request.Body.QueueIds
     $QueueIds = @($RawIds -split ',' | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
 

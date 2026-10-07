@@ -10,7 +10,6 @@ function Invoke-ExecModifyMBPerms {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Extract mailbox requests - handle all three formats
     $MailboxRequests = $null

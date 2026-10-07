@@ -15,7 +15,6 @@ function Invoke-ExecGetReportBuilderPdf {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
         # The generated report's GUID.

@@ -155,7 +155,7 @@ function New-CippCoreRequest {
 
             try {
                 Write-Debug "Access: $Access"
-                Write-LogMessage -headers $Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
+                Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
                 if ($Access) {
                     # Prepare telemetry metadata for HTTP API call
                     $metadata = @{

@@ -10,7 +10,6 @@ function Invoke-RemoveContactTemplates {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
     $ID = $Request.Query.ID ?? $Request.Body.ID
 
     try {

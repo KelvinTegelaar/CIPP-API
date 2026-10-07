@@ -10,7 +10,6 @@ function Invoke-AddTransportRule {
 
     $APIName = $Request.Params.CIPPEndpoint
     $ExecutingUser = $Request.Headers
-    Write-LogMessage -Headers $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, HasSenderOverride, ExceptIfHasSenderOverride, ExceptIfMessageContainsDataClassifications, MessageContainsDataClassifications
 

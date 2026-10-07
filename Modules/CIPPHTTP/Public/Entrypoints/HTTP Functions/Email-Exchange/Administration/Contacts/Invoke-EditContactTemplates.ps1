@@ -9,7 +9,6 @@ function Invoke-EditContactTemplates {
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
     Write-Host ($request | ConvertTo-Json -Depth 10 -Compress)
 
     try {

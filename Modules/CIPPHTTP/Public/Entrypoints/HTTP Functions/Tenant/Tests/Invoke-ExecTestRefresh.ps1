@@ -10,7 +10,6 @@ function Invoke-ExecTestRefresh {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     # A test id (e.g. SecuritySimulation_MfaTampering), or an array of them to queue as one run.

@@ -9,7 +9,6 @@ Function Invoke-ExecSetMailboxQuota {
     param($Request, $TriggerMetadata)
     try {
         $APIName = $Request.Params.CIPPEndpoint
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
         $Username = $request.body.user
         $Tenantfilter = $request.body.tenantfilter
         $quota = $Request.body.quota

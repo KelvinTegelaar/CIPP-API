@@ -9,7 +9,6 @@ Function Invoke-ExecAssignAPDevice {
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
     $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantFilter = $Request.body.tenantFilter
 
 

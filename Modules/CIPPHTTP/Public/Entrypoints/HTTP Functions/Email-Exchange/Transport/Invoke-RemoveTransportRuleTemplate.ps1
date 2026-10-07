@@ -10,7 +10,6 @@ function Invoke-RemoveTransportRuleTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $ID = $request.query.ID ?? $request.body.ID
     try {

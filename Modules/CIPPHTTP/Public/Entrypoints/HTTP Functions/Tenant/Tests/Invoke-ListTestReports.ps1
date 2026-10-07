@@ -13,7 +13,6 @@ function Invoke-ListTestReports {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
         # Get reports from JSON files in test folders

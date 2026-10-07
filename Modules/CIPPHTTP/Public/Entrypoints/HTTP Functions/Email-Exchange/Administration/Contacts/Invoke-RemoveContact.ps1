@@ -10,7 +10,6 @@ Function Invoke-RemoveContact {
 
     $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $GUID = $Request.query.GUID ?? $Request.body.GUID
