@@ -10,7 +10,7 @@ BeforeAll {
     function New-CIPPDbRequest { param($TenantFilter, $Type) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
-    function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $useSystemMailbox) }
+    function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor) }
     function New-ExoBulkRequest { param($tenantid, $cmdletArray, $useSystemMailbox, $ReturnWithCommand) }
     function Get-CIPPTextReplacement { param($TenantFilter, $Text) $Text }
     function Get-NormalizedError { param($Message) "$Message" }
@@ -337,5 +337,59 @@ Describe 'Get-CIPPBaselineSpamFilterPolicyState block-list write params' {
         $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
         $Prepared.Expected.bulkMovesEnabled | Should -BeExactly 'On'
         $Prepared.Current.extraPolicyParams.BulkMovesEnabled | Should -BeExactly 'On'
+    }
+}
+
+Describe 'Get-CIPPBaselineMailboxDefaultAuditSetState' {
+    BeforeAll {
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/PrepareHooks/Get-CIPPBaselineMailboxDefaultAuditSetState.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Executors/Invoke-CIPPBaselineMailboxDefaultAuditSet.ps1')
+        $script:AuditMailboxes = @(
+            @{ UPN = 'default@contoso.com'; recipientTypeDetails = 'UserMailbox'; DefaultAuditSet = @('Admin', 'Delegate', 'Owner') }
+            @{ UPN = 'owner@contoso.com'; recipientTypeDetails = 'UserMailbox'; DefaultAuditSet = @('Admin', 'Delegate') }
+            @{ UPN = 'shared@contoso.com'; recipientTypeDetails = 'SharedMailbox'; DefaultAuditSet = @() }
+            @{ UPN = 'room@contoso.com'; recipientTypeDetails = 'RoomMailbox'; DefaultAuditSet = @('Owner') }
+            @{ UPN = 'discovery@contoso.com'; recipientTypeDetails = 'DiscoveryMailbox'; DefaultAuditSet = @() }
+        ) | ConvertTo-Cached
+    }
+
+    It 'offends every mailbox type it can write that is missing any default sign-in type' {
+        Mock New-CIPPDbRequest { $script:AuditMailboxes }
+        $Prepared = Get-CIPPBaselineMailboxDefaultAuditSetState -Item ([PSCustomObject]@{}) -TenantFilter $script:Tenant
+        $Prepared.Current.offenders | Should -Be @('owner@contoso.com', 'room@contoso.com', 'shared@contoso.com')
+        (Get-Verdict -Expected ([PSCustomObject]@{ offenders = @() }) -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'is compliant when every mailbox still uses the default set' {
+        Mock New-CIPPDbRequest { @($script:AuditMailboxes[0]) }
+        $Prepared = Get-CIPPBaselineMailboxDefaultAuditSetState -Item ([PSCustomObject]@{}) -TenantFilter $script:Tenant
+        (Get-Verdict -Expected ([PSCustomObject]@{ offenders = @() }) -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'reports No Data when the cache is empty' {
+        Mock New-CIPPDbRequest { @() }
+        (Get-CIPPBaselineMailboxDefaultAuditSetState -Item ([PSCustomObject]@{}) -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
+
+    It 'writes Set-Mailbox -DefaultAuditSet Admin,Delegate,Owner anchored to each mailbox' {
+        # A system-mailbox anchor fails with CmdletProxyNotAvailableException for mailboxes hosted elsewhere.
+        Mock New-ExoRequest {}
+        $Current = [PSCustomObject]@{ targets = @([PSCustomObject]@{ id = 'a@contoso.com' }, [PSCustomObject]@{ id = 'b@contoso.com' }) }
+        Invoke-CIPPBaselineMailboxDefaultAuditSet -Remediate $null -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-ExoRequest -Times 2
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter {
+            $cmdlet -eq 'Set-Mailbox' -and $Anchor -eq 'b@contoso.com' -and $cmdParams.Identity -eq 'b@contoso.com' -and
+            ($cmdParams.DefaultAuditSet -join ',') -eq 'Admin,Delegate,Owner'
+        }
+    }
+
+    It 'continues past a failed mailbox and throws only when every write failed' {
+        Mock Write-LogMessage {}
+        Mock New-ExoRequest { if ($Anchor -eq 'a@contoso.com') { throw 'proxy' } }
+        $Current = [PSCustomObject]@{ targets = @([PSCustomObject]@{ id = 'a@contoso.com' }, [PSCustomObject]@{ id = 'b@contoso.com' }) }
+        { Invoke-CIPPBaselineMailboxDefaultAuditSet -Remediate $null -TenantFilter $script:Tenant -Current $Current } | Should -Not -Throw
+        Should -Invoke New-ExoRequest -Times 2
+        Mock New-ExoRequest { throw 'proxy' }
+        { Invoke-CIPPBaselineMailboxDefaultAuditSet -Remediate $null -TenantFilter $script:Tenant -Current $Current } | Should -Throw '*all 2 writes failed*'
     }
 }

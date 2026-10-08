@@ -1,0 +1,37 @@
+{
+  "name": "MailboxDefaultAuditSet",
+  "label": "Reset mailbox audit actions to the Microsoft defaults",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Resets mailboxes with customised audit actions back to the Microsoft-managed default audit set for the Admin, Delegate and Owner sign-in types.",
+  "executiveText": "Ensures every mailbox records the full set of Microsoft-recommended audit events. Attackers and misconfiguration can trim the actions a mailbox audits, hiding activity during a compromise; this restores the defaults so investigations have complete audit trails.",
+  "docsDescription": "Finds user, shared and resource mailboxes whose DefaultAuditSet no longer contains Admin, Delegate and Owner - meaning the audited actions for that sign-in type were customised - and runs Set-Mailbox -DefaultAuditSet Admin,Delegate,Owner on them. Microsoft then manages the audited actions, including new actions it adds over time.",
+  "impactColour": "info",
+  "addedDate": "2026-10-09",
+  "powershellEquivalent": "Set-Mailbox -DefaultAuditSet Admin,Delegate,Owner",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineMailboxDefaultAuditSetState",
+  "remediate": {
+    "executor": "MailboxDefaultAuditSet"
+  }
+}
