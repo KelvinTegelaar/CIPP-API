@@ -128,8 +128,9 @@ function New-CIPPIntuneTemplate {
                 Write-Information "Checking for encrypted OMA settings in policy: $($Template.displayName)"
                 $Template = Get-CIPPOmaSettingDecryptedValue -DeviceConfiguration $Template -DeviceConfigurationId $ID -TenantFilter $TenantFilter
                 # The decrypt helper is best-effort and leaves Intune's placeholder behind on failure. No
-                # tenant accepts that on create, so refuse to store a template that can never deploy.
-                $EncryptedOma = @($Template.omaSettings | Where-Object { $_.secretReferenceValueId -or $_.isEncrypted -eq $true -or $_.value -eq 'PGEvPg==' })
+                # tenant accepts that on create, so refuse to store a template that can never deploy. The value is
+                # compared as a string: a boolean setting carries $true, and $true -eq 'PGEvPg==' is $true in PowerShell.
+                $EncryptedOma = @($Template.omaSettings | Where-Object { $_.secretReferenceValueId -or $_.isEncrypted -eq $true -or "$($_.value)" -eq 'PGEvPg==' })
                 if ($EncryptedOma.Count -gt 0) {
                     throw "Could not decrypt OMA-URI setting(s) '$($EncryptedOma.displayName -join "', '")', template not saved. Check the logbook, and that CIPP has DeviceManagementConfiguration.Read.All on the tenant."
                 }
