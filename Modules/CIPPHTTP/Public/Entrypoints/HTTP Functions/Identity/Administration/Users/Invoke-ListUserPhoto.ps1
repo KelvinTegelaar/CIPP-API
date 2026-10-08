@@ -33,6 +33,12 @@ Function Invoke-ListUserPhoto {
     )
 
     $ImageData = New-GraphBulkRequest -Requests $Requests -tenantid $tenantFilter -NoAuthCheck $true
+    if ($ImageData.status -ne 200 -or $ImageData.body -isnot [string]) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::NotFound
+                Body       = 'No photo found for this user'
+            })
+    }
     #convert body from base64 to byte array
     $Body = [Convert]::FromBase64String($ImageData.body)
 

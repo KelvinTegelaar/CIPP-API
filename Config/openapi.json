@@ -25572,6 +25572,10 @@
                     },
                     "description": "Enforce the caller's allowed JIT roles (from the JIT Role Template on their custom role). Get-CIPPJITAdminAllowedRoles is authoritative and fails closed for restricted callers, so we trust its result rather than swallowing errors here."
                   },
+                  "ApprovalRequestId": {
+                    "type": "string",
+                    "description": "Set by ExecJITAdminRequestDecision once a request has its approvals"
+                  },
                   "Domain": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
@@ -25588,7 +25592,10 @@
                     "type": "string"
                   },
                   "GroupMemberships": {
-                    "$ref": "#/components/schemas/LabelValue"
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
                   },
                   "LastName": {
                     "type": "string"
@@ -25596,7 +25603,7 @@
                   "PostExecution": {
                     "type": "boolean"
                   },
-                  "reason": {
+                  "Reason": {
                     "type": "string"
                   },
                   "StartDate": {
@@ -25620,6 +25627,78 @@
                   "UseTAP": {
                     "type": "string",
                     "description": "Region TAP creation"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ],
+                "additionalProperties": true,
+                "x-cipp-passthrough": true,
+                "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
+    "/api/ExecJITAdminRequestDecision": {
+      "post": {
+        "summary": "Approve or reject a pending JIT Admin request",
+        "operationId": "ExecJITAdminRequestDecision",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Records an approval or rejection on a pending JIT Admin request. The approver must hold one of the configured approver roles and cannot approve their own request. Any rejection ends the request; once the required number of approvals is reached the request is provisioned.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Decision": {
+                    "type": "string",
+                    "enum": [
+                      "Approve",
+                      "Reject"
+                    ]
+                  },
+                  "Note": {
+                    "type": "string",
+                    "description": "Required when rejecting; sent to the requester"
+                  },
+                  "RequestId": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -25675,8 +25754,29 @@
                   "Action": {
                     "type": "string"
                   },
+                  "ApprovalTriggerRoles": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Roles that need approval; none selected means every JIT Admin request needs approval"
+                  },
+                  "ApproverRoles": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "CIPP roles whose users can approve requests"
+                  },
                   "MaxDuration": {
                     "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "RequireApproval": {
+                    "type": "boolean"
+                  },
+                  "RequiredApprovals": {
+                    "type": "integer"
                   }
                 }
               }
@@ -52575,6 +52675,153 @@
         "x-cipp-role": "Identity.Role.Read"
       }
     },
+    "/api/ListJITAdminRequests": {
+      "get": {
+        "summary": "List JIT Admin approval requests",
+        "operationId": "ListJITAdminRequests",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Lists JIT Admin requests that went through the approval flow, with their decisions and whether the calling user can approve them.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "Approvals": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "ApproverRoles": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend"
+                      },
+                      "CanApprove": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "CanReject": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Decisions": {
+                        "x-cipp-field-source": "storage,backend"
+                      },
+                      "EndDate": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GroupIds": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GroupNames": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Groups": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Reason": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "RequestBody": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "RequestedAt": {
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "RequestedBy": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "RequesterHeaders": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "RequestId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "RequiredApprovals": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Results": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend"
+                      },
+                      "RoleIds": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "RoleNames": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Roles": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "RowKey": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "StartDate": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "State": {
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "TargetUser": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "Tenant": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read"
+      }
+    },
     "/api/ListJITAdminTemplates": {
       "get": {
         "summary": "ListJITAdminTemplates",
@@ -64978,6 +65225,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
           }
         },
         "security": [
