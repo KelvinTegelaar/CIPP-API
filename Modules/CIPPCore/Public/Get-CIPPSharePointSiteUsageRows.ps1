@@ -85,7 +85,7 @@ function Get-CIPPSharePointSiteUsageRows {
     $ArchiveByUrl = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
     if ($IncludeArchive) {
         try {
-            foreach ($SpoSite in @(Get-CIPPSPOSite -TenantFilter $TenantFilter)) {
+            foreach ($SpoSite in @(Get-CIPPSPOSite -TenantFilter $TenantFilter -UseCertificate)) {
                 if ([string]::IsNullOrWhiteSpace($SpoSite.Url)) { continue }
                 $ArchiveByUrl[$SpoSite.Url.TrimEnd('/').ToLowerInvariant()] = @{
                     archivedFileDiskUsedBytes = $SpoSite.ArchivedFileDiskUsed

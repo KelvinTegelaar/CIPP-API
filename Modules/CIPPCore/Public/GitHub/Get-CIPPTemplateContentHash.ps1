@@ -31,12 +31,12 @@ function Get-CIPPTemplateContentHash {
         if ($null -eq $Value) { return $null }
 
         if ($Value -is [System.Collections.IEnumerable] -and $Value -isnot [string]) {
-            return @($Value | ForEach-Object { Get-CIPPCanonicalValue -Value $_ })
+            return @(foreach ($Item in $Value) { Get-CIPPCanonicalValue -Value $Item })
         }
 
-        if ($Value -is [PSCustomObject] -or $Value -is [System.Collections.IDictionary]) {
+        if ($Value -is [System.Management.Automation.PSCustomObject] -or $Value -is [System.Collections.IDictionary]) {
             $Ordered = [ordered]@{}
-            $Keys = @(if ($Value -is [System.Collections.IDictionary]) { $Value.Keys } else { $Value.PSObject.Properties.Name })
+            $Keys = @(if ($Value -is [System.Collections.IDictionary]) { $Value.Keys } else { foreach ($Property in $Value.PSObject.Properties) { $Property.Name } })
             [array]::Sort($Keys, [System.StringComparer]::Ordinal)
             foreach ($Key in $Keys) {
                 if ($Key -in @('tenantFilter', 'excludedTenants', 'updatedAt', 'updatedBy', 'createdAt')) { continue }
