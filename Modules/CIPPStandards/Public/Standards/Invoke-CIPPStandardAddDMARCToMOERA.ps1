@@ -90,7 +90,7 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DMARC record is already set for all MOERA (onmicrosoft.com) domains.' -sev Info
         } else {
             $UniqueDomains = ($CurrentInfo | Sort-Object -Property DomainName -Unique)
-            $NotSetDomains = @($UniqueDomains | ForEach-Object { if ($_.Match -eq $false -or ($CurrentInfo | Where-Object -Property DomainName -EQ $_.DomainName).Count -eq 1) { $_.DomainName } })
+            $NotSetDomains = @($UniqueDomains | Where-Object -Property Match -EQ $false | ForEach-Object { $_.DomainName })
             $Message = "DMARC record is not set for $($NotSetDomains.count) of $($UniqueDomains.count) MOERA (onmicrosoft.com) domains."
 
             Write-StandardsAlert -message $Message -object @{MissingDMARC = ($NotSetDomains -join ', ') } -tenant $tenant -standardName 'AddDMARCToMOERA' -standardId $Settings.standardId

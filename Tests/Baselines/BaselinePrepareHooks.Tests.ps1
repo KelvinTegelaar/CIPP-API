@@ -395,3 +395,44 @@ Describe 'Get-CIPPBaselineSafeAttachmentPolicyState' {
         $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'redirectAddress'
     }
 }
+
+Describe 'Get-CIPPBaselineAddDMARCToMOERAState' {
+    # The MoeraDmarc cache holds one row per domain; a declarative read only graded the first.
+    BeforeAll {
+        . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineAddDMARCToMOERAState.ps1')
+        function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
+        $script:Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ RecordValue = 'v=DMARC1; p=reject;' } }
+    }
+    BeforeEach { Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'MoeraDmarc-Count'; DataCount = 1 } } }
+
+    It 'names only the non-compliant domain, including one that is not first' {
+        Mock New-CIPPDbRequest {
+            @(
+                @{ domain = 'a.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1; p=reject;' }
+                @{ domain = 'b.onmicrosoft.com'; hasDmarc = $false; record = $null }
+                @{ domain = 'c.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1; p=none;' }
+            ) | ConvertTo-Cached
+        }
+        $Prepared = Get-CIPPBaselineAddDMARCToMOERAState -Item $script:Item -TenantFilter $script:Tenant
+        $Prepared.Current.domainsWithoutDmarc | Should -Be @('b.onmicrosoft.com', 'c.onmicrosoft.com')
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'is compliant when every domain matches' {
+        Mock New-CIPPDbRequest {
+            @(
+                @{ domain = 'a.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1; p=reject;' }
+                @{ domain = 'b.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1; p=reject;' }
+            ) | ConvertTo-Cached
+        }
+        $Prepared = Get-CIPPBaselineAddDMARCToMOERAState -Item $script:Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'reports a null Current when the cache was never collected' {
+        Mock New-CIPPDbRequest { @() }
+        Mock Get-CIPPDbItem { $null }
+        (Get-CIPPBaselineAddDMARCToMOERAState -Item $script:Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
+}
