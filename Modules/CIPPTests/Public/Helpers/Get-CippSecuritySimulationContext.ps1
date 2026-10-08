@@ -119,6 +119,19 @@ function Get-CippSecuritySimulationContext {
                 }
                 $Candidates = $Expanded
             }
+            # Expected paths fed by a secure list: one grade shows the tenant's value there, so it is checked against the
+            # list instead of re-grading per candidate. Prepare-hook standards have no such path and try each candidate.
+            $ListPaths = @{}
+            $Pending = [System.Collections.Generic.Queue[object]]::new()
+            $Pending.Enqueue(@($Definition.expected, ''))
+            while ($Pending.Count -gt 0) {
+                $Node, $Path = $Pending.Dequeue()
+                if ($Node -is [System.Management.Automation.PSCustomObject]) {
+                    foreach ($Property in $Node.PSObject.Properties) { $Pending.Enqueue(@($Property.Value, $(if ($Path) { "$Path.$($Property.Name)" } else { $Property.Name }))) }
+                } elseif ($Node -is [string] -and $Node -match '^%(\w+)%$' -and $Reference.secure -and @($Reference.secure.($Matches[1])).Count -gt 1) {
+                    $ListPaths[$Path] = @($Reference.secure.($Matches[1]))
+                }
+            }
             try {
                 $FirstDiff = $null
                 foreach ($Candidate in $Candidates) {
@@ -148,7 +161,21 @@ function Get-CippSecuritySimulationContext {
                         $State.compliant = $true
                         break
                     }
-                    $FirstDiff ??= @($Graded.Diff | ForEach-Object { $_.Property } | Where-Object { $_ } | Select-Object -Unique)
+                    # A declarative standard with nothing read has no data; prepare-hook results never carry a current value.
+                    if ($null -eq $Graded.CurrentValue -and $null -ne $Definition.expected -and -not $Definition.prepare) {
+                        $State.status = 'No data'
+                        $State.compliant = $null
+                        $State.detail = 'The tenant cache holds no value for this setting yet.'
+                        break
+                    }
+                    $Diffs = @($Graded.Diff | Where-Object { $_ })
+                    if ($Diffs.Count -gt 0 -and @($Diffs | Where-Object { -not ($ListPaths.ContainsKey("$($_.Property)") -and $ListPaths["$($_.Property)"] -contains $_.ReceivedValue) }).Count -eq 0) {
+                        $State.status = 'Compliant'
+                        $State.compliant = $true
+                        break
+                    }
+                    $FirstDiff ??= @($Diffs | ForEach-Object { $_.Property } | Where-Object { $_ } | Select-Object -Unique)
+                    if ($ListPaths.Count -gt 0) { break }
                 }
                 if ($State.compliant -eq $false -and $State.status -eq 'Not configured') {
                     if ("$($Row.Status)" -match '^(Accepted|Partially Accepted)$') {

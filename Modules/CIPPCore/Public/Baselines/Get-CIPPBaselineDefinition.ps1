@@ -10,7 +10,8 @@ function Get-CIPPBaselineDefinition {
     [CmdletBinding()]
     param($Name)
 
-    # Definition files ship with the app, so the folder is listed once per worker instead of on every call.
+    # Definition files ship with the app, so they are listed and read once per worker; each call still parses fresh objects.
+    $script:CippBaselineDefinitionText ??= @{}
     if (-not $script:CippBaselineDefinitionFiles) {
         $DefinitionsPath = Join-Path $env:CIPPRootPath 'Config/BaselineStandards'
         $script:CippBaselineDefinitionFiles = @(Get-ChildItem -Path $DefinitionsPath -Filter '*.json' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
@@ -22,7 +23,8 @@ function Get-CIPPBaselineDefinition {
 
     foreach ($File in $Files) {
         try {
-            [System.IO.File]::ReadAllText($File) | ConvertFrom-Json -ErrorAction Stop
+            $script:CippBaselineDefinitionText[$File] ??= [System.IO.File]::ReadAllText($File)
+            $script:CippBaselineDefinitionText[$File] | ConvertFrom-Json -ErrorAction Stop
         } catch {
             Write-Information "Get-CIPPBaselineDefinition: failed to parse $([System.IO.Path]::GetFileName($File)): $($_.Exception.Message)"
         }
