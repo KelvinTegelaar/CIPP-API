@@ -17,11 +17,20 @@ function Get-CIPPCAWhatIfVerdict {
     $Satisfiable = @($AttackerCanSatisfy | Where-Object { $_ } | ForEach-Object { "$_".ToLower() })
     $Policies = @($Policies | Where-Object { $_ })
 
+    # A strength that allows any non-phishing-resistant combination (e.g. built-in "Multifactor authentication") is plain MFA.
+    $PhishingResistantMethods = @('windowsHelloForBusiness', 'fido2', 'x509CertificateMultiFactor', 'x509CertificateSingleFactor')
     $ControlsOf = {
         param($Policy)
         $List = [System.Collections.Generic.List[string]]::new()
         foreach ($Control in @($Policy.grantControls.builtInControls | Where-Object { $_ })) { $List.Add("$Control") }
-        if ($Policy.grantControls.authenticationStrength) { $List.Add('authenticationStrength') }
+        $Strength = $Policy.grantControls.authenticationStrength
+        if ($Strength) {
+            $Combinations = @($Strength.allowedCombinations | Where-Object { $_ })
+            $PlainMfa = "$($Strength.id)" -ne '00000000-0000-0000-0000-000000000004' -and
+                @($Combinations | Where-Object { @("$_" -split ',' | Where-Object { $_ -and $PhishingResistantMethods -notcontains $_.Trim() }).Count -gt 0 }).Count -gt 0
+            $Control = if ($PlainMfa) { 'mfa' } else { 'authenticationStrength' }
+            if (-not $List.Contains($Control)) { $List.Add($Control) }
+        }
         @($List)
     }
 

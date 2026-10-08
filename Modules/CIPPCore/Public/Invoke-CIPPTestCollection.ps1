@@ -178,6 +178,12 @@ function Invoke-CIPPTestCollection {
     $Table = Get-CippTable -tablename 'CippTestResults'
     $ResultBatch = [System.Collections.Generic.List[hashtable]]::new()
 
+    # A suite can share per-tenant work across its tests: Initialize-CippTestSuite<Suite> runs first, Clear-CippTestSuite<Suite> last.
+    $SuiteSetup = Get-Command -Name "Initialize-CippTestSuite$SuiteName" -Module CIPPTests -ErrorAction SilentlyContinue
+    if ($SuiteSetup) {
+        try { & $SuiteSetup -Tenant $TenantFilter } catch { Write-Information "  [$SuiteName] Suite setup failed, tests run without it: $($_.Exception.Message)" }
+    }
+
     foreach ($TestFunction in $TestFunctions) {
         $ItemStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
@@ -201,6 +207,8 @@ function Invoke-CIPPTestCollection {
             $Timings.Add(('{0} : {1:N3}s (FAILED)' -f $TestFunction.Name, $ItemStopwatch.Elapsed.TotalSeconds))
         }
     }
+
+    if ($SuiteSetup) { & (Get-Command -Name "Clear-CippTestSuite$SuiteName" -Module CIPPTests) }
 
     # Final flush
     if ($ResultBatch.Count -gt 0) {

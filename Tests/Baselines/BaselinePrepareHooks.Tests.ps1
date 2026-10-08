@@ -22,6 +22,7 @@ BeforeAll {
     $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type) }
+    function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
@@ -190,6 +191,14 @@ Describe 'Get-CIPPBaselineCacheRows' {
         $Rows = @(Get-CIPPBaselineCacheRows -TenantFilter $script:Tenant -Type 'ProbeType')
         Should -Invoke Set-CIPPDBCacheProbeType -Times 1
         $Rows.Count | Should -Be 1
+    }
+
+    It 'does not re-collect a type that was collected and is genuinely empty' {
+        Mock New-CIPPDbRequest { @() }
+        Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'ProbeType-Count'; DataCount = 0 } }
+        Mock Set-CIPPDBCacheProbeType {}
+        @(Get-CIPPBaselineCacheRows -TenantFilter $script:Tenant -Type 'ProbeType').Count | Should -Be 0
+        Should -Invoke Set-CIPPDBCacheProbeType -Times 0
     }
 
     It 'passes collector arguments through, so an umbrella collector is not run at full fan-out' {

@@ -23,7 +23,8 @@
           "devicePlatform": "windows",
           "deviceInfo": {
             "isCompliant": false
-          }
+          },
+          "includeApplications": ["c44b4083-3bb0-49c1-b47d-974e53cbdf3c"]
         },
         "gaps": [
           {
@@ -31,7 +32,7 @@
             "text": "Admins are not required to use a compliant device, so any machine can hold an admin session.",
             "role": "prevents",
             "fix": {
-              "caTemplate": "Require a compliant device for administrators"
+              "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device"
             }
           }
         ],
@@ -46,7 +47,10 @@
         "standards": [
           {
             "name": "ActivityBasedTimeout",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "timeout": ["01:00:00", "03:00:00"]
+            }
           }
         ]
       },
@@ -65,7 +69,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -96,21 +103,34 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           },
           {
             "name": "DefaultSharingLink",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "sharingLinkType": [1, 2]
+            }
           },
           {
             "name": "sharingCapability",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "sharingCapability": [0, 1, 3]
+            }
           },
           {
             "name": "SPAnonymousLinkExpiration",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "days": [1, 7, 14, 30]
+            }
           }
-        ]
+        ],
+        "stopsChainWhen": "prevented"
       },
       {
         "id": "Access",
@@ -120,7 +140,10 @@
         "standards": [
           {
             "name": "SPAnonymousLinkExpiration",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "days": [1, 7, 14, 30]
+            }
           }
         ]
       }
@@ -149,12 +172,11 @@
         "whenFixed": "The Unified Audit Log is on, so every following action is recorded for investigation.",
         "standards": [
           {
-            "name": "AnonReportDisable",
-            "role": "detects"
-          },
-          {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -166,7 +188,10 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           }
         ]
       },
@@ -185,13 +210,20 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
-        ]
+        ],
+        "stopsChainWhen": "prevented"
       }
     ],
     "outcome": {
@@ -222,24 +254,28 @@
           "devicePlatform": "windows",
           "deviceInfo": {
             "isCompliant": false
-          }
+          },
+          "includeApplications": ["00000003-0000-0ff1-ce00-000000000000"]
         },
         "gaps": [
           {
             "when": ["allowed", "weakGrant"],
-            "text": "Access from unmanaged devices is not restricted, so the sync client can copy whole libraries.",
+            "text": "Unmanaged devices are not required to be compliant for SharePoint, so the sync client can copy whole libraries.",
             "role": "prevents",
             "fix": {
-              "caTemplate": "Block downloads on unmanaged devices for SharePoint and OneDrive"
+              "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device"
             }
           }
         ],
         "stopsChainWhen": "blocked",
-        "whenFixed": "Blocked: unmanaged devices are limited to web-only access, so the sync client cannot download.",
+        "whenFixed": "Blocked: SharePoint requires a compliant device, so the unmanaged sync client cannot sign in.",
         "standards": [
           {
             "name": "unmanagedSync",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "conditionalAccessPolicy": [1, 2]
+            }
           }
         ]
       },
@@ -255,11 +291,17 @@
           },
           {
             "name": "SPSyncButtonState",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "hideSyncButton": true
+            }
           },
           {
             "name": "unmanagedSync",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "conditionalAccessPolicy": [1, 2]
+            }
           }
         ]
       }
@@ -331,11 +373,17 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -367,7 +415,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           },
           {
             "name": "DisableReshare",
@@ -376,12 +427,9 @@
           {
             "name": "sharingDomainRestriction",
             "role": "limits"
-          },
-          {
-            "name": "SPGuestPeoplePicker",
-            "role": "limits"
           }
-        ]
+        ],
+        "stopsChainWhen": "prevented"
       },
       {
         "id": "Sprawl",
@@ -391,7 +439,10 @@
         "standards": [
           {
             "name": "SPExternalUserExpiration",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "days": [30, 60, 90]
+            }
           }
         ]
       }
@@ -432,7 +483,7 @@
             "text": "Guest sign-ins are not restricted, so an external account can carry a privileged role.",
             "role": "limits",
             "fix": {
-              "caTemplate": "Restrict guest access with Conditional Access"
+              "caTemplate": "Require multifactor authentication for guest access"
             }
           }
         ],
@@ -441,11 +492,10 @@
         "standards": [
           {
             "name": "DisableGuests",
-            "role": "limits"
-          },
-          {
-            "name": "GuestInvite",
-            "role": "prevents"
+            "role": "limits",
+            "secure": {
+              "days": [30, 60, 90]
+            }
           }
         ]
       },
@@ -457,7 +507,13 @@
         "standards": [
           {
             "name": "DisableGuestDirectory",
-            "role": "prevents"
+            "role": "limits",
+            "secure": {
+              "guestUserRoleId": [
+                "2af84b1e-32c8-42b7-82bc-daa82404023b",
+                "10dae51f-b6af-4016-8d66-8c2a99b929b3"
+              ]
+            }
           }
         ]
       },
@@ -476,7 +532,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -525,11 +584,8 @@
         "standards": [
           {
             "name": "SecurityDefaults",
-            "role": "prevents"
-          },
-          {
-            "name": "DisableBasicAuthSMTP",
-            "role": "prevents"
+            "role": "prevents",
+            "skipWhenLicensed": ["Entra"]
           }
         ]
       },
@@ -541,7 +597,10 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           }
         ]
       },
@@ -560,7 +619,10 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           }
         ]
       }
@@ -598,17 +660,27 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           },
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
-        ]
+        ],
+        "stopsChainWhen": "prevented"
       },
       {
         "id": "MailboxForward",
@@ -625,11 +697,10 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
-          },
-          {
-            "name": "OutBoundSpamAlert",
-            "role": "detects"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           }
         ]
       }
@@ -665,12 +736,8 @@
         "whenFixed": "User consent is routed to admin approval, so the malicious app is never granted access.",
         "standards": [
           {
-            "name": "AppManagementPolicy",
-            "role": "limits"
-          },
-          {
             "name": "EnableAppConsentRequests",
-            "role": "prevents"
+            "role": "limits"
           },
           {
             "name": "OauthConsent",
@@ -678,9 +745,13 @@
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
-        ]
+        ],
+        "stopsChainWhen": "prevented"
       },
       {
         "id": "MailAccess",
@@ -690,7 +761,10 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           }
         ]
       }
@@ -723,28 +797,31 @@
           "clientAppType": "browser",
           "devicePlatform": "windows",
           "country": "NL",
-          "ipAddress": "185.220.101.60"
+          "ipAddress": "185.220.101.60",
+          "includeApplications": ["00000006-0000-0ff1-ce00-000000000000"]
         },
         "gaps": [
           {
             "when": ["allowed", "weakGrant"],
-            "text": "MFA is not enforced, so a stolen password reaches user management.",
+            "text": "Only MFA that can be phished or relayed is required, so a stolen admin session reaches user management.",
             "role": "prevents",
             "fix": {
-              "caTemplate": "Require multifactor authentication for all users"
+              "caTemplate": "Require phishing-resistant multifactor authentication for administrators"
             }
           }
         ],
         "stopsChainWhen": "blocked",
-        "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach user management.",
+        "whenFixed": "Blocked: phishing-resistant MFA is required, so a relayed sign-in cannot reach user management.",
         "standards": [
           {
             "name": "PerUserMFA",
-            "role": "prevents"
+            "role": "prevents",
+            "skipWhenLicensed": ["Entra"]
           },
           {
             "name": "SecurityDefaults",
-            "role": "prevents"
+            "role": "prevents",
+            "skipWhenLicensed": ["Entra"]
           }
         ]
       },
@@ -754,7 +831,7 @@
         "text": "The attacker deletes many accounts quickly, cutting off sign-in and mail for those users. The business impact is immediate.",
         "alerts": [
           {
-            "operation": "Delete user",
+            "operation": "Delete user.",
             "logbook": "Audit.AzureActiveDirectory"
           }
         ],
@@ -762,7 +839,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -774,7 +854,12 @@
         "standards": [
           {
             "name": "DeletedUserRentention",
-            "role": "recovers"
+            "role": "recovers",
+            "secure": {
+              "days": [
+                30, 90, 365, 730, 1095, 1460, 1825, 2190, 2555, 2920, 3285, 3650
+              ]
+            }
           }
         ]
       }
@@ -818,7 +903,10 @@
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -837,7 +925,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -853,7 +944,20 @@
           },
           {
             "name": "AuthMethodsSettings",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "reportSuspiciousActivity": "enabled",
+              "systemCredential": "enabled"
+            }
+          }
+        ],
+        "stopsChainWhen": "prevented",
+        "alerts": [
+          {
+            "operation": "Update user.",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "TAPCreated",
+            "property": "SecuredAccessPassData"
           }
         ]
       }
@@ -916,15 +1020,20 @@
           },
           {
             "name": "PerUserMFA",
-            "role": "prevents"
+            "role": "prevents",
+            "skipWhenLicensed": ["Entra"]
           },
           {
             "name": "SecurityDefaults",
-            "role": "prevents"
+            "role": "prevents",
+            "skipWhenLicensed": ["Entra"]
           },
           {
             "name": "SmartLockout",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "LockoutThreshold": [5, 10]
+            }
           }
         ]
       },
@@ -936,7 +1045,10 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           }
         ]
       },
@@ -955,7 +1067,10 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           }
         ]
       }
@@ -972,7 +1087,7 @@
     "severity": "Critical",
     "summary": "An attacker who took over an account with role-management rights grants itself higher privileges and plants a back-door application.",
     "licensePresets": ["Entra"],
-    "persona": "user",
+    "persona": "admin",
     "attackerCanSatisfy": ["mfa"],
     "steps": [
       {
@@ -989,28 +1104,31 @@
           "devicePlatform": "windows",
           "signInRiskLevel": "medium",
           "country": "NL",
-          "ipAddress": "185.220.101.33"
+          "ipAddress": "185.220.101.33",
+          "includeApplications": ["c44b4083-3bb0-49c1-b47d-974e53cbdf3c"]
         },
         "gaps": [
           {
             "when": ["allowed", "weakGrant"],
-            "text": "MFA is not enforced for this account, so a stolen password reaches role management.",
+            "text": "Only MFA that can be phished or relayed is required, so a stolen admin session reaches role management.",
             "role": "prevents",
             "fix": {
-              "caTemplate": "Require multifactor authentication for all users"
+              "caTemplate": "Require phishing-resistant multifactor authentication for administrators"
             }
           }
         ],
         "stopsChainWhen": "blocked",
-        "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach role management.",
+        "whenFixed": "Blocked: phishing-resistant MFA is required, so a relayed sign-in cannot reach role management.",
         "standards": [
           {
             "name": "PerUserMFA",
-            "role": "prevents"
+            "role": "prevents",
+            "skipWhenLicensed": ["Entra"]
           },
           {
             "name": "SecurityDefaults",
-            "role": "prevents"
+            "role": "prevents",
+            "skipWhenLicensed": ["Entra"]
           }
         ]
       },
@@ -1029,7 +1147,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -1098,7 +1219,15 @@
           }
         ],
         "stopsChainWhen": "blocked",
-        "whenFixed": "Blocked: the sign-in comes from a country outside the allowed list and is refused."
+        "whenFixed": "Blocked: the sign-in comes from a country outside the allowed list and is refused.",
+        "alerts": [
+          {
+            "operation": "UserLoggedIn",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "UserLoggedInFromUnknownLocation",
+            "property": "CIPPGeoLocation"
+          }
+        ]
       },
       {
         "id": "MailboxAccess",
@@ -1108,11 +1237,17 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           },
           {
             "name": "ActivityBasedTimeout",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "timeout": ["01:00:00", "03:00:00"]
+            }
           }
         ]
       },
@@ -1131,11 +1266,17 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -1164,6 +1305,10 @@
           {
             "name": "DeployCheckChromeExtension",
             "role": "prevents"
+          },
+          {
+            "name": "PhishProtection",
+            "role": "detects"
           }
         ]
       },
@@ -1202,10 +1347,12 @@
         ],
         "stopsChainWhen": "blocked",
         "whenFixed": "Blocked: the device is not compliant, so the replayed token is refused.",
-        "standards": [
+        "alerts": [
           {
-            "name": "PhishProtection",
-            "role": "detects"
+            "operation": "UserLoggedIn",
+            "logbook": "Audit.AzureActiveDirectory",
+            "preset": "HostedIP",
+            "property": "CIPPHostedIP"
           }
         ]
       },
@@ -1217,11 +1364,17 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           },
           {
             "name": "ActivityBasedTimeout",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "timeout": ["01:00:00", "03:00:00"]
+            }
           }
         ]
       },
@@ -1245,15 +1398,24 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           },
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -1289,12 +1451,11 @@
         "whenFixed": "The rule creation is written to the audit log and surfaces for review.",
         "standards": [
           {
-            "name": "DisableExchangeOnlinePowerShell",
-            "role": "limits"
-          },
-          {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -1302,13 +1463,7 @@
         "id": "Exfiltration",
         "title": "Company mail copied out",
         "text": "Mail for all users is now silently copied to the attacker. The volume of external mail rises sharply.",
-        "whenFixed": "The outbound spam alert flags the surge of external mail so responders can act.",
-        "standards": [
-          {
-            "name": "OutBoundSpamAlert",
-            "role": "detects"
-          }
-        ]
+        "whenFixed": "The outbound spam alert flags the surge of external mail so responders can act."
       }
     ],
     "outcome": {

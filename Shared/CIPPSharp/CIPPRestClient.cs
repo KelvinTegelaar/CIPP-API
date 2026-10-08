@@ -694,6 +694,16 @@ namespace CIPP
             var client = selection.Client;
             TrackPoolSelection(selection.Pool, selection.Host);
 
+            var rateClaim = CIPPRateLimiter.Acquire(uri, method, body, headers);
+            var rateWait = rateClaim?.Wait ?? TimeSpan.Zero;
+            var rateWaited = TimeSpan.Zero;
+            while (rateWait > TimeSpan.Zero && rateWaited < CIPPRateLimiter.MaxWait)
+            {
+                await Task.Delay(rateWait).ConfigureAwait(false);
+                rateWaited += rateWait;
+                rateWait = CIPPRateLimiter.Recheck(rateClaim);
+            }
+
             using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(uri));
 
             // ----------------------------------------------------------
@@ -869,6 +879,8 @@ namespace CIPP
             // because the compliance client expects a 3xx response — the
             // redirect Location header IS the result we want.
             // ----------------------------------------------------------
+                CIPPRateLimiter.Observe(rateClaim, statusCode, allHeaders, content);
+
                 bool effectiveSkipCheck = skipErrorCheck || noRedirect;
                 TrackPoolResult(selection.Pool, response.IsSuccessStatusCode, statusCode);
                 if (!effectiveSkipCheck && !response.IsSuccessStatusCode)
@@ -1123,6 +1135,7 @@ namespace CIPP
                         .OrderBy(kvp => kvp.Key)
                         .ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value),
                 },
+                RateLimits = CIPPRateLimiter.GetDiagnostics(),
             }, new JsonSerializerOptions { WriteIndented = true });
         }
 

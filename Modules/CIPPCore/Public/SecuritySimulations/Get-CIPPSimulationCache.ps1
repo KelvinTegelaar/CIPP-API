@@ -24,7 +24,8 @@ function Get-CIPPSimulationCache {
     }
 
     $Rows = @(& $Read)
-    if ($Rows.Count -eq 0) {
+    $CollectedEmpty = $Rows.Count -eq 0 -and @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type -CountsOnly | Where-Object { [int]$_.DataCount -eq 0 }).Count -gt 0
+    if ($Rows.Count -eq 0 -and -not $CollectedEmpty) {
         $Collector = Get-Command -Name "Set-CIPPDBCache$Type" -ErrorAction SilentlyContinue
         if ($Collector) {
             try {

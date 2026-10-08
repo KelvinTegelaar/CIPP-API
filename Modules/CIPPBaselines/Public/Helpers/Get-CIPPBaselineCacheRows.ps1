@@ -38,6 +38,8 @@ function Get-CIPPBaselineCacheRows {
 
     $Rows = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type | Where-Object { $_ })
     if ($Rows.Count -gt 0) { return $Rows }
+    # A zero count row means the type was collected and is genuinely empty (e.g. no SMTP AUTH overrides).
+    if (@(Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type -CountsOnly | Where-Object { [int]$_.DataCount -eq 0 }).Count -gt 0) { return @() }
 
     $CollectorFor = if ([string]::IsNullOrWhiteSpace($CollectorType)) { $Type } else { $CollectorType }
     $Collector = Get-Command -Name "Set-CIPPDBCache$CollectorFor" -ErrorAction SilentlyContinue

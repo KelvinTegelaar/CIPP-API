@@ -10,17 +10,21 @@ function Get-CIPPBaselineDefinition {
     [CmdletBinding()]
     param($Name)
 
-    $DefinitionsPath = Join-Path $env:CIPPRootPath 'Config/BaselineStandards'
-    $Files = Get-ChildItem -Path $DefinitionsPath -Filter '*.json' -Recurse -ErrorAction SilentlyContinue
+    # Definition files ship with the app, so the folder is listed once per worker instead of on every call.
+    if (-not $script:CippBaselineDefinitionFiles) {
+        $DefinitionsPath = Join-Path $env:CIPPRootPath 'Config/BaselineStandards'
+        $script:CippBaselineDefinitionFiles = @(Get-ChildItem -Path $DefinitionsPath -Filter '*.json' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+    }
+    $Files = $script:CippBaselineDefinitionFiles
     if ($Name) {
-        $Files = $Files | Where-Object { $_.BaseName -eq $Name }
+        $Files = $Files.Where({ [System.IO.Path]::GetFileNameWithoutExtension($_) -eq $Name })
     }
 
     foreach ($File in $Files) {
         try {
-            [System.IO.File]::ReadAllText($File.FullName) | ConvertFrom-Json -ErrorAction Stop
+            [System.IO.File]::ReadAllText($File) | ConvertFrom-Json -ErrorAction Stop
         } catch {
-            Write-Information "Get-CIPPBaselineDefinition: failed to parse $($File.Name): $($_.Exception.Message)"
+            Write-Information "Get-CIPPBaselineDefinition: failed to parse $([System.IO.Path]::GetFileName($File)): $($_.Exception.Message)"
         }
     }
 }
