@@ -101,4 +101,23 @@ Describe 'Invoke-CIPPBaselineMigration value maps' {
             @($Reusable.Report.warnings) + @($SafeLinks.Report.warnings) | Where-Object { $_ -match 'does not map' } | Should -BeNullOrEmpty
         }
     }
+
+    Context 'AppDeploy' {
+        It 'fans a V2 template-mode multi-select out to one instance per App Approval template' {
+            $Result = Invoke-Migration @{ AppDeploy = @{ action = @('warn'); standards = @{ AppDeploy = @{ mode = @{ label = 'Template'; value = 'template' }; templateIds = @(@{ label = 'App A'; value = 'tpl-a' }, @{ label = 'App B'; value = 'tpl-b' }) } } } }
+            $Configs = @($Result.Configs | Where-Object standard -EQ 'AppDeploy')
+            $Configs.Count | Should -Be 2
+            @($Configs.variables.templateIds) | Should -Be @('tpl-a', 'tpl-b')
+            @($Configs.instance | Select-Object -Unique).Count | Should -Be 2
+            $Configs | ForEach-Object { $_.variables.mode | Should -BeExactly 'template' }
+        }
+
+        It 'keeps a V2 copy-permissions entry as one instance with its app ids' {
+            $Result = Invoke-Migration @{ AppDeploy = @{ action = @('warn'); standards = @{ AppDeploy = @{ mode = 'copy'; appids = 'id-1, id-2' } } } }
+            $Configs = @($Result.Configs | Where-Object standard -EQ 'AppDeploy')
+            $Configs.Count | Should -Be 1
+            $Configs[0].variables.appids | Should -BeExactly 'id-1, id-2'
+            $Configs[0].instance | Should -Match '^AppDeploy#m[0-9a-f]{8}$'
+        }
+    }
 }
