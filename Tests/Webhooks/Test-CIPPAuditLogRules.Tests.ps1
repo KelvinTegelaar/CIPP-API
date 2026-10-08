@@ -29,6 +29,18 @@ BeforeAll {
     function Add-CIPPApplicationPermission { param($RequiredResourceAccess, $ApplicationId, $TenantFilter) }
     function Get-CIPPPartnerUserLookup { @{} }
 
+    # The IP allow/block list helpers run for real (over the mocked table reads) so the CIDR and
+    # most-specific-range matching is exercised end to end.
+    foreach ($Helper in @(
+            'Authentication/Get-CIPPIPAllowBlockList.ps1'
+            'Authentication/Resolve-CIPPIPAllowBlockList.ps1'
+            'Authentication/Test-IpInRange.ps1'
+            'Authentication/ConvertTo-CIPPIPRange.ps1'
+            'BEC/ConvertTo-CIPPBecHostAddress.ps1'
+        )) {
+        . (Join-Path $RepoRoot "Modules/CIPPCore/Public/$Helper")
+    }
+
     # Lookup blob in the 'hashtable' cache format, so no Graph refresh is attempted.
     function New-LookupRow {
         param([string]$RowKey)
@@ -84,6 +96,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         $script:AuditRuleLookupCache = @{}
         $script:AuditRuleListCache = @{}
         $script:PartnerUserMemo = $null
+        $script:TrustedIpRows = @()
 
         Mock -CommandName Get-CIPPTable -MockWith {
             param($TableName)
@@ -122,6 +135,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
                     )
                 }
                 'Config' { [pscustomobject]@{ Value = 'cipp.contoso.com' } }
+                'trustedIps' { $script:TrustedIpRows }
                 default { @() }
             }
         }
@@ -548,6 +562,44 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             )
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
             @($script:RemovedRows).RowKey | Should -Not -Contain 'unrelated'
+        }
+    }
+
+    Context 'the IP allow/block list' {
+        # New-AuditRow's client IP is 203.0.113.10.
+        It 'treats an address inside a trusted CIDR range as trusted' {
+            $script:TrustedIpRows = @(
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = '203.0.113.0_24'; Range = '203.0.113.0/24'; state = 'Trusted' }
+            )
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)).DataToProcess)[0]
+            $data.CIPPGeoLocation | Should -BeNullOrEmpty
+            Should -Invoke Get-CIPPGeoIPLocationBatch -Times 0
+        }
+
+        It 'still trusts a legacy single-address row' {
+            $script:TrustedIpRows = @(
+                [pscustomobject]@{ PartitionKey = 'AllTenants'; RowKey = '203.0.113.10'; state = 'Trusted' }
+            )
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)).DataToProcess)[0]
+            $data.CIPPGeoLocation | Should -BeNullOrEmpty
+        }
+
+        It 'does not trust a blocked address inside a trusted range' {
+            $script:TrustedIpRows = @(
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = '203.0.113.0_24'; Range = '203.0.113.0/24'; state = 'Trusted' }
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = '203.0.113.10'; state = 'Blocked' }
+            )
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)).DataToProcess)[0]
+            $data.CIPPGeoLocation | Should -Be 'Unknown'
+            Should -Invoke Get-CIPPGeoIPLocationBatch -Times 1
+        }
+
+        It 'does not trust an address outside the range' {
+            $script:TrustedIpRows = @(
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = '198.51.100.0_24'; Range = '198.51.100.0/24'; state = 'Trusted' }
+            )
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)).DataToProcess)[0]
+            $data.CIPPGeoLocation | Should -Be 'Unknown'
         }
     }
 

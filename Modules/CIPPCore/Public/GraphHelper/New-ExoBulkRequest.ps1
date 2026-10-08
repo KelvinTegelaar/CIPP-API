@@ -15,7 +15,10 @@ function New-ExoBulkRequest {
         [int]$MaxConcurrency = 1,
         [int]$TimeoutSec = 100,
         [switch]$Compliance,
-        [switch]$AsApp
+        [switch]$AsApp,
+        # Routes each cmdlet to its Identity (a UPN): mailbox-store writes such as audit settings fail when proxied.
+        # NOTE: this forces the batch size to 1 (one POST per cmdlet), so tune the fan-out with -MaxConcurrency.
+        [switch]$AnchorPerMailbox
     )
 
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
@@ -49,9 +52,10 @@ function New-ExoBulkRequest {
             $IdToBatchRequest = @{}   # Original sub-requests, reused for nextLink continuations
 
             # Split the cmdletArray into batches of 10
+            $BatchSize = if ($AnchorPerMailbox) { 1 } else { 10 }
             $batches = [System.Collections.Generic.List[object]]::new()
-            for ($i = 0; $i -lt $cmdletArray.Length; $i += 10) {
-                $batches.Add($cmdletArray[$i..[math]::Min($i + 9, $cmdletArray.Length - 1)])
+            for ($i = 0; $i -lt $cmdletArray.Length; $i += $BatchSize) {
+                $batches.Add($cmdletArray[$i..[math]::Min($i + $BatchSize - 1, $cmdletArray.Length - 1)])
             }
 
             $ReturnedData = [System.Collections.Generic.List[object]]::new()
@@ -67,7 +71,7 @@ function New-ExoBulkRequest {
                         $OnMicrosoft = $Tenant.initialDomainName
                         $Anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
                     }
-                    $Headers['X-AnchorMailbox'] = "APP:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($tenant.customerId)"
+                    $Headers['X-AnchorMailbox'] = if ($AnchorPerMailbox) { "UPN:$($Anchor -replace '^UPN:')" } else { "APP:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($tenant.customerId)" }
                     $Headers['X-CmdletName'] = $cmd.CmdletInput.CmdletName
                     $Headers['Accept'] = 'application/json; odata.metadata=minimal'
                     $Headers['Accept-Encoding'] = 'gzip'
@@ -170,12 +174,12 @@ function New-ExoBulkRequest {
 
                 $ThrottledRequests = @($Throttled | ForEach-Object { $IdToBatchRequest[$_.id] })
                 $RetryPayloads = [System.Collections.Generic.List[object]]::new()
-                for ($i = 0; $i -lt $ThrottledRequests.Count; $i += 10) {
-                    $Slice = $ThrottledRequests[$i..[math]::Min($i + 9, $ThrottledRequests.Count - 1)]
+                for ($i = 0; $i -lt $ThrottledRequests.Count; $i += $BatchSize) {
+                    $Slice = $ThrottledRequests[$i..[math]::Min($i + $BatchSize - 1, $ThrottledRequests.Count - 1)]
                     $RetryBody = @{ requests = @($Slice) }
                     $RetryJson = [CIPP.CippJson]::ToJson($RetryBody, 10) ?? (ConvertTo-Json -InputObject $RetryBody -Depth 10)
                     $RetryJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $RetryJson
-                    $RetryPayloads.Add(@{ Json = $RetryJson; Headers = $Headers.Clone() })
+                    $RetryPayloads.Add(@{ Json = $RetryJson; Headers = if ($AnchorPerMailbox) { $Slice[0].headers.Clone() } else { $Headers.Clone() } })
                 }
 
                 $Replacements = @{}

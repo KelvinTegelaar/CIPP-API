@@ -191,7 +191,6 @@ function Test-CIPPAuditLogRules {
             HasLocationData        = $null
         }
 
-        $TrustedIPTable = Get-CIPPTable -TableName 'trustedIps'
         $ConfigTable = Get-CIPPTable -TableName 'WebhookRules'
 
         # Per-tenant, in-process memo of the resolved rule set. Rebuilding it reads the whole
@@ -555,7 +554,7 @@ function Test-CIPPAuditLogRules {
         $ListEntry = $script:AuditRuleListCache[$TenantFilter]
         if ($ListEntry -and $ListEntry.Expires -gt $ListNow) {
             $ExcludedUsers = $ListEntry.ExcludedUsers
-            $TrustedIPLookup = $ListEntry.TrustedIPLookup
+            $IPListEntries = $ListEntry.IPListEntries
         } else {
             foreach ($CachedTenant in @($script:AuditRuleListCache.Keys)) {
                 if ($script:AuditRuleListCache[$CachedTenant].Expires -le $ListNow) {
@@ -563,28 +562,34 @@ function Test-CIPPAuditLogRules {
                 }
             }
             $ExcludedUsers = Get-CIPPAzDataTableEntity @AuditLogUserExclusions -Filter "PartitionKey eq '$TenantFilter'"
-            $TrustedIPEntries = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and state eq 'Trusted'"
-            $TrustedIPLookup = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-            foreach ($TrustedEntry in $TrustedIPEntries) {
-                if (![string]::IsNullOrEmpty($TrustedEntry.RowKey)) {
-                    $null = $TrustedIPLookup.Add([string]$TrustedEntry.RowKey)
-                }
-            }
+            # Trusted and Blocked entries, single addresses and CIDR ranges alike. Blocked ones matter
+            # here only because the most specific range wins: a blocked address inside a trusted
+            # range must stay untrusted.
+            $IPListEntries = @(Get-CIPPIPAllowBlockList -TenantFilter $TenantFilter)
             $script:AuditRuleListCache[$TenantFilter] = [PSCustomObject]@{
-                Expires         = $ListNow.AddMinutes(2)
-                ExcludedUsers   = $ExcludedUsers
-                TrustedIPLookup = $TrustedIPLookup
+                Expires       = $ListNow.AddMinutes(2)
+                ExcludedUsers = $ExcludedUsers
+                IPListEntries = $IPListEntries
             }
         }
 
         if ($LogCount -gt 0) {
 
+            # Each distinct client IP is resolved against the list once per batch, here, and the
+            # record loop below reads the answer from $TrustedIPLookup.
+            $TrustedIPLookup = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            $ResolvedIPs = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
             $GeoPrefetchIPs = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
             foreach ($AuditRecord in $SearchResults) {
                 $cip = $AuditRecord.auditData.clientip
                 if ([string]::IsNullOrEmpty($cip) -or $cip -match '[X]+') { continue }
                 $cip = $script:ClientIpRegex.Replace([string]$cip, '$1') -replace '[\[\]]', ''
-                if ($TrustedIPLookup.Contains($cip) -or $script:ReservedIpRegex.IsMatch($cip)) { continue }
+                if (-not $ResolvedIPs.Add($cip)) { continue }
+                if ($IPListEntries.Count -gt 0 -and (Resolve-CIPPIPAllowBlockList -IPAddress $cip -Entries $IPListEntries).State -eq 'Trusted') {
+                    $null = $TrustedIPLookup.Add($cip)
+                    continue
+                }
+                if ($script:ReservedIpRegex.IsMatch($cip)) { continue }
                 $null = $GeoPrefetchIPs.Add($cip)
             }
             $GeoLookup = @{}
