@@ -188,6 +188,7 @@ function Invoke-ExecSharePointTemplate {
                 $JobId = $Request.Query.DeploymentId ?? $Request.Body.DeploymentId
                 if (-not $JobId) { throw 'DeploymentId is required' }
                 $Body = @(Get-CIPPAsyncDeployment -JobId $JobId)
+                Add-CIPPRealtimeWatch -JobId $JobId
             } catch {
                 $Body = @{ Results = "Failed to get deployment status: $($_.Exception.Message)" }
                 $StatusCode = [HttpStatusCode]::BadRequest

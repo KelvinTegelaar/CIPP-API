@@ -11,7 +11,7 @@
   "docsDescription": "Zero-hour auto purge (ZAP) for Microsoft Teams retroactively detects and neutralises malicious messages that have already been delivered in Teams chats. Enabling ZAP ensures that phishing, malware, and high confidence phishing messages are automatically purged even after initial delivery, aligning with CIS M365 7.0.0 benchmark control 2.4.4.",
   "impactColour": "info",
   "addedDate": "2026-05-06",
-  "powershellEquivalent": "Set-TeamsProtectionPolicy -Identity 'Teams Protection Policy' -ZapEnabled $true",
+  "powershellEquivalent": "Set-TeamsProtectionPolicy -Identity 'Default Teams Protection Policy' -ZapEnabled $true",
   "appliesToTest": [
     "CIS_2_4_4"
   ],
@@ -19,11 +19,19 @@
     "CIS"
   ],
   "requiredCapabilities": [
-    "EXCHANGE_S_STANDARD",
-    "EXCHANGE_S_ENTERPRISE",
-    "EXCHANGE_S_STANDARD_GOV",
-    "EXCHANGE_S_ENTERPRISE_GOV",
-    "EXCHANGE_LITE"
+    [
+      "EXCHANGE_S_STANDARD",
+      "EXCHANGE_S_ENTERPRISE",
+      "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_ENTERPRISE_GOV",
+      "EXCHANGE_LITE"
+    ],
+    [
+      "ATP_ENTERPRISE",
+      "ATP_ENTERPRISE_GOV",
+      "THREAT_INTELLIGENCE",
+      "THREAT_INTELLIGENCE_GOV"
+    ]
   ],
   "secureScoreImpact": 0,
   "compare": "subset",
@@ -31,13 +39,7 @@
     "ZapEnabled": true
   },
   "read": {
-    "cacheType": "ExoTeamsProtectionPolicy",
-    "filter": [
-      {
-        "property": "Identity",
-        "value": "Teams Protection Policy"
-      }
-    ]
+    "cacheType": "ExoTeamsProtectionPolicy"
   },
   "remediate": {
     "executor": "ExoRequest",
@@ -45,7 +47,7 @@
       {
         "cmdlet": "Set-TeamsProtectionPolicy",
         "params": {
-          "Identity": "Teams Protection Policy",
+          "Identity": "Default Teams Protection Policy",
           "ZapEnabled": true
         }
       }

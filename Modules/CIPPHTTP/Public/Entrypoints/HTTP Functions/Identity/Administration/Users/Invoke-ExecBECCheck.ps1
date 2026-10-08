@@ -42,6 +42,7 @@ function Invoke-ExecBECCheck {
                 $Progress = try { @(Get-CIPPAsyncDeployment -JobId $Run.CaseId) | Select-Object -First 1 } catch { $null }
 
                 if ($Run.Status -in @('Waiting', 'Running')) {
+                    Add-CIPPRealtimeWatch -JobId $Run.CaseId
                     # last sign of life: the job row's last change, else when the run started or was requested
                     $LastActivity = $null
                     foreach ($Candidate in @($Progress.LastUpdate, $Run.StartedAt, $Run.RequestedAt)) {

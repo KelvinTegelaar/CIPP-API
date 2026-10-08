@@ -1179,8 +1179,8 @@ function Push-BECRun {
         Write-LogMessage -API 'BECRun' -message "BEC phase $Key failed for $($UserName): $errMessage [case $CaseId]" -tenant $TenantFilter -sev 'Error' -LogData $CippError
         & $Step $StepIndex 'failed' $errMessage
         if ($IsLast) {
-            # without the score and report there is no case: the run failed
-            Set-CIPPAsyncDeploymentStatus -JobId $CaseId -Name $UserName -Status 'failed' -Logs $errMessage
+            # without the score and report there is no case: the run failed. The report is written first,
+            # as on success, so a page told the job ended reads the outcome rather than a running case.
             try {
                 $null = Set-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -Properties @{
                     UserId            = [string]$SuspectUser
@@ -1193,6 +1193,7 @@ function Push-BECRun {
             } catch {
                 Write-Information "BEC: could not record the failed run $CaseId`: $($_.Exception.Message)"
             }
+            Set-CIPPAsyncDeploymentStatus -JobId $CaseId -Name $UserName -Status 'failed' -Logs $errMessage
         } else {
             # the later phases still run; this phase's checks show as failed on the case
             try {

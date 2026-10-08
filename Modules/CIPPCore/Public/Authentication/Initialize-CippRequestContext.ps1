@@ -51,4 +51,5 @@ function Initialize-CippRequestContext {
     $script:CippAllowedGroupsStorage.Value = $null
     $script:CippUserRolesStorage.Value = @{}
     $script:CippAllowedPermissionsStorage.Value = $null
+    $script:CippRealtimeUser = $null
 }

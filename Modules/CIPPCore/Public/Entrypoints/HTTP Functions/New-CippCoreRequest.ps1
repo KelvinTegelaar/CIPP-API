@@ -109,6 +109,7 @@ function New-CippCoreRequest {
                 if ($script:CippAccessUserContext) {
                     Write-Information "Access: $($script:CippAccessUserContext.User) [$($script:CippAccessUserContext.Roles -join ', ')] -> $($Request.Params.CIPPEndpoint)"
                 }
+                $script:CippRealtimeUser = $Request.Headers.'x-ms-client-principal-name'
             } catch {
                 $DeniedUser = if ($script:CippAccessUserContext) { " for user $($script:CippAccessUserContext.User) [$($script:CippAccessUserContext.Roles -join ', ')]" } else { '' }
                 Write-Information "Access denied for $FunctionName$($DeniedUser) : $($_.Exception.Message)"
