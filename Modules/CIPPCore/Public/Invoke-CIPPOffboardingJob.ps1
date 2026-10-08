@@ -118,6 +118,19 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Remove group ownership'
+                Condition  = { $Options.RemoveGroupOwnership -eq $true }
+                Cmdlet     = 'Remove-CIPPGroupOwnerships'
+                Parameters = @{
+                    userid       = $UserID
+                    tenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Username     = $Username
+                    NewOwner     = [string]($Options.NewGroupOwner.value ?? $Options.NewGroupOwner)
+                    Headers      = $Headers
+                }
+            }
+            @{
                 Title      = 'Remove all rules'
                 Condition  = { $Options.RemoveRules -eq $true }
                 Cmdlet     = 'Remove-CIPPMailboxRule'
