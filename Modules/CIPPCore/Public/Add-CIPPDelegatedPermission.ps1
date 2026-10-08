@@ -73,8 +73,15 @@ function Add-CIPPDelegatedPermission {
     $Results = [System.Collections.Generic.List[string]]::new()
 
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId | Select-Object -First 1
-    if (!$ourSVCPrincipal) {
-        $ourSvcPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$ApplicationId')?`$select=appId,id,displayName" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
+    foreach ($Delay in 0, 2, 4, 8, 16) {
+        if ($ourSVCPrincipal) { break }
+        # A service principal created moments ago can take a while to replicate.
+        Start-Sleep -Seconds $Delay
+        try {
+            $ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$ApplicationId')?`$select=appId,id,displayName" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
+        } catch {
+            Write-Information "Service principal for $ApplicationId not found in $TenantFilter yet: $($_.Exception.Message)"
+        }
     }
     if (!$ourSVCPrincipal) {
         $Results.Add("Failed to find service principal for application $ApplicationId in tenant $TenantFilter")
