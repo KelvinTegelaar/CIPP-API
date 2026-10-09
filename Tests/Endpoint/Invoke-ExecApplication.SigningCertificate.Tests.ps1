@@ -87,7 +87,7 @@ Describe 'AddSigningCertificate' {
         $script:Posts.Count | Should -Be 1
         $script:Posts[0].Uri | Should -Be 'https://graph.microsoft.com/beta/servicePrincipals/sp-1/addTokenSigningCertificate'
         $script:Posts[0].Body | Should -Match '"displayName":"CN=Microsoft Azure Federated SSO Certificate"'
-        $End = [DateTimeOffset]::Parse(($script:Posts[0].Body | ConvertFrom-Json -AsHashtable).endDateTime)
+        $End = [DateTimeOffset]($script:Posts[0].Body | ConvertFrom-Json -AsHashtable).endDateTime
         ($End - [DateTimeOffset]::UtcNow).TotalDays | Should -BeGreaterThan (3 * 365 - 2)
         $Response.Body.Results.details[0].thumbprint | Should -Be $script:Thumb
     }
@@ -102,7 +102,7 @@ Describe 'AddSigningCertificate' {
 
         $null = Invoke-ExecApplication -Request (New-Request @{ Action = 'AddSigningCertificate' })
 
-        $End = [DateTimeOffset]::Parse(($script:Posts[0].Body | ConvertFrom-Json -AsHashtable).endDateTime)
+        $End = [DateTimeOffset]($script:Posts[0].Body | ConvertFrom-Json -AsHashtable).endDateTime
         $Days = ($End - [DateTimeOffset]::UtcNow).TotalDays
         $Days | Should -BeLessThan 999
         $Days | Should -BeGreaterThan 996
