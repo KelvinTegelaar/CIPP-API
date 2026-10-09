@@ -22485,6 +22485,7 @@
               "type": "string",
               "enum": [
                 "HaloPSA",
+                "Hudu",
                 "NinjaOne"
               ]
             }

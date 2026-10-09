@@ -139,6 +139,9 @@ Function Invoke-ExecExtensionMapping {
         'HaloPSA' {
           $Result = Invoke-HaloAutoMap -CIPPMapping $Table
         }
+        'Hudu' {
+          $Result = Invoke-HuduAutoMap -CIPPMapping $Table
+        }
       }
     }
     $StatusCode = [HttpStatusCode]::OK
