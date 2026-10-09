@@ -16512,6 +16512,9 @@
                   "colour": {
                     "type": "string"
                   },
+                  "coverFade": {
+                    "type": "boolean"
+                  },
                   "coverFooterText": {
                     "type": "string"
                   },
