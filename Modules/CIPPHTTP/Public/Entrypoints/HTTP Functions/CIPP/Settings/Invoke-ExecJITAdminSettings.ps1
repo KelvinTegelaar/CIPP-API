@@ -54,8 +54,8 @@ function Invoke-ExecJITAdminSettings {
                         break
                     }
                 } else {
-                    # Empty or null means no limit
-                    $JITAdminConfig.MaxDuration = $null
+                    # Empty or null means no limit; a saved row has no MaxDuration column, as tables drop nulls
+                    $JITAdminConfig | Add-Member -NotePropertyName MaxDuration -NotePropertyValue $null -Force
                 }
 
                 # Roles that need approval; none selected means every JIT Admin request needs approval
