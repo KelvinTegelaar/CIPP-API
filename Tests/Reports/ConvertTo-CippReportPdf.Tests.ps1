@@ -292,6 +292,15 @@ Describe 'Cover footer note' {
         $Cover | Should -Match '24\s+sharing\s+links'
         $Cover | Should -Match 'CONFIDENTIAL'
     }
+
+    It 'fades the cover photo unless the branding turns the fade off' {
+        $Render = {
+            param($Branding)
+            [System.Text.Encoding]::Latin1.GetString((ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Branding $Branding))
+        }
+        & $Render @{ coverStock = '/reportImages/soc.jpg' } | Should -Match '/ca 0\.5'
+        & $Render @{ coverStock = '/reportImages/soc.jpg'; coverFade = $false } | Should -Not -Match '/ca 0\.5'
+    }
 }
 
 Describe 'Gallery covers on Infographic pages' {

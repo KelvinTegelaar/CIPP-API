@@ -71,6 +71,7 @@ namespace CIPP.Reporting
                 GeneratedOn = generatedOn ?? string.Empty,
                 Logo = logoBytes,
                 CoverImage = coverImage,
+                CoverFade = branding.CoverFade != false,
             };
 
             var groups = BuildPageGroups(blocks);
@@ -119,7 +120,7 @@ namespace CIPP.Reporting
                         p.Background(ReportComponents.Pdf(ReportColours.White));
                         if (ctx.CoverImage is { Length: > 0 })
                         {
-                            try { p.BackgroundImage(ctx.CoverImage, OfficeIMO.Drawing.OfficeImageFit.Cover, 0.5); }
+                            try { p.BackgroundImage(ctx.CoverImage, OfficeIMO.Drawing.OfficeImageFit.Cover, ctx.CoverFade ? 0.5 : 1.0); }
                             catch { /* an unusable cover photo leaves the plain white cover */ }
                         }
                         p.Content(cc => cc.Item(i => ReportComponents.RenderCoverDrawing(ctx, i)));

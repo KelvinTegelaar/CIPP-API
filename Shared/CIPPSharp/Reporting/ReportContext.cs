@@ -19,6 +19,7 @@ namespace CIPP.Reporting
         public bool? ShowPageNumbers { get; init; }
         public string? WatermarkText { get; init; }
         public bool? WatermarkEnabled { get; init; }
+        public bool? CoverFade { get; init; }
         public string? Logo { get; init; }        // data-URL
         public string? CoverImage { get; init; }   // data-URL (an uploaded cover)
         public string? CoverStock { get; init; }   // a bundled /reportImages/ path, or "none"
@@ -67,6 +68,7 @@ namespace CIPP.Reporting
                 ShowPageNumbers = Bool("showPageNumbers"),
                 WatermarkText = Str("watermarkText"),
                 WatermarkEnabled = Bool("watermarkEnabled"),
+                CoverFade = Bool("coverFade"),
                 Logo = Str("logo"),
                 CoverImage = Str("coverImage"),
                 CoverStock = Str("coverStock"),
@@ -91,6 +93,7 @@ namespace CIPP.Reporting
         public string GeneratedOn { get; init; } = "";
         public byte[]? Logo { get; init; }
         public byte[]? CoverImage { get; init; }
+        public bool CoverFade { get; init; } = true;
 
         /// <summary>Usable content width in points (paper - page padding both sides). Mirrors contentWidth().</summary>
         public double ContentWidth => ReportStyles.ContentWidth(PageSize, Landscape);
