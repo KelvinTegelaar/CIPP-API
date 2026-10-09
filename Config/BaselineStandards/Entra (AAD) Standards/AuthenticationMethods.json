@@ -11,10 +11,6 @@
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Set-CIPPAuthenticationPolicy",
   "recommendedBy": [],
-  "requiredCapabilities": [
-    "AAD_PREMIUM",
-    "AAD_PREMIUM_P2"
-  ],
   "disabledFeatures": {
     "report": false,
     "warn": false,
