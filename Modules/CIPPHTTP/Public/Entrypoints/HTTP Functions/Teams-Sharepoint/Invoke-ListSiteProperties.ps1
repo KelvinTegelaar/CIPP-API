@@ -21,8 +21,11 @@ function Invoke-ListSiteProperties {
     $LinkPermissionNames = @{ 0 = 'None'; 1 = 'View'; 2 = 'Edit' }
     $DomainRestrictionNames = @{ 0 = 'None'; 1 = 'AllowList'; 2 = 'BlockList' }
 
+    if (-not $SiteUrl) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
+
     try {
-        if (-not $SiteUrl) { throw 'SiteUrl is required.' }
         $Site = Get-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $SiteUrl
 
         $Body = [PSCustomObject]@{
@@ -53,7 +56,7 @@ function Invoke-ListSiteProperties {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Body = "Failed to get site properties for $($SiteUrl): $($ErrorMessage.NormalizedError)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

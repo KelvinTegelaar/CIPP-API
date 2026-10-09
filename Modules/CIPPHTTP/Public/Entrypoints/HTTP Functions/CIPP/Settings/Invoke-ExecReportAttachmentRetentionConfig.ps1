@@ -10,6 +10,22 @@ function Invoke-ExecReportAttachmentRetentionConfig {
     $Table = Get-CIPPTable -TableName Config
     $Filter = "PartitionKey eq 'ReportAttachmentRetention' and RowKey eq 'Settings'"
 
+    if (-not $Request.Query.List) {
+        $RetentionDays = $Request.Body.RetentionDays -as [int]
+        $ValidationError = if ($RetentionDays -lt 7) {
+            'Retention days must be at least 7 days'
+        } elseif ($RetentionDays -gt 365) {
+            'Retention days must be at most 365 days'
+        }
+        if ($ValidationError) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = [pscustomobject]@{'Results' = "Failed to set configuration: $ValidationError" }
+                })
+        }
+    }
+
+    $StatusCode = [HttpStatusCode]::OK
     $results = try {
         if ($Request.Query.List) {
             $RetentionSettings = Get-CIPPAzDataTableEntity @Table -Filter $Filter
@@ -24,18 +40,6 @@ function Invoke-ExecReportAttachmentRetentionConfig {
                 }
             }
         } else {
-            $RetentionDays = [int]$Request.Body.RetentionDays
-
-            # Validate minimum value
-            if ($RetentionDays -lt 7) {
-                throw 'Retention days must be at least 7 days'
-            }
-
-            # Validate maximum value
-            if ($RetentionDays -gt 365) {
-                throw 'Retention days must be at most 365 days'
-            }
-
             $RetentionConfig = @{
                 'RetentionDays' = $RetentionDays
                 'PartitionKey'  = 'ReportAttachmentRetention'
@@ -49,13 +53,14 @@ function Invoke-ExecReportAttachmentRetentionConfig {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message "Failed to set report attachment retention configuration: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
         "Failed to set configuration: $($ErrorMessage.NormalizedError)"
     }
 
     $body = [pscustomobject]@{'Results' = $Results }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 }

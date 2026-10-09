@@ -46,14 +46,18 @@ function Invoke-ExecSetLibraryPermission {
     }
 
     try {
-        if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
+        if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+        }
 
         $RoleDefId = if (-not [string]::IsNullOrWhiteSpace($RoleDefinitionId)) {
             $RoleDefinitionId
         } else {
             $RoleDefinitionIds[[string]$PermissionLevel]
         }
-        if (-not $RoleDefId) { throw 'No permission level was selected.' }
+        if (-not $RoleDefId) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'No permission level was selected.' } })
+        }
 
         # Build the claims-encoded logon names for ensureuser. A PrincipalId from the permission
         # list is already resolved on the site, so it skips that round-trip.
@@ -92,7 +96,7 @@ function Invoke-ExecSetLibraryPermission {
                 })
         }
         if ($Principals.Count -eq 0) {
-            throw 'No users or groups selected.'
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'No users or groups selected.' } })
         }
 
         # Resolving with -EnsureUniqueRoleAssignments breaks inheritance (copying the existing
@@ -171,17 +175,16 @@ function Invoke-ExecSetLibraryPermission {
         $Result = $Messages -join ' '
         if ($Granted.Count -gt 0) {
             Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
-            $StatusCode = [HttpStatusCode]::OK
         } else {
             Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error
-            $StatusCode = [HttpStatusCode]::BadRequest
         }
+        $StatusCode = Get-CippBulkStatusCode -Total $Principals.Count -Failed $Failed.Count
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $FailTarget = if ($LibraryName) { "library $LibraryName" } else { 'the site root' }
         $Result = "Failed to set permission on $FailTarget. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

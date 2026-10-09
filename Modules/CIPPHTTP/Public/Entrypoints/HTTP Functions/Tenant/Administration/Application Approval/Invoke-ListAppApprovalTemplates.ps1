@@ -54,15 +54,16 @@ function Invoke-ListAppApprovalTemplates {
                 }
             }
         }
-
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Body = @{
             Results = "Failed to list app deployment templates: $($_.Exception.Message)"
         }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = ConvertTo-Json -Depth 10 -InputObject @($Body)
         })
 }

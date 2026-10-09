@@ -33,7 +33,9 @@ Function Invoke-ExecTeamsVoicePhoneNumberAssignment {
             $TargetId = $Identity
             if ($Identity -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
                 $TargetId = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$([uri]::EscapeDataString($Identity))?`$select=id" -tenantid $TenantFilter).id
-                if (-not $TargetId) { throw "Could not resolve $Identity to a user or resource account." }
+                if (-not $TargetId) {
+                    return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::NotFound; Body = [pscustomobject]@{ 'Results' = "Could not resolve $Identity to a user or resource account." } })
+                }
             }
 
             $Body = @{
@@ -53,7 +55,7 @@ Function Invoke-ExecTeamsVoicePhoneNumberAssignment {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = [pscustomobject]@{'Results' = $ErrorMessage.NormalizedError }
         Write-LogMessage -Headers $Headers -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

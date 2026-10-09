@@ -152,7 +152,7 @@ Function Invoke-ListSiteMembers {
         $StatusCode = [HttpStatusCode]::OK
         $Body = @($Members)
     } catch {
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = Get-NormalizedError -Message $_.Exception.Message
     }
 

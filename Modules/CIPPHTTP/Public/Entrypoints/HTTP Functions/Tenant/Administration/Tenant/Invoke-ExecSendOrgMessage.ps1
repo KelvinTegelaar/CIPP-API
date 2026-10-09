@@ -109,7 +109,7 @@ Function Invoke-ExecSendOrgMessage {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to send organizational message of type '$MessageType': $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage.NormalizedError
     }
     return [HttpResponseContext]@{

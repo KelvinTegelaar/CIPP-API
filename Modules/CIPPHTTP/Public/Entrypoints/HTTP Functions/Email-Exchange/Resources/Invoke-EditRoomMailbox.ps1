@@ -132,7 +132,7 @@ Function Invoke-EditRoomMailbox {
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message "Failed to update room: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Results.Add("Failed to update Room mailbox $($MailboxObject.userPrincipalName). $($ErrorMessage.NormalizedError)")
 
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Body = [pscustomobject]@{ 'Results' = @($Results) }

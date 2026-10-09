@@ -22,10 +22,14 @@ function Invoke-ExecRemoveSiteUser {
     $LoginName = $Request.Body.user.addedFields.LoginName ?? $Request.Body.user.value
     $Label = $Request.Body.DisplayName ?? $Request.Body.user.value ?? $LoginName
 
-    try {
-        if ($SiteUrls.Count -eq 0) { throw 'SiteUrl is required.' }
-        if (-not $LoginName) { throw 'No user was selected.' }
+    if ($SiteUrls.Count -eq 0) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
+    if (-not $LoginName) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'No user was selected.' } })
+    }
 
+    try {
         $Removal = Remove-CIPPSPOSiteUser -TenantFilter $TenantFilter -SiteUrls $SiteUrls -LoginName $LoginName
 
         $Messages = [System.Collections.Generic.List[string]]::new()
@@ -40,12 +44,12 @@ function Invoke-ExecRemoveSiteUser {
             throw $Results
         }
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Info
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total $SiteUrls.Count -Failed $Removal.Failed.Count
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to remove $Label from the selected site(s): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

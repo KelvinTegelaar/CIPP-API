@@ -26,6 +26,7 @@ function Invoke-AddTransportRule {
         $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
     }
 
+    $Failed = 0
     $Result = foreach ($tenantFilter in $tenants) {
         $TenantParams = Resolve-CIPPTransportRuleTemplate -Template $RequestParams -TenantFilter $tenantFilter
         $Existing = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $tenantFilter -cmdlet 'Get-TransportRule' -useSystemMailbox $true | Where-Object -Property Identity -EQ $TenantParams.name
@@ -48,6 +49,7 @@ function Invoke-AddTransportRule {
 
             Write-LogMessage -Headers $ExecutingUser -API $APINAME -tenant $tenantFilter -message "Created transport rule for $($tenantFilter)" -sev Info
         } catch {
+            $Failed++
             $ErrorMessage = Get-CippException -Exception $_
             "Could not create transport rule for $($tenantFilter): $($ErrorMessage.NormalizedError)"
             Write-LogMessage -Headers $ExecutingUser -API $APINAME -tenant $tenantFilter -message "Could not create transport rule for $($tenantFilter). Error:$($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
@@ -55,7 +57,7 @@ function Invoke-AddTransportRule {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = @{Results = @($Result) }
         })
 

@@ -26,7 +26,7 @@ function Invoke-ListTenantOnboarding {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Function Error: $($ErrorMessage.LineNumber) - $($ErrorMessage.NormalizedError)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

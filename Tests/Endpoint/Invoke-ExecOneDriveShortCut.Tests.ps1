@@ -7,6 +7,7 @@ BeforeAll {
     }
     function New-CIPPOneDriveShortCut { param($Username, $UserId, $URL, $TenantFilter, $APIName, $Headers, $Destination) }
     . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ExecOneDriveShortCut.ps1' | Select-Object -First 1).FullName
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     function New-Request {
         param($Body)
@@ -43,7 +44,7 @@ Describe 'Invoke-ExecOneDriveShortCut' {
         $Body = @((New-Entry 'one@contoso.com'), (New-Entry 'two@contoso.com'), (New-Entry 'three@contoso.com'))
         $Response = Invoke-ExecOneDriveShortCut -Request (New-Request -Body $Body) -TriggerMetadata $null
 
-        $Response.StatusCode | Should -Be 200
+        $Response.StatusCode | Should -Be 207
         Should -Invoke New-CIPPOneDriveShortCut -Times 3 -Exactly
         $Results = @($Response.Body.Results)
         $Results.Count | Should -Be 4

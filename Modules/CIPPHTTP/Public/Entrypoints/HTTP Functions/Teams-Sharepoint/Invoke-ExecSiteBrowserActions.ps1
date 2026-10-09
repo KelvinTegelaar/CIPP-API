@@ -20,13 +20,59 @@ function Invoke-ExecSiteBrowserActions {
     $SiteId = $Request.Body.SiteId
     $Action = $Request.Body.Action
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($TenantFilter)) { throw 'tenantFilter is required.' }
-        if ([string]::IsNullOrWhiteSpace($Action)) { throw 'Action is required.' }
-        if ([string]::IsNullOrWhiteSpace($SiteUrl) -and [string]::IsNullOrWhiteSpace($SiteId)) {
-            throw 'SiteUrl or SiteId is required.'
+    if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'tenantFilter is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($Action)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'Action is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($SiteUrl) -and [string]::IsNullOrWhiteSpace($SiteId)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl or SiteId is required.' } })
+    }
+    if ([string]$Action -notin @('StartVersionCleanup', 'GetVersionCleanupStatus', 'GetSiteProperties')) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "Unknown Action '$Action'. Supported: StartVersionCleanup, GetVersionCleanupStatus, GetSiteProperties." } })
+    }
+
+    if ([string]$Action -eq 'StartVersionCleanup') {
+        $BatchDeleteMode = ($Request.Body.BatchDeleteMode ?? 2) -as [int]
+        if ($Request.Body.BatchDeleteMode -is [PSCustomObject] -and $Request.Body.BatchDeleteMode.value) {
+            $BatchDeleteMode = $Request.Body.BatchDeleteMode.value -as [int]
         }
 
+        $DeleteOlderThanDays = ($Request.Body.DeleteOlderThanDays ?? -1) -as [int]
+        $MajorVersionLimit = ($Request.Body.MajorVersionLimit ?? -1) -as [int]
+        $MajorWithMinorVersionsLimit = ($Request.Body.MajorWithMinorVersionsLimit ?? -1) -as [int]
+        $SyncListPolicy = $Request.Body.SyncListPolicy -eq $true
+
+        switch ($BatchDeleteMode) {
+            0 {
+                if ($DeleteOlderThanDays -lt 30) {
+                    return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'DeleteOlderThanDays must be at least 30 when using Delete Older Than Days mode.' } })
+                }
+                $MajorVersionLimit = -1
+                $MajorWithMinorVersionsLimit = -1
+            }
+            1 {
+                if ($MajorVersionLimit -lt 1) {
+                    return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'MajorVersionLimit is required when using Count Limits mode.' } })
+                }
+                if ($MajorWithMinorVersionsLimit -lt 0) {
+                    return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'MajorWithMinorVersionsLimit is required when using Count Limits mode.' } })
+                }
+                $DeleteOlderThanDays = -1
+            }
+            2 {
+                $DeleteOlderThanDays = -1
+                $MajorVersionLimit = -1
+                $MajorWithMinorVersionsLimit = -1
+            }
+            default {
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "Unsupported BatchDeleteMode '$BatchDeleteMode'. Use 0 (DeleteOlderThanDays), 1 (CountLimits), or 2 (SyncPolicy)." } })
+            }
+        }
+    }
+
+    try {
         if (-not [string]::IsNullOrWhiteSpace($SiteUrl)) {
             $ResolvedUrl = $SiteUrl.TrimEnd('/')
         } else {
@@ -39,43 +85,6 @@ function Invoke-ExecSiteBrowserActions {
 
         $Result = switch ([string]$Action) {
             'StartVersionCleanup' {
-                $BatchDeleteMode = [int]($Request.Body.BatchDeleteMode ?? 2)
-                if ($Request.Body.BatchDeleteMode -is [PSCustomObject] -and $Request.Body.BatchDeleteMode.value) {
-                    $BatchDeleteMode = [int]$Request.Body.BatchDeleteMode.value
-                }
-
-                $DeleteOlderThanDays = [int]($Request.Body.DeleteOlderThanDays ?? -1)
-                $MajorVersionLimit = [int]($Request.Body.MajorVersionLimit ?? -1)
-                $MajorWithMinorVersionsLimit = [int]($Request.Body.MajorWithMinorVersionsLimit ?? -1)
-                $SyncListPolicy = $Request.Body.SyncListPolicy -eq $true
-
-                switch ($BatchDeleteMode) {
-                    0 {
-                        if ($DeleteOlderThanDays -lt 30) {
-                            throw 'DeleteOlderThanDays must be at least 30 when using Delete Older Than Days mode.'
-                        }
-                        $MajorVersionLimit = -1
-                        $MajorWithMinorVersionsLimit = -1
-                    }
-                    1 {
-                        if ($MajorVersionLimit -lt 1) {
-                            throw 'MajorVersionLimit is required when using Count Limits mode.'
-                        }
-                        if ($MajorWithMinorVersionsLimit -lt 0) {
-                            throw 'MajorWithMinorVersionsLimit is required when using Count Limits mode.'
-                        }
-                        $DeleteOlderThanDays = -1
-                    }
-                    2 {
-                        $DeleteOlderThanDays = -1
-                        $MajorVersionLimit = -1
-                        $MajorWithMinorVersionsLimit = -1
-                    }
-                    default {
-                        throw "Unsupported BatchDeleteMode '$BatchDeleteMode'. Use 0 (DeleteOlderThanDays), 1 (CountLimits), or 2 (SyncPolicy)."
-                    }
-                }
-
                 $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
                 $AdminUrl = $SharePointInfo.AdminUrl
                 $EscapedSiteUrl = [System.Security.SecurityElement]::Escape($ResolvedUrl)

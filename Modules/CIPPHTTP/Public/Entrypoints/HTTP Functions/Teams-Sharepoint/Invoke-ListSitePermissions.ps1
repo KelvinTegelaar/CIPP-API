@@ -26,9 +26,11 @@ function Invoke-ListSitePermissions {
         [bool]$Principal.IsShareByEmailGuestUser -or [bool]$Principal.IsEmailAuthenticationGuestUser -or $Principal.LoginName -match '(?i)#ext#|urn%3aspo%3aguest'
     }
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
+    if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
 
+    try {
         $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
         $Scope = $RestContext.Scope
         $JsonAccept = $RestContext.Headers
@@ -93,7 +95,7 @@ function Invoke-ListSitePermissions {
         $ErrorMessage = Get-CippException -Exception $_
         $Body = "Failed to list permissions: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Body -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

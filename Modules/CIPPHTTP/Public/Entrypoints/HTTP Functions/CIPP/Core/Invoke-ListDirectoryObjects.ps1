@@ -39,7 +39,7 @@ function Invoke-ListDirectoryObjects {
         $Results = New-GraphPOSTRequest -tenantid $TenantFilter -uri $Uri -body $Body -AsApp $AsApp -NoAuthCheck $true
         $StatusCode = [System.Net.HttpStatusCode]::OK
     } catch {
-        $StatusCode = [System.Net.HttpStatusCode]::BadRequest
+        $StatusCode = [System.Net.HttpStatusCode]::InternalServerError
         $Results = $_.Exception.Message
         Write-Warning "Error retrieving directory objects: $Results"
         Write-Information $_.InvocationInfo.PositionMessage

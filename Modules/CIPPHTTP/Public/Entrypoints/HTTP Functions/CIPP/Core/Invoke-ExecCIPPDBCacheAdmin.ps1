@@ -32,13 +32,25 @@ function Invoke-ExecCIPPDBCacheAdmin {
             })
     }
 
+    $ValidationError = switch ($Action) {
+        'List' { if ([string]::IsNullOrWhiteSpace($TenantFilter) -or [string]::IsNullOrWhiteSpace($Type)) { 'List requires TenantFilter and Type' } }
+        'Remove' {
+            if ([string]::IsNullOrWhiteSpace($Type)) { 'Remove requires Type' }
+            elseif (-not $Body.Rows) { 'Remove requires Rows with CIPPPartitionKey/CIPPRowKey (or PartitionKey/RowKey)' }
+        }
+        'Empty' { if ([string]::IsNullOrWhiteSpace($TenantFilter) -or [string]::IsNullOrWhiteSpace($Type)) { 'Empty requires TenantFilter and Type' } }
+        default { "Unknown Action '$Action'. Use List, Remove, or Empty." }
+    }
+    if ($ValidationError) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = $ValidationError }
+            })
+    }
+
     try {
         switch ($Action) {
             'List' {
-                if ([string]::IsNullOrWhiteSpace($TenantFilter) -or [string]::IsNullOrWhiteSpace($Type)) {
-                    throw 'List requires TenantFilter and Type'
-                }
-
                 $IsAllTenants = $TenantFilter -eq 'AllTenants'
                 $DbTenant = if ($IsAllTenants) { 'allTenants' } else { $TenantFilter }
                 $Rows = @(Get-CIPPDbItem -TenantFilter $DbTenant -Type $Type)
@@ -79,14 +91,7 @@ function Invoke-ExecCIPPDBCacheAdmin {
             }
 
             'Remove' {
-                if ([string]::IsNullOrWhiteSpace($Type)) {
-                    throw 'Remove requires Type'
-                }
-
                 $Rows = @($Body.Rows)
-                if ($Rows.Count -eq 0) {
-                    throw 'Remove requires Rows with CIPPPartitionKey/CIPPRowKey (or PartitionKey/RowKey)'
-                }
 
                 # Deduplicate by partition+row so array-unrolled List rows sharing one entity delete once
                 $Seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -119,10 +124,6 @@ function Invoke-ExecCIPPDBCacheAdmin {
             }
 
             'Empty' {
-                if ([string]::IsNullOrWhiteSpace($TenantFilter) -or [string]::IsNullOrWhiteSpace($Type)) {
-                    throw 'Empty requires TenantFilter and Type'
-                }
-
                 $ClearResult = Clear-CIPPDbCache -TenantFilter $TenantFilter -Type $Type
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Emptied $Type cache for $($ClearResult.Tenant): $($ClearResult.RemovedCount) row(s)" -sev Warning
                 return ([HttpResponseContext]@{
@@ -133,16 +134,12 @@ function Invoke-ExecCIPPDBCacheAdmin {
                         }
                     })
             }
-
-            default {
-                throw "Unknown Action '$Action'. Use List, Remove, or Empty."
-            }
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "CIPPDB cache admin failed: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
+                StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = @{ Results = $ErrorMessage.NormalizedError }
             })
     }

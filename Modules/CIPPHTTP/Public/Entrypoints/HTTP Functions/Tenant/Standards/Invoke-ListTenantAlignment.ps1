@@ -44,6 +44,8 @@ function Invoke-ListTenantAlignment {
             }
         }
 
+        $Total = 0
+        $Failed = 0
         $Results = if ($Granular) {
             # Flatten ComparisonResults into one row per tenant+standard
             $AlignmentData | ForEach-Object {
@@ -53,6 +55,7 @@ function Invoke-ListTenantAlignment {
                 $StandardType = $Row.standardType ? $Row.standardType : 'Classic Standard'
                 $Row.ComparisonDetails | ForEach-Object {
                     $Detail = $_
+                    $Total++
                     try {
                         $StandardId = $Detail.StandardName
                         $FriendlyType = $StandardType
@@ -97,6 +100,7 @@ function Invoke-ListTenantAlignment {
                             latestDataCollection = $Row.LatestDataCollection
                         }
                     } catch {
+                        $Failed++
                         Write-LogMessage -API $APIName -tenant $Row.TenantFilter -message "Failed to flatten alignment row for $($Row.TenantFilter)/$($Detail.StandardName): $($_.Exception.Message)" -sev Warning
                     }
                 }
@@ -182,7 +186,7 @@ function Invoke-ListTenantAlignment {
         }
 
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
+                StatusCode = Get-CippBulkStatusCode -Total $Total -Failed $Failed
                 Body       = @($Results)
             })
     } catch {

@@ -40,7 +40,7 @@ function Start-CIPPSharePointLibraryCopy {
         param([string]$SiteId, [string]$SiteUrl, [string]$ListId)
         if ([string]::IsNullOrWhiteSpace($SiteId)) {
             if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
-                throw 'SourceSiteId or SourceSiteUrl is required.'
+                throw [System.ArgumentException]::new('SourceSiteId or SourceSiteUrl is required.')
             }
             $ParsedUrl = [System.Uri]$SiteUrl
             $SiteSegment = if ($ParsedUrl.AbsolutePath -in @('', '/')) {
@@ -73,12 +73,12 @@ function Start-CIPPSharePointLibraryCopy {
     foreach ($Meta in @($SourceMeta, $DestMeta)) {
         $Eligible = Test-CIPPSharePointLibraryCopyEligible -Template $Meta.Template -Title $Meta.Title -Name $Meta.Name
         if (-not $Eligible.Eligible) {
-            throw $Eligible.Reason
+            throw [System.ArgumentException]::new($Eligible.Reason)
         }
     }
 
     if ($SourceMeta.SiteId -eq $DestMeta.SiteId -and $SourceMeta.ListId -eq $DestMeta.ListId) {
-        throw 'Source and destination library must be different.'
+        throw [System.ArgumentException]::new('Source and destination library must be different.')
     }
 
     $Enumerate = Get-CIPPSharePointLibraryRootChildUris -TenantFilter $TenantFilter -SiteId $SourceMeta.SiteId `
@@ -86,10 +86,10 @@ function Start-CIPPSharePointLibraryCopy {
 
     $Count = $Enumerate.EligibleRootCount
     if ($Count -eq 0) {
-        throw 'Source library has no eligible content to copy.'
+        throw [System.ArgumentException]::new('Source library has no eligible content to copy.')
     }
     if ($Count -gt 1000) {
-        throw "Source library has $Count eligible root items (limit 1,000). Group files into folders and try again."
+        throw [System.ArgumentException]::new("Source library has $Count eligible root items (limit 1,000). Group files into folders and try again.")
     }
 
     $WarnLevel = 'none'

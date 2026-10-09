@@ -18,14 +18,16 @@ function Invoke-ExecCAServiceExclusion {
         $result = Set-CIPPCAPolicyServiceException -TenantFilter $TenantFilter -PolicyId $ID
         $Body = @{ Results = $result }
         Write-LogMessage -headers $Headers -API 'Set-CIPPCAPolicyServiceException' -message $result -Sev 'Info' -tenant $TenantFilter
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Body = @{ Results = "Failed to add service provider exception to policy $($ID): $($ErrorMessage.NormalizedError)" }
         Write-LogMessage -headers $Headers -API 'Set-CIPPCAPolicyServiceException' -message "Failed to update policy $($ID) with service provider exception for tenant $($env:TenantID): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

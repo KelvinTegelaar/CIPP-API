@@ -74,7 +74,7 @@ function Invoke-ExecTestRun {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to start data collection/test run: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{ Message = "Failed to start data collection/test run for $TenantFilter" }
     }
 

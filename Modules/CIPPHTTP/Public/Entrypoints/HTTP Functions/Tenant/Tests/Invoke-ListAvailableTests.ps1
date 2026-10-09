@@ -120,7 +120,7 @@ function Invoke-ListAvailableTests {
         $Body = [PSCustomObject]@{
             Results = "Failed to list available tests: $($ErrorMessage.NormalizedError)"
         }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

@@ -14,6 +14,7 @@ function Invoke-ExecPermissionRepair {
 
     $APIName = $Request.Params.CIPPEndpoint ?? 'PermissionRepair'
     $Headers = $Request.Headers
+    $StatusCode = [HttpStatusCode]::OK
 
     try {
         $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
@@ -24,13 +25,14 @@ function Invoke-ExecPermissionRepair {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Failed to reconcile permissions: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{
             'Results' = "$($_.Exception.Message) - at line $($_.InvocationInfo.ScriptLineNumber)"
         }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

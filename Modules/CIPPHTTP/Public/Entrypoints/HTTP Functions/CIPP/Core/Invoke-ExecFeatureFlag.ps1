@@ -8,23 +8,30 @@ function Invoke-ExecFeatureFlag {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    try {
-        $Action = $Request.Body.Action
-        $Id = $Request.Body.Id
-        $Enabled = $Request.Body.Enabled
+    $Action = $Request.Body.Action
+    $Id = $Request.Body.Id
+    $Enabled = $Request.Body.Enabled
 
+    $ValidationError = switch ($Action) {
+        'Set' {
+            if ([string]::IsNullOrEmpty($Id)) { 'Feature flag Id is required' }
+            elseif ($null -eq $Enabled) { 'Enabled state is required' }
+        }
+        'Get' {}
+        default { "Invalid action: $Action. Valid actions are 'Set' or 'Get'" }
+    }
+    if ($ValidationError) {
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = @{ error = $ValidationError }
+        }
+    }
+
+    try {
         Write-LogMessage -API 'ExecFeatureFlag' -message "Processing feature flag action: $Action for $Id" -sev 'Info'
 
         switch ($Action) {
             'Set' {
-                if ([string]::IsNullOrEmpty($Id)) {
-                    throw 'Feature flag Id is required'
-                }
-
-                if ($null -eq $Enabled) {
-                    throw 'Enabled state is required'
-                }
-
                 # Use Set-CIPPFeatureFlag to update the flag
                 $Result = Set-CIPPFeatureFlag -Id $Id -Enabled ([bool]$Enabled)
 
@@ -50,13 +57,10 @@ function Invoke-ExecFeatureFlag {
                 $StatusCode = [HttpStatusCode]::OK
                 $Body = $Flags
             }
-            default {
-                throw "Invalid action: $Action. Valid actions are 'Set' or 'Get'"
-            }
         }
     } catch {
         Write-LogMessage -API 'ExecFeatureFlag' -message "Failed to process feature flag: $($_.Exception.Message)" -sev 'Error'
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{
             error   = $_.Exception.Message
             details = $_.Exception

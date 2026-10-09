@@ -57,7 +57,7 @@ function Invoke-AddTenant {
                             resultText = "Failed to retrieve organization profile: $($_.Exception.Message)"
                         })
                 }
-                $StatusCode = [HttpStatusCode]::BadRequest
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         'AddTenant' {
@@ -169,7 +169,7 @@ function Invoke-AddTenant {
                                 resultText = $Result
                             })
                     }
-                    $StatusCode = [HttpStatusCode]::BadRequest
+                    $StatusCode = [HttpStatusCode]::InternalServerError
                 }
             }
         }
@@ -194,17 +194,23 @@ function Invoke-AddTenant {
                     ValidationStatus   = $Response.status
                 }
             } catch {
-                return @{
-                    state      = 'Error'
-                    resultText = "Address validation failed: $($_.Exception.Message)"
-                }
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::InternalServerError
+                        Body       = @{
+                            state      = 'Error'
+                            resultText = "Address validation failed: $($_.Exception.Message)"
+                        }
+                    })
             }
         }
         default {
-            return @{
-                state      = 'Error'
-                resultText = "Invalid action specified: $($Request.Body.Action)"
-            }
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{
+                        state      = 'Error'
+                        resultText = "Invalid action specified: $($Request.Body.Action)"
+                    }
+                })
         }
     }
 

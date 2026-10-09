@@ -381,12 +381,12 @@ function Invoke-ListSiteBrowserPermissions {
             collectedAt            = (Get-Date).ToUniversalTime().ToString('o')
         }
 
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = if ($Errors.Count -gt 0) { [HttpStatusCode]::MultiStatus } else { [HttpStatusCode]::OK }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Body = "Failed to list site browser permissions: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Body -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

@@ -31,9 +31,11 @@ function Invoke-ExecSetSiteProperties {
     $Int64Properties = @('StorageMaximumLevel', 'StorageWarningLevel')
     $ValidLockStates = @('Unlock', 'ReadOnly', 'NoAccess')
 
-    try {
-        if (-not $SiteUrl) { throw 'SiteUrl is required.' }
+    if (-not $SiteUrl) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
 
+    try {
         $Properties = @{}
         $Changes = [System.Collections.Generic.List[string]]::new()
 
@@ -41,7 +43,7 @@ function Invoke-ExecSetSiteProperties {
             $Value = $Request.Body.$Key.value ?? $Request.Body.$Key
             if ($null -ne $Value -and "$Value" -ne '') {
                 if (-not $EnumMaps[$Key].ContainsKey([string]$Value)) {
-                    throw "Invalid value '$Value' for $Key. Valid values: $($EnumMaps[$Key].Keys -join ', ')."
+                    return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "Invalid value '$Value' for $Key. Valid values: $($EnumMaps[$Key].Keys -join ', ')." } })
                 }
                 $Properties[$Key] = [int]$EnumMaps[$Key][[string]$Value]
                 $Changes.Add("$Key=$Value")
@@ -51,7 +53,7 @@ function Invoke-ExecSetSiteProperties {
         $LockState = $Request.Body.LockState.value ?? $Request.Body.LockState
         if ($null -ne $LockState -and "$LockState" -ne '') {
             if ($LockState -notin $ValidLockStates) {
-                throw "Invalid LockState '$LockState'. Valid values: $($ValidLockStates -join ', ')."
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "Invalid LockState '$LockState'. Valid values: $($ValidLockStates -join ', ')." } })
             }
             $Properties['LockState'] = [string]$LockState
             $Changes.Add("LockState=$LockState")
@@ -87,7 +89,7 @@ function Invoke-ExecSetSiteProperties {
         }
 
         if ($Properties.Count -eq 0) {
-            throw 'No valid properties were provided to set.'
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'No valid properties were provided to set.' } })
         }
 
         # Group-connected sites only accept a small subset of tenant site properties; SPO
@@ -106,7 +108,7 @@ function Invoke-ExecSetSiteProperties {
                 }
             }
             if ($Properties.Count -eq 0) {
-                throw "None of the selected properties can be changed on a group-connected site. Supported: $($GroupSiteAllowed -join ', ')."
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "None of the selected properties can be changed on a group-connected site. Supported: $($GroupSiteAllowed -join ', ')." } })
             }
         }
 
@@ -122,7 +124,7 @@ function Invoke-ExecSetSiteProperties {
                 }
             }
             if ($Properties.Count -eq 0) {
-                throw "The site is locked ($CurrentLockState). Unlock it before changing: $($LockSkipped -join ', ')."
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "The site is locked ($CurrentLockState). Unlock it before changing: $($LockSkipped -join ', ')." } })
             }
         }
 
@@ -163,7 +165,7 @@ function Invoke-ExecSetSiteProperties {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to update site properties for $($SiteUrl): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

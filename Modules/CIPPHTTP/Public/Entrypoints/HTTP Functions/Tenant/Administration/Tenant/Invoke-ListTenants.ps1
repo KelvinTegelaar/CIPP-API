@@ -235,6 +235,7 @@ function Invoke-ListTenants {
         }
 
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message 'Listed Tenant Details' -Sev 'Debug'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{
@@ -244,10 +245,11 @@ function Invoke-ListTenants {
             customerId        = ''
 
         }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @($Body)
         })
 

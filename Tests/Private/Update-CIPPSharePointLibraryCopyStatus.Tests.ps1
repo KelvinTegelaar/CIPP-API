@@ -108,4 +108,11 @@ Describe 'Update-CIPPSharePointLibraryCopyStatus' {
         $Result.Status | Should -Be 'Completed'
         $script:ProgressCalls | Should -Be 0
     }
+
+    It 'throws ItemNotFoundException when the operation does not exist' {
+        Mock Get-CIPPSharePointLibraryCopyOperation { $null }
+
+        { Update-CIPPSharePointLibraryCopyStatus -TenantFilter 'contoso.com' -OperationId 'missing' } |
+            Should -Throw -ExceptionType ([System.Management.Automation.ItemNotFoundException]) -ExpectedMessage 'Library copy operation not found.'
+    }
 }

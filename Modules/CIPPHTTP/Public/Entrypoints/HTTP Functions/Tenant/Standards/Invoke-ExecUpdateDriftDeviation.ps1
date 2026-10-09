@@ -55,6 +55,8 @@ function Invoke-ExecUpdateDriftDeviation {
 
     try {
         $TenantFilter = $Request.Body.TenantFilter
+        $Total = 0
+        $Failed = 0
 
         if ($Request.Body.RemoveDriftCustomization) {
             $Table = Get-CippTable -tablename 'tenantDrift'
@@ -80,6 +82,7 @@ function Invoke-ExecUpdateDriftDeviation {
             if ([string]::IsNullOrWhiteSpace($Justification)) { $Justification = 'Denied and deleted from CIPP drift review' }
             if ($Justification.Length -gt 1024) { $Justification = $Justification.Substring(0, 1024) }
             $Justification = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Justification))
+            $Total = @($Deviations).Count
             $Results = foreach ($Deviation in $Deviations) {
                 try {
                     $user = $request.headers.'x-ms-client-principal'
@@ -310,6 +313,7 @@ function Invoke-ExecUpdateDriftDeviation {
                     }
                     Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Updated drift deviation status for $($Deviation.standardName) to $($Deviation.status) with reason: $Reason" -Sev 'Info'
                 } catch {
+                    $Failed++
                     [PSCustomObject]@{
                         standardName = $Deviation.standardName
                         success      = $false
@@ -323,14 +327,14 @@ function Invoke-ExecUpdateDriftDeviation {
         $Body = @{ Results = @($Results) }
 
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
+                StatusCode = Get-CippBulkStatusCode -Total $Total -Failed $Failed
                 Body       = $Body
             })
 
     } catch {
         Write-LogMessage -Headers $Request.Headers -API $APINAME -message "Failed to update drift deviation: $($_.Exception.Message)" -Sev 'Error'
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
+                StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = @{error = $_.Exception.Message }
             })
     }

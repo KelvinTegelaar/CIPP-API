@@ -17,6 +17,7 @@ Function Invoke-ExecExcludeTenant {
     Write-Host ($Username | ConvertTo-Json -Depth 10)
     $Date = (Get-Date).ToString('yyyy-MM-dd')
     $TenantsTable = Get-CippTable -tablename Tenants
+    $StatusCode = [HttpStatusCode]::OK
 
     if ($Request.Query.List) {
         $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
@@ -60,11 +61,12 @@ Function Invoke-ExecExcludeTenant {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $($Name) -headers $Headers -message "Exclusion API failed. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     if (!$body) { $body = @() }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

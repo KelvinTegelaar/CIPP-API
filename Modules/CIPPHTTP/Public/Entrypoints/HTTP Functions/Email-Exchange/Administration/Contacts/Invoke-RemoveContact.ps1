@@ -27,7 +27,7 @@ Function Invoke-RemoveContact {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to delete contact $GUID. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Results = [pscustomobject]@{'Results' = $Result }

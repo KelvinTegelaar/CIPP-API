@@ -20,7 +20,7 @@ function Invoke-ListGeneratedReports {
 
         if ($ReportGUID) {
             # Fetch specific report
-            $ReportGUID = ConvertTo-CIPPODataFilterValue -Value $ReportGUID -Type 'Guid'
+            $ReportGUID = try { ConvertTo-CIPPODataFilterValue -Value $ReportGUID -Type 'Guid' } catch { $FailCode = [HttpStatusCode]::BadRequest; throw }
             $Filter = "RowKey eq '$ReportGUID'"
             $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
         } elseif ($TenantFilter) {
@@ -84,7 +84,7 @@ function Invoke-ListGeneratedReports {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -message "Failed to list generated reports: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{ Results = "Error: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

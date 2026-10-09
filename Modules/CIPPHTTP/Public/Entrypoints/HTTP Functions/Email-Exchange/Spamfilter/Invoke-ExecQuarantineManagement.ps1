@@ -86,7 +86,7 @@ function Invoke-ExecQuarantineManagement {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Quarantine Management failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Results = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

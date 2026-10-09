@@ -34,12 +34,19 @@ function Invoke-ExecSetSharePointMember {
         APIName           = $APIName
     }
 
+    if ($MemberParams.UserPrincipalName.Count -eq 0) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'No user was selected.' } })
+    }
+    if ($MemberParams.Role -notin @('Owners', 'Members', 'Visitors')) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "Invalid role '$($MemberParams.Role)'. Valid roles are: Owners, Members, Visitors." } })
+    }
+
     try {
-        $Results = Set-CIPPSharePointSiteMember @MemberParams
-        $StatusCode = [HttpStatusCode]::OK
+        $Results = @(Set-CIPPSharePointSiteMember @MemberParams)
+        $StatusCode = Get-CippBulkStatusCode -Total $Results.Count -Failed $Results.Where({ $_.state -eq 'error' }).Count
     } catch {
         $Results = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

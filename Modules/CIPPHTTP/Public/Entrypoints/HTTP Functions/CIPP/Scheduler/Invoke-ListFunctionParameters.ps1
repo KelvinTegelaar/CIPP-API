@@ -110,7 +110,7 @@ function Invoke-ListFunctionParameters {
         $Results
     } catch {
         $Results = "Function Error: $($_.Exception.Message)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return [HttpResponseContext]@{
         StatusCode = $StatusCode

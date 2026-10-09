@@ -29,7 +29,7 @@ function Invoke-ExecUserSettings {
         $Result = "Function Error: $ErrorMsg"
         Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
         $Results = $Result
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return [HttpResponseContext]@{
             StatusCode = $StatusCode

@@ -25,28 +25,30 @@ function Invoke-ExecJITAdminRequestDecision {
 
     $Table = Get-CIPPTable -TableName 'JITAdminRequests'
     try {
-        if (-not $Decision) { throw 'Decision must be Approve or Reject.' }
-        if ($Decision -eq 'Reject' -and [string]::IsNullOrWhiteSpace($Note)) { throw 'A note is required when rejecting a request.' }
+        if (-not $Decision) { $FailCode = [HttpStatusCode]::BadRequest; throw 'Decision must be Approve or Reject.' }
+        if ($Decision -eq 'Reject' -and [string]::IsNullOrWhiteSpace($Note)) { $FailCode = [HttpStatusCode]::BadRequest; throw 'A note is required when rejecting a request.' }
         $ParsedId = [guid]::Empty
-        if (-not [guid]::TryParse([string]$RequestId, [ref]$ParsedId)) { throw 'Invalid request id.' }
+        if (-not [guid]::TryParse([string]$RequestId, [ref]$ParsedId)) { $FailCode = [HttpStatusCode]::BadRequest; throw 'Invalid request id.' }
         $Row = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'JITAdminRequest' and RowKey eq '$ParsedId'"
-        if (-not $Row -or $Row.Tenant -ne $TenantFilter) { throw 'JIT Admin request not found.' }
-        if ($Row.State -ne 'Pending') { throw "This request is already $($Row.State.ToLower())." }
+        if (-not $Row -or $Row.Tenant -ne $TenantFilter) { $FailCode = [HttpStatusCode]::NotFound; throw 'JIT Admin request not found.' }
+        if ($Row.State -ne 'Pending') { $FailCode = [HttpStatusCode]::BadRequest; throw "This request is already $($Row.State.ToLower())." }
 
         $CallingUser = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
-        if ($Decision -eq 'Approve' -and $CallingUser -eq $Row.RequestedBy) { throw 'You cannot approve your own request.' }
+        if ($Decision -eq 'Approve' -and $CallingUser -eq $Row.RequestedBy) { $FailCode = [HttpStatusCode]::Forbidden; throw 'You cannot approve your own request.' }
         $ApproverRoles = @($Row.ApproverRoles | ConvertFrom-Json)
         if (@(Get-CIPPAccessRole -Headers $Headers).Where({ $_ -in $ApproverRoles }).Count -eq 0) {
+            $FailCode = [HttpStatusCode]::Forbidden
             throw "Only users with one of these roles can decide on this request: $($ApproverRoles -join ', ')"
         }
 
         $Decisions = [System.Collections.Generic.List[object]]::new()
         foreach ($Existing in @($Row.Decisions | ConvertFrom-Json)) { $Decisions.Add($Existing) }
-        if ($Decisions.By -contains $CallingUser) { throw 'You have already approved this request.' }
+        if ($Decisions.By -contains $CallingUser) { $FailCode = [HttpStatusCode]::BadRequest; throw 'You have already approved this request.' }
         $Decisions.Add([pscustomobject]@{ By = $CallingUser; At = (Get-Date).ToUniversalTime().ToString('o'); Decision = $Decision; Note = [string]$Note })
         $Approvals = @($Decisions.Where({ $_.Decision -eq 'Approve' })).Count
         $NewState = if ($Decision -eq 'Reject') { 'Rejected' } elseif ($Approvals -ge [int]$Row.RequiredApprovals) { 'Approved' } else { 'Pending' }
         if ($NewState -eq 'Approved' -and [int64]$Row.EndDate -le [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'The requested access window has already ended. Reject this request instead.'
         }
 
@@ -89,7 +91,7 @@ function Invoke-ExecJITAdminRequestDecision {
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
         $Results = $_.Exception.Message
     }
 

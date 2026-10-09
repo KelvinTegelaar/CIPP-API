@@ -15,8 +15,14 @@ function Invoke-ExecTestRefresh {
     # A test id (e.g. SecuritySimulation_MfaTampering), or an array of them to queue as one run.
     $TestNames = @($Request.Query.testName ?? $Request.Body.testName | Where-Object { $_ })
 
+    if ($TestNames.Count -eq 0) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Message = "Failed to queue test refresh for $TenantFilter"; Error = 'testName is required' }
+            })
+    }
+
     try {
-        if ($TestNames.Count -eq 0) { throw 'testName is required' }
         $Unknown = @(foreach ($TestName in $TestNames) {
                 if ((Resolve-CIPPCommand -Name "Invoke-CippTest$TestName").ModuleName -ne 'CIPPTests') { $TestName }
             })
@@ -50,7 +56,7 @@ function Invoke-ExecTestRefresh {
         }
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Queued test refresh for $($TestNames -join ', ')" -Sev 'Info'
     } catch {
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Failed to queue test refresh for ${TenantFilter}: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{

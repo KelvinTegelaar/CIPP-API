@@ -22,6 +22,8 @@ function Invoke-ListRoleAssignments {
     $PermanentOnly = [bool]($Request.Query.permanentOnly -eq $true -or "$($Request.Query.permanentOnly)" -eq 'true')
     # Single tenant: also list roles that nobody holds (AssignmentType 'Unassigned'), so the result is the full role catalogue. Default true; set to false for assignments only.
     $IncludeUnassigned = -not ("$($Request.Query.includeUnassigned)" -eq 'false')
+    $Failed = 0
+    $Total = 1
 
     try {
         if ($TenantFilter -eq 'AllTenants') {
@@ -38,6 +40,7 @@ function Invoke-ListRoleAssignments {
             $Tenants = @($RefreshedAt.Keys | Where-Object { $TenantList.defaultDomainName -contains $_ })
 
             $Results = [System.Collections.Generic.List[object]]::new()
+            $Total = $Tenants.Count
             foreach ($Tenant in $Tenants) {
                 try {
                     $Rows = Get-CIPPPIMRoleAssignments -TenantFilter $Tenant -FromCache -IncludePolicy
@@ -46,6 +49,7 @@ function Invoke-ListRoleAssignments {
                         $Results.Add($Row)
                     }
                 } catch {
+                    $Failed++
                     Write-LogMessage -API $APIName -tenant $Tenant -message "Failed to read cached role assignments: $($_.Exception.Message)" -sev Warning
                 }
             }
@@ -61,12 +65,12 @@ function Invoke-ListRoleAssignments {
         if (-not [string]::IsNullOrWhiteSpace($RoleTemplateId)) { $Results = @($Results | Where-Object { $_.RoleDefinitionId -eq $RoleTemplateId }) }
         if ($PermanentOnly) { $Results = @($Results | Where-Object { $_.AssignmentType -eq 'Permanent' }) }
 
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total $Total -Failed $Failed
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to list role assignments: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         $Results = "Failed to list role assignments for $TenantFilter. $($ErrorMessage.NormalizedError)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return [HttpResponseContext]@{

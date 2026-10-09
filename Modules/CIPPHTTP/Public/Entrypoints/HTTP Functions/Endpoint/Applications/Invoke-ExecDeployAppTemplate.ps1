@@ -13,12 +13,16 @@ function Invoke-ExecDeployAppTemplate {
 
     try {
         $TemplateId = $Request.Body.templateId
-        if (!$TemplateId) { throw 'No template ID provided' }
+        if (!$TemplateId) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = @('Failed to deploy app template: No template ID provided') } })
+        }
 
         $Table = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'AppTemplate' and RowKey eq '$TemplateId'"
         $TemplateEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-        if (!$TemplateEntity) { throw 'Template not found' }
+        if (!$TemplateEntity) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::NotFound; Body = @{ Results = @('Failed to deploy app template: Template not found') } })
+        }
 
         $TemplateData = $TemplateEntity.JSON | ConvertFrom-Json -Depth 100
         $AppsRaw = $TemplateData.Apps
@@ -47,6 +51,7 @@ function Invoke-ExecDeployAppTemplate {
         $OverrideAssignTo = $Request.Body.AssignTo
         $OverrideCustomGroup = $Request.Body.customGroup
 
+        $Failed = 0
         $Results = foreach ($App in $Apps) {
             try {
                 $Config = $App.config
@@ -100,18 +105,20 @@ function Invoke-ExecDeployAppTemplate {
                     Write-LogMessage -headers $Headers -API $APIName -message "Deployed app '$($App.appName)' ($AppType) from template $TemplateId" -Sev 'Info'
                     $DeployedResult
                 } else {
+                    $Failed++
                     $FailureText = "Failed to deploy app '$($App.appName)' ($AppType) from template $($TemplateId): $($DeployedResult -join '; ')"
                     Write-LogMessage -headers $Headers -API $APIName -message $FailureText -Sev 'Error'
                     $FailureText
                 }
             } catch {
+                $Failed++
                 $ErrorMessage = Get-CippException -Exception $_
                 "Failed '$($App.appName)': $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -headers $Headers -API $APIName -message "Failed to deploy app '$($App.appName)' from template: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
             }
         }
 
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total $Apps.Count -Failed $Failed
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to deploy app template: $($ErrorMessage.NormalizedError)"

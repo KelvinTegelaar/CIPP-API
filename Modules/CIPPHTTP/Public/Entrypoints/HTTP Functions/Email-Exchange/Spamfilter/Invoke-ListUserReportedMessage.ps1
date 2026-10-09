@@ -14,9 +14,14 @@ function Invoke-ListUserReportedMessage {
     $InternetMessageId = $Request.Query.InternetMessageId
     $Mailboxes = @($Request.Query.RecipientEmail, $Request.Query.ReporterEmail) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($InternetMessageId)) { throw 'This submission has no Internet Message ID, so the message content cannot be retrieved.' }
+    if ([string]::IsNullOrWhiteSpace($InternetMessageId)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = 'This submission has no Internet Message ID, so the message content cannot be retrieved.'
+            })
+    }
 
+    try {
         $EmlBase64 = $null
         $Source = $null
         $Errors = [System.Collections.Generic.List[string]]::new()
@@ -59,7 +64,10 @@ function Invoke-ListUserReportedMessage {
 
         if (-not $EmlBase64) {
             $Detail = if ($Errors.Count -gt 0) { " ($($Errors -join ' | '))" } else { '' }
-            throw "The reported message could not be retrieved: it is not in quarantine and could not be read from the mailbox. Mailbox retrieval requires the Mail.Read Graph permission on the CIPP-SAM application.$Detail"
+            return ([HttpResponseContext]@{
+                    StatusCode = $Errors.Count -gt 0 ? [HttpStatusCode]::InternalServerError : [HttpStatusCode]::NotFound
+                    Body       = "The reported message could not be retrieved: it is not in quarantine and could not be read from the mailbox. Mailbox retrieval requires the Mail.Read Graph permission on the CIPP-SAM application.$Detail"
+                })
         }
 
         $EmlContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($EmlBase64))
@@ -74,7 +82,7 @@ function Invoke-ListUserReportedMessage {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = $ErrorMessage
     }
 

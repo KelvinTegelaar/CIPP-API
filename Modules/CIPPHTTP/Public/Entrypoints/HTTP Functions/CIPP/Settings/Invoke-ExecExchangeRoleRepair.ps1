@@ -12,6 +12,7 @@ function Invoke-ExecExchangeRoleRepair {
 
     $TenantId = $Request.Query.tenantId ?? $Request.Body.tenantId
     $Tenant = Get-Tenants -TenantFilter $TenantId
+    $StatusCode = [HttpStatusCode]::OK
 
     try {
         Write-Information "Starting Exchange Organization Management role repair for tenant: $($Tenant.defaultDomainName)"
@@ -65,6 +66,7 @@ function Invoke-ExecExchangeRoleRepair {
                     $PermissionError = $true
                 }
                 $LogData = $RepairResults | Select-Object -Property id, status, body
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = @{
                     state      = 'error'
                     resultText = "Failed to repair the missing Organization Management roles: $($FailedRoles -join ', ').$(if ($PermissionError) { " This may be due to insufficient permissions. The required Graph Permission is 'Application - RoleManagement.ReadWrite.Exchange'" })"
@@ -81,6 +83,7 @@ function Invoke-ExecExchangeRoleRepair {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-Warning "Exception during Exchange Organization Management role repair: $($ErrorMessage.NormalizedError)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
         Write-LogMessage -API 'ExecExchangeRoleRepair' -headers $Headers -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -Message "Exchange Organization Management role repair failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
         $Results = @{
             state      = 'error'
@@ -89,7 +92,7 @@ function Invoke-ExecExchangeRoleRepair {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [System.Net.HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 }

@@ -17,6 +17,7 @@ function Invoke-ListCustomDataMappings {
 
     Write-Information "Listing custom data mappings with filters - sourceType: $SourceTypeFilter, directoryObject: $DirectoryObjectFilter, tenant: $TenantFilter"
 
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingsTable | ForEach-Object {
             $Mapping = $_.JSON | ConvertFrom-Json -AsHashtable
@@ -56,6 +57,7 @@ function Invoke-ListCustomDataMappings {
             Results = @($Mappings)
         }
     } catch {
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{
             Results = @(
                 @{
@@ -67,7 +69,7 @@ function Invoke-ListCustomDataMappings {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

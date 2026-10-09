@@ -19,6 +19,7 @@ function Invoke-AddEdgeApp {
     $GroupIds = @($Request.Body.GroupIds | Where-Object { $_ })
     $ExcludeGroupIds = @($Request.Body.ExcludeGroupIds | Where-Object { $_ })
 
+    $Failed = 0
     $Results = foreach ($Tenant in $Tenants) {
         try {
             $ExistingEdge = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps' -tenantid $Tenant | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windowsMicrosoftEdgeApp' }
@@ -51,6 +52,7 @@ function Invoke-AddEdgeApp {
             }
             "Successfully added Edge App for $($Tenant)"
         } catch {
+            $Failed++
             $ErrorMessage = Get-CippException -Exception $_
             "Failed to add Edge App for $($Tenant): $($ErrorMessage.NormalizedError)"
             Write-LogMessage -headers $Headers -API $APIName -tenant $($Tenant) -message "Failed to add Edge App. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -Logdata $ErrorMessage
@@ -59,7 +61,7 @@ function Invoke-AddEdgeApp {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = @{'Results' = $Results }
         })
 }

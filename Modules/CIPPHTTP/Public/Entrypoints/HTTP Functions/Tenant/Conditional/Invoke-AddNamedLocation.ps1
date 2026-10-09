@@ -22,6 +22,7 @@ function Invoke-AddNamedLocation {
         $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
     }
 
+    $Failed = 0
     $results = foreach ($Tenant in $tenants) {
         try {
             $ObjBody = if ($Request.body.Type -eq 'IPLocation') {
@@ -47,6 +48,7 @@ function Invoke-AddNamedLocation {
             Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenant -message "Added Named Location $($Displayname)" -Sev 'Info'
 
         } catch {
+            $Failed++
             "Failed to add Named Location $($Tenant): $($_.Exception.Message)"
             Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenant -message "Failed adding Named Location$($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
@@ -57,7 +59,7 @@ function Invoke-AddNamedLocation {
     $body = [pscustomobject]@{'Results' = @($results) }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = $body
         })
 

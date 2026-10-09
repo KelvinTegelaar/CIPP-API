@@ -103,6 +103,7 @@ function Invoke-ExecSharePointTemplate {
                     $Body = @{
                         'Results' = 'No template found with the provided ID'
                     }
+                    $StatusCode = [HttpStatusCode]::NotFound
                 }
             } catch {
                 $Body = @{
@@ -135,21 +136,40 @@ function Invoke-ExecSharePointTemplate {
             try {
                 $TemplateId = $Request.Body.TemplateId
                 $SiteOwner = $Request.Body.SiteOwner
-                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$TemplateId'"
-                if (-not $Template) { throw 'No template found with the provided ID' }
-                $TemplateData = $Template.JSON | ConvertFrom-Json
-                if (-not $SiteOwner) { throw 'A site/team owner is required to deploy this template.' }
+                if (-not $SiteOwner) {
+                    $Body = @{ Results = 'Failed to queue template deployment: A site/team owner is required to deploy this template.' }
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    break
+                }
 
                 $TenantFilter = $Request.Body.tenantFilter
                 if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
-                    throw 'A tenant is required to deploy this template.'
+                    $Body = @{ Results = 'Failed to queue template deployment: A tenant is required to deploy this template.' }
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    break
                 }
 
                 # AnyTenant: deployment provisions sites in this tenant; enforce scope
-                $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-                if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $TenantFilter)) {
-                    throw 'Access to this tenant is not allowed'
+                try {
+                    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+                } catch {
+                    $Body = @{ Results = "Failed to queue template deployment: $($_.Exception.Message)" }
+                    $StatusCode = [HttpStatusCode]::Forbidden
+                    break
                 }
+                if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $TenantFilter)) {
+                    $Body = @{ Results = 'Failed to queue template deployment: Access to this tenant is not allowed' }
+                    $StatusCode = [HttpStatusCode]::Forbidden
+                    break
+                }
+
+                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$TemplateId'"
+                if (-not $Template) {
+                    $Body = @{ Results = 'Failed to queue template deployment: No template found with the provided ID' }
+                    $StatusCode = [HttpStatusCode]::NotFound
+                    break
+                }
+                $TemplateData = $Template.JSON | ConvertFrom-Json
 
                 # Pre-create a status row so the frontend can poll live progress from queue time.
                 $JobId = New-CIPPAsyncDeployment -Names @($TenantFilter) -StepTitles @(@($TemplateData.siteTemplates) | ForEach-Object { $_.displayName }) -Source 'SharePointTemplate'
@@ -180,18 +200,22 @@ function Invoke-ExecSharePointTemplate {
                 Write-LogMessage -headers $Headers -API $APIName -message "Queued SharePoint template deployment '$($TemplateData.templateName)' for $TenantFilter" -Sev 'Info'
             } catch {
                 $Body = @{ Results = "Failed to queue template deployment: $($_.Exception.Message)" }
-                $StatusCode = [HttpStatusCode]::BadRequest
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         'DeployStatus' {
             try {
                 $JobId = $Request.Query.DeploymentId ?? $Request.Body.DeploymentId
-                if (-not $JobId) { throw 'DeploymentId is required' }
+                if (-not $JobId) {
+                    $Body = @{ Results = 'Failed to get deployment status: DeploymentId is required' }
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    break
+                }
                 $Body = @(Get-CIPPAsyncDeployment -JobId $JobId)
                 Add-CIPPRealtimeWatch -JobId $JobId
             } catch {
                 $Body = @{ Results = "Failed to get deployment status: $($_.Exception.Message)" }
-                $StatusCode = [HttpStatusCode]::BadRequest
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         default {

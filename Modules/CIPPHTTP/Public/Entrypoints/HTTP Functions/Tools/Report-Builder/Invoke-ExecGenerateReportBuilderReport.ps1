@@ -17,6 +17,7 @@ function Invoke-ExecGenerateReportBuilderReport {
 
         if ($Action -eq 'delete') {
             if ([string]::IsNullOrEmpty($Body.ReportGUID)) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'ReportGUID is required for deletion'
             }
             $ReportTable = Get-CippTable -tablename 'ReportBuilderReports'
@@ -33,13 +34,14 @@ function Invoke-ExecGenerateReportBuilderReport {
             } else {
                 $Result = @{ Results = 'Report not found' }
             }
-            $StatusCode = [HttpStatusCode]::OK
+            $StatusCode = $ExistingEntity ? [HttpStatusCode]::OK : [HttpStatusCode]::NotFound
         } else {
 
             $TenantFilter = $Body.TenantFilter ?? $Request.Query.TenantFilter
             $TemplateName = $Body.TemplateName ?? $Request.Query.TemplateName
 
             if ([string]::IsNullOrEmpty($TenantFilter)) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'TenantFilter is required'
             }
 
@@ -72,7 +74,7 @@ function Invoke-ExecGenerateReportBuilderReport {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -message "Report generation error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Result = @{ Results = "Error: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

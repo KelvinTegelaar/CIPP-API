@@ -122,7 +122,7 @@ Function Invoke-ExecBrandingSettings {
                     Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message "Uploaded branding $Kind image $($Added.id)" -Sev 'Info'
                     $Added
                 } catch {
-                    $StatusCode = [HttpStatusCode]::BadRequest
+                    $StatusCode = [HttpStatusCode]::InternalServerError
                     "Error: $($_.Exception.Message)"
                 }
             }

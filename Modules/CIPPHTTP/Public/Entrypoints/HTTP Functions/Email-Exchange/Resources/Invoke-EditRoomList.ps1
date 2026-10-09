@@ -16,6 +16,8 @@ Function Invoke-EditRoomList {
     $RoomListObj = $Request.Body
     $GroupId = $RoomListObj.groupId
     $TenantId = $RoomListObj.tenantFilter
+    $Total = 0
+    $Failed = 0
 
     try {
         # Edit basic room list properties
@@ -36,11 +38,13 @@ Function Invoke-EditRoomList {
                 $SetRoomListParams.Name = $RoomListObj.mailNickname
             }
 
+            $Total++
             try {
                 $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-DistributionGroup' -cmdParams $SetRoomListParams -useSystemMailbox $true
                 $Results.Add("Successfully updated room list properties for $($RoomListObj.displayName)")
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Updated room list properties for $($RoomListObj.displayName)" -Sev 'Info'
             } catch {
+                $Failed++
                 $Results.Add("Failed to update room list properties: $($_.Exception.Message)")
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to update room list properties: $($_.Exception.Message)" -Sev 'Error'
             }
@@ -49,6 +53,7 @@ Function Invoke-EditRoomList {
         # Add room members
         if ($RoomListObj.AddMember) {
             foreach ($Member in $RoomListObj.AddMember) {
+                $Total++
                 try {
                     $MemberEmail = if ($Member.value) { $Member.value } else { $Member }
                     $AddMemberParams = @{
@@ -61,6 +66,7 @@ Function Invoke-EditRoomList {
                     $Results.Add("Successfully added room $MemberEmail to room list")
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Added room $MemberEmail to room list $GroupId" -Sev 'Info'
                 } catch {
+                    $Failed++
                     $Results.Add("Failed to add room $MemberEmail : $($_.Exception.Message)")
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to add room $MemberEmail : $($_.Exception.Message)" -Sev 'Error'
                 }
@@ -70,6 +76,7 @@ Function Invoke-EditRoomList {
         # Remove room members
         if ($RoomListObj.RemoveMember) {
             foreach ($Member in $RoomListObj.RemoveMember) {
+                $Total++
                 try {
                     $MemberEmail = if ($Member.value) { $Member.value } else { $Member }
                     $RemoveMemberParams = @{
@@ -82,6 +89,7 @@ Function Invoke-EditRoomList {
                     $Results.Add("Successfully removed room $MemberEmail from room list")
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Removed room $MemberEmail from room list $GroupId" -Sev 'Info'
                 } catch {
+                    $Failed++
                     $Results.Add("Failed to remove room $MemberEmail from room list: $($_.Exception.Message)")
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to remove room $MemberEmail from room list: $($_.Exception.Message)" -Sev 'Error'
                 }
@@ -90,6 +98,7 @@ Function Invoke-EditRoomList {
 
         # Handle owners (ManagedBy property)
         if ($RoomListObj.AddOwner -or $RoomListObj.RemoveOwner) {
+            $Total++
             try {
                 # Get current owners
                 $CurrentGroup = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-DistributionGroup' -cmdParams @{ Identity = $GroupId } -useSystemMailbox $true
@@ -134,6 +143,7 @@ Function Invoke-EditRoomList {
                 $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-DistributionGroup' -cmdParams $SetOwnersParams -useSystemMailbox $true
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Updated owners for room list $GroupId" -Sev 'Info'
             } catch {
+                $Failed++
                 $Results.Add("Failed to update room list owners: $($_.Exception.Message)")
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to update room list owners: $($_.Exception.Message)" -Sev 'Error'
             }
@@ -141,6 +151,7 @@ Function Invoke-EditRoomList {
 
         # Handle external email settings
         if ($null -ne $RoomListObj.allowExternal) {
+            $Total++
             try {
                 $SetExternalParams = @{
                     Identity                           = $GroupId
@@ -157,18 +168,20 @@ Function Invoke-EditRoomList {
 
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Updated external email settings for room list $GroupId" -Sev 'Info'
             } catch {
+                $Failed++
                 $Results.Add("Failed to update external email settings: $($_.Exception.Message)")
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to update external email settings: $($_.Exception.Message)" -Sev 'Error'
             }
         }
-
+        $StatusCode = Get-CippBulkStatusCode -Total $Total -Failed $Failed
     } catch {
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Results.Add("An error occurred while editing the room list: $($_.Exception.Message)")
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to edit room list: $($_.Exception.Message)" -Sev 'Error'
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{'Results' = @($Results) }
         })
 }

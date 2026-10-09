@@ -98,7 +98,7 @@ function Invoke-ExecJITAdmin {
                 $ErrorMessage = "You are not permitted to assign the following role(s): $($ForbiddenLabels -join ', ')"
                 Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Error'
                 return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::BadRequest
+                        StatusCode = [HttpStatusCode]::Forbidden
                         Body       = @{'Results' = @($ErrorMessage) }
                     })
             }
@@ -169,7 +169,7 @@ function Invoke-ExecJITAdmin {
             $CreateResult = Set-CIPPUserJITAdmin @JITAdmin
         } catch {
             return ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{'Results' = @("Failed to create JIT Admin user: $($_.Exception.Message)") }
                 })
         }
@@ -218,6 +218,7 @@ function Invoke-ExecJITAdmin {
 
 
 
+    $StatusCode = [HttpStatusCode]::OK
     #Region TAP creation
     if ($Request.Body.UseTAP) {
         try {
@@ -286,6 +287,7 @@ function Invoke-ExecJITAdmin {
                 })
             $Results.Add("This TAP is usable starting at $($TapRequest.startDateTime) UTC for the next $PasswordExpiration minutes")
         } catch {
+            $StatusCode = [HttpStatusCode]::MultiStatus
             $Results.Add('Failed to create TAP, if this is not yet enabled, use the Standards to push the settings to the tenant.')
             Write-Information (Get-CippException -Exception $_ | ConvertTo-Json -Depth 5)
             if ($Password) {
@@ -388,7 +390,7 @@ function Invoke-ExecJITAdmin {
     $Results.Add("Scheduling JIT Admin $($Request.Body.ExpireAction.value) task for $Username")
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{'Results' = @($Results) }
         })
 

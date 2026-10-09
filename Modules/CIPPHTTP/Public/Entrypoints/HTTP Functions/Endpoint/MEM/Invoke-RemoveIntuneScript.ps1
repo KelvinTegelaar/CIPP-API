@@ -43,7 +43,7 @@ function Invoke-RemoveIntuneScript {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to delete $($ScriptType) script $($DisplayName). Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APINAME -tenant $Tenant -message $Result -Sev 'Error'
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

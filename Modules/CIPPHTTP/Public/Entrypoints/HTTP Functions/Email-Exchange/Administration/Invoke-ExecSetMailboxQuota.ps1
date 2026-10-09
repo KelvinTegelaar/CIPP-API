@@ -12,6 +12,7 @@ Function Invoke-ExecSetMailboxQuota {
         $Username = $request.body.user
         $Tenantfilter = $request.body.tenantfilter
         $quota = $Request.body.quota
+        $StatusCode = [HttpStatusCode]::OK
         $Results = try {
             if ($Request.Body.ProhibitSendQuota) {
                 $quota = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $Username; ProhibitSendQuota = $quota }
@@ -29,17 +30,19 @@ Function Invoke-ExecSetMailboxQuota {
                 Write-LogMessage -headers $Request.Headers -API $APINAME -message "Changed IssueWarningQuota for $username - $($message)" -Sev 'Info' -tenant $TenantFilter
             }
         } catch {
+            $StatusCode = [HttpStatusCode]::InternalServerError
             Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not adjust mailbox quota for $($username)" -Sev 'Error' -tenant $TenantFilter
             "Could not adjust mailbox quota for $($username). Error: $($_.Exception.Message)"
         }
 
         $body = [pscustomobject]@{'Results' = @($results) }
     } catch {
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $body = [pscustomobject]@{'Results' = @("Could not adjust mailbox quota: $($_.Exception.message)") }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 

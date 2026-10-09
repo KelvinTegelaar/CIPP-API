@@ -17,23 +17,27 @@ function Invoke-ExecLicensePricing {
     $Table = Get-CIPPTable -TableName 'LicensePricing'
     $ResponseBody = $null
 
-    try {
-        # SetPrice or RemovePrice
-        $Action = $Request.Body.Action
-        if ([string]::IsNullOrWhiteSpace($Action)) { throw 'Action is required.' }
-        $SkuId = $null
-        $Currency = [string]$Request.Body.Currency
-        $RowKey = $null
-        if ($Action -ne 'BulkImport') {
-            # The SKU GUID (skuId) the price applies to
-            $SkuId = ([string]$Request.Body.skuId).ToLowerInvariant()
-            if ([string]::IsNullOrWhiteSpace($SkuId)) { throw 'skuId is required.' }
-
-            # Overrides are currency-scoped: one row per (skuId, currency).
-            $Currency = if ($Request.Body.Currency) { [string]$Request.Body.Currency } else { 'USD' }
-            $RowKey = '{0}-{1}' -f $SkuId, $Currency.ToLowerInvariant()
+    # SetPrice or RemovePrice
+    $Action = $Request.Body.Action
+    if ([string]::IsNullOrWhiteSpace($Action)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = [pscustomobject]@{ 'Results' = 'Failed to update license pricing. Action is required.' } })
+    }
+    $SkuId = $null
+    $Currency = [string]$Request.Body.Currency
+    $RowKey = $null
+    if ($Action -ne 'BulkImport') {
+        # The SKU GUID (skuId) the price applies to
+        $SkuId = ([string]$Request.Body.skuId).ToLowerInvariant()
+        if ([string]::IsNullOrWhiteSpace($SkuId)) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = [pscustomobject]@{ 'Results' = 'Failed to update license pricing. skuId is required.' } })
         }
 
+        # Overrides are currency-scoped: one row per (skuId, currency).
+        $Currency = if ($Request.Body.Currency) { [string]$Request.Body.Currency } else { 'USD' }
+        $RowKey = '{0}-{1}' -f $SkuId, $Currency.ToLowerInvariant()
+    }
+
+    try {
         switch ($Action) {
             'BulkImport' {
                 $Mode = [string]$Request.Body.Mode
@@ -224,6 +228,7 @@ function Invoke-ExecLicensePricing {
                         }
                     }
                     $WriteFailed = $WriteErrors.Count
+                    $StatusCode = Get-CippBulkStatusCode -Total $Candidates.Count -Failed $WriteFailed
                     $Result = "Updated $Updated price(s), skipped $Unchanged unchanged row(s), failed $WriteFailed."
                     $ResponseBody = [pscustomobject]@{
                         Results   = $Result
@@ -241,7 +246,11 @@ function Invoke-ExecLicensePricing {
             'SetPrice' {
                 # Monthly price per seat, in the given currency
                 $MonthlyPrice = $Request.Body.MonthlyPrice -as [double]
-                if ($null -eq $MonthlyPrice) { throw 'MonthlyPrice must be a number.' }
+                if ($null -eq $MonthlyPrice) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    $Result = 'Failed to update license pricing. MonthlyPrice must be a number.'
+                    break
+                }
 
                 $Entity = @{
                     PartitionKey           = 'Price'

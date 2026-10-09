@@ -57,10 +57,10 @@ Describe 'Push-CIPPTemplateToRepo' {
         $script:Written.ContainsKey('JSON') | Should -BeFalse
     }
 
-    It 'returns an error result and does not stamp when the template is not found' {
+    It 'throws ItemNotFoundException and does not stamp when the template is not found' {
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { $null }
-        $Result = Push-CIPPTemplateToRepo -GUID 'missing' -FullName 'Org/repo' -Message 'push it' -Branch 'main'
-        $Result.state | Should -Be 'error'
+        { Push-CIPPTemplateToRepo -GUID 'missing' -FullName 'Org/repo' -Message 'push it' -Branch 'main' } |
+            Should -Throw -ExceptionType ([System.Management.Automation.ItemNotFoundException]) -ExpectedMessage "Template 'missing' not found"
         Should -Invoke Add-CIPPAzDataTableEntity -Times 0
     }
 

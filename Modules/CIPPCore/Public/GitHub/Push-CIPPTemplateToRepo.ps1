@@ -8,7 +8,7 @@ function Push-CIPPTemplateToRepo {
         templates row with the returned blob SHA and the repo FullName so the scheduled sync
         recognises this as the current copy instead of re-importing it as new.
     .OUTPUTS
-        @{ resultText = <string>; state = 'success' | 'error' }
+        @{ resultText = <string>; state = 'success' | 'error' }. Throws ItemNotFoundException when the template does not exist.
     .FUNCTIONALITY
         Internal
     #>
@@ -23,10 +23,7 @@ function Push-CIPPTemplateToRepo {
     $TemplateTable = Get-CIPPTable -TableName templates
     $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter "RowKey eq '$($GUID)' or OriginalEntityId eq '$($GUID)'" | Select-Object -ExcludeProperty ETag, Timestamp
     if (-not $TemplateEntity) {
-        return @{
-            resultText = "Template '$($GUID)' not found"
-            state      = 'error'
-        }
+        throw [System.Management.Automation.ItemNotFoundException]::new("Template '$($GUID)' not found")
     }
 
     if (-not $Branch) {

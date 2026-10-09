@@ -30,14 +30,20 @@ function Invoke-ExecCIPPUsers {
             try {
                 $UPN = $Request.Body.UPN
                 if ([string]::IsNullOrWhiteSpace($UPN)) {
-                    throw 'UPN (email) is required'
+                    return [HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = 'Failed: UPN (email) is required' }
+                    }
                 }
                 # Squash casing so the RowKey is canonical and case-variant duplicates can't form
                 $UPN = $UPN.Trim().ToLower()
 
                 $Roles = @($Request.Body.Roles)
                 if ($Roles.Count -eq 0) {
-                    throw 'At least one role must be assigned'
+                    return [HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = 'Failed: At least one role must be assigned' }
+                    }
                 }
 
                 # Validate roles exist (built-in + custom)
@@ -54,7 +60,10 @@ function Invoke-ExecCIPPUsers {
 
                 foreach ($Role in $Roles) {
                     if ($Role -notin $AllValidRoles) {
-                        throw "Invalid role: $Role. Valid roles: $($AllValidRoles -join ', ')"
+                        return [HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{ Results = "Failed: Invalid role: $Role. Valid roles: $($AllValidRoles -join ', ')" }
+                        }
                     }
                 }
 
@@ -71,7 +80,10 @@ function Invoke-ExecCIPPUsers {
                     if ($TargetHadManualSuperAdmin) {
                         $OtherManualSuperAdmins = @($AllUsers | Where-Object { $_.RowKey.ToLower() -ne $UPN -and (& $HasManualSuperAdmin $_) })
                         if ($OtherManualSuperAdmins.Count -eq 0) {
-                            throw 'Cannot remove the superadmin role from the last user that has it manually assigned. Grant superadmin manually to another user first (superadmin from Entra group sync does not count).'
+                            return [HttpResponseContext]@{
+                                StatusCode = [HttpStatusCode]::BadRequest
+                                Body       = @{ Results = 'Failed: Cannot remove the superadmin role from the last user that has it manually assigned. Grant superadmin manually to another user first (superadmin from Entra group sync does not count).' }
+                            }
                         }
                     }
                 }
@@ -124,7 +136,7 @@ function Invoke-ExecCIPPUsers {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API $APIName -headers $Headers -message "Failed to add/update user: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 return [HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
                 }
             }
@@ -133,14 +145,20 @@ function Invoke-ExecCIPPUsers {
             try {
                 $UPN = $Request.Body.UPN
                 if ([string]::IsNullOrWhiteSpace($UPN)) {
-                    throw 'UPN (email) is required'
+                    return [HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = 'Failed: UPN (email) is required' }
+                    }
                 }
                 $UPN = $UPN.Trim().ToLower()
 
                 # Self-lockout protection: prevent removing yourself
                 $CurrentUser = $Request.Headers.'x-ms-client-principal-name'
                 if ($CurrentUser -and $UPN -ieq $CurrentUser) {
-                    throw 'Cannot remove your own user account. This would lock you out.'
+                    return [HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = 'Failed: Cannot remove your own user account. This would lock you out.' }
+                    }
                 }
 
                 # Fetch all users once so we can locate the target (case-insensitively)
@@ -148,7 +166,10 @@ function Invoke-ExecCIPPUsers {
                 $AllUsers = @(Get-CIPPAzDataTableEntity @Table | Where-Object { -not $_.RowKey.StartsWith('_') })
                 $MatchingEntities = @($AllUsers | Where-Object { $_.RowKey -and $_.RowKey.ToLower() -eq $UPN })
                 if ($MatchingEntities.Count -eq 0) {
-                    throw "User $UPN not found in the allowed users table"
+                    return [HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::NotFound
+                        Body       = @{ Results = "Failed: User $UPN not found in the allowed users table" }
+                    }
                 }
 
                 # Invariant: don't remove the last user holding a manually-assigned superadmin.
@@ -158,7 +179,10 @@ function Invoke-ExecCIPPUsers {
                 if ($TargetHasManualSuperAdmin) {
                     $OtherManualSuperAdmins = @($AllUsers | Where-Object { $_.RowKey.ToLower() -ne $UPN -and (& $HasManualSuperAdmin $_) })
                     if ($OtherManualSuperAdmins.Count -eq 0) {
-                        throw 'Cannot remove the last user with a manually assigned superadmin role. Grant superadmin manually to another user first (superadmin from Entra group sync does not count).'
+                        return [HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{ Results = 'Failed: Cannot remove the last user with a manually assigned superadmin role. Grant superadmin manually to another user first (superadmin from Entra group sync does not count).' }
+                        }
                     }
                 }
 
@@ -173,7 +197,7 @@ function Invoke-ExecCIPPUsers {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API $APIName -headers $Headers -message "Failed to delete user: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 return [HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
                 }
             }

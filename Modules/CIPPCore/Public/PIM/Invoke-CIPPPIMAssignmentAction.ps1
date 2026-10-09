@@ -96,7 +96,7 @@ function Invoke-CIPPPIMAssignmentAction {
 
     $PIMCapable = [bool](Test-CIPPStandardLicense -StandardName 'PIMRoleAssignment' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog)
     if (-not $PIMCapable) {
-        throw "Tenant $TenantFilter is not licensed for Entra ID P2 / Privileged Identity Management, so PIM assignment changes are not available. Assignments can still be removed from the PIM page."
+        throw [System.ArgumentException]::new("Tenant $TenantFilter is not licensed for Entra ID P2 / Privileged Identity Management, so PIM assignment changes are not available. Assignments can still be removed from the PIM page.")
     }
 
     # Current state for this principal (cheap: filtered at Graph) and the role's policy caps.
@@ -118,10 +118,10 @@ function Invoke-CIPPPIMAssignmentAction {
     }
 
     if ($TargetRow -and $TargetRow.MemberType -eq 'Group') {
-        throw "$PrincipalLabel holds $RoleName through a role-assignable group. Change the group's assignment instead of the member's."
+        throw [System.ArgumentException]::new("$PrincipalLabel holds $RoleName through a role-assignable group. Change the group's assignment instead of the member's.")
     }
     if ($PrincipalAppId -and $env:ApplicationID -and $PrincipalAppId -eq $env:ApplicationID) {
-        throw "Refusing to change the CIPP-SAM application's own role assignment for $RoleName."
+        throw [System.ArgumentException]::new("Refusing to change the CIPP-SAM application's own role assignment for $RoleName.")
     }
 
     $Before = if ($TargetRow) {
@@ -166,7 +166,7 @@ function Invoke-CIPPPIMAssignmentAction {
                 $_.AssignmentType -in @('Permanent', 'Active', 'ActivatedFromEligible') -and $_.PrincipalId -ne $PrincipalId
             })
         if ($OtherActive.Count -eq 0) {
-            throw "Refusing: $PrincipalLabel is the last active Global Administrator in $TenantFilter. Assign another active Global Administrator first."
+            throw [System.ArgumentException]::new("Refusing: $PrincipalLabel is the last active Global Administrator in $TenantFilter. Assign another active Global Administrator first.")
         }
     }
 
@@ -186,7 +186,7 @@ function Invoke-CIPPPIMAssignmentAction {
             # Entra refuses to retire an active assignment younger than five minutes
             # ("The Active duration is too short. Minimum Required is 5 minutes").
             if ($_.Exception.Message -match 'duration is too short') {
-                throw "Entra requires an active assignment to exist for at least 5 minutes before it can be removed; $PrincipalLabel's $RoleName assignment was created too recently. Try again in a few minutes."
+                throw [System.ArgumentException]::new("Entra requires an active assignment to exist for at least 5 minutes before it can be removed; $PrincipalLabel's $RoleName assignment was created too recently. Try again in a few minutes.")
             }
             if ($_.Exception.Message -notmatch 'RoleAssignmentDoesNotExist|does not exist|NotFound|not found') { throw }
             $Existing = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$filter=principalId eq '$PrincipalId' and roleDefinitionId eq '$RoleDefinitionId'" -tenantid $TenantFilter | Where-Object { ($_.directoryScopeId ?? '/') -eq $DirectoryScopeId })
@@ -215,8 +215,8 @@ function Invoke-CIPPPIMAssignmentAction {
     $ResultEnd = $null
     switch ($Action) {
         'ConvertToEligible' {
-            if (-not $ActiveRow) { throw "$PrincipalLabel has no active $RoleName assignment to convert." }
-            if ($PrincipalType -eq 'ServicePrincipal') { throw "$PrincipalLabel is a service principal; PIM eligibility is only supported for users and groups. Remove the assignment instead if it is not needed." }
+            if (-not $ActiveRow) { throw [System.ArgumentException]::new("$PrincipalLabel has no active $RoleName assignment to convert.") }
+            if ($PrincipalType -eq 'ServicePrincipal') { throw [System.ArgumentException]::new("$PrincipalLabel is a service principal; PIM eligibility is only supported for users and groups. Remove the assignment instead if it is not needed.") }
             Test-LastGlobalAdmin
 
             if ($DurationParams.Count -eq 0) { $DurationParams.Duration = $EligibilityCap }
@@ -247,8 +247,8 @@ function Invoke-CIPPPIMAssignmentAction {
             $ResultText = "Converted $PrincipalLabel on $RoleName from $Before to $After.$(if (-not $RemovalSeen) { ' The removal of the active assignment was accepted by Entra and is still propagating; refresh in a minute.' })"
         }
         'GrantActive' {
-            if ($DurationParams.Count -eq 0) { throw 'GrantActive needs a Duration or EndDateTime.' }
-            if ($ActiveRow -and $ActiveRow.AssignmentType -eq 'Permanent') { throw "$PrincipalLabel already holds $RoleName permanently; convert it to eligible instead." }
+            if ($DurationParams.Count -eq 0) { throw [System.ArgumentException]::new('GrantActive needs a Duration or EndDateTime.') }
+            if ($ActiveRow -and $ActiveRow.AssignmentType -eq 'Permanent') { throw [System.ArgumentException]::new("$PrincipalLabel already holds $RoleName permanently; convert it to eligible instead.") }
             $Request = New-CIPPPIMScheduleRequest -Kind Assignment -Action adminAssign -PrincipalId $PrincipalId -RoleDefinitionId $RoleDefinitionId -DirectoryScopeId $DirectoryScopeId -Justification $Justification -MaxDuration $AssignmentCap @DurationParams
             $null = Send-ScheduleRequest -Request $Request
             $ResultEnd = $Request.EndDateTime
@@ -256,9 +256,9 @@ function Invoke-CIPPPIMAssignmentAction {
             $ResultText = "Granted $PrincipalLabel a time-bound active $RoleName assignment until $(& $FormatEnd $ResultEnd)."
         }
         { $_ -in @('Extend', 'Renew') } {
-            if (-not $TargetRow) { throw "$PrincipalLabel has no $RoleName assignment to $($Action.ToLower())." }
-            if ($TargetRow.AssignmentType -eq 'Permanent') { throw "A permanent assignment cannot be extended; convert it to eligible instead." }
-            if ($DurationParams.Count -eq 0) { throw "$Action needs a Duration or EndDateTime." }
+            if (-not $TargetRow) { throw [System.ArgumentException]::new("$PrincipalLabel has no $RoleName assignment to $($Action.ToLower()).") }
+            if ($TargetRow.AssignmentType -eq 'Permanent') { throw [System.ArgumentException]::new("A permanent assignment cannot be extended; convert it to eligible instead.") }
+            if ($DurationParams.Count -eq 0) { throw [System.ArgumentException]::new("$Action needs a Duration or EndDateTime.") }
             $Kind = if ($TargetRow.AssignmentType -eq 'Eligible') { 'Eligibility' } else { 'Assignment' }
             $Cap = if ($Kind -eq 'Eligibility') { $EligibilityCap } else { $AssignmentCap }
             $GraphAction = if ($Action -eq 'Extend') { 'adminExtend' } else { 'adminRenew' }
@@ -269,7 +269,7 @@ function Invoke-CIPPPIMAssignmentAction {
             $ResultText = "$($Action)ed $PrincipalLabel's $($TargetRow.AssignmentType.ToLower()) $RoleName assignment until $(& $FormatEnd $ResultEnd)."
         }
         'Remove' {
-            if (-not $TargetRow) { throw "$PrincipalLabel has no $RoleName assignment to remove." }
+            if (-not $TargetRow) { throw [System.ArgumentException]::new("$PrincipalLabel has no $RoleName assignment to remove.") }
             $RemovalSeen = $true
             if ($TargetRow.AssignmentType -eq 'Eligible') {
                 $Request = New-CIPPPIMScheduleRequest -Kind Eligibility -Action adminRemove -PrincipalId $PrincipalId -RoleDefinitionId $RoleDefinitionId -DirectoryScopeId $DirectoryScopeId -Justification $Justification

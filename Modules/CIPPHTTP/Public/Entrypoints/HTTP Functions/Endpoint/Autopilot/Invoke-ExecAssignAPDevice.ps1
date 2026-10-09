@@ -28,7 +28,7 @@ Function Invoke-ExecAssignAPDevice {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $User -API $APINAME -message "Could not assign $($UserObject.userPrincipalName) to $($DeviceObject) for $($TenantFilter) Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $Results = "Could not assign $($UserObject.userPrincipalName) to $($DeviceObject) for $($TenantFilter) Error: $($ErrorMessage.NormalizedError)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Results = [pscustomobject]@{'Results' = "$results" }

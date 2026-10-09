@@ -56,8 +56,7 @@ Function Invoke-ExecOneDriveShortCut {
         & $Add "Created OneDrive shortcuts for $Succeeded of $($Entries.Count) users. $Failed failed; see the entries above for the users to address manually." $SummaryState
     }
 
-    # Only an all-failed run is an error response; a partial failure is a 200 with the per-user entries above
-    $StatusCode = if ($Failed -eq $Entries.Count) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
+    $StatusCode = Get-CippBulkStatusCode -Total $Entries.Count -Failed $Failed
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

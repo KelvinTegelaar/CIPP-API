@@ -21,7 +21,9 @@ function Invoke-ListCommunityRepoTemplates {
             if (!$Branch) { $Branch = 'main' }
             $File = Get-GitHubFileContents -FullName $Request.Query.FullName -Path $Request.Query.Path -Branch $Branch
             $Body = @{ Results = $File }
+            $StatusCode = [HttpStatusCode]::OK
         } catch {
+            $StatusCode = [HttpStatusCode]::InternalServerError
             $Body = @{
                 Results = @(@{
                         resultText = "Unable to retrieve file contents: $($_.Exception.Message)"
@@ -30,7 +32,7 @@ function Invoke-ListCommunityRepoTemplates {
             }
         }
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
+                StatusCode = $StatusCode
                 Body       = $Body
             })
     }
@@ -101,6 +103,7 @@ function Invoke-ListCommunityRepoTemplates {
     $CatalogItems = [System.Collections.Generic.List[object]]::new()
     $RepoMetadata = [System.Collections.Generic.List[object]]::new()
 
+    $Failed = 0
     foreach ($Repo in $Repos) {
         $Branch = $Repo.DefaultBranch
         if ([string]::IsNullOrEmpty($Branch)) { $Branch = 'main' }
@@ -188,6 +191,7 @@ function Invoke-ListCommunityRepoTemplates {
                     })
             }
         } catch {
+            $Failed++
             $Warnings.Add("Unable to list templates for $($Repo.FullName): $($_.Exception.Message)")
         }
     }
@@ -201,7 +205,7 @@ function Invoke-ListCommunityRepoTemplates {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Repos).Count -Failed $Failed
             Body       = $Body
         })
 }

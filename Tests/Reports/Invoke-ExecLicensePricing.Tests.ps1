@@ -21,6 +21,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     $script:E5 = '06ebc4ee-1bb5-47dd-8120-11324bc54e06'
     $script:E3 = '6fd2c87f-b296-42f0-b197-1e91e994b900'
@@ -197,7 +198,7 @@ Describe 'Invoke-ExecLicensePricing bulk import' {
         }
         $Response = Invoke-ExecLicensePricing -Request (New-Request -Body ([pscustomobject]@{ Action = 'BulkImport'; Mode = 'Apply'; Currency = 'GBP'; Rows = $Rows })) -TriggerMetadata $null
 
-        $Response.StatusCode | Should -Be 200
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::MultiStatus)
         $Response.Body.Valid | Should -BeTrue
         $Response.Body.Updated | Should -Be 1
         $Response.Body.Unchanged | Should -Be 0

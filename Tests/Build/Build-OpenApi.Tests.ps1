@@ -172,6 +172,24 @@ function Invoke-ListThings {
 }
 '@
 
+    # Status comes from the bulk helper, never spelled out as [HttpStatusCode]::MultiStatus.
+    Set-Content -Path (Join-Path $FixtureRoot 'Invoke-ExecFixtureBulk.ps1') -Value @'
+function Invoke-ExecFixtureBulk {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Identity.User.ReadWrite
+    #>
+    param($Request, $TriggerMetadata)
+    $Users = $Request.Body.users
+    return ([HttpResponseContext]@{
+            StatusCode = Get-CippBulkStatusCode -Total $Users.Count -Failed 0
+            Body       = @{ 'Results' = 'done' }
+        })
+}
+'@
+
     # Not an endpoint: no Entrypoint marker.
     Set-Content -Path (Join-Path $FixtureRoot 'Invoke-NotAnEndpoint.ps1') -Value @'
 function Invoke-NotAnEndpoint {
@@ -472,6 +490,13 @@ Describe 'responses' {
     It 'does not invent status codes the endpoint cannot return' {
         # ExecAliased has no BadRequest path
         $script:Spec.paths['/api/ExecAliased'].post.responses.Keys | Should -Not -Contain '400'
+    }
+
+    It 'documents 207 and 500 for an endpoint whose status comes from Get-CippBulkStatusCode' {
+        $Responses = $script:Spec.paths['/api/ExecFixtureBulk'].post.responses
+        $Responses.Keys | Should -Contain '207'
+        $Responses.Keys | Should -Contain '500'
+        $Responses.'207'.description | Should -Not -Be 'MultiStatus'
     }
 }
 

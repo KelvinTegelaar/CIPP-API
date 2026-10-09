@@ -19,9 +19,11 @@ function Invoke-ListSiteRoleDefinitions {
     $SiteUrl = $Request.Query.SiteUrl ?? $Request.Body.SiteUrl
     $IncludeUnassignable = ($Request.Query.IncludeUnassignable ?? $Request.Body.IncludeUnassignable) -eq $true
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
+    if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
 
+    try {
         $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
         $Scope = $RestContext.Scope
         $JsonAccept = $RestContext.Headers
@@ -47,7 +49,7 @@ function Invoke-ListSiteRoleDefinitions {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to list permission levels: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

@@ -26,11 +26,14 @@ function Invoke-ExecBulkRemoveSharingLinks {
         'All'       = @('Anonymous', 'External', 'Internal')
     }
 
+    if (-not $SiteUrl) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
+    if (-not $ScopeClassifications.ContainsKey([string]$Scope)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "Invalid scope '$Scope'. Valid values: $($ScopeClassifications.Keys -join ', ')." } })
+    }
+
     try {
-        if (-not $SiteUrl) { throw 'SiteUrl is required.' }
-        if (-not $ScopeClassifications.ContainsKey([string]$Scope)) {
-            throw "Invalid scope '$Scope'. Valid values: $($ScopeClassifications.Keys -join ', ')."
-        }
         $Classifications = $ScopeClassifications[[string]$Scope]
 
         try {
@@ -95,12 +98,12 @@ function Invoke-ExecBulkRemoveSharingLinks {
             throw $Results
         }
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Info
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total $Targets.Count -Failed $Failed.Count
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to bulk revoke sharing links on $($SiteUrl): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

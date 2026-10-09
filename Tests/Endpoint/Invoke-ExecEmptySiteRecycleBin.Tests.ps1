@@ -29,6 +29,7 @@ BeforeAll {
     }
     function Write-LogMessage { param($Headers, $API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) [PSCustomObject]@{ NormalizedError = $Exception.Message } }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     . $ExecPath
     . $SummaryPath

@@ -36,7 +36,7 @@ Function Invoke-EditRetentionCompliancePolicy {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed updating Retention compliance policy $Identity. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

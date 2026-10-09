@@ -11,6 +11,7 @@ function Invoke-ExecAddGDAPRole {
     $Headers = $Request.Headers
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'AddRoleSimple'
     $GroupBlockList = @('All Users', 'AdminAgents', 'HelpdeskAgents', 'SalesAgents')
+    $StatusCode = [HttpStatusCode]::OK
 
     switch ($Action) {
         'ListGroups' {
@@ -56,6 +57,7 @@ function Invoke-ExecAddGDAPRole {
                     Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force
                     $Result = "Added $($Entities.Count) GDAP role mapping(s)"
                     Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+                    if ($ErrorsFound) { $StatusCode = [HttpStatusCode]::MultiStatus }
                 } elseif ($ErrorsFound -eq $false) {
                     $Results.Add(@{
                             state      = 'success'
@@ -64,6 +66,7 @@ function Invoke-ExecAddGDAPRole {
                     Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message 'All GDAP role mappings already exist' -Sev 'Info'
                 } else {
                     $Result = 'Failed to add GDAP role mappings: reserved groups cannot be mapped'
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 }
             } catch {
@@ -74,6 +77,7 @@ function Invoke-ExecAddGDAPRole {
                         state      = 'error'
                         resultText = $Result
                     })
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         'AddRoleSimple' {
@@ -107,6 +111,7 @@ function Invoke-ExecAddGDAPRole {
                 $Failed = @($Results | Where-Object { $_ -like 'Could not create GDAP group:*' })
                 if ($Failed.Count -gt 0) {
                     $Result = "GDAP role mapping completed with errors. Created: $($Created.Count), Failed: $($Failed.Count)"
+                    $StatusCode = Get-CippBulkStatusCode -Total @($Groups).Count -Failed $Failed.Count
                     Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 } else {
                     $Result = "GDAP role mapping completed. Groups created/reused: $($RoleMappings.Count)"
@@ -123,13 +128,14 @@ function Invoke-ExecAddGDAPRole {
                 $Result = "Failed to add GDAP roles: $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
                 $Results = @($Result)
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
     }
 
     $body = @{Results = @($Results) }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

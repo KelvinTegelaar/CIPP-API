@@ -10,6 +10,7 @@ Function Invoke-ExecRunBackup {
 
     $APIName = $Request.Params.CIPPEndpoint
 
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $CSVfile = New-CIPPBackup -BackupType 'CIPP' -Headers $Request.Headers
         $body = [pscustomobject]@{
@@ -23,6 +24,7 @@ Function Invoke-ExecRunBackup {
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Created CIPP backup' -Sev 'Info'
 
     } catch {
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $body = [pscustomobject]@{
             'Results' = @(
                 @{
@@ -34,7 +36,7 @@ Function Invoke-ExecRunBackup {
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Failed to create CIPP backup' -Sev 'Error' -LogData (Get-CippException -Exception $_)
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

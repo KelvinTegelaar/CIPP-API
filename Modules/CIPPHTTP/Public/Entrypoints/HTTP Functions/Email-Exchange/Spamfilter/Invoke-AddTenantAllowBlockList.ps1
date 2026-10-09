@@ -28,6 +28,7 @@ function Invoke-AddTenantAllowBlockList {
     } else {
         $Entries = @($BlockListObject.entries -split '[,;]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
     }
+    $Failed = 0
     foreach ($Tenant in $Tenants) {
         try {
             $ExoRequest = @{
@@ -52,6 +53,7 @@ function Invoke-AddTenantAllowBlockList {
             $Results.Add($Result)
             Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message $Result -Sev 'Info'
         } catch {
+            $Failed++
             $ErrorMessage = Get-CippException -Exception $_
             $Result = "Failed to create blocklist. Error: $($ErrorMessage.NormalizedError)"
             $Results.Add($Result)
@@ -59,7 +61,7 @@ function Invoke-AddTenantAllowBlockList {
         }
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = @{
                 'Results' = $Results
                 'Request' = $ExoRequest

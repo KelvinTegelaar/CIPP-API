@@ -105,6 +105,7 @@ function Invoke-ExecCippReplacemap {
         return
     }
 
+    $StatusCode = [HttpStatusCode]::OK
     switch ($Action) {
         'List' {
             $Variables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId'" | ForEach-Object {
@@ -218,16 +219,18 @@ function Invoke-ExecCippReplacemap {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $customerId -message $Result -Sev 'Info'
                 $Body = @{ Results = $Result }
             } else {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Body = @{ Results = "Variable '$VariableName' not found" }
             }
         }
         default {
+            $StatusCode = [HttpStatusCode]::BadRequest
             $Body = @{ Results = 'Invalid action' }
         }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

@@ -93,14 +93,20 @@ function Invoke-ExecSiteBrowserPermissions {
         param($Mode = 'Add')
 
         $RoleDefId = Resolve-BrowserPermissionRoleDefId -PermissionLevel $Request.Body.PermissionLevel -RoleDefinitionId $Request.Body.RoleDefinitionId
-        if (-not $RoleDefId) { throw 'No permission level was selected.' }
+        if (-not $RoleDefId) {
+            $Outcome.Status = [HttpStatusCode]::BadRequest
+            throw 'No permission level was selected.'
+        }
 
         $Principals = ConvertTo-BrowserPermissionPrincipals `
             -PrincipalId $Request.Body.PrincipalId `
             -PrincipalName $Request.Body.PrincipalName `
             -Users $Request.Body.Users `
             -Groups $Request.Body.Groups
-        if ($Principals.Count -eq 0) { throw 'No users or groups selected.' }
+        if ($Principals.Count -eq 0) {
+            $Outcome.Status = [HttpStatusCode]::BadRequest
+            throw 'No users or groups selected.'
+        }
 
         $SPScope = Resolve-CIPPSharePointPermissionScope -SiteUrl $SiteUrl -ListId $ListId -TenantFilter $TenantFilter -EnsureUniqueRoleAssignments
 
@@ -163,6 +169,7 @@ function Invoke-ExecSiteBrowserPermissions {
             $Messages.Add("Failed for $(($Failed -join '; ').TrimEnd('.')).")
         }
         $Result = $Messages -join ' '
+        $Outcome.Status = Get-CippBulkStatusCode -Total $Principals.Count -Failed $Failed.Count
         if ($Granted.Count -eq 0) { throw $Result }
         return $Result
     }
@@ -171,12 +178,16 @@ function Invoke-ExecSiteBrowserPermissions {
         $PrincipalId = $Request.Body.PrincipalId
         $RoleDefinitionId = $Request.Body.RoleDefinitionId
         $Label = $Request.Body.PrincipalName ?? $Request.Body.Title ?? $PrincipalId
-        if ([string]::IsNullOrWhiteSpace($PrincipalId)) { throw 'PrincipalId is required.' }
+        if ([string]::IsNullOrWhiteSpace($PrincipalId)) {
+            $Outcome.Status = [HttpStatusCode]::BadRequest
+            throw 'PrincipalId is required.'
+        }
 
         $SPScope = Resolve-CIPPSharePointPermissionScope -SiteUrl $SiteUrl -ListId $ListId -TenantFilter $TenantFilter -EnsureUniqueRoleAssignments
         $Assignments = @(New-GraphGetRequest -uri "$($SPScope.AssignmentUri)?`$expand=Member,RoleDefinitionBindings" -tenantid $TenantFilter -scope $SPScope.Scope -extraHeaders $SPScope.Headers -UseCertificate -AsApp $true)
         $Current = @($Assignments | Where-Object { [string]$_.Member.Id -eq [string]$PrincipalId })
         if ($Current.Count -eq 0) {
+            $Outcome.Status = [HttpStatusCode]::NotFound
             throw "$Label holds no permissions on $($SPScope.TargetLabel)."
         }
         if (-not $Label -or $Label -eq $PrincipalId) { $Label = $Current[0].Member.Title ?? $PrincipalId }
@@ -196,8 +207,10 @@ function Invoke-ExecSiteBrowserPermissions {
 
         if ($Targets.Count -eq 0) {
             if ($SkippedSystem.Count -gt 0) {
+                $Outcome.Status = [HttpStatusCode]::BadRequest
                 throw "$Label only holds $($SkippedSystem -join ', ') on $($SPScope.TargetLabel). SharePoint manages that level itself and it cannot be removed here."
             }
+            $Outcome.Status = [HttpStatusCode]::NotFound
             throw "No matching permission found for $Label on $($SPScope.TargetLabel)."
         }
 
@@ -224,6 +237,7 @@ function Invoke-ExecSiteBrowserPermissions {
             $Messages.Add("Failed for $(($Failed -join '; ').TrimEnd('.')).")
         }
         $Result = $Messages -join ' '
+        $Outcome.Status = Get-CippBulkStatusCode -Total $Targets.Count -Failed $Failed.Count
         if ($Removed.Count -eq 0) { throw $Result }
         return $Result
     }
@@ -232,7 +246,10 @@ function Invoke-ExecSiteBrowserPermissions {
         param([bool]$Add)
 
         $GroupId = $Request.Body.GroupId
-        if ([string]::IsNullOrWhiteSpace($GroupId)) { throw 'GroupId is required.' }
+        if ([string]::IsNullOrWhiteSpace($GroupId)) {
+            $Outcome.Status = [HttpStatusCode]::BadRequest
+            throw 'GroupId is required.'
+        }
 
         $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
         $Scope = $RestContext.Scope
@@ -244,7 +261,10 @@ function Invoke-ExecSiteBrowserPermissions {
             -PrincipalName $Request.Body.PrincipalName `
             -Users $Request.Body.Users `
             -Groups $Request.Body.Groups
-        if ($Principals.Count -eq 0) { throw 'No users or groups selected.' }
+        if ($Principals.Count -eq 0) {
+            $Outcome.Status = [HttpStatusCode]::BadRequest
+            throw 'No users or groups selected.'
+        }
 
         $Done = [System.Collections.Generic.List[string]]::new()
         $Failed = [System.Collections.Generic.List[string]]::new()
@@ -290,6 +310,7 @@ function Invoke-ExecSiteBrowserPermissions {
             $Messages.Add("Failed for $(($Failed -join '; ').TrimEnd('.')).")
         }
         $Result = $Messages -join ' '
+        $Outcome.Status = Get-CippBulkStatusCode -Total $Principals.Count -Failed $Failed.Count
         if ($Done.Count -eq 0) { throw $Result }
         return $Result
     }
@@ -308,16 +329,24 @@ function Invoke-ExecSiteBrowserPermissions {
             $Candidate = $Request.Body.userPrincipalName ?? $Request.Body.PrincipalName
             if ($Candidate -match '@') { $UPNs = @($Candidate) }
         }
-        if ($UPNs.Count -eq 0) { throw 'No users selected.' }
+        if ($UPNs.Count -eq 0) {
+            $Outcome.Status = [HttpStatusCode]::BadRequest
+            throw 'No users selected.'
+        }
 
-        $Results = Set-CIPPSharePointPerms -tenantFilter $TenantFilter -OnedriveAccessUser $UPNs -URL $SiteUrl -Headers $Headers -APIName $APIName -RemovePermission:(-not $Add)
-        return (@($Results) -join ' ')
+        $Results = @(Set-CIPPSharePointPerms -tenantFilter $TenantFilter -OnedriveAccessUser $UPNs -URL $SiteUrl -Headers $Headers -APIName $APIName -RemovePermission:(-not $Add))
+        $Failed = $Results.Where({ $_.state -eq 'error' }).Count
+        $Outcome.Status = Get-CippBulkStatusCode -Total $Results.Count -Failed $Failed
+        $Result = @($Results.resultText) -join ' '
+        if ($Failed -eq $Results.Count) { throw $Result }
+        return $Result
     }
 
     function Invoke-BrowserInheritance {
         param([ValidateSet('Break', 'Reset')][string]$Mode)
 
         if ([string]::IsNullOrWhiteSpace($ListId)) {
+            $Outcome.Status = [HttpStatusCode]::BadRequest
             throw 'ListId is required: a site root web always holds its own permissions.'
         }
         $CopyRoleAssignments = ($Request.Body.CopyRoleAssignments ?? $true) -eq $true
@@ -349,7 +378,10 @@ function Invoke-ExecSiteBrowserPermissions {
 
     function Invoke-BrowserRemoveGraphSitePermission {
         $PermissionId = $Request.Body.PermissionId
-        if ([string]::IsNullOrWhiteSpace($PermissionId)) { throw 'PermissionId is required.' }
+        if ([string]::IsNullOrWhiteSpace($PermissionId)) {
+            $Outcome.Status = [HttpStatusCode]::BadRequest
+            throw 'PermissionId is required.'
+        }
 
         $ResolvedSiteId = $SiteId
         if ([string]::IsNullOrWhiteSpace($ResolvedSiteId)) {
@@ -369,11 +401,19 @@ function Invoke-ExecSiteBrowserPermissions {
         return "Successfully removed Graph site permission for $Label."
     }
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($TenantFilter)) { throw 'tenantFilter is required.' }
-        if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
-        if ([string]::IsNullOrWhiteSpace($Action)) { throw 'Action is required.' }
+    if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'tenantFilter is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($Action)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'Action is required.' } })
+    }
 
+    # Nested action functions set Status for input, not-found and partial outcomes.
+    $Outcome = @{ Status = $null }
+    try {
         $Result = switch ([string]$Action) {
             'GrantAccess' { Invoke-BrowserGrantAccess -Mode 'Add' }
             'ReplaceAccess' { Invoke-BrowserGrantAccess -Mode 'Replace' }
@@ -386,17 +426,18 @@ function Invoke-ExecSiteBrowserPermissions {
             'RestoreInheritance' { Invoke-BrowserInheritance -Mode 'Reset' }
             'RemoveGraphSitePermission' { Invoke-BrowserRemoveGraphSitePermission }
             default {
+                $Outcome.Status = [HttpStatusCode]::BadRequest
                 throw "Unknown Action '$Action'. Supported: GrantAccess, ReplaceAccess, RemoveAccess, AddGroupMember, RemoveGroupMember, AddSiteAdmin, RemoveSiteAdmin, BreakInheritance, RestoreInheritance, RemoveGraphSitePermission."
             }
         }
 
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = $Outcome.Status ?? [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to run Action '$Action'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = $Outcome.Status ?? [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

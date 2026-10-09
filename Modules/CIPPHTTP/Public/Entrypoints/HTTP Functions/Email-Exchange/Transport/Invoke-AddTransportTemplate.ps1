@@ -12,14 +12,18 @@ Function Invoke-AddTransportTemplate {
     $Headers = $Request.Headers
     Write-Host ($request | ConvertTo-Json -Depth 10 -Compress)
 
+    # Posted from the row action; without a name the template lists blank and deploys with no parameters.
+    if (-not $Request.Body.PowerShellCommand -and [string]::IsNullOrWhiteSpace($Request.Body.Name)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{'Results' = 'Failed to create Transport Rule Template: Transport rule template name is required but was not provided' }
+            })
+    }
+
     try {
         # GUID overwrites that template, honoured only alongside PowerShellCommand: a posted rule row carries the rule's own Guid.
         $IsUpdate = $Request.Body.PowerShellCommand -and -not [string]::IsNullOrWhiteSpace($Request.Body.GUID)
         $GUID = if ($IsUpdate) { "$($Request.Body.GUID)" } else { (New-Guid).GUID }
-        # Posted from the row action; without a name the template lists blank and deploys with no parameters.
-        if (-not $Request.Body.PowerShellCommand -and [string]::IsNullOrWhiteSpace($Request.Body.Name)) {
-            throw 'Transport rule template name is required but was not provided'
-        }
         $JSON = if ($request.body.PowerShellCommand) {
             Write-Host 'PowerShellCommand'
             $request.body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID
@@ -46,7 +50,7 @@ Function Invoke-AddTransportTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $Headers -API $APINAME -tenant 'Global' -message "Failed to create Transport Rule Template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to create Transport Rule Template: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 

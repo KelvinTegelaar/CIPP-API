@@ -21,12 +21,19 @@ function Invoke-ListSecureScoreReport {
     $TenantFilter = $Request.Query.tenantFilter ?? 'AllTenants'
     $IncludeHistory = $Request.Query.includeHistory -eq $true
 
+    # AnyTenant is set so AllTenants is reachable, which means the framework's per-tenant check is
+    # skipped for custom-role users. Scope the output here instead, for both paths.
+    try {
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    } catch {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Error = $_.Exception.Message }
+            })
+    }
+
     try {
         $Results = @(Get-CIPPSecureScoreReport -TenantFilter $TenantFilter -IncludeHistory:$IncludeHistory)
-
-        # AnyTenant is set so AllTenants is reachable, which means the framework's per-tenant check is
-        # skipped for custom-role users. Scope the output here instead, for both paths.
-        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         if ($AllowedTenants -notcontains 'AllTenants') {
             $AllowedSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
             foreach ($Allowed in $AllowedTenants) {
@@ -40,7 +47,7 @@ function Invoke-ListSecureScoreReport {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to retrieve secure score report: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{ Error = $ErrorMessage.NormalizedError }
     }
 

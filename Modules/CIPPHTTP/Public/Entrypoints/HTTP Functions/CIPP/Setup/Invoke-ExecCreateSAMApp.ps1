@@ -12,6 +12,7 @@ function Invoke-ExecCreateSAMApp {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     $KV = Get-CippKeyVaultName
+    $StatusCode = [HttpStatusCode]::OK
 
     try {
         $Token = $Request.body
@@ -215,10 +216,11 @@ function Invoke-ExecCreateSAMApp {
         }
         Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Failed to create or update CIPP-SAM application registration: $ErrorDetail" -Sev 'Error'
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $ErrorDetail"; severity = 'failed' }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

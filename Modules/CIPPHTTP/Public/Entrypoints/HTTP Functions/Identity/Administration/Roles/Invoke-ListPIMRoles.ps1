@@ -20,6 +20,8 @@ function Invoke-ListPIMRoles {
     $PrincipalId = $Request.Query.principalId
     # Serve from the reporting database cache instead of live Graph. AllTenants always reads the cache.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
+    $Failed = 0
+    $Total = 1
 
     try {
         # Tenant|roleTemplateId -> directoryRole object id; the role's SID derives from that, not the template id.
@@ -50,6 +52,7 @@ function Invoke-ListPIMRoles {
             # stays assigned-only: the catalogue is the same ~100 built-in roles in every tenant.
             $IncludeUnassigned = ($TenantFilter -ne 'AllTenants') -and [string]::IsNullOrWhiteSpace($PrincipalId)
             $Rows = [System.Collections.Generic.List[object]]::new()
+            $Total = $Tenants.Count
             foreach ($Tenant in $Tenants) {
                 try {
                     foreach ($Role in @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'Roles')) {
@@ -60,6 +63,7 @@ function Invoke-ListPIMRoles {
                         $Rows.Add($Row)
                     }
                 } catch {
+                    $Failed++
                     Write-LogMessage -API $APIName -tenant $Tenant -message "Failed to read cached role assignments: $($_.Exception.Message)" -sev Warning
                 }
             }
@@ -131,12 +135,12 @@ function Invoke-ListPIMRoles {
         )
         $Results = @($Grouped | Sort-Object -Property Tenant, RoleDisplayName)
 
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total $Total -Failed $Failed
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to list roles with PIM data: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         $Results = "Failed to list roles with PIM data for $TenantFilter. $($ErrorMessage.NormalizedError)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return [HttpResponseContext]@{

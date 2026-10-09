@@ -41,7 +41,7 @@ function Invoke-ListGraphSchema {
         # An unknown entity set or navigation property is a caller mistake, and the message
         # from the resolver lists what was available, so it is worth returning verbatim.
         $Schema = @{ Results = $_.Exception.Message }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

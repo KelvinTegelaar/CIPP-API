@@ -18,6 +18,7 @@ function Invoke-ExecExtensionsConfig {
 
 
     $Body = [PSCustomObject]$Request.Body
+    $StatusCode = [HttpStatusCode]::OK
     $Results = try {
         # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
         if ($Body.NinjaOne.Enabled -eq $true) {
@@ -95,13 +96,14 @@ function Invoke-ExecExtensionsConfig {
     } catch {
         $Result = "Failed to save the extensions configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
         Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Result
     }
 
 
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{'Results' = $Results }
         })
 

@@ -36,6 +36,49 @@ function Invoke-ExecBackupReplicationConfig {
         }
     }
 
+    if (-not $Request.Query.List) {
+        $BackupType = $Request.Body.BackupType
+        if ($BackupType -notin $Scopes) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = [pscustomobject]@{'Results' = "Failed to update configuration: BackupType must be one of: $($Scopes -join ', ')" }
+                })
+        }
+
+        $SASUrl = $Request.Body.SASUrl
+        $Enabled = if ($null -ne $Request.Body.Enabled) { [bool]$Request.Body.Enabled } else { $true }
+
+        # Only update the stored secret when a real new value is supplied (the UI sends the
+        # 'SentToKeyVault' sentinel when the existing, masked secret is left untouched).
+        $NewSecret = -not [string]::IsNullOrWhiteSpace($SASUrl) -and $SASUrl -ne 'SentToKeyVault'
+        if ($NewSecret) {
+            $ParsedUri = $SASUrl -as [uri]
+            if (-not $ParsedUri -or $ParsedUri.Query -notmatch 'sig=') {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = [pscustomobject]@{'Results' = 'Failed to update configuration: SAS URL must contain a SAS token (sig=...)' }
+                    })
+            }
+
+            # Confirm the SAS actually grants write+create by writing and removing a tiny probe blob.
+            $guid = [guid]::NewGuid().ToString()
+            $UrlParts = $SASUrl -split '\?', 2
+            $BaseUrl = $UrlParts[0].TrimEnd('/')
+            $ProbeUrl = "$BaseUrl/.cipp-replication-test-$guid`?$($UrlParts[1])"
+            try {
+                $null = Invoke-CIPPRestMethod -Uri $ProbeUrl -Method 'PUT' -Body "cipp-replication-test-$guid" -ContentType 'text/plain' -Headers @{ 'x-ms-blob-type' = 'BlockBlob' }
+                try { $null = Invoke-CIPPRestMethod -Uri $ProbeUrl -Method 'DELETE' -Headers @{} } catch { }
+            } catch {
+                $ProbeError = Get-CippException -Exception $_
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = [pscustomobject]@{'Results' = "Failed to update configuration: SAS URL validation failed (could not write to the container): $($ProbeError.NormalizedError)" }
+                    })
+            }
+        }
+    }
+
+    $StatusCode = [HttpStatusCode]::OK
     $results = try {
         if ($Request.Query.List) {
             $Output = @{}
@@ -48,35 +91,7 @@ function Invoke-ExecBackupReplicationConfig {
             }
             [pscustomobject]$Output
         } else {
-            $BackupType = $Request.Body.BackupType
-            if ($BackupType -notin $Scopes) {
-                throw "BackupType must be one of: $($Scopes -join ', ')"
-            }
-
-            $SASUrl = $Request.Body.SASUrl
-            $Enabled = if ($null -ne $Request.Body.Enabled) { [bool]$Request.Body.Enabled } else { $true }
-
-            # Only update the stored secret when a real new value is supplied (the UI sends the
-            # 'SentToKeyVault' sentinel when the existing, masked secret is left untouched).
-            if (-not [string]::IsNullOrWhiteSpace($SASUrl) -and $SASUrl -ne 'SentToKeyVault') {
-                $ParsedUri = $SASUrl -as [uri]
-                if (-not $ParsedUri -or $ParsedUri.Query -notmatch 'sig=') {
-                    throw 'SAS URL must contain a SAS token (sig=...)'
-                }
-
-                # Confirm the SAS actually grants write+create by writing and removing a tiny probe blob.
-                $guid = [guid]::NewGuid().ToString()
-                $UrlParts = $SASUrl -split '\?', 2
-                $BaseUrl = $UrlParts[0].TrimEnd('/')
-                $ProbeUrl = "$BaseUrl/.cipp-replication-test-$guid`?$($UrlParts[1])"
-                try {
-                    $null = Invoke-CIPPRestMethod -Uri $ProbeUrl -Method 'PUT' -Body "cipp-replication-test-$guid" -ContentType 'text/plain' -Headers @{ 'x-ms-blob-type' = 'BlockBlob' }
-                    try { $null = Invoke-CIPPRestMethod -Uri $ProbeUrl -Method 'DELETE' -Headers @{} } catch { }
-                } catch {
-                    $ProbeError = Get-CippException -Exception $_
-                    throw "SAS URL validation failed (could not write to the container): $($ProbeError.NormalizedError)"
-                }
-
+            if ($NewSecret) {
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                     $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
                     $Secret = [PSCustomObject]@{
@@ -104,13 +119,14 @@ function Invoke-ExecBackupReplicationConfig {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message "Failed to update backup replication configuration: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
         "Failed to update configuration: $($ErrorMessage.NormalizedError)"
     }
 
     $body = [pscustomobject]@{'Results' = $Results }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 }

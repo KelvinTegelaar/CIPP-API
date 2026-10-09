@@ -8,20 +8,26 @@ function Invoke-ExecTimeSettings {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $Timezone = $Request.Body.Timezone.value ?? $Request.Body.Timezone
+
+    if (-not $Timezone) {
+        return ([HttpResponseContext]@{
+                StatusCode = [httpstatusCode]::BadRequest
+                Body       = @{ Results = 'Failed to update time settings: Timezone is required' }
+            })
+    }
+
+    # Validate the IANA timezone ID is recognised by .NET
     try {
-        $Timezone = $Request.Body.Timezone.value ?? $Request.Body.Timezone
+        $null = [TimeZoneInfo]::FindSystemTimeZoneById($Timezone)
+    } catch {
+        return ([HttpResponseContext]@{
+                StatusCode = [httpstatusCode]::BadRequest
+                Body       = @{ Results = "Failed to update time settings: Invalid timezone: '$Timezone' is not a recognised IANA timezone ID" }
+            })
+    }
 
-        if (-not $Timezone) {
-            throw 'Timezone is required'
-        }
-
-        # Validate the IANA timezone ID is recognised by .NET
-        try {
-            $null = [TimeZoneInfo]::FindSystemTimeZoneById($Timezone)
-        } catch {
-            throw "Invalid timezone: '$Timezone' is not a recognised IANA timezone ID"
-        }
-
+    try {
         $Config = @{
             PartitionKey   = 'TimeSettings'
             RowKey         = 'TimeSettings'
@@ -55,7 +61,7 @@ function Invoke-ExecTimeSettings {
         Write-LogMessage -API 'ExecTimeSettings' -headers $Request.Headers -message "Failed to update time settings: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
 
         return ([HttpResponseContext]@{
-                StatusCode = [httpstatusCode]::BadRequest
+                StatusCode = [httpstatusCode]::InternalServerError
                 Body       = @{
                     Results = "Failed to update time settings: $($ErrorMessage.NormalizedError)"
                 }

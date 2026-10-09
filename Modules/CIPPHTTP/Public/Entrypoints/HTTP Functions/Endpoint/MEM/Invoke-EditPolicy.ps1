@@ -17,6 +17,7 @@ Function Invoke-EditPolicy {
     $description = $request.body.Description
     $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
 
+    $StatusCode = [HttpStatusCode]::OK
     $results = try {
         $CreateBody = '{"description":"' + $description + '","displayName":"' + $displayname + '","roleScopeTagIds":["0"]}'
         $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$ID')" -tenantid $tenant -type PATCH -body $CreateBody
@@ -31,13 +32,13 @@ Function Invoke-EditPolicy {
     catch {
         "Failed to add policy for $($Tenant): $($_.Exception.Message)"
         Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Failed editing policy $($Displayname). Error:$($_.Exception.Message)" -Sev 'Error'
-        continue
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $body = [pscustomobject]@{'Results' = $results }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

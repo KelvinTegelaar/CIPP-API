@@ -39,7 +39,7 @@ function Invoke-ListDeletedSites {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Body = "Failed to list deleted sites: $($ErrorMessage.NormalizedError)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

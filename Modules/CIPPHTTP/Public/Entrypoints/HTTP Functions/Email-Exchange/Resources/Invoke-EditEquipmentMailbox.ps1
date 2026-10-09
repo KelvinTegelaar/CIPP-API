@@ -100,7 +100,7 @@ Function Invoke-EditEquipmentMailbox {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Failed to update equipment: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Results.Add("Failed to update Equipment mailbox $($MailboxObject.userPrincipalName). $($ErrorMessage.NormalizedError)")
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Body = [pscustomobject]@{ 'Results' = @($Results) }

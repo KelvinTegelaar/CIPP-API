@@ -16,10 +16,14 @@ function Invoke-ListSiteBrowserLibraryCopy {
     $OperationId = $Request.Query.OperationId ?? $Request.Query.operationId ?? $Request.Body.OperationId ?? $Request.Body.operationId
     $StatusCode = [HttpStatusCode]::OK
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($TenantFilter)) { throw 'tenantFilter is required.' }
-        if ([string]::IsNullOrWhiteSpace($OperationId)) { throw 'OperationId is required.' }
+    if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'tenantFilter is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($OperationId)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'OperationId is required.' } })
+    }
 
+    try {
         $Result = Update-CIPPSharePointLibraryCopyStatus -TenantFilter $TenantFilter -OperationId $OperationId
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter `
             -message "Library copy status $OperationId -> $($Result.Status)" -sev Debug
@@ -27,7 +31,7 @@ function Invoke-ListSiteBrowserLibraryCopy {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to retrieve library copy status: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

@@ -30,6 +30,9 @@ function Set-CIPPSharePointPerms {
 
     .PARAMETER URL
     The site collection URL. Derived from the user's OneDrive when omitted.
+
+    .OUTPUTS
+    One { resultText, state } item per user. A user that fails gets state 'error' and does not stop the rest.
     #>
     [CmdletBinding()]
     param (
@@ -50,12 +53,12 @@ function Set-CIPPSharePointPerms {
     } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 
     if (!$OnedriveAccessUser) {
-        throw 'No valid user was supplied to grant or remove OneDrive access for.'
+        throw [System.ArgumentException]::new('No valid user was supplied to grant or remove OneDrive access for.')
     }
 
     $IsSiteAdmin = $RemovePermission -ne $true
     $Action = $IsSiteAdmin ? 'added' : 'removed'
-    $Results = [system.collections.generic.list[string]]::new()
+    $Results = [System.Collections.Generic.List[object]]::new()
 
     try {
         if (!$URL) {
@@ -66,7 +69,7 @@ function Set-CIPPSharePointPerms {
             # back as an array whenever the user had more than one drive.
             $URL = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)/drive/root?`$select=sharepointIds" -asapp $true -tenantid $TenantFilter).sharepointIds.siteUrl
             if (!$URL) {
-                throw "Could not determine the OneDrive site URL for $UserId. The user may not have a provisioned OneDrive."
+                throw [System.Management.Automation.ItemNotFoundException]::new("Could not determine the OneDrive site URL for $UserId. The user may not have a provisioned OneDrive.")
             }
         }
         $URL = "$URL".TrimEnd('/')
@@ -100,13 +103,13 @@ function Set-CIPPSharePointPerms {
 
                 $Message = "Successfully $Action $AccessUser as a site collection admin of $URL"
                 Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev Info -tenant $TenantFilter
-                $Results.Add($Message)
+                $Results.Add([PSCustomObject]@{ resultText = $Message; state = 'success' })
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $Explanation = Get-CIPPSharePointErrorMessage -ErrorMessage $_.Exception.Message
                 $Message = "Failed to change access for $($AccessUser) on $URL - $Explanation"
                 Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
-                $Results.Add($Message)
+                $Results.Add([PSCustomObject]@{ resultText = $Message; state = 'error' })
             }
         }
 
@@ -115,6 +118,7 @@ function Set-CIPPSharePointPerms {
         $ErrorMessage = Get-CippException -Exception $_
         $Message = "Failed to process SharePoint permissions. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
+        if ($_.Exception -is [System.Management.Automation.ItemNotFoundException]) { throw [System.Management.Automation.ItemNotFoundException]::new($Message) }
         throw $Message
     }
 }

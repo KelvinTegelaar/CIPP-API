@@ -49,7 +49,7 @@ function Invoke-ListReportBuilderTemplates {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -message "Failed to list report builder templates: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{ Results = "Error: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

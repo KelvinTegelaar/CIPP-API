@@ -44,7 +44,7 @@ Function Invoke-ExecRenameAPDevice {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Could not rename device '$($DeviceId)' with serial number '$($SerialNumber)' to '$($DisplayName)'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 

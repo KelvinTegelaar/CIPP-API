@@ -9,6 +9,7 @@ function Invoke-ExecEditTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $Table = Get-CippTable -tablename 'templates'
         $guid = $request.Body.id ? $request.Body.id : $request.Body.GUID
@@ -95,11 +96,12 @@ function Invoke-ExecEditTemplate {
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Failed to edit template: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Editing template failed: $($_.Exception.Message)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

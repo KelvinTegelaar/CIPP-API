@@ -24,8 +24,11 @@ BeforeAll {
     function Remove-AzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Invoke-GitHubApiRequest { param($Path, $Method, $Body, $Accept) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $headers, $LogData) }
+    function Push-CIPPTemplateToRepo { param($GUID, $FullName, $Message, $Branch) }
+    function Push-CIPPBaselineToRepo { param($GUID, $FullName, $Message, $Branch) }
 
     . $Exec
+    . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Get-CippErrorStatusCode.ps1' -File | Select-Object -First 1 -ExpandProperty FullName)
     . $List
 }
 
@@ -57,6 +60,30 @@ Describe 'Invoke-ExecCommunityRepo Add' {
             })
         $Response.Body.Results.state | Should -Be 'success'
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Entity.RowKey -eq '42' -and $Entity.FullName -eq 'owner/repo' }
+    }
+}
+
+Describe 'Invoke-ExecCommunityRepo upload status codes' {
+    BeforeEach {
+        Mock Get-CIPPTable { @{ Context = 'ctx' } }
+        Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ FullName = 'Org/repo'; DefaultBranch = 'main' } }
+    }
+
+    It 'returns <Code> for <Action> when <Case>' -ForEach @(
+        @{ Action = 'UploadTemplate'; Helper = 'Push-CIPPTemplateToRepo'; Case = 'the template is missing'; Code = 404; Mock = { throw [System.Management.Automation.ItemNotFoundException]::new("Template 'g' not found") } }
+        @{ Action = 'UploadBaseline'; Helper = 'Push-CIPPBaselineToRepo'; Case = 'the baseline is missing'; Code = 404; Mock = { throw [System.Management.Automation.ItemNotFoundException]::new("Baseline 'g' not found") } }
+        @{ Action = 'UploadTemplate'; Helper = 'Push-CIPPTemplateToRepo'; Case = 'the push does not land'; Code = 500; Mock = { @{ resultText = 'not pushed'; state = 'error' } } }
+        @{ Action = 'UploadBaseline'; Helper = 'Push-CIPPBaselineToRepo'; Case = 'GitHub throws'; Code = 500; Mock = { throw 'GitHub API is down' } }
+        @{ Action = 'UploadTemplate'; Helper = 'Push-CIPPTemplateToRepo'; Case = 'the push succeeds'; Code = 200; Mock = { @{ resultText = 'uploaded'; state = 'success' } } }
+    ) {
+        Mock $Helper $Mock
+        $Response = Invoke-ExecCommunityRepo -Request ([pscustomobject]@{
+                Params  = @{ CIPPEndpoint = 'ExecCommunityRepo' }
+                Headers = @{}
+                Body    = [pscustomobject]@{ Action = $Action; FullName = 'Org/repo'; GUID = 'g' }
+            })
+        $Response.StatusCode | Should -Be $Code
+        $Response.Body.Results.state | Should -Be $(if ($Code -eq 200) { 'success' } else { 'error' })
     }
 }
 

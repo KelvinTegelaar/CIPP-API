@@ -15,9 +15,14 @@ Function Invoke-ListSensitiveInfoTypeRulePackage {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $RulePackId = $Request.Query.RulePackId ?? $Request.Body.RulePackId
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($RulePackId)) { throw 'RulePackId is required.' }
+    if ([string]::IsNullOrWhiteSpace($RulePackId)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = 'RulePackId is required.'
+            })
+    }
 
+    try {
         $Pack = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DlpSensitiveInformationTypeRulePackage' -cmdParams @{ Identity = $RulePackId } -Compliance |
             Select-Object * -ExcludeProperty *odata*, *data.type* | Select-Object -First 1
         $Xml = [string]$Pack.ClassificationRuleCollectionXml
@@ -36,7 +41,7 @@ Function Invoke-ListSensitiveInfoTypeRulePackage {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Result = $ErrorMessage
     }
 

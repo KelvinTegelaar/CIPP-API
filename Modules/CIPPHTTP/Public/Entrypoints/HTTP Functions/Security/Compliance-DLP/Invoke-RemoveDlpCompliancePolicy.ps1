@@ -26,7 +26,7 @@ Function Invoke-RemoveDlpCompliancePolicy {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to delete DLP compliance policy $Identity - $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

@@ -12,6 +12,7 @@ BeforeAll {
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $useSystemMailbox) }
     function Get-CIPPTextReplacement { param($Text, $TenantFilter, [switch]$EscapeForJson) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Resolve-CIPPTransportRuleTemplate.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Email-Exchange/Transport/Invoke-AddTransportRule.ps1'
     . ([ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $EndpointPath -Raw)))

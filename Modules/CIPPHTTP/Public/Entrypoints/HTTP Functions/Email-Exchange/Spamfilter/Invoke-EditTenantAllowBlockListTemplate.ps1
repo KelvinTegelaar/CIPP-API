@@ -56,7 +56,7 @@ function Invoke-EditTenantAllowBlockListTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $Headers -API $APIName -message "Failed to edit Tenant Allow/Block List Template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $body = [pscustomobject]@{ 'Results' = "Failed to edit Tenant Allow/Block List Template: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

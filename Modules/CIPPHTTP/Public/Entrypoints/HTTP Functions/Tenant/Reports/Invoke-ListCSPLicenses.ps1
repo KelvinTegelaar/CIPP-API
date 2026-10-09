@@ -17,7 +17,7 @@ function Invoke-ListCSPLicenses {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = 'Unable to retrieve CSP licenses, ensure that you have enabled the Sherweb integration and mapped the tenant in the integration settings.'
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return [HttpResponseContext]@{

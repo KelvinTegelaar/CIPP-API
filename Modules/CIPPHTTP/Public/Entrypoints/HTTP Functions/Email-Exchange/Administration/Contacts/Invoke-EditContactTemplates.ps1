@@ -11,14 +11,17 @@ function Invoke-EditContactTemplates {
     $Headers = $Request.Headers
     Write-Host ($request | ConvertTo-Json -Depth 10 -Compress)
 
+    # Get the ContactTemplateID from the request body
+    $ContactTemplateID = $Request.body.ContactTemplateID
+
+    if (-not $ContactTemplateID) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{'Results' = 'Failed to update Contact template: ContactTemplateID is required for editing a template' }
+            })
+    }
+
     try {
-        # Get the ContactTemplateID from the request body
-        $ContactTemplateID = $Request.body.ContactTemplateID
-
-        if (-not $ContactTemplateID) {
-            throw 'ContactTemplateID is required for editing a template'
-        }
-
         # Check if the template exists
         $Table = Get-CippTable -tablename 'templates'
         $SafeContactTemplateID = ConvertTo-CIPPODataFilterValue -Value $ContactTemplateID -Type Guid
@@ -26,7 +29,10 @@ function Invoke-EditContactTemplates {
         $ExistingTemplate = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $ExistingTemplate) {
-            throw "Contact template with ID $ContactTemplateID not found"
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::NotFound
+                    Body       = [pscustomobject]@{'Results' = "Failed to update Contact template: Contact template with ID $ContactTemplateID not found" }
+                })
         }
 
         Write-LogMessage -Headers $Headers -API $APINAME -message "Updating Contact Template with ID: $ContactTemplateID" -Sev Info
@@ -71,7 +77,7 @@ function Invoke-EditContactTemplates {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $Headers -API $APINAME -message "Failed to update Contact template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to update Contact template: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

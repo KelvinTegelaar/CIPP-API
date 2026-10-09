@@ -7,6 +7,7 @@ function Invoke-ExecDeviceCodeLogon {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $clientId = $Request.Query.clientId
         $scope = $Request.Query.scope
@@ -66,6 +67,7 @@ function Invoke-ExecDeviceCodeLogon {
                     message          = $deviceCodeInfo.message
                 }
             } else {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = @{
                     error             = $deviceCodeInfo.error ?? 'device_code_error'
                     error_description = $deviceCodeInfo.error_description ?? 'Failed to request a device code.'
@@ -107,6 +109,7 @@ function Invoke-ExecDeviceCodeLogon {
     } catch {
         # ErrorDetails carries the response body from the token endpoint, which is where the
         # AADSTS code lives; the exception message on its own is just the status line.
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Results = @{
             error             = 'server_error'
             error_description = "An error occurred: $($_.ErrorDetails.Message ?? $_.Exception.Message)"
@@ -114,7 +117,7 @@ function Invoke-ExecDeviceCodeLogon {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results | ConvertTo-Json
             Headers    = @{'Content-Type' = 'application/json' }
         })

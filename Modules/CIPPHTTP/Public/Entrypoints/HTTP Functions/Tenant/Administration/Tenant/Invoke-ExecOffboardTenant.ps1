@@ -233,7 +233,7 @@ function Invoke-ExecOffboardTenant {
         }
 
         Write-LogMessage -headers $Headers -API $APIName -message 'Offboarding completed' -Sev 'Info' -tenant $TenantFilter
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = if ($Tenant -and $TenantId -eq $env:TenantID) { [HttpStatusCode]::BadRequest } else { Get-CippBulkStatusCode -Total ($Results.Count + $Errors.Count) -Failed $Errors.Count }
         $body = [pscustomobject]@{
             'Results' = @($Results)
             'Errors'  = @($Errors)

@@ -15,6 +15,7 @@ function Invoke-ListAuditLogSearches {
     $Type = $Request.Query.Type
 
     if ($TenantFilter) {
+        $StatusCode = [HttpStatusCode]::OK
         switch ($Type) {
             'Searches' {
                 $Results = Get-CippAuditLogSearches -TenantFilter $TenantFilter
@@ -31,6 +32,7 @@ function Invoke-ListAuditLogSearches {
                     $Results = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
                 } catch {
                     $Results = @{ Error = $_.Exception.Message }
+                    $StatusCode = [HttpStatusCode]::InternalServerError
                 }
                 $Body = @{
                     Results  = @($Results)
@@ -76,7 +78,7 @@ function Invoke-ListAuditLogSearches {
         }
 
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
+                StatusCode = $StatusCode
                 Body       = $Body
             })
     } else {

@@ -211,7 +211,7 @@ function Invoke-ListGroups {
     } catch {
         Write-Warning $_.InvocationInfo.PositionMessage
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
     return ([HttpResponseContext]@{

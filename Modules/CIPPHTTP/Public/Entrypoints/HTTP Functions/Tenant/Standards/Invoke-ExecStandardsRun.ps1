@@ -40,16 +40,18 @@ function Invoke-ExecStandardsRun {
             "Successfully started Standards Run for tenant: $TenantFilter - Template: $TemplateName$RunMode"
         }
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to start standards run for tenant: $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Results = [pscustomobject]@{'Results' = "$Results" }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

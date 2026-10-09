@@ -57,7 +57,7 @@ Describe 'Invoke-ExecJITAdminRequestDecision' {
     It 'does not let the requester approve their own request' {
         Mock Get-CIPPAccessRole { @('admin') }
         $Response = Invoke-ExecJITAdminRequestDecision -Request (New-DecisionRequest -Caller 'tech@msp.com' -Decision 'Approve') -TriggerMetadata $null
-        $Response.StatusCode | Should -Be 400
+        $Response.StatusCode | Should -Be 403
         $Response.Body.Results[0] | Should -BeLike '*your own request*'
         Should -Invoke Update-AzDataTableEntity -Times 0
     }
@@ -65,7 +65,7 @@ Describe 'Invoke-ExecJITAdminRequestDecision' {
     It 'refuses a caller without an approver role' {
         Mock Get-CIPPAccessRole { @('editor') }
         $Response = Invoke-ExecJITAdminRequestDecision -Request (New-DecisionRequest -Caller 'other@msp.com' -Decision 'Approve') -TriggerMetadata $null
-        $Response.StatusCode | Should -Be 400
+        $Response.StatusCode | Should -Be 403
         Should -Invoke Update-AzDataTableEntity -Times 0
     }
 

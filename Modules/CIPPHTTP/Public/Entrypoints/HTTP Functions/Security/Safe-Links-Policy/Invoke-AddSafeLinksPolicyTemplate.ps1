@@ -13,18 +13,24 @@ Function Invoke-AddSafeLinksPolicyTemplate {
     # Debug: Log the incoming request body
     Write-LogMessage -Headers $Headers -API $APINAME -message "Request body: $($Request.body | ConvertTo-Json -Depth 5 -Compress)" -Sev Debug
 
+    # Validate required fields. The "create template from policy" row action posts the policy
+    # row, which carries Name/PolicyName but no TemplateName.
+    if ([string]::IsNullOrEmpty($Request.body.Name) -and [string]::IsNullOrEmpty($Request.body.TemplateName)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{'Results' = 'Failed to create SafeLinks policy template: Template name is required but was not provided' }
+            })
+    }
+
+    if ([string]::IsNullOrEmpty($Request.body.PolicyName)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{'Results' = 'Failed to create SafeLinks policy template: Policy name is required but was not provided' }
+            })
+    }
+
     try {
         $GUID = (New-Guid).GUID
-
-        # Validate required fields. The "create template from policy" row action posts the policy
-        # row, which carries Name/PolicyName but no TemplateName.
-        if ([string]::IsNullOrEmpty($Request.body.Name) -and [string]::IsNullOrEmpty($Request.body.TemplateName)) {
-            throw "Template name is required but was not provided"
-        }
-
-        if ([string]::IsNullOrEmpty($Request.body.PolicyName)) {
-            throw "Policy name is required but was not provided"
-        }
 
         # Create a new ordered hashtable to store selected properties
         $policyObject = [ordered]@{}
@@ -85,7 +91,7 @@ Function Invoke-AddSafeLinksPolicyTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $Headers -API $APINAME -message "Failed to create SafeLinks policy template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to create SafeLinks policy template: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

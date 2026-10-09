@@ -1273,7 +1273,7 @@ function Invoke-HuduExtensionSync {
                                     $RetrieveLAPSPassword = $IsNewHuduDevice -or -not $ExistingLAPSCredentialPresent -or [string]::IsNullOrWhiteSpace($ExistingLAPSBackupDate) -or $ExistingLAPSBackupDate -ne $LAPSBackupDate
 
                                     if ($RetrieveLAPSPassword) {
-                                        $LAPSResult = Get-CIPPLapsPassword -Device $Device.azureADDeviceId -TenantFilter $TenantFilter -ErrorAction Stop
+                                        $LAPSResult = try { Get-CIPPLapsPassword -Device $Device.azureADDeviceId -TenantFilter $TenantFilter -ErrorAction Stop } catch [System.Management.Automation.ItemNotFoundException] { $null }
                                         if ($LAPSResult -isnot [string] -and $LAPSResult.state -eq 'success' -and -not [string]::IsNullOrWhiteSpace([string]$LAPSResult.accountName) -and -not [string]::IsNullOrWhiteSpace([string]$LAPSResult.copyField) -and -not [string]::IsNullOrWhiteSpace([string]$LAPSResult.backupDateTime)) {
                                             $LAPSAccount = ([string]$LAPSResult.accountName) -replace '^\.\\', ''
                                             $LAPSBackupDate = [string]$LAPSResult.backupDateTime
@@ -1281,7 +1281,7 @@ function Invoke-HuduExtensionSync {
                                             $DeviceAssetFields.laps_password = [string]$LAPSResult.copyField
                                             $CredentialFieldsChanged = $true
                                             $DeviceAssetFields.laps_backup_date = $LAPSBackupDate
-                                        } elseif ([string]$LAPSResult -like 'No LAPS password found*') {
+                                        } elseif ($null -eq $LAPSResult) {
                                             $LAPSAccount = ''
                                             $LAPSBackupDate = ''
                                             $DeviceAssetFields.laps_account = ''

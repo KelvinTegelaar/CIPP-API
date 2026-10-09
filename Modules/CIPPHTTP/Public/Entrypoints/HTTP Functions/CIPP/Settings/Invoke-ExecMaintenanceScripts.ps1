@@ -25,6 +25,7 @@ Function Invoke-ExecMaintenanceScripts {
     } catch { Write-Host $_.Exception.Message }
     #$ReplacementStrings | Format-Table
 
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $ScriptFile = $Request.Query.ScriptFile
 
@@ -40,6 +41,7 @@ Function Invoke-ExecMaintenanceScripts {
             }
             $Body = @{ ScriptFiles = @($ScriptOptions) }
         } elseif (!(Get-ChildItem (Join-Path $env:CIPPRootPath "ExecMaintenanceScripts\Scripts\$Filename") -ErrorAction SilentlyContinue)) {
+            $StatusCode = [HttpStatusCode]::NotFound
             $Body = @{ Status = 'Script does not exist' }
         } else {
             $Script = Get-Content -Raw (Join-Path $env:CIPPRootPath "ExecMaintenanceScripts\Scripts\$Filename")
@@ -68,11 +70,12 @@ Function Invoke-ExecMaintenanceScripts {
         }
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantfilter) -message "Failed to retrieve maintenance scripts. Error: $($_.Exception.Message)" -Sev 'Error'
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{Status = "Failed to retrieve maintenance scripts $($_.Exception.Message)" }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 

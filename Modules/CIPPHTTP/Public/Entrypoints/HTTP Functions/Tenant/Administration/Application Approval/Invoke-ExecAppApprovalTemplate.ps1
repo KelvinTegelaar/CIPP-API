@@ -77,6 +77,7 @@ function Invoke-ExecAppApprovalTemplate {
                     'Results' = $_.Exception.Message
                 }
                 Write-LogMessage -headers $Headers -API $APIName -message "App Deployment Template Save failed: $($_.Exception.Message)" -Sev 'Error'
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         'Delete' {
@@ -101,12 +102,14 @@ function Invoke-ExecAppApprovalTemplate {
                     $Body = @{
                         'Results' = 'No template found with the provided ID'
                     }
+                    $StatusCode = [HttpStatusCode]::NotFound
                 }
             } catch {
                 $Body = @{
                     'Results' = "Failed to delete template: $($_.Exception.Message)"
                 }
                 Write-LogMessage -headers $Headers -API $APIName -message "App Deployment Template Delete failed: $($_.Exception.Message)" -Sev 'Error'
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         'Get' {

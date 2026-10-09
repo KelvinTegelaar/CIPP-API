@@ -31,11 +31,17 @@ function Invoke-ExecSetLibraryInheritance {
     $CopyRoleAssignments = ($Request.Body.CopyRoleAssignments ?? $true) -eq $true
     $ClearSubscopes = $Request.Body.ClearSubscopes -eq $true
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
-        if ([string]::IsNullOrWhiteSpace($ListId)) { throw 'ListId is required: a site root web always holds its own permissions.' }
-        if ([string]$Action -notin @('Break', 'Reset')) { throw "Action must be 'Break' or 'Reset'." }
+    if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($ListId)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'ListId is required: a site root web always holds its own permissions.' } })
+    }
+    if ([string]$Action -notin @('Break', 'Reset')) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "Action must be 'Break' or 'Reset'." } })
+    }
 
+    try {
         $SPScope = Resolve-CIPPSharePointPermissionScope -SiteUrl $SiteUrl -ListId $ListId -TenantFilter $TenantFilter
         $TargetLabel = if ($LibraryName) { "library $LibraryName" } else { $SPScope.TargetLabel }
 
@@ -68,7 +74,7 @@ function Invoke-ExecSetLibraryInheritance {
         $FailTarget = if ($LibraryName) { "library $LibraryName" } else { 'the library' }
         $Result = "Failed to change permission inheritance on $FailTarget. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
