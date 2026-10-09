@@ -54,7 +54,7 @@ function Invoke-CIPPBaselineGraduation {
                     }
                     'variable' {
                         # Reuse the replacement machinery: an unresolved token comes back verbatim.
-                        $Token = '%{0}%' -f $Condition.variable
+                        $Token = '%{0}%' -f "$($Condition.variable)".Trim().Trim('%')
                         $Value = Get-CIPPTextReplacement -TenantFilter $State.tenantFilter -Text $Token
                         if ($Value -eq $Token) { $false } else {
                             switch ($Condition.operator) {
