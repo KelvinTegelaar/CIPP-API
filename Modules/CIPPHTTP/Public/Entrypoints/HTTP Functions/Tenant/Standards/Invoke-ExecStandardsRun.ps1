@@ -31,10 +31,14 @@ function Invoke-ExecStandardsRun {
 
     # Call the wrapper - it handles queuing internally via Start-CIPPOrchestrator
     try {
-        $null = New-CIPPStandardsRun -TenantFilter $TenantFilter -TemplateID $TemplateId -runManually $RunManually -Force
+        $InstanceId = New-CIPPStandardsRun -TenantFilter $TenantFilter -TemplateID $TemplateId -runManually $RunManually -Force
         $TemplateName = if ($TemplateId -eq '*') { 'All' } else { "$($Templates.templateName) ($($Templates.GUID))" }
         $RunMode = if ($RunManually) { ' (Manual Only)' } else { '' }
-        $Results = "Successfully started Standards Run for tenant: $TenantFilter - Template: $TemplateName$RunMode"
+        $Results = if ("$InstanceId" -like '*-Skipped') {
+            "A Standards Run for tenant: $TenantFilter - Template: $TemplateName is already running, so this request was skipped"
+        } else {
+            "Successfully started Standards Run for tenant: $TenantFilter - Template: $TemplateName$RunMode"
+        }
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Info'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
