@@ -24,4 +24,14 @@ function Start-ExtensionOrchestrator {
             Invoke-NinjaOneExtensionScheduler
         }
     }
+
+    if ($Configuration.HaloPSA.Enabled -eq $true) {
+        if ($PSCmdlet.ShouldProcess('Invoke-HaloAutoMap')) {
+            try {
+                Invoke-HaloAutoMap -CIPPMapping (Get-CIPPTable -TableName CippMapping) | Out-Null
+            } catch {
+                Write-LogMessage -API 'HaloAutoMap' -message "HaloPSA background AutoMap failed: $($_.Exception.Message)" -Sev 'Error'
+            }
+        }
+    }
 }
