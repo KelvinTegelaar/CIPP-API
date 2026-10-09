@@ -18,7 +18,7 @@ function Get-CIPPMSPAppInstallCommand {
     .PARAMETER Tenant
         The tenant object, requires customerId and defaultDomainName.
     .PARAMETER PackageName
-        Package name for ninja/NCentral installs (not stored under params).
+        Package name for NCentral installs (not stored under params).
     #>
     [CmdletBinding()]
     param(
@@ -66,8 +66,8 @@ function Get-CIPPMSPAppInstallCommand {
             $uninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1'
         }
         'ninja' {
-            $NinjaPackage = ConvertTo-CIPPSafePwshArg -Value ([string]$PackageName)
-            $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -InstallParam $NinjaPackage"
+            $NinjaToken = ConvertTo-CIPPSafePwshArg -Value (Resolve-MSPValue $InstallParams.NinjaToken)
+            $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -Token $NinjaToken"
             $uninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1'
         }
         'Huntress' {

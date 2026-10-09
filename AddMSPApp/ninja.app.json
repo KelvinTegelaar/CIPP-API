@@ -8,7 +8,7 @@
   "owner": " ",
   "informationUrl": " ",
   "privacyInformationUrl": " ",
-  "fileName": "ninjarmm.intunewin",
+  "fileName": "ninja.intunewin",
   "@odata.type": "#microsoft.graph.win32LobApp",
   "applicableArchitectures": "x86, x64",
   "installExperience": {
@@ -18,12 +18,10 @@
   },
   "detectionRules": [
     {
-      "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
-      "path": "%ProgramData%\\NinjaRMMAgent",
-      "fileOrFolderName": "ninjarmm-cli.exe",
-      "check32BitOn64System": false,
-      "detectionType": "exists",
-      "operator": "notConfigured"
+      "@odata.type": "#microsoft.graph.win32LobAppPowerShellScriptDetection",
+      "enforceSignatureCheck": false,
+      "runAs32Bit": false,
+      "scriptContent": "aWYgKEdldC1TZXJ2aWNlIC1OYW1lICdOaW5qYVJNTUFnZW50JyAtRXJyb3JBY3Rpb24gU2lsZW50bHlDb250aW51ZSkgewogICAgV3JpdGUtT3V0cHV0ICdOaW5qYU9uZSBhZ2VudCBpbnN0YWxsZWQnCiAgICBleGl0IDAKfQpleGl0IDEK"
     }
   ],
   "returnCodes": [
