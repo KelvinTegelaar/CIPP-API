@@ -109,10 +109,12 @@ function Invoke-ExecCIPPDBCache {
 
         $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
 
-        $ResultsMessage = if ($TenantFilter -eq 'AllTenants') {
-            "Successfully started cache operation for $Name for all tenants"
+        $Skipped = "$InstanceId" -like '*-Skipped'
+        $Scope = if ($TenantFilter -eq 'AllTenants') { 'for all tenants' } else { "on tenant $TenantFilter" }
+        $ResultsMessage = if ($Skipped) {
+            "A $Name cache operation is already running $Scope, so this request was skipped"
         } else {
-            "Successfully started cache operation for $Name on tenant $TenantFilter"
+            "Successfully started cache operation for $Name $Scope"
         }
 
         $Body = [PSCustomObject]@{
@@ -121,7 +123,7 @@ function Invoke-ExecCIPPDBCache {
                 Name       = $Name
                 Tenant     = $TenantFilter
                 InstanceId = $InstanceId
-                QueueId    = $Queue.RowKey
+                QueueId    = if ($Skipped) { $null } else { $Queue.RowKey }
             }
         }
         $StatusCode = [HttpStatusCode]::OK
