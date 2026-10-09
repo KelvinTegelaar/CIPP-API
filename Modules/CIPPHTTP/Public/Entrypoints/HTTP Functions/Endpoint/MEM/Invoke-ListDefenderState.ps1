@@ -33,7 +33,7 @@ Function Invoke-ListDefenderState {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = "$($ErrorMessage)"
     }
     return ([HttpResponseContext]@{

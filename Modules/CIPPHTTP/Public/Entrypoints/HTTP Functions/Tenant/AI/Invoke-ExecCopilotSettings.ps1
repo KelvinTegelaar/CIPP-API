@@ -68,7 +68,7 @@ function Invoke-ExecCopilotSettings {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to set '$SettingId' to ${StateText}: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

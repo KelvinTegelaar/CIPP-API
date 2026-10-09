@@ -22,7 +22,7 @@ function Invoke-ListAgent365PackageDetail {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Agent365Packages' -tenant $TenantFilter -message "Could not get Agent 365 package detail for $PackageId. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Detail = [pscustomobject]@{ error = $ErrorMessage.NormalizedError }
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

@@ -109,7 +109,7 @@ function Invoke-ExecUpdateRefreshToken {
         }
 
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
+                StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = $Results
             })
 

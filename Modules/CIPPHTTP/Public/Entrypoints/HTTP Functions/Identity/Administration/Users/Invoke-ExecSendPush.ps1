@@ -30,7 +30,7 @@ function Invoke-ExecSendPush {
         $Body = $_.Exception.Message
         Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Failed MFA request for $UserEmail - $Body" -Sev 'Error'
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
+                StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = [pscustomobject]@{'Results' = @{ resultText = $Body; state = 'error' } }
             })
     }

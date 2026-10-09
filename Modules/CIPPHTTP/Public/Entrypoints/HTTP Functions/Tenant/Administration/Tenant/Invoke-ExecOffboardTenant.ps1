@@ -239,7 +239,7 @@ function Invoke-ExecOffboardTenant {
             'Errors'  = @($Errors)
         }
     } catch {
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $body = $_.Exception.message
     }
     return ([HttpResponseContext]@{

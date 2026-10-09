@@ -116,7 +116,7 @@ function Invoke-ListCopilotUsage {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'CopilotUsage' -tenant $TenantFilter -message "Failed to retrieve Copilot usage report ($Type). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Results = @()
     }
 
