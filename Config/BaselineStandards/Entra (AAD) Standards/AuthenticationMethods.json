@@ -11,6 +11,7 @@
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Set-CIPPAuthenticationPolicy",
   "recommendedBy": [],
+  "requiredCapabilities": [],
   "disabledFeatures": {
     "report": false,
     "warn": false,
