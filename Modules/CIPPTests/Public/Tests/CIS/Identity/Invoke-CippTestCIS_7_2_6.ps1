@@ -14,8 +14,20 @@ function Invoke-CippTestCIS_7_2_6 {
         }
 
         $Cfg = $SPO | Select-Object -First 1
-        $Capability = $Cfg.SharingCapability
-        $Mode = $Cfg.SharingDomainRestrictionMode
+        # CSOM returns these enums as numbers, not the Get-SPOTenant names.
+        $Capability = switch ("$($Cfg.SharingCapability)") {
+            '0' { 'Disabled' }
+            '1' { 'ExternalUserSharingOnly' }
+            '2' { 'ExternalUserAndGuestSharing' }
+            '3' { 'ExistingExternalUserSharingOnly' }
+            default { "$($Cfg.SharingCapability)" }
+        }
+        $Mode = switch ("$($Cfg.SharingDomainRestrictionMode)") {
+            '0' { 'None' }
+            '1' { 'AllowList' }
+            '2' { 'BlockList' }
+            default { "$($Cfg.SharingDomainRestrictionMode)" }
+        }
         $AllowList = $Cfg.SharingAllowedDomainList
         $BlockList = $Cfg.SharingBlockedDomainList
 

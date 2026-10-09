@@ -60,7 +60,6 @@ function Invoke-CIPPDBCacheCollection {
             'AuthorizationPolicy'
             'AuthenticationMethodsPolicy'
             'SecurityDefaults'
-            'DeviceSettings'
             'DirectoryRecommendations'
             'CrossTenantAccessPolicy'
             'DefaultAppManagementPolicy'

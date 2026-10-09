@@ -6,10 +6,10 @@ function Invoke-CippTestCIS_4_1 {
     param($Tenant)
 
     try {
-        $DeviceSettings = Get-CIPPTestData -TenantFilter $Tenant -Type 'DeviceSettings'
+        $DeviceSettings = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneDeviceManagementSettings'
 
         if (-not $DeviceSettings) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_4_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'DeviceSettings cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name "Devices without a compliance policy are marked 'not compliant'" -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Device Management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_4_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'IntuneDeviceManagementSettings cache not found or the tenant has no Intune license. Please refresh the cache for this tenant.' -Risk 'Medium' -Name "Devices without a compliance policy are marked 'not compliant'" -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Device Management'
             return
         }
 

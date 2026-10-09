@@ -14,14 +14,22 @@ function Invoke-CippTestCIS_7_2_3 {
         }
 
         $Cfg = $SPO | Select-Object -First 1
+        # CSOM returns SharingCapabilities as a number, not the Get-SPOTenant name.
+        $Capability = switch ("$($Cfg.SharingCapability)") {
+            '0' { 'Disabled' }
+            '1' { 'ExternalUserSharingOnly' }
+            '2' { 'ExternalUserAndGuestSharing' }
+            '3' { 'ExistingExternalUserSharingOnly' }
+            default { "$($Cfg.SharingCapability)" }
+        }
         $Allowed = @('Disabled', 'ExistingExternalUserSharingOnly', 'ExternalUserSharingOnly')
 
-        if ($Cfg.SharingCapability -in $Allowed) {
+        if ($Capability -in $Allowed) {
             $Status = 'Passed'
-            $Result = "SharePoint SharingCapability is restricted ($($Cfg.SharingCapability))."
+            $Result = "SharePoint SharingCapability is restricted ($Capability)."
         } else {
             $Status = 'Failed'
-            $Result = "SharePoint SharingCapability is too permissive ($($Cfg.SharingCapability)). Set to ExternalUserSharingOnly or more restrictive."
+            $Result = "SharePoint SharingCapability is too permissive ($Capability). Set to ExternalUserSharingOnly or more restrictive."
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_7_2_3' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'External content sharing is restricted' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'External Collaboration'

@@ -55,11 +55,6 @@
     "description": "Authentication methods policy configuration"
   },
   {
-    "type": "DeviceSettings",
-    "friendlyName": "Device Settings",
-    "description": "Device management settings"
-  },
-  {
     "type": "DirectoryRecommendations",
     "friendlyName": "Directory Recommendations",
     "description": "Azure AD directory recommendations"
@@ -699,6 +694,12 @@
     "type": "ExoLabels",
     "friendlyName": "Compliance Sensitivity Labels",
     "description": "Microsoft Purview sensitivity labels from the Security & Compliance endpoint"
+  },
+  {
+    "type": "ExoLabelPolicies",
+    "collectedBy": "ExoLabels",
+    "friendlyName": "Compliance Sensitivity Label Policies",
+    "description": "Microsoft Purview sensitivity label policies from the Security & Compliance endpoint"
   },
   {
     "type": "DlpComplianceRules",
