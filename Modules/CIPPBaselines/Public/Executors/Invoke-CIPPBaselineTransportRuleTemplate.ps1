@@ -38,23 +38,29 @@ function Invoke-CIPPBaselineTransportRuleTemplate {
             $Parameters[$Property.Name] = $Property.Value
         }
 
-        if ($Deployed.Contains($RuleName)) {
-            if ($Remediate.overwrite -ne $true) {
-                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Transport rule '$RuleName' already exists and overwrite is off - leaving it untouched." -Sev 'Info'
+        if (-not $Deployed.Contains($RuleName)) {
+            try {
+                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-TransportRule' -cmdParams $Parameters -useSystemMailbox $true
+                [void]$Deployed.Add($RuleName)
                 continue
+            } catch {
+                # The rules cache can predate a rule created since the last collection.
+                if ($_.Exception.Message -notmatch 'already exists') { throw }
             }
-            $Parameters['Identity'] = $RuleName
-            # Set-TransportRule rejects Enabled; state changes go through Enable-/Disable-TransportRule.
-            $Enabled = $Parameters['Enabled']
-            $Parameters.Remove('Enabled')
-            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-TransportRule' -cmdParams $Parameters -useSystemMailbox $true
-            if ($null -ne $Enabled) {
-                $StateCmdlet = if ("$Enabled" -in @('True', 'Enabled')) { 'Enable-TransportRule' } else { 'Disable-TransportRule' }
-                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $StateCmdlet -cmdParams @{ Identity = $RuleName } -useSystemMailbox $true
-            }
-        } else {
-            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-TransportRule' -cmdParams $Parameters -useSystemMailbox $true
-            [void]$Deployed.Add($RuleName)
+        }
+
+        if ($Remediate.overwrite -ne $true) {
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Transport rule '$RuleName' already exists and overwrite is off - leaving it untouched." -Sev 'Info'
+            continue
+        }
+        $Parameters['Identity'] = $RuleName
+        # Set-TransportRule rejects Enabled; state changes go through Enable-/Disable-TransportRule.
+        $Enabled = $Parameters['Enabled']
+        $Parameters.Remove('Enabled')
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-TransportRule' -cmdParams $Parameters -useSystemMailbox $true
+        if ($null -ne $Enabled) {
+            $StateCmdlet = if ("$Enabled" -in @('True', 'Enabled')) { 'Enable-TransportRule' } else { 'Disable-TransportRule' }
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $StateCmdlet -cmdParams @{ Identity = $RuleName } -useSystemMailbox $true
         }
     }
 }
