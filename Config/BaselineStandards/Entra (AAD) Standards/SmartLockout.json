@@ -2,11 +2,24 @@
   "name": "SmartLockout",
   "label": "Configure Smart Lockout",
   "cat": "Entra (AAD) Standards",
-  "tag": [],
+  "tag": [
+    "EIDSCA.PR01",
+    "EIDSCA.PR02",
+    "EIDSCA.PR03",
+    "EIDSCA.PR05",
+    "EIDSCA.PR06"
+  ],
   "impact": "Medium Impact",
-  "helpText": "Sets the smart lockout threshold and duration, and optionally on-premises password protection mode.",
+  "helpText": "Sets the smart lockout threshold and duration, optionally on-premises password protection mode, and optionally enforces that the Microsoft global banned password check stays on.",
   "executiveText": "Tunes how quickly repeated failed sign-ins lock an account and for how long, balancing brute-force protection against helpdesk load from accidental lockouts.",
-  "docsDescription": "Grades the four lockout values on the password-rule directory setting. Remediation creates the setting with defaults when absent or patches only the lockout values, leaving the banned-password values to their own standard.",
+  "docsDescription": "Grades the four lockout values on the password-rule directory setting and, when 'Enforce the global banned password check' is on, that EnableBannedPasswordCheck is True (EIDSCA PR03). Remediation creates the setting with defaults when absent or patches only the values this standard manages, leaving the custom banned-password list to its own standard.",
+  "appliesToTest": [
+    "EIDSCAPR01",
+    "EIDSCAPR02",
+    "EIDSCAPR03",
+    "EIDSCAPR05",
+    "EIDSCAPR06"
+  ],
   "impactColour": "warning",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Graph: PATCH settings (directory setting 5cf42378)",
@@ -73,6 +86,11 @@
           "label": "Enforce"
         }
       ]
+    },
+    "EnableBannedPasswordCheck": {
+      "label": "Enforce the global banned password check (off = leave as-is)",
+      "type": "switch",
+      "default": false
     }
   },
   "read": {
@@ -84,6 +102,7 @@
     "lockoutDurationInSeconds": "%LockoutDurationInSeconds%",
     "lockoutThreshold": "%LockoutThreshold%",
     "enableBannedPasswordCheckOnPremises": "%EnableBannedPasswordCheckOnPremises%",
-    "bannedPasswordCheckOnPremisesMode": "%BannedPasswordCheckOnPremisesMode%"
+    "bannedPasswordCheckOnPremisesMode": "%BannedPasswordCheckOnPremisesMode%",
+    "enableBannedPasswordCheck": "%EnableBannedPasswordCheck%"
   }
 }

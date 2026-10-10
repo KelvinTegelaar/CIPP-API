@@ -11,6 +11,10 @@ function Get-CIPPBaselineSmartLockoutState {
 
         'Enforced' normalizes to 'Enforce' - Graph only accepts Audit/Enforce, and older
         saved baselines carry the misspelling.
+
+        When the 'EnableBannedPasswordCheck' switch is on, the global banned password check
+        is graded against True as well (EIDSCA PR03); off leaves that value ungraded so
+        existing baselines keep their four-value contract.
     .FUNCTIONALITY
         Internal
     #>
@@ -44,13 +48,19 @@ function Get-CIPPBaselineSmartLockoutState {
     }
     $Current | Add-Member -NotePropertyName 'settingId' -NotePropertyValue "$($Existing.id)"
 
+    $Expected = [PSCustomObject]@{
+        lockoutDurationInSeconds            = $Duration
+        lockoutThreshold                    = $Threshold
+        enableBannedPasswordCheckOnPremises = $OnPrem
+        bannedPasswordCheckOnPremisesMode   = $Mode
+    }
+    if ($V.EnableBannedPasswordCheck -eq $true -or "$($V.EnableBannedPasswordCheck)" -eq 'True') {
+        $Expected | Add-Member -NotePropertyName 'enableBannedPasswordCheck' -NotePropertyValue 'True'
+        $Current | Add-Member -NotePropertyName 'enableBannedPasswordCheck' -NotePropertyValue $(if ($Existing) { & $ValueOf 'EnableBannedPasswordCheck' } else { '' })
+    }
+
     @{
-        Expected = [PSCustomObject]@{
-            lockoutDurationInSeconds            = $Duration
-            lockoutThreshold                    = $Threshold
-            enableBannedPasswordCheckOnPremises = $OnPrem
-            bannedPasswordCheckOnPremisesMode   = $Mode
-        }
+        Expected = $Expected
         Current  = $Current
     }
 }

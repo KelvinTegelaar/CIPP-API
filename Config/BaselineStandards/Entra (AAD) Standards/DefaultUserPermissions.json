@@ -1,0 +1,92 @@
+{
+  "name": "DefaultUserPermissions",
+  "label": "Default user permissions and self sign-up (authorization policy)",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "EIDSCA.AP05",
+    "EIDSCA.AP06",
+    "EIDSCA.AP09",
+    "EIDSCA.AP14"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Sets four switches on the Microsoft Entra authorization policy: whether users can sign up for email-based subscriptions, whether users with a verified email can join the tenant on their own, whether users may consent to apps that Microsoft flags as risky, and whether members can read other users in the directory. The EIDSCA recommendation is off, off, off and on.",
+  "executiveText": "Closes the self-service doors into the tenant: nobody can create an account or a subscription just by verifying an email address, and employees cannot grant access to applications that Microsoft has flagged as risky. Members keep the ability to look up colleagues in the directory.",
+  "docsDescription": "Writes allowedToSignUpEmailBasedSubscriptions, allowEmailVerifiedUsersToJoinOrganization, allowUserConsentForRiskyApps and defaultUserRolePermissions.allowedToReadOtherUsers on the authorization policy (Graph beta). Maps to EIDSCA AP05, AP06, AP09 and AP14. The write is delegated because the authorization policy rejects app-only tokens. Disable Self Service Licensing also writes the email-based subscription switch; use one or the other in a baseline.",
+  "impactColour": "info",
+  "addedDate": "2026-10-10",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthorizationPolicy -AllowedToSignUpEmailBasedSubscriptions:$false -AllowEmailVerifiedUsersToJoinOrganization:$false -AllowUserConsentForRiskyApps:$false",
+  "appliesToTest": [
+    "EIDSCAAP05",
+    "EIDSCAAP06",
+    "EIDSCAAP09",
+    "EIDSCAAP14"
+  ],
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowedToSignUpEmailBasedSubscriptions": {
+      "type": "switch",
+      "label": "Allow users to sign up for email-based subscriptions",
+      "default": false,
+      "recommended": false
+    },
+    "allowEmailVerifiedUsersToJoinOrganization": {
+      "type": "switch",
+      "label": "Allow users with a verified email to join the tenant on their own",
+      "default": false,
+      "recommended": false
+    },
+    "allowUserConsentForRiskyApps": {
+      "type": "switch",
+      "label": "Allow users to consent to apps Microsoft flags as risky",
+      "default": false,
+      "recommended": false
+    },
+    "allowedToReadOtherUsers": {
+      "type": "switch",
+      "label": "Allow members to read other users in the directory",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "allowedToSignUpEmailBasedSubscriptions": "%allowedToSignUpEmailBasedSubscriptions%",
+    "allowEmailVerifiedUsersToJoinOrganization": "%allowEmailVerifiedUsersToJoinOrganization%",
+    "allowUserConsentForRiskyApps": "%allowUserConsentForRiskyApps%",
+    "defaultUserRolePermissions": {
+      "allowedToReadOtherUsers": "%allowedToReadOtherUsers%"
+    }
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy"
+  },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "allowedToSignUpEmailBasedSubscriptions": "%allowedToSignUpEmailBasedSubscriptions%",
+    "allowEmailVerifiedUsersToJoinOrganization": "%allowEmailVerifiedUsersToJoinOrganization%",
+    "allowUserConsentForRiskyApps": "%allowUserConsentForRiskyApps%",
+    "defaultUserRolePermissions.allowedToReadOtherUsers": "%allowedToReadOtherUsers%"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "asApp": false,
+        "uri": "policies/authorizationPolicy/authorizationPolicy",
+        "body": {
+          "allowedToSignUpEmailBasedSubscriptions": "%allowedToSignUpEmailBasedSubscriptions%",
+          "allowEmailVerifiedUsersToJoinOrganization": "%allowEmailVerifiedUsersToJoinOrganization%",
+          "allowUserConsentForRiskyApps": "%allowUserConsentForRiskyApps%",
+          "defaultUserRolePermissions": {
+            "allowedToReadOtherUsers": "%allowedToReadOtherUsers%"
+          }
+        }
+      }
+    ]
+  }
+}
