@@ -734,6 +734,11 @@
     "description": "Refreshes every cache type that feeds the group usage report (groups, Conditional Access, Intune, roles, app assignments, licenses, transport rules); writes no rows of its own"
   },
   {
+    "type": "NetworkAccess",
+    "friendlyName": "Global Secure Access",
+    "description": "Global Secure Access onboarding status, traffic forwarding profiles with their policy groups and assignment, and Conditional Access signaling"
+  },
+  {
     "type": "RolesAndAssignments",
     "friendlyName": "Roles & Assignments Sources",
     "description": "Refreshes every cache type that feeds the Roles & Assignments page (directory roles, role definitions, role assignments, administrative units, PIM schedules and policies); writes no rows of its own"
