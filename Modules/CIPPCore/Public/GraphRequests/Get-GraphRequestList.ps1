@@ -144,6 +144,10 @@ function Get-GraphRequestList {
         }
     }
     $GraphQuery.Query = $ParamCollection.ToString()
+    Test-CIPPGraphEndpointBlocked -Uri $GraphQuery.ToString() -Expand $BatchExpandQuery -Throw
+    if ($nextLink -match '^https://') {
+        Test-CIPPGraphEndpointBlocked -Uri $nextLink -Throw
+    }
     $PartitionKey = Get-StringHash -String (@($Endpoint, $ParamCollection.ToString(), 'v2') -join '-')
 
     # Perform $count check before caching
@@ -187,6 +191,7 @@ function Get-GraphRequestList {
             }
             $GraphQuery.Query = $ParamCollection.ToString()
             $GraphRequest.uri = $GraphQuery.ToString()
+            Test-CIPPGraphEndpointBlocked -Uri $GraphRequest.uri -Throw
         }
 
         if ($Parameters.'$count' -and -not $ManualPagination.IsPresent) {

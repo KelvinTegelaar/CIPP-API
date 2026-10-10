@@ -171,6 +171,5 @@ function Invoke-CIPPStandardSmartLockout {
         Set-CIPPStandardsCompareField -FieldName 'standards.SmartLockout' `
             -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
 
-        Add-CIPPBPAField -FieldName 'SmartLockout' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

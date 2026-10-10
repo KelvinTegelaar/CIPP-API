@@ -295,6 +295,5 @@ function Invoke-CIPPStandardDisableGuests {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableGuests' -FieldValue $Filtered -StoreAs json -Tenant $tenant
     }
 }

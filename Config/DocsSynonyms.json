@@ -9,7 +9,6 @@
     "dap": ["delegated admin privileges"],
     "sam": ["secure application model", "service account", "application registration"],
     "bec": ["business email compromise", "compromise remediation", "indicators of compromise"],
-    "bpa": ["best practice analyser", "report builder"],
     "cis": ["compliance benchmark test"],
     "spf": ["domain analyser", "email authentication", "dns record"],
     "dkim": ["domain analyser", "email authentication", "dns record"],

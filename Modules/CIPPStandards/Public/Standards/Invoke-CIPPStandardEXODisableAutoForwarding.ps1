@@ -90,6 +90,5 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EXODisableAutoForwarding' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AutoForwardingDisabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

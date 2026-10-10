@@ -29,7 +29,8 @@ function Invoke-AddAppTemplate {
             $AppType = [string]$App.appType
             $ParsedConfig = $null
             try { $ParsedConfig = $ConfigValue | ConvertFrom-Json -Depth 100 -ErrorAction Stop } catch { $ParsedConfig = $null }
-            if ($ParsedConfig.IntuneBody.id -and $AppType -notin @('officeApp', 'edgeApp')) {
+            $IsScriptApp = $AppType -eq 'win32ScriptApp' -and $ParsedConfig.installScript
+            if ($ParsedConfig.IntuneBody.id -and $AppType -notin @('officeApp', 'edgeApp') -and -not $IsScriptApp) {
                 $AppName = if ($App.appName) { [string]$App.appName } else { [string]$ParsedConfig.ApplicationName }
                 throw "'$AppName' is an existing Intune application with uploaded installer content. CIPP application templates are rebuilt from a package or script at deployment, so only Store, Chocolatey, Office, Edge, MSP and Custom (script) applications can be templated."
             }

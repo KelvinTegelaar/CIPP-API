@@ -81,8 +81,6 @@ function Invoke-CIPPStandardDisableAppCreation {
     }
 
     if ($Settings.report -eq $true) {
-        $State = -not $CurrentInfo.defaultUserRolePermissions.allowedToCreateApps
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableAppCreation' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'UserAppCreationDisabled' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

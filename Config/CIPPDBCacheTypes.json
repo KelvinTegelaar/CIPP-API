@@ -65,6 +65,21 @@
     "description": "Azure AD directory recommendations"
   },
   {
+    "type": "ServiceHealthOverviews",
+    "friendlyName": "Service Health Overviews",
+    "description": "Microsoft 365 service health status per workload"
+  },
+  {
+    "type": "ServiceHealthIssues",
+    "friendlyName": "Service Health Issues",
+    "description": "Microsoft 365 service health incidents and advisories, including their post history"
+  },
+  {
+    "type": "MessageCenterMessages",
+    "friendlyName": "Message Center Posts",
+    "description": "Microsoft 365 message center announcements, including body and rollout details"
+  },
+  {
     "type": "CrossTenantAccessPolicy",
     "friendlyName": "Cross-Tenant Access Policy",
     "description": "Cross-tenant access policy configuration"
@@ -73,6 +88,11 @@
     "type": "DefaultAppManagementPolicy",
     "friendlyName": "Default App Management Policy",
     "description": "Default application management policy"
+  },
+  {
+    "type": "ActivityBasedTimeoutPolicy",
+    "friendlyName": "Activity Based Timeout Policy",
+    "description": "Idle session timeout policies for Microsoft 365 web apps"
   },
   {
     "type": "Settings",
@@ -110,6 +130,21 @@
     "description": "Active role assignment instances"
   },
   {
+    "type": "RoleDefinitions",
+    "friendlyName": "Role Definitions",
+    "description": "All built-in and custom directory role definitions, including roles nobody holds"
+  },
+  {
+    "type": "RoleAssignments",
+    "friendlyName": "Role Assignments",
+    "description": "All active directory role assignments with their principal, including custom roles and administrative unit scopes"
+  },
+  {
+    "type": "AdministrativeUnits",
+    "friendlyName": "Administrative Units",
+    "description": "Administrative unit ids and names"
+  },
+  {
     "type": "B2BManagementPolicy",
     "friendlyName": "B2B Management Policy",
     "description": "B2B collaboration policy settings"
@@ -123,11 +158,6 @@
     "type": "DeviceRegistrationPolicy",
     "friendlyName": "Device Registration Policy",
     "description": "Device registration policy settings"
-  },
-  {
-    "type": "CredentialUserRegistrationDetails",
-    "friendlyName": "Credential User Registration Details",
-    "description": "User credential registration details"
   },
   {
     "type": "UserRegistrationDetails",
@@ -148,6 +178,16 @@
     "type": "LicenseOverview",
     "friendlyName": "License Overview",
     "description": "License usage overview"
+  },
+  {
+    "type": "ActiveUserDetail",
+    "friendlyName": "Active User Detail",
+    "description": "Per-user last-activity dates for Exchange, OneDrive, SharePoint, Teams and Viva Engage over 90 days"
+  },
+  {
+    "type": "M365AppUserDetail",
+    "friendlyName": "Microsoft 365 App Usage Detail",
+    "description": "Per-user Office app usage by platform (Windows, Mac, mobile, web) over 90 days"
   },
   {
     "type": "MFAState",
@@ -251,8 +291,8 @@
   },
   {
     "type": "ExoProtectionAlert",
-    "friendlyName": "Exchange Protection Alerts",
-    "description": "Microsoft 365 protection alert policies (Security & Compliance endpoint)"
+    "friendlyName": "Exchange Protection Alert Policies",
+    "description": "Microsoft 365 protection alert policy definitions (Security & Compliance endpoint) - the configured alert rules, NOT alerts that have fired"
   },
   {
     "type": "Mailboxes",
@@ -270,9 +310,19 @@
     "description": "Client Access Server mailbox settings"
   },
   {
+    "type": "ExoCASMailboxSmtpAuth",
+    "friendlyName": "CAS Mailbox SMTP AUTH Overrides",
+    "description": "Mailboxes with SMTP AUTH explicitly enabled despite the tenant default"
+  },
+  {
     "type": "MailboxUsage",
     "friendlyName": "Mailbox Usage",
     "description": "Exchange Online mailbox usage statistics"
+  },
+  {
+    "type": "MailTrafficSummary",
+    "friendlyName": "Mail Traffic Summary",
+    "description": "Top mail senders and recipients by message volume over the last 30 days"
   },
   {
     "type": "OneDriveSiteListing",
@@ -300,6 +350,11 @@
     "type": "SharePointSiteUsage",
     "friendlyName": "SharePoint Site Usage",
     "description": "SharePoint site usage statistics"
+  },
+  {
+    "type": "SharePointUsageReport",
+    "friendlyName": "SharePoint Usage Report (Tenant-level)",
+    "description": "Aggregated SharePoint storage usage across all sites in the tenant"
   },
   {
     "type": "SiteActivity",
@@ -676,5 +731,10 @@
     "type": "GroupUsage",
     "friendlyName": "Group Usage Sources",
     "description": "Refreshes every cache type that feeds the group usage report (groups, Conditional Access, Intune, roles, app assignments, licenses, transport rules); writes no rows of its own"
+  },
+  {
+    "type": "RolesAndAssignments",
+    "friendlyName": "Roles & Assignments Sources",
+    "description": "Refreshes every cache type that feeds the Roles & Assignments page (directory roles, role definitions, role assignments, administrative units, PIM schedules and policies); writes no rows of its own"
   }
 ]

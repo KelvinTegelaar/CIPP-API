@@ -85,6 +85,5 @@ function Invoke-CIPPStandardEnableFIDO2 {
             EnableFIDO2 = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableFIDO2' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'EnableFIDO2' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

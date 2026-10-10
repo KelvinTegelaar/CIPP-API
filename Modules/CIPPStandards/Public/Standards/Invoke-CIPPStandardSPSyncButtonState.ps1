@@ -90,7 +90,6 @@ function Invoke-CIPPStandardSPSyncButtonState {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SPSyncButtonDisabled' -FieldValue $CurrentState.HideSyncButtonOnDocLib -StoreAs bool -Tenant $Tenant
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {

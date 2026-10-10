@@ -136,6 +136,5 @@ function Invoke-CIPPStandardGlobalQuarantineSettings {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.GlobalQuarantineSettings' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'GlobalQuarantineSettingsConfigured' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

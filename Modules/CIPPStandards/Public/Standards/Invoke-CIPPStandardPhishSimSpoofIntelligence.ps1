@@ -132,6 +132,5 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
             IsCompliant    = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.PhishSimSpoofIntelligence' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'PhishSimSpoofIntelligence' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -13,6 +13,7 @@ function Invoke-ListSites {
 
 
     $TenantFilter = $Request.Query.TenantFilter
+    # Required. Which usage set to list: SharePointSiteUsage or OneDriveUsageAccount.
     $Type = $Request.Query.Type
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
@@ -28,6 +29,18 @@ function Invoke-ListSites {
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'Type is required'
             })
+    }
+
+    # Reject an unrecognised Type instead of silently treating it as OneDrive below.
+    switch ($Type) {
+        'SharePointSiteUsage' { }
+        'OneDriveUsageAccount' { }
+        default {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = "Type '$Type' is invalid. Valid values: SharePointSiteUsage, OneDriveUsageAccount."
+                })
+        }
     }
 
     if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {

@@ -97,10 +97,23 @@ function Get-CIPPBaselineWorkItems {
             elseif ($HasAllTenants) { 0 } else { 2 }
             $Scope = @('allTenants', 'group', 'tenant')[$Rank]
 
-            # Ascending stage walk: later stages replace earlier configs for the same instance.
-            $StageConfigs = @{}
+
+            $StageConfigs = @{} # identity -> List[config]
             $StageNumbers = @{}
             $StageNames = @{}
+            $AddStageConfig = {
+                param($Config, $StageNumber, $StageName)
+                $IdentityKey = & $IdentityFor "$($Config.instance ?? $Config.standard)" $Config.variables
+                if ($StageConfigs.ContainsKey($IdentityKey) -and $StageNumbers[$IdentityKey] -eq $StageNumber) {
+                    $StageConfigs[$IdentityKey].Add($Config)
+                } else {
+                    $Configs = [System.Collections.Generic.List[object]]::new()
+                    $Configs.Add($Config)
+                    $StageConfigs[$IdentityKey] = $Configs
+                    $StageNumbers[$IdentityKey] = $StageNumber
+                    $StageNames[$IdentityKey] = $StageName
+                }
+            }
             $StageNumber = 0
             foreach ($Stage in ($Baseline.stages | Select-Object -First $State.currentStage)) {
                 $StageNumber++
@@ -121,88 +134,80 @@ function Get-CIPPBaselineWorkItems {
                             $PackageTemplateRows[$Partition] = @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$SafePartition'")
                         }
                         foreach ($Member in @(Expand-CIPPBaselineTemplatePackage -Definition $ConfigDefinition -Config $Config -TemplateRows $PackageTemplateRows[$Partition])) {
-                            $StageConfigs[$Member.instance] = $Member
-                            $StageNumbers[$Member.instance] = $StageNumber
-                            $StageNames[$Member.instance] = $Stage.name
+                            & $AddStageConfig $Member $StageNumber $Stage.name
                         }
                         continue
                     }
-                    $StageConfigs[$Config.instance] = $Config
-                    $StageNumbers[$Config.instance] = $StageNumber
-                    $StageNames[$Config.instance] = $Stage.name
+                    & $AddStageConfig $Config $StageNumber $Stage.name
                 }
             }
 
-            foreach ($InstanceKey in $StageConfigs.Keys) {
-                if ($StandardName -and $InstanceKey -ne $StandardName) { continue }
-                $Config = $StageConfigs[$InstanceKey]
-                $Key = '{0}|{1}' -f $Domain, (& $IdentityFor $InstanceKey $Config.variables)
-                $Candidate = @{
-                    Rank      = $Rank
-                    Stage     = $StageNumbers[$InstanceKey]
-                    UpdatedAt = [int64]($Baseline.updatedAt ?? 0)
-                    Item      = [PSCustomObject]@{
-                        TenantFilter     = $Domain
-                        TenantName       = $State.tenantName
-                        Standard         = $InstanceKey
-                        BaseName         = ($InstanceKey -split '#')[0]
-                        TemplateId       = $Baseline.GUID
-                        TemplateName     = $Baseline.templateName
-                        Variables        = ($Config.variables ?? [PSCustomObject]@{})
-                        RemediateEnabled = [bool]$Config.remediateEnabled
-                        AlertEnabled     = [bool]$Config.alertEnabled
-                        AlertOnRemediate = [bool]$Config.alertOnRemediate
-                        SourceScope      = $Scope
-                        # Package members attribute their origin so the alignment view
-                        # reads 'Baseline X (PackageName)' instead of hiding the bundle.
-                        SourceTemplate   = $(if ($Config.fromPackage) { '{0} ({1})' -f $Baseline.templateName, $Config.fromPackage } else { $Baseline.templateName })
-                        Stage            = $StageNumbers[$InstanceKey]
-                        StageName        = $StageNames[$InstanceKey]
-                        AlertEmails      = $Baseline.alertEmails
-                        AlertWebhookUrl  = $Baseline.alertWebhookUrl
-                        # 'Disable Scheduled Runs': the scheduled orchestrator skips these
-                        # items (but still counts them for reconciliation).
-                        DisableScheduledRuns = [bool]$Baseline.disableScheduledRuns
-                        Tiers            = @([PSCustomObject]@{
-                                templateName     = $Baseline.templateName
-                                assignedTo       = ($Baseline.assignedTenants -join ', ')
-                                variables        = ($Config.variables ?? [PSCustomObject]@{})
-                                remediateEnabled = [bool]$Config.remediateEnabled
-                                alertEnabled     = [bool]$Config.alertEnabled
-                                alertOnRemediate = [bool]$Config.alertOnRemediate
-                                effective        = $true
-                            })
+            foreach ($IdentityKey in $StageConfigs.Keys) {
+                foreach ($Config in $StageConfigs[$IdentityKey]) {
+                    $InstanceKey = "$($Config.instance ?? $Config.standard)"
+                    if ($StandardName -and $InstanceKey -ne $StandardName) { continue }
+                    $Key = '{0}|{1}' -f $Domain, $IdentityKey
+                    $Candidate = @{
+                        Rank      = $Rank
+                        Stage     = $StageNumbers[$IdentityKey]
+                        UpdatedAt = [int64]($Baseline.updatedAt ?? 0)
+                        Item      = [PSCustomObject]@{
+                            TenantFilter         = $Domain
+                            TenantName           = $State.tenantName
+                            Standard             = $InstanceKey
+                            BaseName             = ($InstanceKey -split '#')[0]
+                            TemplateId           = $Baseline.GUID
+                            TemplateName         = $Baseline.templateName
+                            Variables            = ($Config.variables ?? [PSCustomObject]@{})
+                            RemediateEnabled     = [bool]$Config.remediateEnabled
+                            AlertEnabled         = [bool]$Config.alertEnabled -and -not [bool]$Baseline.disableAlerts
+                            AlertOnRemediate     = [bool]$Config.alertOnRemediate -and -not [bool]$Baseline.disableAlerts
+                            SourceScope          = $Scope
+          
+                            SourceTemplate       = $(if ($Config.fromPackage) { '{0} ({1})' -f $Baseline.templateName, $Config.fromPackage } else { $Baseline.templateName })
+                            Stage                = $StageNumbers[$IdentityKey]
+                            StageName            = $StageNames[$IdentityKey]
+                            AlertEmails          = $Baseline.alertEmails
+                            AlertWebhookUrl      = $Baseline.alertWebhookUrl
+       
+                            DisableScheduledRuns = [bool]$Baseline.disableScheduledRuns
+                            Tiers                = @([PSCustomObject]@{
+                                    templateName     = $Baseline.templateName
+                                    assignedTo       = ($Baseline.assignedTenants -join ', ')
+                                    variables        = ($Config.variables ?? [PSCustomObject]@{})
+                                    remediateEnabled = [bool]$Config.remediateEnabled
+                                    alertEnabled     = [bool]$Config.alertEnabled
+                                    alertOnRemediate = [bool]$Config.alertOnRemediate
+                                    effective        = $true
+                                })
+                        }
                     }
-                }
-                $Candidate.Fingerprint = & $Fingerprint $Config.variables
+                    $Candidate.Fingerprint = & $Fingerprint $Config.variables
 
-                $Existing = $Effective[$Key]
-                if (-not $Existing -or $Candidate.Rank -gt $Existing.Rank) {
-                    # A more specific scope whole-value replaces everything below it -
-                    # including any conflict that existed at the lower rank.
-                    $Candidates = [System.Collections.Generic.List[object]]::new()
-                    $Candidates.Add($Candidate)
-                    $Effective[$Key] = @{ Rank = $Candidate.Rank; Candidates = $Candidates }
-                } elseif ($Candidate.Rank -eq $Existing.Rank) {
-                    $Twin = $Existing.Candidates | Where-Object { $_.Fingerprint -eq $Candidate.Fingerprint } | Select-Object -First 1
-                    if ($Twin) {
-                        # Identical settings from another baseline: dedupe. The strictest
-                        # request from EITHER baseline survives the merge - a wish to
-                        # remediate or alert always wins over report-only/muted. Both
-                        # sources stay visible in the inheritance tiers with their own
-                        # posture, so the merge is explainable in the UI.
-                        $Twin.Item.RemediateEnabled = [bool]($Twin.Item.RemediateEnabled -or $Candidate.Item.RemediateEnabled)
-                        $Twin.Item.AlertEnabled = [bool]($Twin.Item.AlertEnabled -or $Candidate.Item.AlertEnabled)
-                        $Twin.Item.AlertOnRemediate = [bool]($Twin.Item.AlertOnRemediate -or $Candidate.Item.AlertOnRemediate)
-                        $Twin.Item.SourceTemplate = @(@($Twin.Item.SourceTemplate -split ', ') + $Candidate.Item.TemplateName | Where-Object { $_ } | Select-Object -Unique) -join ', '
-                        $Twin.Item.Tiers = @(@($Twin.Item.Tiers) + @($Candidate.Item.Tiers) | Where-Object { $_ })
-                        if ($Candidate.UpdatedAt -gt $Twin.UpdatedAt) { $Twin.UpdatedAt = $Candidate.UpdatedAt }
-                    } else {
-                        # Same level, same identity, different settings: conflict.
-                        $Existing.Candidates.Add($Candidate)
+                    $Existing = $Effective[$Key]
+                    if (-not $Existing -or $Candidate.Rank -gt $Existing.Rank) {
+                        # A more specific scope whole-value replaces everything below it -
+                        # including any conflict that existed at the lower rank.
+                        $Candidates = [System.Collections.Generic.List[object]]::new()
+                        $Candidates.Add($Candidate)
+                        $Effective[$Key] = @{ Rank = $Candidate.Rank; Candidates = $Candidates }
+                    } elseif ($Candidate.Rank -eq $Existing.Rank) {
+                        $Twin = $Existing.Candidates | Where-Object { $_.Fingerprint -eq $Candidate.Fingerprint } | Select-Object -First 1
+                        if ($Twin) {
+
+                            $Twin.Item.RemediateEnabled = [bool]($Twin.Item.RemediateEnabled -or $Candidate.Item.RemediateEnabled)
+                            $Twin.Item.AlertEnabled = [bool]($Twin.Item.AlertEnabled -or $Candidate.Item.AlertEnabled)
+                            $Twin.Item.AlertOnRemediate = [bool]($Twin.Item.AlertOnRemediate -or $Candidate.Item.AlertOnRemediate)
+                            $Twin.Item.SourceTemplate = @(@($Twin.Item.SourceTemplate -split ', ') + $Candidate.Item.TemplateName | Where-Object { $_ } | Select-Object -Unique) -join ', '
+                            $Twin.Item.Tiers = @(@($Twin.Item.Tiers) + @($Candidate.Item.Tiers) | Where-Object { $_ })
+                            if ($Candidate.UpdatedAt -gt $Twin.UpdatedAt) { $Twin.UpdatedAt = $Candidate.UpdatedAt }
+                        } else {
+                            # Same level, same identity, different settings: conflict.
+                            $Existing.Candidates.Add($Candidate)
+                        }
                     }
+                    # Lower rank than the current winner: ignored entirely.
                 }
-                # Lower rank than the current winner: ignored entirely.
             }
         }
     }

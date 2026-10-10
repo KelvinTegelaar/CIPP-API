@@ -1,0 +1,50 @@
+{
+  "immuneResources": [
+    { "resourceId": "26a4ae64-5862-427f-a9b0-044e62572a4f", "displayName": "Microsoft Intune Checkin" },
+    { "resourceId": "04436913-cf0d-4d2a-9cc6-2ffe7f1d3d1c", "displayName": "Windows Notification Service" },
+    { "resourceId": "0a5f63c0-b750-4f38-a71c-4fc0d58b89e2", "displayName": "Microsoft Mobile Application Management" },
+    { "resourceId": "1f5530b3-261a-47a9-b357-ded261e17918", "displayName": "Azure Multi-Factor Auth Connector" },
+    { "resourceId": "c2ada927-a9e2-4564-aae2-70775a2fa0af", "displayName": "OCaaS Client Interaction Service" },
+    { "resourceId": "ff9ebd75-fe62-434a-a6ce-b3f0a8592eaf", "displayName": "Authenticator App" }
+  ],
+  "bypassApps": [
+    { "appId": "04b07795-8ddb-461a-bbee-02f9e1bf7b46", "displayName": "Microsoft Azure CLI", "description": "The Azure command-line tool, with access to a very wide range of services. A public client that can sidestep Conditional Access." },
+    { "appId": "1950a258-227b-4e31-a9cf-717495945fc2", "displayName": "Microsoft Azure PowerShell", "description": "The Azure PowerShell tooling, with the widest service reach of any standard Microsoft client." },
+    { "appId": "1b730954-1685-4b74-9bfd-dac224a7b894", "displayName": "Azure Active Directory PowerShell", "description": "The older directory PowerShell tooling, with broad directory access." },
+    { "appId": "cb1056e2-e479-49de-ae31-7812af012ed8", "displayName": "Microsoft Azure Active Directory Connect", "description": "Hybrid identity synchronization, with broad access." },
+    { "appId": "aebc6443-996d-45c2-90f0-388ff96faa56", "displayName": "Visual Studio Code", "description": "The VS Code editor, whose Azure extensions reach Azure resources." },
+    { "appId": "fc0f3af4-6835-4174-b806-f7db311fd2f3", "displayName": "Microsoft Intune Windows Agent", "description": "The Intune agent; device enrollment sidesteps a managed-device requirement." },
+    { "appId": "dd762716-544d-4aeb-a526-687b73838a22", "displayName": "Microsoft Device Registration Client", "description": "Device registration; network conditions do not apply to it and only a multifactor requirement protects it." },
+    { "appId": "de50c81f-5f80-4771-b66b-cebd28ccdfc1", "displayName": "Device Management Client", "description": "A device management component with access to more services than any other application." },
+    { "appId": "a672d62c-fc7b-4e81-a576-e60dc46e951d", "displayName": "Microsoft Power Query for Excel", "description": "Data connection tooling for Excel, with broad access." },
+    { "appId": "cf710c6e-dfcc-4fa8-a093-d47294e44c66", "displayName": "Azure Analysis Services Client", "description": "Client tooling for Azure Analysis Services." },
+    { "appId": "c58637bb-e2e1-4312-8a00-04b5ffcd3403", "displayName": "SharePoint Online Client Extensibility", "description": "Extensibility client for SharePoint Online." },
+    { "appId": "268761a2-03f3-40df-8a8b-c3db24145b6b", "displayName": "Universal Store Native Client", "description": "The Windows Store client." },
+    { "appId": "1b3c667f-cde3-4090-b60b-3d2abd0117f0", "displayName": "Windows Spotlight", "description": "The Windows lock-screen content client." }
+  ],
+  "deviceRegistrationResource": { "resourceId": "01cb2876-7ebd-4aa4-9cc9-d28bd4d359a9", "displayName": "Device Registration Service" },
+  "wellKnownApps": [
+    { "appId": "00000003-0000-0000-c000-000000000000", "displayName": "Microsoft Graph" },
+    { "appId": "00000002-0000-0000-c000-000000000000", "displayName": "Azure AD Graph (Legacy)" },
+    { "appId": "797f4846-ba00-4fd7-ba43-dac1f8f63013", "displayName": "Azure Resource Manager" },
+    { "appId": "0000000a-0000-0000-c000-000000000000", "displayName": "Microsoft Intune" },
+    { "appId": "00000002-0000-0ff1-ce00-000000000000", "displayName": "Office 365 Exchange Online" },
+    { "appId": "00000003-0000-0ff1-ce00-000000000000", "displayName": "Office 365 SharePoint Online" },
+    { "appId": "cc15fd57-2c6c-4117-a88c-83b1d56b4bbe", "displayName": "Microsoft Teams Services" },
+    { "appId": "fc780465-2017-40d4-a0c5-307022471b92", "displayName": "WindowsDefenderATP" },
+    { "appId": "826870f9-9fbb-4f23-81b8-3a957080dfa2", "displayName": "Security Copilot" },
+    { "appId": "00000007-0000-0000-c000-000000000000", "displayName": "Dataverse" },
+    { "appId": "7df0a125-d3be-4c96-aa54-591f83ff541c", "displayName": "Microsoft Flow Service" }
+  ],
+  "highValueApps": [
+    { "appId": "797f4846-ba00-4fd7-ba43-dac1f8f63013", "name": "Azure Management", "description": "the Azure portal, command line and automation tooling", "risk": "critical" },
+    { "appId": "00000002-0000-0ff1-ce00-000000000000", "name": "Office 365 Exchange Online", "description": "email, calendars and contacts", "risk": "high" },
+    { "appId": "00000003-0000-0ff1-ce00-000000000000", "name": "Office 365 SharePoint Online", "description": "SharePoint and OneDrive files", "risk": "high" },
+    { "appId": "00000003-0000-0000-c000-000000000000", "name": "Microsoft Graph", "description": "programmatic access to all Microsoft 365 data", "risk": "critical" },
+    { "appId": "c44b4083-3bb0-49c1-b47d-974e53cbdf3c", "name": "Azure Portal", "description": "web-based Azure management", "risk": "critical" }
+  ],
+  "appGroupAliases": {
+    "office365": { "displayName": "Office 365 (app group)", "purpose": "Built-in Conditional Access application group covering the core Office 365 services (Exchange Online, SharePoint Online, Teams, and related apps)." },
+    "microsoftadminportals": { "displayName": "Microsoft Admin Portals (app group)", "purpose": "Built-in Conditional Access application group covering the Microsoft admin portals (Microsoft Entra admin center, Microsoft 365 admin center, Azure portal, and others)." }
+  }
+}

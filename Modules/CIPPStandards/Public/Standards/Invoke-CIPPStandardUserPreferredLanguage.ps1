@@ -92,7 +92,6 @@ function Invoke-CIPPStandardUserPreferredLanguage {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'IncorrectUsers' -FieldValue $IncorrectUsers -StoreAs json -Tenant $Tenant
 
         if ($IncorrectUsers.userPrincipalName) { $FieldValue = $IncorrectUsers | Select-Object -Property userPrincipalName, displayName, preferredLanguage, userType } else { $FieldValue = @() }
 

@@ -96,6 +96,5 @@ function Invoke-CIPPStandardintuneDeviceRegLocalAdmins {
             enableGlobalAdmins = $EnableGlobalAdmins
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceRegLocalAdmins' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'intuneDeviceRegLocalAdmins' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

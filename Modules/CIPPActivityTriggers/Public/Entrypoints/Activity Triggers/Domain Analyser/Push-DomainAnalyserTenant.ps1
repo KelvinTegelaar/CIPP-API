@@ -16,8 +16,6 @@ function Push-DomainAnalyserTenant {
             Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
             Remove-CIPPAzDataTableEntity -Force @DomainTable -Entity $CleanupRows
         }
-    } elseif ($Tenant.GraphErrorCount -gt 50) {
-        return
     } else {
         try {
             # Get domains from cached database instead of making Graph API calls

@@ -117,7 +117,7 @@ function Get-CIPPAlertNewShadowAITool {
         Add-CIPPAzDataTableEntity @DeltaTable -Entity $DeltaEntity -Force
 
         # First run establishes the baseline without alerting.
-        if (-not $PreviousRow) { return }
+        if (-not $PreviousRow) { $NewToolNames = @() }
 
         # Optionally skip tools that are marked as sanctioned for this tenant.
         if ($InputValue -eq $true) {
@@ -139,8 +139,8 @@ function Get-CIPPAlertNewShadowAITool {
                     'Tenant'       = $TenantFilter
                 }
             }
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not check for new Shadow AI tools for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

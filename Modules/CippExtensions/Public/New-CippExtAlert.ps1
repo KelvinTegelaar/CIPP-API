@@ -104,6 +104,12 @@ function New-CippExtAlert {
                         $TicketParams.TicketPriority = $Alert.PsaTicketPriority
                     }
 
+                    # HaloPSA may use a stable consolidation key independently
+                    # from the visible ticket title.
+                    if ($Alert.PSAConsolidationKey) {
+                        $TicketParams.ConsolidationKey = $Alert.PSAConsolidationKey
+                    }
+
                     New-HaloPSATicket @TicketParams
                 }
             }

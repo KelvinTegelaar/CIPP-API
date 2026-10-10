@@ -38,21 +38,6 @@ function Set-CIPPDBCacheSPOSites {
         # enumeration value for that site.
         $Sites = @(Get-CIPPSPOSite -TenantFilter $TenantFilter -UseCertificate | Where-Object { $_ -and $_.Url })
 
-        $AuthByUrl = @{}
-        if ($Sites.Count -gt 0) {
-            try {
-                foreach ($Result in @(Get-CIPPSPOSiteBulk -TenantFilter $TenantFilter -SiteUrls @($Sites.Url) -MaxConcurrency 4 -BatchSize 5 -UseCertificate)) {
-                    if ($Result.Success -and $Result.Site) { $AuthByUrl["$($Result.SiteUrl)"] = $Result.Site }
-                }
-                $Missing = $Sites.Count - $AuthByUrl.Count
-                if ($Missing -gt 0) {
-                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SPOSites: $Missing of $($Sites.Count) sites fell back to enumeration values (authoritative per-site read did not return them)" -sev Debug
-                }
-            } catch {
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SPOSites: authoritative per-site read failed; falling back to the enumeration values for this run: $($_.Exception.Message)" -sev Warning
-            }
-        }
-
         # Fields the enumeration only returns as defaults - take the authoritative per-site value, and
         # fall back to the (less accurate) enumeration value when the per-site read did not return.
         $AuthoritativeFields = @(
@@ -65,6 +50,21 @@ function Set-CIPPDBCacheSPOSites {
             'RestrictedAccessControl', 'DisableAppViews', 'DisableFlows', 'SandboxedCodeActivationCapability',
             'IsHubSite', 'IsTeamsConnected', 'IsTeamsChannelConnected', 'WebsCount', 'Status'
         )
+
+        $AuthByUrl = @{}
+        if ($Sites.Count -gt 0) {
+            try {
+                foreach ($Result in @(Get-CIPPSPOSiteBulk -TenantFilter $TenantFilter -SiteUrls @($Sites.Url) -MaxConcurrency 4 -BatchSize 5 -Properties $AuthoritativeFields -UseCertificate)) {
+                    if ($Result.Success -and $Result.Site) { $AuthByUrl["$($Result.SiteUrl)"] = $Result.Site }
+                }
+                $Missing = $Sites.Count - $AuthByUrl.Count
+                if ($Missing -gt 0) {
+                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SPOSites: $Missing of $($Sites.Count) sites fell back to enumeration values (authoritative per-site read did not return them)" -sev Debug
+                }
+            } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SPOSites: authoritative per-site read failed; falling back to the enumeration values for this run: $($_.Exception.Message)" -sev Warning
+            }
+        }
 
         $Rows = @(foreach ($Site in $Sites) {
                 $Auth = $AuthByUrl["$($Site.Url)"]

@@ -145,3 +145,24 @@ Describe 'Start-CIPPDBTestsRun tenant selection' {
         $script:QueuedTenants | Should -Be @('active.onmicrosoft.com')
     }
 }
+
+Describe 'Start-CIPPDBTestsRun queue band' {
+    BeforeEach {
+        $script:Input = $null
+        Mock Test-CIPPRerun { return $false }
+        Mock Write-LogMessage { }
+        Mock Get-CIPPDbItem { @(New-CountRow -Tenant 'active.onmicrosoft.com') }
+        Mock Get-Tenants { @(New-TenantRow -DefaultDomainName 'active.onmicrosoft.com') }
+        Mock Start-CIPPOrchestrator { $script:Input = $InputObject; 'instance-1' }
+    }
+
+    It 'queues at the band it is given (the nightly timer passes 11, after the P10 cache)' {
+        Start-CIPPDBTestsRun -TenantFilter 'allTenants' -Priority 11 | Out-Null
+        $script:Input.Priority | Should -Be 11
+    }
+
+    It 'leaves the band to the caller when none is given (an API request stays at P1)' {
+        Start-CIPPDBTestsRun -TenantFilter 'allTenants' | Out-Null
+        $script:Input.PSObject.Properties.Name | Should -Not -Contain 'Priority'
+    }
+}

@@ -135,6 +135,7 @@ function Export-CIPPBaselineTemplate {
         excludedTenants     = @()
         alertEmails         = ''
         alertWebhookUrl     = ''
+        disableAlerts       = $false
         stages              = @($ExportStages)
         referencedTemplates = @($Manifest)
     }

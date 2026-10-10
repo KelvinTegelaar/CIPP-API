@@ -94,6 +94,5 @@ function Invoke-CIPPStandardunmanagedSync {
             ConditionalAccessPolicy = $WantedState
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.unmanagedSync' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'unmanagedSync' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

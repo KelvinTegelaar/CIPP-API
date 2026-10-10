@@ -171,7 +171,6 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             AllowCloudRecording                        = $AllowCloudRecording
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGlobalMeetingPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'TeamsGlobalMeetingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
     }
 }

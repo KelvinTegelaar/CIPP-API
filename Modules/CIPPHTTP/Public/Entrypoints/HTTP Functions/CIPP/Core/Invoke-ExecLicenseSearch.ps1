@@ -5,13 +5,12 @@ function Invoke-ExecLicenseSearch {
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION
-        Finds which tenants hold the given licence SKUs, searching the cached licence overview rather than querying each tenant live. Takes an array of skuIds in the body.
+        Resolves licence SKU ids to display names from the licence name table, falling back to the given tenant's cached licence overview. Takes an array of skuIds in the body.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     try {
-        # Get skuIds from POST body
         $SkuIds = $Request.Body.skuIds
 
         if (-not $SkuIds -or $SkuIds.Count -eq 0) {
@@ -23,36 +22,9 @@ function Invoke-ExecLicenseSearch {
             }
         }
 
-        Write-Information "Searching for licenses with skuIds: $($SkuIds -join ', ')"
-
-        # Search for licenses using the skuIds as search terms
-        # This searches across all tenants for matching licenses
-        $Results = Search-CIPPDbData -SearchTerms $SkuIds -Types 'LicenseOverview' -Properties 'License', 'skuId'
-
-        Write-Information "Found $($Results.Count) license records matching skuIds"
-
-        # Initialize hashtable to store unique licenses by skuId
-        $UniqueLicenses = @{}
-
-        # Process each result and extract unique skuId/displayName pairs
-        foreach ($Result in $Results) {
-            if ($Result.Data -and $Result.Data.skuId) {
-                $SkuIdKey = $Result.Data.skuId
-
-                # Only add if we haven't seen this skuId yet
-                if (-not $UniqueLicenses.ContainsKey($SkuIdKey)) {
-                    $UniqueLicenses[$SkuIdKey] = [PSCustomObject]@{
-                        skuId       = $Result.Data.skuId
-                        displayName = $Result.Data.License
-                    }
-                }
-            }
-        }
-
-        # Convert hashtable to array for output
-        $OutputResults = @($UniqueLicenses.Values)
-
-        Write-Information "Returning $($OutputResults.Count) unique licenses"
+        # Tenant whose cached licence overview is checked for SKUs the name table does not hold yet
+        $TenantFilter = $Request.Body.tenantFilter
+        $OutputResults = @(Get-CIPPLicenseSkuName -SkuIds @($SkuIds) -TenantFilter $TenantFilter)
 
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
@@ -61,7 +33,6 @@ function Invoke-ExecLicenseSearch {
 
     } catch {
         Write-Information "Error occurred during license search: $($_.Exception.Message)"
-        Write-Information $_.InvocationInfo.PositionMessage
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::InternalServerError
             Body       = @{

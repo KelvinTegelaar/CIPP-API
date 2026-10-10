@@ -100,6 +100,5 @@ function Invoke-CIPPStandardTeamsZAP {
             ZapEnabled = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsZAP' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'TeamsZAP' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

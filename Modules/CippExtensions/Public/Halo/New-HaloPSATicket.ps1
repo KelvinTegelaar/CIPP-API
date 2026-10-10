@@ -11,7 +11,8 @@ function New-HaloPSATicket {
     # priority id or the {label, value} shape the alert form stores, matching how the
     # integration-wide DefaultPriority is read below.
     $TicketPriority,
-    [int]$TicketId
+    [int]$TicketId,
+    [string]$ConsolidationKey
   )
   #Get HaloPSA Token based on the config we have.
   $Table = Get-CIPPTable -TableName Extensionsconfig
@@ -36,10 +37,21 @@ function New-HaloPSATicket {
       $description = "$description<p><em>Affected user: $UnmatchedLabel - no matching HaloPSA contact found, ticket assigned to General User.</em></p>"
     }
   }
+  # A caller may provide a stable consolidation key when the visible title contains
+  # dynamic data such as a timestamp. Without one, retain the existing title behavior.
+  $HashBase = if ([string]::IsNullOrWhiteSpace($ConsolidationKey)) {
+    $title
+  } else {
+    $ConsolidationKey
+  }
 
-  # When linking is active, include UPN in the consolidation key so per-user tickets don't
-  # collapse onto each other when the same alert title fires for multiple users.
-  $HashInput = if ($UserLinkActive -and $UserUPN) { "$title|$UserUPN" } else { $title }
+  # Preserve the existing per-user separation when LinkTicketsToUsers is enabled.
+  $HashInput = if ($UserLinkActive -and $UserUPN) {
+    "$HashBase|$UserUPN"
+  } else {
+    $HashBase
+  }
+
   $TitleHash = Get-StringHash -String $HashInput
 
   # Halo requires a site_id whenever a specific user is set on the ticket; pull it from the

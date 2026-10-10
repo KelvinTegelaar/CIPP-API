@@ -151,6 +151,5 @@ function Invoke-CIPPStandardOneDriveLicensedQuota {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.OneDriveLicensedQuota' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'OneDriveLicensedQuota' -FieldValue @($BelowQuota) -StoreAs json -Tenant $Tenant
     }
 }

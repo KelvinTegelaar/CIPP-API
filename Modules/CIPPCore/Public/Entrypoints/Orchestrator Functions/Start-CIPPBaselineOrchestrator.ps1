@@ -9,7 +9,7 @@ function Start-CIPPBaselineOrchestrator {
         the effective (tenant, standard instance) work items from the deltas and fans them
         out as ONE durable wave, each item its own activity (Push-CIPPBaselineStandard).
         The per-tenant license gate lives in the engine (parallel, off the HTTP path), not
-        here. No deltas = no-op; the timer itself is gated by the Baselines feature flag.
+        here. No deltas = no-op; scheduled runs are skipped while the Baselines flag is off.
     .FUNCTIONALITY
         Entrypoint
     #>
@@ -23,9 +23,20 @@ function Start-CIPPBaselineOrchestrator {
         [switch]$Force
     )
 
+    # The host scheduler fires every CIPPTimers.json entry regardless of feature flags, so the
+    # scheduled run gates itself: while Baselines is disabled the classic engine owns the
+    # tenants. Manual runs (ExecBaselineRun) are not gated.
+    if ($TriggeredBy -eq 'schedule') {
+        $BaselinesFlag = $(try { Get-CIPPFeatureFlag -Id 'Baselines' } catch { $null })
+        if ($BaselinesFlag.Enabled -ne $true) {
+            Write-Information 'Start-CIPPBaselineOrchestrator: skipped the scheduled baseline run - the Baselines feature is disabled.'
+            return 0
+        }
+    }
+
     # A scoped on-demand run should not advance rollouts; the scheduled run does.
     if ($TriggeredBy -eq 'schedule') {
-        try { Invoke-CIPPBaselineGraduation } catch { Write-LogMessage -API 'Baselines' -message "Baseline graduation evaluation failed: $($_.Exception.Message)" -Sev 'Error' }
+        try { $null = Invoke-CIPPBaselineGraduation } catch { Write-LogMessage -API 'Baselines' -message "Baseline graduation evaluation failed: $($_.Exception.Message)" -Sev 'Error' }
     }
 
     # The run scope may arrive as a tenant group (the selector sends the group ID) -

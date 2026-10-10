@@ -92,7 +92,6 @@ function Invoke-CIPPStandardTeamsGuestAccess {
             AllowGuestUser = $AllowGuestUser
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGuestAccess' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'TeamsGuestAccess' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
     }
 }

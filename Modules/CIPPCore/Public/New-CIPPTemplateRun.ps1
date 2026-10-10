@@ -78,7 +78,7 @@ function New-CIPPTemplateRun {
 
                 if (!$ExistingTemplate -or $UpdateNeeded) {
                     $Template = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $File.path).content | ConvertFrom-Json
-                    $ImportResult = Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $TemplateSettings.templateRepo.value
+                    $ImportResult = Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $TemplateSettings.templateRepo.value -Path $File.path
                     if ($ImportResult) {
                         Write-Information $ImportResult
                         $ImportResult

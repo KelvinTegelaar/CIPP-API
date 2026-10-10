@@ -38,7 +38,7 @@ function Get-CIPPAlertSharepointQuota {
                 AlertQuotaThreshold   = $Value
                 Tenant                = $TenantFilter
             }
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     }
 }

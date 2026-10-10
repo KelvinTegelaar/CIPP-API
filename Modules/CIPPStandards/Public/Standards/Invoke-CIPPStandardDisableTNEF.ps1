@@ -86,7 +86,6 @@ function Invoke-CIPPStandardDisableTNEF {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableTNEF' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'TNEFDisabled' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 
 }

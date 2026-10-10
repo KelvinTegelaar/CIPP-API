@@ -240,6 +240,19 @@ Function Invoke-ExecBrandingSettings {
                     }
                 }
 
+                # Which of the tenant's names a report prints: alias (the name CIPP shows), name (the
+                # Microsoft 365 organisation name) or domain (the default domain).
+                if (-not $ErrorMessage -and $Request.Body.PSObject.Properties.Name -contains 'tenantLabel') {
+                    $TenantLabel = "$($Request.Body.tenantLabel)"
+                    if (@('alias', 'name', 'domain') -notcontains $TenantLabel) {
+                        $StatusCode = [HttpStatusCode]::BadRequest
+                        $ErrorMessage = 'Error: tenantLabel must be alias, name or domain.'
+                    } else {
+                        $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'tenantLabel' -Value $TenantLabel -Force
+                        $Updated = $true
+                    }
+                }
+
                 # Show the branded footer text on report pages.
                 if (-not $ErrorMessage -and $Request.Body.PSObject.Properties.Name -contains 'showFooter') {
                     $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'showFooter' -Value ([bool]$Request.Body.showFooter) -Force
@@ -438,6 +451,32 @@ Function Invoke-ExecBrandingSettings {
                 Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message 'Reset branding settings to defaults' -Sev 'Info'
                 'Successfully reset branding settings to defaults'
             }
+            'RenameImage' {
+                # A name for a gallery image, so it can be picked by name where the image is offered
+                # elsewhere: the report builder lists uploaded covers as Infographic page backgrounds.
+                $Kind = "$($Request.Body.kind)".ToLowerInvariant()
+                $ImageId = "$($Request.Body.id)".Trim()
+                $ImageName = "$($Request.Body.name)".Trim()
+                if (-not $ImageId) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    'Error: id is required.'
+                    break
+                }
+                if ($ImageName.Length -gt 64) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    'Error: Image name must be 64 characters or fewer.'
+                    break
+                }
+                $PartitionKey = switch ($Kind) { 'logo' { 'logo' } 'cover' { 'brandingCover' } default { $null } }
+                if (-not $PartitionKey) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    'Error: kind must be logo or cover.'
+                    break
+                }
+                Set-CIPPImageName -PartitionKey $PartitionKey -Id $ImageId -Name $ImageName
+                Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message "Named branding $Kind image $ImageId '$ImageName'" -Sev 'Info'
+                'Successfully named image'
+            }
             'ListPresets' {
                 Get-CIPPBrandingPreset
             }
@@ -513,6 +552,14 @@ Function Invoke-ExecBrandingSettings {
                     break
                 }
 
+                # Which of the tenant's names the preset's reports print; see the Set action.
+                $PresetTenantLabel = if ($Request.Body.tenantLabel) { "$($Request.Body.tenantLabel)" } else { 'alias' }
+                if (@('alias', 'name', 'domain') -notcontains $PresetTenantLabel) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    'Error: tenantLabel must be alias, name or domain.'
+                    break
+                }
+
                 $PresetId = if ($Request.Body.id) { "$($Request.Body.id)" } else { (New-Guid).Guid }
 
                 Add-CIPPAzDataTableEntity @Table -Force -Entity @{
@@ -530,6 +577,7 @@ Function Invoke-ExecBrandingSettings {
                     showPageNumbers  = [bool]$Request.Body.showPageNumbers
                     watermarkText    = $PresetWatermark
                     watermarkEnabled = [bool]$Request.Body.watermarkEnabled
+                    tenantLabel      = $PresetTenantLabel
                 } | Out-Null
 
                 Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message "Saved branding preset '$PresetName'" -Sev 'Info'

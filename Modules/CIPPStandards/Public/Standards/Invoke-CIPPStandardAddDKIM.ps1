@@ -196,8 +196,6 @@ function Invoke-CIPPStandardAddDKIM {
     }
 
     if ($Settings.report -eq $true) {
-        $DKIMState = if ($null -eq $NewDomains -and $null -eq $SetDomains) { $true } else { $SetDomains, $NewDomains }
         Set-CIPPStandardsCompareField -FieldName 'standards.AddDKIM' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
-        Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIMState -StoreAs bool -Tenant $tenant
     }
 }

@@ -94,6 +94,5 @@ function Invoke-CIPPStandardFocusedInbox {
             FocusedInboxOn = $WantedState
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.FocusedInbox' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'FocusedInboxCorrectState' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

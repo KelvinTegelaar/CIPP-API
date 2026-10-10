@@ -80,6 +80,5 @@ function Invoke-CIPPStandardSensitivityLabelTemplate {
         $ExpectedValue = @{ MissingLabels = @() }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.SensitivityLabelTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SensitivityLabelTemplate' -FieldValue ($MissingLabels.Count -eq 0) -StoreAs bool -Tenant $Tenant
     }
 }

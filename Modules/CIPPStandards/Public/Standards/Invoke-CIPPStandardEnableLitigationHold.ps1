@@ -109,6 +109,5 @@ function Invoke-CIPPStandardEnableLitigationHold {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableLitigationHold' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'EnableLitHold' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }

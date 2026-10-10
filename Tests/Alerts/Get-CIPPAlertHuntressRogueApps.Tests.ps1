@@ -1,5 +1,6 @@
 # Pester tests for Get-CIPPAlertHuntressRogueApps
-# Covers the feed guard and describing matches from either rogue app list.
+# Covers the feed guard (no lifecycle call when the feed is unavailable), the single empty call
+# when nothing matches, and describing matches from either rogue app list.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -65,6 +66,17 @@ Describe 'Get-CIPPAlertHuntressRogueApps' {
 
             Get-CIPPAlertHuntressRogueApps -TenantFilter 'contoso.onmicrosoft.com'
             Should -Invoke -CommandName Write-AlertTrace -Times 0
+        }
+    }
+
+    Context 'no match' {
+        It 'reconciles once with empty data when no rogue app is present' {
+            Mock -CommandName New-GraphBulkRequest -MockWith { script:New-Principals -AppIds @() }
+
+            Get-CIPPAlertHuntressRogueApps -TenantFilter 'contoso.onmicrosoft.com'
+
+            Should -Invoke -CommandName Write-AlertTrace -Times 1 -Exactly
+            @($script:Alerted) | Should -BeNullOrEmpty
         }
     }
 

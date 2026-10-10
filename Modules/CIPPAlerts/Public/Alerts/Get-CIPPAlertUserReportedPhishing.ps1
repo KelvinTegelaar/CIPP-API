@@ -36,9 +36,7 @@ function Get-CIPPAlertUserReportedPhishing {
                 Tenant           = $TenantFilter
             }
         }
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         if ($ErrorMessage.NormalizedError -match 'dataservice\.protection\.outlook\.com' -or $ErrorMessage.NormalizedError -match 'No HTTP resource was found') {

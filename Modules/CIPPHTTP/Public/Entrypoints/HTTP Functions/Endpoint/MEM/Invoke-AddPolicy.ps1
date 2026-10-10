@@ -17,6 +17,10 @@ function Invoke-AddPolicy {
     $description = $Request.Body.Description
     $AssignTo = if ($Request.Body.AssignTo -ne 'on') { $Request.Body.AssignTo }
     $ExcludeGroup = $Request.Body.excludeGroup
+    # Sent by the deploy drawer when a single tenant is selected and groups were picked by id.
+    # customGroup/excludeGroup still carry the display names for logging and as a fallback.
+    $GroupIds = @($Request.Body.GroupIds | Where-Object { $_ })
+    $ExcludeGroupIds = @($Request.Body.ExcludeGroupIds | Where-Object { $_ })
     $AssignmentFilterSelection = $Request.Body.AssignmentFilterName ?? $Request.Body.assignmentFilter
     $AssignmentFilterType = $Request.Body.AssignmentFilterType ?? $Request.Body.assignmentFilterType
     $AssignmentFilterName = switch ($AssignmentFilterSelection) {
@@ -87,6 +91,8 @@ function Invoke-AddPolicy {
                 Headers          = $Headers
                 APIName          = $APIName
             }
+            if ($GroupIds.Count -gt 0) { $params.GroupIds = $GroupIds }
+            if ($ExcludeGroupIds.Count -gt 0) { $params.ExcludeGroupIds = $ExcludeGroupIds }
 
             if (-not [string]::IsNullOrWhiteSpace($AssignmentFilterName)) {
                 $params.AssignmentFilterName = $AssignmentFilterName

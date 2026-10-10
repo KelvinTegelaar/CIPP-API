@@ -213,7 +213,6 @@ function Invoke-CIPPStandardPhishingSimulations {
             PhishingSimUrls = @($Settings.PhishingSimUrls.value)
             IsCompliant     = $true
         }
-        Add-CIPPBPAField -FieldName 'PhishingSimulations' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.PhishingSimulations' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

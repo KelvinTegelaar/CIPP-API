@@ -77,6 +77,5 @@ function Invoke-CIPPStandardDisableSMS {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableSMS' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableSMS' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

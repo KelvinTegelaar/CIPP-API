@@ -27,9 +27,7 @@ function Get-CIPPAlertOverusedLicenses {
             }
         }
 
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Overused Licenses Alert Error occurred: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

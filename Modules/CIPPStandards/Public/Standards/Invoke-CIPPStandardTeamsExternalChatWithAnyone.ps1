@@ -86,7 +86,6 @@ function Invoke-CIPPStandardTeamsExternalChatWithAnyone {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TeamsExternalChatWithAnyone' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
             UseB2BInvitesToAddExternalUsers = $CurrentState.UseB2BInvitesToAddExternalUsers

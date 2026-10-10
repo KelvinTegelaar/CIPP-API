@@ -213,14 +213,6 @@ function Invoke-CIPPStandardStaleEntraDevices {
 
     if ($Settings.report -eq $true) {
 
-        # Report only on actionable devices; skipped devices (hybrid-joined/Intune-managed/Autopilot) are excluded.
-        if ($RemediationEligibleStaleDevices.Count -gt 0) {
-            $StaleReport = ConvertTo-Json -InputObject ($RemediationEligibleStaleDevices | Select-Object -Property displayName, id, approximateLastSignInDateTime, accountEnabled, enrollmentProfileName, operatingSystem, managementType, profileType) -Depth 10 -Compress
-            Add-CIPPBPAField -FieldName 'StaleEntraDevices' -FieldValue $StaleReport -StoreAs json -Tenant $Tenant
-        } else {
-            Add-CIPPBPAField -FieldName 'StaleEntraDevices' -FieldValue $true -StoreAs bool -Tenant $Tenant
-        }
-
         if ($DevicesToDisable.Count -gt 0) {
             $EligibleToDisableFieldValue = $DevicesToDisable | Select-Object -Property displayName, id, approximateLastSignInDateTime, accountEnabled, enrollmentProfileName, operatingSystem, managementType, profileType
         }

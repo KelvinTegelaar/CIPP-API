@@ -172,6 +172,25 @@ Describe 'Set-CIPPDBCacheDefenderCVEs' {
             (($script:Rows[0].deviceDetailsJson | ConvertFrom-Json).deviceId | Sort-Object) | Should -Be @('d1', 'd2')
         }
 
+        It 'dedupes device ids case-insensitively and keeps the text of each CVE''s first record' {
+            Mock -CommandName Get-DefenderTvmRaw -MockWith {
+                New-TvmRecord -cveId 'CVE-A' -deviceId 'ABC' -deviceName 'PC-UPPER'
+                New-TvmRecord -cveId 'CVE-A' -deviceId 'abc' -deviceName 'pc-lower'
+                New-TvmRecord -cveId 'CVE-B' -deviceId 'abc' -deviceName 'pc-lower'
+                New-TvmRecord -cveId 'CVE-B' -deviceId 'ABC' -deviceName 'PC-UPPER'
+            }
+
+            Set-CIPPDBCacheDefenderCVEs -TenantFilter $script:Tenant
+
+            $ByCve = @{}; foreach ($Row in $script:Rows) { $ByCve[$Row.cveId] = $Row }
+            $ByCve['CVE-A'].deviceCount | Should -Be 1
+            # Compare parsed fields: the fragment comes from a plain @{} so its key order varies by process.
+            $A = $ByCve['CVE-A'].deviceDetailsJson | ConvertFrom-Json
+            $B = $ByCve['CVE-B'].deviceDetailsJson | ConvertFrom-Json
+            "$($A.deviceId)|$($A.deviceName)" | Should -BeExactly 'ABC|PC-UPPER'
+            "$($B.deviceId)|$($B.deviceName)" | Should -BeExactly 'abc|pc-lower'
+        }
+
         It 'skips software-inventory rows with no CVE without throwing or logging an error' {
             Mock -CommandName Get-DefenderTvmRaw -MockWith {
                 [pscustomobject]@{ cveId = $null; deviceId = 'd0'; deviceName = 'PC-0' }
@@ -285,6 +304,24 @@ Describe 'Set-CIPPDBCacheDefenderCVEs' {
             # One per incoming record. Anything higher means a second serialisation crept back
             # into the emit stage, which is what put two copies of a CVE's devices in memory.
             $script:JsonCalls | Should -Be 30
+        }
+
+        It 'serialises a device once per tenant, not once per CVE it is affected by' {
+            # The fold keeps one JSON fragment per device and gives each CVE integer indexes into
+            # that table. Serialising per CVE x device pair is what retained ~350-400 bytes per
+            # pair on a large tenant.
+            Mock -CommandName Get-DefenderTvmRaw -MockWith {
+                foreach ($i in 1..30) { New-TvmRecord -cveId "CVE-$i" -deviceId 'd1' -deviceName 'PC-1' }
+            }
+
+            $script:JsonCalls = 0
+            Mock -CommandName ConvertTo-Json -MockWith { $script:JsonCalls++; '{"deviceId":"d1","deviceName":"PC-1"}' }
+
+            Set-CIPPDBCacheDefenderCVEs -TenantFilter $script:Tenant
+
+            $script:JsonCalls | Should -Be 1
+            $script:Rows.Count | Should -Be 30
+            $script:Rows | ForEach-Object { $_.deviceDetailsJson | Should -BeExactly '{"deviceId":"d1","deviceName":"PC-1"}' }
         }
 
         It 'passes AddCount exactly once so the stored count is the run total' {

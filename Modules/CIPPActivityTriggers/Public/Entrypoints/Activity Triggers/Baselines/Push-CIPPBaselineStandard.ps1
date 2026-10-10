@@ -63,6 +63,19 @@ function Push-CIPPBaselineStandard {
                             Write-LogMessage -API 'Baselines' -tenant $Item.Item.TenantFilter -message "The refreshed cache still grades `"$($Item.Item.Standard)`" as drifted after remediation - either the write did not take effect or the API is lagging beyond the retry window; the next compare may re-report drift until the scheduled collection." -Sev 'Warning'
                         }
                     }
+                    if ($Verdict -and $Verdict.Compliant) {
+                        # GradeOnly persists nothing - the row still carries the optimistic
+                        # PendingVerification the initial remediation wrote. A clean verdict
+                        # here (first pass or after backoff) confirms the fix, so clear it.
+                        $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
+                        $SafeTenant = ConvertTo-CIPPODataFilterValue -Value "$($Item.Item.TenantFilter)" -Type String
+                        $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value ("$($Item.Item.Standard)" -replace '#', '~') -Type String
+                        $ResolvedRow = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and RowKey eq '$SafeRowKey'" | Select-Object -First 1
+                        if ($ResolvedRow -and $ResolvedRow.PendingVerification) {
+                            $ResolvedRow.PendingVerification = $false
+                            $null = Add-CIPPAzDataTableEntity @ResolvedTable -Entity $ResolvedRow -Force
+                        }
+                    }
                 } catch {
                     Write-Information "Baselines: post-remediation cache verification for $($Item.Item.Standard) failed: $($_.Exception.Message)"
                 }

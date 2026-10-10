@@ -56,9 +56,9 @@ function Get-CIPPAlertNewAppApproval {
                     $AlertData.Add($Message)
                 }
             }
-
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
+
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
     }
 }

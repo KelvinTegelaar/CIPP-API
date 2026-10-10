@@ -76,6 +76,5 @@ function Invoke-CIPPStandardDisableVoice {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableVoice' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableVoice' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

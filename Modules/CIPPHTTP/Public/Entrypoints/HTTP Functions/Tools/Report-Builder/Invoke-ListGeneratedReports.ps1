@@ -3,7 +3,7 @@ function Invoke-ListGeneratedReports {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Core.Read
+        CIPP.ReportBuilder.Read
     .DESCRIPTION
         Lists generated reports from the CIPP Report Builder, filterable by tenant or report GUID.
     #>

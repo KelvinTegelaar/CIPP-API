@@ -17,11 +17,11 @@ function Get-CIPPAlertLongLivedAppCredentials {
         $Apps = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=id,appId,displayName,passwordCredentials,keyCredentials&`$top=999" -tenantid $TenantFilter -AsApp $true)
 
         $NowUtc = [datetime]::UtcNow
-        $DatePartition = (Get-Date -UFormat '%Y%m%d').ToString()
         $CredTypeMap = @(
             @{ Property = 'passwordCredentials'; TypeLabel = 'Secret' }
             @{ Property = 'keyCredentials'; TypeLabel = 'Certificate' }
         )
+        $AlertData = [System.Collections.Generic.List[object]]::new()
 
         foreach ($App in @($Apps)) {
             foreach ($ct in $CredTypeMap) {
@@ -33,8 +33,6 @@ function Get-CIPPAlertLongLivedAppCredentials {
                     if ($endUtc -le $startUtc -or $endUtc -le $NowUtc) { continue }
                     $months = (New-TimeSpan -Start $startUtc -End $endUtc).TotalDays / 30.4375
                     if ($months -gt $MaxMonths) {
-                        $keyId = if ($Cred.keyId) { "$($Cred.keyId)" } else { 'unknown' }
-                        $tracePartition = "$DatePartition-$($App.id)-$keyId" -replace '[/\\#?]', '_'
                         $oneFinding = [PSCustomObject]@{
                             AppDisplayName   = $App.displayName
                             AppId            = $App.appId
@@ -46,11 +44,13 @@ function Get-CIPPAlertLongLivedAppCredentials {
                             ValidityMonths   = [math]::Round([double]$months, 2)
                             MaxMonthsAllowed = $MaxMonths
                         }
-                        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $oneFinding -PartitionKey $tracePartition
+                        $AlertData.Add($oneFinding)
                     }
                 }
             }
         }
+
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Excessive secret validity alert failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage

@@ -39,6 +39,12 @@ function Invoke-ExecOnboardTenant {
                         $StandardsExcludeAllTenants = [bool]$ExistingOnboarding.StandardsExcludeAllTenants
                     }
 
+                    if ($Request.Body.PSObject.Properties.Name -contains 'tenantGroups') {
+                        $TenantGroups = [string](ConvertTo-Json -InputObject @($Request.Body.tenantGroups) -Compress)
+                    } else {
+                        $TenantGroups = [string]$ExistingOnboarding.TenantGroups
+                    }
+
                     $OnboardingSteps = [PSCustomObject]@{
                         'Step1' = @{
                             'Status'  = 'pending'
@@ -76,6 +82,7 @@ function Invoke-ExecOnboardTenant {
                         Logs                       = ''
                         Exception                  = ''
                         StandardsExcludeAllTenants = $StandardsExcludeAllTenants
+                        TenantGroups               = $TenantGroups
                     }
                     Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
 

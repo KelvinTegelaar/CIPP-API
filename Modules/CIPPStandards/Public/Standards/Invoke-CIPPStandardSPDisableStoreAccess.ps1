@@ -93,6 +93,5 @@ function Invoke-CIPPStandardSPDisableStoreAccess {
             SPDisableStoreAccess = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SPDisableStoreAccess' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SPDisableStoreAccess' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -90,6 +90,7 @@ function Get-CIPPBrandingPreset {
             showPageNumbers  = if ($null -eq $Entity.showPageNumbers) { $true } else { [bool]$Entity.showPageNumbers }
             watermarkText    = if ($Entity.watermarkText) { "$($Entity.watermarkText)" } else { '' }
             watermarkEnabled = if ($null -eq $Entity.watermarkEnabled) { $true } else { [bool]$Entity.watermarkEnabled }
+            tenantLabel      = if (@('alias', 'name', 'domain') -contains "$($Entity.tenantLabel)") { "$($Entity.tenantLabel)" } else { 'alias' }
         }
     }
 

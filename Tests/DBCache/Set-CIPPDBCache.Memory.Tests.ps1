@@ -26,8 +26,8 @@ BeforeAll {
     # PowerShell parameter names are case-insensitive, so a single $AsApp binds both the -asapp
     # and -AsApp spellings the collectors use.
     function New-GraphBulkRequest { param($Requests, $tenantid, $AsApp, $scope) }
-    function New-ExoBulkRequest { param($tenantid, $cmdletArray, $useSystemMailbox, $Select, $ReturnWithCommand) }
-    function New-ExoRequest { param($cmdlet, $cmdParams, $Select, $Anchor, $useSystemMailbox, $tenantid, $NoAuthCheck, [switch]$Compliance, $ApiVersion, $ModuleVersion, [switch]$AsApp, [switch]$UseCertificate) }
+    function New-ExoBulkRequest { param($tenantid, $cmdletArray, $useSystemMailbox, $Select, $ReturnWithCommand, $TimeoutSec, $MaxConcurrency) }
+    function New-ExoRequest { param($cmdlet, $cmdParams, $Select, $Anchor, $useSystemMailbox, $tenantid, $NoAuthCheck, [switch]$Compliance, $ApiVersion, $ModuleVersion, [switch]$AsApp, [switch]$UseCertificate, [switch]$StreamPages) }
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Get-CIPPSPOSite { param($TenantFilter, $SiteUrl) @() }
@@ -472,7 +472,7 @@ Describe 'DBCache collectors reworked for bounded memory' {
     Context 'Set-CIPPDBCacheMailboxes' {
         BeforeEach {
             # 5 mailboxes; m1 grants send-on-behalf to m5's directory id.
-            $Mailboxes = 1..5 | ForEach-Object {
+            $script:TestMailboxes = 1..5 | ForEach-Object {
                 [pscustomobject]@{
                     id                        = "id-$_"
                     ExternalDirectoryObjectId = "id-$_"
@@ -484,9 +484,8 @@ Describe 'DBCache collectors reworked for bounded memory' {
                     GrantSendOnBehalfTo       = if ($_ -eq 1) { @('id-5') } else { @() }
                 }
             }
-            Mock -CommandName New-ExoBulkRequest -MockWith {
-                @{ 'Get-Mailbox' = $Mailboxes; 'Get-User' = @() }
-            }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-Mailbox' } -MockWith { [pscustomobject]@{ Value = $script:TestMailboxes } }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-User' } -MockWith { }
             Mock -CommandName New-GraphGetRequest -MockWith { @() }
         }
 
@@ -528,7 +527,7 @@ Describe 'DBCache collectors reworked for bounded memory' {
                     GrantSendOnBehalfTo       = if ($_ -eq 1) { @('id-120') } else { @() }
                 }
             }
-            Mock -CommandName New-ExoBulkRequest -MockWith { @{ 'Get-Mailbox' = $Many; 'Get-User' = @() } }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-Mailbox' } -MockWith { [pscustomobject]@{ Value = $Many } }
 
             Set-CIPPDBCacheMailboxes -TenantFilter 'contoso.com' -Types @('Permissions')
 
@@ -558,7 +557,7 @@ Describe 'DBCache collectors reworked for bounded memory' {
                 [pscustomobject]@{ id = 'id-1'; ExternalDirectoryObjectId = 'id-1'; UserPrincipalName = 'u1@contoso.com'; DisplayName = 'User 1'; PrimarySMTPAddress = 'u1@contoso.com'; ArchiveGuid = '00000000-0000-0000-0000-000000000000'; EmailAddresses = @(); GrantSendOnBehalfTo = @(); AutoExpandingArchiveEnabled = $true }
                 [pscustomobject]@{ id = 'id-2'; ExternalDirectoryObjectId = 'id-2'; UserPrincipalName = 'u2@contoso.com'; DisplayName = 'User 2'; PrimarySMTPAddress = 'u2@contoso.com'; ArchiveGuid = '00000000-0000-0000-0000-000000000000'; EmailAddresses = @(); GrantSendOnBehalfTo = @(); AutoExpandingArchiveEnabled = $false }
             )
-            Mock -CommandName New-ExoBulkRequest -MockWith { @{ 'Get-Mailbox' = $Mixed; 'Get-User' = @() } }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-Mailbox' } -MockWith { [pscustomobject]@{ Value = $Mixed } }
 
             Set-CIPPDBCacheMailboxes -TenantFilter 'contoso.com' -Types @('None')
 
@@ -578,6 +577,24 @@ Describe 'DBCache collectors reworked for bounded memory' {
             $Rows.Count | Should -Be 5
             @($Rows.AutoExpandingArchive) | Should -Not -Contain $false
             @($Rows.AutoExpandingArchiveScope) | Select-Object -Unique | Should -Be 'Organization'
+        }
+
+        It 'writes every page through one writer and joins Get-User fields from their own pages' {
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-User' } -MockWith {
+                [pscustomobject]@{ Value = @([pscustomobject]@{ ExternalDirectoryObjectId = 'id-5'; RemotePowerShellEnabled = $true; Guid = 'g-5'; Identity = 'i-5' }) }
+            }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-Mailbox' } -MockWith {
+                [pscustomobject]@{ Value = @($script:TestMailboxes[0..2]) }
+                [pscustomobject]@{ Value = @($script:TestMailboxes[3..4]) }
+            }
+
+            Set-CIPPDBCacheMailboxes -TenantFilter 'contoso.com' -Types @('None')
+
+            $Writes = @($script:DbWrites | Where-Object Type -EQ 'Mailboxes')
+            $Writes.Count | Should -Be 1
+            @($Writes[0].Rows.UPN) | Should -Be @('u1@contoso.com', 'u2@contoso.com', 'u3@contoso.com', 'u4@contoso.com', 'u5@contoso.com')
+            $Writes[0].Rows[4].RemotePowerShellEnabled | Should -BeTrue
+            $Writes[0].Rows[4].Identity | Should -Be 'i-5'
         }
 
         It 'keeps caching mailboxes when the organization config lookup fails' {

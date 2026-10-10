@@ -31,6 +31,8 @@ function Get-CIPPAsyncDeployment {
                 TenantFilter = $_.TenantFilter
                 Steps  = @($_.Steps | ConvertFrom-Json)
                 Logs   = $_.Logs
+                # when the row last changed (a step or status update); lets callers detect abandoned jobs
+                LastUpdate = $_.Timestamp
             }
         })
 }

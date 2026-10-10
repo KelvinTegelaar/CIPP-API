@@ -160,12 +160,24 @@ function Invoke-ExecApiClient {
 
                 Add-CIPPAzDataTableEntity @Table -Entity $Client -Force | Out-Null
 
-                # When this client is MCP-enabled, configure its app registration as the MCP OAuth
-                # resource (host identifier URIs + v2 tokens) so the Claude connector flow can resolve it.
+                # When this client is MCP-enabled it becomes one of the OAuth client apps that AI
+                # connectors sign in as. Several MCPAllowed clients may coexist (each with its own
+                # role/IP/redirects/CA); the dedicated CIPP-MCP app is the shared protected resource.
+                # Configure this client (callbacks, public client flows, resource permissions +
+                # consent) and ensure the resource app exists (Set-CIPPMCPClientApp ->
+                # New-CIPPMcpResourceApp).
                 if ([bool]($Request.Body.MCPAllowed ?? $false)) {
                     try {
-                        $null = Set-CIPPMCPClientApp -AppId $ClientId -Headers $Request.Headers
-                        $Results.Add('MCP resource URIs, v2 tokens, and callbacks for known MCP clients (Claude, ChatGPT, VS Code, Copilot) configured on the app registration. Run Save to Azure to apply the changes.')
+                        $McpResult = Set-CIPPMCPClientApp -AppId $ClientId -Headers $Request.Headers
+                        $Results.Add("Configured '$($Client.AppName)' as an MCP OAuth client (callbacks for Claude, ChatGPT, VS Code and Copilot Studio) against the CIPP-MCP resource app. Run Save to Azure to apply the changes.")
+                        if (-not $McpResult.ResourceAppId) {
+                            $Results.Add(@{
+                                    resultText = 'The CIPP-MCP resource app could not be created or resolved. MCP connectors will not be able to sign in until this succeeds - re-run Save, or check the app registration permissions.'
+                                    state      = 'warning'
+                                })
+                        } else {
+                            $Results.Add('For Copilot Studio, use this client''s Application (Client) ID and its secret (reset it with Actions > Reset Application Secret if you did not save it).')
+                        }
                     } catch {
                         $Results.Add(@{
                                 resultText = "Client saved, but MCP app configuration failed: $($_.Exception.Message)"
@@ -218,6 +230,22 @@ function Invoke-ExecApiClient {
             Write-Information "[ExecApiClient] MCP clients resolved for audiences/scope: $($McpClientIds -join ', ')"
             try {
                 $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $FunctionAppName
+
+                # Ensure the dedicated CIPP-MCP resource app exists and every MCP client app is wired
+                # up (callbacks, resource permission, admin consent) BEFORE writing EasyAuth:
+                # Set-CippApiAuth reads the resource app id for allowedAudiences, so the resource must
+                # exist first. This makes Save to Azure a full deploy for both new and existing setups
+                # (an instance upgraded from the single-app model gets its resource app created and its
+                # client rewired here). Best-effort per client.
+                foreach ($McpId in $McpClientIds) {
+                    if ([string]::IsNullOrEmpty($McpId)) { continue }
+                    try {
+                        $null = Set-CIPPMCPClientApp -AppId $McpId -Headers $Request.Headers
+                    } catch {
+                        Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "MCP client $McpId could not be configured during Save to Azure: $($_.Exception.Message)" -Sev 'Warning'
+                    }
+                }
+
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds -McpClientIds $McpClientIds
 
                 if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
@@ -355,6 +383,150 @@ function Invoke-ExecApiClient {
                 }
             } catch {
                 Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Failed to remove app registration for $ClientId" -sev 'Warning'
+            }
+        }
+        'GetMcpAuth' {
+            # MCP status for the client-management UI: whether the dedicated CIPP-MCP resource app is
+            # provisioned, plus each MCPAllowed client app and its custom (non-default) redirect URIs.
+            $KnownClients = Get-CippMcpKnownClients
+            $McpResTable = Get-CippTable -tablename 'CippMcpResource'
+            $McpResRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
+            $ResourceConfigured = $false
+            $ResourceAppId = ''
+            $ResourceObjectId = ''
+            $ResourceDisplayName = ''
+            $ResourceIdentifierUris = @()
+            $PreAuthorizedClientIds = @()
+            if (-not [string]::IsNullOrWhiteSpace($McpResRow.AppId)) {
+                try {
+                    $ResApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($McpResRow.AppId)')?`$select=id,appId,displayName,identifierUris,api" -NoAuthCheck $true -asapp $true
+                    $ResourceConfigured = [bool]$ResApp.appId
+                    $ResourceAppId = "$($ResApp.appId)"
+                    $ResourceObjectId = "$($ResApp.id)"
+                    $ResourceDisplayName = "$($ResApp.displayName)"
+                    $ResourceIdentifierUris = @($ResApp.identifierUris)
+                    $PreAuthorizedClientIds = @(@($ResApp.api.preAuthorizedApplications) | ForEach-Object { $_.appId })
+                } catch {
+                    $ResourceConfigured = $false
+                }
+            }
+            # If the resource app isn't set up, check whether the MCP resource URL is being held by a
+            # DIFFERENT app (e.g. a client left over from the old single-app setup) - that blocks
+            # creation and the admin must delete it manually. Surface it so the page can warn.
+            $ResourceConflict = $null
+            if (-not $ResourceConfigured -and $env:WEBSITE_HOSTNAME) {
+                try {
+                    $HostUri = "https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp"
+                    $Holders = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=identifierUris/any(u:u eq '$HostUri')&`$count=true&`$select=appId,displayName" -NoAuthCheck $true -asapp $true -ComplexFilter)
+                    $Conflict = $Holders | Where-Object { $_.appId -and $_.displayName -ne 'CIPP-MCP' } | Select-Object -First 1
+                    if ($Conflict) { $ResourceConflict = @{ AppId = "$($Conflict.appId)"; AppName = "$($Conflict.displayName)" } }
+                } catch {
+                    Write-Information "[ExecApiClient] Could not check for MCP resource URI conflict: $($_.Exception.Message)"
+                }
+                # Fall back to (or enrich with) the conflict error persisted by New-CIPPMcpResourceApp.
+                try {
+                    $ErrRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'Error'"
+                    if ($ErrRow.RowKey) {
+                        if (-not $ResourceConflict) { $ResourceConflict = @{ AppId = "$($ErrRow.ConflictAppId)"; AppName = "$($ErrRow.ConflictAppName)" } }
+                        $ResourceConflict.Message = "$($ErrRow.Message)"
+                    }
+                } catch {
+                    Write-Information "[ExecApiClient] Could not read stored MCP conflict error: $($_.Exception.Message)"
+                }
+            }
+            $McpClients = @(Get-CIPPAzDataTableEntity @Table | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) -and "$($_.MCPAllowed)" -eq 'True' })
+            $ClientInfo = [System.Collections.Generic.List[object]]::new()
+            foreach ($C in $McpClients) {
+                # Custom redirect URIs are surfaced per platform: 'public' (mobile & desktop, PKCE -
+                # Claude/ChatGPT/CLI) and 'web' (confidential, secret - Copilot Studio). Which bucket a
+                # URI is in decides whether the token exchange succeeds, so the UI edits them separately.
+                $CustomPublic = @()
+                $CustomWeb = @()
+                try {
+                    $CApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($C.RowKey)')?`$select=publicClient,web" -NoAuthCheck $true -asapp $true
+                    $CustomPublic = @(@($CApp.publicClient.redirectUris) | Where-Object { $_ -notin $KnownClients.PublicClientRedirectUris })
+                    $CustomWeb = @(@($CApp.web.redirectUris) | Where-Object { $_ -notin $KnownClients.ConfidentialRedirectUris -and $_ -notlike "*/.auth/login/aad/callback" })
+                } catch {
+                    $CustomPublic = @()
+                    $CustomWeb = @()
+                }
+                $ClientInfo.Add(@{
+                        AppId                          = "$($C.RowKey)"
+                        AppName                        = "$($C.AppName)"
+                        PublicRedirectUris             = @($CustomPublic)
+                        WebRedirectUris                = @($CustomWeb)
+                        UserImpersonationPreAuthorized = ($PreAuthorizedClientIds -contains "$($C.RowKey)")
+                    })
+            }
+            $Body = @{ Results = @{
+                    ResourceConfigured     = $ResourceConfigured
+                    ResourceAppId          = $ResourceAppId
+                    ResourceObjectId       = $ResourceObjectId
+                    ResourceDisplayName    = $ResourceDisplayName
+                    ResourceIdentifierUris = @($ResourceIdentifierUris)
+                    ResourceConflict       = $ResourceConflict
+                    DefaultRedirectUris    = @($KnownClients.PublicClientRedirectUris)
+                    DefaultWebRedirectUris = @($KnownClients.ConfidentialRedirectUris)
+                    Clients                = @($ClientInfo)
+                } }
+        }
+        'SetMcpRedirectUris' {
+            # Replace the CUSTOM redirect URIs on a specific MCP client app, per platform. The built-in
+            # provider callbacks are always kept. Body.ClientId picks the client; Body.PublicRedirectUris
+            # go under 'publicClient' (mobile & desktop / PKCE - Claude, ChatGPT, CLI) and
+            # Body.WebRedirectUris under 'web' (confidential / secret - Copilot Studio). A URI under the
+            # wrong platform fails at the token exchange, which is why they are edited separately.
+            # Back-compat: a lone Body.RedirectUris is treated as the public list.
+            $KnownClients = Get-CippMcpKnownClients
+            $TargetClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
+            if ([string]::IsNullOrWhiteSpace($TargetClientId)) {
+                $Body = @{ Results = @{ resultText = 'No ClientId provided.'; state = 'error' } }
+                break
+            }
+            # Only ever patch an app registration that is a CIPP-managed, MCP-enabled API client -
+            # never an arbitrary appId, which would let a caller rewrite the redirect URIs of any app
+            # in the tenant via CIPP's app-only Graph rights.
+            $ManagedClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$TargetClientId'"
+            if (-not $ManagedClient.RowKey -or "$($ManagedClient.MCPAllowed)" -ne 'True') {
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked MCP redirect URI update for $TargetClientId : not an MCP-enabled CIPP API client." -Sev 'Warning'
+                $Body = @{ Results = @{ resultText = 'That app is not an MCP-enabled CIPP API client.'; state = 'error' } }
+                break
+            }
+            $Invalid = [System.Collections.Generic.List[string]]::new()
+            $ParseUris = {
+                param($Raw)
+                $Out = [System.Collections.Generic.List[string]]::new()
+                foreach ($Uri in @($Raw)) {
+                    $U = "$Uri".Trim()
+                    if ([string]::IsNullOrWhiteSpace($U)) { continue }
+                    $Parsed = $null
+                    if ([System.Uri]::TryCreate($U, [System.UriKind]::Absolute, [ref]$Parsed)) {
+                        if ($Out -notcontains $U) { $Out.Add($U) }
+                    } else {
+                        $Invalid.Add($U)
+                    }
+                }
+                $Out
+            }
+            $CustomPublic = & $ParseUris ($Request.Body.PublicRedirectUris ?? $Request.Body.RedirectUris)
+            $CustomWeb = & $ParseUris $Request.Body.WebRedirectUris
+            if ($Invalid.Count -gt 0) {
+                $Body = @{ Results = @{ resultText = "These are not valid absolute URIs: $($Invalid -join ', ')"; state = 'error' } }
+                break
+            }
+            try {
+                $CApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$TargetClientId')?`$select=id,web" -NoAuthCheck $true -asapp $true
+                # Preserve the EasyAuth login callback if this app carries one; it is not ours to drop.
+                $KeepWeb = @(@($CApp.web.redirectUris) | Where-Object { $_ -like "*/.auth/login/aad/callback" })
+                $DesiredPublic = @(@($KnownClients.PublicClientRedirectUris) + @($CustomPublic) | Where-Object { $_ } | Select-Object -Unique)
+                $DesiredWeb = @(@($KnownClients.ConfidentialRedirectUris) + @($KeepWeb) + @($CustomWeb) | Where-Object { $_ } | Select-Object -Unique)
+                $PatchBody = @{ publicClient = @{ redirectUris = @($DesiredPublic) }; web = @{ redirectUris = @($DesiredWeb) } } | ConvertTo-Json -Depth 6 -Compress
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($CApp.id)" -type PATCH -body $PatchBody -NoAuthCheck $true -asapp $true
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated MCP client $TargetClientId redirect URIs ($($CustomPublic.Count) public, $($CustomWeb.Count) web)." -Sev 'Info'
+                $Body = @{ Results = @{ resultText = 'MCP connector redirect URIs updated.'; state = 'success' } }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                $Body = @{ Results = @{ resultText = "Failed to update redirect URIs: $($ErrorMessage.NormalizedError)"; state = 'error' } }
             }
         }
         default {

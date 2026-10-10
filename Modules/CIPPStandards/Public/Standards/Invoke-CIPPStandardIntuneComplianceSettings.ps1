@@ -107,6 +107,5 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.IntuneComplianceSettings' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'IntuneComplianceSettings' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

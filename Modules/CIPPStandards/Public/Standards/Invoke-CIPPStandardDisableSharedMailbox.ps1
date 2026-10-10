@@ -57,11 +57,8 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     }
 
     try {
-        # (A -or B) -and C: same meaning as before, parentheses for readability.
-        $SharedMailboxList = @(New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($Tenant)/Mailbox" -Tenantid $Tenant -scope ExchangeOnline | Where-Object {
-                ($_.RecipientTypeDetails -eq 'SharedMailbox' -or $_.RecipientTypeDetails -eq 'SchedulingMailbox') -and
-                $_.UserPrincipalName -in $UserList.UserPrincipalName
-            })
+        $SharedMailboxList = @(New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = "RecipientTypeDetails -eq 'SharedMailbox' -or RecipientTypeDetails -eq 'SchedulingMailbox'" } -Select 'UserPrincipalName,DisplayName,RecipientTypeDetails,ExternalDirectoryObjectId' |
+                Where-Object { $_.ExternalDirectoryObjectId -in $UserList.id })
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableSharedMailbox state for $Tenant, could not list mailboxes from Exchange. Error: $ErrorMessage" -Sev Error
@@ -76,7 +73,7 @@ function Invoke-CIPPStandardDisableSharedMailbox {
                 @{
                     id        = $int++
                     method    = 'PATCH'
-                    url       = "users/$($Mailbox.ObjectKey)"
+                    url       = "users/$($Mailbox.ExternalDirectoryObjectId)"
                     body      = @{ accountEnabled = $false }
                     'headers' = @{
                         'Content-Type' = 'application/json'
@@ -93,17 +90,17 @@ function Invoke-CIPPStandardDisableSharedMailbox {
                     $Mailbox = $SharedMailboxList[$i]
 
                     if ($result.status -eq 200 -or $result.status -eq 204) {
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ObjectKey)) disabled." -sev Info
-                        $null = $DisabledKeys.Add("$($Mailbox.ObjectKey)")
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ExternalDirectoryObjectId)) disabled." -sev Info
+                        $null = $DisabledKeys.Add("$($Mailbox.ExternalDirectoryObjectId)")
                         $UpdateDB = $true
                     } else {
                         $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ObjectKey)): $errorMsg" -sev Error
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ExternalDirectoryObjectId)): $errorMsg" -sev Error
                     }
                 }
 
                 # Report what is left after remediation, not what was found.
-                $SharedMailboxList = @($SharedMailboxList | Where-Object { -not $DisabledKeys.Contains("$($_.ObjectKey)") })
+                $SharedMailboxList = @($SharedMailboxList | Where-Object { -not $DisabledKeys.Contains("$($_.ExternalDirectoryObjectId)") })
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to process bulk disable shared mailboxes request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
@@ -143,6 +140,5 @@ function Invoke-CIPPStandardDisableSharedMailbox {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharedMailbox' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'DisableSharedMailbox' -FieldValue $SharedMailboxList -StoreAs json -Tenant $Tenant
     }
 }

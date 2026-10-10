@@ -40,6 +40,7 @@ function Set-CIPPDBCacheUsers {
             # Security & policies
             'passwordPolicies'
             'perUserMfaState'
+            'lastPasswordChangeDateTime'
 
             # Contact information
             'mail'

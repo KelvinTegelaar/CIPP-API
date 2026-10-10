@@ -36,6 +36,27 @@ function Set-CIPPSensitivityLabel {
     $PolicySource = $Template.PolicyParams
     $LabelName = $LabelParams.Name
 
+    # Rights identities can carry replacement tokens - captured templates hold %defaultdomain% where the
+    # source label named its own tenant's domain (see ConvertTo-CIPPSensitivityLabelDomainToken).
+    if ("$($LabelParams['EncryptionRightsDefinitions'])" -match '%') {
+        $LabelParams['EncryptionRightsDefinitions'] = @($LabelParams['EncryptionRightsDefinitions'] | ForEach-Object {
+                if ($_ -is [string] -and $_ -match '%') { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $_ } else { $_ }
+            })
+    }
+
+    # -EncryptionRightsDefinitions is a single EncryptionRightsDefinitionsParameter value, not a
+    # MultiValuedProperty: several grants travel in ONE string as 'Identity1:Rights;Identity2:Rights'.
+    # Sent as a JSON array the AdminApi deserializes it to List[string], which the parameter binder
+    # cannot convert ("Cannot convert value System.Collections.Generic.List1[System.String] ...").
+    if ($LabelParams.ContainsKey('EncryptionRightsDefinitions')) {
+        $RightsEntries = @($LabelParams['EncryptionRightsDefinitions'] | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+        if ($RightsEntries.Count -gt 0) {
+            $LabelParams['EncryptionRightsDefinitions'] = $RightsEntries -join ';'
+        } else {
+            $LabelParams.Remove('EncryptionRightsDefinitions')
+        }
+    }
+
     # PswsHashtable parameters need the Exchange.GenericHashTable odata type to bind over the AdminApi.
     if ($LabelParams.ContainsKey('AdvancedSettings')) {
         $LabelParams['AdvancedSettings'] = ConvertTo-CIPPExoHashtable -InputObject $LabelParams['AdvancedSettings']

@@ -80,7 +80,6 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
             $FieldValue = $CurrentState | Select-Object -Property DisableAddToOneDrive
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableAddShortcutsToOneDrive' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'OneDriveAddShortcutButtonDisabled' -FieldValue $CurrentState.DisableAddToOneDrive -StoreAs bool -Tenant $Tenant
     }
 
     if ($Settings.remediate -eq $true) {

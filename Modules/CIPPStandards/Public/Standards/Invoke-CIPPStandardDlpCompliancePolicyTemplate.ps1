@@ -97,6 +97,5 @@ function Invoke-CIPPStandardDlpCompliancePolicyTemplate {
         $ExpectedValue = @{ NonCompliantPolicies = @() }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DlpCompliancePolicyTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DlpCompliancePolicyTemplate' -FieldValue ($NonCompliant.Count -eq 0) -StoreAs bool -Tenant $Tenant
     }
 }

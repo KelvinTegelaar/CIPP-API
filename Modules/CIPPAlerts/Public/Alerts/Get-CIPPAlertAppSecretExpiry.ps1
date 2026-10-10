@@ -43,7 +43,5 @@ function Get-CIPPAlertAppSecretExpiry {
             }
         }
     }
-    if ($AlertData) {
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-    }
+    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 }

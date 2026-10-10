@@ -5,9 +5,10 @@ function Get-CIPPBaselineDefenderCompliancePolicyState {
     .DESCRIPTION
         Reads the MDE connector singleton (fc780465-2017-40d4-a0c5-307022471b92) LIVE - it is
         one small object with no cache, exactly what the classic read. A missing connector
-        grades every surface false. Two of the classic's rules are load-bearing:
-        connecting Windows forces the Windows partner-data block on (Microsoft enforces it
-        server-side), and microsoftDefenderForEndpointAttachEnabled always grades true.
+        grades every surface false. Three rules are load-bearing: connecting Windows forces the
+        Windows partner-data block on, connecting macOS forces the macOS partner-data block on
+        (Microsoft enforces both server-side), and microsoftDefenderForEndpointAttachEnabled
+        always grades true.
     .FUNCTIONALITY
         Internal
     #>
@@ -46,7 +47,7 @@ function Get-CIPPBaselineDefenderCompliancePolicyState {
         androidDeviceBlockedOnMissingPartnerData            = [bool]$V.androidDeviceBlockedOnMissingPartnerData
         iosDeviceBlockedOnMissingPartnerData                = [bool]$V.iosDeviceBlockedOnMissingPartnerData
         windowsDeviceBlockedOnMissingPartnerData            = $(if ([bool]$V.ConnectWindows) { $true } else { [bool]$V.windowsDeviceBlockedOnMissingPartnerData })
-        macDeviceBlockedOnMissingPartnerData                = [bool]$V.macDeviceBlockedOnMissingPartnerData
+        macDeviceBlockedOnMissingPartnerData                = $(if ([bool]$V.ConnectMac) { $true } else { [bool]$V.macDeviceBlockedOnMissingPartnerData })
         androidMobileApplicationManagementEnabled           = [bool]$V.ConnectAndroidCompliance
         iosMobileApplicationManagementEnabled               = [bool]$V.ConnectIosCompliance
         windowsMobileApplicationManagementEnabled           = [bool]$V.windowsMobileApplicationManagementEnabled

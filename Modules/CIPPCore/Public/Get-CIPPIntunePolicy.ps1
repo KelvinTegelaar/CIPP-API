@@ -9,6 +9,24 @@ function Get-CIPPIntunePolicy {
         $tenantFilter
     )
 
+    # Custom (OMA-URI) device configurations read back from Graph with their secret values encrypted
+    # (value 'PGEvPg==', isEncrypted, secretReferenceValueId), whereas the template captured by
+    # New-CIPPIntuneTemplate stores them decrypted. Without decrypting the read-back copy the drift
+    # compare can never converge and the template re-deploys on every standards run. Decrypt here the
+    # same way capture and the DB cache already do, but never let a decrypt failure sink the whole
+    # policy read - fall back to the undecrypted object so the rest of the policy still returns.
+    function Get-CIPPIntunePolicyOmaDecryptedValue {
+        param($DeviceConfiguration, $DeviceConfigurationId, $TenantFilter)
+        if (@($DeviceConfiguration.omaSettings | Where-Object { $_.secretReferenceValueId }).Count -gt 0) {
+            try {
+                $DeviceConfiguration = Get-CIPPOmaSettingDecryptedValue -DeviceConfiguration $DeviceConfiguration -DeviceConfigurationId $DeviceConfigurationId -TenantFilter $TenantFilter
+            } catch {
+                Write-Information "Failed to decrypt OMA settings for device configuration '$($DeviceConfiguration.displayName)': $($_.Exception.Message)"
+            }
+        }
+        return $DeviceConfiguration
+    }
+
     try {
         switch ($TemplateType) {
             'AppProtection' {
@@ -135,35 +153,11 @@ function Get-CIPPIntunePolicy {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                     $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
-                        $definitionValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')/definitionValues" -tenantid $tenantFilter
+                        # The definition must be expanded: without it every bind is built on an empty id
+                        # and the compare against a template can never match.
+                        $definitionValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')/definitionValues?`$expand=definition" -tenantid $tenantFilter
                         $policy | Add-Member -MemberType NoteProperty -Name 'definitionValues' -Value $definitionValues -Force
-
-                        $templateJsonItems = $definitionValues
-                        $templateJsonSource = foreach ($templateJsonItem in $templateJsonItems) {
-                            $presentationValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')/definitionValues('$($templateJsonItem.id)')/presentationValues?`$expand=presentation" -tenantid $tenantFilter | ForEach-Object {
-                                $obj = $_
-                                if ($obj.id) {
-                                    $presObj = @{
-                                        id                        = $obj.id
-                                        'presentation@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($templateJsonItem.definition.id)')/presentations('$($obj.presentation.id)')"
-                                    }
-                                    if ($obj.values) { $presObj['values'] = $obj.values }
-                                    if ($obj.value) { $presObj['value'] = $obj.value }
-                                    if ($obj.'@odata.type') { $presObj['@odata.type'] = $obj.'@odata.type' }
-                                    [pscustomobject]$presObj
-                                }
-                            }
-                            [PSCustomObject]@{
-                                'definition@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($templateJsonItem.definition.id)')"
-                                enabled                 = $templateJsonItem.enabled
-                                presentationValues      = @($presentationValues)
-                            }
-                        }
-                        $inputvar = [pscustomobject]@{
-                            added      = @($templateJsonSource)
-                            updated    = @()
-                            deletedIds = @()
-                        }
+                        $inputvar = Get-CIPPIntuneAdminTemplateDefinitionValue -PolicyId $policy.id -TenantFilter $tenantFilter -DefinitionValues $definitionValues
                         $policyJson = ConvertTo-Json -InputObject $inputvar -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
@@ -171,35 +165,9 @@ function Get-CIPPIntunePolicy {
                 } elseif ($PolicyId) {
                     $policy = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')" -tenantid $tenantFilter
                     if ($policy) {
-                        $definitionValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')/definitionValues" -tenantid $tenantFilter
+                        $definitionValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')/definitionValues?`$expand=definition" -tenantid $tenantFilter
                         $policy | Add-Member -MemberType NoteProperty -Name 'definitionValues' -Value $definitionValues -Force
-
-                        $templateJsonItems = $definitionValues
-                        $templateJsonSource = foreach ($templateJsonItem in $templateJsonItems) {
-                            $presentationValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')/definitionValues('$($templateJsonItem.id)')/presentationValues?`$expand=presentation" -tenantid $tenantFilter | ForEach-Object {
-                                $obj = $_
-                                if ($obj.id) {
-                                    $presObj = @{
-                                        id                        = $obj.id
-                                        'presentation@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($templateJsonItem.definition.id)')/presentations('$($obj.presentation.id)')"
-                                    }
-                                    if ($obj.values) { $presObj['values'] = $obj.values }
-                                    if ($obj.value) { $presObj['value'] = $obj.value }
-                                    if ($obj.'@odata.type') { $presObj['@odata.type'] = $obj.'@odata.type' }
-                                    [pscustomobject]$presObj
-                                }
-                            }
-                            [PSCustomObject]@{
-                                'definition@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($templateJsonItem.definition.id)')"
-                                enabled                 = $templateJsonItem.enabled
-                                presentationValues      = @($presentationValues)
-                            }
-                        }
-                        $inputvar = [pscustomobject]@{
-                            added      = @($templateJsonSource)
-                            updated    = @()
-                            deletedIds = @()
-                        }
+                        $inputvar = Get-CIPPIntuneAdminTemplateDefinitionValue -PolicyId $PolicyId -TenantFilter $tenantFilter -DefinitionValues $definitionValues
                         $policyJson = ConvertTo-Json -InputObject $inputvar -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
@@ -207,35 +175,11 @@ function Get-CIPPIntunePolicy {
                 } else {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                     foreach ($policy in $policies) {
-                        $definitionValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')/definitionValues" -tenantid $tenantFilter
+                        # The definition must be expanded: without it every bind is built on an empty id
+                        # and the compare against a template can never match.
+                        $definitionValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')/definitionValues?`$expand=definition" -tenantid $tenantFilter
                         $policy | Add-Member -MemberType NoteProperty -Name 'definitionValues' -Value $definitionValues -Force
-
-                        $templateJsonItems = $definitionValues
-                        $templateJsonSource = foreach ($templateJsonItem in $templateJsonItems) {
-                            $presentationValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')/definitionValues('$($templateJsonItem.id)')/presentationValues?`$expand=presentation" -tenantid $tenantFilter | ForEach-Object {
-                                $obj = $_
-                                if ($obj.id) {
-                                    $presObj = @{
-                                        id                        = $obj.id
-                                        'presentation@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($templateJsonItem.definition.id)')/presentations('$($obj.presentation.id)')"
-                                    }
-                                    if ($obj.values) { $presObj['values'] = $obj.values }
-                                    if ($obj.value) { $presObj['value'] = $obj.value }
-                                    if ($obj.'@odata.type') { $presObj['@odata.type'] = $obj.'@odata.type' }
-                                    [pscustomobject]$presObj
-                                }
-                            }
-                            [PSCustomObject]@{
-                                'definition@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($templateJsonItem.definition.id)')"
-                                enabled                 = $templateJsonItem.enabled
-                                presentationValues      = @($presentationValues)
-                            }
-                        }
-                        $inputvar = [pscustomobject]@{
-                            added      = @($templateJsonSource)
-                            updated    = @()
-                            deletedIds = @()
-                        }
+                        $inputvar = Get-CIPPIntuneAdminTemplateDefinitionValue -PolicyId $policy.id -TenantFilter $tenantFilter -DefinitionValues $definitionValues
                         $policyJson = ConvertTo-Json -InputObject $inputvar -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
@@ -287,8 +231,12 @@ function Get-CIPPIntunePolicy {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                     $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
+                        # Capture the id before Select-Object strips it - the decrypt helper needs it to
+                        # resolve each OMA secret.
+                        $DeviceConfigurationId = $policy.id
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                        $policyDetails = Get-CIPPIntunePolicyOmaDecryptedValue -DeviceConfiguration $policyDetails -DeviceConfigurationId $DeviceConfigurationId -TenantFilter $tenantFilter
                         $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
@@ -296,7 +244,11 @@ function Get-CIPPIntunePolicy {
                 } elseif ($PolicyId) {
                     $policy = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')" -tenantid $tenantFilter
                     if ($policy) {
+                        # Capture the id before Select-Object strips it - the decrypt helper needs it to
+                        # resolve each OMA secret.
+                        $DeviceConfigurationId = $policy.id
                         $policyDetails = $policy | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                        $policyDetails = Get-CIPPIntunePolicyOmaDecryptedValue -DeviceConfiguration $policyDetails -DeviceConfigurationId $DeviceConfigurationId -TenantFilter $tenantFilter
                         $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
@@ -304,8 +256,12 @@ function Get-CIPPIntunePolicy {
                 } else {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                     foreach ($policy in $policies) {
+                        # Capture the id before Select-Object strips it - the decrypt helper needs it to
+                        # resolve each OMA secret.
+                        $DeviceConfigurationId = $policy.id
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                        $policyDetails = Get-CIPPIntunePolicyOmaDecryptedValue -DeviceConfiguration $policyDetails -DeviceConfigurationId $DeviceConfigurationId -TenantFilter $tenantFilter
                         $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }

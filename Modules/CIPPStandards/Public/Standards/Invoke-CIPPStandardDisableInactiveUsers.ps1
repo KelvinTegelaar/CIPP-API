@@ -187,6 +187,5 @@ function Invoke-CIPPStandardDisableInactiveUsers {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableInactiveUsers' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableInactiveUsers' -FieldValue $Filtered -StoreAs json -Tenant $Tenant
     }
 }

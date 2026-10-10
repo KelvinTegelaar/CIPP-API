@@ -44,6 +44,10 @@ BeforeAll {
             InternalLicensingEnabled       = $true
             ExternalLicensingEnabled       = $false
             SimplifiedClientAccessEnabled  = $false
+            SimplifiedClientAccessDoNotForwardDisabled = $false
+            SimplifiedClientAccessEncryptOnlyDisabled = $true
+            EnablePdfEncryption            = $true
+            DecryptAttachmentForEncryptOnly = $false
             TransportDecryptionSetting     = 'Optional'
             JournalReportDecryptionEnabled = $true
             LicensingLocation              = $LicensingLocation
@@ -132,6 +136,17 @@ Describe 'Invoke-ListIRMConfiguration' {
 
             $Response.Body.MessageEncryptionEnabled | Should -BeTrue
             $Response.Body.TransportDecryptionSetting | Should -Be 'Optional'
+        }
+
+        It 'passes the optional IRM settings through for the tools page' {
+            Mock -CommandName New-ExoRequest -MockWith { New-IRMConfig -LicensingLocation @() }
+
+            $Response = Invoke-ListIRMConfiguration -Request (New-IRMRequest)
+
+            $Response.Body.EnablePdfEncryption | Should -BeTrue
+            $Response.Body.DecryptAttachmentForEncryptOnly | Should -BeFalse
+            $Response.Body.SimplifiedClientAccessDoNotForwardDisabled | Should -BeFalse
+            $Response.Body.SimplifiedClientAccessEncryptOnlyDisabled | Should -BeTrue
         }
 
         It 'reports message encryption as disabled when Azure RMS licensing is off' {

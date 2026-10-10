@@ -234,6 +234,5 @@ function Invoke-CIPPStandardSecureScoreRemediation {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.SecureScoreRemediation' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
-        Add-CIPPBPAField -FieldName 'SecureScoreRemediation' -FieldValue $ReportData -StoreAs json -Tenant $tenant
     }
 }

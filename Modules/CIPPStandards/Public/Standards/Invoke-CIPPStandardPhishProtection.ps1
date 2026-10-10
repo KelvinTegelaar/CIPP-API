@@ -133,7 +133,6 @@ function Invoke-CIPPStandardPhishProtection {
         $ExpectedValue = @{
             PhishingCSSEnabled = $true
         }
-        Add-CIPPBPAField -FieldName 'PhishProtection' -FieldValue $authState -StoreAs bool -Tenant $tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.PhishProtection' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

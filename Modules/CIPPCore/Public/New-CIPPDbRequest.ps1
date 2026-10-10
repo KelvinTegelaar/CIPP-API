@@ -61,7 +61,11 @@ function New-CIPPDbRequest {
         [string]$Type,
 
         [Parameter(Mandatory = $false)]
-        [string[]]$Fields
+        [string[]]$Fields,
+
+        # Rows already read by an AllTenants caller; parsed instead of querying again
+        [Parameter(DontShow = $true)]
+        [object[]]$Rows
     )
 
     try {
@@ -104,7 +108,7 @@ function New-CIPPDbRequest {
             $Filter = "PartitionKey eq '{0}'" -f $SafeTenantFilter
         }
 
-        $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        $Results = if ($PSBoundParameters.ContainsKey('Rows')) { $Rows } else { Get-CIPPAzDataTableEntity @Table -Filter $Filter }
 
         # CippJson replaces `$Results.Data | ConvertFrom-Json`. A row whose Data is a JSON array
         # returns object[], which PowerShell unrolls into the output stream — the same shape the

@@ -155,6 +155,5 @@ function Invoke-CIPPStandardDefenderExclusionPolicy {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DefenderExclusionPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DefenderExclusionPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -53,7 +53,9 @@ function Get-CIPPLicenseOverview {
         Tenant   = $TenantFilter
         Licenses = $LicRequest
     }
-    $ConvertTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
+    # GUID -> display name, last row wins
+    $SkuNames = @{}
+    foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) { $SkuNames[$Row.GUID] = $Row.Product_Display_Name }
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
@@ -126,7 +128,7 @@ function Get-CIPPLicenseOverview {
                 if (!$IncludeExcluded -or $sku.skuId -in $HiddenFromDropdownGuids) { continue }
             }
             $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.aadSkuId -eq $sku.skuId } | Select-Object -ExpandProperty displayName -First 1
-            $PrettyNameCSV = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
+            $PrettyNameCSV = $SkuNames[[string]$sku.skuid]
             $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $sku.skuPartNumber
 
             # Initialize $Term with the default value

@@ -1,0 +1,103 @@
+{
+  "summary": {
+    "aiToolsDetected": 18,
+    "deviceInstalls": 36,
+    "consentedAiApps": 5,
+    "highRiskTools": 3,
+    "sanctionedTools": 2
+  },
+  "byRisk": [
+    {
+      "risk": "High",
+      "tools": 3
+    },
+    {
+      "risk": "Medium",
+      "tools": 7
+    },
+    {
+      "risk": "Low",
+      "tools": 6
+    },
+    {
+      "risk": "Informational",
+      "tools": 2
+    }
+  ],
+  "topTools": [
+    {
+      "tool": "Sample AI Assistant",
+      "category": "Chat",
+      "status": "Unsanctioned",
+      "devices": 22,
+      "users": 18
+    },
+    {
+      "tool": "Sample Code Helper",
+      "category": "Development",
+      "status": "Unsanctioned",
+      "devices": 14,
+      "users": 9
+    },
+    {
+      "tool": "Sample Notetaker",
+      "category": "Meetings",
+      "status": "Sanctioned",
+      "devices": 11,
+      "users": 24
+    }
+  ],
+  "detectedApps": [
+    {
+      "application": "Sample AI Assistant Desktop",
+      "aiTool": "Sample AI Assistant",
+      "vendor": "Example Corp",
+      "category": "Chat",
+      "risk": "High",
+      "status": "Unsanctioned",
+      "deviceCount": 22
+    },
+    {
+      "application": "Sample Code Helper",
+      "aiTool": "Sample Code Helper",
+      "vendor": "Example Labs",
+      "category": "Development",
+      "risk": "Medium",
+      "status": "Unsanctioned",
+      "deviceCount": 14
+    },
+    {
+      "application": "Sample Notetaker",
+      "aiTool": "Sample Notetaker",
+      "vendor": "Example Corp",
+      "category": "Meetings",
+      "risk": "Informational",
+      "status": "Sanctioned",
+      "deviceCount": 11
+    }
+  ],
+  "consentedApps": [
+    {
+      "applicationId": "00000000-0000-0000-0000-000000000001",
+      "application": "Sample AI Connector",
+      "aiTool": "Sample AI Assistant",
+      "vendor": "Example Corp",
+      "category": "Chat",
+      "risk": "High",
+      "status": "Unsanctioned",
+      "activeUsersLast7Days": 18,
+      "firstConsentedDateTime": "2026-06-11T10:22:00Z"
+    },
+    {
+      "applicationId": "00000000-0000-0000-0000-000000000002",
+      "application": "Sample Meeting Notes",
+      "aiTool": "Sample Notetaker",
+      "vendor": "Example Corp",
+      "category": "Meetings",
+      "risk": "Informational",
+      "status": "Sanctioned",
+      "activeUsersLast7Days": 24,
+      "firstConsentedDateTime": "2026-03-02T14:05:00Z"
+    }
+  ]
+}

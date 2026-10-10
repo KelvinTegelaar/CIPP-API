@@ -14,6 +14,7 @@ function Invoke-CippTestZTNA21814 {
     try {
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
+        $UserById = [CIPP.CippIndex]::Build($Users, @(foreach ($U in $Users) { , ($($U.id) ?? $null) }))
 
         $RoleData = [System.Collections.Generic.List[object]]::new()
 
@@ -22,7 +23,7 @@ function Invoke-CippTestZTNA21814 {
             $RoleUsers = $RoleMembers | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.user' }
 
             foreach ($RoleMember in $RoleUsers) {
-                $UserDetail = $Users | Where-Object { $_.id -eq $RoleMember.id } | Select-Object -First 1
+                $UserDetail = $UserById.Find($RoleMember.id) | Select-Object -First 1
 
                 if ($UserDetail) {
                     $RoleData.Add([PSCustomObject]@{

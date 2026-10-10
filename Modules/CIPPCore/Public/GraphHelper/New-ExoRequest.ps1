@@ -33,7 +33,9 @@ function New-ExoRequest {
 
         $ModuleVersion = '3.9.2',
         [switch]$AsApp,
-        [switch]$UseCertificate
+        [switch]$UseCertificate,
+        # Emit each page as @{ Value } as it arrives instead of returning every page at the end
+        [switch]$StreamPages
     )
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         if ($Compliance.IsPresent) {
@@ -134,6 +136,14 @@ function New-ExoRequest {
 
                 Write-Information "POST [ $URL ] | tenant: $tenantid | cmdlet: $cmdlet"
                 Write-Verbose "Request Body: $ExoBody"
+                if ($StreamPages) {
+                    do {
+                        $Return = Invoke-CIPPRestMethod -Uri $URL -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
+                        $URL = $Return.'@odata.nextLink'
+                        [PSCustomObject]@{ Value = $Return.value }
+                    } until ($null -eq $URL)
+                    return
+                }
                 $ReturnedData = do {
                     $ExoRequestParams = @{
                         Uri         = $URL

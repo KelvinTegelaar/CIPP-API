@@ -50,7 +50,7 @@ function Invoke-AddUserDefaults {
         # Settings
         $Autopassword = $Request.Body.Autopassword
         $Password = $Request.Body.password
-        $MustChangePass = $Request.Body.MustChangePass
+        $MustChangePass = [System.Convert]::ToBoolean($Request.Body.MustChangePass)
         $PerUserMfa = [System.Convert]::ToBoolean($Request.Body.perUserMfa)
 
         $UsageLocation = if ($Request.Body.usageLocation -is [string]) {
@@ -104,6 +104,14 @@ function Invoke-AddUserDefaults {
         $SharedMailboxes = $Request.Body.sharedMailboxes
         $SharedMailboxPermission = $Request.Body.sharedMailboxPermission
 
+        # SharePoint sites new users are added to, with one role for all of them
+        $SharePointSites = $Request.Body.sharePointSites
+        $SharePointSiteRole = if ($Request.Body.sharePointSiteRole -is [string]) {
+            $Request.Body.sharePointSiteRole
+        } else {
+            $Request.Body.sharePointSiteRole.value
+        }
+
         # Create template object with all fields from CippAddEditUser
         $TemplateObject = @{
             tenantFilter             = $TenantFilter
@@ -143,6 +151,9 @@ function Invoke-AddUserDefaults {
             sharedCalendarPermission = $SharedCalendarPermission
             sharedMailboxes          = $SharedMailboxes
             sharedMailboxPermission  = $SharedMailboxPermission
+            sharePointSites          = $SharePointSites
+            sharePointSiteRole       = $SharePointSiteRole
+            defaultAttributes        = $Request.Body.defaultAttributes
         }
 
         # Use existing GUID if editing, otherwise generate new one

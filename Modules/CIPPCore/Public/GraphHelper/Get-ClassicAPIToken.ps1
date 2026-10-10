@@ -37,7 +37,6 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
             $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
             if (!$Tenant) {
                 $Tenant = @{
-                    GraphErrorCount     = $null
                     LastGraphTokenError = $null
                     LastGraphError      = $null
                     PartitionKey        = 'TenantFailed'
@@ -45,7 +44,6 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
                 }
             }
             $Tenant.LastGraphError = $_.Exception.Message
-            $Tenant.GraphErrorCount++
 
             Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             Throw "Failed to obtain Classic API Token for $TenantID - $_"

@@ -204,6 +204,5 @@ function Invoke-CIPPStandardNudgeMFA {
             excludeTargets                         = $DesiredExcludeTargets
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.NudgeMFA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'NudgeMFA' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

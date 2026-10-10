@@ -36,12 +36,15 @@ function Invoke-AddAlert {
         $TenantsJson = $Tenants | ConvertTo-Json -Compress -Depth 10 | Out-String
         $excludedTenantsJson = $Request.Body.excludedTenants | ConvertTo-Json -Compress -Depth 10 | Out-String
         $Actions = $Request.Body.actions | ConvertTo-Json -Compress -Depth 10 | Out-String
+        # Which containment actions the 'becremediate' action runs (ListBECRemediationActions ids); empty = the default six.
+        $BecActions = @($Request.Body.becActions | ForEach-Object { if ($_ -and $_.PSObject.Properties['value']) { $_.value } else { $_ } } | Where-Object { $_ })
         $RowKey = $Request.Body.RowKey ? $Request.Body.RowKey : (New-Guid).ToString()
         $CompleteObject = @{
             Tenants           = [string]$TenantsJson
             excludedTenants   = [string]$excludedTenantsJson
             Conditions        = [string]$Conditions
             Actions           = [string]$Actions
+            BecActions        = [string](ConvertTo-Json -InputObject $BecActions -Compress -Depth 5)
             type              = $Request.Body.logbook.value
             RowKey            = $RowKey
             PartitionKey      = 'Webhookv2'

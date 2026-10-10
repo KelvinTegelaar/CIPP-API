@@ -34,7 +34,8 @@ function Invoke-PublicPhishingCheck {
             rawBody                  = "$($Request.body | ConvertTo-Json)"
         }
         $null = Add-CIPPAzDataTableEntity @table -Entity $TableBody -Force
-        Write-AlertTrace -cmdletName 'CheckExtentionAlert' -tenantFilter $Tenant.defaultDomainName -data $TableBody
+        # One event per call: append it without resolving earlier reports.
+        Write-AlertTrace -cmdletName 'CheckExtentionAlert' -tenantFilter $Tenant.defaultDomainName -data $TableBody -Append
         #Write-AlertMessage -message $Message -sev 'Alert' -tenant $Tenant.customerId -LogData $Request.body
     }
 

@@ -157,6 +157,5 @@ function Invoke-CIPPStandardTeamsDisableResourceAccounts {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsDisableResourceAccounts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'TeamsDisableResourceAccounts' -FieldValue $EnabledResourceAccounts -StoreAs json -Tenant $Tenant
     }
 }

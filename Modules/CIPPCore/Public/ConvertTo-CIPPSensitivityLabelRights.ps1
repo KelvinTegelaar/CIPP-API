@@ -9,9 +9,10 @@ function ConvertTo-CIPPSensitivityLabelRights {
 
             [{"Identity":"AuthenticatedUsers","Rights":"VIEW,DOCEDIT,PRINT"}]
 
-        New-Label/Set-Label -EncryptionRightsDefinitions is a MultiValuedProperty of 'identity:rights'
-        strings ('AuthenticatedUsers:VIEW,DOCEDIT,PRINT'), so the read shape has to be flattened before it
-        can be sent back.
+        New-Label/Set-Label -EncryptionRightsDefinitions takes 'identity:rights' entries
+        ('AuthenticatedUsers:VIEW,DOCEDIT,PRINT'), so the read shape has to be flattened before it can be
+        sent back. This function returns one entry per grant; Set-CIPPSensitivityLabel joins them with ';'
+        into the single string the cmdlet parameter binds (it is not a MultiValuedProperty).
 
         Rights definitions are the portable half of template-based encryption: unlike an RMS template id
         they carry no tenant-scoped identifiers, so they are what lets a captured label rebuild its

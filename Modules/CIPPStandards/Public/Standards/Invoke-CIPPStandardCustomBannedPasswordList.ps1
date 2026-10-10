@@ -248,7 +248,6 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
             }
         }
 
-        Add-CIPPBPAField -FieldName 'CustomBannedPasswordList' -CurrentValue $BannedPasswordState -ExpectedValue $ExpectedValue -StoreAs json -Tenant $tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.CustomBannedPasswordList' -FieldValue $BannedPasswordState.Compliant -Tenant $tenant
     }
 

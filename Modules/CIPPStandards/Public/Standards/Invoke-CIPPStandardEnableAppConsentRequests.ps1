@@ -60,40 +60,43 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         return
     }
 
+    # Roles from standards table, defaulting to Global Administrator when none are selected
+    $RolesToAdd = $Settings.ReviewerRoles.value
+    $RoleNames = $Settings.ReviewerRoles.label -join ', '
+    if (!$RolesToAdd) {
+        $RolesToAdd = @('62e90394-69f5-4237-9190-012177145e10')
+        $RoleNames = '(Default) Global Administrator'
+    }
+
+    # Users from standards table, matched on display name so the reviewer account
+    # can be created any way (invited guest, B2B, manual) regardless of which mail
+    # attribute ended up populated
+    $ReviewerUserNames = @(($Settings.ReviewerUsers.value ?? $Settings.ReviewerUsers) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $ReviewerUsers = [System.Collections.Generic.List[object]]::new()
+    if ($Settings.remediate -eq $true -or $Settings.report -eq $true) {
+        try {
+            foreach ($Name in $ReviewerUserNames) {
+                $UserFilter = [System.Uri]::EscapeDataString("displayName eq '$($Name -replace "'", "''")'")
+                $MatchedUsers = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName,userPrincipalName&`$filter=$UserFilter" -tenantid $Tenant)
+                if ($MatchedUsers.Count -eq 0 -and $Settings.remediate -eq $true) {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "EnableAppConsentRequests: No user found with display name '$Name', not added as reviewer" -sev Warning
+                }
+                foreach ($User in $MatchedUsers) { $ReviewerUsers.Add($User) }
+            }
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not look up the EnableAppConsentRequests reviewer users for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
+    }
+
     if ($Settings.remediate -eq $true) {
         try {
-            # Get current state
-
             # Change state to enabled with default settings
             $CurrentInfo.isEnabled = 'true'
             $CurrentInfo.notifyReviewers = 'true'
             $CurrentInfo.remindersEnabled = 'true'
             $CurrentInfo.requestDurationInDays = 30
-
-            # Roles from standards table
-            $RolesToAdd = $Settings.ReviewerRoles.value
-            $RoleNames = $Settings.ReviewerRoles.label -join ', '
-
-            # Set default if no roles are selected
-            if (!$RolesToAdd) {
-                $RolesToAdd = @('62e90394-69f5-4237-9190-012177145e10')
-                $RoleNames = '(Default) Global Administrator'
-            }
-
-            # Users from standards table, matched on display name so the reviewer account
-            # can be created any way (invited guest, B2B, manual) regardless of which mail
-            # attribute ended up populated
-            $ReviewerUserNames = @(($Settings.ReviewerUsers.value ?? $Settings.ReviewerUsers) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-            $ReviewerUsers = [System.Collections.Generic.List[object]]::new()
-            foreach ($Name in $ReviewerUserNames) {
-                $UserFilter = [System.Uri]::EscapeDataString("displayName eq '$($Name -replace "'", "''")'")
-                $MatchedUsers = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName&`$filter=$UserFilter" -tenantid $Tenant)
-                if ($MatchedUsers.Count -eq 0) {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "EnableAppConsentRequests: No user found with display name '$Name', not added as reviewer" -sev Warning
-                    continue
-                }
-                foreach ($User in $MatchedUsers) { $ReviewerUsers.Add($User) }
-            }
 
             $NewReviewers = [System.Collections.Generic.List[object]]::new()
             foreach ($Role in $RolesToAdd) {
@@ -154,23 +157,33 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         }
     }
     if ($Settings.report -eq $true) {
-        # Set default if no roles are selected, matches remediation logic
-        $RolesToAdd = $Settings.ReviewerRoles.value
-        if (!$RolesToAdd -or $RolesToAdd.Count -eq 0) {
-            $RolesToAdd = @('62e90394-69f5-4237-9190-012177145e10')
-        }
-        $ReviewerUserNames = @(($Settings.ReviewerUsers.value ?? $Settings.ReviewerUsers) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        # Grade that each configured role and user is PRESENT among the reviewers, not the reviewer
+        # count: remediation deliberately keeps reviewers added by hand, so a count never converges.
+        # A user name that matches no account in the tenant is graded missing.
+        $ReviewerQueries = @(@($CurrentInfo.reviewers) | ForEach-Object { "$($_.query)" })
+        $RoleLabels = @{ '62e90394-69f5-4237-9190-012177145e10' = 'Global Administrator' }
+        foreach ($Role in @($Settings.ReviewerRoles)) { if ($Role.value) { $RoleLabels[$Role.value] = $Role.label ?? $Role.value } }
+        $MissingRoles = @($RolesToAdd | Where-Object { $RoleId = $_; -not ($ReviewerQueries | Where-Object { $_ -match [regex]::Escape($RoleId) }) } | ForEach-Object { $RoleLabels[$_] ?? $_ })
+        $MissingUsers = @($ReviewerUserNames | Where-Object {
+                $Name = $_
+                $Covered = @($ReviewerUsers | Where-Object { $_.displayName -eq $Name }) | Where-Object {
+                    $User = $_
+                    $ReviewerQueries | Where-Object { $_ -match [regex]::Escape("$($User.id)") -or (-not [string]::IsNullOrWhiteSpace($User.userPrincipalName) -and $_ -match [regex]::Escape("$($User.userPrincipalName)")) }
+                }
+                -not $Covered
+            })
 
         $CurrentValue = [PSCustomObject]@{
             EnableAppConsentRequests = [bool]$CurrentInfo.isEnabled
-            ReviewerCount            = $CurrentInfo.reviewers.count
+            MissingReviewerRoles     = @($MissingRoles)
+            MissingReviewerUsers     = @($MissingUsers)
         }
         $ExpectedValue = [PSCustomObject]@{
             EnableAppConsentRequests = $true
-            ReviewerCount            = $RolesToAdd.Count + $ReviewerUserNames.Count
+            MissingReviewerRoles     = @()
+            MissingReviewerUsers     = @()
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableAppConsentRequests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue $CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

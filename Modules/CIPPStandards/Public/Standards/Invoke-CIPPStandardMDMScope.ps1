@@ -157,7 +157,6 @@ function Invoke-CIPPStandardMDMScope {
             customGroup = $Settings.customGroup ?? ''
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MDMScope' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'MDMScope' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
 }

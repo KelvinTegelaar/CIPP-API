@@ -164,6 +164,5 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
             AAGUIDs                = $AAGUIDs -join ', '
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.FIDO2PasskeyProfiles' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'FIDO2PasskeyProfiles' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -37,6 +37,7 @@ function Invoke-EditUser {
                     Webhook = [bool]$Request.Body.PostExecution.Webhook
                     Email   = [bool]$Request.Body.PostExecution.Email
                     PSA     = [bool]$Request.Body.PostExecution.PSA
+                    Push    = [bool]$Request.Body.PostExecution.Push
                 }
             }
             Add-CIPPScheduledTask -Task $TaskBody -hidden $false -DisallowDuplicateName $true -Headers $Headers

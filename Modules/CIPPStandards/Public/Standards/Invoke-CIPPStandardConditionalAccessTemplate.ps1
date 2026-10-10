@@ -184,9 +184,9 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 return
             }
 
-            if ($Settings.state -and $Settings.state -ne 'donotchange' -and $CompareObj.state -eq $Settings.state) {
-                Write-Information "Policy is in the deployed state '$($CompareObj.state)'; not comparing against template state '$($Policy.state)'"
-                $Policy | Add-Member -NotePropertyName 'state' -NotePropertyValue $CompareObj.state -Force
+            # Override the template's state with the standard's state for drift comparison
+            if ($Settings.state -and $Settings.state -ne 'donotchange') {
+                $Policy | Add-Member -NotePropertyName 'state' -NotePropertyValue $Settings.state -Force
             }
 
             try {

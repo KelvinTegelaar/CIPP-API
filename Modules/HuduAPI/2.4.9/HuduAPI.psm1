@@ -165,11 +165,15 @@ function Invoke-HuduRequest {
     }
     Write-Verbose ( '{0} [{1}]' -f $Method, $Uri )
 
+    # One session for every request, so calls reuse the connection instead of a new TCP and TLS handshake each time
+    if (-not $Script:Int_HuduWebSession) { $Script:Int_HuduWebSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new() }
+
     $RestMethod = @{
         Method      = $Method
         Uri         = $Uri
         Headers     = $Headers
         ContentType = $ContentType
+        WebSession  = $Script:Int_HuduWebSession
     }
 
     if ($Body) {
@@ -188,7 +192,7 @@ function Invoke-HuduRequest {
         if ("$_".trim() -eq 'Retry later' -or "$_".trim() -eq 'The remote server returned an error: (429) Too Many Requests.') {
             Write-Information 'Hudu API Rate limited. Waiting 30 Seconds then trying again'
             Start-Sleep 30
-            $Results = Invoke-HuduRequest @RestMethod
+            $Results = Invoke-RestMethod @RestMethod
         } else {
             Write-Error "'$_'"
         }
@@ -3117,10 +3121,13 @@ function Set-HuduAsset {
         [Alias('primary_manufacturer')]
         [string]$PrimaryManufacturer,
 
-        [string]$Slug
+        [string]$Slug,
+
+        # The asset as already returned by Get-HuduAssets, to build the update from without fetching it again
+        [object]$ExistingAsset
     )
-    
-    $Object = Get-HuduAssets -id $Id | Select-Object name,asset_layout_id,company_id,slug,primary_serial,primary_model,primary_mail,id,primary_manufacturer,@{n='custom_fields';e={$_.fields | ForEach-Object {[pscustomobject]@{$_.label.replace(' ','_').tolower()= $_.value}}}}
+
+    $Object = $(if ($ExistingAsset) { $ExistingAsset } else { Get-HuduAssets -id $Id }) | Select-Object name,asset_layout_id,company_id,slug,primary_serial,primary_model,primary_mail,id,primary_manufacturer,@{n='custom_fields';e={$_.fields | ForEach-Object {[pscustomobject]@{$_.label.replace(' ','_').tolower()= $_.value}}}}
     if ($Object) {
         $Asset = [ordered]@{asset = $Object }
         $CompanyId = $Object.company_id
@@ -3321,10 +3328,14 @@ function Set-HuduAssetLayout {
             'dropdown'          { $field.'field_type' = 'Dropdown' }
             'embed'             { $field.'field_type' = 'Embed' }
             'phone'             { $field.'field_type' = 'Phone' }
-            ('email'    -or 'copyabletext')     { $field.'field_type' = 'Email' }
-            ('assettag' -or 'assetlink')        { $field.'field_type' = 'AssetTag' }
-            ('website'  -or 'link')             { $field.'field_type' = 'Website' }
-            ('password' -or 'confidentialtext') { $field.'field_type' = 'Password' }
+            'email'             { $field.'field_type' = 'Email' }
+            'copyabletext'      { $field.'field_type' = 'Email' }
+            'assettag'          { $field.'field_type' = 'AssetTag' }
+            'assetlink'         { $field.'field_type' = 'AssetTag' }
+            'website'           { $field.'field_type' = 'Website' }
+            'link'              { $field.'field_type' = 'Website' }
+            'password'          { $field.'field_type' = 'Password' }
+            'confidentialtext'  { $field.'field_type' = 'Password' }
             Default { Write-Error "Invalid field type: $($field.'field_type') found in field $($field.name)"; break }
         }
     }

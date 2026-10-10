@@ -20,7 +20,7 @@ function Get-CIPPTestResultsTenants {
         One or more test IDs (the row's RowKey), e.g. 'CustomScript-<guid>'.
 
     .PARAMETER Status
-        One or more statuses to filter on (Passed / Failed / Investigate / Skipped / Informational).
+        One or more statuses to filter on (Passed / Failed / Investigate / Skipped / Informational / Unlicensed).
 
     .PARAMETER TestType
         Restrict to a single test type (Identity / Devices / Custom).
@@ -302,6 +302,7 @@ function Get-CIPPTestResultsTenants {
             'Investigate' { $Counts['Investigate']++ }
             'Skipped' { $Counts['Skipped']++ }
             'Informational' { $Counts['Informational']++ }
+            'Unlicensed' { $Counts['Informational']++ }
         }
 
         if ($RowStatusSet -and -not $RowStatusSet.Contains($StatusValue)) { continue }

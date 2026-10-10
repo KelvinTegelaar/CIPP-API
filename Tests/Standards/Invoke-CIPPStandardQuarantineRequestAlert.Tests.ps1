@@ -17,7 +17,6 @@ BeforeAll {
     function Write-LogMessage { [CmdletBinding()] param($API, $Tenant, $Message, $sev, $LogData) }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $TenantFilter) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Get-NormalizedError { [CmdletBinding()] param($Message) $Message }
 
     . $StandardPath
@@ -32,15 +31,10 @@ Describe 'Invoke-CIPPStandardQuarantineRequestAlert' {
         # $script:alertObj models the tenant's live Protection Alert: $null = it does not exist.
         $script:alertObj = $null
         $script:compareFields = [System.Collections.Generic.List[object]]::new()
-        $script:bpaFields = [System.Collections.Generic.List[object]]::new()
 
         Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
         Mock -CommandName Write-LogMessage -MockWith { }
         Mock -CommandName Write-StandardsAlert -MockWith { }
-        Mock -CommandName Add-CIPPBPAField -MockWith {
-            param($FieldName, $FieldValue, $StoreAs, $Tenant)
-            $script:bpaFields.Add([pscustomobject]@{ Field = $FieldName; FieldValue = $FieldValue })
-        }
         Mock -CommandName Set-CIPPStandardsCompareField -MockWith {
             param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $TenantFilter)
             $script:compareFields.Add([pscustomobject]@{ Field = $FieldName; Current = $CurrentValue; Expected = $ExpectedValue })
@@ -72,7 +66,6 @@ Describe 'Invoke-CIPPStandardQuarantineRequestAlert' {
         Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter { $cmdlet -eq 'New-ProtectionAlert' }
         $script:compareFields.Count | Should -Be 1
         $script:compareFields[0].Current.NotifyUser | Should -Contain $script:NotifyUser
-        $script:bpaFields[0].FieldValue | Should -BeTrue
     }
 
     It 'updates recipients on an existing alert and reports the applied value' {
@@ -87,7 +80,6 @@ Describe 'Invoke-CIPPStandardQuarantineRequestAlert' {
 
         Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter { $cmdlet -eq 'Set-ProtectionAlert' }
         $script:compareFields[0].Current.NotifyUser | Should -Contain $script:NotifyUser
-        $script:bpaFields[0].FieldValue | Should -BeTrue
     }
 
     It 'reports an existing correctly configured alert as compliant without writing' {
@@ -101,7 +93,6 @@ Describe 'Invoke-CIPPStandardQuarantineRequestAlert' {
 
         Should -Invoke New-ExoRequest -Times 0 -ParameterFilter { $cmdlet -in @('New-ProtectionAlert', 'Set-ProtectionAlert') }
         $script:compareFields[0].Current.NotifyUser | Should -Contain $script:NotifyUser
-        $script:bpaFields[0].FieldValue | Should -BeTrue
     }
 
     It 'writes Current and Expected as matching arrays when compliant' {
@@ -134,7 +125,6 @@ Describe 'Invoke-CIPPStandardQuarantineRequestAlert' {
             report     = $true
         }
 
-        $script:bpaFields[0].FieldValue | Should -BeFalse
         $script:compareFields[0].Current.NotifyUser | Should -Contain 'extra@contoso.com'
     }
 
@@ -145,7 +135,6 @@ Describe 'Invoke-CIPPStandardQuarantineRequestAlert' {
             report     = $true
         }
 
-        $script:bpaFields[0].FieldValue | Should -BeFalse
         @($script:compareFields[0].Current.NotifyUser) | Should -BeNullOrEmpty
     }
 
@@ -159,7 +148,6 @@ Describe 'Invoke-CIPPStandardQuarantineRequestAlert' {
         }
 
         Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter { $cmdlet -eq 'Remove-ProtectionAlert' }
-        $script:bpaFields[0].FieldValue | Should -BeTrue
     }
 
     It 'skips everything when the tenant is not licensed for Exchange' {

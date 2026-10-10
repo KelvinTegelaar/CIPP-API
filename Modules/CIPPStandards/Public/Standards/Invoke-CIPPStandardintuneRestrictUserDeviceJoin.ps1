@@ -90,6 +90,5 @@ function Invoke-CIPPStandardintuneRestrictUserDeviceJoin {
             disableUserDeviceJoin = $DisableUserDeviceJoin
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.intuneRestrictUserDeviceJoin' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'intuneRestrictUserDeviceJoin' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

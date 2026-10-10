@@ -49,7 +49,10 @@ function Get-CIPPAlertArchiveQuota {
             Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Archive quota Alert: Unable to get archive mailboxes: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             return
         }
-        if ($ArchiveMailboxes.Count -eq 0) { return }
+        if ($ArchiveMailboxes.Count -eq 0) {
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data @()
+            return
+        }
 
         # Archive size only comes from Get-MailboxStatistics. Batch it with an operation guid per
         # mailbox so each result maps back to its mailbox, the same pattern the reporting-DB cache uses.
@@ -105,7 +108,5 @@ function Get-CIPPAlertArchiveQuota {
         }
     }
 
-    if ($OverQuota) {
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $OverQuota
-    }
+    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $OverQuota
 }

@@ -10,8 +10,23 @@ Function Invoke-ListAzureADConnectStatus {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $TenantFilter = $Request.Query.TenantFilter
+    # Optional. Which section to return: 'AzureADConnectSettings' for the sync status and
+    # configuration, or 'AzureADObjectsInError' for objects that failed to sync. Omit to
+    # return both.
     $DataToReturn = $Request.Query.DataToReturn
-    Write-Host "DataToReturn: $DataToReturn"
+
+    switch ($DataToReturn) {
+        'AzureADConnectSettings' { }
+        'AzureADObjectsInError' { }
+        default {
+            if ($DataToReturn) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = 'DataToReturn must be AzureADConnectSettings or AzureADObjectsInError'
+                    })
+            }
+        }
+    }
 
     if (($DataToReturn -eq 'AzureADConnectSettings') -or ([string]::IsNullOrEmpty($DataToReturn)) ) {
         $ADConnectStatusGraph = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/organization' -tenantid $TenantFilter

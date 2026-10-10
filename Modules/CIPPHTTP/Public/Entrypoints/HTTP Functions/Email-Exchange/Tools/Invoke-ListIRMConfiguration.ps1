@@ -23,15 +23,19 @@ function Invoke-ListIRMConfiguration {
         $AdRmsDetected = @($LicensingLocation | Where-Object { $_ -notmatch 'aadrm\.|azurerms|\.microsoft\.(com|us)' }).Count -gt 0
 
         $Results = [PSCustomObject]@{
-            AzureRMSLicensingEnabled       = $IRMConfig.AzureRMSLicensingEnabled
-            InternalLicensingEnabled       = $IRMConfig.InternalLicensingEnabled
-            ExternalLicensingEnabled       = $IRMConfig.ExternalLicensingEnabled
-            SimplifiedClientAccessEnabled  = $IRMConfig.SimplifiedClientAccessEnabled
-            TransportDecryptionSetting     = $IRMConfig.TransportDecryptionSetting
-            JournalReportDecryptionEnabled = $IRMConfig.JournalReportDecryptionEnabled
-            LicensingLocation              = $LicensingLocation
-            MessageEncryptionEnabled       = [bool]$IRMConfig.AzureRMSLicensingEnabled
-            AdRmsDetected                  = $AdRmsDetected
+            AzureRMSLicensingEnabled                   = $IRMConfig.AzureRMSLicensingEnabled
+            InternalLicensingEnabled                   = $IRMConfig.InternalLicensingEnabled
+            ExternalLicensingEnabled                   = $IRMConfig.ExternalLicensingEnabled
+            SimplifiedClientAccessEnabled              = $IRMConfig.SimplifiedClientAccessEnabled
+            SimplifiedClientAccessDoNotForwardDisabled = $IRMConfig.SimplifiedClientAccessDoNotForwardDisabled
+            SimplifiedClientAccessEncryptOnlyDisabled  = $IRMConfig.SimplifiedClientAccessEncryptOnlyDisabled
+            EnablePdfEncryption                        = $IRMConfig.EnablePdfEncryption
+            DecryptAttachmentForEncryptOnly            = $IRMConfig.DecryptAttachmentForEncryptOnly
+            TransportDecryptionSetting                 = $IRMConfig.TransportDecryptionSetting
+            JournalReportDecryptionEnabled             = $IRMConfig.JournalReportDecryptionEnabled
+            LicensingLocation                          = $LicensingLocation
+            MessageEncryptionEnabled                   = [bool]$IRMConfig.AzureRMSLicensingEnabled
+            AdRmsDetected                              = $AdRmsDetected
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

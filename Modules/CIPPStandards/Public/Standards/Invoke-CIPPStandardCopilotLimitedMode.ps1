@@ -129,6 +129,5 @@ function Invoke-CIPPStandardCopilotLimitedMode {
             groupId           = if ($DesiredEnabled) { $ResolvedGroupId } else { $null }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.CopilotLimitedMode' -CurrentValue ([PSCustomObject]$CurrentValue) -ExpectedValue ([PSCustomObject]$ExpectedValue) -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'CopilotLimitedMode' -FieldValue ([bool]$StateIsCorrect) -StoreAs bool -Tenant $Tenant
     }
 }

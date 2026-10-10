@@ -141,7 +141,5 @@ function Invoke-CIPPStandardCopilotSettings {
             $ExpectedState[$Result.Key] = $Result.Desired
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.CopilotSettings' -CurrentValue ([PSCustomObject]$CurrentState) -ExpectedValue ([PSCustomObject]$ExpectedState) -TenantFilter $Tenant
-        $AllCompliant = -not ($ComplianceResults | Where-Object { -not $_.IsCompliant })
-        Add-CIPPBPAField -FieldName 'CopilotSettings' -FieldValue ([bool]$AllCompliant) -StoreAs bool -Tenant $Tenant
     }
 }

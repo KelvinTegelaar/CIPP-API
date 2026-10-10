@@ -42,9 +42,7 @@ function Get-CIPPAlertLowTenantAlignment {
             }
         }
 
-        if ($LowAlignmentAlerts.Count -gt 0) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $LowAlignmentAlerts
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $LowAlignmentAlerts
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

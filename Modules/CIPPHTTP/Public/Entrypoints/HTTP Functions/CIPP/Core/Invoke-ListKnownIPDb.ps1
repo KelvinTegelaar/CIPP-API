@@ -3,7 +3,7 @@ function Invoke-ListKnownIPDb {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.Read
+        CIPP.IPDatabase.Read
     .DESCRIPTION
         Lists known IP address entries from the CIPP IP database, optionally filtered by tenant.
     #>

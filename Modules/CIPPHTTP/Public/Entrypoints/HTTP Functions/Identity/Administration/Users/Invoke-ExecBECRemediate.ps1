@@ -4,6 +4,10 @@ function Invoke-ExecBECRemediate {
         Entrypoint
     .ROLE
         Identity.User.ReadWrite
+    .SYNOPSIS
+        Runs selectable Business Email Compromise containment for a user.
+    .DESCRIPTION
+        Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the default set runs (the DefaultSelected actions, configurable instance-wide from CIPP settings). Actions marked Critical require Confirmation to equal the user's UPN. With Async the request is validated, queued as a scheduled task that runs straight away, and answered with a DeploymentId whose per-action progress ListOffboardingProgress returns; without it the actions run inline and their results are returned. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -11,217 +15,60 @@ function Invoke-ExecBECRemediate {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-
     $TenantFilter = $Request.Body.tenantFilter
     $SuspectUser = $Request.Body.userid
     $Username = $Request.Body.username
-    Write-Host $TenantFilter
-    Write-Host $SuspectUser
+    # Action ids from ListBECRemediationActions; empty runs the default set
+    $Actions = @($Request.Body.Actions | ForEach-Object { if ($_ -and $_.PSObject.Properties['value']) { $_.value } else { $_ } } | Where-Object { $_ })
+    # must equal the user's UPN when a Critical action is selected
+    $Confirmation = [string]$Request.Body.Confirmation
+    # the BEC run whose findings supply default targets and which records the outcome
+    $CaseId = [string]$Request.Body.CaseId
+    $Parameters = $Request.Body.Parameters
+    # run as a background scheduled task and report progress under the returned DeploymentId
+    $Async = [bool]$Request.Body.Async
 
+    $StatusCode = [HttpStatusCode]::OK
+    $AsyncDeploymentId = $null
     $Results = try {
-        $AllResults = [System.Collections.Generic.List[object]]::new()
-
-        # Step 1: Reset Password
-        $Step = 'Reset Password'
-        try {
-            $PasswordResult = Set-CIPPResetPassword -UserID $Username -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers
-            $AllResults.Add($PasswordResult)
-        } catch {
-            $AllResults.Add([pscustomobject]@{
-                    resultText = "Failed to reset password: $($_.Exception.Message)"
-                    state      = 'error'
-                })
+        if (-not $TenantFilter) { throw 'tenantFilter is required' }
+        if (-not $Username) {
+            if (-not $SuspectUser) { throw 'username or userid is required' }
+            $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$SuspectUser?`$select=userPrincipalName" -tenantid $TenantFilter -AsApp $true).userPrincipalName
         }
 
-        # Step 2: Disable Account
-        $Step = 'Disable Account'
-        try {
-            $DisableResult = Set-CIPPSignInState -userid $Username -AccountEnabled $false -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers
-            $AllResults.Add([pscustomobject]@{
-                    resultText = $DisableResult
-                    state      = if ($DisableResult -like '*WARNING*') { 'warning' } else { 'success' }
-                })
-        } catch {
-            $AllResults.Add([pscustomobject]@{
-                    resultText = "Failed to disable account: $($_.Exception.Message)"
-                    state      = 'error'
-                })
+        $Catalog = Get-CIPPBecContainmentActions
+        $Selected = if ($Actions.Count -eq 0) { @($Catalog | Where-Object { $_.DefaultSelected }) } else { @($Catalog | Where-Object { $_.Id -in $Actions }) }
+        $Unknown = @($Actions | Where-Object { $_ -notin $Catalog.Id })
+        if ($Unknown.Count -gt 0) { throw "Unknown containment action(s): $($Unknown -join ', ')" }
+        $Critical = @($Selected | Where-Object { $_.Impact -eq 'Critical' })
+        $ConfirmationOk = $Confirmation -and ($Confirmation.Trim() -ieq ([string]$Username).Trim())
+        if ($Critical.Count -gt 0 -and -not $ConfirmationOk) {
+            $StatusCode = [HttpStatusCode]::BadRequest
+            throw "Type the user's UPN ($Username) to confirm: the selected actions include Critical changes ($($Critical.Label -join ', '))"
         }
 
-        # Step 3: Revoke Sessions
-        $Step = 'Revoke Sessions'
-        try {
-            $SessionResult = Revoke-CIPPSessions -userid $SuspectUser -username $Username -Headers $Headers -APIName $APIName -tenantFilter $TenantFilter
-            $AllResults.Add([pscustomobject]@{
-                    resultText = $SessionResult
-                    state      = if ($SessionResult -like '*Failed*') { 'error' } else { 'success' }
-                })
-        } catch {
-            $AllResults.Add([pscustomobject]@{
-                    resultText = "Failed to revoke sessions: $($_.Exception.Message)"
-                    state      = 'error'
-                })
+        $Rows = if ($Async) {
+            $AsyncDeploymentId = Start-CIPPBecContainmentJob -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $Username -Actions @($Selected.Id) -Parameters $Parameters -CaseId $CaseId -Headers $Headers -APIName $APIName
+            [pscustomobject]@{ resultText = "Queued $($Selected.Count) containment action(s) for $Username. Progress is shown below and on the scheduled task."; state = 'info' }
+        } else {
+            Invoke-CIPPBecContainment -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $Username -Actions $Actions -Parameters $Parameters -Confirmed:$ConfirmationOk -CaseId $CaseId -Headers $Headers -APIName $APIName
         }
-
-        # Step 4: Remove MFA methods
-        $Step = 'Remove MFA methods'
-        try {
-            $MFAResult = Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
-            $AllResults.Add([pscustomobject]@{
-                    resultText = $MFAResult
-                    state      = if ($MFAResult -like '*No MFA methods*') { 'info' } elseif ($MFAResult -like '*Successfully*') { 'success' } else { 'error' }
-                })
-        } catch {
-            $AllResults.Add([pscustomobject]@{
-                    resultText = "Failed to remove MFA methods: $($_.Exception.Message)"
-                    state      = 'error'
-                })
-        }
-
-        # Step 5: Disable Inbox Rules
-        $Step = 'Disable Inbox Rules'
-        try {
-            Write-LogMessage -headers $Headers -API $APIName -message "Starting inbox rules processing for user: $Username" -Sev 'Info' -tenant $TenantFilter
-            $Rules = New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $Username; IncludeHidden = $true }
-            Write-LogMessage -headers $Headers -API $APIName -message "Retrieved $(($Rules | Measure-Object).Count) total rules for $Username" -Sev 'Info' -tenant $TenantFilter
-            $RuleDisabled = 0
-            $RuleFailed = 0
-            $DelegateRulesSkipped = 0
-            $RuleMessages = [System.Collections.Generic.List[string]]::new()
-
-            if (($Rules | Measure-Object).Count -eq 0) {
-                # No rules exist at all
-                $AllResults.Add([pscustomobject]@{
-                        resultText = "No Inbox Rules found for $Username."
-                        state      = 'info'
-                    })
-            } else {
-                # Rules exist, filter and process them
-                $ProcessableRules = $Rules | Where-Object {
-                    $_.Name -ne 'Junk E-Mail Rule' -and
-                    $_.Name -notlike 'Microsoft.Exchange.OOF.*'
-                }
-
-                if (($ProcessableRules | Measure-Object).Count -eq 0) {
-                    # Rules exist but none are processable after filtering
-                    $SystemRulesCount = ($Rules | Measure-Object).Count - $DelegateRulesSkipped
-                    if ($SystemRulesCount -gt 0) {
-                        $AllResults.Add([pscustomobject]@{
-                                resultText = "Found $(($Rules | Measure-Object).Count) inbox rules for $Username, but none require disabling (only system rules found)."
-                                state      = 'info'
-                            })
-                    }
-                } else {
-                    # Process the filterable rules
-                    $ProcessableRules | ForEach-Object {
-                        $CurrentRule = $_
-                        Write-LogMessage -headers $Headers -API $APIName -message "Processing rule: Name='$($CurrentRule.Name)', Identity='$($CurrentRule.Identity)'" -Sev 'Info' -tenant $TenantFilter
-
-                        try {
-                            Set-CIPPMailboxRule -Username $Username -UserId $Username -TenantFilter $TenantFilter -RuleId $CurrentRule.Identity -RuleName $CurrentRule.Name -Disable -APIName $APIName -Headers $Headers
-
-                            Write-LogMessage -headers $Headers -API $APIName -message "Successfully disabled rule: $($CurrentRule.Name)" -Sev 'Info' -tenant $TenantFilter
-                            $RuleDisabled++
-                        } catch {
-                            # Check if this is a system delegate rule, if so we can ignore the error
-                            if ($CurrentRule.Name -match '^Delegate Rule -\d+$') {
-                                Write-LogMessage -headers $Headers -API $APIName -message "Skipping delegate rule '$($CurrentRule.Name)' - unable to disable (expected behavior)" -Sev 'Info' -tenant $TenantFilter
-                                $DelegateRulesSkipped++
-                            } else {
-                                # Handle as normal error
-                                $ErrorMsg = "Could not disable rule '$($CurrentRule.Name)': $($_.Exception.Message)"
-                                Write-LogMessage -headers $Headers -API $APIName -message $ErrorMsg -Sev 'Error' -tenant $TenantFilter
-                                $RuleMessages.Add($ErrorMsg)
-                                $RuleFailed++
-                            }
-                        }
-                    }
-
-                    # Report results
-                    if ($RuleDisabled -gt 0) {
-                        $AllResults.Add([pscustomobject]@{
-                                resultText = "Successfully disabled $RuleDisabled inbox rules for $Username"
-                                state      = 'success'
-                            })
-                    } elseif ($DelegateRulesSkipped -gt 0 -and $RuleDisabled -eq 0 -and $RuleFailed -eq 0) {
-                        # Only system rules were found, report as no processable rules
-                        $AllResults.Add([pscustomobject]@{
-                                resultText = "No processable inbox rules found for $Username"
-                                state      = 'info'
-                            })
-                    }
-
-                    if ($RuleFailed -gt 0) {
-                        $AllResults.Add([pscustomobject]@{
-                                resultText = "Failed to process $RuleFailed inbox rules for $Username"
-                                state      = 'warning'
-                            })
-
-                        # Add individual rule failure messages as objects
-                        foreach ($RuleMessage in $RuleMessages) {
-                            $AllResults.Add([pscustomobject]@{
-                                    resultText = $RuleMessage
-                                    state      = 'error'
-                                })
-                        }
-                    }
-                }
-            }
-
-            $TotalProcessed = $RuleDisabled + $RuleFailed + $DelegateRulesSkipped
-            Write-LogMessage -headers $Headers -API $APIName -message "Completed inbox rules processing for $Username. Total rules: $(($Rules | Measure-Object).Count), Processed: $TotalProcessed, Disabled: $RuleDisabled, Failed: $RuleFailed, Delegate rules skipped: $DelegateRulesSkipped" -Sev 'Info' -tenant $TenantFilter
-
-        } catch {
-            $ErrorMsg = "Failed to process inbox rules: $($_.Exception.Message)"
-            Write-LogMessage -headers $Headers -API $APIName -message $ErrorMsg -Sev 'Error' -tenant $TenantFilter
-            $AllResults.Add([pscustomobject]@{
-                    resultText = $ErrorMsg
-                    state      = 'error'
-                })
-        }
-
-        # Step 6: Disable OneDrive Sharing
-        $Step = 'Disable OneDrive Sharing'
-        try {
-            $OneDriveResult = Set-CIPPOneDriveSharing -UserId $Username -TenantFilter $TenantFilter -SharingCapability 'Disabled' -APIName $APIName -Headers $Headers
-            $AllResults.Add([pscustomobject]@{
-                    resultText = $OneDriveResult
-                    state      = if ($OneDriveResult -like '*Successfully*') { 'success' } else { 'error' }
-                })
-        } catch {
-            $AllResults.Add([pscustomobject]@{
-                    resultText = "Failed to disable OneDrive sharing: $($_.Exception.Message)"
-                    state      = 'error'
-                })
-        }
-
-        $StatusCode = [HttpStatusCode]::OK
-        Write-LogMessage -API 'BECRemediate' -tenant $TenantFilter -message "Executed Remediation for $Username" -sev 'Info' -LogData @($AllResults)
-
-        # Return the results array
-        $AllResults.ToArray()
-
+        @($Rows | ForEach-Object {
+                $Row = [ordered]@{ resultText = $_.resultText; state = $_.state; Action = $_.Action; Target = $_.Target }
+                if ($_.copyField) { $Row.copyField = $_.copyField }
+                [pscustomobject]$Row
+            })
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $ErrorList = [System.Collections.Generic.List[object]]::new()
-        $ErrorList.Add([pscustomobject]@{
-                resultText = "Failed to execute remediation at step '$Step'. $($ErrorMessage.NormalizedError)"
-                state      = 'error'
-            })
-        Write-LogMessage -API 'BECRemediate' -tenant $TenantFilter -message "Executed Remediation for $Username failed at the $Step step" -sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
-
-        # Return the error array
-        $ErrorList.ToArray()
+        if ($StatusCode -eq [HttpStatusCode]::OK) { $StatusCode = [HttpStatusCode]::InternalServerError }
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "BEC containment for $Username was not executed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        @([pscustomobject]@{ resultText = $ErrorMessage.NormalizedError; state = 'error' })
     }
 
-    # Create the final response structure
-    $ResponseBody = [pscustomobject]@{'Results' = @($Results) }
-
-    # Associate values to output bindings
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $ResponseBody
+            # DeploymentId is set only for an Async run: the id to poll with ListOffboardingProgress
+            Body       = [pscustomobject]@{ Results = @($Results); DeploymentId = $AsyncDeploymentId }
         })
-
 }

@@ -32,6 +32,9 @@ function Get-CIPPBaseline {
     $RolloutRows = Get-CIPPAzDataTableEntity @RolloutTable -Filter $Filter
     if (-not $RolloutRows) { return }
 
+    $RepoTable = Get-CippTable -tablename 'CommunityRepos'
+    $Repos = @(Get-CIPPAzDataTableEntity @RepoTable -Filter "PartitionKey eq 'CommunityRepos'")
+
     $DeltaTable = Get-CippTable -tablename 'Baselines'
     $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
 
@@ -44,10 +47,14 @@ function Get-CIPPBaseline {
     # name field = displayName) are what CA and Intune templates use, but the wider
     # template families store rows under partitions that do NOT match their executor
     # ('TransportTemplate', 'ExConnectorTemplate', ...) and name them 'name'/'Name'.
+    # Only picker identities are template references: free-text identities (the
+    # Autopilot/Device Prep/Apple enrollment profile names) are the value itself, and
+    # wrapping them renders '[object Object]' in the editor's text field.
     $IdentityDefinitions = @{}
     if ($ResolveIdentityLabels) {
         foreach ($Definition in @(Get-CIPPBaselineDefinition)) {
-            if ($Definition.instanceIdentity) {
+            $IdentityType = "$($Definition.variables.$($Definition.instanceIdentity).type)"
+            if ($Definition.instanceIdentity -and $IdentityType -in @('autoComplete', 'select')) {
                 $IdentityDefinitions[$Definition.name] = @{
                     Variable  = $Definition.instanceIdentity
                     Partition = "$($Definition.identity.partition ?? $Definition.remediate.executor)"
@@ -113,6 +120,13 @@ function Get-CIPPBaseline {
             $StageDefinitions = @($RolloutRow.Stages | ConvertFrom-Json -ErrorAction Stop)
             $ExcludedTenants = @()
             try { if ($RolloutRow.excludedTenants) { $ExcludedTenants = @($RolloutRow.excludedTenants | ConvertFrom-Json) } } catch { }
+            # Expand a stored group Id to its member domains, same as assignment scopes. Raw
+            # values (including group Ids) stay in $ExcludedTenants for the exclusions display.
+            $ExpandedExcludedTenants = @($ExcludedTenants | ForEach-Object {
+                    $Value = $_
+                    $Group = $Groups | Where-Object { $_.Id -eq $Value } | Select-Object -First 1
+                    if ($Group) { $Group.Members.defaultDomainName } else { $Value }
+                } | Select-Object -Unique)
 
             # The standards per stage come from the delta rows for this baseline.
             $SafeGuid = ConvertTo-CIPPODataFilterValue -Value $GUID
@@ -128,7 +142,8 @@ function Get-CIPPBaseline {
                     name            = $StageDefinition.name
                     logic           = $StageDefinition.logic
                     conditions      = @($StageDefinition.conditions)
-                    standards       = @($StageDeltas.standardName)
+                    # Enumerated explicitly: member access on an empty array yields a lone $null.
+                    standards       = @($StageDeltas | ForEach-Object { $_.standardName })
                     standardsConfig = @($StageDeltas | ForEach-Object {
                             [PSCustomObject]@{
                                 standard         = (($_.standardName) -split '#')[0]
@@ -234,7 +249,7 @@ function Get-CIPPBaseline {
                     $Assignment.scopeId
                 }
             }
-            $AssignedDomains = @($AssignedDomains | Where-Object { $_ -and $_ -ne 'Exported Template' -and $ExcludedTenants -notcontains $_ } | Select-Object -Unique)
+            $AssignedDomains = @($AssignedDomains | Where-Object { $_ -and $_ -ne 'Exported Template' -and $ExpandedExcludedTenants -notcontains $_ } | Select-Object -Unique)
             foreach ($Domain in $AssignedDomains) {
                 if ($TenantStates.tenantFilter -notcontains $Domain) {
                     $TenantStates.Add((& $NewState $Domain 1 $RolloutRow.updatedAt))
@@ -257,18 +272,27 @@ function Get-CIPPBaseline {
                 }
             }
 
+            $IsRepoSource = Test-CIPPRepoSource -Source $RolloutRow.Source
             [PSCustomObject]@{
                 GUID               = $GUID
                 templateName       = $RolloutRow.templateName
                 baselineName       = $RolloutRow.templateName
                 description        = $RolloutRow.description
                 assignedTenants    = $AssignedTenants
-                assignments        = $(if ($AssignedTo.Count -gt 0) { $AssignedTo } else { $Assignments })
-                exclusions         = $(if ($ExcludedTo.Count -gt 0) { $ExcludedTo } else { @($ExcludedTenants | ForEach-Object { [PSCustomObject]@{ label = $_; value = $_ } }) })
-                excludedTenants    = $ExcludedTenants
+                # @() not $(): a subexpression unrolls a one-item list into a bare object, which
+                # the table then flattens into "Exclusions - Label" columns that go blank as soon
+                # as a second entry exists (#771). Always ship a real array.
+                assignments        = @(if ($AssignedTo.Count -gt 0) { $AssignedTo } else { $Assignments })
+                exclusions         = @(if ($ExcludedTo.Count -gt 0) { $ExcludedTo } else { $ExcludedTenants | ForEach-Object { [PSCustomObject]@{ label = $_; value = $_ } } })
+                excludedTenants    = $ExpandedExcludedTenants
                 alertEmails        = $RolloutRow.alertEmails
                 alertWebhookUrl    = $RolloutRow.alertWebhookUrl
+                disableAlerts      = [bool]$RolloutRow.disableAlerts
                 disableScheduledRuns = [bool]$RolloutRow.disableScheduledRuns
+                source             = $(if ($IsRepoSource) { $RolloutRow.Source } else { $null })
+                isSynced           = ($IsRepoSource -and ![string]::IsNullOrEmpty($RolloutRow.SHA))
+                sourceUrl          = $(if ($IsRepoSource) { Get-CIPPTemplateSourceUrl -Source $RolloutRow.Source -SourcePath $RolloutRow.SourcePath -Repos $Repos } else { $null })
+                hasLocalChanges    = $(if ($IsRepoSource) { [bool]$RolloutRow.LocalChanges } else { $null })
                 standardsCount     = $UniqueStandards.Count
                 stageNames         = @($Stages.name)
                 stages             = $Stages

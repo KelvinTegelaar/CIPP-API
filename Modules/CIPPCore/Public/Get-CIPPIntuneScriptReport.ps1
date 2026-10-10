@@ -2,7 +2,11 @@ function Get-CIPPIntuneScriptReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     $ScriptTypeMap = [ordered]@{
@@ -13,20 +17,17 @@ function Get-CIPPIntuneScriptReport {
     }
 
     if ($TenantFilter -eq 'AllTenants') {
-        $Tenants = foreach ($Type in $ScriptTypeMap.Keys) {
-            Get-CIPPDbItem -TenantFilter 'allTenants' -Type $Type |
-                Where-Object { $_.RowKey -notlike '*-Count' } |
-                Select-Object -ExpandProperty PartitionKey -Unique
-        }
-        $Tenants = @($Tenants | Select-Object -Unique)
-
-        $TenantList = Get-Tenants -IncludeErrors
-        $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+        $ByType = @{}
+        foreach ($Type in $ScriptTypeMap.Keys) { $ByType[$Type] = Get-CIPPDbItem -TenantFilter 'allTenants' -Type $Type -ByTenant }
+        $Tenants = @(foreach ($Type in $ScriptTypeMap.Keys) { $ByType[$Type].Keys }) | Select-Object -Unique
 
         $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
         foreach ($Tenant in $Tenants) {
+            # Hand each tenant its rows and drop them here so they can be freed once processed
+            $TenantItems = @{}
+            foreach ($Type in $ScriptTypeMap.Keys) { $TenantItems[$Type] = $ByType[$Type][$Tenant] ?? @(); $ByType[$Type].Remove($Tenant) }
             try {
-                $TenantResults = Get-CIPPIntuneScriptReport -TenantFilter $Tenant
+                $TenantResults = Get-CIPPIntuneScriptReport -TenantFilter $Tenant -DbItems $TenantItems
                 foreach ($Result in $TenantResults) {
                     $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                     $AllResults.Add($Result)
@@ -49,7 +50,7 @@ function Get-CIPPIntuneScriptReport {
     $ItemsByType = @{}
     $AllItems = [System.Collections.Generic.List[object]]::new()
     foreach ($Type in $ScriptTypeMap.Keys) {
-        $Items = @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type | Where-Object { $_.RowKey -notlike '*-Count' })
+        $Items = @($(if ($DbItems) { $DbItems[$Type] } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type }) | Where-Object { $_.RowKey -notlike '*-Count' })
         $ItemsByType[$Type] = $Items
         foreach ($Item in $Items) { $AllItems.Add($Item) }
     }

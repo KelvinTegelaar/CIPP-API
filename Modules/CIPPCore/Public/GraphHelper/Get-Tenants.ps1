@@ -30,7 +30,7 @@ function Get-Tenants {
     } elseif ($IncludeErrors.IsPresent) {
         $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
     } else {
-        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false and GraphErrorCount lt 50"
+        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
     }
 
     if ($TenantFilter) {
@@ -60,30 +60,33 @@ function Get-Tenants {
     }
 
     if ($CleanOld.IsPresent) {
-        try {
-            $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
-            # Filter out MLT relationships locally
-            $GDAPRelationships = $GDAPRelationships | Where-Object { $_.displayName -notlike 'MLT_*' }
-            if (!$GDAPRelationships) {
-                Write-LogMessage -API 'Get-Tenants' -message 'Tried cleaning old tenants but failed to get GDAP relationships - No relationships returned' -Sev 'Critical'
-                throw 'Failed to get GDAP relationships for cleaning old tenants.'
-            }
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'Get-Tenants' -message "Tried cleaning old tenants but failed to get GDAP relationships - $($_.Exception.Message)" -Sev 'Critical' -LogData $ErrorMessage
-            throw $_
-        }
-        $GDAPList = foreach ($Relationship in $GDAPRelationships) {
-            [PSCustomObject]@{
-                customerId      = $Relationship.customer.tenantId
-                displayName     = $Relationship.customer.displayName
-                autoExtend      = ($Relationship.autoExtendDuration -ne 'PT0S')
-                relationshipEnd = $Relationship.endDateTime
-            }
-        }
+        # Only check GDAP relationships if there are GDAP-managed tenants to reconcile against - direct-tenant deployments have none.
         $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false and delegatedPrivilegeStatus ne 'directTenant'"
-        $CurrentTenants | Where-Object { $_.customerId -notin $GDAPList.customerId -and $_.customerId -ne $env:TenantID } | ForEach-Object {
-            Remove-CIPPAzDataTableEntity -Force @TenantsTable -Entity $_
+        if (($CurrentTenants | Measure-Object).Count -gt 0) {
+            try {
+                $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
+                # Filter out MLT relationships locally
+                $GDAPRelationships = $GDAPRelationships | Where-Object { $_.displayName -notlike 'MLT_*' }
+                if (!$GDAPRelationships) {
+                    Write-LogMessage -API 'Get-Tenants' -message 'Tried cleaning old tenants but failed to get GDAP relationships - No relationships returned' -Sev 'Critical'
+                    throw 'Failed to get GDAP relationships for cleaning old tenants.'
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Get-Tenants' -message "Tried cleaning old tenants but failed to get GDAP relationships - $($_.Exception.Message)" -Sev 'Critical' -LogData $ErrorMessage
+                throw $_
+            }
+            $GDAPList = foreach ($Relationship in $GDAPRelationships) {
+                [PSCustomObject]@{
+                    customerId      = $Relationship.customer.tenantId
+                    displayName     = $Relationship.customer.displayName
+                    autoExtend      = ($Relationship.autoExtendDuration -ne 'PT0S')
+                    relationshipEnd = $Relationship.endDateTime
+                }
+            }
+            $CurrentTenants | Where-Object { $_.customerId -notin $GDAPList.customerId -and $_.customerId -ne $env:TenantID } | ForEach-Object {
+                Remove-CIPPAzDataTableEntity -Force @TenantsTable -Entity $_
+            }
         }
     }
     $PartnerModeTable = Get-CippTable -tablename 'tenantMode'
@@ -136,13 +139,6 @@ function Get-Tenants {
 
             if ($Alias) {
                 Write-Host "Alias found for $($_.Name) - $Alias."
-            }
-
-            if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
-                # Reset error count
-                Write-Host "Resetting error count for $($_.Name)"
-                $ExistingTenantInfo.GraphErrorCount = 0
-                Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
             }
 
             # Re-read domains for a row last derived over 7 days ago even when it looks healthy: a custom
@@ -229,7 +225,6 @@ function Get-Tenants {
                     Excluded                 = $false
                     ExcludeUser              = ''
                     ExcludeDate              = ''
-                    GraphErrorCount          = 0
                     LastGraphError           = ''
                     RequiresRefresh          = [bool]$RequiresRefresh
                     LastRefresh              = (Get-Date).ToUniversalTime()
@@ -259,7 +254,6 @@ function Get-Tenants {
                 Excluded          = $false
                 ExcludeUser       = ''
                 ExcludeDate       = ''
-                GraphErrorCount   = 0
                 LastGraphError    = ''
                 RequiresRefresh   = [bool]$RequiresRefresh
                 LastRefresh       = (Get-Date).ToUniversalTime()
@@ -290,7 +284,6 @@ function Get-Tenants {
                 Excluded          = $false
                 ExcludeUser       = ''
                 ExcludeDate       = ''
-                GraphErrorCount   = 0
                 LastGraphError    = ''
                 RequiresRefresh   = [bool]$RequiresRefresh
                 LastRefresh       = (Get-Date).ToUniversalTime()

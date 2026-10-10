@@ -31,7 +31,7 @@ function Set-CIPPDBCachePIMSettings {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching PIM settings' -sev Debug
 
         try {
-            $PIMRoleSettings = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/roleManagementPolicyAssignments?$top=999' -tenantid $TenantFilter
+            $PIMRoleSettings = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/policies/roleManagementPolicyAssignments?`$filter=scopeId eq '/' and scopeType eq 'DirectoryRole'&`$top=999" -tenantid $TenantFilter
 
             if ($PIMRoleSettings) {
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMRoleSettings' -Data $PIMRoleSettings -AddCount

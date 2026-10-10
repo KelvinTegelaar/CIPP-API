@@ -69,7 +69,6 @@ function Invoke-CIPPStandardallowOTPTokens {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.allowOTPTokens' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
-        Add-CIPPBPAField -FieldName 'MSAuthenticator' -FieldValue $CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
     }
 
 }

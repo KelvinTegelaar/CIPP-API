@@ -22,13 +22,12 @@ BeforeAll {
     # binding makes signature drift in the standard fail loudly here instead of silently
     # landing in $args.
     function New-CIPPDbRequest { [CmdletBinding()] param($TenantFilter, $Type, $Fields) }
-    function New-GraphGetRequest { [CmdletBinding()] param($uri, $tenantid, $scope, $AsApp, $noPagination, $NoAuthCheck, $skipTokenCache, $ComplexFilter, $CountOnly) }
+    function New-ExoRequest { [CmdletBinding()] param($cmdlet, $cmdParams, $Select, $Anchor, $useSystemMailbox, $tenantid, $NoAuthCheck, $Compliance, $ApiVersion, $AvailableCmdlets, $ModuleVersion, $AsApp, $UseCertificate) }
     function New-GraphBulkRequest { [CmdletBinding()] param($tenantid, $NoAuthCheck, $scope, $asapp, $Requests, $NoPaginateIds, $Version, $Headers) }
     function Set-CIPPDBCacheUsers { [CmdletBinding()] param($TenantFilter) }
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $Tenant2, $message, $sev, $headers, $LogData) }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $TenantFilter, $Tenant) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Get-NormalizedError { [CmdletBinding()] param($Message) $Message }
     function Get-CippException { [CmdletBinding()] param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
 
@@ -38,7 +37,7 @@ BeforeAll {
     # declared there are not in scope inside It blocks or mocks at run time.
     $script:Tenant = 'contoso.onmicrosoft.com'
 
-    # Both shapes go through ConvertFrom-Json, matching what the cache and the adminapi hand back.
+    # Both shapes go through ConvertFrom-Json, matching what the cache and the Get-Mailbox cmdlet hand back.
     function script:New-CachedUser {
         param(
             [string]$Id,
@@ -61,10 +60,10 @@ BeforeAll {
             [string]$Type = 'SharedMailbox'
         )
         [ordered]@{
-            ObjectKey            = $Id
-            UserPrincipalName    = $Upn
-            DisplayName          = $Upn
-            RecipientTypeDetails = $Type
+            ExternalDirectoryObjectId = $Id
+            UserPrincipalName         = $Upn
+            DisplayName               = $Upn
+            RecipientTypeDetails      = $Type
         } | ConvertTo-Json -Depth 5 | ConvertFrom-Json
     }
 }
@@ -80,7 +79,6 @@ Describe 'Invoke-CIPPStandardDisableSharedMailbox' {
         # Object keys the bulk PATCH should answer with a failure instead of a 204.
         $script:failKeys = @()
 
-        Mock -CommandName Add-CIPPBPAField -MockWith { }
         Mock -CommandName Set-CIPPDBCacheUsers -MockWith { }
         Mock -CommandName Write-LogMessage -MockWith {
             param($API, $tenant, $message, $sev, $LogData)
@@ -95,7 +93,7 @@ Describe 'Invoke-CIPPStandardDisableSharedMailbox' {
             $script:compare.Add(@{ Current = $CurrentValue; Expected = $ExpectedValue })
         }
         Mock -CommandName New-CIPPDbRequest -MockWith { $script:users }
-        Mock -CommandName New-GraphGetRequest -MockWith { $script:mailboxes }
+        Mock -CommandName New-ExoRequest -MockWith { $script:mailboxes }
         Mock -CommandName New-GraphBulkRequest -MockWith {
             param($tenantid, $Requests)
             @(foreach ($Request in $Requests) {
@@ -200,14 +198,14 @@ Describe 'Invoke-CIPPStandardDisableSharedMailbox' {
 
             Invoke-CIPPStandardDisableSharedMailbox -Tenant $script:Tenant -Settings @{ report = $true }
 
-            Should -Invoke New-GraphGetRequest -Times 0 -Exactly
+            Should -Invoke New-ExoRequest -Times 0 -Exactly
             @($script:logs | Where-Object { $_.Message -like '*could not read the cached user list*' }).Count | Should -Be 1
             $script:compare.Count | Should -Be 0
         }
 
         It 'names Exchange when the mailbox list fails' {
             $script:users = @(New-CachedUser -Id 'shared1' -Upn 'shared@contoso.com')
-            Mock -CommandName New-GraphGetRequest -MockWith { throw 'Exchange is down' }
+            Mock -CommandName New-ExoRequest -MockWith { throw 'Exchange is down' }
 
             Invoke-CIPPStandardDisableSharedMailbox -Tenant $script:Tenant -Settings @{ report = $true }
 
@@ -220,7 +218,7 @@ Describe 'Invoke-CIPPStandardDisableSharedMailbox' {
 
             Invoke-CIPPStandardDisableSharedMailbox -Tenant $script:Tenant -Settings @{ report = $true }
 
-            Should -Invoke New-GraphGetRequest -Times 0 -Exactly
+            Should -Invoke New-ExoRequest -Times 0 -Exactly
             @($script:logs | Where-Object { $_.Message -like '*cached user list is empty*' }).Count | Should -Be 1
             $script:compare.Count | Should -Be 0
         }

@@ -86,7 +86,6 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'PasswordExpireDisabled' -FieldValue $DomainsWithoutPassExpire -StoreAs json -Tenant $tenant
 
         $CurrentValue = @{
             DomainsWithoutPassExpire = @($DomainsWithoutPassExpire)

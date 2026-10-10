@@ -12,27 +12,42 @@ function Invoke-ListDefenderTVM {
     $TenantFilter = $Request.Query.tenantFilter
     # Interact with query parameters or the body of the request.
     try {
-        $GraphRequest = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine' -scope 'https://api.securitycenter.microsoft.com/.default' | Group-Object cveId
-        $GroupObj = foreach ($cve in $GraphRequest) {
-            # Start with base properties
+        # Fold the streamed export into one bucket per CVE as records arrive, rather than grouping
+        # every device x CVE record in memory. Per property the bucket keeps the lowest non-null
+        # value (arrays flattened), which is what sorting the group's values and taking the first did.
+        $Buckets = @{}
+        Get-DefenderTvmRaw -TenantId $TenantFilter -Stream | ForEach-Object {
+            $CveId = [string]$_.cveId
+            $Bucket = $Buckets[$CveId]
+            if (-not $Bucket) {
+                $Bucket = @{ Count = 0; Devices = [System.Collections.Generic.List[object]]::new(); Values = @{} }
+                $Buckets[$CveId] = $Bucket
+            }
+            $Bucket.Count++
+            foreach ($Property in $_.PSObject.Properties) {
+                if ($Property.Name -eq 'deviceName') {
+                    foreach ($Name in @($Property.Value)) { $Bucket.Devices.Add(@{ deviceName = $Name }) }
+                    continue
+                }
+                if (-not $Bucket.Values.ContainsKey($Property.Name)) { $Bucket.Values[$Property.Name] = $null }
+                foreach ($Value in @($Property.Value)) {
+                    if ($null -ne $Value -and ($null -eq $Bucket.Values[$Property.Name] -or $Value -lt $Bucket.Values[$Property.Name])) {
+                        $Bucket.Values[$Property.Name] = $Value
+                    }
+                }
+            }
+        }
+
+        $GroupObj = foreach ($CveId in ($Buckets.Keys | Sort-Object)) {
+            $Bucket = $Buckets[$CveId]
             $obj = [ordered]@{
                 customerId           = $TenantFilter
-                affectedDevicesCount = $cve.count
-                cveId                = $cve.name
+                affectedDevicesCount = $Bucket.Count
+                cveId                = $CveId
+                affectedDevices      = @($Bucket.Devices)
             }
-
-            # Get all unique property names from the group
-            $allProperties = $cve.group | Get-Member -MemberType Properties | Select-Object -ExpandProperty Name | Sort-Object -Unique
-
-            # Add all properties from the group with appropriate processing
-            foreach ($property in $allProperties) {
-                if ($property -eq 'deviceName') {
-                    # Special handling for deviceName - create array of objects
-                    $obj['affectedDevices'] = @($cve.group.$property | ForEach-Object { @{ $property = $_ } })
-                } else {
-                    # For all other properties, get unique values
-                    $obj[$property] = ($cve.group.$property | Sort-Object -Unique) | Select-Object -First 1
-                }
+            foreach ($Property in ($Bucket.Values.Keys | Sort-Object)) {
+                $obj[$Property] = $Bucket.Values[$Property]
             }
 
             # Convert and output as PSCustomObject. Not really needed, but hey, why not.

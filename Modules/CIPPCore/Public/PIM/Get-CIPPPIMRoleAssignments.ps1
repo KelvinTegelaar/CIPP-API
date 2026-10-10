@@ -31,13 +31,16 @@ function Get-CIPPPIMRoleAssignments {
 
     .PARAMETER FromCache
         Read the CIPPDB cache (RoleAssignmentScheduleInstances / RoleEligibilitySchedules, falling
-        back to the directoryRoles 'Roles' cache for tenants without PIM rows). Used for AllTenants.
+        back to the RoleAssignments cache, then the directoryRoles 'Roles' cache, for tenants without
+        PIM rows). Role names, descriptions and the built-in/privileged flags come from the
+        RoleDefinitions cache and AU scope names from the AdministrativeUnits cache. Used for
+        AllTenants and the cached Roles & Assignments view.
 
     .PARAMETER IncludePolicy
         Attach the role's PIM policy summary (PolicySummary, PolicyBelowFloor) to every row.
 
     .PARAMETER IncludeUnassignedRoles
-        Live reads only: also return one row per role definition that has no assignment at all
+        Also return one row per role definition that has no assignment at all
         (AssignmentType 'Unassigned', no principal), so the result doubles as the role catalogue.
         Ignored when -PrincipalId is given.
 
@@ -159,50 +162,68 @@ function Get-CIPPPIMRoleAssignments {
         }
     }
 
+    # Role names come from the tenant's definitions (custom roles included); PIM's
+    # roleDefinitionId equals the template id for built-in roles and the definition id otherwise.
+    # Live: beta, because isPrivileged is not on the v1.0 unifiedRoleDefinition and a $select of it
+    # fails the whole request, which left every row showing the template GUID. Cache: the
+    # RoleDefinitions cache holds the same fields.
+    $Definitions = @()
+    try {
+        $Definitions = if ($FromCache.IsPresent) {
+            @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'RoleDefinitions')
+        } else {
+            @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/roleManagement/directory/roleDefinitions?$select=id,templateId,displayName,description,isBuiltIn,isPrivileged' -tenantid $TenantFilter)
+        }
+    } catch {
+        Write-Information "Could not list role definitions for $TenantFilter`: $($_.Exception.Message)"
+    }
+    foreach ($Definition in @($Definitions)) {
+        $Info = @{ Description = $Definition.description; IsBuiltIn = [bool]$Definition.isBuiltIn }
+        if ($Definition.id) { $RoleNames[$Definition.id] = $Definition.displayName; $RoleInfo[$Definition.id] = $Info }
+        if ($Definition.templateId) { $RoleNames[$Definition.templateId] = $Definition.displayName; $RoleInfo[$Definition.templateId] = $Info }
+        if ($Definition.isPrivileged -eq $true) {
+            $null = $PrivilegedIds.Add($Definition.id)
+            if ($Definition.templateId) { $null = $PrivilegedIds.Add($Definition.templateId) }
+        }
+    }
+
     if ($FromCache.IsPresent) {
         $Instances = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'RoleAssignmentScheduleInstances')
         $Eligibilities = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'RoleEligibilitySchedules')
         $CachedRoles = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Roles')
+        # directoryRoles only fill what the definitions cache did not (not collected yet).
         foreach ($Role in $CachedRoles) {
-            if ($Role.roleTemplateId -and $Role.displayName) { $RoleNames[$Role.roleTemplateId] = $Role.displayName }
-            if ($Role.roleTemplateId) { $RoleInfo[$Role.roleTemplateId] = @{ Description = $Role.description; IsBuiltIn = $null } }
+            if (-not $Role.roleTemplateId) { continue }
+            if ($Role.displayName -and -not $RoleNames.ContainsKey($Role.roleTemplateId)) { $RoleNames[$Role.roleTemplateId] = $Role.displayName }
+            if (-not $RoleInfo.ContainsKey($Role.roleTemplateId)) { $RoleInfo[$Role.roleTemplateId] = @{ Description = $Role.description; IsBuiltIn = $null } }
         }
 
-        if ($Instances.Count -gt 0 -or $Eligibilities.Count -gt 0) {
+        $PIMCapable = ($Instances.Count -gt 0 -or $Eligibilities.Count -gt 0)
+        if ($PIMCapable) {
             Add-InstanceRows -Instances $Instances -PIMCapable $true
             Add-EligibilityRows -Schedules $Eligibilities
         } else {
-            # No PIM data cached (non-P2 tenant or PIM never onboarded): directoryRoles members are
-            # all permanent, direct assignments.
-            foreach ($Role in $CachedRoles) {
-                foreach ($Member in @($Role.members)) {
-                    if (-not $Member.id) { continue }
-                    $Rows.Add((ConvertTo-Row -Principal $Member -PrincipalObjectId $Member.id -RoleId ($Role.roleTemplateId ?? $Role.id) -AssignmentType 'Permanent' -MemberType 'Direct' -ScopeId '/' -Start $null -End $null -Source 'Direct' -ScheduleId $null -RoleAssignmentId $null -PIMCapable $false))
+            # No PIM data cached (non-P2 tenant or PIM never onboarded): every assignment is
+            # permanent and direct. The RoleAssignments cache covers custom roles and AU scopes;
+            # directoryRoles members (built-in roles at directory scope) are the older fallback.
+            $CachedAssignments = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'RoleAssignments')
+            if ($CachedAssignments.Count -gt 0) {
+                foreach ($Assignment in $CachedAssignments) {
+                    if (-not $Assignment.principalId) { continue }
+                    $Principal = $Assignment.principal ?? [PSCustomObject]@{ displayName = $null; userPrincipalName = $null; '@odata.type' = $null; appId = $null }
+                    $Rows.Add((ConvertTo-Row -Principal $Principal -PrincipalObjectId $Assignment.principalId -RoleId $Assignment.roleDefinitionId -AssignmentType 'Permanent' -MemberType 'Direct' -ScopeId $Assignment.directoryScopeId -Start $null -End $null -Source 'Direct' -ScheduleId $null -RoleAssignmentId $Assignment.id -PIMCapable $false))
+                }
+            } else {
+                foreach ($Role in $CachedRoles) {
+                    foreach ($Member in @($Role.members)) {
+                        if (-not $Member.id) { continue }
+                        $Rows.Add((ConvertTo-Row -Principal $Member -PrincipalObjectId $Member.id -RoleId ($Role.roleTemplateId ?? $Role.id) -AssignmentType 'Permanent' -MemberType 'Direct' -ScopeId '/' -Start $null -End $null -Source 'Direct' -ScheduleId $null -RoleAssignmentId $null -PIMCapable $false))
+                    }
                 }
             }
         }
     } else {
         $PIMCapable = [bool](Test-CIPPStandardLicense -StandardName 'PIMRoleAssignments' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog)
-
-        # Role names come from the tenant's definitions (custom roles included); PIM's
-        # roleDefinitionId equals the template id for built-in roles and the definition id otherwise.
-        # beta: isPrivileged is not on the v1.0 unifiedRoleDefinition and a $select of it fails the
-        # whole request, which left every row showing the template GUID.
-        $Definitions = @()
-        try {
-            $Definitions = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/roleManagement/directory/roleDefinitions?$select=id,templateId,displayName,description,isBuiltIn,isPrivileged' -tenantid $TenantFilter)
-            foreach ($Definition in @($Definitions)) {
-                $Info = @{ Description = $Definition.description; IsBuiltIn = [bool]$Definition.isBuiltIn }
-                if ($Definition.id) { $RoleNames[$Definition.id] = $Definition.displayName; $RoleInfo[$Definition.id] = $Info }
-                if ($Definition.templateId) { $RoleNames[$Definition.templateId] = $Definition.displayName; $RoleInfo[$Definition.templateId] = $Info }
-                if ($Definition.isPrivileged -eq $true) {
-                    $null = $PrivilegedIds.Add($Definition.id)
-                    if ($Definition.templateId) { $null = $PrivilegedIds.Add($Definition.templateId) }
-                }
-            }
-        } catch {
-            Write-Information "Could not list role definitions for $TenantFilter`: $($_.Exception.Message)"
-        }
 
         $Filters = [System.Collections.Generic.List[string]]::new()
         if ($PrincipalId) { $Filters.Add("principalId eq '$PrincipalId'") }
@@ -230,42 +251,48 @@ function Get-CIPPPIMRoleAssignments {
                 $Rows.Add((ConvertTo-Row -Principal $Principal -PrincipalObjectId $Assignment.principalId -RoleId $Assignment.roleDefinitionId -AssignmentType 'Permanent' -MemberType 'Direct' -ScopeId $Assignment.directoryScopeId -Start $null -End $null -Source 'Direct' -ScheduleId $null -RoleAssignmentId $Assignment.id -PIMCapable $false))
             }
         }
+    }
 
-        # The role catalogue: one row per definition nobody holds, so the PIM page can list every
-        # role the way the old Roles page did. Skipped for a single-principal read.
-        if ($IncludeUnassignedRoles.IsPresent -and -not $PrincipalId) {
-            $AssignedRoleIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Rows.RoleDefinitionId | Where-Object { $_ }), [System.StringComparer]::OrdinalIgnoreCase)
-            foreach ($Definition in $Definitions) {
-                $RoleId = $Definition.templateId ?? $Definition.id
-                if (-not $RoleId) { continue }
-                if ($RoleDefinitionId -and $RoleId -ne $RoleDefinitionId -and $Definition.id -ne $RoleDefinitionId) { continue }
-                if ($AssignedRoleIds.Contains($RoleId) -or ($Definition.id -and $AssignedRoleIds.Contains($Definition.id))) { continue }
-                $NoPrincipal = [PSCustomObject]@{ displayName = $null; userPrincipalName = $null; '@odata.type' = $null; appId = $null }
-                $Row = ConvertTo-Row -Principal $NoPrincipal -PrincipalObjectId '' -RoleId $RoleId -AssignmentType 'Unassigned' -MemberType '' -ScopeId '/' -Start $null -End $null -Source '' -ScheduleId $null -RoleAssignmentId $null -PIMCapable $PIMCapable
-                $Row.PrincipalId = $null
-                $Row.PrincipalType = 'None'
-                $Rows.Add($Row)
-            }
+    # The role catalogue: one row per definition nobody holds, so the PIM page can list every
+    # role the way the old Roles page did. Skipped for a single-principal read.
+    if ($IncludeUnassignedRoles.IsPresent -and -not $PrincipalId) {
+        $AssignedRoleIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Rows.RoleDefinitionId | Where-Object { $_ }), [System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($Definition in $Definitions) {
+            $RoleId = $Definition.templateId ?? $Definition.id
+            if (-not $RoleId) { continue }
+            if ($RoleDefinitionId -and $RoleId -ne $RoleDefinitionId -and $Definition.id -ne $RoleDefinitionId) { continue }
+            if ($AssignedRoleIds.Contains($RoleId) -or ($Definition.id -and $AssignedRoleIds.Contains($Definition.id))) { continue }
+            $NoPrincipal = [PSCustomObject]@{ displayName = $null; userPrincipalName = $null; '@odata.type' = $null; appId = $null }
+            $Row = ConvertTo-Row -Principal $NoPrincipal -PrincipalObjectId '' -RoleId $RoleId -AssignmentType 'Unassigned' -MemberType '' -ScopeId '/' -Start $null -End $null -Source '' -ScheduleId $null -RoleAssignmentId $null -PIMCapable $PIMCapable
+            $Row.PrincipalId = $null
+            $Row.PrincipalType = 'None'
+            $Rows.Add($Row)
         }
+    }
 
-        # Administrative-unit scopes: show the unit's name instead of its id.
-        $UnitIds = @($ScopeIds | Where-Object { $_ -match '^/administrativeUnits/' } | ForEach-Object { $_ -replace '^/administrativeUnits/', '' })
-        if ($UnitIds.Count -gt 0) {
-            try {
+    # Administrative-unit scopes: show the unit's name instead of its id.
+    $UnitIds = @($ScopeIds | Where-Object { $_ -match '^/administrativeUnits/' } | ForEach-Object { $_ -replace '^/administrativeUnits/', '' })
+    if ($UnitIds.Count -gt 0) {
+        try {
+            $UnitNames = @{}
+            if ($FromCache.IsPresent) {
+                foreach ($Unit in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'AdministrativeUnits')) {
+                    if ($Unit.id -and $Unit.displayName) { $UnitNames["/administrativeUnits/$($Unit.id)"] = "AU: $($Unit.displayName)" }
+                }
+            } else {
                 $UnitRequests = @(foreach ($UnitId in $UnitIds) {
                         @{ id = $UnitId; method = 'GET'; url = "/directory/administrativeUnits/$UnitId`?`$select=id,displayName" }
                     })
                 $UnitResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests $UnitRequests -Version 'v1.0'
-                $UnitNames = @{}
                 foreach ($Result in @($UnitResults)) {
                     if ($Result.body.displayName) { $UnitNames["/administrativeUnits/$($Result.id)"] = "AU: $($Result.body.displayName)" }
                 }
-                foreach ($Row in $Rows) {
-                    if ($UnitNames.ContainsKey($Row.DirectoryScopeId)) { $Row.Scope = $UnitNames[$Row.DirectoryScopeId] }
-                }
-            } catch {
-                Write-Information "Could not resolve administrative unit names for $TenantFilter`: $($_.Exception.Message)"
             }
+            foreach ($Row in $Rows) {
+                if ($UnitNames.ContainsKey($Row.DirectoryScopeId)) { $Row.Scope = $UnitNames[$Row.DirectoryScopeId] }
+            }
+        } catch {
+            Write-Information "Could not resolve administrative unit names for $TenantFilter`: $($_.Exception.Message)"
         }
     }
 

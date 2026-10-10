@@ -131,6 +131,5 @@ function Invoke-CIPPStandardSPGuestPeoplePicker {
             NonCompliantSiteCount = 0
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SPGuestPeoplePicker' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'SPGuestPeoplePicker' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -1,4 +1,4 @@
-Each accepted domain in your organization should be covered by a Safe Links policy to ensure all users receive URL protection. Without domain-specific Safe Links coverage, users in certain domains may not be protected from malicious links, creating security gaps that attackers can exploit to target specific business units or subsidiaries.
+Each accepted domain in your organization should be covered by a Safe Links policy to ensure all users receive URL protection. A domain is considered fully covered only when an enabled Safe Links policy rule targets the domain without domain, recipient, or group exclusions. Without domain-specific Safe Links coverage, users in certain domains may not be protected from malicious links, creating security gaps that attackers can exploit to target specific business units or subsidiaries.
 
 **Remediation action**
 

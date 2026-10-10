@@ -104,7 +104,6 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TeamsExternalFileSharing' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentValue = @{
             AllowGoogleDrive = $CurrentState.AllowGoogleDrive

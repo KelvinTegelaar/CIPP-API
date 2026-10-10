@@ -10,7 +10,8 @@ function Get-CIPPGeoIPLocationBatch {
         written back to knownlocationdbv2 and cachegeoip so later processing is a cache hit.
 
         Returns a hashtable keyed by normalized IP -> flattened location object
-        @{ CountryOrRegion; City; Proxy; Hosting; ASName }. Failed/unknown lookups are NOT cached
+        @{ CountryOrRegion; City; Proxy; Hosting; ASName; Org }. Org is the registered owner, which
+        ip-api still reports for ranges no network announces (so ASName is Unknown). Failed/unknown lookups are NOT cached
         (no poisoning) and are absent from the returned hashtable.
 
         Used both at ingestion (warm the cache up front) and as a per-batch prefetch in the audit
@@ -90,13 +91,15 @@ function Get-CIPPGeoIPLocationBatch {
             continue
         }
         $cached = Get-CIPPAzDataTableEntity @LocationTable -Filter "PartitionKey eq 'ip' and RowKey eq '$ip' and Timestamp ge datetime'$ValidAfter'"
-        if ($cached -and $cached.CountryOrRegion -and $cached.CountryOrRegion -ne 'Unknown') {
+        # rows cached before Org was kept are re-read when they also lack a network name
+        if ($cached -and $cached.CountryOrRegion -and $cached.CountryOrRegion -ne 'Unknown' -and -not ($cached.ASName -eq 'Unknown' -and -not $cached.Org)) {
             $Result[$ip] = [pscustomobject]@{
                 CountryOrRegion = $cached.CountryOrRegion
                 City            = $cached.City
                 Proxy           = $cached.Proxy
                 Hosting         = $cached.Hosting
                 ASName          = $cached.ASName
+                Org             = $cached.Org
             }
             $script:GeoIpMemo[$ip] = [pscustomobject]@{ Expires = $MemoExpiry; Location = $Result[$ip] }
         } else {
@@ -122,7 +125,7 @@ function Get-CIPPGeoIPLocationBatch {
             foreach ($ip in $chunk) {
                 try {
                     $s = Invoke-GeoRetry -Uri "https://geoipdb.azurewebsites.net/api/GetIPInfo?IP=$ip"
-                    if ($s -and $s.status -ne 'fail') { $fb.Add([pscustomobject]@{ query = $ip; status = 'success'; countryCode = $s.countryCode; city = $s.city; proxy = $s.proxy; hosting = $s.hosting; asname = $s.asname }) }
+                    if ($s -and $s.status -ne 'fail') { $fb.Add([pscustomobject]@{ query = $ip; status = 'success'; countryCode = $s.countryCode; city = $s.city; proxy = $s.proxy; hosting = $s.hosting; asname = $s.asname; org = $s.org; isp = $s.isp }) }
                 } catch { }
             }
             $resp = $fb
@@ -136,6 +139,7 @@ function Get-CIPPGeoIPLocationBatch {
                 Proxy           = if ($null -ne $r.proxy) { $r.proxy } else { 'Unknown' }
                 Hosting         = if ($null -ne $r.hosting) { $r.hosting } else { 'Unknown' }
                 ASName          = if ($r.asname) { $r.asname } else { 'Unknown' }
+                Org             = if ($r.org) { $r.org } elseif ($r.isp) { $r.isp } else { 'Unknown' }
             }
             $Result[$ip] = $loc
             # Only cache real results - never persist Unknown (no poisoning, matches single path).
@@ -151,6 +155,7 @@ function Get-CIPPGeoIPLocationBatch {
                         Proxy           = "$($loc.Proxy)"
                         Hosting         = "$($loc.Hosting)"
                         ASName          = "$($loc.ASName)"
+                        Org             = "$($loc.Org)"
                     })
                 $CacheGeoEntities.Add(@{
                         PartitionKey = 'IP'

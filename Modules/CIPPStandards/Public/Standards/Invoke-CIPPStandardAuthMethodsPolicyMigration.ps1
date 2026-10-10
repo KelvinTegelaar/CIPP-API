@@ -74,9 +74,7 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
     }
 
     if ($Settings.report -eq $true) {
-        $migrationComplete = $CurrentInfo.policyMigrationState -eq 'migrationComplete' -or $null -eq $CurrentInfo.policyMigrationState
         Set-CIPPStandardsCompareField -FieldName 'standards.AuthMethodsPolicyMigration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
-        Add-CIPPBPAField -FieldName 'AuthMethodsPolicyMigration' -FieldValue $migrationComplete -StoreAs bool -Tenant $tenant
     }
 
 }

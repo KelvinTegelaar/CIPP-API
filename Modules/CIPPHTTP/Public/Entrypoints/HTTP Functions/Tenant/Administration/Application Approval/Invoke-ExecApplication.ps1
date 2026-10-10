@@ -10,7 +10,7 @@ function Invoke-ExecApplication {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     $ValidTypes = @('applications', 'servicePrincipals')
-    $ValidActions = @('Update', 'Upsert', 'Delete', 'RemoveKey', 'RemovePassword', 'Hide', 'Show')
+    $ValidActions = @('Update', 'Upsert', 'Delete', 'RemoveKey', 'RemovePassword', 'Hide', 'Show', 'ListSigningCertificates', 'AddSigningCertificate', 'SetPreferredSigningKey', 'RemoveSigningCertificate')
 
     $Id = $Request.Query.Id ?? $Request.Body.Id
     $Type = $Request.Query.Type ?? $Request.Body.Type
@@ -131,6 +131,114 @@ function Invoke-ExecApplication {
                 } else {
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Error'
                 }
+            }
+        } elseif ($Action -in @('ListSigningCertificates', 'AddSigningCertificate', 'SetPreferredSigningKey', 'RemoveSigningCertificate')) {
+            # SAML token-signing certificates. Graph identifies the active one by SHA-1 thumbprint
+            # (preferredTokenSigningKeyThumbprint) while keyCredentials only carry the public key,
+            # so derive the thumbprint from the key bytes rather than trusting customKeyIdentifier,
+            # which is SHA-256 on portal-issued certs.
+            if ($Type -ne 'servicePrincipals') { throw 'Token signing certificates exist only on service principals.' }
+            $GetSigning = {
+                $Sp = New-GraphGetRequest -Uri "$Uri`?`$select=displayName,preferredTokenSigningKeyThumbprint,keyCredentials,passwordCredentials" -tenantid $TenantFilter -AsApp $true
+                $Preferred = "$($Sp.preferredTokenSigningKeyThumbprint)".ToUpperInvariant()
+                $Certs = foreach ($Cred in @($Sp.keyCredentials | Where-Object { $_.usage -eq 'Verify' -and $_.key })) {
+                    $Thumb = ([System.BitConverter]::ToString([System.Security.Cryptography.SHA1]::HashData([System.Convert]::FromBase64String($Cred.key))) -replace '-', '')
+                    [PSCustomObject]@{
+                        keyId               = $Cred.keyId
+                        customKeyIdentifier = $Cred.customKeyIdentifier
+                        displayName         = $Cred.displayName
+                        thumbprint          = $Thumb
+                        startDateTime       = $Cred.startDateTime
+                        endDateTime         = $Cred.endDateTime
+                        preferred           = $Thumb -eq $Preferred
+                    }
+                }
+                [PSCustomObject]@{ DisplayName = $Sp.displayName; Preferred = $Preferred; Certificates = @($Certs); Sp = $Sp }
+            }
+            if ($Action -eq 'ListSigningCertificates') {
+                $Signing = & $GetSigning
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::OK
+                        Body       = @{ Results = @($Signing.Certificates | Select-Object -ExcludeProperty customKeyIdentifier); Metadata = @{ Preferred = $Signing.Preferred } }
+                    })
+            } elseif ($Action -eq 'AddSigningCertificate') {
+                # Entra generates the key pair server-side and adds it alongside the current one.
+                # Nothing signs with it until SetPreferredSigningKey.
+                # The display name becomes the immutable certificate subject and relying parties may
+                # show it, so default to Entra's own subject rather than branding it.
+                $DisplayName = "$($Request.Body.DisplayName)".Trim()
+                if (-not $DisplayName) { $DisplayName = 'Microsoft Azure Federated SSO Certificate' }
+                if ($DisplayName -notmatch '^CN=') { $DisplayName = "CN=$DisplayName" }
+                $EndDateTime = $Request.Body.EndDateTime
+                $End = if (-not $EndDateTime) {
+                    # Graph defaults to 3 years, which the tenant's app management policy may cap
+                    # (asymmetricKeyLifetime). Default to the shorter of the two.
+                    $Max = [TimeSpan]::FromDays(3 * 365)
+                    try {
+                        $Policies = @(New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/defaultAppManagementPolicy' -tenantid $TenantFilter -AsApp $true)
+                        $Policies += @(New-GraphGetRequest -Uri "$Uri/appManagementPolicies" -tenantid $TenantFilter -AsApp $true)
+                        foreach ($Policy in $Policies) {
+                            if ($Policy.isEnabled -eq $false) { continue }
+                            $Rules = @($Policy.servicePrincipalRestrictions.keyCredentials) + @($Policy.restrictions.keyCredentials)
+                            foreach ($Rule in ($Rules | Where-Object { $_.restrictionType -eq 'asymmetricKeyLifetime' -and $_.state -eq 'enabled' -and $_.maxLifetime })) {
+                                $Lifetime = [System.Xml.XmlConvert]::ToTimeSpan($Rule.maxLifetime)
+                                if ($Lifetime -lt $Max) { $Max = $Lifetime }
+                            }
+                        }
+                    } catch {
+                        Write-Information "Could not read app management policies for $TenantFilter, using the 3 year default: $($_.Exception.Message)"
+                    }
+                    # A day of slack so the lifetime Graph measures from its own clock stays under the cap.
+                    [DateTimeOffset]::UtcNow.Add($Max).AddDays(-1)
+                } elseif ("$EndDateTime" -match '^\d+$') {
+                    # The date picker posts unix seconds; accept ISO strings too.
+                    [DateTimeOffset]::FromUnixTimeSeconds([int64]$EndDateTime)
+                } else {
+                    [DateTimeOffset]::Parse("$EndDateTime")
+                }
+                $CertBody = @{ displayName = $DisplayName; endDateTime = $End.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') }
+                $NewCert = New-GraphPOSTRequest -Uri "$Uri/addTokenSigningCertificate" -Body ($CertBody | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+                $Results = @{
+                    resultText = "Added token signing certificate '$($NewCert.displayName)' (thumbprint $($NewCert.thumbprint), expires $($NewCert.endDateTime)). The current certificate stays active until you set the new one as preferred. Graph can take a minute to list it."
+                    state      = 'success'
+                    details    = @($NewCert | Select-Object keyId, thumbprint, displayName, startDateTime, endDateTime)
+                }
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
+            } elseif ($Action -eq 'RemoveSigningCertificate') {
+                $Thumbprint = "$($Request.Body.Thumbprint.value ?? $Request.Body.Thumbprint)".Trim().ToUpperInvariant()
+                if ($Thumbprint -notmatch '^[0-9A-F]{40}$') { throw 'Thumbprint must be the 40-character hex SHA-1 thumbprint of a signing certificate on this service principal.' }
+                $Signing = & $GetSigning
+                $Target = $Signing.Certificates | Where-Object { $_.thumbprint -eq $Thumbprint } | Select-Object -First 1
+                if (-not $Target) { throw "No signing certificate with thumbprint $Thumbprint is registered on '$($Signing.DisplayName)'." }
+                if ($Target.preferred) { throw "Certificate $Thumbprint is the preferred signing certificate. Set another certificate as preferred first." }
+                # A signing cert is a Verify key, a Sign key and the PFX password that share one
+                # customKeyIdentifier. Removing just the Verify key via RemoveKey leaves the private half
+                # behind and removePassword 500s on the PFX password, so replace both collections in one
+                # PATCH. Graph requires retained entries to carry null key material.
+                $DropKeyIds = @($Signing.Sp.keyCredentials | Where-Object { $_.customKeyIdentifier -eq $Target.customKeyIdentifier } | ForEach-Object { $_.keyId })
+                $KeepKeys = @($Signing.Sp.keyCredentials | Where-Object { $_.keyId -notin $DropKeyIds } | ForEach-Object { $_ | Select-Object keyId, type, usage, displayName, customKeyIdentifier, startDateTime, endDateTime, @{ n = 'key'; e = { $null } } })
+                $KeepPasswords = @($Signing.Sp.passwordCredentials | Where-Object { $_.keyId -notin $DropKeyIds } | ForEach-Object { $_ | Select-Object keyId, displayName, customKeyIdentifier, hint, startDateTime, endDateTime, @{ n = 'secretText'; e = { $null } } })
+                # Encode each entry individually so both collections stay JSON arrays at 0, 1 or many
+                # (a whole-collection ConvertTo-Json collapses single elements).
+                $ToJsonArray = { param($Items) '[' + (@($Items | ForEach-Object { ConvertTo-Json -InputObject $_ -Compress -Depth 5 }) -join ',') + ']' }
+                $PatchBody = '{{"keyCredentials":{0},"passwordCredentials":{1}}}' -f (& $ToJsonArray $KeepKeys), (& $ToJsonArray $KeepPasswords)
+                $null = New-GraphPOSTRequest -Uri $Uri -Type 'PATCH' -Body $PatchBody -tenantid $TenantFilter -AsApp $true
+                $Results = @{
+                    resultText = "Removed signing certificate $Thumbprint ($($DropKeyIds.Count) key entries and its PFX password) from '$($Signing.DisplayName)'."
+                    state      = 'success'
+                }
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
+            } else {
+                $Thumbprint = "$($Request.Body.Thumbprint.value ?? $Request.Body.Thumbprint)".Trim().ToUpperInvariant()
+                if ($Thumbprint -notmatch '^[0-9A-F]{40}$') { throw 'Thumbprint must be the 40-character hex SHA-1 thumbprint of a signing certificate on this service principal.' }
+                $Signing = & $GetSigning
+                if ($Signing.Certificates.thumbprint -notcontains $Thumbprint) { throw "No signing certificate with thumbprint $Thumbprint is registered on '$($Signing.DisplayName)'." }
+                $null = New-GraphPOSTRequest -Uri $Uri -Type 'PATCH' -Body (@{ preferredTokenSigningKeyThumbprint = $Thumbprint } | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+                $Results = @{
+                    resultText = "'$($Signing.DisplayName)' now signs tokens with certificate $Thumbprint. Update the relying party's trust before removing the previous certificate."
+                    state      = 'success'
+                }
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
             }
         } elseif ($Action -eq 'Hide' -or $Action -eq 'Show') {
             # MyApps portal visibility is stored as the 'HideApp' string in the service

@@ -29,8 +29,8 @@ function Invoke-CIPPStandardDefenderCompliancePolicy {
             {"type":"switch","name":"standards.DefenderCompliancePolicy.iosDeviceBlockedOnMissingPartnerData","label":"Block iOS if partner data unavailable","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.allowPartnerToCollectIosCertificateMetadata","label":"Enable Certificate Sync for iOS/iPadOS devices","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.allowPartnerToCollectIosPersonalCertificateMetadata","label":"Send full certificate inventory data on personally-owned iOS/iPadOS devices","defaultValue":false}
-            {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectMac","label":"Connect macOS devices to MDE","defaultValue":false}
-            {"type":"switch","name":"standards.DefenderCompliancePolicy.macDeviceBlockedOnMissingPartnerData","label":"Block macOS if partner data unavailable","defaultValue":false}
+            {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectMac","label":"Connect macOS devices to MDE (Note: enabling this forces 'Block macOS if partner data unavailable' to on)","defaultValue":false}
+            {"type":"switch","name":"standards.DefenderCompliancePolicy.macDeviceBlockedOnMissingPartnerData","label":"Block macOS if partner data unavailable (Note: Microsoft enforces this to on when Connect macOS devices to MDE is on)","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectWindows","label":"Connect Windows 10.0.15063+ to MDE (Note: enabling this forces 'Block Windows if partner data unavailable' to on)","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.windowsMobileApplicationManagementEnabled","label":"Connect Windows (MAM)","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.windowsDeviceBlockedOnMissingPartnerData","label":"Block Windows if partner data unavailable (Note: Microsoft enforces this to on when Connect Windows 10.0.15063+ to MDE is on)","defaultValue":false}
@@ -65,7 +65,7 @@ function Invoke-CIPPStandardDefenderCompliancePolicy {
         androidDeviceBlockedOnMissingPartnerData            = [bool]$Settings.androidDeviceBlockedOnMissingPartnerData
         iosDeviceBlockedOnMissingPartnerData                = [bool]$Settings.iosDeviceBlockedOnMissingPartnerData
         windowsDeviceBlockedOnMissingPartnerData            = if ([bool]$Settings.ConnectWindows) { $true } else { [bool]$Settings.windowsDeviceBlockedOnMissingPartnerData }
-        macDeviceBlockedOnMissingPartnerData                = [bool]$Settings.macDeviceBlockedOnMissingPartnerData
+        macDeviceBlockedOnMissingPartnerData                = if ([bool]$Settings.ConnectMac) { $true } else { [bool]$Settings.macDeviceBlockedOnMissingPartnerData }
         androidMobileApplicationManagementEnabled           = [bool]$Settings.ConnectAndroidCompliance
         iosMobileApplicationManagementEnabled               = [bool]$Settings.ConnectIosCompliance
         windowsMobileApplicationManagementEnabled           = [bool]$Settings.windowsMobileApplicationManagementEnabled
@@ -186,6 +186,5 @@ function Invoke-CIPPStandardDefenderCompliancePolicy {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DefenderCompliancePolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DefenderCompliancePolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

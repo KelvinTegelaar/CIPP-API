@@ -103,6 +103,5 @@ Function Invoke-CIPPStandardIntuneWindowsDiagnostic {
             hasValidWindowsLicense                           = $Settings.hasValidWindowsLicense
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.IntuneWindowsDiagnostic' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'IntuneWindowsDiagnostic' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -36,5 +36,7 @@ function Remove-CIPPImage {
         } catch {
             Write-Warning "Failed to remove image '$ImageId' in partition '$PartitionKey': $($_.Exception.Message)"
         }
+        # Its name row (see Set-CIPPImageName) goes with it; there may not be one.
+        try { Remove-CIPPAzDataTableEntity @Table -Entity @{ PartitionKey = 'imageMeta'; RowKey = $ImageId } -Force | Out-Null } catch { Write-Verbose "No name row for image '$ImageId'." }
     }
 }

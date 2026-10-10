@@ -4,9 +4,10 @@ function Set-CIPPDBCacheActiveUserDetail {
         Caches the Microsoft 365 active-user detail report for a tenant
 
     .DESCRIPTION
-        Stores getOffice365ActiveUserDetail(period='D90') - one row per user carrying per-service
+        Stores getOffice365ActiveUserDetail(period='D180') - one row per user carrying per-service
         last-activity dates (Exchange, OneDrive, SharePoint, Teams, Yammer) and the products
         assigned. Rows are keyed by userPrincipalName so they join to the cached Users dataset.
+        D180 is the longest Graph window so license optimization can filter to any inactive threshold.
 
         Note: when the tenant conceals usage-report names, userPrincipalName is anonymized and the
         rows cannot be joined to users. The license optimization report detects this and points to
@@ -28,7 +29,7 @@ function Set-CIPPDBCacheActiveUserDetail {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching active user detail' -sev Debug
 
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getOffice365ActiveUserDetail(period='D90')?`$format=application%2fjson" -tenantid $TenantFilter -Stream |
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getOffice365ActiveUserDetail(period='D180')?`$format=application%2fjson" -tenantid $TenantFilter -Stream |
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ActiveUserDetail' -AddCount
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached active user detail successfully' -sev Debug
 

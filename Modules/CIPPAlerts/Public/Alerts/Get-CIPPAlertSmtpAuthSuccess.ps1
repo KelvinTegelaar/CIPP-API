@@ -30,9 +30,7 @@ function Get-CIPPAlertSmtpAuthSuccess {
         $AlertData = $SignIns | Select-Object userPrincipalName, createdDateTime, clientAppUsed, ipAddress, status, @{Name = 'Tenant'; Expression = { $TenantFilter } }
 
         # Write results into the alert pipeline
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
     } catch {
         # Suppress errors if no data returned

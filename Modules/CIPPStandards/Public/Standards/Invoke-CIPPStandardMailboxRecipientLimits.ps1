@@ -256,12 +256,6 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
 
     # Report
     if ($Settings.report -eq $true) {
-        $ReportData = @{
-            MailboxesToUpdate       = $MailboxesToUpdate
-            MailboxesWithPlanIssues = $MailboxesWithPlanIssues
-        }
-        Add-CIPPBPAField -FieldName 'MailboxRecipientLimits' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
-
         $CurrentValue = @{
             MailboxesToUpdate       = @($MailboxesToUpdate)
             MailboxesWithPlanIssues = @($MailboxesWithPlanIssues)

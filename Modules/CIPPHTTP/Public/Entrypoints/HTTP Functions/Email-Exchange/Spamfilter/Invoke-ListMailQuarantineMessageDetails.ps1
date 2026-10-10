@@ -35,6 +35,8 @@ function Invoke-ListMailQuarantineMessageDetails {
     # used to investigate messages the operator was never authorized to see.
     try {
         $QuarantineMessage = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ Identity = $Identity }
+        # The fallback path below exports and parses the EML; record who looked at this message either way.
+        Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -tenant $TenantFilter -message "Viewed the analysis details of quarantined message $Identity" -Sev 'Info'
     } catch {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::NotFound

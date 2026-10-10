@@ -89,6 +89,5 @@ function Invoke-CIPPStandarddisableMacSync {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.disableMacSync' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'MacSync' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 }

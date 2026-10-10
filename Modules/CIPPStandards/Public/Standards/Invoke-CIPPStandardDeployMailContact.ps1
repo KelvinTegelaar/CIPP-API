@@ -135,7 +135,6 @@ function Invoke-CIPPStandardDeployMailContact {
             FirstName            = $ExistingContactLookup.givenName ?? ''
             LastName             = $ExistingContactLookup.surname ?? ''
         }
-        Add-CIPPBPAField -FieldName 'DeployMailContact' -FieldValue $ContactData -StoreAs json -Tenant $Tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -CurrentValue $CurrentValue -ExpectedValue $ContactData -Tenant $Tenant
     }
 }

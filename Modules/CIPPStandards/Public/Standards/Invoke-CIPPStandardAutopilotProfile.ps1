@@ -155,7 +155,6 @@ function Invoke-CIPPStandardAutopilotProfile {
     # Report
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotProfile' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AutopilotProfile' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 
     # Alert

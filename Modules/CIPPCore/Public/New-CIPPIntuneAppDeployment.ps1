@@ -26,7 +26,8 @@ function New-CIPPIntuneAppDeployment {
     $AppType = if ($AppConfig.type) { $AppConfig.type } else { 'Choco' }
 
     # Older templates may hold a Graph-read body (has an id); only Office/Edge can deploy from one.
-    if ($IntuneBody.id -and $AppType -notin @('OfficeApp', 'EdgeApp')) {
+    $IsScriptApp = $AppType -eq 'Win32ScriptApp' -and $AppConfig.installScript
+    if ($IntuneBody.id -and $AppType -notin @('OfficeApp', 'EdgeApp') -and -not $IsScriptApp) {
         throw "'$($AppConfig.Applicationname)' was templated from an existing Intune application with uploaded installer content. CIPP cannot deploy uploaded installer content; only script or package based applications can be templated. Rebuild this template entry as a Store, Chocolatey, Office, Edge, MSP or Custom Application."
     }
 
@@ -248,6 +249,11 @@ function New-CIPPIntuneAppDeployment {
                 APIName       = $APIName
             }
             if ($AppTypeForAssignment) { $AssignParams.AppType = $AppTypeForAssignment }
+            # Group ids queued by the deploy drawer's single-tenant picker; they win over the
+            # name resolution of assignTo/excludeGroup inside Set-CIPPAssignedApplication.
+            # '@($null).Count' is 1, so test the value before counting it.
+            if ($AppConfig.GroupIds -and @($AppConfig.GroupIds).Count -gt 0) { $AssignParams.GroupIds = @($AppConfig.GroupIds) }
+            if ($AppConfig.ExcludeGroupIds -and @($AppConfig.ExcludeGroupIds).Count -gt 0) { $AssignParams.ExcludeGroupIds = @($AppConfig.ExcludeGroupIds) }
             Set-CIPPAssignedApplication @AssignParams
         }
     }

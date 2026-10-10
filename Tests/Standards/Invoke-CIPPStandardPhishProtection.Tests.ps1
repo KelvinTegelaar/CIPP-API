@@ -20,7 +20,6 @@ BeforeAll {
     function Get-CippException { [CmdletBinding()] param($Exception) [pscustomobject]@{ NormalizedError = ($Exception | Out-String); RawError = ($Exception.ErrorDetails.Message ?? '') } }
     function Get-NormalizedError { [CmdletBinding()] param($Message) $Message }
     function Write-StandardsAlert { [CmdletBinding()] param($message, $object, $tenant, $standardName, $standardId) }
-    function Add-CIPPBPAField { [CmdletBinding()] param($FieldName, $FieldValue, $StoreAs, $Tenant) }
     function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $CurrentValue, $ExpectedValue, $Tenant) }
 
     . $StandardPath
@@ -38,7 +37,6 @@ Describe 'Invoke-CIPPStandardPhishProtection localization handling' {
         }
         Mock Write-LogMessage { }
         Mock Write-StandardsAlert { }
-        Mock Add-CIPPBPAField { }
         Mock Set-CIPPStandardsCompareField { }
         Mock New-GraphPostRequest { }
     }

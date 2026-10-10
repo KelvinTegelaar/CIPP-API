@@ -6,6 +6,13 @@ function Invoke-NinjaOneSync {
         $Filter = "PartitionKey eq 'NinjaOneMapping'"
         $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.IntegrationId -and $_.IntegrationId -ne '' }
 
+        # Same check as the integration test button, once, before queuing a task per mapped tenant.
+        $ExtTable = Get-CIPPTable -TableName Extensionsconfig
+        $NinjaConfig = ((Get-AzDataTableEntity @ExtTable).config | ConvertFrom-Json).NinjaOne
+        if ($TenantsToProcess -and -not (Get-NinjaOneToken -configuration $NinjaConfig).access_token) {
+            throw "NinjaOne API check failed, synchronization not queued for $(($TenantsToProcess | Measure-Object).count) tenants. Test the NinjaOne integration in Extensions."
+        }
+
 
         $Batch = foreach ($Tenant in $TenantsToProcess) {
             [PSCustomObject]@{

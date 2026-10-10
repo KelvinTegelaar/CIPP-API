@@ -5,7 +5,7 @@ function Invoke-ExecIRMConfiguration {
     .ROLE
         Exchange.Mailbox.ReadWrite
     .DESCRIPTION
-        Enables or disables Microsoft Purview Message Encryption for a tenant by setting AzureRMSLicensingEnabled and the Outlook Encrypt button by setting SimplifiedClientAccessEnabled, or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.
+        Updates the Microsoft Purview Message Encryption configuration for a tenant (AzureRMSLicensingEnabled, SimplifiedClientAccessEnabled, EnablePdfEncryption, DecryptAttachmentForEncryptOnly, SimplifiedClientAccessDoNotForwardDisabled, SimplifiedClientAccessEncryptOnlyDisabled, TransportDecryptionSetting; only the settings present in the body are changed), or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -30,19 +30,22 @@ function Invoke-ExecIRMConfiguration {
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Tested the message encryption configuration for $SenderAddress" -Sev Info
             }
             'Set' {
-                $cmdParams = @{ AzureRMSLicensingEnabled = [System.Convert]::ToBoolean($Request.Body.AzureRMSLicensingEnabled) }
-                # Only touch the Encrypt button setting when the caller sent it, so an API client
-                # that posts just AzureRMSLicensingEnabled does not silently disable it.
-                if ($null -ne $Request.Body.SimplifiedClientAccessEnabled) {
-                    $cmdParams.SimplifiedClientAccessEnabled = [System.Convert]::ToBoolean($Request.Body.SimplifiedClientAccessEnabled)
+                # Only touch the settings the caller sent, so an API client that posts just
+                # AzureRMSLicensingEnabled does not silently flip the others. Whitelisted: the body is
+                # caller-controlled and goes straight to Set-IRMConfiguration.
+                $cmdParams = @{}
+                foreach ($Key in 'AzureRMSLicensingEnabled', 'SimplifiedClientAccessEnabled', 'EnablePdfEncryption', 'DecryptAttachmentForEncryptOnly', 'SimplifiedClientAccessDoNotForwardDisabled', 'SimplifiedClientAccessEncryptOnlyDisabled') {
+                    if ($null -ne $Request.Body.$Key) { $cmdParams[$Key] = [System.Convert]::ToBoolean($Request.Body.$Key) }
+                }
+                if ($Request.Body.TransportDecryptionSetting -in 'Disabled', 'Optional', 'Mandatory') {
+                    $cmdParams.TransportDecryptionSetting = $Request.Body.TransportDecryptionSetting
+                }
+                if ($cmdParams.Count -eq 0) {
+                    throw 'No message encryption settings were provided.'
                 }
                 $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-IRMConfiguration' -cmdParams $cmdParams
-                $ResultParts = [System.Collections.Generic.List[string]]::new()
-                $ResultParts.Add("$(if ($cmdParams.AzureRMSLicensingEnabled) { 'enabled' } else { 'disabled' }) Microsoft Purview Message Encryption")
-                if ($cmdParams.ContainsKey('SimplifiedClientAccessEnabled')) {
-                    $ResultParts.Add("$(if ($cmdParams.SimplifiedClientAccessEnabled) { 'enabled' } else { 'disabled' }) the Outlook Encrypt button")
-                }
-                $Results = "Successfully $($ResultParts -join ' and ')."
+                $Applied = ($cmdParams.GetEnumerator() | Sort-Object Name | ForEach-Object { "$($_.Name) = $($_.Value)" }) -join ', '
+                $Results = "Successfully updated the message encryption configuration: $Applied."
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev Info
             }
             default {

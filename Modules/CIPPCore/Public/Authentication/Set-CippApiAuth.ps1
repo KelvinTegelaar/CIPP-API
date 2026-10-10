@@ -65,18 +65,27 @@ function Set-CippApiAuth {
             [void]$AllAudiences.Add("api://$id")
         }
 
-        # MCP resource clients also accept tokens whose audience is the host-based identifier URI or
-        # the bare appId (v2 tokens), so the Claude connector's token validates against EasyAuth.
+        # The dedicated CIPP-MCP resource app is the token audience for MCP calls, so add its
+        # identifier URIs + bare appId (v2 tokens). The MCPAllowed client apps are the token's azp
+        # and are already in allowedApplications via $ClientIds.
         if ($McpClientIds -and $env:WEBSITE_HOSTNAME) {
             [void]$AllAudiences.Add("https://$($env:WEBSITE_HOSTNAME)")
             [void]$AllAudiences.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
-            foreach ($McpId in $McpClientIds) {
-                if (-not [string]::IsNullOrEmpty($McpId)) { [void]$AllAudiences.Add($McpId) }
+            try {
+                $McpResTable = Get-CippTable -tablename 'CippMcpResource'
+                $McpResRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
+                if (-not [string]::IsNullOrWhiteSpace($McpResRow.AppId)) {
+                    [void]$AllAudiences.Add("api://$($McpResRow.AppId)")
+                    [void]$AllAudiences.Add("$($McpResRow.AppId)")
+                }
+            } catch {
+                Write-Information "[ApiAuth] Could not resolve CIPP-MCP resource app id for allowedAudiences: $($_.Exception.Message)"
             }
         }
 
         # First-party MCP clients (e.g. VS Code) bring their own client ID, so the token's azp
-        # is theirs — EasyAuth's allowedApplications must include them when MCP is enabled.
+        # is theirs — EasyAuth's allowedApplications must include them when MCP is enabled. The
+        # MCPAllowed API clients are already in $AllAppIds via $ClientIds.
         if ($McpClientIds) {
             foreach ($KnownId in (Get-CippMcpKnownClients).PreAuthorizedClientIds) {
                 [void]$AllAppIds.Add($KnownId)
@@ -132,8 +141,15 @@ function Set-CippApiAuth {
         if ($McpClientIds -and $env:WEBSITE_HOSTNAME) {
             $AudienceList.Add("https://$($env:WEBSITE_HOSTNAME)")
             $AudienceList.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
-            foreach ($McpId in $McpClientIds) {
-                if (-not [string]::IsNullOrEmpty($McpId)) { $AudienceList.Add($McpId) }
+            try {
+                $McpResTable = Get-CippTable -tablename 'CippMcpResource'
+                $McpResRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
+                if (-not [string]::IsNullOrWhiteSpace($McpResRow.AppId)) {
+                    $AudienceList.Add("api://$($McpResRow.AppId)")
+                    $AudienceList.Add("$($McpResRow.AppId)")
+                }
+            } catch {
+                Write-Information "[ApiAuth] Could not resolve CIPP-MCP resource app id for allowedAudiences: $($_.Exception.Message)"
             }
         }
         $AllowedAudiences = @($AudienceList)

@@ -23,7 +23,8 @@ function Invoke-ListLicensePricing {
     if ([string]::IsNullOrWhiteSpace($Currency)) { $Currency = 'USD' }
 
     try {
-        $Results = @(Get-CIPPLicensePrice -Currency $Currency)
+        # Every catalog SKU, including ones with no price in this currency yet, so each can be priced
+        $Results = @(Get-CIPPLicensePrice -Currency $Currency -IncludeUnknown)
         $Currencies = @(Get-CIPPLicensePrice -ListCurrencies)
         $StatusCode = [HttpStatusCode]::OK
     } catch {

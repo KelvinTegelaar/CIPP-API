@@ -25,6 +25,10 @@ function Push-CIPPBaselineCacheRefresh {
             Write-Information "Baseline trend point skipped: $($_.Exception.Message)"
         }
 
+        try { Send-CIPPBaselineAlertDigest } catch {
+            Write-LogMessage -API 'Baselines' -message "Baseline alert digest failed: $($_.Exception.Message)" -Sev 'Error'
+        }
+
         $Impacted = @{}
         foreach ($ActivityResult in @($Item.Results)) {
             foreach ($Record in @($ActivityResult)) {

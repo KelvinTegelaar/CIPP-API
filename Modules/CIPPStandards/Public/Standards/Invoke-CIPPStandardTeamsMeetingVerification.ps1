@@ -92,6 +92,5 @@ function Invoke-CIPPStandardTeamsMeetingVerification {
             CaptchaVerificationForMeetingJoin = $CaptchaVerificationForMeetingJoin
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMeetingVerification' -CurrentValue $CurrentState -ExpectedValue $ExpectedState -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'TeamsMeetingVerification' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

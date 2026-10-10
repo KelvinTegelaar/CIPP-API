@@ -4,91 +4,83 @@ function New-GradientServiceSyncRun {
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).Gradient
+    $APIName = 'GradientSync'
     $Tenants = Get-Tenants
-    #creating accounts in Gradient
+    $GradientSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
     try {
-        $GradientToken = Get-GradientToken -Configuration $Configuration
-        $ExistingAccounts = (Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/accounts' -Method GET -Headers $GradientToken)
-        $NewAccounts = $Tenants | Where-Object defaultDomainName -NotIn $ExistingAccounts.id | ForEach-Object {
-            [PSCustomObject]@{
-                name        = $_.displayName
-                description = $_.defaultDomainName
-                id          = $_.defaultDomainName
-            }
-        } | ConvertTo-Json -Depth 10
-        if ($NewAccounts) { Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/accounts' -Method POST -Headers $GradientToken -Body $NewAccounts -ContentType 'application/json' }
-        #setting the integration to active
-        $ExistingIntegrations = (Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization' -Method GET -Headers $GradientToken)
-        if ($ExistingIntegrations.Status -ne 'active') {
-            $ActivateRequest = Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/status/active' -Method PATCH -Headers $GradientToken
-        }
-    } catch {
-        Write-LogMessage -API $APINAME -message "Failed to create tenants in Gradient API. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
-    }
-
-    $ConvertTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
-    $Table = Get-CIPPTable -TableName cachelicenses
-    $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
-    $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
-    # Only exclude licenses marked as ExcludedEverywhere (not alert-only exclusions)
-    $ExcludedEverywhereRowKeys = @($ExcludedSkuList | Where-Object {
-        $null -eq $_.ExcludedEverywhere -or $_.ExcludedEverywhere -eq $true
-    } | ForEach-Object { $_.RowKey })
-
-    $RawGraphRequest = $Tenants | ForEach-Object -Parallel {
-        $domainName = $_.defaultDomainName
-        Import-Module (Join-Path $env:CIPPRootPath 'Modules\AzBobbyTables')
-        Import-Module (Join-Path $env:CIPPRootPath 'Modules\CIPPCore')
-        Write-Host "Doing $domainName"
+        #creating accounts in Gradient
         try {
-            $Licrequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $_.defaultDomainName -ErrorAction Stop | Where-Object -Property skuId -NotIn $using:ExcludedEverywhereRowKeys
-            [PSCustomObject]@{
-                Tenant   = $domainName
-                Licenses = $Licrequest
+            $GradientToken = Get-GradientToken -Configuration $Configuration
+            $ExistingAccounts = (Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api/organization/accounts' -Method GET -Headers $GradientToken)
+            $NewAccounts = $Tenants | Where-Object defaultDomainName -NotIn $ExistingAccounts.id | ForEach-Object {
+                [PSCustomObject]@{
+                    name        = $_.displayName
+                    description = $_.defaultDomainName
+                    id          = $_.defaultDomainName
+                }
+            } | ConvertTo-Json -Depth 10
+            if ($NewAccounts) { Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api/organization/accounts' -Method POST -Headers $GradientToken -Body $NewAccounts -ContentType 'application/json' }
+            #setting the integration to active
+            $ExistingIntegrations = (Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api/organization' -Method GET -Headers $GradientToken)
+            if ($ExistingIntegrations.Status -ne 'active') {
+                $ActivateRequest = Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api/organization/status/active' -Method PATCH -Headers $GradientToken
             }
         } catch {
-            [PSCustomObject]@{
-                Tenant   = $domainName
-                Licenses = @{
-                    skuid         = "Could not connect to client: $($_.Exception.Message)"
-                    skuPartNumber = 'Could not connect to client'
-                    consumedUnits = 0
-                    prepaidUnits  = { Enabled = 0 }
-                }
-            }
+            Write-LogMessage -API $APIName -message "Failed to create tenants in Gradient API. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
         }
-    }
-    $LicenseTable = foreach ($singlereq in $RawGraphRequest) {
-        $skuid = $singlereq.Licenses
-        foreach ($sku in $skuid) {
-            try {
-                if ($sku.skuId -eq 'Could not connect to client') { continue }
-                $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
-                if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
-                #Check if serviceID exists by SKUID in gradient
-                $ExistingService = (Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api' -Method GET -Headers $GradientToken).data.skus | Where-Object name -EQ $PrettyName
-                Write-Host "New service: $($ExistingService.name) ID: $($ExistingService.id)"
-                if (!$ExistingService) {
-                    #Create service
+
+        # GUID -> display name, last row wins like the Where-Object | Select-Object -Last 1 it replaces
+        $SkuDisplayNames = @{}
+        foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) { $SkuDisplayNames[$Row.GUID] = $Row.Product_Display_Name }
+
+        # A failed read must stop the sync: an empty catalogue would create a duplicate service for every SKU.
+        try {
+            $ServicesByName = @{}
+            foreach ($Service in (Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api' -Method GET -Headers $GradientToken).data.skus) {
+                if ($Service.name -and -not $ServicesByName.ContainsKey($Service.name)) { $ServicesByName[$Service.name] = $Service }
+            }
+        } catch {
+            Write-LogMessage -API $APIName -message "Failed to read the Gradient service catalogue, licence sync skipped. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
+            return
+        }
+
+        # Licence counts come from the reporting DB (LicenseOverview), which already drops licences
+        # excluded everywhere, rather than a live subscribedSkus call per tenant.
+        foreach ($Tenant in $Tenants) {
+            $TenantName = $Tenant.defaultDomainName
+            $Licenses = @(New-CIPPDbRequest -TenantFilter $TenantName -Type 'LicenseOverview' -Fields 'skuId', 'License', 'TotalLicenses' | Where-Object { $_.skuId })
+            if ($Licenses.Count -eq 0) {
+                Write-LogMessage -API $APIName -message 'No cached licence data for this tenant, skipped. The licence cache fills on the next CIPP data collection.' -Sev 'Warning' -tenant $TenantName
+                continue
+            }
+            foreach ($sku in $Licenses) {
+                try {
+                    $PrettyName = $SkuDisplayNames["$($sku.skuId)"]
+                    if (!$PrettyName) { $PrettyName = $sku.License }
+                    $ExistingService = if ($PrettyName) { $ServicesByName[$PrettyName] }
+                    if (!$ExistingService) {
+                        #Create service
+                        $ServiceBody = [PSCustomObject]@{
+                            name        = $PrettyName
+                            description = $PrettyName
+                            category    = 'infrastructure'
+                            subcategory = 'hosted email'
+                        } | ConvertTo-Json -Depth 10
+                        $ExistingService = (Invoke-RestMethod -WebSession $GradientSession -Uri 'https://app.usegradient.com/api/vendor-api/service' -Method POST -Headers $GradientToken -Body $ServiceBody -ContentType 'application/json').skus | Where-Object name -EQ $PrettyName | Select-Object -First 1
+                        if ($ExistingService -and $PrettyName) { $ServicesByName[$PrettyName] = $ExistingService }
+                    }
+                    #Post the purchased licence count to the service
                     $ServiceBody = [PSCustomObject]@{
-                        name        = $PrettyName
-                        description = $PrettyName
-                        category    = 'infrastructure'
-                        subcategory = 'hosted email'
+                        accountId = $TenantName
+                        unitCount = [int]$sku.TotalLicenses
                     } | ConvertTo-Json -Depth 10
-                    $ExistingService = (Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/service' -Method POST -Headers $GradientToken -Body $ServiceBody -ContentType 'application/json').skus | Where-Object name -EQ $PrettyName
+                    $null = Invoke-RestMethod -WebSession $GradientSession -Uri "https://app.usegradient.com/api/vendor-api/service/$($ExistingService.id)/count" -Method POST -Headers $GradientToken -Body $ServiceBody -ContentType 'application/json'
+                } catch {
+                    Write-LogMessage -API $APIName -message "Failed to sync licence '$PrettyName' to Gradient. Error: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantName
                 }
-                #Post the CountAvailable to the service
-                $ServiceBody = [PSCustomObject]@{
-                    accountId = $singlereq.Tenant
-                    unitCount = $sku.prepaidUnits.enabled
-                } | ConvertTo-Json -Depth 10
-                $Results = Invoke-RestMethod -Uri "https://app.usegradient.com/api/vendor-api/service/$($ExistingService.id)/count" -Method POST -Headers $GradientToken -Body $ServiceBody -ContentType 'application/json'
-            } catch {
-                Write-LogMessage -API $APINAME -message "Failed to create license in Gradient API. Error: $($_). $results" -Sev 'Error' -tenant $singlereq.tenant
-
             }
         }
+    } finally {
+        $GradientSession.Dispose()
     }
-
 }

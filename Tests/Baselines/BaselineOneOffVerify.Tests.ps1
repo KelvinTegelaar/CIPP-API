@@ -12,8 +12,9 @@ BeforeAll {
     function Update-CippQueueEntry { param($RowKey, $Status, $Name) }
     function Get-CIPPBaselineDefinition { param($Name) }
     function Get-CippTable { param($tablename) @{} }
-    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }
+    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" -replace "'", "''" }
     function Get-CIPPAzDataTableEntity { param($Filter) }
+    function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Add-CIPPBaselineHistoryEvent { param($TenantFilter, $Standard, $Mode, $TriggeredBy, $Outcome, $Detail, $RunId, $Remediated) }
     function Set-CIPPBaselineResult { param($Result, $Prior, $RunId) }
@@ -348,6 +349,8 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         Mock Set-CIPPDBCacheTestCache { }
         Mock Start-Sleep { }
         Mock Write-LogMessage { }
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ PartitionKey = $script:Tenant; RowKey = 'TestStd'; PendingVerification = $true } }
+        Mock Add-CIPPAzDataTableEntity { }
         $script:PushItem = @{
             RunId = 'run-1'; Mode = 'oneoff'; TriggeredBy = 'operator@contoso.com'
             Item  = @{ TenantFilter = $script:Tenant; Standard = 'TestStd'; BaseName = 'TestStd' }
@@ -366,6 +369,29 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $Sev -eq 'Warning' }
     }
 
+    It 'a clean verdict clears PendingVerification on the stored row' {
+        Mock Invoke-CIPPBaselineStandard {
+            if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $true } }
+            [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
+        }
+        Push-CIPPBaselineStandard -Item $script:PushItem
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Entity.PendingVerification -eq $false }
+    }
+
+    It 'escapes an apostrophe in the Standard name before it reaches the table filter' {
+        # Instance keys are derived from template names and can carry an apostrophe -
+        # unescaped, it breaks out of the OData string literal.
+        Mock Invoke-CIPPBaselineStandard {
+            if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $true } }
+            [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
+        }
+        $script:PushItem.Item.Standard = "IntuneTemplate#Bob's Policy"
+        Push-CIPPBaselineStandard -Item $script:PushItem
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $Filter -eq "PartitionKey eq '$($script:Tenant)' and RowKey eq 'IntuneTemplate~Bob''s Policy'"
+        }
+    }
+
     It 'stale then fresh: waits for propagation, collects a SECOND time, ends quiet' {
         # The whole point of the fix - the first refresh captured pre-write state, the
         # retry after the backoff captures the real one.
@@ -380,6 +406,15 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $Sev -eq 'Warning' }
     }
 
+    It 'a verdict that only turns clean AFTER the retries also clears PendingVerification' {
+        Mock Invoke-CIPPBaselineStandard {
+            if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = ($script:GradeCalls -ge 2) } }
+            [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
+        }
+        Push-CIPPBaselineStandard -Item $script:PushItem
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Entity.PendingVerification -eq $false }
+    }
+
     It 'still stale after BOTH retries: warns and STOPS - two growing backoffs, never a loop' {
         Mock Invoke-CIPPBaselineStandard {
             if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $false } }
@@ -390,6 +425,15 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         $script:GradeCalls | Should -Be 3
         Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 30 }
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Warning' -and $message -like '*still grades*' }
+    }
+
+    It 'still non-compliant after both retries does NOT write the row' {
+        Mock Invoke-CIPPBaselineStandard {
+            if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $false } }
+            [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
+        }
+        Push-CIPPBaselineStandard -Item $script:PushItem
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
     }
 
     It 'scheduled runs are untouched: impact records out, no inline refresh, no verification' {
@@ -403,6 +447,7 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         $Records[0].CacheType | Should -Be 'TestCache'
         Should -Invoke Set-CIPPDBCacheTestCache -Times 0 -Exactly
         $script:GradeCalls | Should -Be 0
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
     }
 }
 
@@ -466,5 +511,111 @@ Describe 'Compare-CIPPIntuneObject type tolerance' {
         $Dif = [PSCustomObject]@{ timeWindow = '60' }
         $Diff = @(Compare-CIPPIntuneObject -ReferenceObject $Ref -DifferenceObject $Dif | Where-Object { $_ })
         $Diff.Count | Should -Be 1
+    }
+}
+
+Describe 'Invoke-CIPPBaselineStandard remediation alerting and write failures' {
+    BeforeAll {
+        function Get-CippException { param($Exception) [PSCustomObject]@{ Message = "$($Exception.Exception.Message)"; RawError = 'body' } }
+        function Invoke-CIPPBaselineTestWrite { param($Remediate, $TenantFilter, $Current) }
+
+        # checkBeforeRun:false - the engine writes on EVERY run, compliant or not.
+        $script:WriteAlwaysDefinition = [PSCustomObject]@{
+            name                 = 'WriteAlways'; label = 'Write Always Standard'
+            requiredCapabilities = @(); variables = [PSCustomObject]@{}
+            checkBeforeRun       = $false
+            read                 = [PSCustomObject]@{ cacheType = 'TestCache' }
+            expected             = [PSCustomObject]@{ enabled = $true }
+            remediate            = [PSCustomObject]@{ executor = 'TestWrite' }
+        }
+        $script:WriteAlwaysItem = @{
+            TenantFilter = $script:Tenant; Standard = 'WriteAlways'; BaseName = 'WriteAlways'
+            Variables = [PSCustomObject]@{}; Tiers = @()
+            AlertEnabled = $true; AlertOnRemediate = $true; RemediateEnabled = $true
+        }
+        $script:PriorRow = {
+            param($Status)
+            [PSCustomObject]@{ PartitionKey = $script:Tenant; RowKey = 'WriteAlways'; StandardName = 'WriteAlways'; Status = $Status; LastRun = 1 }
+        }
+    }
+
+    BeforeEach {
+        $script:Persisted = $null
+        Mock Get-CIPPBaselineDefinition { $script:WriteAlwaysDefinition }
+        Mock New-CIPPDbRequest { [PSCustomObject]@{ enabled = $true } }
+        Mock Invoke-CIPPBaselineTestWrite { }
+        Mock Set-CIPPBaselineResult { $script:Persisted = $Result }
+        Mock Add-CIPPBaselineHistoryEvent { }
+        Mock Send-CIPPBaselineAlert { }
+        Mock Remove-CIPPAzDataTableEntity { }
+        Mock Write-LogMessage { }
+    }
+
+    It 'a steady-state write-always standard already Compliant does NOT re-alert every run' {
+        Mock Get-CIPPAzDataTableEntity { @(& $script:PriorRow 'Compliant') }
+        $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'
+        Should -Invoke Invoke-CIPPBaselineTestWrite -Times 1 -Exactly
+        $Result.Outcome | Should -Be 'Remediated'
+        $Result.Status | Should -Be 'Compliant'
+        $Result.AlertEvent | Should -BeNullOrEmpty
+        Should -Invoke Send-CIPPBaselineAlert -Times 0 -Exactly
+    }
+
+    It 'an executor that reports Changed=$false records Compliant, not Remediated, and never alerts' {
+        Mock Get-CIPPAzDataTableEntity { @(& $script:PriorRow 'Drift') }
+        Mock Invoke-CIPPBaselineTestWrite { [PSCustomObject]@{ Changed = $false } }
+        $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'
+        Should -Invoke Invoke-CIPPBaselineTestWrite -Times 1 -Exactly
+        $Result.Outcome | Should -Be 'Compliant'
+        $Result.Status | Should -Be 'Compliant'
+        $Result.Remediated | Should -Not -Be $true
+        $Result.AlertEvent | Should -BeNullOrEmpty
+        Should -Invoke Send-CIPPBaselineAlert -Times 0 -Exactly
+        Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $message -like 'Successfully changed*' }
+    }
+
+    It 'alerts on the transition INTO remediation - a drifted prior still fires once' {
+        Mock Get-CIPPAzDataTableEntity { @(& $script:PriorRow 'Drift') }
+        $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'
+        $Result.AlertEvent | Should -Be 'Remediated'
+        Should -Invoke Send-CIPPBaselineAlert -Times 1 -Exactly
+    }
+
+    It 'alerts on first sight, where there is no prior row at all' {
+        Mock Get-CIPPAzDataTableEntity { @() }
+        $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'
+        $Result.AlertEvent | Should -Be 'Remediated'
+        Should -Invoke Send-CIPPBaselineAlert -Times 1 -Exactly
+    }
+
+    It 'a failed write persists Error, not Drift with an empty diff, and never alerts' {
+        Mock Get-CIPPAzDataTableEntity { @(& $script:PriorRow 'Drift') }
+        Mock New-CIPPDbRequest { [PSCustomObject]@{ enabled = $false } }
+        Mock Invoke-CIPPBaselineTestWrite { throw 'Request failed with status code Forbidden' }
+        $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'
+        $Result.Outcome | Should -Be 'Error'
+        $Result.Status | Should -Be 'Error'
+        $Result.AlertEvent | Should -BeNullOrEmpty
+        $script:Persisted.Status | Should -Be 'Error'
+        Should -Invoke Send-CIPPBaselineAlert -Times 0 -Exactly
+    }
+
+    It 'a failed write carries the exception detail as LogData so the response body survives' {
+        Mock Get-CIPPAzDataTableEntity { @(& $script:PriorRow 'Drift') }
+        Mock New-CIPPDbRequest { [PSCustomObject]@{ enabled = $false } }
+        Mock Invoke-CIPPBaselineTestWrite { throw 'Request failed with status code Forbidden' }
+        $null = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter {
+            $Sev -eq 'Error' -and $message -like 'Failed to change*' -and $null -ne $LogData
+        }
+    }
+
+    It 'a failed write keeps a pending deny - an operator order outlives the failure' {
+        Mock Get-CIPPAzDataTableEntity { @(& $script:PriorRow 'Denied - Remediate Pending') }
+        Mock New-CIPPDbRequest { [PSCustomObject]@{ enabled = $false } }
+        Mock Invoke-CIPPBaselineTestWrite { throw 'Request failed with status code Forbidden' }
+        $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'
+        $Result.Outcome | Should -Be 'Error'
+        $Result.Status | Should -Be 'Denied - Remediate Pending'
     }
 }

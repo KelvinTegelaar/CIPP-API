@@ -95,6 +95,5 @@ function Invoke-CIPPStandardMDMEnrollmentDuringRegistration {
             isMdmEnrollmentDuringRegistrationDisabled = $DesiredState
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MDMEnrollmentDuringRegistration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'MDMEnrollmentDuringRegistration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

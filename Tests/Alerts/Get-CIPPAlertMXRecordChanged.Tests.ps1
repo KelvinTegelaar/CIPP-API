@@ -1,6 +1,8 @@
 # Pester tests for Get-CIPPAlertMXRecordChanged.
 # A domain without a CacheMxRecords row is being observed for the first time; its current
-# records establish the baseline and must not be reported as a change.
+# records establish the baseline and must not be reported as a change. The check still
+# completed, so Write-AlertTrace is called once with empty data (that is what resolves
+# previously open items).
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -43,7 +45,8 @@ Describe 'Get-CIPPAlertMXRecordChanged' {
     It 'stores current MX records as the baseline without alerting when no prior domain row exists' {
         Get-CIPPAlertMXRecordChanged -TenantFilter 'tenant.onmicrosoft.com'
 
-        Should -Invoke Write-AlertTrace -Times 0 -Exactly
+        Should -Invoke Write-AlertTrace -Times 1 -Exactly
+        $script:CapturedAlertData | Should -BeNullOrEmpty
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
             $Entity.PartitionKey -eq 'tenant.onmicrosoft.com' -and
             $Entity.RowKey -eq 'contoso.com' -and

@@ -95,6 +95,5 @@ function Invoke-CIPPStandardTwoClickEmailProtection {
             TwoClickMailPreviewEnabled = $WantedState
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TwoClickEmailProtection' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'TwoClickEmailProtection' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -1,4 +1,7 @@
 function Clear-CIPPImmutableId {
+    # Legacy: kept for offboarding and already-queued scheduled tasks. New code should prolly use Clear-CIPPOnPremisesAttributes instead -bobby
+    # TODO: Move Invoke-CIPPOffboardingJob(User Offboarding) to use Clear-CIPPOnPremisesAttributes instead
+
     [CmdletBinding()]
     param (
         $TenantFilter,
@@ -9,18 +12,17 @@ function Clear-CIPPImmutableId {
         $APIName = 'Clear Immutable ID'
     )
 
-    try {
-        # If User object is provided, check if we need to schedule instead of clearing immediately
-        if ($User) {
+    # If User object is provided, check if we need to schedule instead of clearing immediately
+    if ($User) {
+        $DisplayName = $Username ?? $UserID
+        try {
             # User has ImmutableID but is not synced from on-premises - safe to clear immediately
             if ($User.onPremisesSyncEnabled -ne $true -and ![string]::IsNullOrEmpty($User.onPremisesImmutableId)) {
-                $DisplayName = $Username ?? $UserID
                 Write-LogMessage -Message "User $DisplayName has an ImmutableID set but is not synced from on-premises. Proceeding to clear the ImmutableID." -TenantFilter $TenantFilter -Severity 'Warning' -APIName $APIName -headers $Headers
                 # Continue to clear below
             }
             # User is synced from on-premises - must schedule for after deletion
             elseif ($User.onPremisesSyncEnabled -eq $true -and ![string]::IsNullOrEmpty($User.onPremisesImmutableId)) {
-                $DisplayName = $Username ?? $UserID
                 Write-LogMessage -Message "User $DisplayName is synced from on-premises. Scheduling an Immutable ID clear for when the user account has been soft deleted." -TenantFilter $TenantFilter -Severity 'Warning' -APIName $APIName -headers $Headers
 
                 $ScheduledTask = @{
@@ -54,38 +56,18 @@ function Clear-CIPPImmutableId {
             }
             # User has no ImmutableID or is already clear
             else {
-                $DisplayName = $Username ?? $UserID
                 $Result = "User $DisplayName does not have an ImmutableID set or it is already cleared."
                 Write-LogMessage -headers $Headers -API $APIName -message $Result -sev Info -tenant $TenantFilter
                 return $Result
             }
-        }
-
-        # Perform the actual clear operation
-        try {
-            $UserObj = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserID" -tenantid $TenantFilter -ErrorAction SilentlyContinue
         } catch {
-            # User might be deleted, try to restore it
-            $DeletedUser = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directory/deletedItems/$UserID" -tenantid $TenantFilter
-            if ($DeletedUser.id) {
-                # Restore deleted user object
-                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/directory/deletedItems/$UserID/restore" -tenantid $TenantFilter -type POST
-                Write-LogMessage -headers $Headers -API $APIName -message "Restored deleted user $UserID to clear immutable ID" -sev Info -tenant $TenantFilter
-            }
+            $ErrorMessage = Get-CippException -Exception $_
+            $Result = "Failed to schedule immutable ID clear for $DisplayName. Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Result -sev Error -tenant $TenantFilter -LogData $ErrorMessage
+            throw $Result
         }
-
-        $Body = [pscustomobject]@{ onPremisesImmutableId = $null }
-        $Body = ConvertTo-Json -InputObject $Body -Depth 5 -Compress
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$UserID" -tenantid $TenantFilter -type PATCH -body $Body
-        $DisplayName = $Username ?? $UserID
-        $Result = "Successfully cleared immutable ID for user $DisplayName"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -sev Info -tenant $TenantFilter
-        return $Result
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        $DisplayName = $Username ?? $UserID
-        $Result = "Failed to clear immutable ID for $DisplayName. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -sev Error -tenant $TenantFilter -LogData $ErrorMessage
-        throw $Result
     }
+
+    # The clear itself (including restoring a soft-deleted user) lives in the shared on-premises attribute helper
+    return (Clear-CIPPOnPremisesAttributes -TenantFilter $TenantFilter -UserID $UserID -Username $Username -Headers $Headers -APIName $APIName -Attributes 'onPremisesImmutableId')
 }

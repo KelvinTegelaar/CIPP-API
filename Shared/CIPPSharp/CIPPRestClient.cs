@@ -74,6 +74,8 @@ namespace CIPP
         public HttpResult? Result     { get; init; }
         public string?     Error      { get; init; }
         public int         Attempts   { get; init; }
+        /// <summary>True when the request hit its own TimeoutSec (not a server-side cancel).</summary>
+        public bool        TimedOut   { get; init; }
     }
 
     // =====================================================================
@@ -182,9 +184,10 @@ namespace CIPP
     //   PartnerCenter   5   api.partnercenter.microsoft.com
     //   SPO             5   *.sharepoint.com CSOM/_api (concurrent per-site fan-out)
     //   DNS             2   dns.google.com, cloudflare-dns.com (per host)
+    //   NinjaOne       12   *.ninjarmm.com, *.ninjaone.com (tenant sync fan-out)
     //   Default         5   catch-all + absorbs legacy Invoke-RestMethod calls
     //   ─────────────
-    //   Total          84   leaves a 41-port buffer for the Functions host,
+    //   Total          96   leaves a 29-port buffer for the Functions host,
     //                       Durable extension, AppInsights, Azure SDK clients,
     //                       and any stragglers that bypass the pool.
     //
@@ -238,6 +241,7 @@ namespace CIPP
         private static HttpClient? _adminPlaneClient;
         private static HttpClient? _spoClient;
         private static HttpClient? _dnsClient;
+        private static HttpClient? _ninjaOneClient;
         private static HttpClient? _defaultClient;
 
         /// <summary>
@@ -293,6 +297,11 @@ namespace CIPP
         /// Covers graph.microsoft.com and any *.microsoft.com graph surface.
         /// Cap: 30 connections.
         /// </summary>
+        // Per-lane connection cap. Override any lane with env "<Lane>MaxConnectionsPerServer"
+        // (e.g. ExoMaxConnectionsPerServer) for load testing; otherwise the tuned default applies.
+        private static int MaxConn(string envVar, int fallback)
+            => int.TryParse(Environment.GetEnvironmentVariable(envVar), out var v) && v > 0 ? v : fallback;
+
         private static HttpClient BuildGraphClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
@@ -301,14 +310,14 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,   // Graph supports HTTP/2; streams share connections
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 30,
+            MaxConnectionsPerServer        = MaxConn("GraphMaxConnectionsPerServer", 30),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
         /// EXO client — Exchange Online and Outlook endpoints.
         /// Covers outlook.office365.com, outlook.office.com, outlook.com,
         /// and *.protection.outlook.com (mail protection / transport).
-        /// Cap: 20 connections.
+        /// Cap: 30 connections (override with env <c>ExoMaxConnectionsPerServer</c>).
         /// HTTP/2 enabled — EXO REST APIs support it.
         /// </summary>
         private static HttpClient BuildExoClient() => new HttpClient(new SocketsHttpHandler
@@ -319,7 +328,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 20,
+            MaxConnectionsPerServer        = MaxConn("ExoMaxConnectionsPerServer", 30),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -337,7 +346,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 5,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("LoginMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -356,7 +365,7 @@ namespace CIPP
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = false,  // 3xx IS the expected response here
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("ComplianceMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -373,7 +382,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("PartnerCenterMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -389,7 +398,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("AdminPlaneMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -410,7 +419,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("SpoMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -428,7 +437,24 @@ namespace CIPP
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 5,
-            MaxConnectionsPerServer        = 2,
+            MaxConnectionsPerServer        = MaxConn("DnsMaxConnectionsPerServer", 2),
+        }) { Timeout = Timeout.InfiniteTimeSpan };
+
+        /// <summary>
+        /// NinjaOne client — *.ninjarmm.com / *.ninjaone.com. The tenant sync fans out
+        /// per-device and per-document writes, and NinjaOne scales close to linearly with
+        /// concurrency (300 device PATCHes: 98s at 1 in flight, 12s at 8, 6s at 16), so it gets its own
+        /// lane instead of queueing behind the 5-connection catch-all. Cap: 12 connections.
+        /// </summary>
+        private static HttpClient BuildNinjaOneClient() => new HttpClient(new SocketsHttpHandler
+        {
+            AutomaticDecompression         = DecompressionMethods.All,
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            EnableMultipleHttp2Connections = false,
+            AllowAutoRedirect              = true,
+            MaxAutomaticRedirections       = 10,
+            MaxConnectionsPerServer        = MaxConn("NinjaOneMaxConnectionsPerServer", 12),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -447,7 +473,7 @@ namespace CIPP
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 5,
+            MaxConnectionsPerServer        = MaxConn("DefaultMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         // -----------------------------------------------------------------
@@ -469,6 +495,7 @@ namespace CIPP
                 _adminPlaneClient is not null &&
                 _spoClient        is not null &&
                 _dnsClient        is not null &&
+                _ninjaOneClient   is not null &&
                 _defaultClient    is not null)
                 return;
 
@@ -486,6 +513,7 @@ namespace CIPP
                     _adminPlaneClient = BuildAdminPlaneClient();
                     _spoClient        = BuildSpoClient();
                     _dnsClient        = BuildDnsClient();
+                    _ninjaOneClient   = BuildNinjaOneClient();
                     _defaultClient    = BuildDefaultClient();
                 }
             }
@@ -581,6 +609,9 @@ namespace CIPP
                     StringComparison.OrdinalIgnoreCase)                    => (_dnsClient!, "DNS", host),
                 var h when h.Equals("cloudflare-dns.com",
                     StringComparison.OrdinalIgnoreCase)                    => (_dnsClient!, "DNS", host),
+
+                var h when h.EndsWith(".ninjarmm.com", StringComparison.OrdinalIgnoreCase)
+                        || h.EndsWith(".ninjaone.com", StringComparison.OrdinalIgnoreCase) => (_ninjaOneClient!, "NinjaOne", host),
 
                 // Rule 8 — catch-all
                 _                                                           => (_defaultClient!, "Default", host),
@@ -958,6 +989,7 @@ namespace CIPP
                     {
                         Index = index, IsSuccess = false, StatusCode = 0,
                         Error = ex.Message, Attempts = attempt,
+                        TimedOut = ex is OperationCanceledException,
                     };
                 }
             }

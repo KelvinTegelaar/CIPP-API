@@ -102,6 +102,5 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableOnlineArchiving' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'EnableOnlineArchiving' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }

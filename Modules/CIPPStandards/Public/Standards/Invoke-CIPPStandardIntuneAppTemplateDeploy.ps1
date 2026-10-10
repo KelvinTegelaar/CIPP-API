@@ -149,8 +149,6 @@ function Invoke-CIPPStandardIntuneAppTemplateDeploy {
     }
 
     if ($Settings.report -eq $true) {
-        $StateIsCorrect = $MissingApps.Count -eq 0
         Set-CIPPStandardsCompareField -FieldName 'standards.IntuneAppTemplateDeploy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'IntuneAppTemplateDeploy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

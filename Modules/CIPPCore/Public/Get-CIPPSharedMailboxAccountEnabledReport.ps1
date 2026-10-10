@@ -20,22 +20,24 @@ function Get-CIPPSharedMailboxAccountEnabledReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     try {
         # Handle AllTenants by recursing per tenant present in the Mailboxes cache
         if ($TenantFilter -eq 'AllTenants') {
-            $AllMailboxItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'Mailboxes'
-            $Tenants = @($AllMailboxItems | Where-Object { $_.RowKey -ne 'Mailboxes-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
-
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'Mailboxes' -ByTenant
 
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
                 try {
-                    $TenantResults = Get-CIPPSharedMailboxAccountEnabledReport -TenantFilter $Tenant
+                    $TenantResults = Get-CIPPSharedMailboxAccountEnabledReport -TenantFilter $Tenant -DbItems @{ Mailboxes = $TenantItems }
                     foreach ($Result in $TenantResults) {
                         $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                         $AllResults.Add($Result)
@@ -48,7 +50,7 @@ function Get-CIPPSharedMailboxAccountEnabledReport {
         }
 
         # Mailboxes cache identifies which mailboxes are shared (recipientTypeDetails) and the join key (UPN)
-        $MailboxItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_.RowKey -ne 'Mailboxes-Count' }
+        $MailboxItems = $(if ($DbItems) { $DbItems['Mailboxes'] } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' }) | Where-Object { $_.RowKey -ne 'Mailboxes-Count' }
         if (-not $MailboxItems) {
             throw 'No mailbox data found in reporting database. Sync the report data first.'
         }

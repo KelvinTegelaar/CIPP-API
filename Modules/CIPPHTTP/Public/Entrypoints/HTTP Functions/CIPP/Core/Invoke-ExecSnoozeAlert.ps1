@@ -4,6 +4,12 @@ function Invoke-ExecSnoozeAlert {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.AlertSnooze.ReadWrite
+    .DESCRIPTION
+        Snoozes one alert item so it stops notifying. Body: CmdletName, TenantFilter, AlertItem,
+        and either Duration (7, 14, 30 or 90 days) or UntilResolved=true, which keeps the snooze
+        until the alert stops reporting the item and is then removed automatically. KeepVisible=true
+        leaves the item on the dashboard, marked as snoozed, rather than hiding it. Reason is an
+        optional note. There is no indefinite snooze.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,7 +21,9 @@ function Invoke-ExecSnoozeAlert {
         $CmdletName = $Request.Body.CmdletName
         $TenantFilter = $Request.Body.TenantFilter
         $AlertItem = $Request.Body.AlertItem
-        $Duration = [int]$Request.Body.Duration
+        $Duration = ($Request.Body.Duration) -as [int]
+        $UntilResolved = [System.Convert]::ToBoolean(($Request.Body.UntilResolved ?? $false))
+        $KeepVisible = [System.Convert]::ToBoolean(($Request.Body.KeepVisible ?? $false))
         $Reason = [string]$Request.Body.Reason
         $SnoozedBy = try {
             ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
@@ -28,10 +36,10 @@ function Invoke-ExecSnoozeAlert {
                 })
         }
 
-        if ($Duration -notin @(7, 14, 30, 90)) {
+        if (-not $UntilResolved -and $Duration -notin @(7, 14, 30, 90)) {
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::BadRequest
-                    Body       = @{ Results = 'Duration must be 7, 14, 30, or 90 days.' }
+                    Body       = @{ Results = 'Duration must be 7, 14, 30, or 90 days, or set UntilResolved to true.' }
                 })
         }
 
@@ -47,21 +55,19 @@ function Invoke-ExecSnoozeAlert {
         # Compute content hash for this alert item
         $HashResult = Get-AlertContentHash -AlertItem $AlertItem
 
-        # Calculate SnoozeUntil
         $CurrentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
-        $SnoozeUntil = if ($Duration -eq -1) {
-            [int64](-1)
-        } else {
-            $CurrentUnixTime + ($Duration * 86400)
-        }
+        $SnoozeUntil = if ($UntilResolved) { [int64]0 } else { $CurrentUnixTime + ($Duration * 86400) }
 
         $SnoozeTable = Get-CIPPTable -tablename 'AlertSnooze'
+        $Keys = Get-CIPPAlertLifecycleKey -CmdletName $CmdletName -TenantFilter $TenantFilter -ContentHash $HashResult.ContentHash
         $SnoozeEntity = @{
-            PartitionKey   = [string]$CmdletName
-            RowKey         = [string]"$($TenantFilter)-$($HashResult.ContentHash)" -replace '[\\/#?\u0000-\u001f\u007f-\u009f]', '_'
+            PartitionKey   = $Keys.SnoozePartitionKey
+            RowKey         = $Keys.SnoozeRowKey
             ContentHash    = [string]$HashResult.ContentHash
             Tenant         = [string]$TenantFilter
             SnoozeUntil    = [string]$SnoozeUntil
+            UntilResolved  = [string]$UntilResolved
+            KeepVisible    = [string]$KeepVisible
             SnoozedBy      = [string]$SnoozedBy
             SnoozedAt      = [string]$CurrentUnixTime
             ContentPreview = [string]$HashResult.ContentPreview
@@ -71,9 +77,36 @@ function Invoke-ExecSnoozeAlert {
 
         Add-CIPPAzDataTableEntity @SnoozeTable -Entity $SnoozeEntity -Force | Out-Null
 
-        $DurationLabel = if ($Duration -eq -1) { 'forever' } else { "$Duration days" }
+        # Reflect the snooze on the tracked item straight away, so the dashboard does not have
+        # to wait for the alert's next run to move it out of the active list.
+        try {
+            $LifecycleTable = Get-CIPPTable -tablename 'AlertLifecycle'
+            $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $Keys.PartitionKey -Type String
+            $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value $Keys.RowKey -Type String
+            $Tracked = Get-CIPPAzDataTableEntity @LifecycleTable -Filter "PartitionKey eq '$SafeTenant' and RowKey eq '$SafeRowKey'" | Select-Object -First 1
+            if ($Tracked -and [string]$Tracked.Status -ne 'Resolved') {
+                $Update = @{}
+                foreach ($Prop in $Tracked.PSObject.Properties) {
+                    if ($Prop.Name -in @('ETag', 'Timestamp')) { continue }
+                    $Update[$Prop.Name] = $Prop.Value
+                }
+                $Update.Status = 'Snoozed'
+                $Update.SnoozeUntil = [string]$SnoozeUntil
+                $Update.SnoozedBy = [string]$SnoozedBy
+                $Update.SnoozeRowKey = $Keys.SnoozeRowKey
+                $Update.SnoozeReason = [string]$Reason
+                $Update.SnoozeVisible = [string]$KeepVisible
+                $Update.SnoozeUntilResolved = [string]$UntilResolved
+                Add-CIPPAzDataTableEntity @LifecycleTable -Entity $Update -Force | Out-Null
+            }
+        } catch {
+            Write-Information "Snooze stored but the tracked alert item could not be updated: $($_.Exception.Message)"
+        }
+
+        $DurationLabel = if ($UntilResolved) { 'until it resolves' } else { "for $Duration days" }
         $ContentPreview = $HashResult.ContentPreview
-        $Result = "Successfully snoozed alert for ${DurationLabel}: ${ContentPreview}"
+        $Result = "Successfully snoozed alert ${DurationLabel}: ${ContentPreview}"
+        if ($KeepVisible) { $Result = "$Result (kept visible on the dashboard)" }
         if (-not [string]::IsNullOrWhiteSpace($Reason)) {
             $Result = "$Result - Reason: $Reason"
         }
@@ -83,10 +116,12 @@ function Invoke-ExecSnoozeAlert {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @{
-                    Results     = $Result
-                    ContentHash = $HashResult.ContentHash
-                    SnoozeUntil = $SnoozeUntil
-                    SnoozedBy   = $SnoozedBy
+                    Results       = $Result
+                    ContentHash   = $HashResult.ContentHash
+                    SnoozeUntil   = $SnoozeUntil
+                    UntilResolved = $UntilResolved
+                    KeepVisible   = $KeepVisible
+                    SnoozedBy     = $SnoozedBy
                 }
             })
     } catch {

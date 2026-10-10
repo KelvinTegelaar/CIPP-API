@@ -41,17 +41,11 @@ function Push-GetMailboxPermissionsBatch {
         Write-Information "Built $($ExoBulkRequests.Count) bulk requests for batch $BatchNumber"
 
         # Execute bulk request for this batch with ReturnWithCommand to separate permission types
-        $MailboxPermissions = New-ExoBulkRequest -cmdletArray @($ExoBulkRequests) -tenantid $TenantFilter -ReturnWithCommand $true
+        $MailboxPermissions = New-ExoBulkRequest -cmdletArray @($ExoBulkRequests) -tenantid $TenantFilter -ReturnWithCommand $true -MaxConcurrency 5
 
         Write-Information "Bulk request completed. Result type: $($MailboxPermissions.GetType().Name)"
         if ($MailboxPermissions -is [hashtable]) {
             Write-Information "Result keys: $($MailboxPermissions.Keys -join ', ')"
-            if ($MailboxPermissions['Get-MailboxPermission']) {
-                Write-Information "Sample MailboxPermission: $($MailboxPermissions['Get-MailboxPermission'][0] | ConvertTo-Json -Depth 2 -Compress)"
-            }
-            if ($MailboxPermissions['Get-RecipientPermission']) {
-                Write-Information "Sample RecipientPermission: $($MailboxPermissions['Get-RecipientPermission'][0] | ConvertTo-Json -Depth 2 -Compress)"
-            }
         }
 
         # Normalize MailboxPermission results
@@ -88,13 +82,13 @@ function Push-GetMailboxPermissionsBatch {
         }
 
         $MailboxIdentityLookup = @{}
-        foreach ($MappedMailbox in ($MailboxData | Where-Object { $_.Id -and $_.UPN })) {
+        foreach ($MappedMailbox in $MailboxData.Where({ $_.Id -and $_.UPN })) {
             $MailboxIdentityLookup[[string]$MappedMailbox.Id] = [string]$MappedMailbox.UPN
         }
 
         # Normalize SendOnBehalf permissions from passed mailbox metadata
-        $NormalizedSendOnBehalfPerms = foreach ($Mailbox in ($MailboxData | Where-Object { $_.GrantSendOnBehalfTo -and ($Mailboxes -contains $_.UPN) })) {
-            foreach ($Delegate in (@($Mailbox.GrantSendOnBehalfTo) | Where-Object { $_ -and $MailboxIdentityLookup.ContainsKey([string]$_) })) {
+        $NormalizedSendOnBehalfPerms = foreach ($Mailbox in $MailboxData.Where({ $_.GrantSendOnBehalfTo -and ($Mailboxes -contains $_.UPN) })) {
+            foreach ($Delegate in @($Mailbox.GrantSendOnBehalfTo).Where({ $_ -and $MailboxIdentityLookup.ContainsKey([string]$_) })) {
                 $DelegateUPN = $MailboxIdentityLookup[[string]$Delegate]
                 [PSCustomObject]@{
                     id           = "SOB-$($Mailbox.UPN)-$DelegateUPN"

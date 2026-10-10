@@ -71,6 +71,5 @@ function Invoke-CIPPStandardlaps {
     if ($Settings.report -eq $true) {
         $state = $PreviousSetting.localAdminPassword.isEnabled ? $true : $false
         Set-CIPPStandardsCompareField -FieldName 'standards.laps' -FieldValue $state -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'laps' -FieldValue $PreviousSetting.localAdminPassword.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

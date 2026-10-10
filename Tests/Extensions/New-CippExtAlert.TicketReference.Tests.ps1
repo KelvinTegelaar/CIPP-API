@@ -191,3 +191,114 @@ Describe 'New-CippExtAlert - HaloPSA ticket reference' {
         }
     }
 }
+
+Describe 'New-CippExtAlert - PSA consolidation key' {
+    BeforeEach {
+        $script:TicketArgs = $null
+        $script:GradientArgs = $null
+
+        Mock -CommandName Get-CIPPTable -MockWith {
+            param([string]$TableName)
+            @{ TableName = $TableName }
+        }
+
+        Mock -CommandName Get-Tenants -MockWith {
+            [pscustomobject]@{
+                customerId = 'customer-guid'
+            }
+        }
+
+        Mock -CommandName Write-LogMessage -MockWith { }
+
+        Mock -CommandName New-HaloPSATicket -MockWith {
+            param(
+                $Title,
+                $Description,
+                $Client,
+                $UserUPN,
+                $AzureOID,
+                $DisplayName,
+                $TicketPriority,
+                $TicketId,
+                $ConsolidationKey
+            )
+
+            $script:TicketArgs = [pscustomobject]@{
+                Title            = $Title
+                Client           = $Client
+                ConsolidationKey = $ConsolidationKey
+            }
+        }
+
+        Mock -CommandName New-GradientAlert -MockWith {
+            param($Title, $Description, $Client)
+
+            $script:GradientArgs = [pscustomobject]@{
+                Title  = $Title
+                Client = $Client
+            }
+        }
+    }
+
+    It 'passes the optional consolidation key to HaloPSA' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            param($TableName, $Filter)
+
+            if ($Filter -like '*HaloMapping*') {
+                return [pscustomobject]@{
+                    RowKey        = 'customer-guid'
+                    IntegrationId = 19
+                }
+            }
+
+            [pscustomobject]@{
+                config = (@{
+                    HaloPSA = @{
+                        enabled = $true
+                    }
+                } | ConvertTo-Json -Depth 5)
+            }
+        }
+
+        $Alert = [pscustomobject]@{
+            TenantId            = 'contoso.onmicrosoft.com'
+            AlertTitle          = '[CIPP] dynamic title'
+            AlertText           = '<p>body</p>'
+            PSAConsolidationKey = 'contoso.com|Alerts'
+        }
+
+        New-CippExtAlert -Alert $Alert
+
+        $script:TicketArgs.ConsolidationKey |
+            Should -Be 'contoso.com|Alerts'
+    }
+
+    It 'does not change the Gradient call when the consolidation key is present' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            param($TableName, $Filter)
+
+            [pscustomobject]@{
+                config = (@{
+                    Gradient = @{
+                        enabled = $true
+                    }
+                } | ConvertTo-Json -Depth 5)
+            }
+        }
+
+        $Alert = [pscustomobject]@{
+            TenantId            = 'contoso.onmicrosoft.com'
+            AlertTitle          = '[CIPP] dynamic title'
+            AlertText           = '<p>body</p>'
+            PSAConsolidationKey = 'contoso.com|Alerts'
+        }
+
+        New-CippExtAlert -Alert $Alert
+
+        $script:GradientArgs.Title |
+            Should -Be '[CIPP] dynamic title'
+
+        $script:GradientArgs.Client |
+            Should -Be 'contoso.onmicrosoft.com'
+    }
+}

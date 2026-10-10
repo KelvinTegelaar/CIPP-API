@@ -82,6 +82,7 @@
     },
     "SpamQuarantineTag": {
       "type": "select",
+      "creatable": true,
       "multiple": false,
       "label": "Spam quarantine tag",
       "required": true,
@@ -140,6 +141,7 @@
     },
     "HighConfidenceSpamQuarantineTag": {
       "type": "select",
+      "creatable": true,
       "multiple": false,
       "label": "High confidence spam quarantine tag",
       "required": true,
@@ -198,6 +200,7 @@
     },
     "BulkQuarantineTag": {
       "type": "select",
+      "creatable": true,
       "multiple": false,
       "label": "Bulk quarantine tag",
       "required": true,
@@ -256,6 +259,7 @@
     },
     "PhishQuarantineTag": {
       "type": "select",
+      "creatable": true,
       "multiple": false,
       "label": "Phish quarantine tag",
       "required": true,
@@ -277,6 +281,7 @@
     },
     "HighConfidencePhishQuarantineTag": {
       "type": "select",
+      "creatable": true,
       "multiple": false,
       "label": "High confidence phish quarantine tag",
       "required": true,

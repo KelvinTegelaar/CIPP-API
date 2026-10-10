@@ -40,6 +40,7 @@ function Invoke-ListAlertsQueue {
             RawAlert        = @{
                 Conditions        = @($Conditions)
                 Actions           = @($($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue))
+                BecActions        = @($($Task.BecActions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue) | Where-Object { $_ })
                 Tenants           = @($Tenants)
                 type              = $Task.type
                 RowKey            = $Task.RowKey

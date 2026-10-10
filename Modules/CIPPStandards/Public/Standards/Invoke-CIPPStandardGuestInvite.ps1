@@ -95,6 +95,5 @@ function Invoke-CIPPStandardGuestInvite {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.GuestInvite' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'GuestInvite' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

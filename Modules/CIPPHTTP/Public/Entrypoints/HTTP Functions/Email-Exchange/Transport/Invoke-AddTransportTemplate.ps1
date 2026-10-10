@@ -29,7 +29,7 @@ Function Invoke-AddTransportTemplate {
                     $_ | Select-Object -Property $NonEmptyProperties
                 }
         }
-        $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, @{n = 'comments'; e = { $_.comments } }, * | ConvertTo-Json -Depth 10)
+        $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, @{n = 'comments'; e = { $_.comments } }, * -ExcludeProperty Name, Comments | ConvertTo-Json -Depth 10)
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{

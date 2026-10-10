@@ -6,7 +6,7 @@ function Invoke-CippTestORCA240 {
     param($Tenant)
 
     try {
-        $OrgConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
+        $OrgConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoExternalInOutlook'
 
         if (-not $OrgConfig) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA240' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Outlook external tags are configured' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Configuration'
@@ -15,14 +15,14 @@ function Invoke-CippTestORCA240 {
 
         $Config = $OrgConfig | Select-Object -First 1
 
-        if ($Config.ExternalInOutlook -ne 'Disabled') {
+        if ($Config.Enabled -eq $true) {
             $Status = 'Passed'
             $Result = [System.Text.StringBuilder]::new("Outlook external tags are configured.`n`n")
-            $null = $Result.Append("**ExternalInOutlook:** $($Config.ExternalInOutlook)")
+            $null = $Result.Append("**ExternalInOutlook Enabled:** $($Config.Enabled)")
         } else {
             $Status = 'Failed'
             $Result = [System.Text.StringBuilder]::new("Outlook external tags are NOT configured.`n`n")
-            $null = $Result.Append("**ExternalInOutlook:** $($Config.ExternalInOutlook)")
+            $null = $Result.Append("**ExternalInOutlook Enabled:** $($Config.Enabled)")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA240' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Outlook external tags are configured' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Configuration'

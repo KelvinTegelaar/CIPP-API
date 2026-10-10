@@ -46,7 +46,5 @@ function Get-CIPPAlertOneDriveQuota {
     }
 
     #If the quota is over the threshold, send an alert
-    if ($OverQuota) {
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $OverQuota
-    }
+    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $OverQuota
 }

@@ -26,9 +26,7 @@ function Get-CIPPAlertDefenderStatus {
                 TenantId                       = $_.tenantId
             }
         }
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

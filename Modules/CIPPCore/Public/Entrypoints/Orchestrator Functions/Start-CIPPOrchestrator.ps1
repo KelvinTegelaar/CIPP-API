@@ -17,7 +17,7 @@ function Start-CIPPOrchestrator {
         Indicates the caller is already running in a queue trigger context.
         Skips queuing and starts orchestration directly to avoid double-queuing.
     .EXAMPLE
-        Start-CIPPOrchestrator -InputObject @{OrchestratorName='BPA'; Batch=@($Tenants)}
+        Start-CIPPOrchestrator -InputObject @{OrchestratorName='UpdatePermissionsOrchestrator'; Batch=@($Tenants)}
     .EXAMPLE
         Start-CIPPOrchestrator -InputObject $InputObject -CallerIsQueueTrigger
     .FUNCTIONALITY
@@ -106,24 +106,9 @@ function Start-CIPPOrchestrator {
         # Both the priority default and the parent-run lineage below come from it.
         $OpContext = Get-Variable -Name 'CraftOperationContext' -Scope Global -ValueOnly -ErrorAction SilentlyContinue
 
-        # The queue claims strictly by priority bucket (P00 first), so this decides who runs
-        # when the limiter is saturated. Resolution order:
-        #   1. Explicit Priority on the InputObject, when it is a valid bucket (out-of-range values
-        #      take the fallback: the store clamps into 0-99 buckets, so a stray negative would
-        #      otherwise silently land in the critical P00 bucket).
-        #   2. The enclosing run's priority (from the stamped context) — a child run belongs to
-        #      its parent's band, so a baseline run's follow-up no longer drops back to the default.
-        #   3. P2 for HTTP-triggered orchestrations — user-initiated work must not queue behind
-        #      background fan-outs.
-        #   4. The historical default 4 (timers and other background starters).
-        $Priority = if ($null -ne $InputObject.Priority) { [int]$InputObject.Priority }
-        if ($null -eq $Priority -or $Priority -lt 0 -or $Priority -gt 99) {
-            $Priority = if ($null -ne $OpContext) { $OpContext.PSObject.Properties['Priority'].Value }
-            if ($null -eq $Priority) {
-                $Priority = if ($null -ne $OpContext -and $OpContext.Category -eq 'HTTP') { 2 } else { 4 }
-            }
-            $Priority = [int]$Priority
-        }
+        # Bucket resolution lives in Resolve-CIPPOrchestratorPriority: explicit value, then the
+        # enclosing run's band, then P1 for HTTP-triggered work, else the background default P4.
+        $Priority = Resolve-CIPPOrchestratorPriority -InputObject $InputObject -OpContext $OpContext
 
         # Lineage: pass the enclosing run explicitly as the new run's parent, so Craft holds the
         # parent's finalize (and PostExecution) until this child completes. The bridge cannot see

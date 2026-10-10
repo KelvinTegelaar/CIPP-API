@@ -1,0 +1,10 @@
+{
+  "RequireMfa": { "label": "Multifactor authentication", "description": "Without it, a stolen or guessed password is enough to sign in as one of them." },
+  "PhishingResistantMfa": { "label": "Phishing-resistant authentication", "description": "Without it, their multifactor prompt can be captured by a convincing phishing page." },
+  "RequireCompliantDevice": { "label": "Managed device", "description": "Without it, they can sign in from any device, including unmanaged or infected ones." },
+  "BlockLegacyAuth": { "label": "Legacy authentication blocked", "description": "Without it, older sign-in methods that cannot use multifactor authentication remain available to them." },
+  "SignInRisk": { "label": "Sign-in risk response", "description": "Without it, a sign-in that Microsoft rates as suspicious goes through without any extra check." },
+  "UserRisk": { "label": "User risk response", "description": "Without it, an account that Microsoft rates as likely compromised keeps working until someone notices." },
+  "SessionControls": { "label": "Session limits", "description": "Without it, a session on a shared or lost device stays valid indefinitely." },
+  "BlockCountries": { "label": "Location restrictions", "description": "Without it, sign-ins are accepted from any country or network." }
+}

@@ -3,7 +3,7 @@ function Invoke-ListBreachesAccount {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.Read
+        CIPP.BreachLookup.Read
     .DESCRIPTION
         Checks an email account or domain against the Have I Been Pwned (HIBP) breach database.
     #>

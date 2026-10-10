@@ -114,6 +114,15 @@ function Invoke-ExecCompareIntunePolicy {
                         Write-Warning "$Label : Could not resolve available settings, comparing against the full template - $($_.Exception.Message)"
                     }
                 }
+                if ($TemplateType -eq 'Admin') {
+                    # Imported ADMX settings bind to per-tenant definition ids; compare against the
+                    # binds deployment would write to this tenant.
+                    try {
+                        $Object = Resolve-CIPPIntuneAdminTemplateBinding -RawJSON (ConvertTo-Json -InputObject $Object -Depth 100 -Compress) -TenantFilter $TenantFilter -DisplayName $JSONData.Displayname | ConvertFrom-Json -Depth 100
+                    } catch {
+                        Write-Warning "$Label : Could not resolve the administrative template settings in this tenant, comparing against the stored template - $($_.Exception.Message)"
+                    }
+                }
             }
 
             return @{

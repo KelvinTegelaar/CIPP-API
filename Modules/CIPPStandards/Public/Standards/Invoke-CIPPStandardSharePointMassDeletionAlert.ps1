@@ -125,6 +125,5 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
             NotifyUser = @($Settings.NotifyUser.value)
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SharePointMassDeletionAlert' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SharePointMassDeletionAlert' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

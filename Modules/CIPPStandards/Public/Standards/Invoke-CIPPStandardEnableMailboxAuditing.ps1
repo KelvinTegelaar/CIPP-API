@@ -133,7 +133,6 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableMailboxAuditing' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'MailboxAuditingEnabled' -FieldValue $AuditState -StoreAs bool -Tenant $Tenant
     }
 
 }

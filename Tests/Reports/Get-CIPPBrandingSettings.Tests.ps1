@@ -26,6 +26,7 @@ BeforeAll {
         return $Map
     }
     function Add-CIPPImage { param($PartitionKey, $Data) @{ id = 'migrated-1' } }
+    function Get-CIPPImageNameMap { param($PartitionKey) if ($script:ImageNames) { $script:ImageNames } else { @{} } }
     function ConvertTo-CIPPCoverImageIdList {
         param($Value)
         if ($null -eq $Value -or $Value -eq '') { return , [string[]]@() }
@@ -152,6 +153,21 @@ Describe 'Get-CIPPBrandingSettings' {
             $Result = Get-CIPPBrandingSettings
             @($Result.reportDefaults.PSObject.Properties).Count | Should -Be 0
             $Result.colour | Should -Be '#342858'
+        }
+    }
+
+    Context 'Named covers' {
+        It 'lists the gallery covers by id with the names they were given' {
+            $script:Rows = @(New-ConfigRow -Overrides @{ coverImageIds = '["c1","c2"]' })
+            $script:Images = @{ c1 = @{ data = 'data:image/png;base64,AAAA' }; c2 = @{ data = 'data:image/png;base64,BBBB' } }
+            $script:ImageNames = @{ c1 = 'Board room' }
+            $Covers = @((Get-CIPPBrandingSettings).coverImages)
+            $Covers.Count | Should -Be 2
+            $Covers[0].id | Should -Be 'c1'
+            $Covers[0].name | Should -Be 'Board room'
+            $Covers[1].name | Should -Be ''
+            $script:ImageNames = $null
+            $script:Images = @{}
         }
     }
 

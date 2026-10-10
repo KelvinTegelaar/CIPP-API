@@ -15,6 +15,10 @@ function Invoke-AddOfficeApp {
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
     $AssignTo = $Request.Body.AssignTo -eq 'customGroup' ? $Request.Body.CustomGroup : $Request.Body.AssignTo
     $ExcludeGroup = $Request.Body.excludeGroup
+    # Group ids from the deploy drawer's single-tenant picker. CustomGroup/excludeGroup still
+    # carry the display names for logging and as a fallback if the ids are ever dropped.
+    $GroupIds = @($Request.Body.GroupIds | Where-Object { $_ })
+    $ExcludeGroupIds = @($Request.Body.ExcludeGroupIds | Where-Object { $_ })
 
     $Results = foreach ($Tenant in $Tenants) {
         try {
@@ -34,7 +38,18 @@ function Invoke-AddOfficeApp {
             }
             Write-LogMessage -headers $Headers -API $APIName -tenant $($Tenant) -message "Added Office profile to $($Tenant)" -Sev 'Info'
             if ($AssignTo -and $AssignTo -ne 'On') {
-                Set-CIPPAssignedApplication -ApplicationId $OfficeAppID.id -TenantFilter $Tenant -Intent 'Required' -GroupName $AssignTo -ExcludeGroup $ExcludeGroup -APIName $APIName -Headers $Headers
+                $AssignParams = @{
+                    ApplicationId = $OfficeAppID.id
+                    TenantFilter  = $Tenant
+                    Intent        = 'Required'
+                    GroupName     = $AssignTo
+                    ExcludeGroup  = $ExcludeGroup
+                    APIName       = $APIName
+                    Headers       = $Headers
+                }
+                if ($GroupIds.Count -gt 0) { $AssignParams.GroupIds = $GroupIds }
+                if ($ExcludeGroupIds.Count -gt 0) { $AssignParams.ExcludeGroupIds = $ExcludeGroupIds }
+                Set-CIPPAssignedApplication @AssignParams
                 Write-LogMessage -headers $Headers -API $APIName -tenant $($Tenant) -message "Assigned Office to $AssignTo" -Sev 'Info'
             }
             "Successfully added Office App for $($Tenant)"

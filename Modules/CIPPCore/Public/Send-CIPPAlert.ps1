@@ -20,7 +20,12 @@ function Send-CIPPAlert {
         $PsaTicketPriority,
         $PSAReference,
         $PSATicketId,
-        [switch]$UseStandardizedSchema
+        $PSAConsolidationKey,
+        [switch]$UseStandardizedSchema,
+        # push only: the CIPP user (UPN) whose registered devices receive it
+        $TargetUser,
+        $PushMessage,
+        $Url
     )
     Write-Information 'Shipping Alert'
     $Table = Get-CIPPTable -TableName SchedulerConfig
@@ -29,6 +34,48 @@ function Send-CIPPAlert {
 
     if ($HTMLContent) {
         $HTMLContent = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $HTMLContent
+    }
+
+    if ($Type -eq 'push') {
+        if ([string]::IsNullOrWhiteSpace($TargetUser)) { return 'No target user for push notification' }
+        $SubTable = Get-CIPPTable -tablename 'PushSubscriptions'
+        $Subscriptions = @(Get-CIPPAzDataTableEntity @SubTable -Filter "PartitionKey eq '$TargetUser'")
+        if ($Subscriptions.Count -eq 0) { return "No push devices registered for $TargetUser" }
+
+        $Keys = Get-CIPPVapidKeys
+        $CippConfigTable = Get-CIPPTable -tablename 'Config'
+        $CippUrl = (Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'").Value
+        $Subject = if ($CippUrl) { "https://$CippUrl" } else { 'mailto:noreply@cipp.app' }
+        $Payload = @{
+            title = if ($Title) { "$Title" } else { 'CIPP' }
+            body  = "$PushMessage"
+            url   = if ($Url) { "$Url" } else { '/' }
+        } | ConvertTo-Json -Compress
+
+        $Sent = 0
+        $Pruned = 0
+        foreach ($Sub in $Subscriptions) {
+            try {
+                if ($PSCmdlet.ShouldProcess($Sub.DeviceName, 'Sending push notification')) {
+                    $Result = [CIPP.WebPush]::Send($Sub.Endpoint, $Sub.P256dh, $Sub.Auth, $Payload, $Keys.PublicKey, $Keys.PrivateKey, $Subject, 86400)
+                    if ($Result.IsSuccess) {
+                        $Sent++
+                    } elseif ($Result.IsGone) {
+                        # The browser dropped the subscription; the row is dead weight.
+                        Remove-AzDataTableEntity @SubTable -Entity $Sub -Force | Out-Null
+                        $Pruned++
+                        Write-LogMessage -API $APIName -message "Removed expired push subscription '$($Sub.DeviceName)' for $TargetUser (push service returned HTTP $($Result.StatusCode): $($Result.Content))" -Sev 'Info'
+                    } else {
+                        Write-LogMessage -API $APIName -message "Push to '$($Sub.DeviceName)' for $TargetUser failed with HTTP $($Result.StatusCode): $($Result.Content)" -Sev 'Warning'
+                    }
+                }
+            } catch {
+                Write-LogMessage -API $APIName -message "Push to '$($Sub.DeviceName)' for $TargetUser failed: $($_.Exception.Message)" -Sev 'Warning'
+            }
+        }
+        $Summary = "Push sent to $Sent of $($Subscriptions.Count) device(s) for $TargetUser"
+        if ($Pruned) { $Summary += " ($Pruned expired subscription(s) removed)" }
+        return $Summary
     }
 
     if ($Type -eq 'email') {
@@ -65,16 +112,38 @@ function Send-CIPPAlert {
                     saveToSentItems = 'true'
                 }
 
-                # Add file attachments if provided
+                # Add file attachments if provided. sendMail rejects a request body over 4MB, so attach in
+                # order (the report PDF comes first); whatever no longer fits is uploaded to blob storage and
+                # linked from the body instead, or omitted if the upload fails. The links fit in the 64KB slack.
                 if ($Attachments -and $Attachments.Count -gt 0) {
-                    $PowerShellBody.message.attachments = @($Attachments | ForEach-Object {
-                        @{
-                            '@odata.type'  = '#microsoft.graph.fileAttachment'
-                            name           = $_.Name
-                            contentType    = $_.ContentType
-                            contentBytes   = $_.ContentBytes
+                    $Budget = 4MB - 64KB - [System.Text.Encoding]::UTF8.GetByteCount((ConvertTo-Json -Compress -Depth 10 -InputObject $PowerShellBody))
+                    $DownloadLinks = [System.Collections.Generic.List[string]]::new()
+                    $FittingAttachments = @($Attachments | ForEach-Object {
+                        $Size = ([string]$_.ContentBytes).Length + 512
+                        if ($Size -le $Budget) {
+                            $Budget = $Budget - $Size
+                            @{
+                                '@odata.type'  = '#microsoft.graph.fileAttachment'
+                                name           = $_.Name
+                                contentType    = $_.ContentType
+                                contentBytes   = $_.ContentBytes
+                            }
+                        } else {
+                            $Attachment = $_
+                            try {
+                                $Url = New-CIPPReportAttachmentLink -Name $Attachment.Name -ContentBytes $Attachment.ContentBytes -ContentType $Attachment.ContentType
+                                $DownloadLinks.Add("<li><a href=`"$([System.Net.WebUtility]::HtmlEncode($Url))`">$([System.Net.WebUtility]::HtmlEncode($Attachment.Name))</a></li>")
+                            } catch {
+                                Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Omitting attachment $($Attachment.Name) from '$Title': too large for email and the blob upload failed: $($_.Exception.Message)" -sev Warning
+                            }
                         }
                     })
+                    if ($FittingAttachments.Count -gt 0) {
+                        $PowerShellBody.message.attachments = $FittingAttachments
+                    }
+                    if ($DownloadLinks.Count -gt 0) {
+                        $PowerShellBody.message.body.content = "$HTMLContent<p>The following attachment(s) were too large to attach to this email. Download them directly here:</p><ul>$($DownloadLinks -join '')</ul>"
+                    }
                 }
 
                 $JSONBody = ConvertTo-Json -Compress -Depth 10 -InputObject $PowerShellBody
@@ -371,6 +440,12 @@ function Send-CIPPAlert {
                 if ($PSATicketId) {
                     $Alert.PsaTicketId = $PSATicketId
                     Write-Information "PSA alert target ticket: $PSATicketId"
+                }
+                if ($PSAConsolidationKey) {
+                    # Optional stable key for PSA extensions that support consolidation.
+                    # Extensions that do not consume this property remain unaffected.
+                    $Alert.PSAConsolidationKey = $PSAConsolidationKey
+                    Write-Information 'PSA alert consolidation key supplied'
                 }
                 if ($AffectedUser) {
                     $Alert.AffectedUser = $AffectedUser

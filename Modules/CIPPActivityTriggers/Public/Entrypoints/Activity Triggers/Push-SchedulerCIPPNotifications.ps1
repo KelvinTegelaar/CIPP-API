@@ -145,7 +145,9 @@ function Push-SchedulerCIPPNotifications {
                 $Data = $g.Group | Select-Object Message, API, Tenant, Username, Severity
                 $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'psa' -InputObject 'table' -CIPPURL $CIPPURL
                 $Title = "$tenant CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))"
-                Send-CIPPAlert -Type 'psa' -Title $Title -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
+                # The visible title contains a timestamp, so use a stable per-tenant key for PSA
+                # consolidation. PSA integrations that ignore the optional key remain unchanged.
+                Send-CIPPAlert -Type 'psa' -Title $Title -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts' -PSAConsolidationKey "$tenant|Alerts"
                 & $MarkSent $g.Group $LogTable
                 $Data = $null; $HTMLContent = $null
             }

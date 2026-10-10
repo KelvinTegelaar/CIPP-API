@@ -52,6 +52,7 @@ function Get-CIPPAlertExpiringLicenses {
                         }
 
                         [PSCustomObject]@{
+                            Id             = $Term.SubscriptionId
                             Message        = $Message
                             License        = $_.License
                             SkuId          = $_.skuId
@@ -69,12 +70,11 @@ function Get-CIPPAlertExpiringLicenses {
             }
         )
 
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
     } catch {
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -error $_
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Expiring licenses alert failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
         throw
     }
 }

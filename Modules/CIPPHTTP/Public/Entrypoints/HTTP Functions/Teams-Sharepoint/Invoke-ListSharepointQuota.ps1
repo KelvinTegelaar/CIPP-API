@@ -11,65 +11,67 @@ Function Invoke-ListSharepointQuota {
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $GeoLocations = @()
+    $Live = [bool]$Request.Query.live
 
-    if ($TenantFilter -eq 'AllTenants') {
-        $UsedStoragePercentage = 'Not Supported'
-    } else {
+    if ($Live -eq $true) {
         try {
             $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
             $extraHeaders = @{
                 'Accept' = 'application/json'
             }
-            # StorageQuotas returns one row per geo location: on a Multi-Geo tenant this is a
-            # collection, on every other tenant a single row. Used storage is therefore the sum
-            # across geos, while TenantStorageMB is the shared tenant pool repeated identically
-            # on every row and must be taken once rather than summed.
-            # Cert-based app-only auth: SPO admin REST 401s delegated client-secret tokens on
-            # tenants where the service account lacks SharePoint admin rights, which made this
-            # endpoint silently return 'Not available'.
             $SharePointQuota = New-GraphGetRequest -extraHeaders $extraHeaders -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -uri "$($SharePointInfo.AdminUrl)/_api/StorageQuotas()?api-version=1.3.2" -asapp $true -UseCertificate
-            # The API types every figure as a string. Cast each geo's used storage before summing
-            # (Measure-Object -Sum does not add strings, so this returned $null), and cast the
-            # tenant pool, so both surface as numbers instead of a null and a string.
             $GeoUsedStorageMB = (@($SharePointQuota) | ForEach-Object { [double]($_.GeoUsedStorageMB ?? 0) } | Measure-Object -Sum).Sum
             $TenantStorageRaw = @($SharePointQuota.TenantStorageMB | Where-Object { $_ }) | Select-Object -First 1
             $TenantStorageMB = if ($null -ne $TenantStorageRaw) { [double]$TenantStorageRaw } else { 0 }
-
-            # Per-geo detail so a Multi-Geo tenant can see where the used storage actually sits
-            # rather than only a tenant-wide total. The API types every figure as a string, so
-            # cast here and let callers work with numbers.
+            $GeoLocations = @()
             $GeoLocations = @(foreach ($Geo in @($SharePointQuota)) {
-                    if ($null -eq $Geo) { continue }
-                    [PSCustomObject]@{
-                        GeoLocation           = $Geo.GeoLocation
-                        GeoUsedStorageMB      = [double]($Geo.GeoUsedStorageMB ?? 0)
-                        GeoAllocatedStorageMB = [double]($Geo.GeoAllocatedStorageMB ?? 0)
-                        GeoAvailableStorageMB = [double]($Geo.GeoAvailableStorageMB ?? 0)
-                    }
-                })
+                if ($null -eq $Geo) { continue }
+                [PSCustomObject]@{
+                    GeoLocation           = $Geo.GeoLocation
+                    GeoUsedStorageMB      = [double]($Geo.GeoUsedStorageMB ?? 0)
+                    GeoAllocatedStorageMB = [double]($Geo.GeoAllocatedStorageMB ?? 0)
+                    GeoAvailableStorageMB = [double]($Geo.GeoAvailableStorageMB ?? 0)
+                }
+            })
 
             if ($TenantStorageMB) {
                 $UsedStoragePercentage = [int](($GeoUsedStorageMB / $TenantStorageMB) * 100)
             }
+
+            $SharePointQuotaDetails = @{
+                GeoUsedStorageMB = $GeoUsedStorageMB
+                TenantStorageMB  = $TenantStorageMB
+                Percentage       = $UsedStoragePercentage
+                Dashboard        = "$($UsedStoragePercentage) / 100"
+                GeoLocations     = @($GeoLocations)
+            }
         } catch {
-            $UsedStoragePercentage = 'Not available'
+            return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::InternalServerError
+                Body       = $_.Exception.Message
+            })
+        }
+
+    } else {
+        try {
+            $SharePointQuota = (Get-CIPPDbItem -tenantFilter $TenantFilter -Type SharePointUsageReport | Where-Object { $_.RowKey -notlike '*-Count' }).Data | ConvertFrom-Json
+            $SharePointQuotaDetails = [PSCustomObject]@{
+                GeoUsedStorageMB = $SharePointQuota.GeoUsedStorageMB
+                GeoLocations     = @($SharePointQuota.GeoLocations)
+                TenantStorageMB  = $SharePointQuota.TenantStorageMB
+                Percentage       = $SharePointQuota.Percentage
+                Dashboard        = $SharePointQuota.Dashboard
+            }
+        } catch {
+            return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::InternalServerError
+                Body       = $_.Exception.Message
+            })
         }
     }
 
-    $SharePointQuotaDetails = @{
-        GeoUsedStorageMB = $GeoUsedStorageMB
-        TenantStorageMB  = $TenantStorageMB
-        Percentage       = $UsedStoragePercentage
-        Dashboard        = "$($UsedStoragePercentage) / 100"
-        GeoLocations     = @($GeoLocations)
-    }
-
-    $StatusCode = [HttpStatusCode]::OK
-
     return ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $SharePointQuotaDetails
-        })
-
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $SharePointQuotaDetails
+    })
 }

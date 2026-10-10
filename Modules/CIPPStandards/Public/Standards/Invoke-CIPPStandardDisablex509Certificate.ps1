@@ -71,7 +71,6 @@ function Invoke-CIPPStandardDisablex509Certificate {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.Disablex509Certificate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'Disablex509Certificate' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
 }

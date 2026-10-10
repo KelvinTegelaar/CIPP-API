@@ -47,6 +47,7 @@ function Start-CIPPStatsTimer {
         $uniqueStandardsApplied = Get-CIPPStatsUniqueStandardsApplied
         $driftStandardsCount = Get-CIPPStatsDriftStandardsCount
         $mobileEnrollment = Get-CIPPStatsMobileEnrollment
+        $baselineStats = Get-CIPPStatsBaselines
 
         # Feature flags
         $FeatureFlags = @{}
@@ -102,10 +103,13 @@ function Start-CIPPStatsTimer {
             PWPush                 = $RawExt.PWPush.Enabled
             CFZTNA                 = $RawExt.CFZTNA.Enabled
             GitHub                 = $RawExt.GitHub.Enabled
-            BestPracticeAnalyser   = $FeatureFlags.BestPracticeAnalyser
             SuperAdminNG           = $FeatureFlags.SuperAdminNG
             MCPServer              = $FeatureFlags.MCPServer
             SSOMigrationStatus     = $MigrationStatus
+            FeatureFlags           = ($FeatureFlags | ConvertTo-Json -Compress)
+            BaselineCount          = $baselineStats.BaselineCount
+            BaselineTenantCount    = $baselineStats.BaselineTenantCount
+            BaselineStandardsCount = $baselineStats.BaselineStandardsCount
         } | ConvertTo-Json
 
         try {

@@ -109,6 +109,7 @@ function Invoke-ExecOffboardUser {
                     Webhook = [bool]$Request.Body.PostExecution.webhook
                     Email   = [bool]$Request.Body.PostExecution.email
                     PSA     = [bool]$Request.Body.PostExecution.psa
+                    Push    = [bool]$Request.Body.PostExecution.push
                 }
                 Reference     = $Request.Body.reference
                 PsaTicketId   = $Request.Body.PsaTicketId

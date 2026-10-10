@@ -112,6 +112,18 @@ function Compare-CIPPIntuneAssignments {
         # expected group, not an unexpected extra one.
         $BroadGroupIds = @($BroadTarget.Targets | Where-Object { $_.groupId } | ForEach-Object { $_.groupId })
 
+        # Intune reports some broad group targets back under an equivalent type. Accepting only the
+        # shape remediation writes flags a working assignment as a deviation on every run.
+        $EquivalentTypes = [System.Collections.Generic.List[string]]::new()
+        $SatisfiedBroadIds = [System.Collections.Generic.List[string]]::new()
+        foreach ($BroadId in @($BroadTarget.Equivalents.Keys)) {
+            $Types = @($BroadTarget.Equivalents[$BroadId])
+            $EquivalentTypes.AddRange([string[]]$Types)
+            if (@($Types | Where-Object { $_ -in $ExistingIncludeTypes }).Count -gt 0) {
+                $SatisfiedBroadIds.Add($BroadId)
+            }
+        }
+
         # Groups are looked up once and reused for name->id resolution and for naming the ids that
         # turn out to differ.
         $AllGroupsCache = $null
@@ -143,7 +155,7 @@ function Compare-CIPPIntuneAssignments {
         $TargetTypeMatch = $true
         if ($Target.Managed) {
             $MissingTypes = @($ExpectedIncludeTypes | Where-Object { $_ -ne $GroupType -and $_ -notin $ExistingIncludeTypes })
-            $ExtraTypes = @($ExistingIncludeTypes | Where-Object { $_ -ne $GroupType -and $_ -notin $ExpectedIncludeTypes })
+            $ExtraTypes = @($ExistingIncludeTypes | Where-Object { $_ -ne $GroupType -and $_ -notin $ExpectedIncludeTypes -and $_ -notin $EquivalentTypes })
             if ($MissingTypes.Count -gt 0) {
                 $TargetTypeMatch = $false
                 $Reasons.Add("Policy is not assigned to $(($MissingTypes -replace '#microsoft\.graph\.', '') -join ', ')")
@@ -163,7 +175,7 @@ function Compare-CIPPIntuneAssignments {
             foreach ($Name in $Resolved.Unresolved) { $UnresolvedGroups.Add($Name) }
         }
         $ExpectedGroupIds = @($ExpectedGroupIds) + $BroadGroupIds
-        $MissingIncludeIds = @($ExpectedGroupIds | Where-Object { $_ -notin $ExistingIncludeGroupIds })
+        $MissingIncludeIds = @($ExpectedGroupIds | Where-Object { $_ -notin $ExistingIncludeGroupIds -and $_ -notin $SatisfiedBroadIds })
         $ExtraIncludeIds = if ($Target.Managed) {
             @($ExistingIncludeGroupIds | Where-Object { $_ -notin $ExpectedGroupIds })
         } else { @() }

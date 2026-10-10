@@ -166,9 +166,7 @@ function Invoke-CIPPStandardcalDefault {
     }
 
     if ($Settings.report -eq $true) {
-        $Filtered = $NeedsUpdate | Select-Object -Property Identity, AccessRights
         Set-CIPPStandardsCompareField -FieldName 'standards.calDefault' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'calDefault' -FieldValue $Filtered -StoreAs json -Tenant $Tenant
     }
 
 }

@@ -31,7 +31,7 @@ function Push-GetMailboxRulesBatch {
             }
         }
 
-        $Rules = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Request) | Where-Object { $_.Identity }
+        $Rules = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Request) -MaxConcurrency 5 | Where-Object { $_.Identity }
 
         Write-Information "Retrieved $($Rules.Count) rules from batch $BatchNumber/$TotalBatches"
 
