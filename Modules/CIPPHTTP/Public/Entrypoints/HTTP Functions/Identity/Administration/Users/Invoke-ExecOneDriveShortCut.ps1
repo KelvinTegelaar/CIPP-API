@@ -7,7 +7,7 @@ Function Invoke-ExecOneDriveShortCut {
     .SYNOPSIS
         Creates a OneDrive shortcut to a SharePoint library for one or more users.
     .DESCRIPTION
-        Accepts one { username, userid, siteUrl, destination, tenantFilter } object or an array of them (the Users table bulk action). Every user is attempted: a failure for one user (for example a shortcut that already exists) is reported in its place and does not stop the remaining users, so a bulk rollout never has to be re-run to find out where it got to. The response is one result per user plus a summary line, and only returns an error status when no user succeeded.
+        Accepts one { username, userid, siteUrl, destination, optional shortcutName, tenantFilter } object or an array of them (the Users table bulk action). Every user is attempted: a failure for one user (for example a shortcut that already exists) is reported in its place and does not stop the remaining users, so a bulk rollout never has to be re-run to find out where it got to. The response is one result per user plus a summary line, and only returns an error status when no user succeeded.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -40,8 +40,10 @@ Function Invoke-ExecOneDriveShortCut {
             $Destination = 'root'
         }
 
+        $ShortcutName = [string]$Entry.shortcutName
+
         try {
-            $Message = New-CIPPOneDriveShortCut -Username $Username -UserId $UserId -TenantFilter $TenantFilter -URL $URL -Destination $Destination -Headers $Headers
+            $Message = New-CIPPOneDriveShortCut -Username $Username -UserId $UserId -TenantFilter $TenantFilter -URL $URL -Destination $Destination -ShortcutName $ShortcutName -Headers $Headers
             & $Add $Message 'success'
         } catch {
             # New-CIPPOneDriveShortCut has already logged the failure; record it and carry on with the next user

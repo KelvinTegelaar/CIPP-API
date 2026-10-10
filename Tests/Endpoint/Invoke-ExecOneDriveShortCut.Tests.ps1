@@ -5,7 +5,7 @@ BeforeAll {
     if (-not ([System.Management.Automation.PSTypeName]'HttpStatusCode').Type) {
         $TypeAccelerators::Add('HttpStatusCode', [System.Net.HttpStatusCode])
     }
-    function New-CIPPOneDriveShortCut { param($Username, $UserId, $URL, $TenantFilter, $APIName, $Headers, $Destination) }
+    function New-CIPPOneDriveShortCut { param($Username, $UserId, $URL, $TenantFilter, $APIName, $Headers, $Destination, $ShortcutName) }
     . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ExecOneDriveShortCut.ps1' | Select-Object -First 1).FullName
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
@@ -77,6 +77,16 @@ Describe 'Invoke-ExecOneDriveShortCut' {
         $Results.Count | Should -Be 1
         $Results[0].state | Should -Be 'success'
         $Results[0].resultText | Should -Match 'one@contoso.com'
+    }
+
+    It 'passes shortcutName through, and an empty string when absent' {
+        $Named = New-Entry 'one@contoso.com'
+        $Named | Add-Member -NotePropertyName shortcutName -NotePropertyValue 'Team Docs'
+        $null = Invoke-ExecOneDriveShortCut -Request (New-Request -Body $Named) -TriggerMetadata $null
+        Should -Invoke New-CIPPOneDriveShortCut -Times 1 -ParameterFilter { $ShortcutName -eq 'Team Docs' }
+
+        $null = Invoke-ExecOneDriveShortCut -Request (New-Request -Body (New-Entry 'three@contoso.com')) -TriggerMetadata $null
+        Should -Invoke New-CIPPOneDriveShortCut -Times 1 -ParameterFilter { $Username -eq 'three@contoso.com' -and $ShortcutName -eq '' }
     }
 
     It 'defaults a missing destination to root' {

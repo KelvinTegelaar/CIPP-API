@@ -9,10 +9,21 @@ function New-CIPPOneDriveShortCut {
         $APIName = 'Create OneDrive shortcut',
         $Headers,
         [ValidateSet('root', 'shortcuts')]
-        [string]$Destination = 'root'
+        [string]$Destination = 'root',
+        [string]$ShortcutName
     )
     Write-Host "Received $Username and $UserId. We're using $URL and $TenantFilter (destination=$Destination)"
     try {
+        # OneDrive item-name rules; rejected rather than stripped so the admin sees what to fix
+        if (-not [string]::IsNullOrWhiteSpace($ShortcutName)) {
+            if ($ShortcutName -match '["*:<>?/\\|]') { throw 'Shortcut name cannot contain any of these characters: " * : < > ? / \ |' }
+            if ($ShortcutName -ne $ShortcutName.Trim()) { throw 'Shortcut name cannot start or end with a space.' }
+            if ($ShortcutName.EndsWith('.')) { throw 'Shortcut name cannot end with a period.' }
+            if ($ShortcutName.Length -gt 255) { throw 'Shortcut name cannot be longer than 255 characters.' }
+        } else {
+            $ShortcutName = $null
+        }
+
         $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter | Select-Object -First 1
         if ($SPOTenant.DisableAddToOneDrive -eq $true) {
             throw "Add shortcut to OneDrive is disabled for this tenant (DisableAddToOneDrive). Enable it via the 'Set Add Shortcuts To OneDrive button state' standard, or Set-SPOTenant -DisableAddShortcutsToOneDrive `$false."
@@ -73,7 +84,7 @@ function New-CIPPOneDriveShortCut {
             # Same as the proven test script / HAR: default library via sites/{id}/drive sharePointIds
             $SPIds = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/$($SiteInfo.id)/drive?`$select=SharepointIds" -tenantid $TenantFilter -asapp $true).SharePointIds
             $body = [PSCustomObject]@{
-                name                                = 'Documents'
+                name                                = if ($ShortcutName) { $ShortcutName } else { 'Documents' }
                 remoteItem                          = @{
                     sharepointIds = @{
                         listId           = $SPIds.listid
@@ -85,7 +96,7 @@ function New-CIPPOneDriveShortCut {
                 }
                 '@microsoft.graph.conflictBehavior' = 'rename'
             } | ConvertTo-Json -Depth 10
-            $ShortcutDisplayName = $SiteInfo.displayName
+            $ShortcutDisplayName = if ($ShortcutName) { $ShortcutName } else { $SiteInfo.displayName }
         } else {
             # ── Subfolder shortcut ───────────────────────────────────────────────
             $PathParts = $RelativePath -split '/'
@@ -114,14 +125,14 @@ function New-CIPPOneDriveShortCut {
             }
 
             $body = [PSCustomObject]@{
-                name                                = $DisplayName
+                name                                = if ($ShortcutName) { $ShortcutName } else { $DisplayName }
                 remoteItem                          = @{
                     id              = $FolderItem.id
                     parentReference = @{ driveId = $Drive.id }
                 }
                 '@microsoft.graph.conflictBehavior' = 'rename'
             } | ConvertTo-Json -Depth 10
-            $ShortcutDisplayName = "$($SiteInfo.displayName) / $DisplayName"
+            $ShortcutDisplayName = if ($ShortcutName) { $ShortcutName } else { "$($SiteInfo.displayName) / $DisplayName" }
         }
 
         # Proven path is root/children. special/shortcuts create is optional/undocumented.
@@ -132,7 +143,22 @@ function New-CIPPOneDriveShortCut {
         }
         $DestinationLabel = if ($Destination -eq 'shortcuts') { 'Shortcuts folder' } else { 'OneDrive root' }
 
-        $null = New-GraphPOSTRequest -uri $PostUri -body $body -tenantid $TenantFilter -asapp $true
+        $Created = New-GraphPOSTRequest -uri $PostUri -body $body -tenantid $TenantFilter -asapp $true
+
+        # OneDrive can prefix the site name onto the created name, so rename to the exact name asked for
+        if ($ShortcutName -and $Created.id -and $Created.name -cne $ShortcutName) {
+            try {
+                $RenameBody = @{ name = $ShortcutName } | ConvertTo-Json -Compress
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/users/$Username/drive/items/$($Created.id)" -body $RenameBody -type PATCH -tenantid $TenantFilter -asapp $true
+            } catch {
+                $RenameError = (Get-CippException -Exception $_).NormalizedError
+                $Warning = "Created OneDrive shortcut for $Username called $($Created.name) in $DestinationLabel, but renaming it to $ShortcutName failed: $RenameError"
+                Write-LogMessage -API $APIName -headers $Headers -message $Warning -Sev 'Warning'
+                return $Warning
+            }
+        } elseif ($Created.name) {
+            $ShortcutDisplayName = $Created.name
+        }
         Write-LogMessage -API $APIName -headers $Headers -message "Created OneDrive shortcut called $ShortcutDisplayName for $Username in $DestinationLabel" -Sev 'info'
         return "Successfully created OneDrive Shortcut for $Username called $ShortcutDisplayName in $DestinationLabel"
     } catch {
