@@ -997,7 +997,7 @@ function Build-CippBecReportTree {
             $lines = @(
                 "Display Name: $(if ($device.displayName) { $device.displayName } else { 'N/A' })"
                 "Registered: $(FmtDate $device.createdDateTime)"
-                $(if (($d = ToDate $device.createdDateTime) -and $d -ge $windowStart) { '[!] Registered in the last 7 days' })
+                $(if (($d = ToDate $device.createdDateTime) -and $d -ge $windowStart) { "[!] Registered in the last $windowDays days" })
             )
             $b.Add((New-CippReportInfoBox -Lines -Title "$(if ($type) { $type } else { 'Unknown' })" -Content ($lines -join "`n")))
         }

@@ -1,6 +1,7 @@
 {
   "window": {
-    "days": 7
+    "days": 7,
+    "premiumDays": 30
   },
   "caps": {
     "auditLogPages": 10,

@@ -59,6 +59,15 @@ function Push-BECRun {
         }
         $Heuristics = Get-CIPPBecHeuristics
         $WindowDays = [int]($Heuristics.window.days ?? 7)
+        # Entra ID P1/P2 keep sign-in and directory audit logs for 30 days, so those tenants get the longer window.
+        try {
+            $RunCapabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
+            if ($RunCapabilities.AAD_PREMIUM -eq $true -or $RunCapabilities.AAD_PREMIUM_P2 -eq $true) {
+                $WindowDays = [int]($Heuristics.window.premiumDays ?? $WindowDays)
+            }
+        } catch {
+            Write-Information "BEC: could not read tenant plans for $TenantFilter, using the $WindowDays-day window: $($_.Exception.Message)"
+        }
         $endDate = (Get-Date).ToUniversalTime()
         $startDate = $endDate.AddDays(-$WindowDays)
         # a retry of the first phase starts clean, never on a dead attempt's state

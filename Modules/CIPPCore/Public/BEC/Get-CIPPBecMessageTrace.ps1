@@ -16,7 +16,7 @@ function Get-CIPPBecMessageTrace {
     .PARAMETER RecipientAddress
         Trace messages delivered to this address.
     .PARAMETER StartDate
-        Window start (UTC). Get-MessageTraceV2 accepts at most 10 days per query.
+        Window start (UTC). Get-MessageTraceV2 accepts at most 10 days per query, so longer windows are walked in 10-day slices.
     .PARAMETER EndDate
         Window end (UTC).
     .PARAMETER Anchor
@@ -41,53 +41,60 @@ function Get-CIPPBecMessageTrace {
         throw 'Get-CIPPBecMessageTrace needs a SenderAddress or a RecipientAddress'
     }
 
-    $TraceParams = @{
-        StartDate  = $StartDate.ToString('s')
-        EndDate    = $EndDate.ToString('s')
-        ResultSize = $PageSize
-    }
-    if ($SenderAddress) { $TraceParams.SenderAddress = $SenderAddress }
-    if ($RecipientAddress) { $TraceParams.RecipientAddress = $RecipientAddress }
-
     $ExoParams = @{ tenantid = $TenantFilter; cmdlet = 'Get-MessageTraceV2' }
     if ($Anchor) { $ExoParams.Anchor = $Anchor }
 
     $Rows = [System.Collections.Generic.List[object]]::new()
     $Seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $Pages = 0
-    $Done = $false
+    $Done = $true
     $Stalled = $false
-    $PreviousCursor = $null
-    do {
-        $Pages++
-        $Batch = @(New-ExoRequest @ExoParams -cmdParams $TraceParams | Where-Object { $_ })
-        $NewCount = 0
-        foreach ($Row in $Batch) {
-            $Key = "$($Row.MessageTraceId)|$($Row.RecipientAddress)|$($Row.Received)"
-            if ($Seen.Add($Key)) {
-                $Rows.Add($Row)
-                $NewCount++
+
+    # Get-MessageTraceV2 takes at most 10 days per query: walk the window in slices, newest first.
+    $SliceEnd = $EndDate
+    while (-not $Stalled -and $SliceEnd -gt $StartDate) {
+        $SliceStart = if (($SliceEnd - $StartDate).TotalDays -gt 10) { $SliceEnd.AddDays(-10) } else { $StartDate }
+        $TraceParams = @{
+            StartDate  = $SliceStart.ToString('s')
+            EndDate    = $SliceEnd.ToString('s')
+            ResultSize = $PageSize
+        }
+        if ($SenderAddress) { $TraceParams.SenderAddress = $SenderAddress }
+        if ($RecipientAddress) { $TraceParams.RecipientAddress = $RecipientAddress }
+        $Done = $false
+        $PreviousCursor = $null
+        do {
+            $Pages++
+            $Batch = @(New-ExoRequest @ExoParams -cmdParams $TraceParams | Where-Object { $_ })
+            $NewCount = 0
+            foreach ($Row in $Batch) {
+                $Key = "$($Row.MessageTraceId)|$($Row.RecipientAddress)|$($Row.Received)"
+                if ($Seen.Add($Key)) {
+                    $Rows.Add($Row)
+                    $NewCount++
+                }
             }
-        }
-        if ($Batch.Count -lt $PageSize) {
-            $Done = $true
-            break
-        }
-        # A full page with nothing new means the cursor is not advancing: stop, report partial.
-        if ($NewCount -eq 0) { $Stalled = $true; break }
-        $Last = $Batch[-1]
-        $LastReceived = try { ([datetime]$Last.Received).ToUniversalTime() } catch { $null }
-        if (-not $LastReceived -or -not $Last.RecipientAddress) {
-            # Without a usable cursor the walk cannot continue; report what we have as partial.
-            $Stalled = $true
-            break
-        }
-        $Cursor = "$($LastReceived.ToString('o'))|$($Last.RecipientAddress)"
-        if ($Cursor -eq $PreviousCursor) { $Stalled = $true; break }
-        $PreviousCursor = $Cursor
-        $TraceParams.EndDate = $LastReceived.ToString('s')
-        $TraceParams.StartingRecipientAddress = $Last.RecipientAddress
-    } while (-not $Done -and -not $Stalled)
+            if ($Batch.Count -lt $PageSize) {
+                $Done = $true
+                break
+            }
+            # A full page with nothing new means the cursor is not advancing: stop, report partial.
+            if ($NewCount -eq 0) { $Stalled = $true; break }
+            $Last = $Batch[-1]
+            $LastReceived = try { ([datetime]$Last.Received).ToUniversalTime() } catch { $null }
+            if (-not $LastReceived -or -not $Last.RecipientAddress) {
+                # Without a usable cursor the walk cannot continue; report what we have as partial.
+                $Stalled = $true
+                break
+            }
+            $Cursor = "$($LastReceived.ToString('o'))|$($Last.RecipientAddress)"
+            if ($Cursor -eq $PreviousCursor) { $Stalled = $true; break }
+            $PreviousCursor = $Cursor
+            $TraceParams.EndDate = $LastReceived.ToString('s')
+            $TraceParams.StartingRecipientAddress = $Last.RecipientAddress
+        } while (-not $Done -and -not $Stalled)
+        $SliceEnd = $SliceStart
+    }
 
     return [pscustomobject]@{
         Rows     = $Rows.ToArray()

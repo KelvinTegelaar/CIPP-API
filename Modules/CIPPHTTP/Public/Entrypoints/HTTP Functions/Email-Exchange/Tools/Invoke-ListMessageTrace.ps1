@@ -25,9 +25,9 @@ function Invoke-ListMessageTrace {
     # Escape a value for an OData string literal (single quotes are doubled).
     function ConvertTo-ODataLiteral { param([string]$Value) return ($Value -replace "'", "''") }
 
-    # Runs the Graph scriptblock; on a missing service principal or a consent/permission error it
-    # provisions the SP (best effort) and runs the Get-MessageTraceV2 scriptblock instead, so the
-    # first call in a tenant still returns data while Graph activates.
+    # Runs the Graph scriptblock, falling back to the Get-MessageTraceV2 scriptblock when the service
+    # principal is missing (provisioned best effort), consent is missing, or Graph does not serve the
+    # tenant's cloud, so the call still returns data.
     $RunWithFallback = {
         param($GraphBlock, $V2Block)
         try {
@@ -36,7 +36,9 @@ function Invoke-ListMessageTrace {
             $Message = $_.Exception.Message
             $SpMissing = $Message -match $TransportAppId -or $Message -match 'service principal'
             $Consent = $Message -match 'Authorization_RequestDenied' -or $Message -match 'insufficient' -or $Message -match 'consent' -or $Message -match 'Forbidden' -or $Message -match 'AADSTS'
-            if ($SpMissing -or $Consent) {
+            # Graph message trace is not offered in GCC; Get-MessageTraceV2 is.
+            $Unsupported = $Message -match 'not currently supported' -or $Message -match '\bGCC\b'
+            if ($SpMissing -or $Consent -or $Unsupported) {
                 # Provision the SP only when it is genuinely absent. Once created it can still take
                 # hours to activate, during which Graph keeps reporting it missing - checking first
                 # avoids re-issuing (and log-spamming) a create that would fail as 'already in use'.

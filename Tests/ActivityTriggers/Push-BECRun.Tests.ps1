@@ -413,6 +413,23 @@ Describe 'Push-BECRun' {
         $script:Saved.Properties.Status | Should -Be 'Completed'
     }
 
+    It 'uses the 30-day window for a tenant with Entra ID P1 or P2' {
+        Mock Get-CIPPTenantCapabilities { [pscustomobject]@{ AAD_PREMIUM = $true } }
+        Invoke-BecRun -Item $script:Item
+        $script:Saved.Results.AnalysisWindowDays | Should -Be 30
+        Should -Invoke Get-CIPPBecMessageTrace -ParameterFilter { ($EndDate - $StartDate).TotalDays -eq 30 }
+    }
+
+    It 'keeps the 7-day window without Entra ID P1 or P2, or when the plan read fails' {
+        Mock Get-CIPPTenantCapabilities { [pscustomobject]@{ INTUNE_A = $true } }
+        Invoke-BecRun -Item $script:Item
+        $script:Saved.Results.AnalysisWindowDays | Should -Be 7
+
+        Mock Get-CIPPTenantCapabilities { throw 'CacheCapabilities unavailable' }
+        Invoke-BecRun -Item $script:Item
+        $script:Saved.Results.AnalysisWindowDays | Should -Be 7
+    }
+
     It 'classifies a user without a mailbox as skipped mailbox checks, not failed ones' {
         Mock Get-CIPPBecMailboxInventory { $E = New-CIPPBecCollectorResult -Data @() -Error 'Get-Mailbox: Ex41BAF5|Microsoft.Exchange.Configuration.Tasks.ManagementObjectNotFoundException|The specified mailbox doesn''t exist.'; [pscustomobject]@{ MailboxState = $E; Delegations = $E; AddIns = $E } }
         Invoke-BecRun -Item $script:Item
