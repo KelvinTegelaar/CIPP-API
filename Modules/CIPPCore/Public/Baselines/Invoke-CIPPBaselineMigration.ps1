@@ -77,6 +77,9 @@ function Invoke-CIPPBaselineMigration {
         SPSyncButtonState             = @{ rename = @{ state = 'hideSyncButton' } }
         # V2 were switches (bool); V3 passes the Teams cmdlet's 'Enabled'/'Disabled' strings.
         TeamsChatProtection           = @{ value = @{ FileTypeCheck = @{ True = 'Enabled'; False = 'Disabled' }; UrlReputationCheck = @{ True = 'Enabled'; False = 'Disabled' } } }
+        # V2 'Don't change' is the 'donotconfigure' sentinel; V3 prunes blank (omitWhenBlank).
+        TeamsFilesPolicy              = @{ value = @{ FileSharingInChatsWithExternalUsers = @{ donotconfigure = '' }; NativeFileEntryPoints = @{ donotconfigure = '' }; SPChannelFilesTab = @{ donotconfigure = '' } } }
+        TeamsMessagingPolicy          = @{ value = @{ AutoShareFilesInExternalChats = @{ donotconfigure = '' } } }
         TAP                           = @{ rename = @{ config = 'isUsableOnce' } }
         unmanagedSync                 = @{ rename = @{ state = 'conditionalAccessPolicy' } }
         BitLockerKeysForOwnedDevice   = @{ rename = @{ state = 'allowed' }; value = @{ allowed = @{ allow = $true; restrict = $false } } }

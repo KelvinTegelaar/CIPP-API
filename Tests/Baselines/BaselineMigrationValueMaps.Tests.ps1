@@ -49,6 +49,22 @@ Describe 'Invoke-CIPPBaselineMigration value maps' {
         }
     }
 
+    Context "Teams 'Don''t change'" {
+        # V2 stores 'donotconfigure'; V3 only prunes a BLANK omitWhenBlank value. A literal
+        # 'donotconfigure' would reach the Set body as the value.
+        It 'migrates the donotconfigure sentinel to blank and keeps real picks' {
+            $Result = Invoke-Migration @{
+                TeamsFilesPolicy     = @{ action = @('warn'); standards = @{ TeamsFilesPolicy = @{ FileSharingInChatsWithExternalUsers = @{ label = 'Disabled'; value = 'Disabled' }; NativeFileEntryPoints = @{ label = "Don't change"; value = 'donotconfigure' }; SPChannelFilesTab = 'donotconfigure' } } }
+                TeamsMessagingPolicy = @{ action = @('warn'); standards = @{ TeamsMessagingPolicy = @{ AutoShareFilesInExternalChats = @{ label = "Don't change"; value = 'donotconfigure' } } } }
+            }
+            $Files = ($Result.Configs | Where-Object standard -EQ 'TeamsFilesPolicy').variables
+            $Files.FileSharingInChatsWithExternalUsers | Should -BeExactly 'Disabled'
+            "$($Files.NativeFileEntryPoints)" | Should -BeExactly ''
+            "$($Files.SPChannelFilesTab)" | Should -BeExactly ''
+            "$(($Result.Configs | Where-Object standard -EQ 'TeamsMessagingPolicy').variables.AutoShareFilesInExternalChats)" | Should -BeExactly ''
+        }
+    }
+
     Context 'DefaultSharingLink' {
         It 'translates the V2 enum names to the SPO numerics the definition compares against' {
             $Internal = Invoke-Migration @{ DefaultSharingLink = @{ action = @('warn'); standards = @{ DefaultSharingLink = @{ SharingLinkType = @{ label = 'Internal - Only people in your organization'; value = 'Internal' } } } } }

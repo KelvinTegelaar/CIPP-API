@@ -25,6 +25,7 @@ function Invoke-CIPPStandardTeamsMessagingPolicy {
             {"type":"switch","name":"standards.TeamsMessagingPolicy.DeleteCustomEmojis","label":"Allow Deleting Custom Emojis","defaultValue":false}
             {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowSecurityEndUserReporting","label":"Allow reporting message as security concern","defaultValue":true}
             {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowCommunicationComplianceEndUserReporting","label":"Allow reporting message as inappropriate content","defaultValue":true}
+            {"type":"autoComplete","multiple":false,"creatable":false,"name":"standards.TeamsMessagingPolicy.AutoShareFilesInExternalChats","label":"Automatically share files attached in external chats","options":[{"label":"Don't change","value":"donotconfigure"},{"label":"Enabled","value":"Enabled"},{"label":"Disabled","value":"Disabled"}],"defaultValue":"donotconfigure"}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -69,6 +70,10 @@ function Invoke-CIPPStandardTeamsMessagingPolicy {
     if ($null -eq $Settings.AllowCommunicationComplianceEndUserReporting) { $Settings.AllowCommunicationComplianceEndUserReporting = $CurrentState.AllowCommunicationComplianceEndUserReporting }
 
     $ReadReceiptsEnabledType = $Settings.ReadReceiptsEnabledType.value ?? $Settings.ReadReceiptsEnabledType
+    # Optional, "Don't change" keeps the tenant value (and keeps it out of the Set body)
+    $AutoShareFilesInExternalChats = $Settings.AutoShareFilesInExternalChats.value ?? $Settings.AutoShareFilesInExternalChats
+    $ManageAutoShare = -not ([string]::IsNullOrWhiteSpace($AutoShareFilesInExternalChats) -or $AutoShareFilesInExternalChats -eq 'donotconfigure')
+    if (-not $ManageAutoShare) { $AutoShareFilesInExternalChats = $CurrentState.AutoShareFilesInExternalChats }
 
     $StateIsCorrect = ($CurrentState.AllowOwnerDeleteMessage -eq $Settings.AllowOwnerDeleteMessage) -and
     ($CurrentState.AllowUserDeleteMessage -eq $Settings.AllowUserDeleteMessage) -and
@@ -78,7 +83,8 @@ function Invoke-CIPPStandardTeamsMessagingPolicy {
     ($CurrentState.CreateCustomEmojis -eq $Settings.CreateCustomEmojis) -and
     ($CurrentState.DeleteCustomEmojis -eq $Settings.DeleteCustomEmojis) -and
     ($CurrentState.AllowSecurityEndUserReporting -eq $Settings.AllowSecurityEndUserReporting) -and
-    ($CurrentState.AllowCommunicationComplianceEndUserReporting -eq $Settings.AllowCommunicationComplianceEndUserReporting)
+    ($CurrentState.AllowCommunicationComplianceEndUserReporting -eq $Settings.AllowCommunicationComplianceEndUserReporting) -and
+    ($CurrentState.AutoShareFilesInExternalChats -eq $AutoShareFilesInExternalChats)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -96,6 +102,7 @@ function Invoke-CIPPStandardTeamsMessagingPolicy {
                 AllowSecurityEndUserReporting                = $Settings.AllowSecurityEndUserReporting
                 AllowCommunicationComplianceEndUserReporting = $Settings.AllowCommunicationComplianceEndUserReporting
             }
+            if ($ManageAutoShare) { $cmdParams.AutoShareFilesInExternalChats = $AutoShareFilesInExternalChats }
 
             try {
                 $null = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TeamsMessagingPolicy' -Action Set -Parameters $cmdParams
@@ -128,6 +135,7 @@ function Invoke-CIPPStandardTeamsMessagingPolicy {
             DeleteCustomEmojis                           = $CurrentState.DeleteCustomEmojis
             AllowSecurityEndUserReporting                = $CurrentState.AllowSecurityEndUserReporting
             AllowCommunicationComplianceEndUserReporting = $CurrentState.AllowCommunicationComplianceEndUserReporting
+            AutoShareFilesInExternalChats                = $CurrentState.AutoShareFilesInExternalChats
         }
         $ExpectedValue = @{
             AllowOwnerDeleteMessage                      = $Settings.AllowOwnerDeleteMessage
@@ -139,6 +147,7 @@ function Invoke-CIPPStandardTeamsMessagingPolicy {
             DeleteCustomEmojis                           = $Settings.DeleteCustomEmojis
             AllowSecurityEndUserReporting                = $Settings.AllowSecurityEndUserReporting
             AllowCommunicationComplianceEndUserReporting = $Settings.AllowCommunicationComplianceEndUserReporting
+            AutoShareFilesInExternalChats                = $AutoShareFilesInExternalChats
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMessagingPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
