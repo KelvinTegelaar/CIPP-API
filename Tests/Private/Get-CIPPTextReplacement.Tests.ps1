@@ -142,6 +142,91 @@ Describe 'Get-CIPPTextReplacement' {
         }
     }
 
+    Context 'existing types used as an array element are not spliced' {
+        BeforeEach {
+            $script:GlobalRows = @(
+                New-VariableRow -Name 'jsonlist' -Value '["Site A","Site B"]' -VariableType 'json'
+                New-VariableRow -Name 'jsonempty' -Value '[]' -VariableType 'json'
+                New-VariableRow -Name 'commalist' -Value 'Site A, Site B'
+                New-VariableRow -Name 'count' -Value '5' -VariableType 'integer'
+                New-VariableRow -Name 'unknowntype' -Value 'Site A' -VariableType 'somethingelse'
+            )
+        }
+
+        It 'nests a json array that fills an array element' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["%jsonlist%"]}' -EscapeForJson |
+                Should -Be '{"v":[["Site A","Site B"]]}'
+        }
+
+        It 'nests an empty json array that fills an array element' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["x", "%jsonempty%"]}' -EscapeForJson |
+                Should -Be '{"v":["x", []]}'
+        }
+
+        It 'keeps a comma separated string as one element' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["%commalist%"]}' -EscapeForJson |
+                Should -Be '{"v":["Site A, Site B"]}'
+        }
+
+        It 'writes an integer array element as a number' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":[1,"%count%"]}' -EscapeForJson |
+                Should -Be '{"v":[1,5]}'
+        }
+
+        It 'escapes a json variable embedded in a longer string' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"sites: %jsonlist%"}' -EscapeForJson |
+                Should -Be '{"v":"sites: [\"Site A\",\"Site B\"]"}'
+        }
+
+        It 'treats an unrecognised type as a string' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["%unknowntype%"],"w":"%unknowntype%"}' -EscapeForJson |
+                Should -Be '{"v":["Site A"],"w":"Site A"}'
+        }
+    }
+
+    Context 'a list variable expands to multiple values' {
+        BeforeEach {
+            $script:GlobalRows = @(
+                New-VariableRow -Name 'sites' -Value '["Site A","Site \"B\""]' -VariableType 'list'
+                New-VariableRow -Name 'none' -Value '[]' -VariableType 'list'
+                New-VariableRow -Name 'broken' -Value 'Site A, Site B' -VariableType 'list'
+            )
+        }
+
+        It 'splices its items into the array it is an element of' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["x", "%sites%", "y"]}' -EscapeForJson |
+                Should -Be '{"v":["x", "Site A","Site \"B\"", "y"]}'
+        }
+
+        It 'writes the array when it fills the whole value' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"%sites%"}' -EscapeForJson |
+                Should -Be '{"v":["Site A","Site \"B\""]}'
+        }
+
+        It 'removes the element when the list is empty, wherever it sits' {
+            $Cases = [ordered]@{
+                '{"v":["%none%"]}'           = '{"v":[]}'
+                '{"v":[ "%none%", "y"]}'     = '{"v":[ "y"]}'
+                '{"v":["x", "%none%", "y"]}' = '{"v":["x", "y"]}'
+                '{"v":["x","%none%"]}'       = '{"v":["x"]}'
+                '{"v":"%none%"}'             = '{"v":[]}'
+            }
+            foreach ($Case in $Cases.GetEnumerator()) {
+                Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text $Case.Key -EscapeForJson | Should -Be $Case.Value
+            }
+        }
+
+        It 'comma-joins its items inside a longer string' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"sites: %sites%"}' -EscapeForJson |
+                Should -Be '{"v":"sites: Site A, Site \"B\""}'
+        }
+
+        It 'falls back to a string when the value is not a JSON array' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["%broken%"]}' -EscapeForJson |
+                Should -Be '{"v":["Site A, Site B"]}'
+        }
+    }
+
     Context 'a value that does not match its declared type falls back to the quoted form' {
         BeforeEach {
             $script:GlobalRows = @(

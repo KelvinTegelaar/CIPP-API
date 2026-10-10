@@ -58,7 +58,7 @@ function Get-CIPPBaselineCATemplateState {
         } | Select-Object -First 1
     }
     if (-not $TemplateRow) { throw "Conditional Access template '$TemplateRef' was not found in the template store." }
-    $Template = $TemplateRow.JSON | ConvertFrom-Json -Depth 100
+    $Template = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $TemplateRow.JSON -EscapeForJson | ConvertFrom-Json -Depth 100
 
     # --- lookup maps, cache-only
     $NameById = @{}

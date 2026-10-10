@@ -156,10 +156,10 @@ function Invoke-ExecCippReplacemap {
             $VariableType = $Request.Body.VariableType.value ?? $Request.Body.VariableType
             if ([string]::IsNullOrWhiteSpace($VariableType)) { $VariableType = 'string' }
 
-            if ($VariableType -notin @('string', 'integer', 'boolean', 'json')) {
+            if ($VariableType -notin @('string', 'integer', 'boolean', 'json', 'list')) {
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
-                        Body       = @{ Results = "'$VariableType' is not a valid variable type. Use string, integer, boolean, or json." }
+                        Body       = @{ Results = "'$VariableType' is not a valid variable type. Use string, integer, boolean, json, or list." }
                     })
             }
 
@@ -191,6 +191,19 @@ function Invoke-ExecCippReplacemap {
                         return ([HttpResponseContext]@{
                                 StatusCode = [HttpStatusCode]::BadRequest
                                 Body       = @{ Results = "Variable '$VariableName' is typed as json, but its value is not valid JSON: $($_.Exception.Message)" }
+                            })
+                    }
+                }
+                'list' {
+                    # One value per line is stored as the JSON array the substitution reads.
+                    if (-not $TrimmedValue.StartsWith('[') -and -not $TrimmedValue.StartsWith('{')) {
+                        $TrimmedValue = ConvertTo-Json -InputObject @($TrimmedValue -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) -Compress
+                        $VariableValue = $TrimmedValue
+                    }
+                    if (-not $TrimmedValue.StartsWith('[') -or -not (Test-Json -Json $TrimmedValue -ErrorAction SilentlyContinue)) {
+                        return ([HttpResponseContext]@{
+                                StatusCode = [HttpStatusCode]::BadRequest
+                                Body       = @{ Results = "Variable '$VariableName' is typed as list, but its value is not a JSON array such as [""Site A"",""Site B""]." }
                             })
                     }
                 }

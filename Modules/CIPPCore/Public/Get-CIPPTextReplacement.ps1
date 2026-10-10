@@ -79,6 +79,27 @@ function Get-CIPPTextReplacement {
         }
     }
 
+    # A list variable holds a JSON array. Used as an array element it is spliced in as several
+    # elements; filling a whole slot it is the array; inside a longer string it is comma-joined.
+    function Expand-CIPPListToken {
+        param([string]$Text, [string]$Token, $Value, [bool]$Escape)
+        try {
+            $Items = @(ConvertFrom-Json -InputObject ([string]$Value) -Depth 100 -NoEnumerate -ErrorAction Stop | ForEach-Object { $_ })
+        } catch {
+            return $null
+        }
+        $Quoted = [regex]::Escape('"{0}"' -f $Token)
+        $Encoded = @(foreach ($Item in $Items) { ConvertTo-Json -InputObject $Item -Depth 100 -Compress })
+        if ($Encoded.Count -gt 0) {
+            $Text = $Text -replace "(?<=[\[,]\s*)$Quoted(?=\s*[\],])", (ConvertTo-CIPPLiteralReplacement -Value ($Encoded -join ','))
+        } else {
+            $Text = $Text -replace ",\s*$Quoted(?=\s*[\],])", ''
+            $Text = $Text -replace "(?<=\[\s*)$Quoted\s*,?\s*", ''
+        }
+        $Text = $Text -replace $Quoted, (ConvertTo-CIPPLiteralReplacement -Value ('[{0}]' -f ($Encoded -join ',')))
+        return Set-CIPPReplacementToken -Text $Text -Token $Token -Value ($Items -join ', ') -Escape $Escape
+    }
+
     if ($Text -isnot [string]) {
         return , $Text
     }
@@ -166,6 +187,13 @@ function Get-CIPPTextReplacement {
     foreach ($Replace in $Vars.GetEnumerator()) {
         $String = '%{0}%' -f $Replace.Key
         if ($string -notin $ReservedVariables) {
+            if ("$($VarTypes[$Replace.Key])" -eq 'list') {
+                $Expanded = Expand-CIPPListToken -Text $Text -Token $String -Value $Replace.Value -Escape $EscapeForJson.IsPresent
+                if ($null -ne $Expanded) {
+                    $Text = $Expanded
+                    continue
+                }
+            }
             # A variable declared as integer, boolean or json is written as a JSON literal when it
             # fills an entire string slot, so a numeric setting receives 300 rather than "300" and
             # behaves exactly like a value typed into the template by hand.
