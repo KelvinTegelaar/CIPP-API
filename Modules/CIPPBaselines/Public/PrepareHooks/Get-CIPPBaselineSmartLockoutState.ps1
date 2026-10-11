@@ -46,7 +46,7 @@ function Get-CIPPBaselineSmartLockoutState {
         enableBannedPasswordCheckOnPremises = $(if ($Existing) { & $ValueOf 'EnableBannedPasswordCheckOnPremises' } else { '' })
         bannedPasswordCheckOnPremisesMode   = $(if ($Existing) { & $ValueOf 'BannedPasswordCheckOnPremisesMode' } else { '' })
     }
-    $Current | Add-Member -NotePropertyName 'settingId' -NotePropertyValue "$($Existing.id)"
+    $Current.PSObject.Properties.Add([psnoteproperty]::new('settingId', "$($Existing.id)"))
 
     $Expected = [PSCustomObject]@{
         lockoutDurationInSeconds            = $Duration

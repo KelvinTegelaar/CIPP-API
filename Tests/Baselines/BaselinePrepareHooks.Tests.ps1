@@ -27,6 +27,7 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
     . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
     . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDeviceRegistrationPolicyState.ps1')
     . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDisableBasicAuthSMTPState.ps1')

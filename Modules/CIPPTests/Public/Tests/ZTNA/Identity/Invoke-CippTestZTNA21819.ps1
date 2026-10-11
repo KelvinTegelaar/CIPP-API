@@ -33,7 +33,7 @@ function Invoke-CippTestZTNA21819 {
 
         if ($GlobalAdminPolicy) {
             # Find the notification rule for requestor end-user assignment
-            $NotificationRule = $GlobalAdminPolicy.effectiveRules.Where({
+            $NotificationRule = $GlobalAdminPolicy.rules.Where({
                 $_.id -like '*Notification_Requestor_EndUser_Assignment*'
             })
 

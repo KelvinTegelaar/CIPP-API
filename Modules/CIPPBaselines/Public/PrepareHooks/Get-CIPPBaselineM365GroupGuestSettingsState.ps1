@@ -33,7 +33,7 @@ function Get-CIPPBaselineM365GroupGuestSettingsState {
         allowGuestsToBeGroupOwner = $(if ($Existing) { & $ValueOf 'AllowGuestsToBeGroupOwner' } else { '' })
         allowGuestsToAccessGroups = $(if ($Existing) { & $ValueOf 'AllowGuestsToAccessGroups' } else { '' })
     }
-    $Current | Add-Member -NotePropertyName 'settingId' -NotePropertyValue "$($Existing.id)"
+    $Current.PSObject.Properties.Add([psnoteproperty]::new('settingId', "$($Existing.id)"))
 
     @{
         Expected = [PSCustomObject]@{

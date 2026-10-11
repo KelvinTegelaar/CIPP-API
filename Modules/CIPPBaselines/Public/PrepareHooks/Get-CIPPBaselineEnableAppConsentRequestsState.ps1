@@ -35,7 +35,7 @@ function Get-CIPPBaselineEnableAppConsentRequestsState {
         $TenantFilter
     )
 
-    $Policy = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'AdminConsentRequestPolicy') | Select-Object -First 1
+    $Policy = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'AdminConsentRequestPolicy')[0]
     if (-not $Policy) { return @{ Current = $null } }
 
     $Roles = @(@($Item.Variables.ReviewerRoles) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })

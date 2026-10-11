@@ -24,6 +24,7 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
     . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
     . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
     foreach ($Hook in @('AssignmentFilterTemplate', 'ReusableSettingsTemplate', 'GroupTemplate', 'ExchangeConnectorTemplate',

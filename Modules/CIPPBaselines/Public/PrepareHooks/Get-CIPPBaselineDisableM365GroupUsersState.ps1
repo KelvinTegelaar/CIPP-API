@@ -42,7 +42,7 @@ function Get-CIPPBaselineDisableM365GroupUsersState {
                 -not [string]::IsNullOrWhiteSpace($DesiredGroupId) -and (& $ValueOf 'GroupCreationAllowedGroupId') -eq $DesiredGroupId))
     }
     # Carried for the executor.
-    $Current | Add-Member -NotePropertyName 'settingId' -NotePropertyValue "$($GroupSetting.id)"
+    $Current.PSObject.Properties.Add([psnoteproperty]::new('settingId', "$($GroupSetting.id)"))
     $Current | Add-Member -NotePropertyName 'resolvedGroupId' -NotePropertyValue $DesiredGroupId
 
     @{ Expected = $Expected; Current = $Current }

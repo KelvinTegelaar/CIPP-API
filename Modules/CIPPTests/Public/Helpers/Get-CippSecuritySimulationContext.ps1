@@ -85,8 +85,10 @@ function Get-CippSecuritySimulationContext {
             assigned  = $false
             detail    = ''
         }
-        $Row = @(@($AlignmentRows.Where({ ("$($_.StandardName)" -split '#')[0] -eq $Name })) |
-            Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending)[0]
+        $Row = $null
+        foreach ($AlignmentRow in $AlignmentRows) {
+            if (("$($AlignmentRow.StandardName)" -split '#')[0] -eq $Name -and ($null -eq $Row -or [int64]($AlignmentRow.LastRun ?? 0) -gt [int64]($Row.LastRun ?? 0))) { $Row = $AlignmentRow }
+        }
         $State.assigned = $null -ne $Row
         $TenantSpecific = ($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties.Where({
                 $_.Value.required -eq $true -and $null -eq ($_.Value.default ?? $_.Value.recommended) -and -not ($Reference.secure -and $Reference.secure.PSObject.Properties[$_.Name])

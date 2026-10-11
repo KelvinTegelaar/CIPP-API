@@ -28,7 +28,7 @@ function Get-CIPPBaselineAuthenticationMethodsState {
         $TenantFilter
     )
 
-    $Policy = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'AuthenticationMethodsPolicy') | Select-Object -First 1
+    $Policy = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'AuthenticationMethodsPolicy')[0]
     if (-not $Policy) { return @{ Current = $null } }
 
     $V = $Item.Variables

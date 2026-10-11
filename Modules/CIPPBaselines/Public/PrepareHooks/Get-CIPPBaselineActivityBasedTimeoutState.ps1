@@ -24,13 +24,13 @@ function Get-CIPPBaselineActivityBasedTimeoutState {
         $TenantFilter
     )
 
-    $Policy = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ActivityBasedTimeoutPolicy' | Where-Object { $_ }) | Select-Object -First 1
+    $Policy = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ActivityBasedTimeoutPolicy' | Where-Object { $_ })[0]
     if ($null -eq $Policy) { return @{ Current = $null } }
 
     $CurrentTimeout = $(try {
             $AbtDefinition = (@($Policy.definition)[0] | ConvertFrom-Json).ActivityBasedTimeoutPolicy
-            $DefaultApplicationPolicy = @($AbtDefinition.ApplicationPolicies) | Where-Object { $_.ApplicationId -eq 'default' } | Select-Object -First 1
-            if (-not $DefaultApplicationPolicy) { $DefaultApplicationPolicy = @($AbtDefinition.ApplicationPolicies) | Select-Object -First 1 }
+            $DefaultApplicationPolicy = foreach ($ApplicationPolicy in @($AbtDefinition.ApplicationPolicies)) { if ($ApplicationPolicy.ApplicationId -eq 'default') { $ApplicationPolicy; break } }
+            if (-not $DefaultApplicationPolicy) { $DefaultApplicationPolicy = @($AbtDefinition.ApplicationPolicies)[0] }
             $DefaultApplicationPolicy.WebSessionIdleTimeout ?? $AbtDefinition.WebSessionIdleTimeout
         } catch { $null })
 

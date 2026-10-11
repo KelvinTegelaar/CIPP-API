@@ -33,7 +33,7 @@ function Get-CIPPBaselineConsentPolicySettingsState {
         blockUserConsentForRiskyApps = $(if ($Existing) { & $ValueOf 'BlockUserConsentForRiskyApps' } else { '' })
         enableAdminConsentRequests   = $(if ($Existing) { & $ValueOf 'EnableAdminConsentRequests' } else { '' })
     }
-    $Current | Add-Member -NotePropertyName 'settingId' -NotePropertyValue "$($Existing.id)"
+    $Current.PSObject.Properties.Add([psnoteproperty]::new('settingId', "$($Existing.id)"))
 
     @{
         Expected = [PSCustomObject]@{

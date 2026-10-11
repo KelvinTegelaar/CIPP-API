@@ -42,7 +42,7 @@ function Get-CIPPBaselineCacheRows {
     if (@(Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type -CountsOnly | Where-Object { [int]$_.DataCount -eq 0 }).Count -gt 0) { return @() }
 
     $CollectorFor = if ([string]::IsNullOrWhiteSpace($CollectorType)) { $Type } else { $CollectorType }
-    $Collector = Get-Command -Name "Set-CIPPDBCache$CollectorFor" -ErrorAction SilentlyContinue
+    $Collector = Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$CollectorFor"
     if (-not $Collector) {
         Write-Information "Baselines: no collector exists for cache type $CollectorFor on $TenantFilter."
         return @()

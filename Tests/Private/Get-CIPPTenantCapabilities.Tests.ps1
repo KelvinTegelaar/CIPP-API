@@ -45,4 +45,14 @@ Describe 'Get-CIPPTenantCapabilities' {
         $null = Get-CIPPTenantCapabilities -TenantFilter 'fabrikam.com'
         $script:Reads | Should -Be 2
     }
+
+    It 'rethrows a failed Graph lookup without requesting it again while fresh' {
+        Mock Get-CIPPAzDataTableEntity { $script:Reads++ }
+        Mock New-GraphGetRequest { throw 'AADSTS53003: blocked by Conditional Access' }
+
+        { Get-CIPPTenantCapabilities -TenantFilter 'contoso.com' } | Should -Throw '*AADSTS53003*'
+        { Get-CIPPTenantCapabilities -TenantFilter 'contoso.com' } | Should -Throw '*AADSTS53003*'
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly
+        $script:Reads | Should -Be 1
+    }
 }

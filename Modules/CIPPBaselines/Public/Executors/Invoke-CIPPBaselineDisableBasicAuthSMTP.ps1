@@ -35,7 +35,7 @@ function Invoke-CIPPBaselineDisableBasicAuthSMTP {
     if ($EnabledUsers.Count -gt 0) {
         # Refresh the override cache now: the cleared users must not read back as drift on
         # the next run (ClearOnEmpty makes the emptied state stick).
-        $Collector = Get-Command -Name 'Set-CIPPDBCacheExoCASMailboxSmtpAuth' -ErrorAction SilentlyContinue
+        $Collector = Get-CIPPBaselineCommand -Name 'Set-CIPPDBCacheExoCASMailboxSmtpAuth'
         if ($Collector) {
             try { $null = & $Collector -TenantFilter $TenantFilter } catch {
                 Write-Information "Baselines: SMTP AUTH override cache refresh on $TenantFilter failed: $($_.Exception.Message)"

@@ -28,7 +28,7 @@ function Get-CIPPBaselineOauthConsentState {
         $TenantFilter
     )
 
-    $AuthPolicy = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'AuthorizationPolicy') | Select-Object -First 1
+    $AuthPolicy = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'AuthorizationPolicy')[0]
     if (-not $AuthPolicy) { return @{ Current = $null } }
 
     $AllowedApps = @("$($Item.Variables.AllowedApps)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object -Unique)
@@ -54,7 +54,7 @@ function Get-CIPPBaselineOauthConsentState {
         missingIncludes       = @($Missing | Sort-Object)
     }
     # Carried for the executor.
-    $Current | Add-Member -NotePropertyName 'policyExists' -NotePropertyValue ([bool]($Includes.Count -gt 0))
+    $Current.PSObject.Properties.Add([psnoteproperty]::new('policyExists', [bool]($Includes.Count -gt 0)))
 
     @{
         Expected = [PSCustomObject]@{ consentPolicyAssigned = $true; missingIncludes = @() }

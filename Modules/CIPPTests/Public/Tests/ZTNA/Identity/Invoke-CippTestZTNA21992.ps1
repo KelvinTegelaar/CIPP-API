@@ -23,9 +23,13 @@ function Invoke-CippTestZTNA21992 {
                 $_.keyCredentials -and $_.keyCredentials.Count -gt 0
             }) | ForEach-Object {
                 $App = $_
-                $OldestCert = $App.keyCredentials.Where({ $_.startDateTime }) | ForEach-Object {
-                    [DateTime]$_.startDateTime
-                } | Sort-Object | Select-Object -First 1
+                $OldestCert = $null
+                foreach ($Credential in $App.keyCredentials) {
+                    if ($Credential.startDateTime) {
+                        $Started = [DateTime]$Credential.startDateTime
+                        if ($null -eq $OldestCert -or $Started -lt $OldestCert) { $OldestCert = $Started }
+                    }
+                }
 
                 if ($OldestCert -and $OldestCert -lt $ThresholdDate) {
                     [PSCustomObject]@{
@@ -45,9 +49,13 @@ function Invoke-CippTestZTNA21992 {
                 $_.keyCredentials -and $_.keyCredentials.Count -gt 0
             }) | ForEach-Object {
                 $SP = $_
-                $OldestCert = $SP.keyCredentials.Where({ $_.startDateTime }) | ForEach-Object {
-                    [DateTime]$_.startDateTime
-                } | Sort-Object | Select-Object -First 1
+                $OldestCert = $null
+                foreach ($Credential in $SP.keyCredentials) {
+                    if ($Credential.startDateTime) {
+                        $Started = [DateTime]$Credential.startDateTime
+                        if ($null -eq $OldestCert -or $Started -lt $OldestCert) { $OldestCert = $Started }
+                    }
+                }
 
                 if ($OldestCert -and $OldestCert -lt $ThresholdDate) {
                     [PSCustomObject]@{

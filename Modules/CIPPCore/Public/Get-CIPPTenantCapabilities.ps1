@@ -10,7 +10,10 @@ function Get-CIPPTenantCapabilities {
     $script:CIPPTenantCapabilitiesCache ??= @{}
     $CacheKey = "$TenantFilter"
     $Cached = $script:CIPPTenantCapabilitiesCache[$CacheKey]
-    if ($Cached -and $Cached.Expires -gt [datetime]::UtcNow) { return $Cached.Value }
+    if ($Cached -and $Cached.Expires -gt [datetime]::UtcNow) {
+        if ($Cached.Error) { throw $Cached.Error }
+        return $Cached.Value
+    }
 
     $ConfigTable = Get-CIPPTable -TableName 'CacheCapabilities'
     $datetime = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -18,7 +21,13 @@ function Get-CIPPTenantCapabilities {
     if ($ConfigEntries) {
         $Org = [CIPP.CippJson]::ConvertFromJson("$($ConfigEntries.JSON)")
     } else {
-        $Org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
+        try {
+            $Org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
+        } catch {
+            # A tenant without a token fails the same way for every caller in a run; don't re-request it per call.
+            $script:CIPPTenantCapabilitiesCache[$CacheKey] = @{ Error = $_; Expires = [datetime]::UtcNow.AddMinutes(2) }
+            throw
+        }
         # Save the capabilities to the cache table
         $Entity = @{
             PartitionKey = 'Capabilities'

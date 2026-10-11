@@ -254,7 +254,10 @@ function Invoke-CIPPBaselineStandard {
         if ($StaleRows.Count -gt 0 -and -not $GradeOnly) {
             try { Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $StaleRows } catch { Write-Information "Baselines: stale resolved-row cleanup for $($Item.Standard) on $TenantFilter failed: $($_.Exception.Message)" }
         }
-        $Prior = @($PriorRows | Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending)[0]
+        $Prior = $null
+        foreach ($PriorRow in $PriorRows) {
+            if ($null -eq $Prior -or [int64]($PriorRow.LastRun ?? 0) -gt [int64]($Prior.LastRun ?? 0)) { $Prior = $PriorRow }
+        }
         $PriorStatus = $Prior.Status
 
         # Per-property verdicts default to 'accept' (tolerate); 'denyDelete' marks the path's
@@ -433,7 +436,7 @@ function Invoke-CIPPBaselineStandard {
         # generic empty-cache pointer.
         $CollectorFailure = $null
         $PrepareNoDataReason = $null
-        $CacheCollector = Get-Command -Name "Set-CIPPDBCache$($Definition.read.cacheType)" -ErrorAction SilentlyContinue
+        $CacheCollector = if ($Definition.read.cacheType) { Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$($Definition.read.cacheType)" }
         $CollectorArgs = @{ TenantFilter = $TenantFilter }
         foreach ($Argument in ($Definition.read.collectorArgs ?? [PSCustomObject]@{}).PSObject.Properties) {
             $CollectorArgs[$Argument.Name] = $Argument.Value
@@ -443,7 +446,7 @@ function Invoke-CIPPBaselineStandard {
         }
 
         if ($Definition.prepare) {
-            if ($Definition.prepare -notmatch '^Get-CIPPBaseline[A-Za-z0-9]+$' -or -not (Get-Command -Name $Definition.prepare -ErrorAction SilentlyContinue)) {
+            if ($Definition.prepare -notmatch '^Get-CIPPBaseline[A-Za-z0-9]+$' -or -not (Get-CIPPBaselineCommand -Name $Definition.prepare)) {
                 throw "Prepare function $($Definition.prepare) is not available."
             }
             $Prepared = & $Definition.prepare -Item $Item -TenantFilter $TenantFilter
@@ -616,7 +619,7 @@ function Invoke-CIPPBaselineStandard {
                 $VerdictBy = "$($AcceptedPaths.$DenyKey.by)"
                 try {
                     $DeleteExecutor = "Invoke-CIPPBaselineDelete$($Definition.delete.executor)"
-                    if ($Definition.delete.executor -notmatch '^[A-Za-z0-9]+$' -or -not (Get-Command -Name $DeleteExecutor -ErrorAction SilentlyContinue)) {
+                    if ($Definition.delete.executor -notmatch '^[A-Za-z0-9]+$' -or -not (Get-CIPPBaselineCommand -Name $DeleteExecutor)) {
                         throw "Unknown delete executor '$($Definition.delete.executor)' on $($Definition.name)."
                     }
                     & $DeleteExecutor -Target $Target -TenantFilter $TenantFilter
@@ -703,7 +706,7 @@ function Invoke-CIPPBaselineStandard {
                 # (declarative or prepared), which sweeps and object-scoped writes need and
                 # everything else ignores.
                 $ExecutorName = "Invoke-CIPPBaseline$($Definition.remediate.executor)"
-                if ($Definition.remediate.executor -notmatch '^[A-Za-z0-9]+$' -or -not (Get-Command -Name $ExecutorName -ErrorAction SilentlyContinue)) {
+                if ($Definition.remediate.executor -notmatch '^[A-Za-z0-9]+$' -or -not (Get-CIPPBaselineCommand -Name $ExecutorName)) {
                     throw "Unknown remediate executor '$($Definition.remediate.executor)' on $($Definition.name)."
                 }
                 $ExecutorOutput = & $ExecutorName -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current

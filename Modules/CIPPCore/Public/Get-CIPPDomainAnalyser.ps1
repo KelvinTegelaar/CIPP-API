@@ -53,7 +53,8 @@ function Get-CIPPDomainAnalyser {
                     # Add DkimSelectors from the domain entity if available
                     if (![string]::IsNullOrEmpty($Domain.DkimSelectors)) {
                         $Selectors = $Domain.DkimSelectors | ConvertFrom-Json -ErrorAction SilentlyContinue
-                        $Object | Add-Member -NotePropertyName 'DkimSelectors' -NotePropertyValue ($Selectors) -Force
+                        $Object.PSObject.Properties.Remove('DkimSelectors')
+                        $Object.PSObject.Properties.Add([psnoteproperty]::new('DkimSelectors', $Selectors))
                     }
                     $Object
                 }

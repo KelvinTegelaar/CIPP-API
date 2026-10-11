@@ -23,6 +23,7 @@ BeforeAll {
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Set-CIPPDBCacheUsers { param($TenantFilter) }
 
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineGraphRequest.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineExoRequest.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineDeviceRegistrationPolicy.ps1')

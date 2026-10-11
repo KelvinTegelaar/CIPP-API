@@ -38,6 +38,7 @@ BeforeAll {
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPEnrollmentTimeDeviceMembershipTarget.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Set-CIPPEnrollmentTimeDeviceMembershipTarget.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Remove-CIPPEnrollmentTimeDeviceMembershipMarker.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
     . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
     . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
     foreach ($Name in @('DefenderAVPolicy', 'DefenderASRPolicy', 'DefenderEDRPolicy', 'DefenderExclusionPolicy',

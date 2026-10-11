@@ -113,7 +113,7 @@ function Invoke-CIPPBaselineGraphBulkSweep {
     }
 
     foreach ($CacheType in @($Remediate.refreshCache | Where-Object { $_ })) {
-        $Collector = Get-Command -Name "Set-CIPPDBCache$CacheType" -ErrorAction SilentlyContinue
+        $Collector = Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$CacheType"
         if (-not $Collector) { continue }
         try { $null = & $Collector -TenantFilter $TenantFilter } catch {
             Write-Information "Baselines: cache refresh for $CacheType on $TenantFilter after a sweep failed: $($_.Exception.Message)"

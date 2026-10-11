@@ -10,9 +10,12 @@ function Get-NormalizedError {
     )
 
     #Check if the message is valid JSON.
-    try {
-        $JSONMsg = $message | ConvertFrom-Json
-    } catch {
+    $JSONMsg = $null
+    if ($message -and $message.TrimStart().StartsWith('{')) {
+        try {
+            $JSONMsg = $message | ConvertFrom-Json
+        } catch {
+        }
     }
     #if the message is valid JSON, there can be multiple fields in which the error resides. These are:
     # $message.error.Innererror.Message

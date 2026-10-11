@@ -42,7 +42,7 @@ function Get-CIPPBaselineCustomBannedPasswordListState {
         missingBannedWords         = @($Missing)
     }
     # Carried for the executor: the merge needs the tenant's current words.
-    $Current | Add-Member -NotePropertyName 'settingId' -NotePropertyValue "$($Existing.id)"
+    $Current.PSObject.Properties.Add([psnoteproperty]::new('settingId', "$($Existing.id)"))
     $Current | Add-Member -NotePropertyName 'currentWords' -NotePropertyValue @($CurrentWords)
 
     @{

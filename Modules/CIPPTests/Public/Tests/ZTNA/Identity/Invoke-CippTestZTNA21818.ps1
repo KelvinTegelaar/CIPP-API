@@ -67,12 +67,17 @@ function Invoke-CippTestZTNA21818 {
         $Passed = $true
         $ExitLoop = $false
 
+        # roleDefinitionId carries the role's TEMPLATE id — matching it against $Role.id (the
+        # directoryRole instance id) never succeeded.
+        $PolicyByRoleId = @{}
+        foreach ($RolePolicy in $RoleManagementPolicies) {
+            if ($RolePolicy.scopeId -eq '/' -and $RolePolicy.scopeType -eq 'DirectoryRole' -and $RolePolicy.roleDefinitionId -and -not $PolicyByRoleId.ContainsKey("$($RolePolicy.roleDefinitionId)")) {
+                $PolicyByRoleId["$($RolePolicy.roleDefinitionId)"] = $RolePolicy
+            }
+        }
+
         foreach ($Role in $PrivilegedRoles) {
-            # roleDefinitionId carries the role's TEMPLATE id — matching it against $Role.id (the
-            # directoryRole instance id) never succeeded.
-            $Policy = $RoleManagementPolicies.Where({
-                $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.roleDefinitionId -eq $Role.roleTemplateId
-            }, 'First')[0]
+            $Policy = $PolicyByRoleId["$($Role.roleTemplateId)"]
 
             if (-not $Policy) { continue }
 

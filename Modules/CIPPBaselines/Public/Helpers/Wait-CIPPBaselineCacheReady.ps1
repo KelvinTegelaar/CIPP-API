@@ -30,7 +30,7 @@ function Wait-CIPPBaselineCacheReady {
         $RunId
     )
 
-    $CacheCollector = Get-Command -Name "Set-CIPPDBCache$($Definition.read.cacheType)" -ErrorAction SilentlyContinue
+    $CacheCollector = Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$($Definition.read.cacheType)"
     if (-not $CacheCollector) { return $false }
 
     # --- pre-check: is the cache complete, recent and consistent with live state?

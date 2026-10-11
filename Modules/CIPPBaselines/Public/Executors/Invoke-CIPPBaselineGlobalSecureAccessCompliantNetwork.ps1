@@ -333,7 +333,7 @@ exit 0
 
     # Refresh the caches this run wrote to, so the next compare does not read the old copies as drift.
     foreach ($CacheType in ($Refresh | Sort-Object -Unique)) {
-        $Collector = Get-Command -Name "Set-CIPPDBCache$CacheType" -ErrorAction SilentlyContinue
+        $Collector = Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$CacheType"
         if ($Collector) {
             try { $null = & $Collector -TenantFilter $TenantFilter } catch { Write-Information "Baselines: $CacheType cache refresh on $TenantFilter failed: $($_.Exception.Message)" }
         }
