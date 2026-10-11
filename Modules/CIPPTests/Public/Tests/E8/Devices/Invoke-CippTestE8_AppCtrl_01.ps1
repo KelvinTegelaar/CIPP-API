@@ -16,11 +16,11 @@ function Invoke-CippTestE8_AppCtrl_01 {
             return
         }
 
-        $AppControlPolicies = $ConfigPolicies | Where-Object {
+        $AppControlPolicies = $ConfigPolicies.Where({
             $ids = $_.settings.settingInstance.settingDefinitionId
             ($ids -match 'applicationcontrol') -or ($ids -match 'smartappcontrol') -or ($ids -match 'applocker')
-        }
-        $Assigned = $AppControlPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 }
+        })
+        $Assigned = $AppControlPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 })
 
         if ($Assigned) {
             $Status = 'Passed'

@@ -65,12 +65,13 @@ function Test-CIPPStandardLicense {
     }
 
     if ($Preset) {
-        $RequiredCapabilities = @(
-            $RequiredCapabilities
-            foreach ($CapabilityPreset in $Preset) {
-                $Presets[$CapabilityPreset]
-            }
-        ) | Where-Object { $_ } | Select-Object -Unique
+        $Seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+        $RequiredCapabilities = @(foreach ($Capability in @(
+                    $RequiredCapabilities
+                    foreach ($CapabilityPreset in $Preset) {
+                        $Presets[$CapabilityPreset]
+                    }
+                )) { if ($Capability -and $Seen.Add($Capability)) { $Capability } })
     }
 
     try {

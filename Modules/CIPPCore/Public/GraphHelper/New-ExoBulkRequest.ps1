@@ -140,7 +140,7 @@ function New-ExoBulkRequest {
                             continue
                         }
                         try {
-                            $Parsed = $ConcResult.Result.Content | ConvertFrom-Json
+                            $Parsed = [CIPP.CippJson]::ConvertFromResponse($ConcResult.Result)
                         } catch {
                             Write-Host "EXO bulk batch: could not parse response (HTTP $($ConcResult.StatusCode))"
                             continue

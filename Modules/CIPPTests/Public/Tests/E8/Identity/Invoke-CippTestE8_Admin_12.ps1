@@ -17,7 +17,7 @@ function Invoke-CippTestE8_Admin_12 {
             return
         }
 
-        $GaRole = $Roles | Where-Object { $_.displayName -eq 'Global Administrator' } | Select-Object -First 1
+        $GaRole = $Roles.Where({ $_.displayName -eq 'Global Administrator' }, 'First')[0]
         if (-not $GaRole) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Global Administrator role not present in cache.' -Risk 'Medium' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'E8 ML1 - Restrict Admin Privileges'
             return

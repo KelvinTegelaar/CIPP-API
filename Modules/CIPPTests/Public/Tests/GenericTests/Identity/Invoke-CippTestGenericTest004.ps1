@@ -13,7 +13,7 @@ function Invoke-CippTestGenericTest004 {
             return
         }
 
-        $Users = @($MFAData | Where-Object { $_.UPN })
+        $Users = @($MFAData.Where({ $_.UPN }))
         if ($Users.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest004' -TestType 'Identity' -Status 'Informational' -ResultMarkdown 'MFA state data was found but contained no user records.' -Risk 'Informational' -Name 'Tenant MFA Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'
             return
@@ -61,7 +61,7 @@ function Invoke-CippTestGenericTest004 {
         $null = $Result.Append("| Display Name | MFA Registered | MFA Method | Protected By | Account Type |`n")
         $null = $Result.Append("|-------------|----------------|------------|--------------|--------------|`n")
 
-        $DisplayUsers = $Users | Sort-Object DisplayName | Select-Object -First 100
+        $DisplayUsers = ($Users | Sort-Object DisplayName).Where({ $true }, 'First', 100)
         foreach ($User in $DisplayUsers) {
             $Name = ($User.DisplayName -replace '\|', '\|')
             $Registered = if ($User.MFARegistration -eq $true) { '✅ Yes' } else { '❌ No' }

@@ -21,7 +21,7 @@ function Invoke-CippTestCopilotReady010 {
 
         # Build lookup by UPN for matching
         $RegLookup = @{}
-        foreach ($Reg in ($UserRegistrationDetails | Where-Object { $_.userPrincipalName })) {
+        foreach ($Reg in ($UserRegistrationDetails.Where({ $_.userPrincipalName }))) {
             $RegLookup[$Reg.userPrincipalName.ToLower()] = $Reg
         }
 

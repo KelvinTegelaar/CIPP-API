@@ -25,7 +25,7 @@ function Invoke-CippTestCopilotReady002 {
 
         foreach ($Sku in $LicenseData) {
             $IsCopilot = ($Sku.License -match 'Copilot') -or
-            ($Sku.ServicePlans | Where-Object { $_.servicePlanName -match $CopilotServicePlan })
+            ($Sku.ServicePlans.Where({ $_.servicePlanName -match $CopilotServicePlan }))
             if ($IsCopilot) {
                 $CopilotLicenses.Add($Sku) | Out-Null
                 $Enabled = [int]$Sku.TotalLicenses

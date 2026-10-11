@@ -23,11 +23,11 @@ function Invoke-CippTestCISAMSEXO112 {
             return
         }
 
-        $PoliciesWithTips = $PresetPolicies | Where-Object {
+        $PoliciesWithTips = $PresetPolicies.Where({
             ($_.EnableSimilarUsersSafetyTips -eq $true) -or
             ($_.EnableSimilarDomainsSafetyTips -eq $true) -or
             ($_.EnableUnusualCharactersSafetyTips -eq $true)
-        }
+        })
 
         if ($PoliciesWithTips.Count -gt 0) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: $($PoliciesWithTips.Count) policy/policies have impersonation safety tips enabled:`n`n")

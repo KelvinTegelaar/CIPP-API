@@ -53,7 +53,7 @@ function Set-CIPPDBCacheIntuneAppleUserInitiatedEnrollmentProfiles {
                         continue
                     }
 
-                    $EnrollmentProfile = $Profiles | Where-Object { $_.id -eq $AssignResult.id } | Select-Object -First 1
+                    $EnrollmentProfile = $Profiles.Where({ $_.id -eq $AssignResult.id }, 'First')[0]
                     if ($EnrollmentProfile) {
                         $Assignments = @($AssignResult.body.value)
                         $EnrollmentProfile | Add-Member -NotePropertyName assignments -NotePropertyValue $Assignments -Force

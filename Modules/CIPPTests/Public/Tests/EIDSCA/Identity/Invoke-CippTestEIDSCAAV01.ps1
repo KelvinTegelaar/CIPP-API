@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCAAV01 {
             return
         }
 
-        $VoiceConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Voice' }
+        $VoiceConfig = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'Voice' })
 
         if (-not $VoiceConfig) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAV01' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'Voice authentication configuration not found in Authentication Methods Policy.' -Risk 'Medium' -Name 'Voice Call - Disabled' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'

@@ -39,7 +39,7 @@ function Set-CIPPDBCacheExoLabels {
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching compliance labels' -sev Debug
 
-        $Tenant = Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1
+        $Tenant = @(Get-Tenants -TenantFilter $TenantFilter)[0]
         $Labels = New-ExoRequest -TenantId $Tenant.customerId -cmdlet 'Get-Label' -Compliance -Select 'Name,DisplayName'
 
         if ($Labels) {

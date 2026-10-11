@@ -13,8 +13,8 @@ function Invoke-CippTestGenericTest008 {
             return
         }
 
-        $AllUsers = @($MFAData | Where-Object { $_.UPN })
-        $PerUserMFAUsers = @($AllUsers | Where-Object { $_.PerUser -in @('Enforced', 'Enabled') })
+        $AllUsers = @($MFAData.Where({ $_.UPN }))
+        $PerUserMFAUsers = @($AllUsers.Where({ $_.PerUser -in @('Enforced', 'Enabled') }))
 
         $Result = [System.Text.StringBuilder]::new()
 

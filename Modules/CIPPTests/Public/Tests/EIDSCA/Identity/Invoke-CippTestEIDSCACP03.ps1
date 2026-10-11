@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCACP03 {
             return
         }
 
-        $SettingValue = ($Settings.values | Where-Object { $_.name -eq 'BlockUserConsentForRiskyApps' }).value
+        $SettingValue = $Settings.values.Where({ $_.name -eq 'BlockUserConsentForRiskyApps' }).value
 
         if ($SettingValue -eq 'true') {
             $Status = 'Passed'

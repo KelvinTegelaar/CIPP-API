@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_1_3_9 {
             return
         }
 
-        $Cfg = $OrgConfig | Select-Object -First 1
+        $Cfg = @($OrgConfig)[0]
 
         if ($Cfg.BookingsEnabled -eq $false) {
             $Status = 'Passed'

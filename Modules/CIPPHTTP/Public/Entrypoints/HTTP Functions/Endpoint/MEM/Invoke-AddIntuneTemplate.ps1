@@ -15,7 +15,10 @@ function Invoke-AddIntuneTemplate {
     try {
         if ($Request.Body.RawJSON) {
             if (!$Request.Body.displayName) { throw 'You must enter a displayName' }
-            if ($null -eq ($Request.Body.RawJSON | ConvertFrom-Json)) { throw 'the JSON is invalid' }
+            $Validation = Test-CIPPIntuneTemplate -RawJSON $Request.Body.RawJSON -TemplateType $Request.Body.TemplateType -DisplayName $Request.Body.displayName
+            if (-not $Validation.IsValid) {
+                throw [System.ArgumentException]::new("The template was not saved because it would not deploy: $($Validation.Errors -join ' ')")
+            }
 
             $reusableTemplateRefs = @()
             $object = [PSCustomObject]@{
@@ -58,6 +61,11 @@ function Invoke-AddIntuneTemplate {
             # Intune templates store payload in RAWJson; only the content is rewritten to use reusable template GUID placeholders.
             $templateJson = if ($reusableResult.RawJSON) { $reusableResult.RawJSON } else { $Template.TemplateJson }
 
+            $Validation = Test-CIPPIntuneTemplate -RawJSON $templateJson -TemplateType $Template.Type -DisplayName $Template.DisplayName
+            if (-not $Validation.IsValid) {
+                throw [System.ArgumentException]::new("The captured policy did not produce a deployable template: $($Validation.Errors -join ' ')")
+            }
+
             $object = [PSCustomObject]@{
                 Displayname      = $Template.DisplayName
                 Description      = $Template.Description
@@ -79,15 +87,15 @@ function Invoke-AddIntuneTemplate {
             $StatusCode = [HttpStatusCode]::OK
         }
     } catch {
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Intune Template Deployment failed: $($ErrorMessage.NormalizedMessage)"
+        $Result = "Intune Template Deployment failed: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
     }
 
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
+            Body       = @{ Results = $Result; GUID = $StatusCode -eq [HttpStatusCode]::OK ? $GUID : $null }
         })
 }

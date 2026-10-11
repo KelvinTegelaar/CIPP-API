@@ -51,6 +51,8 @@ namespace CIPP
         private static long _evictions;
         private static long _oversized;
         private static int _sweepInFlight; // 0 = idle, 1 = a background ClearExpired is running
+        // Expired entries nobody reads again would otherwise stay alive until the next 1000th access.
+        private static readonly Timer _sweepTimer = new(_ => TryFireBackgroundSweep(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
         private sealed class CacheEntry
         {
@@ -77,7 +79,10 @@ namespace CIPP
             _ttl = TimeSpan.FromSeconds(ttlSeconds);
         }
 
-        public static bool TryGet(string key, out object? value)
+        public static bool TryGet(string key, out object? value) => TryGet(key, out value, true);
+
+        /// <param name="countMiss">False for a fallback probe, so a lookup that misses twice counts once.</param>
+        public static bool TryGet(string key, out object? value, bool countMiss)
         {
             var count = Interlocked.Increment(ref _accessCount);
             // Every ~1000 accesses, kick off a background sweep so TTL-expired
@@ -105,7 +110,7 @@ namespace CIPP
             if (entry != null)
                 RemoveEntry(key);
 
-            Interlocked.Increment(ref _misses);
+            if (countMiss) Interlocked.Increment(ref _misses);
             value = null;
             return false;
         }
@@ -395,8 +400,15 @@ namespace CIPP
         private static long SizeOfPSObject(PSObject psObj, int depth, ref long budget)
         {
             long total = PSObjectBase;
+            IEnumerable<PSPropertyInfo> properties = psObj.Properties;
+            if (PSMembers.Available)
+            {
+                // Adapted members of a wrapped .NET value are the value itself, not extra properties.
+                if (psObj.BaseObject is not PSCustomObject) total += SizeOf(psObj.BaseObject, depth + 1, ref budget);
+                properties = PSMembers.InstanceProperties(psObj);
+            }
 
-            foreach (var prop in psObj.Properties)
+            foreach (var prop in properties)
             {
                 if (--budget <= 0) break;
                 total += PSNotePropertyOverhead;

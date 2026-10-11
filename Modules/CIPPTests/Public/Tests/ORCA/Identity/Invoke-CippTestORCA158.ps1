@@ -17,7 +17,7 @@ function Invoke-CippTestORCA158 {
             return
         }
 
-        $Policy = $AtpPolicy | Select-Object -First 1
+        $Policy = @($AtpPolicy)[0]
 
         if ($Policy.EnableATPForSPOTeamsODB -eq $true) {
             $Status = 'Passed'

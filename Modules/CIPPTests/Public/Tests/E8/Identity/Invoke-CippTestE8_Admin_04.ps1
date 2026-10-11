@@ -15,7 +15,7 @@ function Invoke-CippTestE8_Admin_04 {
             return
         }
 
-        $Cfg = $AuthPolicy | Select-Object -First 1
+        $Cfg = @($AuthPolicy)[0]
         $Permissions = $Cfg.defaultUserRolePermissions
         # The assigned consent policies live at the top level of the authorization policy, not under defaultUserRolePermissions.
         $UserConsent = $Cfg.permissionGrantPolicyIdsAssignedToDefaultUserRole

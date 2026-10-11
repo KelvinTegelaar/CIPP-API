@@ -13,7 +13,7 @@ function Invoke-CippTestGenericTest006 {
             return
         }
 
-        $StandardUsers = @($MFAData | Where-Object { $_.UPN -and $_.IsAdmin -ne $true })
+        $StandardUsers = @($MFAData.Where({ $_.UPN -and $_.IsAdmin -ne $true }))
 
         if ($StandardUsers.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("No standard (non-admin) user accounts were found in the MFA state data.")
@@ -43,7 +43,7 @@ function Invoke-CippTestGenericTest006 {
         $null = $Result.Append("| Display Name | MFA Registered | MFA Method | Protected By | User Type |`n")
         $null = $Result.Append("|-------------|----------------|------------|--------------|-----------|`n")
 
-        $DisplayUsers = $StandardUsers | Sort-Object DisplayName | Select-Object -First 100
+        $DisplayUsers = ($StandardUsers | Sort-Object DisplayName).Where({ $true }, 'First', 100)
         foreach ($User in $DisplayUsers) {
             $Name = ($User.DisplayName -replace '\|', '\|')
             $Registered = if ($User.MFARegistration -eq $true) { '✅ Yes' } else { '❌ No' }

@@ -44,7 +44,7 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
         # treats a fresh empty cache as authoritative (baseline drift detection).
         $GetChecked = {
             param($Results, $Id)
-            $Result = $Results | Where-Object { $_.id -eq $Id } | Select-Object -First 1
+            $Result = $Results.Where({ $_.id -eq $Id }, 'First')[0]
             if (-not $Result -or $null -eq $Result.status -or [int]$Result.status -lt 200 -or [int]$Result.status -ge 300) {
                 $GraphError = $Result.body.error.message ?? $Result.body.message ?? 'no batch response'
                 throw "Graph request '$Id' failed (HTTP $($Result.status)): $GraphError - preserving the previous cache"

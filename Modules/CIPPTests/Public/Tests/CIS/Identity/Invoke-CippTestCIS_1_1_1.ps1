@@ -49,11 +49,11 @@ function Invoke-CippTestCIS_1_1_1 {
             return
         }
 
-        $NonCompliant = $PrivilegedUsers | Where-Object {
+        $NonCompliant = $PrivilegedUsers.Where({
             $_.onPremisesSyncEnabled -eq $true -or
             $_.userPrincipalName -notlike '*onmicrosoft.com' -or
             ($_.assignedLicenses -and $_.assignedLicenses.Count -gt 0)
-        }
+        })
 
         if ($NonCompliant.Count -eq 0) {
             $Status = 'Passed'
@@ -62,7 +62,7 @@ function Invoke-CippTestCIS_1_1_1 {
             $Status = 'Failed'
             $Result = [System.Text.StringBuilder]::new("$($NonCompliant.Count) of $($PrivilegedUsers.Count) privileged user(s) fail one or more checks (synced from on-premises, non-onmicrosoft.com UPN, or licensed):`n`n")
             $null = $Result.Append("| UPN | Synced | onmicrosoft UPN | Licensed |`n| :-- | :----- | :-------------- | :------- |`n")
-            foreach ($U in ($NonCompliant | Select-Object -First 25)) {
+            foreach ($U in $NonCompliant.Where({ $true }, 'First', 25)) {
                 $null = $Result.Append("| $($U.userPrincipalName) | $([bool]$U.onPremisesSyncEnabled) | $($U.userPrincipalName -like '*onmicrosoft.com') | $([bool]($U.assignedLicenses.Count -gt 0)) |`n")
             }
         }

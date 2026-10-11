@@ -36,7 +36,7 @@ function Invoke-CippTestORCA242 {
         $PassedAlerts = [System.Collections.Generic.List[object]]::new()
 
         foreach ($AlertName in $ImportantAlerts) {
-            $Found = $Alerts | Where-Object { $_.Name -eq $AlertName } | Select-Object -First 1
+            $Found = $Alerts.Where({ $_.Name -eq $AlertName }, 'First')[0]
             if ($null -eq $Found) { continue }
 
             if ($Found.Disabled -eq $true) {

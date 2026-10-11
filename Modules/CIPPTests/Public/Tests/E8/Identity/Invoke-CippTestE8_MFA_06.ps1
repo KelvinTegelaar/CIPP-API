@@ -22,13 +22,13 @@ function Invoke-CippTestE8_MFA_06 {
         # Conditional Access includeRoles reference role template IDs, not directory role instance IDs.
         $PrivRoleIds = @($Roles | ForEach-Object { if ($_.roleTemplateId) { [string]$_.roleTemplateId } elseif ($_.RoletemplateId) { [string]$_.RoletemplateId } })
 
-        $Match = $CA | Where-Object {
+        $Match = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.users.includeRoles -and
-            (@($_.conditions.users.includeRoles) | Where-Object { $_ -in $PrivRoleIds }).Count -gt 0 -and
+            @($_.conditions.users.includeRoles).Where({ $_ -in $PrivRoleIds }).Count -gt 0 -and
             $_.grantControls.authenticationStrength -and
             $_.grantControls.authenticationStrength.id -eq $PhishResistantId
-        }
+        })
 
         if ($Match) {
             $Status = 'Passed'

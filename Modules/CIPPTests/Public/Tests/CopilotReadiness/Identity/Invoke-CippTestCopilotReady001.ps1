@@ -24,7 +24,7 @@ function Invoke-CippTestCopilotReady001 {
         $AssignableCount = 0
 
         foreach ($Sku in $LicenseData) {
-            $HasQualifyingPlan = $Sku.ServicePlans | Where-Object { $_.servicePlanName -in $PrerequisiteServicePlans }
+            $HasQualifyingPlan = $Sku.ServicePlans.Where({ $_.servicePlanName -in $PrerequisiteServicePlans })
             if ($HasQualifyingPlan -and [int]$Sku.TotalLicenses -gt 0) {
                 $EligibleSkus.Add($Sku) | Out-Null
                 $AssignableCount += [int]$Sku.TotalLicenses

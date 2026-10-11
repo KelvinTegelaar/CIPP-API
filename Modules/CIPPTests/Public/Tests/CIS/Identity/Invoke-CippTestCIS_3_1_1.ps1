@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_3_1_1 {
             return
         }
 
-        $Cfg = $Audit | Select-Object -First 1
+        $Cfg = @($Audit)[0]
 
         if ($Cfg.UnifiedAuditLogIngestionEnabled -eq $true) {
             $Status = 'Passed'

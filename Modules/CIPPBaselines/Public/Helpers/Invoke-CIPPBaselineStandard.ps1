@@ -150,7 +150,7 @@ function Invoke-CIPPBaselineStandard {
                     if ($Normalized.PSObject.Properties[$DeclaredVariable.Name]) {
                         $Normalized.$($DeclaredVariable.Name) = $Fallback
                     } else {
-                        $Normalized | Add-Member -NotePropertyName $DeclaredVariable.Name -NotePropertyValue $Fallback
+                        $Normalized.PSObject.Properties.Add([psnoteproperty]::new($DeclaredVariable.Name, $Fallback))
                     }
                 }
             }
@@ -237,11 +237,11 @@ function Invoke-CIPPBaselineStandard {
                         else { $null -ne $_ -and $_ -eq $Current }
                     }).Count -gt 0
                 if ($UseCurrent -and $IsMember) { return $Current }
-                return ($Allowed | Where-Object { $null -ne $_ } | Select-Object -First 1)
+                return $Allowed.Where({ $null -ne $_ }, 'First')[0]
             }
             $Resolved = [PSCustomObject]@{}
             foreach ($Property in $Node.PSObject.Properties) {
-                $Resolved | Add-Member -NotePropertyName $Property.Name -NotePropertyValue (& $ResolveAnyOf $Property.Value $Current.$($Property.Name) $UseCurrent)
+                $Resolved.PSObject.Properties.Add([psnoteproperty]::new($Property.Name, (& $ResolveAnyOf $Property.Value $Current.$($Property.Name) $UseCurrent)))
             }
             $Resolved
         }
@@ -254,7 +254,7 @@ function Invoke-CIPPBaselineStandard {
         if ($StaleRows.Count -gt 0 -and -not $GradeOnly) {
             try { Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $StaleRows } catch { Write-Information "Baselines: stale resolved-row cleanup for $($Item.Standard) on $TenantFilter failed: $($_.Exception.Message)" }
         }
-        $Prior = $PriorRows | Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending | Select-Object -First 1
+        $Prior = @($PriorRows | Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending)[0]
         $PriorStatus = $Prior.Status
 
         # Per-property verdicts default to 'accept' (tolerate); 'denyDelete' marks the path's
@@ -389,19 +389,19 @@ function Invoke-CIPPBaselineStandard {
         # read.array descends into each cached row's nested array and flattens the elements
         # into the candidate set BEFORE the filters run. filter.property may be a dot-path.
         $ReadCurrent = {
-            $Data = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Definition.read.cacheType | Where-Object { $_ })
+            $Data = @((New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Definition.read.cacheType).Where({ $_ }))
             if ($Definition.read.array) {
-                $Data = @($Data | ForEach-Object {
-                        $Nested = $_
-                        foreach ($Segment in ($Definition.read.array -split '\.')) { $Nested = $Nested.$Segment }
-                        $Nested
-                    } | Where-Object { $_ })
+                $Data = @(@(foreach ($Row in $Data) {
+                            $Nested = $Row
+                            foreach ($Segment in ($Definition.read.array -split '\.')) { $Nested = $Nested.$Segment }
+                            $Nested
+                        }).Where({ $_ }))
             }
             foreach ($Condition in @($Definition.read.filter)) {
                 if (-not $Condition) { continue }
                 $Match = & $Render $Condition.value $Item.Variables
                 $Property = $Condition.property
-                $Data = @($Data | Where-Object {
+                $Data = @($Data.Where({
                         $Candidate = $_
                         foreach ($Segment in ($Property -split '\.')) { $Candidate = $Candidate.$Segment }
                         switch ($Condition.operator) {
@@ -410,9 +410,9 @@ function Invoke-CIPPBaselineStandard {
                             'notStartsWith' { -not "$Candidate".StartsWith("$Match") }
                             default { $Candidate -eq $Match }
                         }
-                    })
+                    }))
             }
-            $Value = $Data | Select-Object -First 1
+            $Value = @($Data)[0]
             if ($Definition.read.object -and $null -ne $Value) {
                 foreach ($Segment in ($Definition.read.object -split '\.')) {
                     $Value = $Value.$Segment
@@ -510,7 +510,7 @@ function Invoke-CIPPBaselineStandard {
                     $Value -is [System.Management.Automation.PSCustomObject]) {
                     $Value = & $ProjectNode $Property.Value $Value
                 }
-                $Node | Add-Member -NotePropertyName $Property.Name -NotePropertyValue $Value
+                $Node.PSObject.Properties.Add([psnoteproperty]::new($Property.Name, $Value))
             }
             $Node
         }
@@ -528,7 +528,7 @@ function Invoke-CIPPBaselineStandard {
                 if ($null -eq $Value -and $null -ne $ReadDefaults -and $ReadDefaults.PSObject.Properties[$Property]) {
                     $Value = $ReadDefaults.$Property
                 }
-                $Projected | Add-Member -NotePropertyName $Property -NotePropertyValue $Value
+                $Projected.PSObject.Properties.Add([psnoteproperty]::new($Property, $Value))
             }
             $Result.CurrentValue = $Projected
             $CompareExpected = & $ResolveAnyOf $ExpectedTemplate $Current $true

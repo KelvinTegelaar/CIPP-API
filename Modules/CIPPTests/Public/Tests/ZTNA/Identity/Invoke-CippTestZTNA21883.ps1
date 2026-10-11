@@ -79,7 +79,7 @@ function Invoke-CippTestZTNA21883 {
                 $policyLink = "https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/PolicyBlade/policyId/$($Policy.id)"
                 $policyName = if ($Policy.displayName) { $Policy.displayName } else { 'Unnamed' }
                 $spTargets = if ($Policy.conditions.clientApplications.includeServicePrincipals) {
-                    ($Policy.conditions.clientApplications.includeServicePrincipals | Select-Object -First 3) -join ', '
+                    @($Policy.conditions.clientApplications.includeServicePrincipals.Where({ $true }, 'First', 3)) -join ', '
                     if ($Policy.conditions.clientApplications.includeServicePrincipals.Count -gt 3) {
                         $spTargets += " (and $($Policy.conditions.clientApplications.includeServicePrincipals.Count - 3) more)"
                     }

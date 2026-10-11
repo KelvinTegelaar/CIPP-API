@@ -18,9 +18,9 @@ function Invoke-CippTestORCA113 {
         }
 
         # Exclude the Built-In Protection preset — Microsoft owns it and intentionally allows click-through on the baseline.
-        $CustomPolicies = $SafeLinksPolicies | Where-Object {
+        $CustomPolicies = $SafeLinksPolicies.Where({
             $_.IsBuiltInProtection -ne $true
-        }
+        })
 
         $FailedPolicies = [System.Collections.Generic.List[object]]::new()
         $PassedPolicies = [System.Collections.Generic.List[object]]::new()

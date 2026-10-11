@@ -13,14 +13,14 @@ function Invoke-CippTestCIS_6_2_2 {
             return
         }
 
-        $Whitelisting = $Rules | Where-Object {
+        $Whitelisting = $Rules.Where({
             $_.State -eq 'Enabled' -and (
                 $_.SetSCL -eq -1 -or
                 ($_.SetHeaderName -eq 'X-Forefront-Antispam-Report' -and $_.SetHeaderValue -match 'IPV:CAL') -or
                 ($_.SetHeaderName -eq 'X-MS-Exchange-Organization-BypassClutter') -or
                 $_.SetSpamConfidenceLevel -eq -1
             )
-        }
+        })
 
         if (-not $Whitelisting -or $Whitelisting.Count -eq 0) {
             $Status = 'Passed'
@@ -28,7 +28,7 @@ function Invoke-CippTestCIS_6_2_2 {
         } else {
             $Status = 'Failed'
             $Result = "$($Whitelisting.Count) transport rule(s) whitelist senders by SCL=-1:`n`n"
-            $Result += ($Whitelisting | Select-Object -First 25 | ForEach-Object { "- $($_.Name)" }) -join "`n"
+            $Result += ($Whitelisting.Where({ $true }, 'First', 25) | ForEach-Object { "- $($_.Name)" }) -join "`n"
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_6_2_2' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Mail transport rules do not whitelist specific domains' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Email Protection'

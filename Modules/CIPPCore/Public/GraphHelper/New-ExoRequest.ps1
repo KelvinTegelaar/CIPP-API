@@ -61,7 +61,7 @@ function New-ExoRequest {
         }
         $ExoBody = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $ExoBody -EscapeForJson
 
-        $Tenant = Get-Tenants -IncludeErrors -TenantFilter $tenantid | Select-Object -First 1
+        $Tenant = @(Get-Tenants -IncludeErrors -TenantFilter $tenantid)[0]
         if (-not $Tenant -and $NoAuthCheck -eq $true) {
             $Tenant = [PSCustomObject]@{
                 customerId = $tenantid

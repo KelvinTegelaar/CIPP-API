@@ -18,7 +18,7 @@ function Invoke-CippTestE8_MFA_05 {
         $Configs = $AuthMethodsPolicy.authenticationMethodConfigurations
         $Issues = [System.Collections.Generic.List[string]]::new()
         foreach ($Id in 'Sms','Voice','Email') {
-            $C = $Configs | Where-Object { $_.id -eq $Id }
+            $C = $Configs.Where({ $_.id -eq $Id })
             if ($C -and $C.state -eq 'enabled') { $Issues.Add($Id) }
         }
 

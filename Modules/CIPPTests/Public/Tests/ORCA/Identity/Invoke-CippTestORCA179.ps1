@@ -18,9 +18,9 @@ function Invoke-CippTestORCA179 {
         }
 
         # Exclude the Built-In Protection preset — Microsoft scopes it to external senders by design.
-        $CustomPolicies = $Policies | Where-Object {
+        $CustomPolicies = $Policies.Where({
             $_.IsBuiltInProtection -ne $true
-        }
+        })
 
         $FailedPolicies = [System.Collections.Generic.List[object]]::new()
         $PassedPolicies = [System.Collections.Generic.List[object]]::new()

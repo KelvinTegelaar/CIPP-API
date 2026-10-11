@@ -49,7 +49,7 @@ function Invoke-CippTestZTNA21899 {
             $Lines.Add('')
             $Lines.Add('| Policy / Scope | Rule | Level | Type | Recipient Type |')
             $Lines.Add('| :------------- | :--- | :---- | :--- | :------------- |')
-            foreach ($M in ($MissingRecipients | Select-Object -First 25)) {
+            foreach ($M in $MissingRecipients.Where({ $true }, 'First', 25)) {
                 $Lines.Add("| $($M.ScopeType):$($M.ScopeId) | $($M.RuleId) | $($M.NotificationLevel) | $($M.NotificationType) | $($M.RecipientType) |")
             }
             if ($MissingRecipients.Count -gt 25) {

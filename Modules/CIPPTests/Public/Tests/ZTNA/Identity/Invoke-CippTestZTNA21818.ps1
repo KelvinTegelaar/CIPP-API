@@ -70,14 +70,14 @@ function Invoke-CippTestZTNA21818 {
         foreach ($Role in $PrivilegedRoles) {
             # roleDefinitionId carries the role's TEMPLATE id — matching it against $Role.id (the
             # directoryRole instance id) never succeeded.
-            $Policy = $RoleManagementPolicies | Where-Object {
+            $Policy = $RoleManagementPolicies.Where({
                 $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.roleDefinitionId -eq $Role.roleTemplateId
-            } | Select-Object -First 1
+            }, 'First')[0]
 
             if (-not $Policy) { continue }
 
             foreach ($NotificationRuleId in $Notifications.RuleId) {
-                $Rule = $Policy.rules | Where-Object { $_.id -eq $NotificationRuleId } | Select-Object -First 1
+                $Rule = $Policy.rules.Where({ $_.id -eq $NotificationRuleId }, 'First')[0]
 
                 if ($Rule) {
                     $RuleWithRole = $Rule | Select-Object *, @{Name = 'RoleDisplayName'; Expression = { $Role.displayName } }
@@ -105,7 +105,7 @@ function Invoke-CippTestZTNA21818 {
         $null = $ResultMarkdown.Append("| :-------- | :-------------------- | :---------------- | :------------------------- | :-------------------- |`n")
 
         foreach ($NotificationRule in $NotificationRules) {
-            $MatchingNotification = $Notifications | Where-Object { $_.RuleId -eq $NotificationRule.id }
+            $MatchingNotification = $Notifications.Where({ $_.RuleId -eq $NotificationRule.id })
             $Recipients = if ($NotificationRule.notificationRecipients) { ($NotificationRule.notificationRecipients -join ', ') } else { '' }
             $null = $ResultMarkdown.Append("| $($NotificationRule.roleDisplayName) | $($MatchingNotification.notificationScenario) | $($MatchingNotification.notificationType) | $($NotificationRule.isDefaultRecipientsEnabled) | $Recipients |`n")
         }

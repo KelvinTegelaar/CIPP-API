@@ -13,13 +13,13 @@ function Invoke-CippTestCIS_3_2_2 {
             return
         }
 
-        $TeamsDlp = $Dlp | Where-Object {
+        $TeamsDlp = $Dlp.Where({
             $_.Mode -eq 'Enable' -and $_.Enabled -eq $true -and (
                 $_.TeamsLocation -or
                 $_.Workload -match 'Teams' -or
                 $_.TeamsLocationException
             )
-        }
+        })
 
         if ($TeamsDlp.Count -gt 0) {
             $Status = 'Passed'

@@ -15,12 +15,12 @@ function Invoke-CippTestE8_MFA_03 {
             return
         }
 
-        $Match = $CA | Where-Object {
+        $Match = $CA.Where({
             $_.state -eq 'enabled' -and
             ($_.conditions.users.includeUsers -contains 'All') -and
             ($_.conditions.clientAppTypes -contains 'exchangeActiveSync' -or $_.conditions.clientAppTypes -contains 'other') -and
             ($_.grantControls.builtInControls -contains 'block')
-        }
+        })
 
         if ($Match) {
             $Status = 'Passed'

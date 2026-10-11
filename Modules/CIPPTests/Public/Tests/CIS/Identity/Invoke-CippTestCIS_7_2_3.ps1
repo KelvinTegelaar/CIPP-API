@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_7_2_3 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
         # CSOM returns SharingCapabilities as a number, not the Get-SPOTenant name.
         $Capability = switch ("$($Cfg.SharingCapability)") {
             '0' { 'Disabled' }

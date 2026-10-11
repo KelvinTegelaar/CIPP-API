@@ -12,18 +12,18 @@ function Invoke-CippTestZTNA24540 {
             return
         }
 
-        $FirewallPolicies = $ConfigurationPolicies | Where-Object {
+        $FirewallPolicies = $ConfigurationPolicies.Where({
             $_.templateReference -and $_.templateReference.templateFamily -eq 'endpointSecurityFirewall'
-        }
+        })
 
         if ($FirewallPolicies.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24540' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Windows Firewall configuration policies found' -Risk 'High' -Name 'Windows Firewall policies protect against unauthorized network access' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $AssignedPolicies = $FirewallPolicies | Where-Object {
+        $AssignedPolicies = $FirewallPolicies.Where({
             $_.assignments -and $_.assignments.Count -gt 0
-        }
+        })
 
         if ($AssignedPolicies.Count -gt 0) {
             $Status = 'Passed'

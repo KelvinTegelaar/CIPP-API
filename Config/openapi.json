@@ -4404,7 +4404,30 @@
                     "type": "string"
                   },
                   "RawJSON": {
-                    "type": "string"
+                    "type": "object",
+                    "properties": {
+                      "@odata.context": {
+                        "type": "string",
+                        "description": ".../$metadata#deviceAppManagement/<collection>[/microsoft.graph.<type>]/$entity"
+                      },
+                      "@odata.type": {
+                        "type": "string"
+                      },
+                      "added": {
+                        "type": "string"
+                      },
+                      "settings": {
+                        "type": "string"
+                      },
+                      "templateReference": {
+                        "type": "object",
+                        "properties": {
+                          "templateId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
                   },
                   "TemplateType": {
                     "type": "string"
@@ -4470,9 +4493,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -4481,7 +4501,11 @@
           }
         ],
         "x-cipp-role": "Endpoint.MEM.ReadWrite",
-        "x-cipp-any-tenant": true
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Get-CIPPAppProtectionPolicyUrl",
+          "Test-CIPPIntuneTemplate"
+        ]
       }
     },
     "/api/AddJITAdminTemplate": {
@@ -5141,7 +5165,30 @@
                     "description": "Sent by the deploy drawer when a single tenant is selected and groups were picked by id. customGroup/excludeGroup still carry the display names for logging and as a fallback."
                   },
                   "RAWJson": {
-                    "type": "string"
+                    "type": "object",
+                    "properties": {
+                      "@odata.context": {
+                        "type": "string",
+                        "description": ".../$metadata#deviceAppManagement/<collection>[/microsoft.graph.<type>]/$entity"
+                      },
+                      "@odata.type": {
+                        "type": "string"
+                      },
+                      "added": {
+                        "type": "string"
+                      },
+                      "settings": {
+                        "type": "string"
+                      },
+                      "templateReference": {
+                        "type": "object",
+                        "properties": {
+                          "templateId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
                   },
                   "replacemap": {
                     "type": "string"
@@ -5169,7 +5216,8 @@
                     "description": "The deploy drawer and wizard send the chosen row's GUID as TemplateList.value, not as TemplateID. Template display names are not unique - re-imports create same-named twins - so resolving by display name below can land on a different row than the one the user picked. The selected RowKey must win whenever the request carries one. String rather than Guid: built-in templates are stored with their filename as RowKey."
                   },
                   "TemplateType": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Per tenant, because the replacemap above rewrites the payload."
                   },
                   "tenantFilter": {
                     "$ref": "#/components/schemas/LabelValue"
@@ -5211,7 +5259,11 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Endpoint.MEM.ReadWrite"
+        "x-cipp-role": "Endpoint.MEM.ReadWrite",
+        "x-cipp-reads-via": [
+          "Get-CIPPAppProtectionPolicyUrl",
+          "Test-CIPPIntuneTemplate"
+        ]
       }
     },
     "/api/AddQuarantinePolicy": {
@@ -21621,12 +21673,9 @@
                     "properties": {
                       "@odata.type": {
                         "type": "string"
-                      },
-                      "settings": {
-                        "type": "string"
                       }
                     },
-                    "description": "Intune identifies a policy and every setting in it by @odata.type, and rejects a policy that is missing them. An editor that rebuilds the body from form state can drop them silently, which stores a template that only fails at deployment time - so refuse the write here rather than let a working template be replaced by one that cannot deploy."
+                    "description": "Not every type requires @odata.type, so losing it is only definitely wrong when the stored policy had one. Set-CIPPIntuneTemplate validates the rest."
                   },
                   "Type": {
                     "type": "string"
@@ -21714,9 +21763,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -40674,6 +40720,103 @@
         "x-cipp-role": "CIPP.Core.ReadWrite"
       }
     },
+    "/api/ExecValidateIntuneTemplate": {
+      "post": {
+        "summary": "Check an Intune template for problems that would stop it deploying.",
+        "operationId": "ExecValidateIntuneTemplate",
+        "tags": [
+          "Endpoint > MEM"
+        ],
+        "description": "Runs the checks the store and deploy paths run and reports every finding. Nothing is written or\ndeployed. Validates a stored template by ID, or a payload supplied directly. Supplying a tenant\nadds checks for unresolved replacement variables and settings the tenant does not offer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "description": "Template display name, used to resolve the name the policy would deploy under."
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "GUID of a stored template to validate. Omit when supplying RAWJson directly."
+                  },
+                  "RAWJson": {
+                    "type": "string",
+                    "description": "Policy payload to validate as-is, instead of reading a stored template."
+                  },
+                  "TemplateType": {
+                    "type": "string",
+                    "description": "Template type, e.g. Catalog or deviceCompliancePolicies. Inferred from the payload if omitted."
+                  },
+                  "tenantFilter": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Tenant to run the tenant-specific checks against. Omit for static validation only."
+                  }
+                },
+                "required": [
+                  "RAWJson"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "GUID of a stored template to validate. Omit when supplying RAWJson directly.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Tenant to run the tenant-specific checks against. Omit for static validation only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.MEM.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecWebhookSubscriptions": {
       "post": {
         "summary": "ExecWebhookSubscriptions",
@@ -46642,7 +46785,7 @@
           {
             "name": "period",
             "in": "query",
-            "description": "Prefer D30 (Copilot reports v1). Some tenants are already on v2, which rejects D30 (as RL30) and wants D28 (RL28) instead. Get-CopilotReportPeriod falls back on that Graph error.",
+            "description": "D28 suits Copilot reports v2; Get-CIPPCopilotReport retries with D30 for tenants still on v1.",
             "required": false,
             "schema": {
               "type": "string"

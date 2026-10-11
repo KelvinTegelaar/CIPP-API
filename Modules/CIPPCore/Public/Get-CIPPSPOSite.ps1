@@ -48,7 +48,7 @@ function Get-CIPPSPOSite {
 "@
         $AdditionalHeaders = @{ 'Accept' = 'application/json;odata=verbose' }
         $Results = New-GraphPostRequest -scope "$AdminUrl/.default" -tenantid $TenantFilter -Uri "$AdminUrl/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders @AuthSplat
-        $Site = $Results | Where-Object { $_._ObjectType_ -match 'SiteProperties' } | Select-Object -First 1
+        $Site = @($Results).Where({ $_._ObjectType_ -match 'SiteProperties' }, 'First')[0]
         if (-not $Site) {
             throw "Could not retrieve site properties for $SiteUrl"
         }

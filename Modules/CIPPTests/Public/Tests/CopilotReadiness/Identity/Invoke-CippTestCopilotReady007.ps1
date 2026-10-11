@@ -26,7 +26,7 @@ function Invoke-CippTestCopilotReady007 {
         # Build lookup of readiness data keyed by UPN
         $ReadinessLookup = @{}
         if ($ReadinessData) {
-            foreach ($Entry in ($ReadinessData | Where-Object { $_.userPrincipalName })) {
+            foreach ($Entry in ($ReadinessData.Where({ $_.userPrincipalName }))) {
                 $ReadinessLookup[$Entry.userPrincipalName.ToLower()] = $Entry
             }
         }

@@ -16,13 +16,13 @@ function Invoke-CippTestE8_MFA_10 {
             return
         }
 
-        $Match = $CA | Where-Object {
+        $Match = $CA.Where({
             $_.state -eq 'enabled' -and
             ($_.conditions.users.includeUsers -contains 'All') -and
             ($_.conditions.applications.includeApplications -contains 'All') -and
             $_.grantControls.authenticationStrength -and
             $_.grantControls.authenticationStrength.id -eq $PhishResistantId
-        }
+        })
 
         if ($Match) {
             $Status = 'Passed'

@@ -41,7 +41,7 @@ function Write-LogMessage {
 
     if (!$tenant) { $tenant = 'None' }
     if (!$username) { $username = 'CIPP' }
-    if ($sev -eq 'Debug' -and $env:DebugMode -ne $true) {
+    if ($sev -eq 'Debug' -and [System.Environment]::GetEnvironmentVariable('DebugMode') -ne $true) {
         return
     }
     $TzId = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }

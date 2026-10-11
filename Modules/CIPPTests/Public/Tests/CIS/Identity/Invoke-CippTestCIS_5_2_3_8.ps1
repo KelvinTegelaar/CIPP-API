@@ -13,14 +13,14 @@ function Invoke-CippTestCIS_5_2_3_8 {
             return
         }
 
-        $PwdSetting = $Settings | Where-Object { $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' -or $_.displayName -eq 'Password Rule Settings' } | Select-Object -First 1
+        $PwdSetting = $Settings.Where({ $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' -or $_.displayName -eq 'Password Rule Settings' }, 'First')[0]
 
         if (-not $PwdSetting) {
             # Password Rule Settings object not present: tenant defaults apply (LockoutThreshold default = 10), which satisfies the recommendation.
             $Status = 'Passed'
             $Result = "Password Rule Settings not configured; the tenant default Lockout threshold of 10 applies, which is compliant (10 or less)."
         } else {
-            $LockoutThreshold = ($PwdSetting.values | Where-Object { $_.name -eq 'LockoutThreshold' }).value
+            $LockoutThreshold = $(foreach ($Item in $PwdSetting.values) { if ($Item.name -eq 'LockoutThreshold') { $Item } }).value
 
             if ([int]$LockoutThreshold -le 10) {
                 $Status = 'Passed'

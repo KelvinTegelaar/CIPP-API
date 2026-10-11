@@ -95,7 +95,7 @@ function Invoke-CIPPRestMethod {
     # ------------------------------------------------------------------
     $HasCippRestClient = $null -ne ('CIPP.CIPPRestClient' -as [type])
     $IsBinaryBody = $Body -is [byte[]]
-    if ($UseLegacyInvokeRestMethod -or $env:DisableCIPPRestMethod -eq 'true' -or -not $HasCippRestClient -or $IsBinaryBody) {
+    if ($UseLegacyInvokeRestMethod -or [System.Environment]::GetEnvironmentVariable('DisableCIPPRestMethod') -eq 'true' -or -not $HasCippRestClient -or $IsBinaryBody) {
         $LegacyParams = @{
             Uri         = $Uri
             Method      = $Method
@@ -256,13 +256,13 @@ function Invoke-CIPPRestMethod {
     # Return — deserialize JSON or return raw string
     # Empty body → null (matches Invoke-RestMethod on 204 No Content etc.)
     # ------------------------------------------------------------------
-    if ([string]::IsNullOrWhiteSpace($Result.Content)) {
+    if (-not $Result.HasContent) {
         return $null
     }
 
     if ($Result.IsJson) {
         try {
-            return $Result.Content | ConvertFrom-Json -Depth 100
+            return [CIPP.CippJson]::ConvertFromResponse($Result)
         } catch {
             # Malformed JSON — return raw so callers can handle it
             return $Result.Content

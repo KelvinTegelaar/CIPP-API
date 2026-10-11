@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO141 {
             return
         }
 
-        $FailedPolicies = $SpamPolicies | Where-Object { $_.HighConfidenceSpamAction -ne 'Quarantine' }
+        $FailedPolicies = $SpamPolicies.Where({ $_.HighConfidenceSpamAction -ne 'Quarantine' })
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies quarantine high confidence spam.")

@@ -19,13 +19,13 @@ function Invoke-CippTestCIS_5_2_2_5 {
         $PrivRoleIds = @($Roles | ForEach-Object { if ($_.roleTemplateId) { [string]$_.roleTemplateId } elseif ($_.RoletemplateId) { [string]$_.RoletemplateId } })
         $PhishResistantId = '00000000-0000-0000-0000-000000000004'  # Built-in 'Phishing-resistant MFA' strength
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.users.includeRoles -and
-            (@($_.conditions.users.includeRoles) | Where-Object { $_ -in $PrivRoleIds }).Count -gt 0 -and
+            @($_.conditions.users.includeRoles).Where({ $_ -in $PrivRoleIds }).Count -gt 0 -and
             $_.grantControls.authenticationStrength -and
             $_.grantControls.authenticationStrength.id -eq $PhishResistantId
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

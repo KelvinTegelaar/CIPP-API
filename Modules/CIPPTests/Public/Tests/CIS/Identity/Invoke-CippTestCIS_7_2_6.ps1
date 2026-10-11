@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_7_2_6 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
         # CSOM returns these enums as numbers, not the Get-SPOTenant names.
         $Capability = switch ("$($Cfg.SharingCapability)") {
             '0' { 'Disabled' }

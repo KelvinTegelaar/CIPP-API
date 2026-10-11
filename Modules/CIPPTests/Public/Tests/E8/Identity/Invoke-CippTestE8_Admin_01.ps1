@@ -32,14 +32,14 @@ function Invoke-CippTestE8_Admin_01 {
                 [void]$PrivUserIds.Add([string]$A.principalId)
             }
         }
-        $PrivUsers = $Users | Where-Object { $PrivUserIds.Contains($_.id) }
+        $PrivUsers = $Users.Where({ $PrivUserIds.Contains($_.id) })
 
         if (-not $PrivUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No privileged users found.' -Risk 'High' -Name $Name -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'E8 ML1 - Restrict Admin Privileges'
             return
         }
 
-        $NonCompliant = $PrivUsers | Where-Object { $_.onPremisesSyncEnabled -eq $true }
+        $NonCompliant = $PrivUsers.Where({ $_.onPremisesSyncEnabled -eq $true })
 
         if (-not $NonCompliant) {
             $Status = 'Passed'
@@ -47,7 +47,7 @@ function Invoke-CippTestE8_Admin_01 {
         } else {
             $Status = 'Failed'
             $Sb = [System.Text.StringBuilder]::new("$($NonCompliant.Count) of $($PrivUsers.Count) privileged user(s) are synced from on-premises Active Directory:`n`n| UPN |`n| :-- |`n")
-            foreach ($U in ($NonCompliant | Select-Object -First 50)) { $null = $Sb.Append("| $($U.userPrincipalName) |`n") }
+            foreach ($U in $NonCompliant.Where({ $true }, 'First', 50)) { $null = $Sb.Append("| $($U.userPrincipalName) |`n") }
             $Result = $Sb.ToString()
         }
 

@@ -32,7 +32,7 @@ function Invoke-CippTestE8_Admin_05 {
                 [void]$PrivUserIds.Add([string]$A.principalId)
             }
         }
-        $PrivUsers = $Users | Where-Object { $PrivUserIds.Contains($_.id) -and $_.accountEnabled -eq $true }
+        $PrivUsers = $Users.Where({ $PrivUserIds.Contains($_.id) -and $_.accountEnabled -eq $true })
 
         if (-not $PrivUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No enabled privileged users found.' -Risk 'Medium' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'E8 ML2 - Restrict Admin Privileges'
@@ -55,7 +55,7 @@ function Invoke-CippTestE8_Admin_05 {
         } else {
             $Status = 'Failed'
             $Sb = [System.Text.StringBuilder]::new("$($Stale.Count) of $($PrivUsers.Count) enabled privileged user(s) have not signed in for more than 45 days:`n`n| UPN | Last sign-in |`n| :-- | :----------- |`n")
-            foreach ($S in ($Stale | Sort-Object LastSignIn | Select-Object -First 50)) {
+            foreach ($S in @($Stale | Sort-Object LastSignIn).Where({ $true }, 'First', 50)) {
                 $null = $Sb.Append("| $($S.UPN) | $($S.LastSignIn) |`n")
             }
             $Result = $Sb.ToString()

@@ -18,7 +18,7 @@ function Invoke-CippTestCopilotReady013 {
             return
         }
 
-        $ActiveLabels = @($Labels | Where-Object { $_.isActive -eq $true })
+        $ActiveLabels = @($Labels.Where({ $_.isActive -eq $true }))
 
         if ($ActiveLabels.Count -gt 0) {
             $Status = 'Passed'

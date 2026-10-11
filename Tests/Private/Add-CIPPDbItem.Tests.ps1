@@ -1,5 +1,6 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
 
     function Get-CippTable { param($tablename) @{} }
     function Get-CIPPAzDataTableEntity { param($Filter, $Property) }
@@ -120,5 +121,22 @@ Describe 'Add-CIPPDbItem authoritative empty collections' {
         $DataRows.Count | Should -Be 2
         $DataRows | ForEach-Object { $_.RunId | Should -Not -BeNullOrEmpty }
         ($DataRows.RunId | Sort-Object -Unique).Count | Should -Be 1
+    }
+}
+
+Describe 'Add-CIPPDbItem row data' {
+    BeforeEach {
+        Mock Write-LogMessage {}
+        Mock Get-CIPPAzDataTableEntity {}
+        Mock Add-CIPPAzDataTableEntity {}
+    }
+
+    It 'writes only the row''s own fields after its properties were enumerated' {
+        $Policy = '{"id":"p1","settings":{"a":1}}' | ConvertFrom-Json
+        $null = @($Policy.PSObject.Properties); $null = @($Policy.settings.PSObject.Properties)
+
+        Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'Policies' -Data @($Policy)
+
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Entity[0].Data -ceq '{"id":"p1","settings":{"a":1}}' }
     }
 }

@@ -113,6 +113,10 @@ function Get-CIPPTestData {
     if ([CIPP.TestDataCache]::TryGet($CacheKey, [ref]$CachedValue)) {
         return $CachedValue
     }
+    # Whole records already loaded (sandbox) carry every projected field; don't parse the type a second time.
+    if ($NormalizedFields -and [CIPP.TestDataCache]::TryGet(('{0}|{1}' -f $TenantFilter, $Type), [ref]$CachedValue, $false)) {
+        return $CachedValue
+    }
 
     $Data = if ($NormalizedFields) {
         New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type -Fields $NormalizedFields

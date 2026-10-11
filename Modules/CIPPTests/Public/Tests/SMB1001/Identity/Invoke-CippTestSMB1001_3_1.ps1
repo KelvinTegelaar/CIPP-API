@@ -22,8 +22,8 @@ function Invoke-CippTestSMB1001_3_1 {
             return
         }
 
-        $UserMailboxes = @($Mailboxes | Where-Object { $_.recipientTypeDetails -eq 'UserMailbox' -and $_.LicensedForLitigationHold -eq $true })
-        $WithoutHold = @($UserMailboxes | Where-Object { $_.LitigationHoldEnabled -ne $true })
+        $UserMailboxes = @($Mailboxes.Where({ $_.recipientTypeDetails -eq 'UserMailbox' -and $_.LicensedForLitigationHold -eq $true }))
+        $WithoutHold = @($UserMailboxes.Where({ $_.LitigationHoldEnabled -ne $true }))
 
         if ($UserMailboxes.Count -eq 0) {
             $Status = 'Informational'
@@ -33,7 +33,7 @@ function Invoke-CippTestSMB1001_3_1 {
             $Result = "Litigation Hold is enabled on all $($UserMailboxes.Count) eligible user mailbox(es). Evidence the offline-isolated backup half of SMB1001 (3.1) separately (e.g., third-party M365 backup vendor)."
         } else {
             $Status = 'Failed'
-            $TableRows = foreach ($M in ($WithoutHold | Select-Object -First 25)) { "- $($M.UPN)" }
+            $TableRows = foreach ($M in ($WithoutHold.Where({ $true }, 'First', 25))) { "- $($M.UPN)" }
             $Result = "$($WithoutHold.Count) of $($UserMailboxes.Count) eligible user mailbox(es) do not have Litigation Hold enabled. Without preservation, deleted email cannot be recovered after the retention window:`n`n$(($TableRows) -join "`n")"
         }
 

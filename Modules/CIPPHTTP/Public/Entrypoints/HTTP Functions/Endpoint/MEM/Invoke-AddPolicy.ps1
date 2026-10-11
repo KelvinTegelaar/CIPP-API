@@ -79,9 +79,16 @@ function Invoke-AddPolicy {
         }
 
         try {
+            # Per tenant, because the replacemap above rewrites the payload.
+            $Validation = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType $Request.Body.TemplateType -DisplayName $DisplayName
+            if (-not $Validation.IsValid) {
+                throw "Not deployed to $Tenant : $($Validation.Errors -join ' ')"
+            }
+
             Write-Host 'Calling Adding policy'
             $params = @{
-                TemplateType     = $Request.Body.TemplateType
+                # Resolved type: a template stored before Type was recorded arrives with none.
+                TemplateType     = $Validation.Type
                 Description      = $description
                 DisplayName      = $DisplayName
                 RawJSON          = $RawJSON

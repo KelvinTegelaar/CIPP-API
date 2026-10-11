@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_1_3_6 {
             return
         }
 
-        $Cfg = $OrgConfig | Select-Object -First 1
+        $Cfg = @($OrgConfig)[0]
 
         if ($Cfg.CustomerLockBoxEnabled -eq $true) {
             $Status = 'Passed'

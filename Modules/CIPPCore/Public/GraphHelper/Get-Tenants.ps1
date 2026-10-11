@@ -38,17 +38,16 @@ function Get-Tenants {
 
         if ($SafeTenantFilter -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
             $Filter = "{0} and customerId eq '{1}'" -f $Filter, $SafeTenantFilter
-            # create where-object scriptblock
-            $IncludedTenantFilter = [scriptblock]::Create("`$_.customerId -eq '$SafeTenantFilter'")
+            $IncludedTenantFilter = { $_.customerId -eq $TenantFilter }
             $RelationshipFilter = " and customer/tenantId eq '$SafeTenantFilter'"
         } else {
             # parens: OData 'and' binds tighter than 'or', which would leave the initialDomainName clause unscoped
             $Filter = "{0} and (defaultDomainName eq '{1}' or initialDomainName eq '{1}')" -f $Filter, $SafeTenantFilter
-            $IncludedTenantFilter = [scriptblock]::Create("`$_.defaultDomainName -eq '$SafeTenantFilter' -or `$_.initialDomainName -eq '$SafeTenantFilter'")
+            $IncludedTenantFilter = { $_.defaultDomainName -eq $TenantFilter -or $_.initialDomainName -eq $TenantFilter }
             $RelationshipFilter = ''
         }
     } else {
-        $IncludedTenantFilter = [scriptblock]::Create('$true')
+        $IncludedTenantFilter = { $true }
         $RelationshipFilter = ''
     }
 
@@ -101,10 +100,10 @@ function Get-Tenants {
         }
         # GDAP relationship objects carry customerId, not domains, so a domain-scoped refresh must key
         # on the customerId of the row already read above - otherwise it matches zero relationships.
-        $ResolvedCustomerId = ($IncludedTenantsCache | Select-Object -First 1).customerId
+        $ResolvedCustomerId = @($IncludedTenantsCache)[0].customerId
         if ($TenantFilter -and -not $RelationshipFilter -and $ResolvedCustomerId) {
             $RelationshipFilter = " and customer/tenantId eq '$ResolvedCustomerId'"
-            $IncludedTenantFilter = [scriptblock]::Create("`$_.customerId -eq '$ResolvedCustomerId'")
+            $IncludedTenantFilter = { $_.customerId -eq $ResolvedCustomerId }
         }
         #get the full list of tenants
         $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'$RelationshipFilter&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true

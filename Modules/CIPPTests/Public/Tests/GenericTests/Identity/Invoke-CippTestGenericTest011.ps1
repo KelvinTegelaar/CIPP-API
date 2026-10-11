@@ -26,7 +26,7 @@ function Invoke-CippTestGenericTest011 {
                 if ($Std.name -and $Std.tag) {
                     # Keep human-readable compliance-framework references (CIS, NIST, etc. - they
                     # contain spaces) and drop internal single-token tags like 'mip_search_auditlog'.
-                    $FrameworkTags = @($Std.tag | Where-Object { $_ -is [string] -and $_ -match '\s' })
+                    $FrameworkTags = @($Std.tag.Where({ $_ -is [string] -and $_ -match '\s' }))
                     if ($FrameworkTags.Count -gt 0) {
                         $StandardsTagMap[$Std.name] = ($FrameworkTags -join ', ')
                     }
@@ -79,20 +79,20 @@ function Invoke-CippTestGenericTest011 {
             # 2. IntuneTemplate — extract GUID, look up in template table, fall back to standardSettings
             if ($StandardName -like '*IntuneTemplate*') {
                 $Parts = $StandardName.Split('.')
-                $TemplateGuid = $Parts | Where-Object {
+                $TemplateGuid = $Parts.Where({
                     $_ -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                } | Select-Object -First 1
+                }, 'First')[0]
 
                 if ($TemplateGuid) {
                     # Try template table first
-                    $MatchedTemplate = $AllIntuneTemplates | Where-Object { $_.GUID -match "$TemplateGuid" }
+                    $MatchedTemplate = $AllIntuneTemplates.Where({ $_.GUID -match "$TemplateGuid" })
                     if ($MatchedTemplate -and $MatchedTemplate.displayName) {
                         return "Intune - $($MatchedTemplate.displayName)"
                     }
                     # Fall back to standardSettings TemplateList.label
                     if ($TemplateSettings -and $TemplateSettings.IntuneTemplate) {
                         $IntuneTemplates = @($TemplateSettings.IntuneTemplate)
-                        $Match = $IntuneTemplates | Where-Object { $_.TemplateList.value -eq $TemplateGuid }
+                        $Match = $IntuneTemplates.Where({ $_.TemplateList.value -eq $TemplateGuid })
                         if ($Match -and $Match.TemplateList.label) {
                             return "Intune - $($Match.TemplateList.label)"
                         }
@@ -104,18 +104,18 @@ function Invoke-CippTestGenericTest011 {
             # 3. ConditionalAccessTemplate — extract GUID, look up in template table
             if ($StandardName -like '*ConditionalAccessTemplate*') {
                 $Parts = $StandardName.Split('.')
-                $TemplateGuid = $Parts | Where-Object {
+                $TemplateGuid = $Parts.Where({
                     $_ -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                } | Select-Object -First 1
+                }, 'First')[0]
 
                 if ($TemplateGuid) {
-                    $MatchedTemplate = $AllCATemplates | Where-Object { $_.GUID -match "$TemplateGuid" }
+                    $MatchedTemplate = $AllCATemplates.Where({ $_.GUID -match "$TemplateGuid" })
                     if ($MatchedTemplate -and $MatchedTemplate.displayName) {
                         return "Conditional Access - $($MatchedTemplate.displayName)"
                     }
                     if ($TemplateSettings -and $TemplateSettings.ConditionalAccessTemplate) {
                         $CATemplates = @($TemplateSettings.ConditionalAccessTemplate)
-                        $Match = $CATemplates | Where-Object { $_.TemplateList.value -eq $TemplateGuid }
+                        $Match = $CATemplates.Where({ $_.TemplateList.value -eq $TemplateGuid })
                         if ($Match -and $Match.TemplateList.label) {
                             return "Conditional Access - $($Match.TemplateList.label)"
                         }

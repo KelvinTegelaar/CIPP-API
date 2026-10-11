@@ -10,7 +10,7 @@ function Invoke-CippTestE8_PatchOS_04 {
 
     try {
         $Legacy = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneDeviceConfigurations'
-        $Rings = $Legacy | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windowsUpdateForBusinessConfiguration' }
+        $Rings = $Legacy.Where({ $_.'@odata.type' -eq '#microsoft.graph.windowsUpdateForBusinessConfiguration' })
 
         if (-not $Rings) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No `windowsUpdateForBusinessConfiguration` Update Ring policies cached for this tenant; quality deferral cannot be evaluated automatically.' -Risk 'Medium' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'E8 ML2 - Patch Operating Systems'

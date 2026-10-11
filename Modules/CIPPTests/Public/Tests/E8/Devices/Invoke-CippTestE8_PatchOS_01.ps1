@@ -14,15 +14,15 @@ function Invoke-CippTestE8_PatchOS_01 {
 
         $UpdateRings = @()
         if ($ConfigPolicies) {
-            $UpdateRings += $ConfigPolicies | Where-Object {
+            $UpdateRings += $ConfigPolicies.Where({
                 $ids = $_.settings.settingInstance.settingDefinitionId
                 ($ids -match 'windowsupdate') -or ($ids -match 'update_ring')
-            }
+            })
         }
         if ($LegacyPolicies) {
-            $UpdateRings += $LegacyPolicies | Where-Object {
+            $UpdateRings += $LegacyPolicies.Where({
                 $_.'@odata.type' -eq '#microsoft.graph.windowsUpdateForBusinessConfiguration'
-            }
+            })
         }
 
         if (-not $UpdateRings) {
@@ -30,7 +30,7 @@ function Invoke-CippTestE8_PatchOS_01 {
             return
         }
 
-        $Assigned = $UpdateRings | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 }
+        $Assigned = $UpdateRings.Where({ $_.assignments -and $_.assignments.Count -gt 0 })
         if ($Assigned) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Passed' -ResultMarkdown "$($Assigned.Count) Windows Update Ring policy/policies are configured and assigned." -Risk 'High' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'E8 ML1 - Patch Operating Systems'
         } else {

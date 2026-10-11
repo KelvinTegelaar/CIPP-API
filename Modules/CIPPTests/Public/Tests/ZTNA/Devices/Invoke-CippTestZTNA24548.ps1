@@ -20,7 +20,7 @@ function Invoke-CippTestZTNA24548 {
             return
         }
 
-        $IosPolicies = @($AllPolicies | Where-Object { $_.URLName -eq 'iosManagedAppProtection' })
+        $IosPolicies = @($AllPolicies.Where({ $_.URLName -eq 'iosManagedAppProtection' }))
 
         # Data exists but no iOS policy at all — that is a genuine failure of this control, not a
         # missing-data skip.
@@ -29,7 +29,7 @@ function Invoke-CippTestZTNA24548 {
             return
         }
 
-        $AssignedPolicies = @($IosPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AssignedPolicies = @($IosPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedPolicies.Count -gt 0
 
         if ($Passed) {

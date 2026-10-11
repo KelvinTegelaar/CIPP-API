@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCACP01 {
             return
         }
 
-        $SettingValue = ($Settings.values | Where-Object { $_.name -eq 'EnableGroupSpecificConsent' }).value
+        $SettingValue = $Settings.values.Where({ $_.name -eq 'EnableGroupSpecificConsent' }).value
 
         if ($SettingValue -eq 'False') {
             $Status = 'Passed'

@@ -34,7 +34,7 @@ function Set-CIPPDBCacheComplianceRetentionRules {
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching retention compliance rules' -sev Debug
 
-        $Tenant = Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1
+        $Tenant = @(Get-Tenants -TenantFilter $TenantFilter)[0]
         $Rules = New-ExoRequest -TenantId $Tenant.customerId -cmdlet 'Get-RetentionComplianceRule' -Compliance -AsApp | Select-Object * -ExcludeProperty '*odata*', '*data.type*'
 
         if ($Rules) {

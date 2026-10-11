@@ -14,7 +14,7 @@ function Invoke-CippTestCIS_5_1_8_1 {
             return
         }
 
-        $OrgCfg = $Org | Select-Object -First 1
+        $OrgCfg = @($Org)[0]
         $IsHybrid = $OrgCfg.onPremisesSyncEnabled -eq $true
 
         if (-not $IsHybrid) {

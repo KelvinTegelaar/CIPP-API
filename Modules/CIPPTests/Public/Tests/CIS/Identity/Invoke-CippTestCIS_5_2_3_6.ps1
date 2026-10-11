@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_2_3_6 {
             return
         }
 
-        $Cfg = $AMP | Select-Object -First 1
+        $Cfg = @($AMP)[0]
         $State = $Cfg.systemCredentialPreferences.state
         $TargetType = $Cfg.systemCredentialPreferences.includeTargets.targetType
         $TargetId = $Cfg.systemCredentialPreferences.includeTargets.id

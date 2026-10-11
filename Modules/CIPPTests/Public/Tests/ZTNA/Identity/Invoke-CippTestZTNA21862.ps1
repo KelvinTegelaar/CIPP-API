@@ -9,9 +9,9 @@ function Invoke-CippTestZTNA21862 {
     #Tested
     try {
         # Get risky service principals and risk detections from cache
-        $UntriagedRiskyPrincipals = Get-CIPPTestData -TenantFilter $Tenant -Type 'RiskyServicePrincipals' | Where-Object { $_.riskState -eq 'atRisk' }
+        $UntriagedRiskyPrincipals = (Get-CIPPTestData -TenantFilter $Tenant -Type 'RiskyServicePrincipals').Where({ $_.riskState -eq 'atRisk' })
         $ServicePrincipalRiskDetections = Get-CIPPTestData -TenantFilter $Tenant -Type 'ServicePrincipalRiskDetections'
-        $UntriagedRiskDetections = $ServicePrincipalRiskDetections | Where-Object { $_.riskState -eq 'atRisk' }
+        $UntriagedRiskDetections = $ServicePrincipalRiskDetections.Where({ $_.riskState -eq 'atRisk' })
 
         if (-not $UntriagedRiskyPrincipals -and -not $ServicePrincipalRiskDetections) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'All risky workload identities are triaged' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Monitoring'

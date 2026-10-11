@@ -111,6 +111,10 @@ if ($isEndpoint) {
         }
     }
 }
+# Functions using CIPPSharp types ([CIPP.CippJson] etc.) need the DLL, or the test silently exercises a fallback path
+$usesCippSharp = [bool]$funcAst.Find({
+        param($node) $node -is [System.Management.Automation.Language.TypeExpressionAst] -and $node.TypeName.FullName -like 'CIPP.*'
+    }, $true)
 $usesBody = $bodyFields.Count -gt 0
 $usesQuery = $queryFields.Count -gt 0
 
@@ -152,6 +156,9 @@ $sb = [System.Text.StringBuilder]::new()
 [void]$sb.Append("    `$FunctionPath = Get-ChildItem -Path (Join-Path `$RepoRoot 'Modules') -Recurse -Filter '$FunctionName.ps1' -File -ErrorAction SilentlyContinue |$nl")
 [void]$sb.Append("        Select-Object -First 1 -ExpandProperty FullName$nl")
 [void]$sb.Append("    if (-not `$FunctionPath) { throw 'Could not locate $FunctionName.ps1 under Modules/' }$nl$nl")
+if ($usesCippSharp) {
+    [void]$sb.Append("    Add-Type -Path (Join-Path `$RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')$nl$nl")
+}
 
 if ($isEndpoint) {
     [void]$sb.Append("    # Azure Functions binding types do not exist outside the Functions host - fake them.$nl")

@@ -176,7 +176,7 @@ function Set-CIPPDBCacheIntunePolicies {
                             $Policy = $PolicyById[[string]$AssignResult.id]
                             if ($Policy) {
                                 $Assignments = @($AssignResult.body.value)
-                                $Policy | Add-Member -NotePropertyName assignments -NotePropertyValue $Assignments -Force
+                                $Policy.PSObject.Properties.Remove('assignments'); $Policy.PSObject.Properties.Add([psnoteproperty]::new('assignments', $Assignments))
                             }
                         }
                     } catch {
@@ -204,7 +204,7 @@ function Set-CIPPDBCacheIntunePolicies {
                     for ($Chunk = 0; $Chunk -lt $DeviceStatusRequests.Count; $Chunk += 20) {
                         $DeviceStatusResults = $null
                         try {
-                            $DeviceStatusResults = @(New-GraphBulkRequest -Requests @($DeviceStatusRequests[$Chunk..($Chunk + 19)]) -tenantid $TenantFilter)
+                            $DeviceStatusResults = @(New-GraphBulkRequest -Requests @($DeviceStatusRequests[$Chunk..([Math]::Min($Chunk + 19, $DeviceStatusRequests.Count - 1))]) -tenantid $TenantFilter)
                             foreach ($StatusResult in $DeviceStatusResults) {
                                 if ($null -eq $StatusResult.status) {
                                     & $AddWarning "No HTTP status was returned while fetching device statuses for $($PolicyType.Type) policy $($StatusResult.id)"

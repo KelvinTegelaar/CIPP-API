@@ -29,7 +29,7 @@ function Invoke-CippTestE8_PatchApp_02 {
         } else {
             $Status = 'Failed'
             $Sb = [System.Text.StringBuilder]::new("$($Stale.Count) of $($Devices.Count) managed device(s) have not synced for >14 days; their patch state is unknown:`n`n| Device | Last sync |`n| :----- | :-------- |`n")
-            foreach ($S in ($Stale | Select-Object -First 50)) { $null = $Sb.Append("| $($S.Device) | $($S.LastSync) |`n") }
+            foreach ($S in $Stale.Where({ $true }, 'First', 50)) { $null = $Sb.Append("| $($S.Device) | $($S.LastSync) |`n") }
             $Result = $Sb.ToString()
         }
 

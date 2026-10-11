@@ -13,7 +13,7 @@ function Invoke-CippTestGenericTest007 {
             return
         }
 
-        $LicensedUsers = @($MFAData | Where-Object { $_.UPN -and $_.isLicensed -eq $true })
+        $LicensedUsers = @($MFAData.Where({ $_.UPN -and $_.isLicensed -eq $true }))
 
         if ($LicensedUsers.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("No licensed user accounts were found in the MFA state data. This may indicate no licenses have been assigned or the data needs to be re-synced.")
@@ -45,7 +45,7 @@ function Invoke-CippTestGenericTest007 {
         $null = $Result.Append("| Display Name | Role | MFA Registered | MFA Method | Protected By |`n")
         $null = $Result.Append("|-------------|------|----------------|------------|--------------|`n")
 
-        $DisplayUsers = $LicensedUsers | Sort-Object DisplayName | Select-Object -First 100
+        $DisplayUsers = ($LicensedUsers | Sort-Object DisplayName).Where({ $true }, 'First', 100)
         foreach ($User in $DisplayUsers) {
             $Name = $User.DisplayName
             $Role = if ($User.IsAdmin -eq $true) { '🔑 Admin' } else { 'User' }

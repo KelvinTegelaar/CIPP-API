@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_4_1 {
             return
         }
 
-        $Cfg = $DeviceSettings | Select-Object -First 1
+        $Cfg = @($DeviceSettings)[0]
 
         if ($Cfg.secureByDefault -eq $true) {
             $Status = 'Passed'

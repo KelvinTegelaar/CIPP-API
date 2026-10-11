@@ -6,11 +6,17 @@ function Get-CIPPTenantCapabilities {
         $APIName = 'Get Tenant Capabilities',
         $Headers
     )
+    # License checks call this for every standard and test: one read per tenant per worker every few minutes
+    $script:CIPPTenantCapabilitiesCache ??= @{}
+    $CacheKey = "$TenantFilter"
+    $Cached = $script:CIPPTenantCapabilitiesCache[$CacheKey]
+    if ($Cached -and $Cached.Expires -gt [datetime]::UtcNow) { return $Cached.Value }
+
     $ConfigTable = Get-CIPPTable -TableName 'CacheCapabilities'
     $datetime = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable -Filter "RowKey eq '$TenantFilter' and PartitionKey eq 'Capabilities' and Timestamp ge datetime'$datetime'"
     if ($ConfigEntries) {
-        $Org = $ConfigEntries.JSON | ConvertFrom-Json
+        $Org = [CIPP.CippJson]::ConvertFromJson("$($ConfigEntries.JSON)")
     } else {
         $Org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
         # Save the capabilities to the cache table
@@ -21,10 +27,11 @@ function Get-CIPPTenantCapabilities {
         }
         Add-CIPPAzDataTableEntity @ConfigTable -Entity $Entity -Force
     }
-    $Plans = $Org.servicePlans | Where-Object { $_.provisioningStatus -ne 'disabled' } | Sort-Object -Property serviceplanName -Unique | Select-Object servicePlanName, provisioningStatus
     $Results = @{}
-    foreach ($Plan in $Plans) {
-        $Results."$($Plan.servicePlanName)" = $Plan.provisioningStatus -ne 'disabled'
+    foreach ($Plan in $Org.servicePlans) {
+        if ($Plan.provisioningStatus -ne 'disabled') { $Results["$($Plan.servicePlanName)"] = $true }
     }
-    [PSCustomObject]$Results
+    $Capabilities = [PSCustomObject]$Results
+    $script:CIPPTenantCapabilitiesCache[$CacheKey] = @{ Value = $Capabilities; Expires = [datetime]::UtcNow.AddMinutes(5) }
+    $Capabilities
 }

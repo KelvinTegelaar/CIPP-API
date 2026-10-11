@@ -13,20 +13,20 @@ function Invoke-CippTestCIS_5_2_2_15 {
             return
         }
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.users.includeUsers -contains 'All' -and
             $_.conditions.applications.includeApplications -contains 'All' -and
             $_.grantControls.builtInControls -contains 'block' -and
             $_.conditions.locations -and
             # Include at least one untrusted/selected location (a GUID, not just 'AllTrusted')
-            ($_.conditions.locations.includeLocations | Where-Object { $_ -and $_ -ne 'AllTrusted' }) -and
+            ($_.conditions.locations.includeLocations.Where({ $_ -and $_ -ne 'AllTrusted' })) -and
             # Exclude trusted locations: AllTrusted, or at least one location GUID
             (
                 $_.conditions.locations.excludeLocations -contains 'AllTrusted' -or
-                ($_.conditions.locations.excludeLocations | Where-Object { $_ })
+                ($_.conditions.locations.excludeLocations.Where({ $_ }))
             )
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

@@ -18,11 +18,11 @@ function Invoke-CippTestE8_MFA_01 {
         }
 
         $RegByUpn = @{}
-        foreach ($R in ($Reg | Where-Object { $_.userPrincipalName })) {
+        foreach ($R in $Reg.Where({ $_.userPrincipalName })) {
             $RegByUpn[$R.userPrincipalName.ToLower()] = $R
         }
 
-        $MemberUsers = $Users | Where-Object { $_.accountEnabled -eq $true -and $_.userType -ne 'Guest' }
+        $MemberUsers = $Users.Where({ $_.accountEnabled -eq $true -and $_.userType -ne 'Guest' })
         $NotMfaCapable = foreach ($U in $MemberUsers) {
             $R = $RegByUpn[[string]$U.userPrincipalName.ToLower()]
             if (-not $R -or $R.isMfaCapable -ne $true) { $U }
@@ -35,7 +35,7 @@ function Invoke-CippTestE8_MFA_01 {
             $Status = 'Failed'
             $Sb = [System.Text.StringBuilder]::new("$($NotMfaCapable.Count) of $($MemberUsers.Count) enabled member users are not MFA capable:`n`n")
             $null = $Sb.Append("| UPN | Display Name |`n| :-- | :----------- |`n")
-            foreach ($U in ($NotMfaCapable | Select-Object -First 50)) {
+            foreach ($U in $NotMfaCapable.Where({ $true }, 'First', 50)) {
                 $null = $Sb.Append("| $($U.userPrincipalName) | $($U.displayName) |`n")
             }
             $Result = $Sb.ToString()

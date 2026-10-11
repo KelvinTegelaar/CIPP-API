@@ -14,7 +14,7 @@ function Invoke-CippTestORCA235 {
         }
 
         # ORCA scopes this to custom domains; onmicrosoft.com is handled by Microsoft.
-        $CustomDomains = $Results | Where-Object { $_.Domain -notlike '*.onmicrosoft.com' }
+        $CustomDomains = $Results.Where({ $_.Domain -notlike '*.onmicrosoft.com' })
 
         if (-not $CustomDomains -or $CustomDomains.Count -eq 0) {
             $Status = 'Passed'
@@ -48,7 +48,7 @@ function Invoke-CippTestORCA235 {
             $Status = 'Failed'
             $Result = [System.Text.StringBuilder]::new("$($FailedDomains.Count) of $($CustomDomains.Count) custom domains are missing a valid SPF record or do not end in -all (hard fail).`n`n")
             $null = $Result.Append("| Domain | SPF Record |`n| :----- | :--------- |`n")
-            foreach ($Domain in ($FailedDomains | Select-Object -First 25)) {
+            foreach ($Domain in ($FailedDomains.Where({ $true }, 'First', 25))) {
                 $Display = if ([string]::IsNullOrWhiteSpace($Domain.ActualSPFRecord)) { '*(none)*' } else { $Domain.ActualSPFRecord }
                 $null = $Result.Append("| $($Domain.Domain) | $Display |`n")
             }

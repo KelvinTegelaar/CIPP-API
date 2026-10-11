@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_4_5 {
             return
         }
 
-        $Cfg = $DRP | Select-Object -First 1
+        $Cfg = @($DRP)[0]
 
         if ($Cfg.localAdminPassword.isEnabled -eq $true) {
             $Status = 'Passed'

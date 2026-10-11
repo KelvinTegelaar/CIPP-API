@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_7_2_2 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
 
         if ($Cfg.EnableAzureADB2BIntegration -eq $true) {
             $Status = 'Passed'

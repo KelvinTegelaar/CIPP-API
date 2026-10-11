@@ -13,9 +13,9 @@ function Invoke-CippTestZTNA24550 {
             return
         }
 
-        $WindowsPolicies = $ConfigurationPolicies | Where-Object {
+        $WindowsPolicies = $ConfigurationPolicies.Where({
             $_.platforms -match 'windows10'
-        }
+        })
 
         $WindowsBitLockerPolicies = [System.Collections.Generic.List[object]]::new()
         foreach ($WindowsPolicy in $WindowsPolicies) {
@@ -41,9 +41,9 @@ function Invoke-CippTestZTNA24550 {
             }
         }
 
-        $AssignedPolicies = $WindowsBitLockerPolicies | Where-Object {
+        $AssignedPolicies = $WindowsBitLockerPolicies.Where({
             $_.assignments -and $_.assignments.Count -gt 0
-        }
+        })
 
         if ($AssignedPolicies.Count -gt 0) {
             $Status = 'Passed'

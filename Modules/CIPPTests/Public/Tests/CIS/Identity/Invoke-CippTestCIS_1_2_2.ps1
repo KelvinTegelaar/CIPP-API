@@ -14,7 +14,7 @@ function Invoke-CippTestCIS_1_2_2 {
             return
         }
 
-        $SharedMailboxes = $Mailboxes | Where-Object { $_.RecipientTypeDetails -eq 'SharedMailbox' }
+        $SharedMailboxes = $Mailboxes.Where({ $_.RecipientTypeDetails -eq 'SharedMailbox' })
 
         if (-not $SharedMailboxes -or $SharedMailboxes.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_2_2' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No shared mailboxes found.' -Risk 'High' -Name 'Sign-in to shared mailboxes is blocked' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Identity'
@@ -43,7 +43,7 @@ function Invoke-CippTestCIS_1_2_2 {
         } else {
             $Status = 'Failed'
             $Result = "$($EnabledShared.Count) of $($SharedMailboxes.Count) shared mailbox(es) have sign-in enabled:`n`n"
-            $Result += ($EnabledShared | Select-Object -First 25 | ForEach-Object { "- $($_.userPrincipalName)" }) -join "`n"
+            $Result += ($EnabledShared.Where({ $true }, 'First', 25) | ForEach-Object { "- $($_.userPrincipalName)" }) -join "`n"
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_2_2' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Sign-in to shared mailboxes is blocked' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Identity'

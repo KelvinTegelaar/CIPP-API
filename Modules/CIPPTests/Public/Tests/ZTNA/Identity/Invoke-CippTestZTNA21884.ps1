@@ -36,7 +36,7 @@ function Invoke-CippTestZTNA21884 {
             $Lines.Add('')
             $Lines.Add('| Policy Name | State |')
             $Lines.Add('| :---------- | :---- |')
-            foreach ($P in ($WorkloadPolicies | Select-Object -First 25)) {
+            foreach ($P in $WorkloadPolicies.Where({ $true }, 'First', 25)) {
                 $Lines.Add("| $($P.displayName) | $($P.state) |")
             }
         } else {

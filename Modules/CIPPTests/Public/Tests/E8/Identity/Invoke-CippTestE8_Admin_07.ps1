@@ -19,7 +19,7 @@ function Invoke-CippTestE8_Admin_07 {
             return
         }
 
-        $GaRole = $Roles | Where-Object { $_.displayName -eq 'Global Administrator' } | Select-Object -First 1
+        $GaRole = $Roles.Where({ $_.displayName -eq 'Global Administrator' }, 'First')[0]
         if (-not $GaRole) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Global Administrator role not found in the Roles cache.' -Risk 'High' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'E8 ML2 - Restrict Admin Privileges'
             return
@@ -37,8 +37,8 @@ function Invoke-CippTestE8_Admin_07 {
                 [void]$GaUserIds.Add([string]$A.principalId)
             }
         }
-        $GaUsers = $Users | Where-Object { $GaUserIds.Contains($_.id) }
-        $BreakGlass = $GaUsers | Where-Object { $_.userPrincipalName -like '*onmicrosoft.com' -and $_.accountEnabled -eq $true }
+        $GaUsers = $Users.Where({ $GaUserIds.Contains($_.id) })
+        $BreakGlass = $GaUsers.Where({ $_.userPrincipalName -like '*onmicrosoft.com' -and $_.accountEnabled -eq $true })
 
         if (-not $BreakGlass -or $BreakGlass.Count -lt 2) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Only $($BreakGlass.Count) Global Administrator(s) on the *.onmicrosoft.com domain. ACSC guidance recommends 2-4 dedicated cloud-only break-glass accounts." -Risk 'High' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'E8 ML2 - Restrict Admin Privileges'
@@ -50,13 +50,13 @@ function Invoke-CippTestE8_Admin_07 {
         }
 
         $BreakGlassIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$BreakGlass.id)
-        $MfaPolicies = $CA | Where-Object {
+        $MfaPolicies = $CA.Where({
             $_.state -eq 'enabled' -and
             (($_.grantControls.builtInControls -contains 'mfa') -or $_.grantControls.authenticationStrength)
-        }
+        })
         $WithExclusion = foreach ($P in $MfaPolicies) {
             $Excluded = $P.conditions.users.excludeUsers
-            if ($Excluded -and (@($Excluded) | Where-Object { $BreakGlassIds.Contains($_) }).Count -gt 0) { $P }
+            if ($Excluded -and @($Excluded).Where({ $BreakGlassIds.Contains($_) }).Count -gt 0) { $P }
         }
 
         if ($WithExclusion) {

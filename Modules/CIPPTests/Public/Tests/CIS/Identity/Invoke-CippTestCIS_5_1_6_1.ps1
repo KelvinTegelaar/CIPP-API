@@ -16,8 +16,8 @@ function Invoke-CippTestCIS_5_1_6_1 {
 
         # Inspect B2B management policy AllowedDomains / BlockedDomains.
         # b2bManagementPolicy inherits from stsPolicy, so the settings live in definition[0] as a JSON string.
-        $Cfg = $B2B | Where-Object { $_.isOrganizationDefault -eq $true } | Select-Object -First 1
-        if (-not $Cfg) { $Cfg = $B2B | Select-Object -First 1 }
+        $Cfg = $B2B.Where({ $_.isOrganizationDefault -eq $true }, 'First')[0]
+        if (-not $Cfg) { $Cfg = @($B2B)[0] }
         if ($Cfg) {
             $Domains = $null
             if ($Cfg.definition) {

@@ -14,8 +14,8 @@ function Invoke-CippTestCIS_8_2_1 {
             return
         }
 
-        $E = $External | Select-Object -First 1
-        $F = $Federation | Select-Object -First 1
+        $E = @($External)[0]
+        $F = @($Federation)[0]
 
         $PolicyDisabled = $E.EnableFederationAccess -eq $false
         $TenantDisabled = $F.AllowFederatedUsers -eq $false

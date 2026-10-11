@@ -51,8 +51,8 @@ function Invoke-CippTestZTNA21801 {
         }
 
         $totalUserCount = $results.Count
-        $phishResistantUsers = $results | Where-Object { $_.phishResistantAuthMethod }
-        $phishableUsers = $results | Where-Object { !$_.phishResistantAuthMethod }
+        $phishResistantUsers = $results.Where({ $_.phishResistantAuthMethod })
+        $phishableUsers = $results.Where({ !$_.phishResistantAuthMethod })
 
         $phishResistantUserCount = $phishResistantUsers.Count
 

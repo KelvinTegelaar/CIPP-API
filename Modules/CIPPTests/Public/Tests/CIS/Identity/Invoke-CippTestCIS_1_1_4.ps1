@@ -58,7 +58,7 @@ function Invoke-CippTestCIS_1_1_4 {
         } else {
             $Status = 'Failed'
             $Result = "$($NonCompliant.Count) privileged user(s) have productivity workloads (Exchange/SharePoint/Teams/Skype) enabled on their administrative accounts.`n`n"
-            $Result += ($NonCompliant | Select-Object -First 25 | ForEach-Object { "- $($_.userPrincipalName)" }) -join "`n"
+            $Result += ($NonCompliant.Where({ $true }, 'First', 25) | ForEach-Object { "- $($_.userPrincipalName)" }) -join "`n"
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_4' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Administrative accounts use licenses with a reduced application footprint' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'

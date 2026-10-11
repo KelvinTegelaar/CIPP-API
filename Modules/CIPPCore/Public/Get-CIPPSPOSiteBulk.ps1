@@ -122,7 +122,7 @@ function Get-CIPPSPOSiteBulk {
                     $Parsed = $Result.Result.Content | ConvertFrom-Json
                     # One action's error aborts the whole ProcessQuery, so a batch-level ErrorInfo fails
                     # every URL in the chunk - the caller falls back per site.
-                    $CsomError = ($Parsed | Where-Object { $_.ErrorInfo } | Select-Object -First 1).ErrorInfo.ErrorMessage
+                    $CsomError = foreach ($Entry in $Parsed) { if ($Entry.ErrorInfo) { $Entry.ErrorInfo.ErrorMessage; break } }
                     if ($CsomError) { $BatchError = $CsomError }
                 } catch {
                     $BatchError = "Could not parse CSOM response: $($_.Exception.Message)"
@@ -138,7 +138,7 @@ function Get-CIPPSPOSiteBulk {
                 # deleted/erroring site in the middle would leave a gap) rather than trusting position.
                 $SitesInBatch = @($Parsed | Where-Object { $_._ObjectType_ -match 'SiteProperties' -and $_.Url })
                 foreach ($Url in $Chunk) {
-                    $Site = $SitesInBatch | Where-Object { "$($_.Url)".TrimEnd('/') -ieq "$Url".TrimEnd('/') } | Select-Object -First 1
+                    $Site = $SitesInBatch.Where({ "$($_.Url)".TrimEnd('/') -ieq "$Url".TrimEnd('/') }, 'First')[0]
                     if ($Site) {
                         [PSCustomObject]@{ SiteUrl = $Url; Site = $Site; Success = $true; Error = $null }
                     } else {

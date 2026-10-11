@@ -17,7 +17,7 @@ function Invoke-CippTestORCA225 {
             return
         }
 
-        $Policy = $AtpPolicy | Select-Object -First 1
+        $Policy = @($AtpPolicy)[0]
 
         if ($Policy.EnableSafeDocs -eq $true) {
             $Status = 'Passed'

@@ -26,7 +26,7 @@ function Invoke-CippTestE8_Admin_08 {
             return
         }
 
-        $TargetRoles = $Roles | Where-Object { $_.displayName -in $HighlyPriv }
+        $TargetRoles = $Roles.Where({ $_.displayName -in $HighlyPriv })
         if (-not $TargetRoles) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No highly-privileged roles found in cache.' -Risk 'High' -Name $Name -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'E8 ML3 - Restrict Admin Privileges'
             return

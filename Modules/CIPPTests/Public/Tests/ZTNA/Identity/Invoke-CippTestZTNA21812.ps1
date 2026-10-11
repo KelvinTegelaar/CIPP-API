@@ -14,7 +14,7 @@ function Invoke-CippTestZTNA21812 {
     try {
         $AllGlobalAdmins = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId '62e90394-69f5-4237-9190-012177145e10'
 
-        $GlobalAdmins = @($AllGlobalAdmins | Where-Object { $_.'@odata.type' -in @('#microsoft.graph.user', '#microsoft.graph.servicePrincipal') })
+        $GlobalAdmins = @($AllGlobalAdmins.Where({ $_.'@odata.type' -in @('#microsoft.graph.user', '#microsoft.graph.servicePrincipal') }))
 
         $Passed = $GlobalAdmins.Count -le 5
 

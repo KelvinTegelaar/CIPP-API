@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_7_2_4 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
         # CSOM exposes OneDriveSharingCapability as ODBSharingCapability, and both as numbers.
         $OneDrive, $SP = foreach ($Value in $Cfg.ODBSharingCapability, $Cfg.SharingCapability) {
             switch ("$Value") {

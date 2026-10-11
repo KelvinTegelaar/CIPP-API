@@ -10,7 +10,7 @@ function Invoke-CippTestZTNA21845 {
     try {
         # Get Temporary Access Pass configuration
         $AuthMethodsPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
-        $TAPConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'TemporaryAccessPass' }
+        $TAPConfig = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'TemporaryAccessPass' })
 
         if (-not $TAPConfig) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Temporary access pass is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
@@ -25,14 +25,14 @@ function Invoke-CippTestZTNA21845 {
 
         # Get conditional access policies
         $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
-        $SecurityInfoPolicies = $CAPolicies | Where-Object {
+        $SecurityInfoPolicies = $CAPolicies.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.applications.includeUserActions -contains 'urn:user:registersecurityinfo' -and
             $null -ne $_.grantControls.authenticationStrength
-        }
+        })
 
         $TAPEnabled = $TAPConfig.state -eq 'enabled'
-        $TargetsAllUsers = $TAPConfig.includeTargets | Where-Object { $_.id -eq 'all_users' }
+        $TargetsAllUsers = $TAPConfig.includeTargets.Where({ $_.id -eq 'all_users' })
         $HasConditionalAccessEnforcement = $SecurityInfoPolicies.Count -gt 0
 
         # Note: Authentication strength policy validation requires additional API calls not available in cache

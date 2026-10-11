@@ -16,7 +16,7 @@ function Invoke-CippTestE8_Backup_01 {
         }
 
         # Inactive (soft-deleted) mailboxes carry WhenSoftDeleted; there is no IsInactiveMailbox field in the cache.
-        $UserMailboxes = $Mailboxes | Where-Object { $_.RecipientTypeDetails -eq 'UserMailbox' -and -not $_.WhenSoftDeleted }
+        $UserMailboxes = $Mailboxes.Where({ $_.RecipientTypeDetails -eq 'UserMailbox' -and -not $_.WhenSoftDeleted })
         if (-not $UserMailboxes) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No user mailboxes found.' -Risk 'Medium' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'E8 ML1 - Regular Backups'
             return
@@ -24,12 +24,12 @@ function Invoke-CippTestE8_Backup_01 {
 
         # The built-in "Default MRM Policy" is present on every mailbox and only manages archive/deletion tags —
         # it is not a data-protection retention control, so it does not count as protected.
-        $Unprotected = $UserMailboxes | Where-Object {
+        $Unprotected = $UserMailboxes.Where({
             -not ($_.LitigationHoldEnabled -eq $true) -and
             -not ($_.ComplianceTagHoldApplied -eq $true) -and
             ([string]::IsNullOrWhiteSpace($_.RetentionPolicy) -or $_.RetentionPolicy -eq 'Default MRM Policy') -and
             -not $_.InPlaceHolds
-        }
+        })
 
         if (-not $Unprotected) {
             $Status = 'Passed'
@@ -37,7 +37,7 @@ function Invoke-CippTestE8_Backup_01 {
         } else {
             $Status = 'Failed'
             $Sb = [System.Text.StringBuilder]::new("$($Unprotected.Count) of $($UserMailboxes.Count) user mailbox(es) have no litigation hold, retention policy, or compliance tag applied:`n`n| UPN |`n| :-- |`n")
-            foreach ($M in ($Unprotected | Select-Object -First 50)) { $null = $Sb.Append("| $($M.UPN) |`n") }
+            foreach ($M in $Unprotected.Where({ $true }, 'First', 50)) { $null = $Sb.Append("| $($M.UPN) |`n") }
             $Result = $Sb.ToString()
         }
 

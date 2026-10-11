@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_8_2_3 {
             return
         }
 
-        $Cfg = $Messaging | Select-Object -First 1
+        $Cfg = @($Messaging)[0]
 
         if ($Cfg.UseB2BInvitesToAddExternalUsers -eq $false) {
             $Status = 'Passed'

@@ -10,7 +10,7 @@ function Invoke-CippTestZTNA21830 {
     try {
         # Get Conditional Access policies
         $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
-        $EnabledCAPolicies = $CAPolicies | Where-Object { $_.state -eq 'enabled' }
+        $EnabledCAPolicies = $CAPolicies.Where({ $_.state -eq 'enabled' })
 
         # Get privileged roles
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles

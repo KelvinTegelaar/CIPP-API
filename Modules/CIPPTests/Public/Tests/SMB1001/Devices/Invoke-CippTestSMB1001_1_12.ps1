@@ -22,7 +22,7 @@ function Invoke-CippTestSMB1001_1_12 {
             return
         }
 
-        $Connector = $MDEOnboarding | Select-Object -First 1
+        $Connector = @($MDEOnboarding)[0]
         $State = $Connector.partnerState
 
         if ($State -eq 'enabled') {

@@ -10,7 +10,7 @@ function Invoke-CippTestZTNA21849 {
     try {
         # Get password rule settings from Settings cache
         $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
-        $PasswordRuleSettings = $Settings | Where-Object { $_.displayName -eq 'Password Rule Settings' }
+        $PasswordRuleSettings = foreach ($Setting in $Settings) { if ($Setting.displayName -eq 'Password Rule Settings') { $Setting } }
 
         $PortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/PasswordProtection/fromNav/'
 
@@ -23,7 +23,7 @@ function Invoke-CippTestZTNA21849 {
             $null = $ResultMarkdown.Append("| :---- | :---- |`n")
             $null = $ResultMarkdown.Append("| Lockout Duration (seconds) | 60 (Default) |`n")
         } else {
-            $LockoutDurationSetting = $PasswordRuleSettings.values | Where-Object { $_.name -eq 'LockoutDurationInSeconds' }
+            $LockoutDurationSetting = foreach ($Value in $PasswordRuleSettings.values) { if ($Value.name -eq 'LockoutDurationInSeconds') { $Value } }
 
             if ($null -eq $LockoutDurationSetting) {
                 # Default is 60 seconds

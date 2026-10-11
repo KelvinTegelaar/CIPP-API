@@ -50,7 +50,7 @@ function Invoke-CippTestZTNA21876 {
             $Lines.Add('')
             $Lines.Add('| Principal | Role Definition ID | Assignment Type | Member Type |')
             $Lines.Add('| :-------- | :----------------- | :-------------- | :---------- |')
-            foreach ($A in ($PermanentToPrivileged | Select-Object -First 25)) {
+            foreach ($A in $PermanentToPrivileged.Where({ $true }, 'First', 25)) {
                 $Lines.Add("| $($A.principalId) | $($A.roleDefinitionId) | $($A.assignmentType) | $($A.memberType) |")
             }
             if ($PermanentToPrivileged.Count -gt 25) {

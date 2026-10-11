@@ -54,7 +54,11 @@ Describe 'CIPPRateLimiter' {
         [CIPP.CIPPRateLimiter]::Recheck($Early).TotalSeconds | Should -BeGreaterThan 9
     }
 
-    It 'costs each $batch sub-request and blocks only the throttled sub-request endpoint' {
+    It 'costs each $batch sub-request and blocks only the throttled sub-request endpoint (<Form> body)' -ForEach @(
+        @{ Form = 'string' }
+        @{ Form = 'utf8' }
+        @{ Form = 'utf8 with BOM' }
+    ) {
         $A = Get-AuthHeader 'tenant-a'
         $Body = @{ requests = @(
                 @{ id = '1'; method = 'GET'; url = '/users/u1/authentication/methods' }
@@ -62,7 +66,10 @@ Describe 'CIPPRateLimiter' {
             ) } | ConvertTo-Json -Depth 5
         $Claim = [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/$batch', 'POST', $Body, $A)
         $Response = '{"responses":[{"id":"1","status":200,"body":{}},{"id":"2","status":429,"headers":{"Retry-After":"20"}}]}'
-        [CIPP.CIPPRateLimiter]::Observe($Claim, 200, (Get-ResponseHeader), $Response)
+        $Bytes = [Text.Encoding]::UTF8.GetBytes($Response)
+        if ($Form -eq 'string') { [CIPP.CIPPRateLimiter]::Observe($Claim, 200, (Get-ResponseHeader), $Response) }
+        elseif ($Form -eq 'utf8') { [CIPP.CIPPRateLimiter]::Observe($Claim, 200, (Get-ResponseHeader), [byte[]]$Bytes) }
+        else { [CIPP.CIPPRateLimiter]::Observe($Claim, 200, (Get-ResponseHeader), [byte[]](@(0xEF, 0xBB, 0xBF) + $Bytes)) }
 
         [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/groups/6f1d2c3e-0000-4000-8000-0000000000a2/members', 'GET', $null, $A).Wait.TotalSeconds | Should -BeGreaterThan 19
         [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/users/u2/authentication/methods', 'GET', $null, $A).Wait | Should -Be ([timespan]::Zero)

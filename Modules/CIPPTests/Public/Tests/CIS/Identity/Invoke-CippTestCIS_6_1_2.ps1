@@ -13,15 +13,15 @@ function Invoke-CippTestCIS_6_1_2 {
             return
         }
 
-        $User = $Mailboxes | Where-Object { $_.RecipientTypeDetails -eq 'UserMailbox' }
+        $User = $Mailboxes.Where({ $_.RecipientTypeDetails -eq 'UserMailbox' })
         # CIS 6.1.2 requires per-mailbox audit ACTIONS to be configured. With mailbox auditing on by
         # default Microsoft applies the default action sets and Get-Mailbox reports AuditEnabled = True,
         # so the reliable signal is a non-empty AuditOwner (the effective owner actions) or a
         # DefaultAuditSet that still lists the Owner sign-in type (Microsoft-managed defaults).
         # AuditEnabled itself can arrive as a string from EXO REST and is not graded directly.
-        $Failures = $User | Where-Object {
+        $Failures = $User.Where({
             @($_.AuditOwner).Count -eq 0 -and ("$($_.DefaultAuditSet)" -notmatch 'Owner')
-        }
+        })
 
         if ($Failures.Count -eq 0) {
             $Status = 'Passed'

@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_6_2_3 {
             return
         }
 
-        $Cfg = $Org | Select-Object -First 1
+        $Cfg = @($Org)[0]
         $External = $Cfg.Enabled
 
         if ($External -eq $true) {

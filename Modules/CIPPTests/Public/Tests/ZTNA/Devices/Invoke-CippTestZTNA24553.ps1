@@ -16,14 +16,14 @@ function Invoke-CippTestZTNA24553 {
             return
         }
 
-        $UpdatePolicies = @($IntunePolicies | Where-Object {
+        $UpdatePolicies = @($IntunePolicies.Where({
                 $_.'@odata.type' -in @(
                     '#microsoft.graph.windowsUpdateForBusinessConfiguration',
                     '#microsoft.graph.windows10CompliancePolicy'
                 )
-            })
+            }))
 
-        $AssignedPolicies = @($UpdatePolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AssignedPolicies = @($UpdatePolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedPolicies.Count -gt 0
 
         if ($Passed) {

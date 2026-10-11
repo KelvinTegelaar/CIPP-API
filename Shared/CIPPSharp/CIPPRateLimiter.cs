@@ -156,21 +156,47 @@ namespace CIPP
             try
             {
                 using var doc = JsonDocument.Parse(content);
-                if (!doc.RootElement.TryGetProperty("responses", out var responses) || responses.ValueKind != JsonValueKind.Array) return;
-                foreach (var response in responses.EnumerateArray())
-                {
-                    if (!response.TryGetProperty("status", out var status) || !status.TryGetInt32(out var code) || code != 429) continue;
-                    var id = response.TryGetProperty("id", out var idEl) ? idEl.ToString() : null;
-                    int? seconds = null;
-                    if (response.TryGetProperty("headers", out var subHeaders) && subHeaders.ValueKind == JsonValueKind.Object)
-                        foreach (var h in subHeaders.EnumerateObject())
-                            if (h.Name.Equals("Retry-After", StringComparison.OrdinalIgnoreCase))
-                                seconds = ParseRetryAfter(h.Value.ToString());
-                    foreach (var (key, subId) in claim.Keys)
-                        if (subId == id) Block(key, seconds ?? DefaultRetryAfterSeconds);
-                }
+                ObserveBatch(claim, doc);
             }
             catch (JsonException) { }
+        }
+
+        /// <summary>Observe for a body kept as UTF-8 bytes.</summary>
+        public static void Observe(Claim? claim, int statusCode, IReadOnlyDictionary<string, string[]>? headers, byte[] body)
+        {
+            if (claim is null || claim.Keys.Count == 0) return;
+            if (statusCode == 429 || (statusCode == 503 && RetryAfter(headers) is not null) || claim.Keys[0].SubId is null)
+            {
+                Observe(claim, statusCode, headers, (string?)null);
+                return;
+            }
+            var json = HttpBody.Utf8(body);
+            if (json is null) { Observe(claim, statusCode, headers, HttpBody.Decode(body)); return; }
+            var span = json.Value.Span;
+            if (span.IndexOf("\"status\":429"u8) < 0 && span.IndexOf("\"status\": 429"u8) < 0) return;
+            try
+            {
+                using var doc = JsonDocument.Parse(json.Value);
+                ObserveBatch(claim, doc);
+            }
+            catch (JsonException) { }
+        }
+
+        private static void ObserveBatch(Claim claim, JsonDocument doc)
+        {
+            if (!doc.RootElement.TryGetProperty("responses", out var responses) || responses.ValueKind != JsonValueKind.Array) return;
+            foreach (var response in responses.EnumerateArray())
+            {
+                if (!response.TryGetProperty("status", out var status) || !status.TryGetInt32(out var code) || code != 429) continue;
+                var id = response.TryGetProperty("id", out var idEl) ? idEl.ToString() : null;
+                int? seconds = null;
+                if (response.TryGetProperty("headers", out var subHeaders) && subHeaders.ValueKind == JsonValueKind.Object)
+                    foreach (var h in subHeaders.EnumerateObject())
+                        if (h.Name.Equals("Retry-After", StringComparison.OrdinalIgnoreCase))
+                            seconds = ParseRetryAfter(h.Value.ToString());
+                foreach (var (key, subId) in claim.Keys)
+                    if (subId == id) Block(key, seconds ?? DefaultRetryAfterSeconds);
+            }
         }
 
         public static object GetDiagnostics()

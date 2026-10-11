@@ -26,7 +26,7 @@ function Invoke-CippTestCopilotReady003 {
         # Build a lookup of activation data keyed by UPN for fast cross-referencing
         $ActivationLookup = @{}
         if ($ActivationData) {
-            foreach ($Entry in ($ActivationData | Where-Object { $_.userPrincipalName -and $_.userPrincipalName -ne '' })) {
+            foreach ($Entry in ($ActivationData.Where({ $_.userPrincipalName -and $_.userPrincipalName -ne '' }))) {
                 $ActivationLookup[$Entry.userPrincipalName.ToLower()] = $Entry
             }
         }
@@ -100,7 +100,7 @@ function Invoke-CippTestCopilotReady003 {
                     $null = $Result.Append("- $($User.displayName) ($($User.userPrincipalName))$PlatformStr`n")
                 }
             } elseif ($NoDesktopUsers.Count -gt 20) {
-                $NeverActivated = @($NoDesktopUsers | Where-Object { $_.neverActivated }).Count
+                $NeverActivated = $NoDesktopUsers.Where({ $_.neverActivated }).Count
                 $null = $Result.Append("**$($NoDesktopUsers.Count) users** have no desktop M365 Apps activation")
                 if ($NeverActivated -gt 0) { $null = $Result.Append(" ($NeverActivated have never activated on any platform)") }
                 $null = $Result.Append(".`n")

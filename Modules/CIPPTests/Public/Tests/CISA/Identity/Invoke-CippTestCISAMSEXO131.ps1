@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO131 {
             return
         }
 
-        $OrgConfigObject = $OrgConfig | Select-Object -First 1
+        $OrgConfigObject = @($OrgConfig)[0]
 
         if ($OrgConfigObject.AuditDisabled -eq $false) {
             $Result = [System.Text.StringBuilder]::new('✅ **Pass**: Mailbox auditing is enabled for the organization.')

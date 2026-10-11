@@ -40,7 +40,7 @@ function Get-CippSecuritySimulationContext {
         $TestId = "SecuritySimulation_$($Scenario.id)"
         $Licensed = -not $Scenario.licensePresets -or (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset $Scenario.licensePresets -SkipLog)
         $Persona = $(if ("$($Scenario.persona)") { "$($Scenario.persona)" } else { 'user' })
-        $WhatIfSteps = @($Scenario.steps | Where-Object { $_.whatIf })
+        $WhatIfSteps = @($Scenario.steps.Where({ $_.whatIf }))
         # The What If API itself needs Entra ID P1 or P2, whatever else the scenario is licensed for.
         $CALicensed = $WhatIfSteps.Count -gt 0 -and $Licensed -and (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset Entra -SkipLog)
         $Identity = $null
@@ -70,13 +70,13 @@ function Get-CippSecuritySimulationContext {
     }
 
     # Graded live against the scenario's secure value (a list means any entry is secure); tenant-specific settings use the baseline verdict.
-    $References = @($Scenarios.steps.standards | Where-Object { $_ })
+    $References = @($Scenarios.steps.standards.Where({ $_ }))
     foreach ($Reference in $References) {
         $Name = "$($Reference.name)"
         $Key = '{0}|{1}' -f $Name, (ConvertTo-Json -Compress -Depth 5 -InputObject $Reference.secure)
         if ($Context.Standards.ContainsKey($Key)) { continue }
         $Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        $Definition = Get-CIPPBaselineDefinition -Name $Name | Select-Object -First 1
+        $Definition = @(Get-CIPPBaselineDefinition -Name $Name)[0]
         $State = [PSCustomObject]@{
             name      = $Name
             label     = "$($Definition.label ?? $Name)"
@@ -85,10 +85,10 @@ function Get-CippSecuritySimulationContext {
             assigned  = $false
             detail    = ''
         }
-        $Row = @($AlignmentRows | Where-Object { ("$($_.StandardName)" -split '#')[0] -eq $Name }) |
-            Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending | Select-Object -First 1
+        $Row = @(@($AlignmentRows.Where({ ("$($_.StandardName)" -split '#')[0] -eq $Name })) |
+            Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending)[0]
         $State.assigned = $null -ne $Row
-        $TenantSpecific = @(($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties | Where-Object {
+        $TenantSpecific = ($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties.Where({
                 $_.Value.required -eq $true -and $null -eq ($_.Value.default ?? $_.Value.recommended) -and -not ($Reference.secure -and $Reference.secure.PSObject.Properties[$_.Name])
             }).Count -gt 0
 
@@ -168,13 +168,13 @@ function Get-CippSecuritySimulationContext {
                         $State.detail = 'The tenant cache holds no value for this setting yet.'
                         break
                     }
-                    $Diffs = @($Graded.Diff | Where-Object { $_ })
-                    if ($Diffs.Count -gt 0 -and @($Diffs | Where-Object { -not ($ListPaths.ContainsKey("$($_.Property)") -and $ListPaths["$($_.Property)"] -contains $_.ReceivedValue) }).Count -eq 0) {
+                    $Diffs = @($Graded.Diff.Where({ $_ }))
+                    if ($Diffs.Count -gt 0 -and $Diffs.Where({ -not ($ListPaths.ContainsKey("$($_.Property)") -and $ListPaths["$($_.Property)"] -contains $_.ReceivedValue) }).Count -eq 0) {
                         $State.status = 'Compliant'
                         $State.compliant = $true
                         break
                     }
-                    $FirstDiff ??= @($Diffs | ForEach-Object { $_.Property } | Where-Object { $_ } | Select-Object -Unique)
+                    $FirstDiff ??= @(@($Diffs | ForEach-Object { $_.Property }).Where({ $_ }) | Select-Object -Unique)
                     if ($ListPaths.Count -gt 0) { break }
                 }
                 if ($State.compliant -eq $false -and $State.status -eq 'Not configured') {

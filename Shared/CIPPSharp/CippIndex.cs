@@ -66,6 +66,9 @@ namespace CIPP
             return list.Count == 1 ? list[0] : list.ToArray();
         }
 
+        /// <summary>The first item under <paramref name="key"/>, or nothing: Find(key) | Select-Object -First 1 without stopping a pipeline.</summary>
+        public object? First(object? key) => TryGetValue(Name(key), out var list) && list.Count > 0 ? list[0] : System.Management.Automation.Internal.AutomationNull.Value;
+
         public bool Has(object? key) => ContainsKey(Name(key));
     }
 }

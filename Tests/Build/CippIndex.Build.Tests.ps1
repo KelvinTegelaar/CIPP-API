@@ -108,4 +108,14 @@ Describe 'CippIndex.Build matches the PowerShell index builder' {
         @($New.Find('DEV-1')).Count | Should -Be 2
         @($New.Find($null))[-1] | Should -Be $Extra
     }
+
+    It 'First returns what Find piped to Select-Object -First 1 returns' {
+        $New = Build-Sharp $Groups { param($G) $G.members.deviceId }
+        foreach ($Key in @($null, 'DEV-1', 'dev-1', 'missing')) {
+            $Expected = $New.Find($Key) | Select-Object -First 1
+            $Actual = $New.First($Key)
+            Get-Shape @{ k = $Actual } | Should -BeExactly (Get-Shape @{ k = $Expected }) -Because "key '$Key'"
+            @($Actual).Count | Should -Be @($Expected).Count
+        }
+    }
 }

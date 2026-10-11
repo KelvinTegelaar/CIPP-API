@@ -23,10 +23,10 @@ function Invoke-CippTestCISAMSEXO113 {
             return
         }
 
-        $PoliciesWithIntelligence = $PresetPolicies | Where-Object {
+        $PoliciesWithIntelligence = $PresetPolicies.Where({
             ($_.EnableMailboxIntelligence -eq $true) -and
             ($_.EnableMailboxIntelligenceProtection -eq $true)
-        }
+        })
 
         if ($PoliciesWithIntelligence.Count -gt 0) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: $($PoliciesWithIntelligence.Count) policy/policies have mailbox intelligence enabled:`n`n")

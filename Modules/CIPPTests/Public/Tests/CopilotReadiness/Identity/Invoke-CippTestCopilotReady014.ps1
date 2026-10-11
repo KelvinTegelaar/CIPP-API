@@ -18,7 +18,7 @@ function Invoke-CippTestCopilotReady014 {
             return
         }
 
-        $EnabledPolicies = @($Policies | Where-Object { $_.Mode -eq 'Enable' -and $_.Enabled -eq $true })
+        $EnabledPolicies = @($Policies.Where({ $_.Mode -eq 'Enable' -and $_.Enabled -eq $true }))
         $AllPolicies = @($Policies)
 
         if ($EnabledPolicies.Count -gt 0) {

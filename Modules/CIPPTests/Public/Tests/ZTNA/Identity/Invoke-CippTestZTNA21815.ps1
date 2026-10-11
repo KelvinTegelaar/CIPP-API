@@ -21,13 +21,13 @@ function Invoke-CippTestZTNA21815 {
         $PermanentAssignments = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Role in $PrivilegedRoles) {
-            $ActiveAssignments = $AssignmentsByRole.Find($Role.RoletemplateId) | Where-Object {
+            $ActiveAssignments = ($AssignmentsByRole.Find($Role.RoletemplateId)).Where({
                 $_.assignmentType -eq 'Assigned' -and
                 $null -eq $_.endDateTime
-            }
+            })
 
             foreach ($Assignment in $ActiveAssignments) {
-                $User = $UserById.Find($Assignment.principalId) | Select-Object -First 1
+                $User = $UserById.First($Assignment.principalId)
                 if (-not $User) { continue }
 
                 $PermanentAssignments.Add([PSCustomObject]@{

@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO11 {
             return
         }
 
-        $ForwardingEnabledDomains = $RemoteDomains | Where-Object { $_.AutoForwardEnabled -eq $true }
+        $ForwardingEnabledDomains = $RemoteDomains.Where({ $_.AutoForwardEnabled -eq $true })
 
         if (($ForwardingEnabledDomains | Measure-Object).Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new('✅ **Pass**: Automatic forwarding to external domains is disabled for all remote domains.')

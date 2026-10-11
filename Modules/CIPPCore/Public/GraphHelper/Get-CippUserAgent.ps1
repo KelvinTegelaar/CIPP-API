@@ -13,7 +13,7 @@ function Get-CippUserAgent {
     [CmdletBinding()]
     param()
 
-    $Version = $env:CippVersion ?? $env:APP_VERSION ?? '1.0'
+    $Version = [System.Environment]::GetEnvironmentVariable('CippVersion') ?? $env:APP_VERSION ?? '1.0'
     $Context = $script:CippUserAgentContextStorage.Value
 
     if ($Context.Source) {

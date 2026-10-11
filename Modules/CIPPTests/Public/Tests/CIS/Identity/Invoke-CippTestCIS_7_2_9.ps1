@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_7_2_9 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
         $Required = $Cfg.ExternalUserExpirationRequired
         $Days = [int]$Cfg.ExternalUserExpireInDays
 

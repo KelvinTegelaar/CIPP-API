@@ -45,7 +45,7 @@ function Set-CIPPDBCacheSharePointUsageReport {
         }
 
         $GeoUsedStorageMB = (@($SharePointQuota) | ForEach-Object { [double]($_.GeoUsedStorageMB ?? 0) } | Measure-Object -Sum).Sum
-        $TenantStorageRaw = @($SharePointQuota.TenantStorageMB | Where-Object { $_ }) | Select-Object -First 1
+        $TenantStorageRaw = @($SharePointQuota.TenantStorageMB).Where({ $_ }, 'First')[0]
         $TenantStorageMB = if ($null -ne $TenantStorageRaw) { [double]$TenantStorageRaw } else { 0 }
         $GeoLocations = @(foreach ($Geo in @($SharePointQuota)) {
             if ($null -eq $Geo) { continue }

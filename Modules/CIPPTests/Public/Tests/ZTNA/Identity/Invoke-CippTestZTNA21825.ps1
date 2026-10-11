@@ -20,9 +20,9 @@ function Invoke-CippTestZTNA21825 {
         $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         # Filter to policies targeting roles
-        $RoleScopedPolicies = $CAPolicies | Where-Object {
+        $RoleScopedPolicies = $CAPolicies.Where({
             $_.conditions.users.includeRoles -and $_.conditions.users.includeRoles.Count -gt 0
-        }
+        })
 
         # Recommended: Sign-in frequency should be 4 hours or less for privileged users
         $RecommendedMaxHours = 4
@@ -39,16 +39,16 @@ function Invoke-CippTestZTNA21825 {
             $null = $ResultMarkdown.Append("#### $($Role.displayName)`n`n")
 
             # Get CA policies assigned to this role
-            $AssignedPolicies = $CAPolicies | Where-Object { $_.conditions.users.includeRoles -contains $Role.id }
-            $EnabledPolicies = $AssignedPolicies | Where-Object { $_.state -eq 'enabled' }
+            $AssignedPolicies = $CAPolicies.Where({ $_.conditions.users.includeRoles -contains $Role.id })
+            $EnabledPolicies = $AssignedPolicies.Where({ $_.state -eq 'enabled' })
 
             if ($EnabledPolicies.Count -gt 0) {
                 # Check if at least one compliant enabled policy covers this role
-                $CompliantForRole = $EnabledPolicies | Where-Object {
+                $CompliantForRole = $EnabledPolicies.Where({
                     $_.sessionControls.signInFrequency -and
                     $_.sessionControls.signInFrequency.type -eq 'hours' -and
                     $_.sessionControls.signInFrequency.value -le $RecommendedMaxHours
-                }
+                })
 
                 $RoleStatus = if ($CompliantForRole.Count -gt 0) {
                     '✅ Covered'

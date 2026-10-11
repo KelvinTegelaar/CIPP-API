@@ -590,7 +590,7 @@ function Invoke-NinjaOneTenantSync {
             [System.Collections.Generic.List[String]]$DeviceUserIDs = @()
             [System.Collections.Generic.List[PSCustomObject]]$DeviceUsersDetail = @()
 
-            $MappedDevice = $DeviceMapById.Find($device.id) | Select-Object -First 1
+            $MappedDevice = $DeviceMapById.First($device.id)
             if (-not $MappedDevice) {
                 $MappedDevice = [PSCustomObject]@{
                     PartitionKey = $Customer.CustomerId
@@ -980,7 +980,7 @@ function Invoke-NinjaOneTenantSync {
         foreach ($Key in @($NinjaUserDocById.Keys)) {
             $SameUser = $NinjaUserDocById[$Key]
             if ($SameUser.Count -lt 2 -or -not $UserById.Has($Key)) { continue }
-            $Owner = $UserById.Find($Key) | Select-Object -First 1
+            $Owner = $UserById.First($Key)
             $Keep = @($SameUser | Where-Object { $_.documentName -eq "$($Owner.displayName) ($($Owner.userPrincipalName))" }) + @($SameUser | Sort-Object { [double]$_.documentUpdateTime } -Descending) | Select-Object -First 1
             foreach ($Doc in $SameUser) { if ($Doc.documentId -ne $Keep.documentId) { $DuplicateDocs.Add($Doc) } }
             $NinjaUserDocById[$Key] = [System.Collections.Generic.List[object]]@($Keep)
@@ -1022,7 +1022,7 @@ function Invoke-NinjaOneTenantSync {
                     throw 'Multiple Users with the same ID found'
                 }
                 # A recreated account keeps its document name, and NinjaOne rejects a second document with that name
-                if (-not $NinjaOneUser) { $NinjaOneUser = $NinjaUserDocByName.Find("$($User.displayName) ($($User.userPrincipalName))") | Select-Object -First 1 }
+                if (-not $NinjaOneUser) { $NinjaOneUser = $NinjaUserDocByName.First("$($User.displayName) ($($User.userPrincipalName))") }
 
 
                 $UserGroups = foreach ($Group in ($GroupsByMemberId.Find($User.id))) { $UserGroupRowById[[string]$Group.id] }
@@ -1116,7 +1116,7 @@ function Invoke-NinjaOneTenantSync {
 
 
 
-                $UserOneDriveStats = $OneDriveByUpn.Find($User.userPrincipalName) | Select-Object -First 1
+                $UserOneDriveStats = $OneDriveByUpn.First($User.userPrincipalName)
                 $UserOneDriveUse = $UserOneDriveStats.storageUsedInBytes / 1GB
                 $UserOneDriveTotal = $UserOneDriveStats.storageAllocatedInBytes / 1GB
 
@@ -1169,7 +1169,7 @@ function Invoke-NinjaOneTenantSync {
                 }
 
 
-                $UserMailboxStats = $MailboxStatsByUpn.Find($User.userPrincipalName) | Select-Object -First 1
+                $UserMailboxStats = $MailboxStatsByUpn.First($User.userPrincipalName)
                 $UserMailUse = $UserMailboxStats.storageUsedInBytes / 1GB
                 $UserMailTotal = $UserMailboxStats.prohibitSendReceiveQuotaInBytes / 1GB
 
@@ -1496,7 +1496,7 @@ function Invoke-NinjaOneTenantSync {
                 $DeviceMapWrites["$($Pending.Map.RowKey)"] = $Pending.Map
             }
             $RelationChecks = @(foreach ($LinkDevice in $ParsedDevices | Where-Object { $null -ne $_.NinjaDevice }) {
-                    $DeviceMapEntry = $DeviceMapById.Find($LinkDevice.id) | Select-Object -First 1
+                    $DeviceMapEntry = $DeviceMapById.First($LinkDevice.id)
                     $LinkedDocs = foreach ($LinkUser in $LinkDevice.UserIDs) {
                         $MatchedUser = $UsersMapById.Find($LinkUser)
                         if (($MatchedUser | Measure-Object).count -eq 1) { "$($MatchedUser.NinjaOneID)" }

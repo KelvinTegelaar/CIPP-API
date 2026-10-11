@@ -15,7 +15,7 @@ function Invoke-CippTestE8_MFA_09 {
             return
         }
 
-        $MsAuth = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
+        $MsAuth = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'MicrosoftAuthenticator' })
         if (-not $MsAuth -or $MsAuth.state -ne 'enabled') {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'Microsoft Authenticator method is not enabled in the tenant.' -Risk 'Medium' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'E8 ML3 - MFA'
             return

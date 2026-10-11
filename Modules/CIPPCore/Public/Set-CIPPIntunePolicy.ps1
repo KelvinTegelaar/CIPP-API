@@ -400,6 +400,10 @@ function Set-CIPPIntunePolicy {
                     Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Added policy $($DisplayName) via template" -Sev Info
                 }
             }
+            default {
+                # Otherwise nothing is sent and the return below still reports success.
+                throw "Intune template type '$TemplateType' cannot be deployed. Deployment supports: $((Get-CIPPIntuneDeployableType) -join ', '). Re-import or recapture the template to give it a supported type."
+            }
         }
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "$($PostType) policy $($DisplayName)" -Sev Info
         if ($AssignTo) {

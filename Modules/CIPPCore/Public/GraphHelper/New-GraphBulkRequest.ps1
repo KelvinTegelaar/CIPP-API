@@ -44,7 +44,7 @@ function New-GraphBulkRequest {
             $ReturnedData = for ($i = 0; $i -lt $Requests.count; $i += 20) {
                 $req = @{}
                 # Use select to create hashtables of id, method and url for each call
-                $req['requests'] = ($Requests[$i..($i + 19)])
+                $req['requests'] = ($Requests[$i..([Math]::Min($i + 19, $Requests.Count - 1))])
                 $ReqBody = [CIPP.CippJson]::ToJson($req, 100) ?? (ConvertTo-Json -InputObject $req -Compress -Depth 100)
                 $Return = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
                 if ($Return.headers.'retry-after') {
@@ -70,7 +70,7 @@ function New-GraphBulkRequest {
                 $TransientIds = @($Transient | ForEach-Object { [string]$_.id })
                 $RetryRequests = @($Requests | Where-Object { [string]$_.id -in $TransientIds })
                 for ($j = 0; $j -lt $RetryRequests.Count; $j += 20) {
-                    $RetryBody = ConvertTo-Json -InputObject @{ requests = @($RetryRequests[$j..($j + 19)]) } -Compress -Depth 100
+                    $RetryBody = ConvertTo-Json -InputObject @{ requests = @($RetryRequests[$j..([Math]::Min($j + 19, $RetryRequests.Count - 1))]) } -Compress -Depth 100
                     $RetryReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $RetryBody
                     foreach ($Fresh in @($RetryReturn.responses)) {
                         foreach ($Batch in @($ReturnedData)) {
@@ -126,7 +126,7 @@ function New-GraphBulkRequest {
                         $null = $AnsweredIds.Add([string]$NextResponse.id)
                         $PageStatus = $NextResponse.status -as [int]
                         if ($PageStatus -ge 400) {
-                            $PageRequest = $NextBatchRequests | Where-Object { $_.id -eq $NextResponse.id } | Select-Object -First 1
+                            $PageRequest = $NextBatchRequests.Where({ $_.id -eq $NextResponse.id }, 'First')[0]
                             $RetryKey = "$($NextResponse.id)|$($PageRequest.url)"
                             if ($PageRequest -and $RetriedPages.Add($RetryKey)) {
                                 $RetryAfter = [Math]::Min([Math]::Max(($NextResponse.headers.'Retry-After' -as [int]), 0), 30)

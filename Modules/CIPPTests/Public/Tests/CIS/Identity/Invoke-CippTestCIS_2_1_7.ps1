@@ -23,9 +23,9 @@ function Invoke-CippTestCIS_2_1_7 {
         # Get-AntiPhishPolicy only populates Enabled for the built-in default policy; a custom policy's
         # active state lives on its anti-phish rule's State, joined by AntiPhishPolicy name (mirrors
         # Invoke-CIPPStandardAntiPhishPolicy / Invoke-ListAntiPhishingFilters).
-        $Compliant = $AntiPhish | Where-Object {
+        $Compliant = $AntiPhish.Where({
             $Policy = $_
-            $RuleEnabled = [bool]($AntiPhishRules | Where-Object { $_.AntiPhishPolicy -eq $Policy.Name -and $_.State -eq 'Enabled' })
+            $RuleEnabled = [bool]($AntiPhishRules.Where({ $_.AntiPhishPolicy -eq $Policy.Name -and $_.State -eq 'Enabled' }))
             ($Policy.Enabled -eq $true -or $RuleEnabled) -and
             $Policy.PhishThresholdLevel -ge 2 -and
             $Policy.EnableMailboxIntelligenceProtection -eq $true -and
@@ -39,7 +39,7 @@ function Invoke-CippTestCIS_2_1_7 {
             $Policy.EnableSimilarUsersSafetyTips -eq $true -and
             $Policy.EnableSimilarDomainsSafetyTips -eq $true -and
             $Policy.EnableUnusualCharactersSafetyTips -eq $true
-        }
+        })
 
         if ($Compliant) {
             $Status = 'Passed'

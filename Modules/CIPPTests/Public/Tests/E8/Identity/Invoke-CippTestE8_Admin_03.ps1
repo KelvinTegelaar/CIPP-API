@@ -20,15 +20,15 @@ function Invoke-CippTestE8_Admin_03 {
         # Conditional Access includeRoles reference role template IDs, not directory role instance IDs.
         $PrivRoleIds = @($Roles | ForEach-Object { if ($_.roleTemplateId) { [string]$_.roleTemplateId } elseif ($_.RoletemplateId) { [string]$_.RoletemplateId } })
 
-        $Match = $CA | Where-Object {
+        $Match = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.users.includeRoles -and
-            (@($_.conditions.users.includeRoles) | Where-Object { $_ -in $PrivRoleIds }).Count -gt 0 -and
+            @($_.conditions.users.includeRoles).Where({ $_ -in $PrivRoleIds }).Count -gt 0 -and
             (
                 ($_.grantControls.builtInControls -contains 'compliantDevice') -or
                 ($_.grantControls.builtInControls -contains 'domainJoinedDevice')
             )
-        }
+        })
 
         if ($Match) {
             $Status = 'Passed'

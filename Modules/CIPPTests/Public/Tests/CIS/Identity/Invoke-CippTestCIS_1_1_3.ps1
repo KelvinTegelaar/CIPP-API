@@ -14,7 +14,7 @@ function Invoke-CippTestCIS_1_1_3 {
             return
         }
 
-        $GA = $Roles | Where-Object { $_.displayName -eq 'Global Administrator' } | Select-Object -First 1
+        $GA = $Roles.Where({ $_.displayName -eq 'Global Administrator' }, 'First')[0]
         if (-not $GA) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_3' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'Global Administrator role not found in tenant role definitions.' -Risk 'High' -Name 'Between two and four global admins are designated' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Privileged Access'
             return

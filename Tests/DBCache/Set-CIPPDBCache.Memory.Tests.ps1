@@ -23,6 +23,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $sev, $Sev2, $LogData) }
     function Get-CippException { param($Exception) }
     function New-GraphGetRequest { param($uri, $tenantid, $scope, $AsApp, [bool]$noPagination, $Caller, [switch]$ComplexFilter, [switch]$Stream, $Headers) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-CIPPCopilotReport.ps1')
     # PowerShell parameter names are case-insensitive, so a single $AsApp binds both the -asapp
     # and -AsApp spellings the collectors use.
     function New-GraphBulkRequest { param($Requests, $tenantid, $AsApp, $scope) }

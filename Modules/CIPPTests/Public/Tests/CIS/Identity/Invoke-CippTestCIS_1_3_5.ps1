@@ -10,7 +10,7 @@ function Invoke-CippTestCIS_1_3_5 {
 
         if (-not $Forms) {
             $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
-            $Forms = $Settings | Where-Object { $_.PSObject.Properties.Name -contains 'isInOrgFormsPhishingScanEnabled' } | Select-Object -First 1
+            $Forms = $Settings.Where({ $_.PSObject.Properties.Name -contains 'isInOrgFormsPhishingScanEnabled' }, 'First')[0]
         }
 
         if (-not $Forms) {
