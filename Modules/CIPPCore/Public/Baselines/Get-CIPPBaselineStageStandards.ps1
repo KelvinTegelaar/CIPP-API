@@ -21,6 +21,7 @@ function Get-CIPPBaselineStageStandards {
             $Definition = $Definitions | Where-Object { $_.name -eq "$($Config.standard)" } | Select-Object -First 1
             if ($Definition.package) {
                 (Expand-CIPPBaselineTemplatePackage -Definition $Definition -Config $Config).instance
+            } else {
                 "$($Config.instance ?? $Config.standard)"
             }
         }
