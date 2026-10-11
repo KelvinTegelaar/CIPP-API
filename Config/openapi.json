@@ -44056,8 +44056,16 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Baseline alignment data. With ?tenantFilter= returns the tenant payload (summary,\nresolved rows with history, stage states, deviation feed); with\n?tenantFilter=&history=true returns the flattened run-event history; with\n?byStandard=true returns the aggregate payload (fleet score, per-standard rollups,\ntenant summaries, trend, and the accepted/denied deviation list).",
+        "description": "Baseline alignment data. With ?tenantFilter= returns the tenant payload (summary,\nresolved rows with history, stage states, deviation feed); with\n?tenantFilter=&history=true returns the flattened run-event history; with\n?byStandard=true returns the aggregate payload (fleet score, per-standard rollups,\ntenant summaries, trend, and the accepted/denied deviation list). byStandard also\ntakes &baselineId=<GUID> to limit it to one baseline and &stage=<1-based stage number>\nto limit that further to one stage; filtered payloads carry a 'filter' object and a\ntrend of today's live point only.",
         "parameters": [
+          {
+            "name": "baselineId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "byStandard",
             "in": "query",
@@ -44072,6 +44080,14 @@
             "required": false,
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "stage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {

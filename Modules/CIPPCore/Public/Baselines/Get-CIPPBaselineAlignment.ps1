@@ -8,6 +8,15 @@ function Get-CIPPBaselineAlignment {
           BaselineHistory), per-baseline stage states, and the deviation feed for one tenant.
         - -ByStandard: fleet score, per-standard aggregates, per-tenant summaries, and the
           accepted/suppressed deviation list across all tenants.
+    .PARAMETER BaselineId
+        -ByStandard only: limit the aggregate to one baseline (its GUID). Keeps the rows of
+        tenants assigned to it, for the standards it has rolled out to each tenant (stages up
+        to the tenant's current stage). Rows are per tenant + standard, so a standard shared
+        by several baselines counts toward each of them. Stored trends are fleet-wide, so a
+        filtered trend holds only today's live point, and the payload carries a 'filter' object.
+    .PARAMETER Stage
+        -ByStandard with -BaselineId only: the 1-based stage number. Keeps only that stage's
+        standards, for tenants that have reached it.
     .FUNCTIONALITY
         Internal
     #>
@@ -15,7 +24,9 @@ function Get-CIPPBaselineAlignment {
     param(
         $TenantFilter,
         [switch]$ByStandard,
-        [switch]$History
+        [switch]$History,
+        [string]$BaselineId,
+        [int]$Stage
     )
 
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
@@ -209,8 +220,8 @@ function Get-CIPPBaselineAlignment {
 
             # Aligned % against the standards this baseline has rolled out so far ('No Data'
             # rows carry no signal, so no percentage until the engine resolves something).
-            $RolledOut = @($Baseline.stages | Select-Object -First $State.currentStage | ForEach-Object { @($_.standards) } | ForEach-Object { ($_ -split '#')[0] } | Select-Object -Unique)
-            $RolledOutRows = @($Rows | Where-Object { $RolledOut -contains (($_.standardName -split '#')[0]) })
+            $RolledOut = @(Get-CIPPBaselineStageStandards -Baseline $Baseline -Definitions $Definitions | Select-Object -First $State.currentStage | ForEach-Object { $_ })
+            $RolledOutRows = @($Rows | Where-Object { $RolledOut -contains $_.standardName })
             $RolledOutScores = & $ScoreRows $RolledOutRows
             $AlignedPercentage = if ($RolledOutScores.applicable -gt 0) { $RolledOutScores.alignedPercentage } else { $null }
 
@@ -427,24 +438,54 @@ function Get-CIPPBaselineAlignment {
         $Entities = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey ne ''"
         $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions -ResolveTemplateName $ResolveTemplateName })
 
+        $FilterInfo = $null
+        if ($Stage -and -not $BaselineId) { throw 'Stage requires BaselineId.' }
+        if ($BaselineId) {
+            $FilterBaseline = Get-CIPPBaseline -ID $BaselineId | Select-Object -First 1
+            if (-not $FilterBaseline) { throw "Baseline '$BaselineId' was not found." }
+            $StageKeys = @(Get-CIPPBaselineStageStandards -Baseline $FilterBaseline -Definitions $Definitions)
+            if ($Stage -and ($Stage -lt 1 -or $Stage -gt $StageKeys.Count)) { throw "Baseline '$($FilterBaseline.templateName)' has no stage $Stage." }
+            # Tenant -> instance keys this baseline has rolled out to it.
+            $Allowed = @{}
+            foreach ($State in @($FilterBaseline.tenantStates)) {
+                if ($FilterBaseline.excludedTenants -contains $State.tenantFilter) { continue }
+                $Keys = if ($Stage) {
+                    if ($State.currentStage -ge $Stage) { $StageKeys[$Stage - 1] }
+                } else {
+                    $StageKeys | Select-Object -First $State.currentStage | ForEach-Object { $_ }
+                }
+                $Allowed["$($State.tenantFilter)"] = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Keys | Where-Object { $_ }), [System.StringComparer]::OrdinalIgnoreCase)
+            }
+            $Rows = @($Rows | Where-Object { $Allowed.ContainsKey("$($_.tenantFilter)") -and $Allowed["$($_.tenantFilter)"].Contains("$($_.standardName)") })
+            $FilterInfo = [PSCustomObject]@{
+                baselineId   = $FilterBaseline.GUID
+                baselineName = $FilterBaseline.templateName
+                stage        = $(if ($Stage) { $Stage } else { $null })
+                stageName    = $(if ($Stage) { @($FilterBaseline.stages)[$Stage - 1].name } else { $null })
+            }
+        }
+
         # Per-standard trends in ONE range scan over the 'standard_*' partitions (keys
         # sanitize '#' to '~'), attached to each standard so the offcanvas charts without
         # another call. Today's point is always the LIVE score, appended per group below.
         $Today = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
         $StandardTrends = @{}
-        try {
-            $TrendTable = Get-CippTable -tablename 'BaselineTrend'
-            $Cutoff = (Get-Date).ToUniversalTime().AddDays(-90).ToString('yyyy-MM-dd')
-            $StandardTrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter ("PartitionKey ge 'standard_' and PartitionKey lt 'standard{0}' and RowKey ge '{1}' and RowKey lt '{2}'" -f [char]0x60, $Cutoff, $Today))
-            foreach ($Point in ($StandardTrendRows | Sort-Object -Property RowKey)) {
-                $StandardKey = "$($Point.PartitionKey)".Substring(9) -replace '~', '#'
-                if (-not $StandardTrends.ContainsKey($StandardKey)) {
-                    $StandardTrends[$StandardKey] = [System.Collections.Generic.List[object]]::new()
+        # Stored trends are fleet-wide; a filtered view only has today's live point.
+        if (-not $FilterInfo) {
+            try {
+                $TrendTable = Get-CippTable -tablename 'BaselineTrend'
+                $Cutoff = (Get-Date).ToUniversalTime().AddDays(-90).ToString('yyyy-MM-dd')
+                $StandardTrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter ("PartitionKey ge 'standard_' and PartitionKey lt 'standard{0}' and RowKey ge '{1}' and RowKey lt '{2}'" -f [char]0x60, $Cutoff, $Today))
+                foreach ($Point in ($StandardTrendRows | Sort-Object -Property RowKey)) {
+                    $StandardKey = "$($Point.PartitionKey)".Substring(9) -replace '~', '#'
+                    if (-not $StandardTrends.ContainsKey($StandardKey)) {
+                        $StandardTrends[$StandardKey] = [System.Collections.Generic.List[object]]::new()
+                    }
+                    $StandardTrends[$StandardKey].Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
                 }
-                $StandardTrends[$StandardKey].Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
+            } catch {
+                Write-Information "Baseline standard trend read skipped: $($_.Exception.Message)"
             }
-        } catch {
-            Write-Information "Baseline standard trend read skipped: $($_.Exception.Message)"
         }
 
         $Standards = foreach ($Group in ($Rows | Group-Object -Property standardName)) {
@@ -480,28 +521,32 @@ function Get-CIPPBaselineAlignment {
         # score so the chart never lags the rest of the page.
         $Today = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')
         $Trend = [System.Collections.Generic.List[object]]::new()
-        try {
-            $TrendTable = Get-CippTable -tablename 'BaselineTrend'
-            $Cutoff = (Get-Date).ToUniversalTime().AddDays(-13).ToString('yyyy-MM-dd')
-            $TrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter "PartitionKey eq 'fleet' and RowKey ge '$Cutoff' and RowKey lt '$Today'") | Sort-Object -Property RowKey
-            foreach ($Point in $TrendRows) {
-                $Trend.Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
+        if (-not $FilterInfo) {
+            try {
+                $TrendTable = Get-CippTable -tablename 'BaselineTrend'
+                $Cutoff = (Get-Date).ToUniversalTime().AddDays(-13).ToString('yyyy-MM-dd')
+                $TrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter "PartitionKey eq 'fleet' and RowKey ge '$Cutoff' and RowKey lt '$Today'") | Sort-Object -Property RowKey
+                foreach ($Point in $TrendRows) {
+                    $Trend.Add([PSCustomObject]@{ date = $Point.RowKey; aligned = [int]$Point.Aligned; verified = [int]$Point.Verified })
+                }
+            } catch {
+                Write-Information "Baseline trend read skipped: $($_.Exception.Message)"
             }
-        } catch {
-            Write-Information "Baseline trend read skipped: $($_.Exception.Message)"
         }
         if ($Rows.Count -gt 0) {
             $Trend.Add([PSCustomObject]@{ date = $Today; aligned = $Fleet.alignedPercentage; verified = $Fleet.verifiedPercentage })
         }
         $Trend = @($Trend)
 
-        return [PSCustomObject]@{
+        $Result = [PSCustomObject]@{
             fleet            = [PSCustomObject]$Fleet
             standards        = @($Standards)
             tenants          = @($Tenants)
             trend            = $Trend
             activeDeviations = @($Rows | Where-Object { $_.status -in @('Accepted', 'Partially Accepted') -or $_.status -like 'Denied - *' })
         }
+        if ($FilterInfo) { $Result | Add-Member -NotePropertyName 'filter' -NotePropertyValue $FilterInfo }
+        return $Result
     }
 
     throw 'Specify -TenantFilter or -ByStandard.'
