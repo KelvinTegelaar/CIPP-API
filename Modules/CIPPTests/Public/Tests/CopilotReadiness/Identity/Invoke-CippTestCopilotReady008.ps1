@@ -24,15 +24,15 @@ function Invoke-CippTestCopilotReady008 {
 
         $ReadinessLookup = @{}
         if ($ReadinessData) {
-            foreach ($Entry in ($ReadinessData | Where-Object { $_.userPrincipalName })) {
+            foreach ($Entry in ($ReadinessData.Where({ $_.userPrincipalName }))) {
                 $ReadinessLookup[$Entry.userPrincipalName.ToLower()] = $Entry
             }
         }
 
-        $LicensedUsers = @($AllUsers | Where-Object {
+        $LicensedUsers = @($AllUsers.Where({
                 $_.userPrincipalName -and $_.accountEnabled -eq $true -and
-                ($_.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' })
-            })
+                $_.assignedPlans.Where({ $_.capabilityStatus -eq 'Enabled' }, 'First').Count
+            }))
 
         if ($LicensedUsers.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady008' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No licensed active users found in the tenant.' -Risk 'Informational' -Name 'Copilot candidate tier breakdown' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

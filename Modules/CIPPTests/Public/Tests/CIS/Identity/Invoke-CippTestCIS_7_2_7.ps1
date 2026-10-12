@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_7_2_7 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
 
         # The SPOTenant cache comes from the SharePoint CSOM endpoint, which returns
         # DefaultSharingLinkType as a numeric SharingLinkType (None=0, Direct=1, Internal=2,

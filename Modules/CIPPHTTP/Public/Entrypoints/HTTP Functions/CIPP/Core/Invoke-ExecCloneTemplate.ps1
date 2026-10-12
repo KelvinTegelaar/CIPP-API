@@ -15,6 +15,7 @@ function Invoke-ExecCloneTemplate {
 
     $GUID = $Request.Query.GUID ?? $Request.Body.GUID
     $Type = $Request.Query.Type ?? $Request.Body.Type
+    $StatusCode = [HttpStatusCode]::OK
 
     if ($GUID -and $Type) {
         $Table = Get-CIPPTable -tablename templates
@@ -52,6 +53,7 @@ function Invoke-ExecCloneTemplate {
                     }
                 }
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $ErrorMessage = Get-CIPPException -Exception $_
                 $Result = "Failed to clone template (Type=$Type, GUID=$GUID): $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
@@ -64,6 +66,7 @@ function Invoke-ExecCloneTemplate {
                 }
             }
         } else {
+            $StatusCode = [HttpStatusCode]::NotFound
             $body = @{
                 Results = @{
                     state      = 'error'
@@ -72,6 +75,7 @@ function Invoke-ExecCloneTemplate {
             }
         }
     } else {
+        $StatusCode = [HttpStatusCode]::BadRequest
         $body = @{
             Results = @{
                 state      = 'error'
@@ -80,7 +84,7 @@ function Invoke-ExecCloneTemplate {
         }
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 }

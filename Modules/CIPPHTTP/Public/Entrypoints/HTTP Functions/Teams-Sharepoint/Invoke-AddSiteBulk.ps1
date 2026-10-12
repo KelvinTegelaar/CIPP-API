@@ -12,6 +12,7 @@ Function Invoke-AddSiteBulk {
 
 
     $Results = [System.Collections.Generic.List[System.Object]]::new()
+    $Failed = 0
 
     foreach ($sharePointObj in $Request.Body.bulkSites) {
         try {
@@ -30,11 +31,12 @@ Function Invoke-AddSiteBulk {
             $SharePointSite = New-CIPPSharepointSite @SiteParams
             $Results.Add($SharePointSite)
         } catch {
+            $Failed++
             $Results.Add("Failed to create $($sharePointObj.siteName) Error message: $($_.Exception.Message)")
         }
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Request.Body.bulkSites).Count -Failed $Failed
             Body       = @{'Results' = $Results }
         })
 

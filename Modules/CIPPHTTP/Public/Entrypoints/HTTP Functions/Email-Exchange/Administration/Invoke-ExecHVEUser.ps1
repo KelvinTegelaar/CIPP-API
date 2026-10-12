@@ -17,14 +17,17 @@ function Invoke-ExecHVEUser {
     $Tenant = $HVEUserObject.TenantFilter
     $Action = $HVEUserObject.Action ?? 'Create'
 
+    if ($Action -in 'Edit', 'AssignBillingPolicy', 'RemoveBillingPolicy', 'Remove' -and [string]::IsNullOrWhiteSpace($HVEUserObject.Identity)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = @("Identity is required for $Action action") }
+            })
+    }
+
     try {
         switch ($Action) {
             'Edit' {
                 $Identity = $HVEUserObject.Identity
-                if ([string]::IsNullOrWhiteSpace($Identity)) {
-                    throw 'Identity is required for Edit action'
-                }
-
                 # Set-MailUser supports DisplayName and PrimarySmtpAddress for HVE accounts
                 $MailUserParams = @{
                     HVEAccount = $true
@@ -63,13 +66,12 @@ function Invoke-ExecHVEUser {
             }
             'AssignBillingPolicy' {
                 $Identity = $HVEUserObject.Identity
-                if ([string]::IsNullOrWhiteSpace($Identity)) {
-                    throw 'Identity is required for AssignBillingPolicy action'
-                }
-
                 $PolicyId = if ($HVEUserObject.BillingPolicyId.value) { $HVEUserObject.BillingPolicyId.value } else { $HVEUserObject.BillingPolicyId }
                 if ([string]::IsNullOrWhiteSpace($PolicyId)) {
-                    throw 'BillingPolicyId is required for AssignBillingPolicy action'
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{ Results = @('BillingPolicyId is required for AssignBillingPolicy action') }
+                        })
                 }
 
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-HVEAccountBillingPolicy' -cmdParams @{
@@ -81,10 +83,6 @@ function Invoke-ExecHVEUser {
             }
             'RemoveBillingPolicy' {
                 $Identity = $HVEUserObject.Identity
-                if ([string]::IsNullOrWhiteSpace($Identity)) {
-                    throw 'Identity is required for RemoveBillingPolicy action'
-                }
-
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-HVEAccountBillingPolicy' -cmdParams @{
                     Identity        = $Identity
                     BillingPolicyId = $null
@@ -94,10 +92,6 @@ function Invoke-ExecHVEUser {
             }
             'Remove' {
                 $Identity = $HVEUserObject.Identity
-                if ([string]::IsNullOrWhiteSpace($Identity)) {
-                    throw 'Identity is required for Remove action'
-                }
-
                 # Get the account details before deleting so we can remove from cache
                 $MailUser = $null
                 try {
@@ -209,7 +203,7 @@ function Invoke-ExecHVEUser {
         $Message = "Failed to $($Action.ToLower()) HVE user: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
         $Results.Add($Message)
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

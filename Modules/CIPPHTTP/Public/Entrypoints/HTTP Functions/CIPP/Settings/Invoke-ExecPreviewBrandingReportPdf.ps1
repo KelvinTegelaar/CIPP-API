@@ -15,7 +15,6 @@ function Invoke-ExecPreviewBrandingReportPdf {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $ReportNames = @{
         executive = 'Executive Summary'; reportBuilder = 'Quarterly Security Review'; shadowAI = 'Shadow AI Report'

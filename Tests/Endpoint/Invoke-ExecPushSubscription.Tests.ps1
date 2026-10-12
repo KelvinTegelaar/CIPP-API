@@ -73,7 +73,7 @@ Describe 'Invoke-ExecPushSubscription' {
 
     It 'refuses every action while impersonating' {
         $Response = Invoke-ExecPushSubscription -Request (New-Request -Impersonate 'readonly' -Body ([pscustomobject]@{ Action = 'Subscribe'; Subscription = $script:Subscription }))
-        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::BadRequest)
+        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::Forbidden)
         $Response.Body.Results | Should -Match 'impersonating'
         Should -Invoke Add-CIPPAzDataTableEntity -Times 0
     }
@@ -81,7 +81,7 @@ Describe 'Invoke-ExecPushSubscription' {
     It 'only removes a device that belongs to the caller' {
         Mock Get-CIPPAzDataTableEntity { $null }
         $Response = Invoke-ExecPushSubscription -Request (New-Request -Body ([pscustomobject]@{ Action = 'Unsubscribe'; RowKey = 'someone-elses' }))
-        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::BadRequest)
+        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::NotFound)
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Filter -eq "PartitionKey eq 'tech@msp.example' and RowKey eq 'someone-elses'" }
         Should -Invoke Remove-AzDataTableEntity -Times 0
 

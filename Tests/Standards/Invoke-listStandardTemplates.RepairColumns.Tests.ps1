@@ -24,6 +24,7 @@ BeforeAll {
     function Get-CIPPTemplateSourceUrl { param($Source, $SourcePath, $Repos) if ($Source) { "https://github.com/$Source" } }
 
     . $HashFunctionPath
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
     . $FunctionPath
 
     function New-Request {

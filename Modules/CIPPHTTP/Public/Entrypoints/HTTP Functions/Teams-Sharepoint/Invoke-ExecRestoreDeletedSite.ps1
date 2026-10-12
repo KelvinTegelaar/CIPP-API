@@ -16,8 +16,11 @@ function Invoke-ExecRestoreDeletedSite {
     $TenantFilter = $Request.Body.tenantFilter
     $SiteUrl = $Request.Body.SiteUrl ?? $Request.Body.Url
 
+    if (-not $SiteUrl) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
+
     try {
-        if (-not $SiteUrl) { throw 'SiteUrl is required.' }
         $Operation = Restore-CIPPSPODeletedSite -TenantFilter $TenantFilter -SiteUrl $SiteUrl
         $Results = if ($Operation -and -not $Operation.IsComplete) {
             "Restore of $SiteUrl has started. Large sites can take a while to finish restoring."
@@ -30,7 +33,7 @@ function Invoke-ExecRestoreDeletedSite {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to restore $($SiteUrl): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO153 {
             return
         }
 
-        $FailedPolicies = $SafeLinksPolicies | Where-Object { $_.TrackUserClicks -eq $true }
+        $FailedPolicies = $SafeLinksPolicies.Where({ $_.TrackUserClicks -eq $true })
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SafeLinksPolicies.Count) Safe Links policy/policies have click tracking disabled.")

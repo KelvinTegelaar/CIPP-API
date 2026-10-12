@@ -25,7 +25,7 @@ function Invoke-CippTestZTNA21984 {
             $Lines.Add('')
             $Lines.Add('| Recommendation | Impact | Last Action |')
             $Lines.Add('| :------------- | :----- | :---------- |')
-            foreach ($R in ($Active | Select-Object -First 25)) {
+            foreach ($R in $Active.Where({ $true }, 'First', 25)) {
                 $Lines.Add("| $($R.displayName) | $($R.impactType ?? '-') | $($R.lastModifiedDateTime ?? '-') |")
             }
             if ($Active.Count -gt 25) {

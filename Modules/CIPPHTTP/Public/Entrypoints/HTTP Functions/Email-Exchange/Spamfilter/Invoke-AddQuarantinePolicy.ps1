@@ -19,6 +19,7 @@ Function Invoke-AddQuarantinePolicy {
         $tenants = (Get-Tenants).defaultDomainName
     }
 
+    $Failed = 0
     $Result = foreach ($TenantFilter in $tenants) {
         try {
             $ReleaseActionPreference = $Request.Body.ReleaseActionPreference.value ?? $Request.Body.ReleaseActionPreference
@@ -49,6 +50,7 @@ Function Invoke-AddQuarantinePolicy {
 
         }
         catch {
+            $Failed++
             $ErrorMessage = Get-CippException -Exception $_
             $Message = "Failed to create Quarantine policy '$($Request.Body.Name)' for tenant '$($TenantFilter)' - $($ErrorMessage.NormalizedError)"
             Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev Error -LogData $ErrorMessage
@@ -57,7 +59,7 @@ Function Invoke-AddQuarantinePolicy {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($tenants).Count -Failed $Failed
             Body       = @{Results = @($Result) }
         })
 

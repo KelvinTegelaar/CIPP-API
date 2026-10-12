@@ -16,9 +16,9 @@ function Invoke-CippTestZTNA24839 {
             return
         }
 
-        $iOSWifiConfProfiles = @($DeviceConfigs | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.iosWiFiConfiguration' })
-        $CompliantIosWifiConfProfiles = @($iOSWifiConfProfiles | Where-Object { $_.wiFiSecurityType -in @('wpa2Enterprise', 'wpaEnterprise') })
-        $AssignedCompliantProfiles = @($CompliantIosWifiConfProfiles | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $iOSWifiConfProfiles = @($DeviceConfigs.Where({ $_.'@odata.type' -eq '#microsoft.graph.iosWiFiConfiguration' }))
+        $CompliantIosWifiConfProfiles = @($iOSWifiConfProfiles.Where({ $_.wiFiSecurityType -in @('wpa2Enterprise', 'wpaEnterprise') }))
+        $AssignedCompliantProfiles = @($CompliantIosWifiConfProfiles.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedCompliantProfiles.Count -gt 0
 
         if ($Passed) {

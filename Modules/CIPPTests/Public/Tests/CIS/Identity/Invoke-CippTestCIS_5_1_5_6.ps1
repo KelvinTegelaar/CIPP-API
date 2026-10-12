@@ -11,9 +11,9 @@ function Invoke-CippTestCIS_5_1_5_6 {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_5_6' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'DefaultAppManagementPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Maximum certificate lifetime for applications does not exceed 180 days' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
             return
         }
-        $Cfg = $Policy | Select-Object -First 1
+        $Cfg = @($Policy)[0]
 
-        $Restriction = $Cfg.applicationRestrictions.keyCredentials | Where-Object { $_.restrictionType -eq 'asymmetricKeyLifetime' } | Select-Object -First 1
+        $Restriction = $Cfg.applicationRestrictions.keyCredentials.Where({ $_.restrictionType -eq 'asymmetricKeyLifetime' }, 'First')[0]
 
         if (-not $Cfg.isEnabled) {
             $Status = 'Failed'

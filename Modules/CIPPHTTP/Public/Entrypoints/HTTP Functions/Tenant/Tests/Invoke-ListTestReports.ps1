@@ -13,12 +13,14 @@ function Invoke-ListTestReports {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
         # Get reports from JSON files in test folders
         $ReportsRootPath = Join-Path $env:CIPPRootPath 'Modules\CIPPTests\Public\Tests'
+        $Total = 0
+        $Failed = 0
         $FileReports = [System.IO.Directory]::EnumerateFiles($ReportsRootPath, 'report.json', [System.IO.SearchOption]::AllDirectories) | ForEach-Object {
+            $Total++
             try {
                 $ReportContent = [System.IO.File]::ReadAllText($_) | ConvertFrom-Json
                 $FolderName = [System.IO.Path]::GetFileName([System.IO.Path]::GetDirectoryName($_))
@@ -31,6 +33,7 @@ function Invoke-ListTestReports {
                     type        = $FolderName
                 }
             } catch {
+                $Failed++
                 $CurrentFolder = [System.IO.Path]::GetFileName([System.IO.Path]::GetDirectoryName($_))
                 Write-LogMessage -API $APIName -message "Error reading report.json from $CurrentFolder $($_.Exception.Message)" -sev Warning
             }
@@ -85,13 +88,13 @@ function Invoke-ListTestReports {
 
         $Reports = @($FileReports) + @($DatabaseReports)
 
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total ($Total + $DatabaseReports.Count) -Failed $Failed
         $Body = @($Reports)
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -message "Error retrieving test reports: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{ Error = $ErrorMessage.NormalizedError }
     }
 

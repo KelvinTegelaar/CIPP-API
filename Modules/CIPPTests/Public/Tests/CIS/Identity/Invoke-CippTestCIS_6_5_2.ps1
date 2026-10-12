@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_6_5_2 {
             return
         }
 
-        $Cfg = $Org | Select-Object -First 1
+        $Cfg = @($Org)[0]
 
         $Compliant = $Cfg.MailTipsAllTipsEnabled -eq $true -and
                      $Cfg.MailTipsExternalRecipientsTipsEnabled -eq $true -and

@@ -23,11 +23,11 @@ function Test-E8AsrRule {
             return
         }
 
-        $AsrPolicies = $ConfigPolicies | Where-Object {
+        $AsrPolicies = $ConfigPolicies.Where({
             $_.platforms -like '*windows10*' -and
             $_.technologies -like '*mdm*' -and
             ($_.settings.settingInstance.settingDefinitionId -contains 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules')
-        }
+        })
 
         if (-not $AsrPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Defender Attack Surface Reduction policy is configured for Windows 10/11.' -Risk $Risk -Name $Name -UserImpact $UserImpact -ImplementationEffort $ImplementationEffort -Category $Category
@@ -36,7 +36,7 @@ function Test-E8AsrRule {
 
         $Matching = foreach ($P in $AsrPolicies) {
             $children = $P.settings.settingInstance.groupSettingCollectionValue.children
-            $found = $children | Where-Object { $_.settingDefinitionId -eq $RuleSettingId }
+            $found = $children.Where({ $_.settingDefinitionId -eq $RuleSettingId })
             $value = $found.choiceSettingValue.value
             if ($value -like '*_block' -or $value -like '*_warn') {
                 [pscustomobject]@{ Policy = $P; Value = $value }
@@ -48,7 +48,7 @@ function Test-E8AsrRule {
             return
         }
 
-        $Assigned = $Matching | Where-Object { $_.Policy.assignments -and $_.Policy.assignments.Count -gt 0 }
+        $Assigned = $Matching.Where({ $_.Policy.assignments -and $_.Policy.assignments.Count -gt 0 })
 
         if ($Assigned) {
             $Status = 'Passed'

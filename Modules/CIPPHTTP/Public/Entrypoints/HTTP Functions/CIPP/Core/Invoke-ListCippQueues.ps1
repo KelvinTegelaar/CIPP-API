@@ -24,8 +24,6 @@ function Invoke-ListCippQueues {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
-
     $RawIds = $Request.Query.QueueIds ?? $Request.Body.QueueIds
     $QueueIds = @($RawIds -split ',' | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
 
@@ -41,7 +39,11 @@ function Invoke-ListCippQueues {
     foreach ($QueueId in $QueueIds) {
         try {
             $Queue = @(Get-CIPPQueueData -QueueId $QueueId) | Where-Object { $_ } | Select-Object -First 1
-            if ($Queue) { $Queues.Add($Queue) } else { $MissingQueueIds.Add($QueueId) }
+            if ($Queue) {
+                # Live updates arrive per queue id, so the client needs it to place them
+                $Queue.PSObject.Properties.Add([psnoteproperty]::new('QueueId', $QueueId))
+                $Queues.Add($Queue)
+            } else { $MissingQueueIds.Add($QueueId) }
         } catch {
             Write-Information "ListCippQueues: could not read queue $QueueId : $($_.Exception.Message)"
             $MissingQueueIds.Add($QueueId)

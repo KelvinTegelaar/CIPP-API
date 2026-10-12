@@ -88,8 +88,10 @@ function Get-CIPPIntuneDefinitionIndex {
         # A definition with no display name stringifies to '', which is falsy - the call sites
         # already treat that as "no label" and fall back to the setting id.
         $Index[$Id] = @{
-            displayName = "$($Definition.displayName)"
-            options     = $Options
+            displayName  = "$($Definition.displayName)"
+            options      = $Options
+            minimumCount = $Definition.minimumCount
+            maximumCount = $Definition.maximumCount
         }
     }
 

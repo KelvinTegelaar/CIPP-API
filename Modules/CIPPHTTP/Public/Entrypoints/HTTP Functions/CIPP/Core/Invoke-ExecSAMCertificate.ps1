@@ -14,9 +14,15 @@ function Invoke-ExecSAMCertificate {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    try {
-        $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'Get'
+    $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'Get'
+    if ($Action -notin @('Get', 'Renew')) {
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = @{ Results = "Failed to process SAM certificate request: Invalid action: $Action. Valid actions are 'Get' or 'Renew'" }
+        }
+    }
 
+    try {
         switch ($Action) {
             'Get' {
                 $Stored = Get-CIPPSAMCertificate -SkipCache -ErrorAction SilentlyContinue
@@ -56,13 +62,10 @@ function Invoke-ExecSAMCertificate {
                 }
                 $StatusCode = [HttpStatusCode]::OK
             }
-            default {
-                throw "Invalid action: $Action. Valid actions are 'Get' or 'Renew'"
-            }
         }
     } catch {
         Write-LogMessage -API 'ExecSAMCertificate' -message "Failed to process SAM certificate request: $($_.Exception.Message)" -sev 'Error' -LogData (Get-CippException -Exception $_)
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{
             Results = "Failed to process SAM certificate request: $($_.Exception.Message)"
         }

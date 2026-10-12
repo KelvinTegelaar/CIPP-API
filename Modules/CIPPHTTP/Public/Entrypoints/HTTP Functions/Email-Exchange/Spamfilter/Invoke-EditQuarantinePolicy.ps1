@@ -64,7 +64,7 @@ Function Invoke-EditQuarantinePolicy {
     }
     catch {
         $Result = "Failed to update Quarantine policy '$($Request.Body.Name)' - $($_)"
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
     }
 

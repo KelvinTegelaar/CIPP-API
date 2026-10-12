@@ -20,12 +20,14 @@ Function Invoke-ExecMailboxMobileDevices {
     Try {
         $MobileResults = Set-CIPPMobileDevice -UserId $UserId -Guid $Guid -DeviceId $DeviceId -Quarantine $Quarantine -tenantFilter $TenantFilter -APIName $APINAME -Delete $Delete -Headers $Request.Headers
         $Results = [pscustomobject]@{'Results' = $MobileResults }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed  $($UserId): $($_.Exception.Message)" }
+        $Results = [pscustomobject]@{'Results' = $_.Exception.Message }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

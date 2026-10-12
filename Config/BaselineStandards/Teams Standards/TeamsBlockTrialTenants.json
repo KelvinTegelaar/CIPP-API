@@ -1,0 +1,65 @@
+{
+  "name": "TeamsBlockTrialTenants",
+  "label": "Block communication with trial-only Teams tenants",
+  "cat": "Teams Standards",
+  "tag": [
+    "CIS M365 7.0.0 (8.2.4)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Controls whether users can chat, call and meet with accounts in Teams tenants that have no purchased seats (trial-only tenants). Microsoft blocks this by default since July 2024 because threat actors abuse trial tenants; this standard keeps it blocked. When blocked, users from trial-only tenants are removed from existing chats.",
+  "executiveText": "Stops attackers who spin up free trial Teams tenants from reaching employees through chats, calls and meetings, closing an entry point used for phishing and malware delivery.",
+  "docsDescription": "Sets ExternalAccessWithTrialTenants on the tenant federation configuration (Teams admin center > External access > Organization settings > 'People in my organization can communicate with accounts in trial Teams tenant').",
+  "impactColour": "info",
+  "addedDate": "2026-10-10",
+  "powershellEquivalent": "Set-CsTenantFederationConfiguration -ExternalAccessWithTrialTenants Blocked",
+  "appliesToTest": [
+    "CIS_8_2_4"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "label": "Communication with trial-only Teams tenants",
+      "default": "Blocked",
+      "recommended": "Blocked",
+      "options": [
+        {
+          "label": "Blocked",
+          "value": "Blocked"
+        },
+        {
+          "label": "Allowed",
+          "value": "Allowed"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "ExternalAccessWithTrialTenants": "%state%"
+  },
+  "read": {
+    "cacheType": "CsTenantFederationConfiguration"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTenantFederationConfiguration",
+        "params": {
+          "ExternalAccessWithTrialTenants": "%state%"
+        }
+      }
+    ]
+  }
+}

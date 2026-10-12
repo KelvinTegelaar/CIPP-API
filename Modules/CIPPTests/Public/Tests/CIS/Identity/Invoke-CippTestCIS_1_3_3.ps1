@@ -13,10 +13,10 @@ function Invoke-CippTestCIS_1_3_3 {
             return
         }
 
-        $DefaultPolicy = $SharingPolicies | Where-Object { $_.Default -eq $true } | Select-Object -First 1
-        if (-not $DefaultPolicy) { $DefaultPolicy = $SharingPolicies | Select-Object -First 1 }
+        $DefaultPolicy = $SharingPolicies.Where({ $_.Default -eq $true }, 'First')[0]
+        if (-not $DefaultPolicy) { $DefaultPolicy = @($SharingPolicies)[0] }
 
-        $CalendarSharing = $DefaultPolicy.Domains | Where-Object { $_ -match 'CalendarSharing' }
+        $CalendarSharing = $DefaultPolicy.Domains.Where({ $_ -match 'CalendarSharing' })
 
         if (-not $CalendarSharing -or $DefaultPolicy.Enabled -eq $false) {
             $Status = 'Passed'

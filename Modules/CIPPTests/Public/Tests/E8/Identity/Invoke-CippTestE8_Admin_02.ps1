@@ -32,14 +32,14 @@ function Invoke-CippTestE8_Admin_02 {
                 [void]$PrivUserIds.Add([string]$A.principalId)
             }
         }
-        $PrivUsers = $Users | Where-Object { $PrivUserIds.Contains($_.id) }
+        $PrivUsers = $Users.Where({ $PrivUserIds.Contains($_.id) })
 
         if (-not $PrivUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No privileged users found.' -Risk 'Medium' -Name $Name -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'E8 ML1 - Restrict Admin Privileges'
             return
         }
 
-        $Licensed = $PrivUsers | Where-Object { $_.assignedLicenses -and $_.assignedLicenses.Count -gt 0 }
+        $Licensed = $PrivUsers.Where({ $_.assignedLicenses -and $_.assignedLicenses.Count -gt 0 })
 
         if (-not $Licensed) {
             $Status = 'Passed'
@@ -47,7 +47,7 @@ function Invoke-CippTestE8_Admin_02 {
         } else {
             $Status = 'Failed'
             $Sb = [System.Text.StringBuilder]::new("$($Licensed.Count) of $($PrivUsers.Count) privileged user(s) have productivity licenses assigned. ACSC ISM-1175 requires admins not to use mail/Teams/internet on the privileged account.`n`n| UPN | License count |`n| :-- | :-----------: |`n")
-            foreach ($U in ($Licensed | Select-Object -First 50)) {
+            foreach ($U in $Licensed.Where({ $true }, 'First', 50)) {
                 $null = $Sb.Append("| $($U.userPrincipalName) | $($U.assignedLicenses.Count) |`n")
             }
             $Result = $Sb.ToString()

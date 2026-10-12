@@ -10,7 +10,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 
-    function Get-CIPPSPOTenant { param($TenantFilter, [switch]$SkipCache) }
+    function Get-CIPPSPOTenant { param($TenantFilter, [switch]$SkipCache, [switch]$UseCertificate) }
     function Add-CIPPDbItem { param($TenantFilter, $Type, $Data, [switch]$AddCount) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
 
@@ -67,6 +67,7 @@ Describe 'Set-CIPPDBCacheSPOTenant' {
         { Set-CIPPDBCacheSPOTenant -TenantFilter $script:Tenant } | Should -Not -Throw
         Should -Invoke Add-CIPPDbItem -Times 1 -ParameterFilter { $Type -eq 'SPOTenant' }
         Should -Invoke Write-LogMessage -Times 0 -ParameterFilter { $sev -eq 'Error' }
+        Should -Invoke Get-CIPPSPOTenant -Times 1 -ParameterFilter { $UseCertificate }
     }
 }
 
@@ -122,5 +123,6 @@ Describe 'Set-CIPPDBCacheSPOTenantSyncClientRestriction' {
             $Data[0].ConditionalAccessPolicy -eq 'AllowLimitedAccess' -and
             $Data[0].TenantFilter -eq 'contoso.onmicrosoft.com'
         }
+        Should -Invoke Get-CIPPSPOTenant -Times 1 -ParameterFilter { $UseCertificate }
     }
 }

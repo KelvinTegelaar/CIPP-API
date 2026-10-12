@@ -215,7 +215,7 @@ function Invoke-ListSiteBrowser {
 
             $SiteMeta = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/sites/$SiteSegment`?`$select=id,webUrl,displayName,isPersonalSite" -tenantid $TenantFilter -asapp $true
             if ($SiteMeta.isPersonalSite -eq $true) {
-                throw 'OneDrive sites are not supported in the SharePoint site browser.'
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'OneDrive sites are not supported in the SharePoint site browser.' } })
             }
             if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
                 $SiteUrl = $SiteMeta.webUrl
@@ -283,7 +283,7 @@ function Invoke-ListSiteBrowser {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to list SharePoint browser items: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $StorageStatus = $null
     }
 

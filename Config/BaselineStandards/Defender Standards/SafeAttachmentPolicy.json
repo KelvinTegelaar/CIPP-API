@@ -102,10 +102,11 @@
       "omitWhenBlank": true,
       "default": "",
       "condition": {
-        "field": "standards.SafeAttachmentPolicy.Redirect",
+        "field": "Redirect",
         "compareType": "is",
         "compareValue": true
-      }
+      },
+      "clearOnHide": true
     }
   },
   "read": {

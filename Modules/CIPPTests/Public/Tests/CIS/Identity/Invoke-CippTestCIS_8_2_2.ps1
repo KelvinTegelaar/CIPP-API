@@ -14,8 +14,8 @@ function Invoke-CippTestCIS_8_2_2 {
             return
         }
 
-        $E = $External | Select-Object -First 1
-        $F = $Federation | Select-Object -First 1
+        $E = @($External)[0]
+        $F = @($Federation)[0]
 
         if ($E.EnableTeamsConsumerAccess -eq $false -or $F.AllowTeamsConsumer -eq $false) {
             $Status = 'Passed'

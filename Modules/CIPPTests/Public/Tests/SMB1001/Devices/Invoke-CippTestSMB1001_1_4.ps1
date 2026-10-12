@@ -21,14 +21,14 @@ function Invoke-CippTestSMB1001_1_4 {
             return
         }
 
-        $UpdatePolicies = @($DeviceConfigs | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windowsUpdateForBusinessConfiguration' })
+        $UpdatePolicies = @($DeviceConfigs.Where({ $_.'@odata.type' -eq '#microsoft.graph.windowsUpdateForBusinessConfiguration' }))
 
         if ($UpdatePolicies.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Windows Update for Business configuration profiles found in Intune.' -Risk 'High' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $Assigned = @($UpdatePolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $Assigned = @($UpdatePolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
 
         if ($Assigned.Count -gt 0) {
             $Status = 'Passed'

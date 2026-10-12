@@ -33,7 +33,7 @@ function Invoke-CippTestE8_Admin_11 {
         } else {
             $Status = 'Failed'
             $Sb = [System.Text.StringBuilder]::new("$($Bad.Count) of $($Schedules.Count) PIM eligibility schedule(s) do not expire within 12 months:`n`n| Principal | Role | Reason |`n| :-------- | :--- | :----- |`n")
-            foreach ($B in ($Bad | Select-Object -First 50)) { $null = $Sb.Append("| $($B.Principal) | $($B.RoleId) | $($B.Reason) |`n") }
+            foreach ($B in $Bad.Where({ $true }, 'First', 50)) { $null = $Sb.Append("| $($B.Principal) | $($B.RoleId) | $($B.Reason) |`n") }
             $Result = $Sb.ToString()
         }
 

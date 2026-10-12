@@ -10,7 +10,6 @@ function Invoke-ExecGDAPRepairRoleMappings {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Results = [System.Collections.Generic.List[object]]::new()
 
@@ -73,14 +72,16 @@ function Invoke-ExecGDAPRepairRoleMappings {
         $null = Test-CIPPGDAPRelationships -Headers $Headers
 
         Write-LogMessage -headers $Headers -API $APIName -message 'Repaired GDAP role mappings' -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results.Add(@{ resultText = "Failed to repair GDAP role mappings: $($ErrorMessage.NormalizedError)"; state = 'error' })
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to repair GDAP role mappings: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{ Results = @($Results) }
         })
 }

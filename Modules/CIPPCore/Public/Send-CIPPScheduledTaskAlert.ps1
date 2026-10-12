@@ -274,6 +274,10 @@ function Send-CIPPScheduledTaskAlert {
                 # below carries them, so a split task's per-user notes land on the same ticket.
                 $PsaReference = $TaskInfo.Reference
                 $PsaTicketId = $TaskInfo.PsaTicketId
+                # Consolidate on the task's identity rather than the visible title, so rewording
+                # the title does not open a second ticket for the same task.
+                $PsaTaskKey = if ($TaskInfo.RowKey) { $TaskInfo.RowKey } else { $TaskInfo.Name }
+                $PsaConsolidationKey = if ($PsaTaskKey) { "$TenantFilter|$PsaTaskKey" } else { $null }
                 try {
                     $ExtConfigTable = Get-CIPPTable -TableName Extensionsconfig
                     $ExtConfig = (Get-CIPPAzDataTableEntity @ExtConfigTable).config | ConvertFrom-Json -ErrorAction SilentlyContinue
@@ -361,7 +365,7 @@ function Send-CIPPScheduledTaskAlert {
                                     if ([string]::IsNullOrWhiteSpace($GroupKey)) {
                                         # Rows without a usable user identifier - fall back to the
                                         # task-level affected user if one was resolved.
-                                        $GroupParams = @{ Type = 'psa'; Title = $title; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId }
+                                        $GroupParams = @{ Type = 'psa'; Title = $title; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId; PSAConsolidationKey = $PsaConsolidationKey }
                                         if ($TaskAffectedUser) { $GroupParams.AffectedUser = $TaskAffectedUser }
                                         if ($TaskPsaPriority) { $GroupParams.PsaTicketPriority = $TaskPsaPriority }
                                         $Outcomes.Add([pscustomobject]@{ Channel = 'PSA'; Result = [string]((Send-CIPPAlert @GroupParams) -join ' ') })
@@ -373,7 +377,7 @@ function Send-CIPPScheduledTaskAlert {
                                             UPN         = $GroupKey
                                             DisplayName = $GroupDisplayName
                                         }
-                                        $UserParams = @{ Type = 'psa'; Title = $UserTitle; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter; AffectedUser = $AffectedUser; PSAReference = $PsaReference; PSATicketId = $PsaTicketId }
+                                        $UserParams = @{ Type = 'psa'; Title = $UserTitle; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter; AffectedUser = $AffectedUser; PSAReference = $PsaReference; PSATicketId = $PsaTicketId; PSAConsolidationKey = $(if ($PsaConsolidationKey) { "$PsaConsolidationKey|$GroupKey" }) }
                                         if ($TaskPsaPriority) { $UserParams.PsaTicketPriority = $TaskPsaPriority }
                                         $Outcomes.Add([pscustomobject]@{ Channel = 'PSA'; Result = [string]((Send-CIPPAlert @UserParams) -join ' ') })
                                     }
@@ -387,7 +391,7 @@ function Send-CIPPScheduledTaskAlert {
                 }
 
                 if (-not $PsaSplitSent) {
-                    $PsaParams = @{ Type = 'psa'; Title = $title; HTMLContent = (ConvertTo-PSAHtml -Html $HTML); TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId }
+                    $PsaParams = @{ Type = 'psa'; Title = $title; HTMLContent = (ConvertTo-PSAHtml -Html $HTML); TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId; PSAConsolidationKey = $PsaConsolidationKey }
                     if ($TaskAffectedUser) { $PsaParams.AffectedUser = $TaskAffectedUser }
                     if ($TaskPsaPriority) { $PsaParams.PsaTicketPriority = $TaskPsaPriority }
                     $Outcomes.Add([pscustomobject]@{ Channel = 'PSA'; Result = [string]((Send-CIPPAlert @PsaParams) -join ' ') })

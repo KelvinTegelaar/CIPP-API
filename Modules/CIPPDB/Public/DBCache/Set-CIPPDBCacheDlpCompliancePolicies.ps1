@@ -36,7 +36,7 @@ function Set-CIPPDBCacheDlpCompliancePolicies {
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching DLP compliance policies' -sev Debug
 
-        $Tenant = Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1
+        $Tenant = @(Get-Tenants -TenantFilter $TenantFilter)[0]
         # Full objects (no -Select): the template compare needs every field in the
         # Get-CIPPDlpComplianceFieldList Policy allowlist (Comment, Mode, all *Location* fields, ...).
         $Policies = New-ExoRequest -TenantId $Tenant.customerId -cmdlet 'Get-DlpCompliancePolicy' -Compliance | Select-Object * -ExcludeProperty '*odata*', '*data.type*'

@@ -125,7 +125,10 @@ function Invoke-ListDBCache {
         } else {
             $Tenant = (Get-Tenants -TenantFilter $TenantFilter).defaultDomainName
             if (-not $Tenant) {
-                throw "Tenant '$TenantFilter' not found"
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::NotFound
+                        Body       = @{ Results = "Tenant '$TenantFilter' not found" }
+                    })
             }
         }
 
@@ -146,7 +149,10 @@ function Invoke-ListDBCache {
 
             # A single-tenant request would otherwise be unguarded now that AnyTenant is set.
             if (-not $IsAllTenants -and -not $AllowedDomains.Contains([string]$Tenant)) {
-                throw 'Access to this tenant is not allowed'
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::Forbidden
+                        Body       = @{ Results = 'Access to this tenant is not allowed' }
+                    })
             }
         }
 
@@ -274,7 +280,7 @@ function Invoke-ListDBCache {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to list DB cache: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
+                StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = @{ Results = $ErrorMessage.NormalizedError }
             })
     }

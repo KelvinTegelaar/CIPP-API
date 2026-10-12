@@ -25,9 +25,9 @@ function Invoke-CippTestZTNA21784 {
         )
 
         # Find authentication strength policies with phishing-resistant methods
-        $PhishingResistantPolicies = $AuthStrengthPolicies | Where-Object {
-            $_.allowedCombinations | Where-Object { $PhishingResistantMethods -contains $_ }
-        }
+        $PhishingResistantPolicies = $AuthStrengthPolicies.Where({
+            $_.allowedCombinations.Where({ $PhishingResistantMethods -contains $_ })
+        })
 
         if (-not $PhishingResistantPolicies) {
             $Status = 'Failed'
@@ -36,22 +36,22 @@ function Invoke-CippTestZTNA21784 {
             return
         }
 
-        $EnabledPolicies = $CAPolicies | Where-Object { $_.state -eq 'enabled' }
+        $EnabledPolicies = $CAPolicies.Where({ $_.state -eq 'enabled' })
 
         # Find policies that apply to all users with phishing-resistant auth strength
-        $RelevantPolicies = $EnabledPolicies | Where-Object {
+        $RelevantPolicies = $EnabledPolicies.Where({
             ($_.conditions.users.includeUsers -contains 'All') -and
             ($_.grantControls.authenticationStrength.id -in $PhishingResistantPolicies.id)
-        }
+        })
 
         if (-not $RelevantPolicies) {
             $Status = 'Failed'
             $Result = 'No Conditional Access policies found requiring phishing-resistant authentication for all users'
         } else {
             # Check for user exclusions that create coverage gaps
-            $PoliciesWithExclusions = $RelevantPolicies | Where-Object {
+            $PoliciesWithExclusions = $RelevantPolicies.Where({
                 $_.conditions.users.excludeUsers.Count -gt 0
-            }
+            })
 
             if ($PoliciesWithExclusions.Count -gt 0) {
                 $Status = 'Failed'

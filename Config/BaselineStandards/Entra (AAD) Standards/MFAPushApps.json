@@ -1,0 +1,37 @@
+{
+  "name": "MFAPushApps",
+  "label": "Azure MFA push notification apps",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables or disables the Azure Multi-Factor Auth Client and Azure Multi-Factor Auth Connector service principals. CIPP's Send MFA Push and MFA OTP verification need both apps enabled.",
+  "executiveText": "Keeps the Microsoft apps behind MFA push verification in a known state, so help desk identity checks work when they are needed.",
+  "docsDescription": "Grades two facts from the ServicePrincipals cache: the Azure Multi-Factor Auth Client (appId 981f26a1-7f43-403b-a875-f8b09b8cd720) and Azure Multi-Factor Auth Connector (appId 1f5530b3-261a-47a9-b357-ded261e17918) service principals match the configured state; a missing principal grades enabled, the platform default. Remediation PATCHes the appId-addressed upsert endpoint for each with Prefer: create-if-missing.",
+  "impactColour": "info",
+  "addedDate": "2026-10-06",
+  "powershellEquivalent": "Update-MgServicePrincipal",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "Enabled": {
+      "label": "Enable the Azure MFA push notification apps",
+      "type": "switch",
+      "default": true
+    }
+  },
+  "read": {
+    "cacheType": "ServicePrincipals"
+  },
+  "prepare": "Get-CIPPBaselineMFAPushAppsState",
+  "remediate": {
+    "executor": "MFAPushApps",
+    "enabled": "%Enabled%"
+  }
+}

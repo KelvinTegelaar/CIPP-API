@@ -16,13 +16,13 @@ function Invoke-CippTestCIS_5_2_2_10 {
         # User Action GUID for "Register security information"
         $RegSecInfo = 'cb1d5f30-e5dc-4d70-b3f1-5ab8e3c9d3c0'
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.applications.includeUserActions -contains 'urn:user:registersecurityinfo' -and
             ($_.grantControls.builtInControls -contains 'compliantDevice' -or
              $_.grantControls.builtInControls -contains 'domainJoinedDevice' -or
              ($_.conditions.locations -and $_.conditions.locations.includeLocations))
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

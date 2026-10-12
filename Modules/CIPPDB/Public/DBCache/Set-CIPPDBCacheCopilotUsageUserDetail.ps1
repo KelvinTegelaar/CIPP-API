@@ -24,7 +24,7 @@ function Set-CIPPDBCacheCopilotUsageUserDetail {
         # Add-CIPPDbItem call - the empty one wrote the -Data @() marker - and a pipeline that
         # yields nothing still runs the writer's end block, so that marker is still written.
         $CachedRecords = 0
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMicrosoft365CopilotUsageUserDetail(period='D30')" -tenantid $TenantFilter -AsApp $true -Stream |
+        Get-CIPPCopilotReport -UriTemplate "https://graph.microsoft.com/beta/reports/getMicrosoft365CopilotUsageUserDetail(period='{0}')" -TenantFilter $TenantFilter -AsApp $true -Stream |
             ForEach-Object { $CachedRecords++; $_ } |
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUsageUserDetail' -AddCount
 

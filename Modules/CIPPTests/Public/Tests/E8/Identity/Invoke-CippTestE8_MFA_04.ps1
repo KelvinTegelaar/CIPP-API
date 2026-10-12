@@ -20,7 +20,7 @@ function Invoke-CippTestE8_MFA_04 {
         $Configs = $AuthMethodsPolicy.authenticationMethodConfigurations
         $Enabled = [System.Collections.Generic.List[string]]::new()
         foreach ($Id in 'Fido2','X509Certificate') {
-            $C = $Configs | Where-Object { $_.id -eq $Id }
+            $C = $Configs.Where({ $_.id -eq $Id })
             if ($C -and $C.state -eq 'enabled') { $Enabled.Add($Id) }
         }
 

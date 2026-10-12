@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_4_6 {
             return
         }
 
-        $Cfg = $Auth | Select-Object -First 1
+        $Cfg = @($Auth)[0]
 
         if ($Cfg.defaultUserRolePermissions.allowedToReadBitLockerKeysForOwnedDevice -eq $false) {
             $Status = 'Passed'

@@ -20,6 +20,7 @@ function Invoke-AddOfficeApp {
     $GroupIds = @($Request.Body.GroupIds | Where-Object { $_ })
     $ExcludeGroupIds = @($Request.Body.ExcludeGroupIds | Where-Object { $_ })
 
+    $Failed = 0
     $Results = foreach ($Tenant in $Tenants) {
         try {
             # Office is a singleton per tenant, so match on the type rather than on a display name
@@ -54,6 +55,7 @@ function Invoke-AddOfficeApp {
             }
             "Successfully added Office App for $($Tenant)"
         } catch {
+            $Failed++
             $ErrorMessage = Get-CippException -Exception $_
             "Failed to add Office App for $($Tenant): $($ErrorMessage.NormalizedError)"
             Write-LogMessage -headers $Headers -API $APIName -tenant $($Tenant) -message "Failed to add Office App. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -Logdata $ErrorMessage
@@ -63,7 +65,7 @@ function Invoke-AddOfficeApp {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = @{'Results' = $Results }
         })
 }

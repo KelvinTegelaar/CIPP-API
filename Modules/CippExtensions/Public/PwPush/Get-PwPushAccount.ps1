@@ -1,4 +1,13 @@
 function Get-PwPushAccount {
+    <#
+    .SYNOPSIS
+        Lists PWPush accounts for the extension's account picker.
+    .DESCRIPTION
+        Returns name/id rows from the configured server, or a single placeholder row when the
+        integration is not configured or the list cannot be retrieved.
+    .FUNCTIONALITY
+        Internal
+    #>
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $ParsedConfig = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ErrorAction SilentlyContinue
     $Configuration = $ParsedConfig.PWPush
@@ -7,10 +16,10 @@ function Get-PwPushAccount {
         # Anything else fails or returns nothing - surface that as a placeholder row instead of
         # letting the error escape (500) or returning null, which the frontend cannot render.
         try {
-            Set-PwPushConfig -Configuration $Configuration -FullConfiguration $ParsedConfig
-            $Accounts = @(Get-PushAccount -ErrorAction Stop | Where-Object { $null -ne $_ })
+            $Connection = New-PwPushConnection -Configuration $Configuration -FullConfiguration $ParsedConfig
+            $Accounts = @(Get-CIPPPwPushWorkspace -Connection $Connection)
         } catch {
-            Write-Information "Failed to retrieve PWPush accounts: $($_.Exception.Message)"
+            Write-LogMessage -API PwPush -Message "Failed to retrieve PWPush accounts: $($_.Exception.Message)" -Sev 'Warning' -LogData (Get-CippException -Exception $_)
             $Accounts = @()
         }
         if ($Accounts.Count -eq 0) {

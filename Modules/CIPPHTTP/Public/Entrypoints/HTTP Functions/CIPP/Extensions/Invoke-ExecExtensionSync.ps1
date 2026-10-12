@@ -7,6 +7,7 @@ Function Invoke-ExecExtensionSync {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $StatusCode = [HttpStatusCode]::OK
     switch ($Request.Query.Extension) {
         'Gradient' {
             try {
@@ -26,6 +27,7 @@ Function Invoke-ExecExtensionSync {
                     }
                 }
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = [pscustomobject]@{'Results' = "Could not start Gradient Sync: $($_.Exception.Message)" }
 
                 Write-LogMessage -API 'Scheduler_Billing' -tenant 'none' -message "Could not start billing processing $($_.Exception.Message)" -sev Error
@@ -45,6 +47,7 @@ Function Invoke-ExecExtensionSync {
                     if (($Tenant | Measure-Object).count -eq 1) {
                         $Batch = [PSCustomObject]@{
                             'NinjaAction'  = 'SyncTenant'
+                            'TenantFilter' = $Request.Query.TenantFilter ?? $Tenant.RowKey
                             'MappedTenant' = $Tenant
                             'FunctionName' = 'NinjaOneQueue'
                         }
@@ -60,12 +63,14 @@ Function Invoke-ExecExtensionSync {
 
                         $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.IntegrationName)" }
                     } else {
+                        $StatusCode = [HttpStatusCode]::NotFound
                         $Results = [pscustomobject]@{'Results' = 'Tenant was not found.' }
                     }
 
                 } else {
                     $Batch = [PSCustomObject]@{
                         'NinjaAction'  = 'SyncTenants'
+                        'QueueName'    = 'AllTenants'
                         'FunctionName' = 'NinjaOneQueue'
                     }
                     $InputObject = [PSCustomObject]@{
@@ -79,6 +84,7 @@ Function Invoke-ExecExtensionSync {
 
                 }
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = [pscustomobject]@{'Results' = "Could not start NinjaOne Sync: $($_.Exception.Message)" }
                 Write-LogMessage -API 'Scheduler_Billing' -tenant 'none' -message "Could not start NinjaOne Sync $($_.Exception.Message)" -sev Error
             }
@@ -100,6 +106,7 @@ Function Invoke-ExecExtensionSync {
                         Write-LogMessage -API 'HuduSync' -tenant $Tenant.defaultDomainName -message "On-demand Hudu Synchronization queued for $($Mapping.IntegrationName)" -Sev 'Info' -Headers $Request.Headers
                         $Results = [pscustomobject]@{'Results' = "Hudu Synchronization Queued for $($Mapping.IntegrationName)" }
                     } else {
+                        $StatusCode = [HttpStatusCode]::NotFound
                         $Results = [pscustomobject]@{'Results' = 'Tenant was not found.' }
                     }
                 } else {
@@ -107,6 +114,7 @@ Function Invoke-ExecExtensionSync {
                     $Results = [pscustomobject]@{'Results' = 'Extension sync tasks have been rescheduled and will start within 15 minutes' }
                 }
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = [pscustomobject]@{'Results' = "Could not start Hudu Sync: $($_.Exception.Message)" }
                 Write-LogMessage -API 'HuduSync' -tenant 'none' -message "Could not start Hudu Sync $($_.Exception.Message)" -sev Error
             }
@@ -116,7 +124,7 @@ Function Invoke-ExecExtensionSync {
 
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

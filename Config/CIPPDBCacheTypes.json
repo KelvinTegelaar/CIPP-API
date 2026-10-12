@@ -55,11 +55,6 @@
     "description": "Authentication methods policy configuration"
   },
   {
-    "type": "DeviceSettings",
-    "friendlyName": "Device Settings",
-    "description": "Device management settings"
-  },
-  {
     "type": "DirectoryRecommendations",
     "friendlyName": "Directory Recommendations",
     "description": "Azure AD directory recommendations"
@@ -701,6 +696,12 @@
     "description": "Microsoft Purview sensitivity labels from the Security & Compliance endpoint"
   },
   {
+    "type": "ExoLabelPolicies",
+    "collectedBy": "ExoLabels",
+    "friendlyName": "Compliance Sensitivity Label Policies",
+    "description": "Microsoft Purview sensitivity label policies from the Security & Compliance endpoint"
+  },
+  {
     "type": "DlpComplianceRules",
     "collectedBy": "DlpCompliancePolicies",
     "friendlyName": "DLP Compliance Rules",
@@ -731,6 +732,11 @@
     "type": "GroupUsage",
     "friendlyName": "Group Usage Sources",
     "description": "Refreshes every cache type that feeds the group usage report (groups, Conditional Access, Intune, roles, app assignments, licenses, transport rules); writes no rows of its own"
+  },
+  {
+    "type": "NetworkAccess",
+    "friendlyName": "Global Secure Access",
+    "description": "Global Secure Access onboarding status, traffic forwarding profiles with their policy groups and assignment, and Conditional Access signaling"
   },
   {
     "type": "RolesAndAssignments",

@@ -13,6 +13,7 @@ BeforeAll {
     function Get-CIPPAsyncDeployment { param($JobId) }
     function Set-CIPPAsyncDeploymentStatus { param($JobId, $Name, $Status, $Logs) }
     function Set-CIPPAsyncDeploymentStep { param($JobId, $Name, $StepIndex, $StepStatus, $Message) }
+    function Add-CIPPRealtimeWatch { param($JobId, [switch]$Run) }
     function Write-LogMessage { param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = $Exception.Exception.Message } }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecRunSteps.ps1')
@@ -41,6 +42,7 @@ Describe 'Invoke-ExecBECCheck' {
         Mock Get-CIPPAsyncDeployment { @() }
         Mock Set-CIPPAsyncDeploymentStatus { }
         Mock Set-CIPPAsyncDeploymentStep { }
+        Mock Add-CIPPRealtimeWatch { }
         Mock Write-LogMessage { }
     }
 
@@ -115,6 +117,7 @@ Describe 'Invoke-ExecBECCheck' {
             Should -Invoke Get-CIPPBecReport -Times 1 -ParameterFilter { $CaseId -eq 'BEC-w' -and $IncludeResults.IsPresent }
             Should -Invoke Get-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-w' }
             Should -Invoke Set-CIPPBecReport -Times 0 -Because 'a run that progressed a minute ago is not stale'
+            Should -Invoke Add-CIPPRealtimeWatch -Times 1 -Exactly -ParameterFilter { $JobId -eq 'BEC-w' } -Because 'the reader follows the case live from here instead of polling'
         }
 
         It 'returns containment already run against the case while it is still running' {

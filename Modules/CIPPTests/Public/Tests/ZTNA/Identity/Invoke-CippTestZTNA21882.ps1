@@ -32,7 +32,7 @@ function Invoke-CippTestZTNA21882 {
                 $NestedGroups.Add([PSCustomObject]@{
                         Group        = $G
                         NestedCount  = $GroupMembers.Count
-                        NestedSample = ($GroupMembers | Select-Object -First 3).displayName -join ', '
+                        NestedSample = @($GroupMembers.Where({ $true }, 'First', 3)).displayName -join ', '
                     })
             }
         }
@@ -47,7 +47,7 @@ function Invoke-CippTestZTNA21882 {
             $Lines.Add('')
             $Lines.Add('| Group | Nested Members | Sample |')
             $Lines.Add('| :---- | :------------- | :----- |')
-            foreach ($Entry in ($NestedGroups | Select-Object -First 25)) {
+            foreach ($Entry in $NestedGroups.Where({ $true }, 'First', 25)) {
                 $Lines.Add("| $($Entry.Group.displayName) | $($Entry.NestedCount) | $($Entry.NestedSample) |")
             }
             if ($NestedGroups.Count -gt 25) {

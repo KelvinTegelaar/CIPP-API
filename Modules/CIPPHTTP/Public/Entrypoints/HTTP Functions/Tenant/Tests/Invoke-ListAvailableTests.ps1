@@ -10,9 +10,6 @@ function Invoke-ListAvailableTests {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     try {
         # Get all test folders
         $TestsRoot = Join-Path $env:CIPPRootPath 'Modules\CIPPTests\Public\Tests'
@@ -26,7 +23,6 @@ function Invoke-ListAvailableTests {
             ForEach-Object {
                 $_.Group | Sort-Object -Property Version -Descending | Select-Object -First 1
             }
-
 
         # Build identity tests array
         $IdentityTests = foreach ($TestFolder in $TestFolders) {
@@ -124,7 +120,7 @@ function Invoke-ListAvailableTests {
         $Body = [PSCustomObject]@{
             Results = "Failed to list available tests: $($ErrorMessage.NormalizedError)"
         }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

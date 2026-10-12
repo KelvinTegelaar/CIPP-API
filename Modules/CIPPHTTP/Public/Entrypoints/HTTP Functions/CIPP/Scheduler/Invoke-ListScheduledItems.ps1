@@ -5,7 +5,7 @@ function Invoke-ListScheduledItems {
     .ROLE
         CIPP.Scheduler.Read
     .DESCRIPTION
-        Lists scheduled tasks in CIPP, filterable by tenant or task ID. Returns task name, command, schedule, and last execution status.
+        Lists scheduled tasks in CIPP, filterable by tenant, task ID, task state, or reference. Returns task name, command, schedule, and last execution status.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -26,6 +26,10 @@ function Invoke-ListScheduledItems {
         $Name = $Request.Query.Name ?? $Request.Body.Name
         $Type = $Request.Query.Type ?? $Request.Body.Type
         $SearchTitle = $Request.query.SearchTitle ?? $Request.body.SearchTitle
+        # Only tasks whose Reference contains this text, case-insensitive with no wildcards (e.g. '[ID:1528]').
+        $Reference = $Request.Query.Reference ?? $Request.Body.Reference
+        # Only tasks in these states, comma-separated (e.g. 'Planned' or 'Planned,Running').
+        $TaskState = $Request.Query.TaskState ?? $Request.Body.TaskState
 
         if ($ShowHidden) {
             $ScheduledItemFilter.Add("(Hidden eq true or Hidden eq 'True')")
@@ -41,6 +45,18 @@ function Invoke-ListScheduledItems {
         if ($Type) {
             $SafeType = ConvertTo-CIPPODataFilterValue -Value $Type -Type String
             $ScheduledItemFilter.Add("Command eq '$SafeType'")
+        }
+
+        if ($TaskState) {
+            # Stored states are single title-case words (Planned, Running, Completed...) and storage
+            # compares case-sensitively, so normalise the casing rather than silently matching nothing.
+            $TextInfo = [System.Globalization.CultureInfo]::InvariantCulture.TextInfo
+            $StateClauses = foreach ($State in ($TaskState -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })) {
+                "TaskState eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $TextInfo.ToTitleCase($State.ToLowerInvariant()) -Type String)
+            }
+            if ($StateClauses) {
+                $ScheduledItemFilter.Add('({0})' -f ($StateClauses -join ' or '))
+            }
         }
     }
 
@@ -72,6 +88,12 @@ function Invoke-ListScheduledItems {
     # both leading and trailing wildcards (e.g. '*Vacation*').
     if ($SearchTitle) {
         $Tasks = $Tasks | Where-Object { $_.Name -like $SearchTitle }
+    }
+
+    # Also client-side for the same reason. A plain substring match rather than -like, because
+    # references are typically ticket IDs in square brackets, which -like treats as a character set.
+    if ($Reference) {
+        $Tasks = $Tasks | Where-Object { $_.Reference -and ([string]$_.Reference).Contains([string]$Reference, [System.StringComparison]::OrdinalIgnoreCase) }
     }
 
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList

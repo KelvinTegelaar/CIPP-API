@@ -123,6 +123,7 @@ Function Invoke-ExecExtensionMapping {
         'NinjaOne' {
           $Batch = [PSCustomObject]@{
             'NinjaAction'  = 'StartAutoMapping'
+            'QueueName'    = 'AutoMapping'
             'FunctionName' = 'NinjaOneQueue'
           }
           $InputObject = [PSCustomObject]@{
@@ -137,6 +138,9 @@ Function Invoke-ExecExtensionMapping {
         }
         'HaloPSA' {
           $Result = Invoke-HaloAutoMap -CIPPMapping $Table
+        }
+        'Hudu' {
+          $Result = Invoke-HuduAutoMap -CIPPMapping $Table
         }
       }
     }

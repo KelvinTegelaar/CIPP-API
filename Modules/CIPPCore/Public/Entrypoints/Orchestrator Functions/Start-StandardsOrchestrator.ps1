@@ -18,6 +18,6 @@ function Start-StandardsOrchestrator {
             return
         }
         Write-LogMessage -API 'Standards' -message 'Starting Standards Schedule' -sev Info
-        New-CIPPStandardsRun -tenantfilter 'allTenants'
+        $null = New-CIPPStandardsRun -tenantfilter 'allTenants'
     }
 }

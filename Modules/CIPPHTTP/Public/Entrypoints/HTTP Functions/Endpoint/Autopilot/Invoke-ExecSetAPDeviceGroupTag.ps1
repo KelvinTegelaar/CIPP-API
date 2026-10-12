@@ -40,7 +40,7 @@ Function Invoke-ExecSetAPDeviceGroupTag {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Could not update group tag for device '$($DeviceId)' with serial number '$($SerialNumber)' to '$($GroupTag)'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

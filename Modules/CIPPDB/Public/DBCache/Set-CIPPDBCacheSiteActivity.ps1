@@ -90,7 +90,7 @@ function Set-CIPPDBCacheSiteActivity {
                 [Parameter(Mandatory = $true)][string]$Id,
                 [Parameter(Mandatory = $true)][string]$Label
             )
-            $Response = $Responses | Where-Object { $_.id -eq $Id } | Select-Object -First 1
+            $Response = foreach ($Candidate in $Responses) { if ($Candidate.id -eq $Id) { $Candidate; break } }
             if (-not $Response) {
                 throw "$Label response missing from Graph bulk batch"
             }
@@ -109,7 +109,7 @@ function Set-CIPPDBCacheSiteActivity {
         $OneDriveRows = @(Get-SiteActivityBulkReportRows -Responses $FoundationalResults -Id 'oneDriveUsage' -Label 'OneDrive usage report')
         $TeamRows = @(Get-SiteActivityBulkReportRows -Responses $FoundationalResults -Id 'teamsActivity' -Label 'Teams team activity report')
 
-        $AllSitesResponse = $FoundationalResults | Where-Object { $_.id -eq 'listAllSites' } | Select-Object -First 1
+        $AllSitesResponse = $FoundationalResults.Where({ $_.id -eq 'listAllSites' }, 'First')[0]
         if (-not $AllSitesResponse) {
             throw 'getAllSites response missing from Graph bulk batch'
         }
@@ -356,14 +356,11 @@ function Set-CIPPDBCacheSiteActivity {
             }
 
             if ($SiteType -eq 'SharePointAndTeams') {
-                # One call rather than four: each Add-Member rebuilds the object's property bag.
-                # [ordered] keeps the emitted JSON property order identical to the sequential adds.
-                $Record | Add-Member -NotePropertyMembers ([ordered]@{
-                        teamsTeamId           = $TeamsTeamId
-                        teamsTeamName         = $TeamsTeamName
-                        teamsLastActivityDate = $TeamsLastActivity
-                        teamsLinkStatus       = $TeamsLinkStatus
-                    }) -Force
+                $Props = $Record.PSObject.Properties
+                $Props.Add([psnoteproperty]::new('teamsTeamId', $TeamsTeamId))
+                $Props.Add([psnoteproperty]::new('teamsTeamName', $TeamsTeamName))
+                $Props.Add([psnoteproperty]::new('teamsLastActivityDate', $TeamsLastActivity))
+                $Props.Add([psnoteproperty]::new('teamsLinkStatus', $TeamsLinkStatus))
             }
 
             if (-not (Test-SiteActivityCacheComplete -SiteType $SiteType -WebUrl $WebUrl -DisplayName $DisplayName -TeamsTeamId $TeamsTeamId -TeamsTeamName $TeamsTeamName)) {

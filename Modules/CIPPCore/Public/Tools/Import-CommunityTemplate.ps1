@@ -272,6 +272,13 @@ function Import-CommunityTemplate {
                     #create a new template
                     $DisplayName = $Template.displayName ?? $template.Name
 
+                    $Validation = Test-CIPPIntuneTemplate -RawJSON $RawJson -TemplateType $URLName -DisplayName $DisplayName
+                    if (-not $Validation.IsValid) {
+                        $StatusMessage = "Intune template '$DisplayName' from source '$Source' was not imported: $($Validation.Errors -join ' ')"
+                        Write-Warning $StatusMessage
+                        return $StatusMessage
+                    }
+
                     # Check for duplicate template
                     $DuplicateFilter = "PartitionKey eq 'IntuneTemplate'"
                     $ExistingTemplates = Get-CIPPAzDataTableEntity @Table -Filter $DuplicateFilter -ErrorAction SilentlyContinue

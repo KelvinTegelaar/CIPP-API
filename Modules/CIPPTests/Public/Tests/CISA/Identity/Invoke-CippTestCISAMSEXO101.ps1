@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO101 {
             return
         }
 
-        $FailedPolicies = $MalwarePolicies | Where-Object { -not $_.EnableFileFilter }
+        $FailedPolicies = $MalwarePolicies.Where({ -not $_.EnableFileFilter })
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($MalwarePolicies.Count) malware filter policy/policies have file filtering enabled.")

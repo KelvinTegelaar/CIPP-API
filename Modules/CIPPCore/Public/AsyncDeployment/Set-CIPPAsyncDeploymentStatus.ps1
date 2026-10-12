@@ -44,6 +44,7 @@ function Set-CIPPAsyncDeploymentStatus {
         $Row.Status = $Status
         if ($null -ne $Logs) { $Row.Logs = [string]$Logs }
         Add-CIPPAzDataTableEntity @Table -Entity $Row -Force
+        Send-CIPPAsyncDeploymentUpdate -JobId $JobId -Row $Row
     } catch {
         Write-Verbose "Failed to update async deployment status: $($_.Exception.Message)"
     }

@@ -25,7 +25,10 @@ function Invoke-ListAsyncDeployment {
 
     # Rows name their tenant (TenantFilter, or Name for tenant-keyed jobs such as SharePoint template
     # deployments); a tenant-restricted caller only gets rows in scope.
-    $Rows = @(Get-CIPPAsyncDeployment -JobId $DeploymentId | Select-CippAllowedTenantData -TenantProperty @('TenantFilter', 'Name'))
+    $AllRows = @(Get-CIPPAsyncDeployment -JobId $DeploymentId)
+    $Rows = @($AllRows | Select-CippAllowedTenantData -TenantProperty @('TenantFilter', 'Name'))
+    # Live updates carry every row of the job, so only a caller who may read them all gets them
+    if ($Rows.Count -eq $AllRows.Count) { Add-CIPPRealtimeWatch -JobId $DeploymentId }
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ConvertTo-Json -Depth 10 -InputObject $Rows

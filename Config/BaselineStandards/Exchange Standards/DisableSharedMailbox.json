@@ -45,6 +45,7 @@
     "writes": [
       {
         "method": "PATCH",
+        "asApp": false,
         "uri": "users/%id%",
         "body": {
           "accountEnabled": false

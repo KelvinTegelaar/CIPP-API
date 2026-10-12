@@ -68,7 +68,16 @@ function Get-SharePointAdminLink {
         # sovereign clouds use sharepoint.de (Germany), sharepoint.cn (21Vianet),
         # sharepoint.us (GCC High) and sharepoint-mil.us (DoD), so take it from the host we got
         # back rather than assuming.
-        $RootSite = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter
+        # A tenant without SharePoint fails the same way for every caller in a run; don't re-request it per call.
+        $script:CIPPSharePointRootSiteFailures ??= @{}
+        $KnownFailure = $script:CIPPSharePointRootSiteFailures["$TenantFilter"]
+        if ($KnownFailure -and $KnownFailure.Expires -gt [datetime]::UtcNow) { throw $KnownFailure.Error }
+        try {
+            $RootSite = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter
+        } catch {
+            $script:CIPPSharePointRootSiteFailures["$TenantFilter"] = @{ Error = $_; Expires = [datetime]::UtcNow.AddMinutes(2) }
+            throw
+        }
         $SharePointHost = $RootSite.siteCollection.hostname
         if ([string]::IsNullOrWhiteSpace($SharePointHost)) { $SharePointHost = ($RootSite.id -split ',')[0] }
         if ([string]::IsNullOrWhiteSpace($SharePointHost) -and $RootSite.webUrl) { $SharePointHost = ([uri]$RootSite.webUrl).Host }

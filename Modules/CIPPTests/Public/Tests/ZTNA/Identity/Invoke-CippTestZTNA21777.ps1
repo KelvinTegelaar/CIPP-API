@@ -40,7 +40,7 @@ function Invoke-CippTestZTNA21777 {
             $Lines.Add('')
             $Lines.Add('| Display Name | App ID | Sign-In Audience |')
             $Lines.Add('| :----------- | :----- | :--------------- |')
-            foreach ($App in ($NonCompliantApps | Select-Object -First 25)) {
+            foreach ($App in $NonCompliantApps.Where({ $true }, 'First', 25)) {
                 $Lines.Add("| $($App.displayName) | $($App.appId) | $($App.signInAudience) |")
             }
             if ($NonCompliantApps.Count -gt 25) {

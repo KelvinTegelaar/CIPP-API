@@ -15,8 +15,8 @@ function Invoke-CippTestZTNA21964 {
             return
         }
 
-        $BuiltInStrengths = @($AuthStrengths | Where-Object { $_.policyType -eq 'builtIn' })
-        $CustomStrengths = @($AuthStrengths | Where-Object { $_.policyType -eq 'custom' })
+        $BuiltInStrengths = @($AuthStrengths.Where({ $_.policyType -eq 'builtIn' }))
+        $CustomStrengths = @($AuthStrengths.Where({ $_.policyType -eq 'custom' }))
 
         $ResultMarkdown = [System.Text.StringBuilder]::new("## Authentication Strength Policies`n`n")
         $null = $ResultMarkdown.Append("Found $($AuthStrengths.Count) authentication strength policies ($($BuiltInStrengths.Count) built-in, $($CustomStrengths.Count) custom).`n`n")

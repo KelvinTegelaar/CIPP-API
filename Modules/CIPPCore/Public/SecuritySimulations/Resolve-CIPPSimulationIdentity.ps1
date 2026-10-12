@@ -60,25 +60,25 @@ function Resolve-CIPPSimulationIdentity {
                 if ($null -eq $User -or $User.accountEnabled -ne $true -or "$($User.userType)" -eq 'Guest') { continue }
                 $Candidates.Add($User)
             }
-            $Pick = $Candidates | Where-Object { -not $ExcludedUserIds.Contains("$($_.id)") } | Select-Object -First 1
-            if (-not $Pick) { $Pick = $Candidates | Select-Object -First 1 }
+            $Pick = $Candidates.Where({ -not $ExcludedUserIds.Contains("$($_.id)") }, 'First')[0]
+            if (-not $Pick -and $Candidates.Count -gt 0) { $Pick = $Candidates[0] }
             if ($Pick) { return (& $Describe $Pick 'Privileged role member') }
         }
         'user' {
-            $Pick = $Users | Where-Object {
-                $_.accountEnabled -eq $true -and
-                "$($_.userType)" -ne 'Guest' -and
-                @($_.assignedLicenses | Where-Object { $_ }).Count -gt 0 -and
-                -not $AdminIds.Contains("$($_.id)") -and
-                -not $ExcludedUserIds.Contains("$($_.id)")
-            } | Select-Object -First 1
+            $Pick = $Users.Where({
+                    $_.accountEnabled -eq $true -and
+                    "$($_.userType)" -ne 'Guest' -and
+                    @($_.assignedLicenses).Where({ $_ }).Count -gt 0 -and
+                    -not $AdminIds.Contains("$($_.id)") -and
+                    -not $ExcludedUserIds.Contains("$($_.id)")
+                }, 'First')[0]
             if (-not $Pick) {
-                $Pick = $Users | Where-Object { $_.accountEnabled -eq $true -and "$($_.userType)" -ne 'Guest' -and -not $AdminIds.Contains("$($_.id)") } | Select-Object -First 1
+                $Pick = $Users.Where({ $_.accountEnabled -eq $true -and "$($_.userType)" -ne 'Guest' -and -not $AdminIds.Contains("$($_.id)") }, 'First')[0]
             }
             if ($Pick) { return (& $Describe $Pick 'Licensed member') }
         }
         'guest' {
-            $Pick = $Users | Where-Object { $_.accountEnabled -eq $true -and "$($_.userType)" -eq 'Guest' } | Select-Object -First 1
+            $Pick = $Users.Where({ $_.accountEnabled -eq $true -and "$($_.userType)" -eq 'Guest' }, 'First')[0]
             if ($Pick) { return (& $Describe $Pick 'Guest') }
         }
     }

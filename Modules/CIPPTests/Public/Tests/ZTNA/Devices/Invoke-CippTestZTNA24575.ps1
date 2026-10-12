@@ -13,29 +13,29 @@ function Invoke-CippTestZTNA24575 {
             return
         }
 
-        $MdmSensePolicies = $ConfigPolicies | Where-Object {
+        $MdmSensePolicies = $ConfigPolicies.Where({
             $_.platforms -like '*windows10*' -and
             $_.technologies -like '*mdm*' -and
             $_.technologies -like '*microsoftSense*'
-        }
+        })
 
         if (-not $MdmSensePolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24575' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Windows Defender policies found' -Risk 'High' -Name 'Defender Antivirus policies protect Windows devices from malware' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Device'
             return
         }
 
-        $AVPolicies = $MdmSensePolicies | Where-Object {
+        $AVPolicies = $MdmSensePolicies.Where({
             $_.templateReference.templateFamily -eq 'endpointSecurityAntivirus'
-        }
+        })
 
         if (-not $AVPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24575' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Windows Defender Antivirus policies found' -Risk 'High' -Name 'Defender Antivirus policies protect Windows devices from malware' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Device'
             return
         }
 
-        $AssignedPolicies = $AVPolicies | Where-Object {
+        $AssignedPolicies = $AVPolicies.Where({
             $_.assignments -and $_.assignments.Count -gt 0
-        }
+        })
 
         if ($AssignedPolicies) {
             $Status = 'Passed'

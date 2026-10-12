@@ -12,17 +12,17 @@ function Invoke-CippTestZTNA21808 {
             return
         }
 
-        $Enabled = $CAPolicies | Where-Object { $_.state -eq 'enabled' }
-        $DeviceCodePolicies = $Enabled | Where-Object {
+        $Enabled = $CAPolicies.Where({ $_.state -eq 'enabled' })
+        $DeviceCodePolicies = $Enabled.Where({
             if ($_.conditions.authenticationFlows.transferMethods) {
                 $Methods = $_.conditions.authenticationFlows.transferMethods -split ','
                 $Methods -contains 'deviceCodeFlow'
             } else {
                 $false
             }
-        }
+        })
 
-        $BlockPolicies = $DeviceCodePolicies | Where-Object { $_.grantControls.builtInControls -contains 'block' }
+        $BlockPolicies = $DeviceCodePolicies.Where({ $_.grantControls.builtInControls -contains 'block' })
 
         if ($BlockPolicies.Count -gt 0) {
             $Status = 'Passed'

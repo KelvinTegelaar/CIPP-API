@@ -39,7 +39,7 @@ function Invoke-CippTestE8_MFA_07 {
         }
 
         $PhishMethods = @('fido2SecurityKey','windowsHelloForBusiness','x509CertificateSingleFactor','x509CertificateMultiFactor','passKeyDeviceBound','passKeyDeviceBoundAuthenticator','passKeyDeviceBoundWindowsHello')
-        $NonCompliant = foreach ($R in $Reg | Where-Object { $PrivUserIds.Contains($_.id) }) {
+        $NonCompliant = foreach ($R in $Reg.Where({ $PrivUserIds.Contains($_.id) })) {
             $HasPhish = $false
             foreach ($M in $R.methodsRegistered) {
                 if ($PhishMethods -contains $M) { $HasPhish = $true; break }
@@ -53,7 +53,7 @@ function Invoke-CippTestE8_MFA_07 {
         } else {
             $Status = 'Failed'
             $Sb = [System.Text.StringBuilder]::new("$($NonCompliant.Count) of $($PrivUserIds.Count) privileged users have no phishing-resistant method registered:`n`n| UPN | Methods Registered |`n| :-- | :----------------- |`n")
-            foreach ($U in ($NonCompliant | Select-Object -First 50)) {
+            foreach ($U in $NonCompliant.Where({ $true }, 'First', 50)) {
                 $null = $Sb.Append("| $($U.userPrincipalName) | $(($U.methodsRegistered) -join ', ') |`n")
             }
             $Result = $Sb.ToString()

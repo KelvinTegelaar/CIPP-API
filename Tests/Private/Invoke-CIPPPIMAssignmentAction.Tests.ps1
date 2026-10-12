@@ -80,7 +80,7 @@ Describe 'Invoke-CIPPPIMAssignmentAction' {
 
     It 'refuses on a tenant without Entra ID P2 and posts nothing' {
         Mock Test-CIPPStandardLicense { $false }
-        { Invoke-Convert } | Should -Throw '*not licensed for Entra ID P2*'
+        { Invoke-Convert } | Should -Throw '*not licensed for Entra ID P2*' -ExceptionType ([System.ArgumentException])
         Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
     }
 
@@ -90,7 +90,7 @@ Describe 'Invoke-CIPPPIMAssignmentAction' {
             if ($PrincipalId) { $Rows = $Rows | Where-Object { $_.PrincipalId -eq $PrincipalId } }
             @($Rows)
         }
-        { Invoke-Convert } | Should -Throw '*last active Global Administrator*'
+        { Invoke-Convert } | Should -Throw '*last active Global Administrator*' -ExceptionType ([System.ArgumentException])
         Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
     }
 
@@ -100,7 +100,7 @@ Describe 'Invoke-CIPPPIMAssignmentAction' {
             if ($PrincipalId) { $Rows = $Rows | Where-Object { $_.PrincipalId -eq $PrincipalId } }
             @($Rows)
         }
-        { Invoke-CIPPPIMAssignmentAction -TenantFilter 'contoso.onmicrosoft.com' -Action Remove -PrincipalId 'user-1' -RoleDefinitionId $script:GA -AssignmentType Permanent -Justification 'test' } | Should -Throw '*last active Global Administrator*'
+        { Invoke-CIPPPIMAssignmentAction -TenantFilter 'contoso.onmicrosoft.com' -Action Remove -PrincipalId 'user-1' -RoleDefinitionId $script:GA -AssignmentType Permanent -Justification 'test' } | Should -Throw '*last active Global Administrator*' -ExceptionType ([System.ArgumentException])
         Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
     }
 
@@ -140,14 +140,15 @@ Describe 'Invoke-CIPPPIMAssignmentAction' {
 
         It 'leaves the active assignment alone when the eligibility cannot be confirmed' {
             Mock New-GraphGetRequest { @() }
-            { Invoke-Convert } | Should -Throw '*could not be confirmed*'
+            $Err = { Invoke-Convert } | Should -Throw '*could not be confirmed*' -PassThru
+            $Err.Exception | Should -Not -BeOfType ([System.ArgumentException])
             $script:Posts.Count | Should -Be 1
             $script:Posts[0].Body.action | Should -Be 'adminAssign'
         }
 
         It 'refuses an eligibility lifetime above the policy cap instead of clamping it' {
             Mock Get-CIPPPIMRolePolicies { [pscustomobject]@{ RoleDefinitionId = $script:GA; PolicyId = 'pol'; Settings = [pscustomobject]@{ eligibilityMaxDuration = 'P180D'; activeAssignmentMaxDuration = 'P180D' } } }
-            { Invoke-Convert @{ Duration = 'P365D' } } | Should -Throw '*exceeds the maximum allowed*'
+            { Invoke-Convert @{ Duration = 'P365D' } } | Should -Throw '*exceeds the maximum allowed*' -ExceptionType ([System.ArgumentException])
             Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
         }
 
@@ -172,12 +173,12 @@ Describe 'Invoke-CIPPPIMAssignmentAction' {
         It 'applies the JIT admin maximum duration as a cap' {
             Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ MaxDuration = 'PT2H' } }
             Mock Get-CIPPPIMRoleAssignments { @((New-Row -Principal 'user-1' -Type 'Eligible'), (New-Row -Principal 'user-2')) | Where-Object { -not $PrincipalId -or $_.PrincipalId -eq $PrincipalId } }
-            { Invoke-CIPPPIMAssignmentAction -TenantFilter 'contoso.onmicrosoft.com' -Action GrantActive -PrincipalId 'user-1' -RoleDefinitionId $script:GA -AssignmentType Eligible -Duration 'PT4H' -Justification 'test' } | Should -Throw '*exceeds the maximum allowed*'
+            { Invoke-CIPPPIMAssignmentAction -TenantFilter 'contoso.onmicrosoft.com' -Action GrantActive -PrincipalId 'user-1' -RoleDefinitionId $script:GA -AssignmentType Eligible -Duration 'PT4H' -Justification 'test' } | Should -Throw '*exceeds the maximum allowed*' -ExceptionType ([System.ArgumentException])
             Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
         }
 
         It 'refuses without an expiration' {
-            { Invoke-CIPPPIMAssignmentAction -TenantFilter 'contoso.onmicrosoft.com' -Action GrantActive -PrincipalId 'user-1' -RoleDefinitionId $script:GA -AssignmentType Eligible -Justification 'test' } | Should -Throw '*needs a Duration or EndDateTime*'
+            { Invoke-CIPPPIMAssignmentAction -TenantFilter 'contoso.onmicrosoft.com' -Action GrantActive -PrincipalId 'user-1' -RoleDefinitionId $script:GA -AssignmentType Eligible -Justification 'test' } | Should -Throw '*needs a Duration or EndDateTime*' -ExceptionType ([System.ArgumentException])
             Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
         }
 

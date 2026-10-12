@@ -25,7 +25,7 @@ function Invoke-ListGDAPContracts {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $env:TenantID -headers $Request.Headers -message "Failed to list GDAP contracts: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         $Body = @{ Results = @(); Error = $ErrorMessage.NormalizedError }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

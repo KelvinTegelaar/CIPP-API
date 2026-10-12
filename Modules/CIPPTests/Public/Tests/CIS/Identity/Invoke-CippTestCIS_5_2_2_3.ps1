@@ -14,12 +14,12 @@ function Invoke-CippTestCIS_5_2_2_3 {
         }
 
         $LegacyClients = @('exchangeActiveSync', 'other')
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.grantControls.builtInControls -contains 'block' -and
             $_.conditions.clientAppTypes -and
-            ($_.conditions.clientAppTypes | Where-Object { $_ -in $LegacyClients }).Count -gt 0
-        }
+            $_.conditions.clientAppTypes.Where({ $_ -in $LegacyClients }).Count -gt 0
+        })
 
         if ($Matching) {
             $Status = 'Passed'

@@ -10,7 +10,6 @@ Function Invoke-AddContactTemplates {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
     Write-Host ($request | ConvertTo-Json -Depth 10 -Compress)
 
     try {
@@ -55,7 +54,7 @@ Function Invoke-AddContactTemplates {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $Headers -API $APINAME -message "Failed to create Contact template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to create Contact template: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

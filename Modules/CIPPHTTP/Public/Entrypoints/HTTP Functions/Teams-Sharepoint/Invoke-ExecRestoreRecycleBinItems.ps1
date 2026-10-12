@@ -18,10 +18,14 @@ function Invoke-ExecRestoreRecycleBinItems {
     $Ids = @($Request.Body.Ids) | Where-Object { $_ }
     $ItemNames = @($Request.Body.ItemNames) | Where-Object { $_ }
 
-    try {
-        if (-not $SiteUrl) { throw 'SiteUrl is required.' }
-        if ($Ids.Count -eq 0) { throw 'No recycle bin items were selected.' }
+    if (-not $SiteUrl) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
+    if ($Ids.Count -eq 0) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'No recycle bin items were selected.' } })
+    }
 
+    try {
         $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
         $Scope = $RestContext.Scope
         $JsonAccept = $RestContext.Headers
@@ -42,7 +46,7 @@ function Invoke-ExecRestoreRecycleBinItems {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to restore recycle bin items on $($SiteUrl): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

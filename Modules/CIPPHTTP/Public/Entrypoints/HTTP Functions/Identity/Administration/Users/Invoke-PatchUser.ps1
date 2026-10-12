@@ -167,7 +167,7 @@ function Invoke-PatchUser {
             if ($AllErrorMessages.Count -eq 0) {
                 $HttpResponse.Body = @{'Results' = @($SuccessMessage) }
             } else {
-                $HttpResponse.StatusCode = [HttpStatusCode]::BadRequest
+                $HttpResponse.StatusCode = Get-CippBulkStatusCode -Total ($TotalPatchSuccessCount + $TotalManagerSuccessCount + $TotalSponsorSuccessCount + $AllErrorMessages.Count) -Failed $AllErrorMessages.Count
                 $PartialSuccessMessage = if ($HasRelationshipUpdates) { $SuccessMessage } else { "Successfully patched $TotalPatchSuccessCount of $($Users.Count) users" }
                 $Results = [System.Collections.Generic.List[string]]::new()
                 foreach ($ErrorMessage in $AllErrorMessages) {

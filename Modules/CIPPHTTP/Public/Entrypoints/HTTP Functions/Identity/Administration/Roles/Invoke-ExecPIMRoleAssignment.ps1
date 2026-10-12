@@ -101,7 +101,7 @@ function Invoke-ExecPIMRoleAssignment {
         $ErrorMessage = Get-CippException -Exception $_
         $Message = "PIM $Action failed for $PrincipalId on $RoleDefinitionId`: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
         $Results = @(@{ resultText = $Message; state = 'error' })
     }
 

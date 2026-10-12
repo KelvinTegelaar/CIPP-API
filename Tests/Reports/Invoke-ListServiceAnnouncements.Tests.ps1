@@ -25,11 +25,11 @@ BeforeAll {
     $script:T2 = [datetimeoffset]'2026-09-29T02:00:00Z'
 
     function New-Request {
-        param($TenantFilter, [switch]$UseReportDB)
+        param($TenantFilter, [switch]$UseReportDB, [switch]$Open)
         [pscustomobject]@{
             Params  = @{ CIPPEndpoint = 'Test' }
             Headers = @{}
-            Query   = [pscustomobject]@{ tenantFilter = $TenantFilter; UseReportDB = [bool]$UseReportDB }
+            Query   = [pscustomobject]@{ tenantFilter = $TenantFilter; UseReportDB = [bool]$UseReportDB; Open = [bool]$Open }
         }
     }
     function New-Row {
@@ -98,6 +98,74 @@ Describe 'Service announcement list endpoints' {
         $Exchange.TenantDetails.Tenant | Should -Be @('a.com', 'b.com')
         $Exchange.TenantDetails[0].details.value | Should -Be 'a-only'
         ($Response.Body | Where-Object id -EQ 'TM1').Tenant | Should -Be 'a.com'
+    }
+
+    It 'drops resolved issues from the cache when Open is set and keeps the unresolved ones' {
+        Mock Get-CIPPDbItem {
+            [ordered]@{
+                'a.com' = [System.Collections.Generic.List[object]]@(
+                    (New-Row 'a.com' '[{"id":"EX1","isResolved":true},{"id":"TM1","isResolved":false}]')
+                )
+            }
+        }
+
+        $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'a.com' -UseReportDB -Open)
+
+        $Response.StatusCode | Should -Be 200
+        $Response.Body | Should -HaveCount 1
+        $Response.Body[0].id | Should -Be 'TM1'
+        $Response.Body[0].PSObject.Properties.Name | Should -Not -Contain 'Tenant'
+    }
+
+    It 'keeps resolved issues from the cache when Open is not set' {
+        Mock Get-CIPPDbItem {
+            [ordered]@{
+                'a.com' = [System.Collections.Generic.List[object]]@(
+                    (New-Row 'a.com' '[{"id":"EX1","isResolved":true},{"id":"TM1","isResolved":false}]')
+                )
+            }
+        }
+
+        $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'a.com' -UseReportDB)
+
+        $Response.Body.id | Should -Be @('EX1', 'TM1')
+    }
+
+    It 'under Open, skips the tenant whose cached copy is resolved but still returns the tenant where the issue is open' {
+        # Cache rows are written per tenant on different runs, so the same issue can be resolved in one row and open in another.
+        Mock Get-CIPPDbItem {
+            [ordered]@{
+                'a.com' = [System.Collections.Generic.List[object]]@((New-Row 'a.com' '{"id":"EX1","isResolved":true,"lastModifiedDateTime":"2026-09-29T00:00:00Z"}'))
+                'b.com' = [System.Collections.Generic.List[object]]@((New-Row 'b.com' '{"id":"EX1","isResolved":false,"lastModifiedDateTime":"2026-09-28T00:00:00Z"}'))
+            }
+        }
+
+        $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'AllTenants' -Open)
+
+        $Response.Body | Should -HaveCount 1
+        $Response.Body[0].Tenants | Should -Be @('b.com')
+        $Response.Body[0].TenantCount | Should -Be 1
+        $Response.Body[0].Tenant | Should -Be 'b.com'
+    }
+
+    It 'asks Graph for unresolved issues only when Open is set on a live request' {
+        Mock New-GraphGetRequest { @([pscustomobject]@{ id = 'EX1' }) }
+        Mock Get-CIPPDbItem { [ordered]@{} }
+
+        $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'a.com' -Open)
+
+        $Response.Body.id | Should -Be 'EX1'
+        Should -Invoke New-GraphGetRequest -Times 1 -ParameterFilter { $uri -eq 'https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/issues?$filter=isResolved eq false' -and $tenantid -eq 'a.com' }
+        Should -Invoke Get-CIPPDbItem -Times 0
+    }
+
+    It 'calls Graph without a filter on a live request when Open is not set' {
+        Mock New-GraphGetRequest { @([pscustomobject]@{ id = 'EX1' }) }
+        Mock Get-CIPPDbItem { [ordered]@{} }
+
+        Invoke-ListServiceHealthIssues -Request (New-Request 'a.com') | Out-Null
+
+        Should -Invoke New-GraphGetRequest -Times 1 -ParameterFilter { $uri -eq 'https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/issues' }
     }
 
     It 'returns 500 with a sync hint when a tenant has no cached messages' {

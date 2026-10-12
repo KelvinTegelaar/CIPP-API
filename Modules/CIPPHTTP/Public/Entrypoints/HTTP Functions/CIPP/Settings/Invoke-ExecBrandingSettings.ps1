@@ -122,7 +122,7 @@ Function Invoke-ExecBrandingSettings {
                     Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message "Uploaded branding $Kind image $($Added.id)" -Sev 'Info'
                     $Added
                 } catch {
-                    $StatusCode = [HttpStatusCode]::BadRequest
+                    $StatusCode = [HttpStatusCode]::InternalServerError
                     "Error: $($_.Exception.Message)"
                 }
             }
@@ -323,6 +323,11 @@ Function Invoke-ExecBrandingSettings {
                 # Draw the watermark on report pages.
                 if (-not $ErrorMessage -and $Request.Body.PSObject.Properties.Name -contains 'watermarkEnabled') {
                     $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'watermarkEnabled' -Value ([bool]$Request.Body.watermarkEnabled) -Force
+                    $Updated = $true
+                }
+
+                if (-not $ErrorMessage -and $Request.Body.PSObject.Properties.Name -contains 'coverFade') {
+                    $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'coverFade' -Value ([bool]$Request.Body.coverFade) -Force
                     $Updated = $true
                 }
 
@@ -577,6 +582,7 @@ Function Invoke-ExecBrandingSettings {
                     showPageNumbers  = [bool]$Request.Body.showPageNumbers
                     watermarkText    = $PresetWatermark
                     watermarkEnabled = [bool]$Request.Body.watermarkEnabled
+                    coverFade        = $Request.Body.coverFade -ne $false
                     tenantLabel      = $PresetTenantLabel
                 } | Out-Null
 

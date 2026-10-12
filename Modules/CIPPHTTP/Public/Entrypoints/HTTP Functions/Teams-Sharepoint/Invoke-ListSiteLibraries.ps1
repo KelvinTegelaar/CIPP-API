@@ -17,19 +17,21 @@ function Invoke-ListSiteLibraries {
     $SiteId = $Request.Query.SiteId ?? $Request.Body.SiteId
     $SiteUrl = $Request.Query.SiteUrl ?? $Request.Body.SiteUrl
 
+    if ([string]::IsNullOrWhiteSpace($SiteId) -and [string]::IsNullOrWhiteSpace($SiteUrl)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteId or SiteUrl is required.' } })
+    }
+
     try {
         # Resolve the site addressing segment: prefer the Graph site id, else hostname:path from the URL.
         if (-not [string]::IsNullOrWhiteSpace($SiteId)) {
             $SiteSegment = $SiteId
-        } elseif (-not [string]::IsNullOrWhiteSpace($SiteUrl)) {
+        } else {
             $ParsedUrl = [System.Uri]$SiteUrl
             $SiteSegment = if ($ParsedUrl.AbsolutePath -in @('', '/')) {
                 $ParsedUrl.Host
             } else {
                 "$($ParsedUrl.Host):$($ParsedUrl.AbsolutePath):"
             }
-        } else {
-            throw 'SiteId or SiteUrl is required.'
         }
 
         $Lists = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/$SiteSegment/lists?`$select=id,displayName,name,webUrl,list" -tenantid $TenantFilter -asapp $true
@@ -47,7 +49,7 @@ function Invoke-ListSiteLibraries {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to list document libraries: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

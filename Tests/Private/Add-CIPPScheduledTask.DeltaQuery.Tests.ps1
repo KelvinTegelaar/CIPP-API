@@ -15,6 +15,7 @@ BeforeAll {
     function Add-CippQueueMessage { param($Cmdlet, $Parameters) }
     function New-CIPPTaskDeltaQuery { param($Trigger, $TenantFilter, $PartitionKey) }
     function Get-CIPPSchedulerBlockedCommands { }
+    function Resolve-CIPPCommand { param($Name) }
     function Get-NormalizedError { param($Message) }
     function Write-LogMessage { param($headers, $API, $message, $Sev, $Tenant) }
 
@@ -53,8 +54,8 @@ Describe 'Add-CIPPScheduledTask DeltaQuery trigger' {
         Mock -CommandName Get-NormalizedError -MockWith { $Message }
         Mock -CommandName Write-LogMessage -MockWith { }
         Mock -CommandName New-CIPPTaskDeltaQuery -MockWith { @{ '@odata.deltaLink' = 'https://graph/deltalink' } }
-        Mock -CommandName Get-Command -ParameterFilter { $Name -eq 'Clear-CIPPImmutableID' } -MockWith {
-            [pscustomobject]@{ Name = 'Clear-CIPPImmutableID'; Module = 'CIPPCore'; Parameters = @{ TenantFilter = 1; UserID = 1 } }
+        Mock -CommandName Resolve-CIPPCommand -ParameterFilter { $Name -eq 'Clear-CIPPImmutableID' } -MockWith {
+            [pscustomobject]@{ Name = 'Clear-CIPPImmutableID'; ModuleName = 'CIPPCore' }
         }
     }
 

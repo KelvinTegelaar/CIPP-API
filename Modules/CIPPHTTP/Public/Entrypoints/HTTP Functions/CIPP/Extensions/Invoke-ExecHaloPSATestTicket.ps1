@@ -15,6 +15,7 @@ Function Invoke-ExecHaloPSATestTicket {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $ConfigTable = Get-CIPPTable -TableName Extensionsconfig
         $Configuration = ((Get-CIPPAzDataTableEntity @ConfigTable).config | ConvertFrom-Json).HaloPSA
@@ -47,11 +48,12 @@ Function Invoke-ExecHaloPSATestTicket {
             $Results = [pscustomobject]@{ Results = "$Result against client '$ClientName' (id $ClientId). It is safe to close this ticket." }
         }
     } catch {
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Results = [pscustomobject]@{ Results = "Failed to create HaloPSA test ticket: $($_.Exception.Message). Line $($_.InvocationInfo.ScriptLineNumber)" }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 }

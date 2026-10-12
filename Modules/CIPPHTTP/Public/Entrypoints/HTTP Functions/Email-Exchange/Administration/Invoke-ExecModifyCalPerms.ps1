@@ -46,6 +46,7 @@ function Invoke-ExecModifyCalPerms {
 
     $Results = [System.Collections.Generic.List[string]]::new()
     $HasErrors = $false
+    $Failed = 0
 
     # Convert permissions to array format if it's an object with numeric keys
     if ($Permissions -is [PSCustomObject]) {
@@ -97,7 +98,7 @@ function Invoke-ExecModifyCalPerms {
 
                 $Results.Add($Result)
             } catch {
-                $HasErrors = $true
+                $Failed++
                 $Results.Add("$($_.Exception.Message)")
             }
         }
@@ -110,7 +111,7 @@ function Invoke-ExecModifyCalPerms {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
+            StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { Get-CippBulkStatusCode -Total $Results.Count -Failed $Failed }
             Body       = @{'Results' = @($Results) }
         })
 }

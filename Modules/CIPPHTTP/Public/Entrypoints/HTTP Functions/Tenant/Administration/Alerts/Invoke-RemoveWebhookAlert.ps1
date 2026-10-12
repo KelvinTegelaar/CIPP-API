@@ -48,13 +48,15 @@ Function Invoke-RemoveWebhookAlert {
             }
         }
         $body = [pscustomobject]@{'Results' = $Results }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Failed to remove webhook alert. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to remove webhook alert: $($_.Exception.Message)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         }
 }

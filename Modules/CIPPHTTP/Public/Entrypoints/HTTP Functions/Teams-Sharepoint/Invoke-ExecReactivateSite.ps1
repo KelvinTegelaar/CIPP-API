@@ -30,12 +30,19 @@ function Invoke-ExecReactivateSite {
     # Web GUID (the row's webId / sharepointIds.webId).
     $WebId = $Request.Body.WebId
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($TenantFilter)) { throw 'tenantFilter is required.' }
-        if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
+    if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'tenantFilter is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
+    $ParsedSiteUrl = $null
+    if (-not [System.Uri]::TryCreate([string]$SiteUrl, [System.UriKind]::Absolute, [ref]$ParsedSiteUrl) -or [string]::IsNullOrWhiteSpace($ParsedSiteUrl.Host)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "SiteUrl '$SiteUrl' is not a valid URL." } })
+    }
 
-        $SiteHost = ([System.Uri]$SiteUrl).Host
-        if ([string]::IsNullOrWhiteSpace($SiteHost)) { throw "SiteUrl '$SiteUrl' is not a valid URL." }
+    try {
+        $SiteHost = $ParsedSiteUrl.Host
 
         # Prefer building the Graph composite id ({host},{siteCollectionId},{webId}) from the
         # ids the site listing already carries: an archived site is locked, so avoid any lookup
@@ -71,7 +78,7 @@ function Invoke-ExecReactivateSite {
             $Results += ' Reactivation may need Unlicensed OneDrive billing enabled on the tenant, or the site cannot be reactivated via the API right now - reactivate it from the SharePoint admin center.'
         }
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

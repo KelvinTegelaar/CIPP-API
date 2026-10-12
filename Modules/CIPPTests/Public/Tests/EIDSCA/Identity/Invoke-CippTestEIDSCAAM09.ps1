@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCAAM09 {
             return
         }
 
-        $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
+        $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'MicrosoftAuthenticator' })
 
         if ($MethodConfig.featureSettings.displayLocationInformationRequiredState.state -eq 'enabled') {
             $Status = 'Passed'

@@ -18,10 +18,14 @@ function Invoke-ListSiteRecycleBinSummary {
     if ($MaxItems -lt 1) { $MaxItems = 5000 }
     if ($MaxItems -gt 20000) { $MaxItems = 20000 }
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($TenantFilter)) { throw 'tenantFilter is required.' }
-        if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
+    if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'tenantFilter is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'SiteUrl is required.' } })
+    }
 
+    try {
         $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
         $Scope = $RestContext.Scope
         $JsonAccept = $RestContext.Headers
@@ -87,7 +91,7 @@ function Invoke-ListSiteRecycleBinSummary {
         $ErrorMessage = Get-CippException -Exception $_
         $Body = "Failed to summarize recycle bin for $($SiteUrl): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Body -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

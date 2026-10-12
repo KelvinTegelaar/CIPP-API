@@ -13,13 +13,13 @@ function Invoke-CippTestCIS_5_2_2_2 {
             return
         }
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.users.includeUsers -contains 'All' -and
             $_.grantControls -and
             ($_.grantControls.builtInControls -contains 'mfa' -or $_.grantControls.authenticationStrength) -and
             $_.conditions.applications.includeApplications -contains 'All'
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

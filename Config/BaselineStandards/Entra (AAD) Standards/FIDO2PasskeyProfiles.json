@@ -4,9 +4,9 @@
   "cat": "Entra (AAD) Standards",
   "tag": [],
   "impact": "Medium Impact",
-  "helpText": "Configures the default passkey profile: allowed passkey types, attestation enforcement, and optional AAGUID key restrictions. Other profiles are never touched.",
+  "helpText": "Configures the default passkey profile. Most tenants should leave AAGUID restrictions off. When you restrict to an allow list, Windows Hello and Microsoft Authenticator passkeys stay allowed by default; turning \"Always allow Microsoft passkeys\" off rejects them as not meeting the profile's criteria. Other profiles are never touched.",
   "executiveText": "Controls which passkey authenticators the organization accepts - device-bound versus synced, and optionally an explicit allow or block list of authenticator models.",
-  "docsDescription": "Grades the default passkey profile's passkey types, attestation enforcement, key restriction enforcement, restriction type and sorted AAGUID set. Remediation rewrites the default profile in place, resending every other profile untouched. Attestation must be disabled to allow synced passkeys.",
+  "docsDescription": "Grades the default passkey profile's passkey types, attestation enforcement, key restriction enforcement, restriction type and sorted AAGUID set. Remediation rewrites the default profile in place, resending every other profile untouched.\n\nAn AAGUID identifies an authenticator model (a YubiKey series, Windows Hello, Microsoft Authenticator). Entering any AAGUIDs turns key restrictions on. In allow mode, every authenticator not on the list is refused at registration and sign-in, including Windows Hello and Authenticator passkeys, unless \"Always allow Microsoft passkeys\" stays on (the default). That switch adds the Windows Hello (08987058-cadc-4b81-b6e1-30de50dcbe96, 9ddd1817-af5a-4672-a2b9-3e3dd95000a9, 6028b017-b1d4-4c02-b4b3-afcdafc96bb2) and Authenticator (Android de1e552d-db1d-4423-a619-566b625cdc84, iOS 90a3ccdf-635c-4729-a248-9b709135078f) AAGUIDs to the allow list, and on its own with restrictions enforced allows only those. It has no effect in block mode or while restrictions are off.\n\nCommon setups: allowing synced passkeys (Apple, Google, password managers) - attestation Disabled and no AAGUID restrictions, as Microsoft recommends. Device-bound only with approved hardware keys - allow mode, and the keys' AAGUIDs. Blocking a specific model - block mode with its AAGUID. Windows Hello passkeys and Authenticator cross-device registration need attestation Disabled.",
   "impactColour": "warning",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Graph: PATCH authenticationMethodConfigurations/Fido2",
@@ -41,7 +41,8 @@
       ],
       "required": true,
       "type": "autoComplete",
-      "label": "Allowed Passkey Types"
+      "label": "Allowed Passkey Types",
+      "helperText": "Synced passkeys (Apple, Google, password managers) require attestation Disabled. Windows Hello and Authenticator passkeys are device-bound."
     },
     "AttestationEnforcement": {
       "creatable": false,
@@ -57,12 +58,14 @@
       ],
       "required": true,
       "type": "autoComplete",
-      "label": "Attestation Enforcement"
+      "label": "Attestation Enforcement",
+      "helperText": "Windows Hello passkeys and Authenticator cross-device registration only work with attestation Disabled."
     },
     "EnforceKeyRestrictions": {
       "label": "Enforce AAGUID Key Restrictions",
       "type": "switch",
-      "default": false
+      "default": false,
+      "helperText": "Turn on only if you need to limit which authenticator models can register; it reveals the restriction settings."
     },
     "EnforcementType": {
       "creatable": false,
@@ -78,12 +81,455 @@
       ],
       "omitWhenBlank": true,
       "type": "autoComplete",
-      "label": "Key Restriction Type"
+      "label": "Key Restriction Type",
+      "helperText": "Allow refuses every authenticator not listed. Block refuses only the listed ones.",
+      "condition": {
+        "field": "EnforceKeyRestrictions",
+        "compareType": "is",
+        "compareValue": true
+      }
+    },
+    "AllowMicrosoftPasskeys": {
+      "label": "Always allow Microsoft passkeys (Windows Hello + Authenticator)",
+      "type": "switch",
+      "default": true,
+      "helperText": "On by default. Adds the Windows Hello and Microsoft Authenticator AAGUIDs to the allow list so those passkeys keep working. No effect in block mode.",
+      "condition": {
+        "field": "EnforceKeyRestrictions",
+        "compareType": "is",
+        "compareValue": true
+      }
     },
     "AAGUIDs": {
-      "label": "AAGUIDs (comma-separated)",
+      "label": "AAGUIDs",
       "omitWhenBlank": true,
-      "type": "textField"
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "options": [
+        {
+          "label": "1Password (bada5566-a7aa-401f-bd96-45619a55120d)",
+          "value": "bada5566-a7aa-401f-bd96-45619a55120d"
+        },
+        {
+          "label": "Apple Passwords (fbfc3007-154e-4ecc-8c0b-6e020557d7bd)",
+          "value": "fbfc3007-154e-4ecc-8c0b-6e020557d7bd"
+        },
+        {
+          "label": "Bitwarden (d548826e-79b4-db40-a3d8-11116f7e8349)",
+          "value": "d548826e-79b4-db40-a3d8-11116f7e8349"
+        },
+        {
+          "label": "Dashlane (531126d6-e717-415c-9320-3d9aa6981239)",
+          "value": "531126d6-e717-415c-9320-3d9aa6981239"
+        },
+        {
+          "label": "Google Password Manager (ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4)",
+          "value": "ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4"
+        },
+        {
+          "label": "Google Titan Security Key v2 (42b4fb4a-2866-43b2-9bf7-6c6669c2e5d3)",
+          "value": "42b4fb4a-2866-43b2-9bf7-6c6669c2e5d3"
+        },
+        {
+          "label": "iCloud Keychain (Managed) (dd4ec289-e01d-41c9-bb89-70fa845d4bf2)",
+          "value": "dd4ec289-e01d-41c9-bb89-70fa845d4bf2"
+        },
+        {
+          "label": "Keeper (0ea242b4-43c4-4a1b-8b17-dd6d0b6baec6)",
+          "value": "0ea242b4-43c4-4a1b-8b17-dd6d0b6baec6"
+        },
+        {
+          "label": "LastPass (b78a0a55-6ef8-d246-a042-ba0f6d55050c)",
+          "value": "b78a0a55-6ef8-d246-a042-ba0f6d55050c"
+        },
+        {
+          "label": "Microsoft Authenticator for Android (de1e552d-db1d-4423-a619-566b625cdc84)",
+          "value": "de1e552d-db1d-4423-a619-566b625cdc84"
+        },
+        {
+          "label": "Microsoft Authenticator for iOS (90a3ccdf-635c-4729-a248-9b709135078f)",
+          "value": "90a3ccdf-635c-4729-a248-9b709135078f"
+        },
+        {
+          "label": "Microsoft Password Manager (d3452668-01fd-4c12-926c-83a4204853aa)",
+          "value": "d3452668-01fd-4c12-926c-83a4204853aa"
+        },
+        {
+          "label": "NordPass (b84e4048-15dc-4dd0-8640-f4f60813c8af)",
+          "value": "b84e4048-15dc-4dd0-8640-f4f60813c8af"
+        },
+        {
+          "label": "Proton Pass (50726f74-6f6e-5061-7373-50726f746f6e)",
+          "value": "50726f74-6f6e-5061-7373-50726f746f6e"
+        },
+        {
+          "label": "RSA Authenticator 4 for Android (59f85fe7-faa5-4c92-9f52-697b9d4d5473)",
+          "value": "59f85fe7-faa5-4c92-9f52-697b9d4d5473"
+        },
+        {
+          "label": "RSA Authenticator 4 for iOS (8681a073-5f50-4d52-bce4-e21658d207b3)",
+          "value": "8681a073-5f50-4d52-bce4-e21658d207b3"
+        },
+        {
+          "label": "RSA DS100 (7e3f3d30-3557-4442-bdae-139312178b39)",
+          "value": "7e3f3d30-3557-4442-bdae-139312178b39"
+        },
+        {
+          "label": "Samsung Pass (53414d53-554e-4700-0000-000000000000)",
+          "value": "53414d53-554e-4700-0000-000000000000"
+        },
+        {
+          "label": "Security Key by Yubico (b92c3f9a-c014-4056-887f-140a2501163b)",
+          "value": "b92c3f9a-c014-4056-887f-140a2501163b"
+        },
+        {
+          "label": "Security Key by Yubico (f8a011f3-8c0a-4d15-8006-17111f9edc7d)",
+          "value": "f8a011f3-8c0a-4d15-8006-17111f9edc7d"
+        },
+        {
+          "label": "Security Key by Yubico with NFC (149a2021-8ef6-4133-96b8-81f8d5b7f1f5)",
+          "value": "149a2021-8ef6-4133-96b8-81f8d5b7f1f5"
+        },
+        {
+          "label": "Security Key by Yubico with NFC (6d44ba9b-f6ec-2e49-b930-0c8fe920cb73)",
+          "value": "6d44ba9b-f6ec-2e49-b930-0c8fe920cb73"
+        },
+        {
+          "label": "Security Key NFC by Yubico (a4e9fc6d-4cbe-4758-b8ba-37598bb5bbaa)",
+          "value": "a4e9fc6d-4cbe-4758-b8ba-37598bb5bbaa"
+        },
+        {
+          "label": "Security Key NFC by Yubico (b7d3f68e-88a6-471e-9ecf-2df26d041ede)",
+          "value": "b7d3f68e-88a6-471e-9ecf-2df26d041ede"
+        },
+        {
+          "label": "Security Key NFC by Yubico (e77e3c64-05e3-428b-8824-0cbeb04b829d)",
+          "value": "e77e3c64-05e3-428b-8824-0cbeb04b829d"
+        },
+        {
+          "label": "Security Key NFC by Yubico - Enterprise Edition (0bb43545-fd2c-4185-87dd-feb0b2916ace)",
+          "value": "0bb43545-fd2c-4185-87dd-feb0b2916ace"
+        },
+        {
+          "label": "Security Key NFC by Yubico - Enterprise Edition (47ab2fb4-66ac-4184-9ae1-86be814012d5)",
+          "value": "47ab2fb4-66ac-4184-9ae1-86be814012d5"
+        },
+        {
+          "label": "Security Key NFC by Yubico - Enterprise Edition (ed042a3a-4b22-4455-bb69-a267b652ae7e)",
+          "value": "ed042a3a-4b22-4455-bb69-a267b652ae7e"
+        },
+        {
+          "label": "Security Key NFC by Yubico - Enterprise Edition (Enterprise Profile) (72c6b72d-8512-4c66-8359-9d3d10d9222f)",
+          "value": "72c6b72d-8512-4c66-8359-9d3d10d9222f"
+        },
+        {
+          "label": "Security Key NFC by Yubico - Enterprise Edition (Enterprise Profile) (9ff4cc65-6154-4fff-ba09-9e2af7882ad2)",
+          "value": "9ff4cc65-6154-4fff-ba09-9e2af7882ad2"
+        },
+        {
+          "label": "Security Key NFC by Yubico - Enterprise Edition Preview (2772ce93-eb4b-4090-8b73-330f48477d73)",
+          "value": "2772ce93-eb4b-4090-8b73-330f48477d73"
+        },
+        {
+          "label": "Security Key NFC by Yubico Preview (760eda36-00aa-4d29-855b-4012a182cdeb)",
+          "value": "760eda36-00aa-4d29-855b-4012a182cdeb"
+        },
+        {
+          "label": "TOKEN2 FIDO2 Security Key (ab32f0c6-2239-afbb-c470-d2ef4e254db7)",
+          "value": "ab32f0c6-2239-afbb-c470-d2ef4e254db7"
+        },
+        {
+          "label": "TOKEN2 PIN Plus Security Key Series (eabb46cc-e241-80bf-ae9e-96fa6d2975cf)",
+          "value": "eabb46cc-e241-80bf-ae9e-96fa6d2975cf"
+        },
+        {
+          "label": "Windows Hello Hardware Authenticator (08987058-cadc-4b81-b6e1-30de50dcbe96)",
+          "value": "08987058-cadc-4b81-b6e1-30de50dcbe96"
+        },
+        {
+          "label": "Windows Hello Software Authenticator (6028b017-b1d4-4c02-b4b3-afcdafc96bb2)",
+          "value": "6028b017-b1d4-4c02-b4b3-afcdafc96bb2"
+        },
+        {
+          "label": "Windows Hello VBS Hardware Authenticator (9ddd1817-af5a-4672-a2b9-3e3dd95000a9)",
+          "value": "9ddd1817-af5a-4672-a2b9-3e3dd95000a9"
+        },
+        {
+          "label": "YubiKey 5 CCN Series with NFC (3aa78eb1-ddd8-46a8-a821-8f8ec57a7bd5)",
+          "value": "3aa78eb1-ddd8-46a8-a821-8f8ec57a7bd5"
+        },
+        {
+          "label": "YubiKey 5 CCN Series with NFC (Consumer Profile) (eb7ef748-cbe0-4b40-b8f6-07bd2d592d35)",
+          "value": "eb7ef748-cbe0-4b40-b8f6-07bd2d592d35"
+        },
+        {
+          "label": "YubiKey 5 CCN Series with NFC (Enterprise Profile) (3ec9c8d3-a5a7-415b-a7b5-f1d606368d3f)",
+          "value": "3ec9c8d3-a5a7-415b-a7b5-f1d606368d3f"
+        },
+        {
+          "label": "YubiKey 5 CCN Series with NFC (Enterprise Profile) (4fc84f16-2545-4e53-b8fc-7bf4d7282a10)",
+          "value": "4fc84f16-2545-4e53-b8fc-7bf4d7282a10"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series (57f7de54-c807-4eab-b1c6-1c9be7984e92)",
+          "value": "57f7de54-c807-4eab-b1c6-1c9be7984e92"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series (73bb0cd4-e502-49b8-9c6f-b59445bf720b)",
+          "value": "73bb0cd4-e502-49b8-9c6f-b59445bf720b"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series (Enterprise Profile) (905b4cb4-ed6f-4da9-92fc-45e0d4e9b5c7)",
+          "value": "905b4cb4-ed6f-4da9-92fc-45e0d4e9b5c7"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series (RC Preview) (d2fbd093-ee62-488d-9dad-1e36389f8826)",
+          "value": "d2fbd093-ee62-488d-9dad-1e36389f8826"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with Lightning (7b96457d-e3cd-432b-9ceb-c9fdd7ef7432)",
+          "value": "7b96457d-e3cd-432b-9ceb-c9fdd7ef7432"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with Lightning (85203421-48f9-4355-9bc8-8a53846e5083)",
+          "value": "85203421-48f9-4355-9bc8-8a53846e5083"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with Lightning (Enterprise Profile) (3a662962-c6d4-4023-bebb-98ae92e78e20)",
+          "value": "3a662962-c6d4-4023-bebb-98ae92e78e20"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with Lightning (RC Preview) (9e66c661-e428-452a-a8fb-51f7ed088acf)",
+          "value": "9e66c661-e428-452a-a8fb-51f7ed088acf"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with Lightning Preview (5b0e46ba-db02-44ac-b979-ca9b84f5e335)",
+          "value": "5b0e46ba-db02-44ac-b979-ca9b84f5e335"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with NFC (c1f9a0bc-1dd2-404a-b27f-8e29047a43fd)",
+          "value": "c1f9a0bc-1dd2-404a-b27f-8e29047a43fd"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with NFC (Enterprise Profile) (79f3c8ba-9e35-484b-8f47-53a5a0f5c630)",
+          "value": "79f3c8ba-9e35-484b-8f47-53a5a0f5c630"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with NFC (fcc0118f-cd45-435b-8da1-9782b2da0715)",
+          "value": "fcc0118f-cd45-435b-8da1-9782b2da0715"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with NFC (RC Preview) (ce6bf97f-9f69-4ba7-9032-97adc6ca5cf1)",
+          "value": "ce6bf97f-9f69-4ba7-9032-97adc6ca5cf1"
+        },
+        {
+          "label": "YubiKey 5 FIPS Series with NFC Preview (62e54e98-c209-4df3-b692-de71bb6a8528)",
+          "value": "62e54e98-c209-4df3-b692-de71bb6a8528"
+        },
+        {
+          "label": "YubiKey 5 Series (19083c3d-8383-4b18-bc03-8f1c9ab2fd1b)",
+          "value": "19083c3d-8383-4b18-bc03-8f1c9ab2fd1b"
+        },
+        {
+          "label": "YubiKey 5 Series (cb69481e-8ff7-4039-93ec-0a2729a154a8)",
+          "value": "cb69481e-8ff7-4039-93ec-0a2729a154a8"
+        },
+        {
+          "label": "YubiKey 5 Series (Consumer Profile) (0a357157-9b18-4c8a-920e-d156e972b2f8)",
+          "value": "0a357157-9b18-4c8a-920e-d156e972b2f8"
+        },
+        {
+          "label": "YubiKey 5 Series (ee882879-721c-4913-9775-3dfcce97072a)",
+          "value": "ee882879-721c-4913-9775-3dfcce97072a"
+        },
+        {
+          "label": "YubiKey 5 Series (Enterprise Profile) (20ac7a17-c814-4833-93fe-539f0d5e3389)",
+          "value": "20ac7a17-c814-4833-93fe-539f0d5e3389"
+        },
+        {
+          "label": "YubiKey 5 Series (Enterprise Profile) (4599062e-6926-4fe7-9566-9e8fb1aedaa0)",
+          "value": "4599062e-6926-4fe7-9566-9e8fb1aedaa0"
+        },
+        {
+          "label": "YubiKey 5 Series (Enterprise Profile) (524de2de-982f-49b4-a769-2b5e3b73ad79)",
+          "value": "524de2de-982f-49b4-a769-2b5e3b73ad79"
+        },
+        {
+          "label": "YubiKey 5 Series (ff4dac45-ede8-4ec2-aced-cf66103f4335)",
+          "value": "ff4dac45-ede8-4ec2-aced-cf66103f4335"
+        },
+        {
+          "label": "YubiKey 5 Series with Lightning (24673149-6c86-42e7-98d9-433fb5b73296)",
+          "value": "24673149-6c86-42e7-98d9-433fb5b73296"
+        },
+        {
+          "label": "YubiKey 5 Series with Lightning (a02167b9-ae71-4ac7-9a07-06432ebb6f1c)",
+          "value": "a02167b9-ae71-4ac7-9a07-06432ebb6f1c"
+        },
+        {
+          "label": "YubiKey 5 Series with Lightning (c5ef55ff-ad9a-4b9f-b580-adebafe026d0)",
+          "value": "c5ef55ff-ad9a-4b9f-b580-adebafe026d0"
+        },
+        {
+          "label": "YubiKey 5 Series with Lightning (Consumer Profile) (03012cb7-4fb2-42e7-9e8d-a81f10e2a5e9)",
+          "value": "03012cb7-4fb2-42e7-9e8d-a81f10e2a5e9"
+        },
+        {
+          "label": "YubiKey 5 Series with Lightning (Enterprise Profile) (3b24bf49-1d45-4484-a917-13175df0867b)",
+          "value": "3b24bf49-1d45-4484-a917-13175df0867b"
+        },
+        {
+          "label": "YubiKey 5 Series with Lightning (Enterprise Profile) (b90e7dc1-316e-4fee-a25a-56a666a670fe)",
+          "value": "b90e7dc1-316e-4fee-a25a-56a666a670fe"
+        },
+        {
+          "label": "YubiKey 5 Series with Lightning (Enterprise Profile) (c3479970-e58a-4f70-836f-853bf42fb063)",
+          "value": "c3479970-e58a-4f70-836f-853bf42fb063"
+        },
+        {
+          "label": "YubiKey 5 Series with Lightning Preview (3124e301-f14e-4e38-876d-fbeeb090e7bf)",
+          "value": "3124e301-f14e-4e38-876d-fbeeb090e7bf"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC (2fc0579f-8113-47ea-b116-bb5a8db9202a)",
+          "value": "2fc0579f-8113-47ea-b116-bb5a8db9202a"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC (a25342c0-3cdc-4414-8e46-f4807fca511c)",
+          "value": "a25342c0-3cdc-4414-8e46-f4807fca511c"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC (Consumer Profile) (f4ce5fc0-57d3-46f5-a736-efb7d5bc63b5)",
+          "value": "f4ce5fc0-57d3-46f5-a736-efb7d5bc63b5"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC (Consumer Profile) KVZR57-2 (7dab85a5-d16d-4eaf-a7ef-4c1385b151c5)",
+          "value": "7dab85a5-d16d-4eaf-a7ef-4c1385b151c5"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC (d7781e5d-e353-46aa-afe2-3ca49f13332a)",
+          "value": "d7781e5d-e353-46aa-afe2-3ca49f13332a"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC (Enterprise Profile) (1ac71f64-468d-4fe0-bef1-0e5f2f551f18)",
+          "value": "1ac71f64-468d-4fe0-bef1-0e5f2f551f18"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC (Enterprise Profile) (41e39911-c669-4811-b860-c6ad0b411b96)",
+          "value": "41e39911-c669-4811-b860-c6ad0b411b96"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC (Enterprise Profile) (6ab56fad-881f-4a43-acb2-0be065924522)",
+          "value": "6ab56fad-881f-4a43-acb2-0be065924522"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC (fa2b99dc-9e39-4257-8f92-4a30d23c4118)",
+          "value": "fa2b99dc-9e39-4257-8f92-4a30d23c4118"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC - Enhanced PIN (662ef48a-95e2-4aaa-a6c1-5b9c40375824)",
+          "value": "662ef48a-95e2-4aaa-a6c1-5b9c40375824"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC - Enhanced PIN (Enterprise Profile) (b2c1a50b-dad8-4dc7-ba4d-0ce9597904bc)",
+          "value": "b2c1a50b-dad8-4dc7-ba4d-0ce9597904bc"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC Enhanced PIN (Consumer Profile) (0ebd9f2c-f685-441c-8c3e-a02a234a840a)",
+          "value": "0ebd9f2c-f685-441c-8c3e-a02a234a840a"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC Enhanced PIN (Enterprise Profile) (9a3f2abd-a73d-439c-9ee7-1b53a857eaa7)",
+          "value": "9a3f2abd-a73d-439c-9ee7-1b53a857eaa7"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC KVZR57 (9eb7eabc-9db5-49a1-b6c3-555a802093f4)",
+          "value": "9eb7eabc-9db5-49a1-b6c3-555a802093f4"
+        },
+        {
+          "label": "YubiKey 5 Series with NFC Preview (34f5766d-1536-4a24-9033-0e294e510fb0)",
+          "value": "34f5766d-1536-4a24-9033-0e294e510fb0"
+        },
+        {
+          "label": "YubiKey Bio Fido Edition (Consumer Profile) (9dd8d593-2213-438a-97f8-d6b813d51c27)",
+          "value": "9dd8d593-2213-438a-97f8-d6b813d51c27"
+        },
+        {
+          "label": "YubiKey Bio Fido Edition (Enterprise Profile) (add92433-0d69-4026-8166-29b25bce64e9)",
+          "value": "add92433-0d69-4026-8166-29b25bce64e9"
+        },
+        {
+          "label": "YubiKey Bio Multi-protocol Edition (Consumer Profile) (ba0a9266-40d8-4048-9786-d710b5474752)",
+          "value": "ba0a9266-40d8-4048-9786-d710b5474752"
+        },
+        {
+          "label": "YubiKey Bio Multi-protocol Edition (Consumer Profile) 1VDJSN-2 (9806a2c8-c0da-478e-b4ca-620005d34182)",
+          "value": "9806a2c8-c0da-478e-b4ca-620005d34182"
+        },
+        {
+          "label": "YubiKey Bio Multi-protocol Edition (Enterprise Profile) (dc5e949d-f939-43b3-9877-a85c7186b753)",
+          "value": "dc5e949d-f939-43b3-9877-a85c7186b753"
+        },
+        {
+          "label": "YubiKey Bio Series - FIDO Edition (7409272d-1ff9-4e10-9fc9-ac0019c124fd)",
+          "value": "7409272d-1ff9-4e10-9fc9-ac0019c124fd"
+        },
+        {
+          "label": "YubiKey Bio Series - FIDO Edition (d8522d9f-575b-4866-88a9-ba99fa02f35b)",
+          "value": "d8522d9f-575b-4866-88a9-ba99fa02f35b"
+        },
+        {
+          "label": "YubiKey Bio Series - FIDO Edition (dd86a2da-86a0-4cbe-b462-4bd31f57bc6f)",
+          "value": "dd86a2da-86a0-4cbe-b462-4bd31f57bc6f"
+        },
+        {
+          "label": "YubiKey Bio Series - FIDO Edition (Enterprise Profile) (83c47309-aabb-4108-8470-8be838b573cb)",
+          "value": "83c47309-aabb-4108-8470-8be838b573cb"
+        },
+        {
+          "label": "YubiKey Bio Series - FIDO Edition (Enterprise Profile) (8c39ee86-7f9a-4a95-9ba3-f6b097e5c2ee)",
+          "value": "8c39ee86-7f9a-4a95-9ba3-f6b097e5c2ee"
+        },
+        {
+          "label": "YubiKey Bio Series - FIDO Edition (Enterprise Profile) (ad08c78a-4e41-49b9-86a2-ac15b06899e2)",
+          "value": "ad08c78a-4e41-49b9-86a2-ac15b06899e2"
+        },
+        {
+          "label": "YubiKey Bio Series - Multi-protocol Edition (34744913-4f57-4e6e-a527-e9ec3c4b94e6)",
+          "value": "34744913-4f57-4e6e-a527-e9ec3c4b94e6"
+        },
+        {
+          "label": "YubiKey Bio Series - Multi-protocol Edition (7d1351a6-e097-4852-b8bf-c9ac5c9ce4a3)",
+          "value": "7d1351a6-e097-4852-b8bf-c9ac5c9ce4a3"
+        },
+        {
+          "label": "YubiKey Bio Series - Multi-protocol Edition (90636e1f-ef82-43bf-bdcf-5255f139d12f)",
+          "value": "90636e1f-ef82-43bf-bdcf-5255f139d12f"
+        },
+        {
+          "label": "YubiKey Bio Series - Multi-protocol Edition (Enterprise Profile) (6ec5cff2-a0f9-4169-945b-f33b563f7b99)",
+          "value": "6ec5cff2-a0f9-4169-945b-f33b563f7b99"
+        },
+        {
+          "label": "YubiKey Bio Series - Multi-protocol Edition (Enterprise Profile) (97e6a830-c952-4740-95fc-7c78dc97ce47)",
+          "value": "97e6a830-c952-4740-95fc-7c78dc97ce47"
+        },
+        {
+          "label": "YubiKey Bio Series - Multi-protocol Edition 1VDJSN (58276709-bb4b-4bb3-baf1-60eea99282a7)",
+          "value": "58276709-bb4b-4bb3-baf1-60eea99282a7"
+        },
+        {
+          "label": "Zoho Vault (b35a26b2-8f6e-4697-ab1d-d44db4da28c6)",
+          "value": "b35a26b2-8f6e-4697-ab1d-d44db4da28c6"
+        }
+      ],
+      "helperText": "Pick authenticator models from the list, or type an AAGUID from your vendor and press Enter. Microsoft's own are added by the switch above.",
+      "condition": {
+        "field": "EnforceKeyRestrictions",
+        "compareType": "is",
+        "compareValue": true
+      }
     }
   },
   "read": {
@@ -100,6 +546,7 @@
     "attestationEnforcement": "%AttestationEnforcement%",
     "enforceKeyRestrictions": "%EnforceKeyRestrictions%",
     "enforcementType": "%EnforcementType%",
+    "allowMicrosoftPasskeys": "%AllowMicrosoftPasskeys%",
     "aaGuids": "%AAGUIDs%"
   }
 }

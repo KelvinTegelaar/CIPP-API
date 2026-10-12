@@ -21,11 +21,11 @@ function Invoke-ExecRemoveSharingLink {
     $FileName = $Request.Body.FileName
     $CacheId = $Request.Body.CacheId
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($DriveId) -or [string]::IsNullOrWhiteSpace($ItemId) -or [string]::IsNullOrWhiteSpace($PermissionId)) {
-            throw 'DriveId, ItemId and PermissionId are required.'
-        }
+    if ([string]::IsNullOrWhiteSpace($DriveId) -or [string]::IsNullOrWhiteSpace($ItemId) -or [string]::IsNullOrWhiteSpace($PermissionId)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'DriveId, ItemId and PermissionId are required.' } })
+    }
 
+    try {
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/drives/$DriveId/items/$ItemId/permissions/$PermissionId" -tenantid $TenantFilter -type DELETE -asapp $true
 
         # Best effort: drop the revoked link from the reporting cache so the report updates without a full sync.
@@ -44,7 +44,7 @@ function Invoke-ExecRemoveSharingLink {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to revoke sharing link$(if ($FileName) { " for $FileName" }). Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

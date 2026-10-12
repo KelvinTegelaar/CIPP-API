@@ -14,12 +14,12 @@ function Invoke-CippTestCIS_5_3_4 {
             return
         }
 
-        $GA = $Roles | Where-Object { $_.displayName -eq 'Global Administrator' } | Select-Object -First 1
+        $GA = $Roles.Where({ $_.displayName -eq 'Global Administrator' }, 'First')[0]
 
-        $GAPolicy = $Policies | Where-Object {
+        $GAPolicy = $Policies.Where({
             $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and
-            ($_.rules | Where-Object { $_.id -eq 'Approval_EndUser_Assignment' -and $_.setting.isApprovalRequired -eq $true })
-        }
+            ($_.rules.Where({ $_.id -eq 'Approval_EndUser_Assignment' -and $_.setting.isApprovalRequired -eq $true }))
+        })
 
         if ($GAPolicy) {
             $Status = 'Passed'

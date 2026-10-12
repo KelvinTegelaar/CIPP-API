@@ -16,6 +16,7 @@ function Invoke-AddSharedMailbox {
     $MailboxObject = $Request.Body
     $Tenant = $MailboxObject.tenantID
     $Aliases = $MailboxObject.addedAliases -split '\n'
+    $Failed = 0
 
     try {
 
@@ -35,6 +36,7 @@ function Invoke-AddSharedMailbox {
             $null = Set-CIPPSignInState -userid $AddSharedRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APIName -Headers $Headers -AccountEnabled $false
             $Results.Add("Blocked sign-in for shared mailbox $Email")
         } catch {
+            $Failed++
             $ErrorMessage = Get-CippException -Exception $_
             $Message = "Failed to block sign-in for shared mailbox $Email Error: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
@@ -55,19 +57,20 @@ function Invoke-AddSharedMailbox {
                 $Results.Add($Message)
 
             } catch {
+                $Failed++
                 $ErrorMessage = Get-CippException -Exception $_
                 $Message = "Failed to add aliases to $Email : $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
                 $Results.Add($Message)
             }
         }
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = $Failed ? [HttpStatusCode]::MultiStatus : [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Message = "Failed to create shared mailbox. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
         $Results.Add($Message)
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 

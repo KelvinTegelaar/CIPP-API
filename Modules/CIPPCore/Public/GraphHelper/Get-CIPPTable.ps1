@@ -11,7 +11,9 @@ function Get-CIPPTable {
         ConnectionString = $env:AzureWebJobsStorage
         TableName        = $tablename
     }
-    $ContextParams['MaxConnectionsPerServer'] = if ($env:AZBOBBY_MAX_CONNECTIONS_PER_SERVER) { [int]$env:AZBOBBY_MAX_CONNECTIONS_PER_SERVER } else { 30 }
+    # Reading an unset variable through $env: throws and catches internally on every call
+    $MaxConnections = [System.Environment]::GetEnvironmentVariable('AZBOBBY_MAX_CONNECTIONS_PER_SERVER')
+    $ContextParams['MaxConnectionsPerServer'] = if ($MaxConnections) { [int]$MaxConnections } else { 30 }
     $Context = New-AzDataTableContext @ContextParams
 
     # New-AzDataTable 409s once the table exists, and those 409s bill like any other request.

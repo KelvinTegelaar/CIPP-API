@@ -1,0 +1,63 @@
+{
+  "displayName": "",
+  "installCommandLine": "",
+  "uninstallCommandLine": "",
+  "description": " ",
+  "publisher": "CIPP",
+  "developer": " ",
+  "owner": " ",
+  "informationUrl": " ",
+  "privacyInformationUrl": " ",
+  "fileName": "ninja.intunewin",
+  "@odata.type": "#microsoft.graph.win32LobApp",
+  "applicableArchitectures": "x86, x64",
+  "installExperience": {
+    "runAsAccount": "system",
+    "deviceRestartBehavior": "suppress",
+    "@odata.type": "microsoft.graph.win32LobAppInstallExperience"
+  },
+  "detectionRules": [
+    {
+      "@odata.type": "#microsoft.graph.win32LobAppPowerShellScriptDetection",
+      "enforceSignatureCheck": false,
+      "runAs32Bit": false,
+      "scriptContent": "aWYgKEdldC1TZXJ2aWNlIC1OYW1lICdOaW5qYVJNTUFnZW50JyAtRXJyb3JBY3Rpb24gU2lsZW50bHlDb250aW51ZSkgewogICAgV3JpdGUtT3V0cHV0ICdOaW5qYU9uZSBhZ2VudCBpbnN0YWxsZWQnCiAgICBleGl0IDAKfQpleGl0IDEK"
+    }
+  ],
+  "returnCodes": [
+    {
+      "returnCode": 0,
+      "type": "success",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    },
+    {
+      "returnCode": 1707,
+      "type": "success",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    },
+    {
+      "returnCode": 1641,
+      "type": "hardReboot",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    },
+    {
+      "returnCode": 1618,
+      "type": "retry",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    },
+    {
+      "returnCode": 3010,
+      "type": "softReboot",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    }
+  ],
+  "minimumNumberOfProcessors": 1,
+  "minimumFreeDiskSpaceInMB": 8,
+  "minimumCpuSpeedInMHz": 4,
+  "minimumSupportedOperatingSystem": {
+    "@odata.type": "microsoft.graph.windowsMinimumOperatingSystem",
+    "v10_1607": true
+  },
+  "notes": "CIPP Uploaded application",
+  "minimumMemoryInMB": 1
+}

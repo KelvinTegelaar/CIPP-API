@@ -74,7 +74,7 @@ function Invoke-ListFunctionStats {
             }
         }
     } catch {
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{
             Results  = @()
             Metadata = @{

@@ -25,9 +25,13 @@ BeforeAll {
     $script:Tenant = 'contoso.onmicrosoft.com'
 
     function New-CustomPolicy {
-        param([switch]$Encrypted)
+        param([switch]$Encrypted, [switch]$Boolean)
         $Setting = if ($Encrypted) {
             [ordered]@{ '@odata.type' = '#microsoft.graph.omaSettingStringXml'; displayName = 'AppLocker EXE'; omaUri = './Vendor/MSFT/AppLocker/x'; value = 'PGEvPg=='; isEncrypted = $true; secretReferenceValueId = 'abc_1' }
+        } elseif ($Boolean) {
+            # Graph's shape for a boolean setting: typed $true, never encrypted. '$true -eq "PGEvPg=="' is $true in
+            # PowerShell, so a naive placeholder check rejects every boolean setting that is switched on (#852).
+            [ordered]@{ '@odata.type' = '#microsoft.graph.omaSettingBoolean'; displayName = 'SkipUserStatusPage'; omaUri = './Device/Vendor/MSFT/DMClient/Provider/MS DM Server/FirstSyncStatus/SkipUserStatusPage'; value = $true; isEncrypted = $false; secretReferenceValueId = $null }
         } else {
             [ordered]@{ '@odata.type' = '#microsoft.graph.omaSettingStringXml'; displayName = 'AppLocker EXE'; omaUri = './Vendor/MSFT/AppLocker/x'; value = 'PFJ1bGVzLz4='; isEncrypted = $false }
         }
@@ -67,9 +71,28 @@ Describe 'Set-CIPPIntunePolicy -TemplateType Device (encrypted OMA-URI settings)
 
         Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly
     }
+
+    It 'deploys a template whose boolean OMA-URI setting is switched on (not mistaken for the placeholder)' {
+        $RawJSON = New-CustomPolicy -Boolean | ConvertTo-Json -Depth 10
+
+        Set-CIPPIntunePolicy -TemplateType 'Device' -DisplayName 'App Locker' -RawJSON $RawJSON -TenantFilter $script:Tenant |
+            Should -BeLike 'Successfully added policy*'
+
+        Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly
+    }
 }
 
 Describe 'New-CIPPIntuneTemplate -URLName deviceConfigurations (encrypted OMA-URI settings)' {
+    It 'captures a policy whose boolean OMA-URI setting is switched on' {
+        Mock -CommandName New-GraphGetRequest -MockWith { New-CustomPolicy -Boolean }
+        Mock -CommandName Get-CIPPOmaSettingDecryptedValue -MockWith { $DeviceConfiguration }
+
+        $Result = New-CIPPIntuneTemplate -URLName 'deviceConfigurations' -ID 'policy-id' -TenantFilter $script:Tenant
+
+        $Result.Type | Should -Be 'Device'
+        ($Result.TemplateJson | ConvertFrom-Json).omaSettings[0].value | Should -BeTrue
+    }
+
     BeforeEach {
         Mock -CommandName New-GraphGetRequest -MockWith { New-CustomPolicy -Encrypted }
     }

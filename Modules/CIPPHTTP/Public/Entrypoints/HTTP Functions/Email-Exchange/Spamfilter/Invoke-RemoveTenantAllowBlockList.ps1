@@ -39,7 +39,7 @@ function Invoke-RemoveTenantAllowBlockList {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove $($Entries) type $ListType. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

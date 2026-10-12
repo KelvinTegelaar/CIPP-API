@@ -5,7 +5,7 @@ function Set-CIPPDBCacheExoLabels {
 
     .DESCRIPTION
         Calls Get-Label against the Security & Compliance endpoint and writes the results into the
-        CIPP database under Type 'ExoLabels'. Selects Name and DisplayName - the fields the
+        CIPP database under Type 'ExoLabels', and Get-LabelPolicy under 'ExoLabelPolicies'. Selects Name and DisplayName - the fields the
         SensitivityLabelTemplate standard matches deployed labels on. Distinct from the
         'SensitivityLabels' type, which caches the Graph informationProtection view.
 
@@ -33,12 +33,13 @@ function Set-CIPPDBCacheExoLabels {
             # A license skip is still a completed collection: record the authoritative empty set
             # so collect-on-miss does not re-run this collector forever on unlicensed tenants.
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoLabels' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoLabelPolicies' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching compliance labels' -sev Debug
 
-        $Tenant = Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1
+        $Tenant = @(Get-Tenants -TenantFilter $TenantFilter)[0]
         $Labels = New-ExoRequest -TenantId $Tenant.customerId -cmdlet 'Get-Label' -Compliance -Select 'Name,DisplayName'
 
         if ($Labels) {
@@ -50,6 +51,9 @@ function Set-CIPPDBCacheExoLabels {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoLabels' -Data @() -AddCount -ClearOnEmpty
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 compliance labels (none found)' -sev Debug
         }
+
+        $LabelPolicies = New-ExoRequest -TenantId $Tenant.customerId -cmdlet 'Get-LabelPolicy' -Compliance -Select 'Name,Type,Enabled,Labels'
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoLabelPolicies' -Data @(if ($LabelPolicies) { $LabelPolicies }) -AddCount -ClearOnEmpty
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

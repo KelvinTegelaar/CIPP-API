@@ -10,7 +10,7 @@ function Push-CIPPBaselineToRepo {
         file is stamped with its returned blob SHA and the repo FullName: related templates
         on their templates row, the baseline itself on its rollout row.
     .OUTPUTS
-        @{ resultText = <string>; state = 'success' | 'error' }
+        @{ resultText = <string>; state = 'success' | 'error' }. Throws ItemNotFoundException when the baseline does not exist.
     .FUNCTIONALITY
         Internal
     #>
@@ -30,10 +30,7 @@ function Push-CIPPBaselineToRepo {
 
     $Export = Export-CIPPBaselineTemplate -GUID $GUID
     if (-not $Export) {
-        return @{
-            resultText = "Baseline '$($GUID)' not found"
-            state      = 'error'
-        }
+        throw [System.Management.Automation.ItemNotFoundException]::new("Baseline '$($GUID)' not found")
     }
 
     $TemplateTable = Get-CIPPTable -TableName templates

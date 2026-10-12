@@ -30,6 +30,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     function New-OffboardRequest {
         param([hashtable]$Body = @{}, [string[]]$Users = @('sseck@contoso.com'))
@@ -258,7 +259,7 @@ Describe 'Invoke-ExecOffboardUser' {
         It 'refuses a task that belongs to another tenant' {
             $Response = Invoke-ExecOffboardUser -Request (New-RerunRequest -Action 'Rerun' -Body @{ tenantFilter = 'other.com' })
 
-            $Response.StatusCode | Should -Be ([HttpStatusCode]::BadRequest)
+            $Response.StatusCode | Should -Be ([HttpStatusCode]::NotFound)
             Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
         }
 
@@ -267,7 +268,7 @@ Describe 'Invoke-ExecOffboardUser' {
 
             $Response = Invoke-ExecOffboardUser -Request (New-RerunRequest -Action 'RerunStep' -Body @{ StepIndex = 1 })
 
-            $Response.StatusCode | Should -Be ([HttpStatusCode]::BadRequest)
+            $Response.StatusCode | Should -Be ([HttpStatusCode]::NotFound)
             Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
         }
     }
@@ -292,7 +293,7 @@ Describe 'Invoke-ExecOffboardUser' {
             $Response = Invoke-ExecOffboardUser -Request $Request
 
             Should -Invoke Add-CIPPScheduledTask -Times 3 -Exactly
-            $Response.StatusCode | Should -Be ([HttpStatusCode]::Forbidden)
+            $Response.StatusCode | Should -Be ([HttpStatusCode]::MultiStatus)
             $Response.Body.Results | Should -Contain 'scheduler unavailable'
         }
     }

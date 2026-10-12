@@ -12,12 +12,12 @@ function Invoke-CippTestZTNA21869 {
             return
         }
 
-        $AppsWithoutAssignment = $ServicePrincipals | Where-Object {
+        $AppsWithoutAssignment = $ServicePrincipals.Where({
             $_.appRoleAssignmentRequired -eq $false -and
             $null -ne $_.preferredSingleSignOnMode -and
             $_.preferredSingleSignOnMode -in @('password', 'saml', 'oidc') -and
             $_.accountEnabled -eq $true
-        }
+        })
 
         if (-not $AppsWithoutAssignment) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21869' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'All enterprise applications have explicit assignment requirements' -Risk 'Medium' -Name 'Enterprise applications must require explicit assignment or scoped provisioning' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'
@@ -31,7 +31,7 @@ function Invoke-CippTestZTNA21869 {
         $ResultLines.Add('')
         $ResultLines.Add('**Applications without user assignment requirements:**')
 
-        $Top10Apps = $AppsWithoutAssignment | Select-Object -First 10
+        $Top10Apps = $AppsWithoutAssignment.Where({ $true }, 'First', 10)
         foreach ($App in $Top10Apps) {
             $ResultLines.Add("- $($App.displayName) (SSO: $($App.preferredSingleSignOnMode))")
         }

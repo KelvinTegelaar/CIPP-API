@@ -23,11 +23,11 @@ function Invoke-ExecRemoveSPOExternalUser {
     $SiteUrls = @($Request.Body.SiteUrls) | Where-Object { $_ }
     $DisplayName = $Request.Body.DisplayName ?? $EntraUserId ?? $LoginName
 
-    try {
-        if (-not $EntraUserId -and $SiteUrls.Count -eq 0) {
-            throw 'This entry has no Entra guest account and no known site memberships. The remaining SharePoint store entry cannot be removed (Microsoft deprecated the API) and ages out on its own; revoke any sharing links they hold via the Sharing Report.'
-        }
+    if (-not $EntraUserId -and $SiteUrls.Count -eq 0) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'This entry has no Entra guest account and no known site memberships. The remaining SharePoint store entry cannot be removed (Microsoft deprecated the API) and ages out on its own; revoke any sharing links they hold via the Sharing Report.' } })
+    }
 
+    try {
         $Messages = [System.Collections.Generic.List[string]]::new()
         $Errors = [System.Collections.Generic.List[string]]::new()
 
@@ -70,12 +70,12 @@ function Invoke-ExecRemoveSPOExternalUser {
             $Results += " Issues: $($Errors -join '; ')"
         }
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Info
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total ($Messages.Count + $Errors.Count) -Failed $Errors.Count
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to remove guest access for $($DisplayName): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

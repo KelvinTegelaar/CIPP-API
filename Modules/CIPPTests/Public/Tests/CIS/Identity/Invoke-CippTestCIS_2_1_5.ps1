@@ -19,7 +19,7 @@ function Invoke-CippTestCIS_2_1_5 {
             return
         }
 
-        $Cfg = $Atp | Select-Object -First 1
+        $Cfg = @($Atp)[0]
 
         $Required = @{
             EnableATPForSPOTeamsODB    = $true

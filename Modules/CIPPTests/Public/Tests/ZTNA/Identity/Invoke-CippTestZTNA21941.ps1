@@ -124,7 +124,7 @@ function Invoke-CippTestZTNA21941 {
         }
 
         # Determine overall status
-        $PassingPolicies = $TokenProtectionPolicies | Where-Object { $_.Status -eq 'Pass' }
+        $PassingPolicies = $TokenProtectionPolicies.Where({ $_.Status -eq 'Pass' })
         $Status = if ($PassingPolicies.Count -gt 0) { 'Passed' } else { 'Failed' }
 
         # Build result markdown

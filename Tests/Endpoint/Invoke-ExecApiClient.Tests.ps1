@@ -2,7 +2,7 @@
 #
 # Split-app model: an MCPAllowed API client is an OAuth *client* (the app a connector signs in as),
 # and the dedicated CIPP-MCP app is the shared resource. Several MCPAllowed clients may coexist, each
-# with its own role/IP/redirects/CA, so saving one must NOT clear MCP Access on the others. Enabling
+# with its own redirects, so saving one must NOT clear MCP Access on the others. Enabling
 # MCP on a client configures it via Set-CIPPMCPClientApp.
 
 BeforeAll {

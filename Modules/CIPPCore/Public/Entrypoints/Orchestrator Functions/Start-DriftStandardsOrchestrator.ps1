@@ -18,6 +18,6 @@ function Start-DriftStandardsOrchestrator {
             return
         }
         Write-LogMessage -API 'Standards' -message 'Starting Drift Standards Schedule' -sev Info
-        New-CIPPStandardsRun -Drift
+        $null = New-CIPPStandardsRun -Drift
     }
 }

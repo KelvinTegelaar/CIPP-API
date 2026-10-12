@@ -215,6 +215,15 @@ Describe 'Invoke-CIPPBecContainment' {
         Should -Invoke Set-CIPPMobileDevice -Times 1 -ParameterFilter { $Quarantine -eq 'true' -and $DeviceId -eq 'dev-1' -and $Guid -eq 'guid-1' }
     }
 
+    It 'records a failed mobile device block as an error row and keeps going' {
+        Mock Set-CIPPMobileDevice { throw 'Failed to Block Active Sync Device for victim@contoso.com: denied' }
+        $Rows = Invoke-CIPPBecContainment -TenantFilter 'contoso.com' -UserPrincipalName 'victim@contoso.com' -Actions @('BlockMobileDevices', 'ResetPassword') -Confirmed -RunResults $script:Run -Parameters @{ MobileDeviceIds = @('dev-1') }
+        $Row = $Rows | Where-Object { $_.Target -eq 'dev-1' }
+        $Row.state | Should -Be 'error'
+        $Row.resultText | Should -Match 'Failed to Block Active Sync Device'
+        Should -Invoke Set-CIPPResetPassword -Times 1
+    }
+
     It 'sets and clears the case log context' {
         $null = Invoke-CIPPBecContainment -TenantFilter 'contoso.com' -UserPrincipalName 'victim@contoso.com' -Actions @('RevokeSessions') -CaseId 'BEC-9'
         Should -Invoke Set-CippBecCaseContext -Times 1 -ParameterFilter { $CaseId -eq 'BEC-9' }

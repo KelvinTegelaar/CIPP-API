@@ -14,17 +14,20 @@ function Invoke-ListTests {
 
     $APIName = $TriggerMetadata.FunctionName
 
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $ReportId = $Request.Query.reportId ?? $Request.Body.reportId
+    # When true, return only the aggregated TestCounts (per-type pass/fail/etc totals) and skip
+    # the per-result markdown/metadata enrichment and the SecureScore/MFAState/License DB reads.
+    $SummaryOnly = ($Request.Query.summaryOnly -eq $true) -or ($Request.Body.summaryOnly -eq $true)
+
+    if (-not $TenantFilter) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Error = 'TenantFilter parameter is required' }
+            })
+    }
+
     try {
-        $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-        $ReportId = $Request.Query.reportId ?? $Request.Body.reportId
-        # When true, return only the aggregated TestCounts (per-type pass/fail/etc totals) and skip
-        # the per-result markdown/metadata enrichment and the SecureScore/MFAState/License DB reads.
-        $SummaryOnly = ($Request.Query.summaryOnly -eq $true) -or ($Request.Body.summaryOnly -eq $true)
-
-        if (-not $TenantFilter) {
-            throw 'TenantFilter parameter is required'
-        }
-
         $TestResultsData = Get-CIPPTestResults -TenantFilter $TenantFilter
 
         $IdentityTotal = 0
@@ -267,7 +270,7 @@ function Invoke-ListTests {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Error retrieving tests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{ Error = $ErrorMessage.NormalizedError }
     }
 

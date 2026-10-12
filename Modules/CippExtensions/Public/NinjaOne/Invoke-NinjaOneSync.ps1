@@ -14,8 +14,11 @@ function Invoke-NinjaOneSync {
         }
 
 
+        $TenantDomains = @{}
+        foreach ($T in Get-Tenants -IncludeErrors) { $TenantDomains[$T.customerId] = $T.defaultDomainName }
         $Batch = foreach ($Tenant in $TenantsToProcess) {
             [PSCustomObject]@{
+                'TenantFilter' = $TenantDomains[$Tenant.RowKey] ?? $Tenant.RowKey
                 'NinjaAction'  = 'SyncTenant'
                 'MappedTenant' = $Tenant
                 'FunctionName' = 'NinjaOneQueue'

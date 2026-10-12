@@ -12,7 +12,7 @@ function Invoke-CippTestZTNA21776 {
             return
         }
 
-        $Matched = $AuthPolicy | Where-Object { $_.defaultUserRolePermissions.permissionGrantPoliciesAssigned -match '^ManagePermissionGrantsForSelf' }
+        $Matched = $AuthPolicy.Where({ $_.defaultUserRolePermissions.permissionGrantPoliciesAssigned -match '^ManagePermissionGrantsForSelf' })
         $NoMatch = $Matched.Count -eq 0
         $LowImpact = $Matched.defaultUserRolePermissions.permissionGrantPoliciesAssigned -contains 'managePermissionGrantsForSelf.microsoft-user-default-low'
 

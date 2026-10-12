@@ -36,7 +36,7 @@ function Set-CIPPDBCacheExoDlpSensitiveInfoTypes {
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching sensitive information type rule packages' -sev Debug
 
-        $Tenant = Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1
+        $Tenant = @(Get-Tenants -TenantFilter $TenantFilter)[0]
         $RulePackages = New-ExoRequest -TenantId $Tenant.customerId -cmdlet 'Get-DlpSensitiveInformationTypeRulePackage' -Compliance | Select-Object * -ExcludeProperty '*odata*', '*data.type*'
         # Drop Microsoft's built-in catalog packages, keeping only custom/tenant-authored ones. Fail-open:
         # a package with no Publisher is kept rather than risk losing a real custom pack.

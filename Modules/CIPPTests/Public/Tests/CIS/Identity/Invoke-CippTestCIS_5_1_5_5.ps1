@@ -11,9 +11,9 @@ function Invoke-CippTestCIS_5_1_5_5 {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_5_5' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'DefaultAppManagementPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'New application passwords are system-generated' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
             return
         }
-        $Cfg = $Policy | Select-Object -First 1
+        $Cfg = @($Policy)[0]
 
-        $Restriction = $Cfg.applicationRestrictions.passwordCredentials | Where-Object { $_.restrictionType -eq 'customPasswordAddition' } | Select-Object -First 1
+        $Restriction = $Cfg.applicationRestrictions.passwordCredentials.Where({ $_.restrictionType -eq 'customPasswordAddition' }, 'First')[0]
 
         if (-not $Cfg.isEnabled) {
             $Status = 'Failed'

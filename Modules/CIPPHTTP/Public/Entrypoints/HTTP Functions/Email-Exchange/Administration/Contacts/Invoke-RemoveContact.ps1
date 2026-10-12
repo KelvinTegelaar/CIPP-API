@@ -10,7 +10,6 @@ Function Invoke-RemoveContact {
 
     $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $GUID = $Request.query.GUID ?? $Request.body.GUID
@@ -28,7 +27,7 @@ Function Invoke-RemoveContact {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to delete contact $GUID. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Results = [pscustomobject]@{'Results' = $Result }

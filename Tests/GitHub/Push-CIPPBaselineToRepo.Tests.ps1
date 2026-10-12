@@ -64,10 +64,10 @@ Describe 'Push-CIPPBaselineToRepo' {
         $Rollout.LocalChanges | Should -Be $false
     }
 
-    It 'returns an error result when the baseline does not exist' {
+    It 'throws ItemNotFoundException when the baseline does not exist' {
         Mock -CommandName Export-CIPPBaselineTemplate -MockWith { $null }
-        $Result = Push-CIPPBaselineToRepo -GUID 'missing' -FullName 'Org/repo' -Message 'push it' -Branch 'main'
-        $Result.state | Should -Be 'error'
+        { Push-CIPPBaselineToRepo -GUID 'missing' -FullName 'Org/repo' -Message 'push it' -Branch 'main' } |
+            Should -Throw -ExceptionType ([System.Management.Automation.ItemNotFoundException]) -ExpectedMessage "Baseline 'missing' not found"
         Should -Invoke Add-CIPPAzDataTableEntity -Times 0
     }
 

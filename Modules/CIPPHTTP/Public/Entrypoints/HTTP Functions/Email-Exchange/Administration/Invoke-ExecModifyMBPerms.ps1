@@ -10,12 +10,12 @@ function Invoke-ExecModifyMBPerms {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Extract mailbox requests - handle all three formats
     $MailboxRequests = $null
     $Results = [System.Collections.ArrayList]::new()
     $SuccessfulOps = [System.Collections.ArrayList]::new()
+    $Failed = 0
 
     # Direct array format
     if ($Request.Body -is [array]) {
@@ -62,6 +62,7 @@ function Invoke-ExecModifyMBPerms {
         $Permissions = $MailboxRequest.permissions
 
         if ([string]::IsNullOrEmpty($Username)) {
+            $Failed++
             $null = $Results.Add('Skipped mailbox with missing userID')
             continue
         }
@@ -81,6 +82,7 @@ function Invoke-ExecModifyMBPerms {
                     }
                 } catch {
                     Write-LogMessage -headers $Headers -API $APIName -message "Could not find user $($Username)" -Sev 'Error' -tenant $TenantFilter
+                    $Failed++
                     $null = $Results.Add("Could not find user $($Username)")
                     continue
                 }
@@ -201,6 +203,7 @@ function Invoke-ExecModifyMBPerms {
 
                             if ($result.error) {
                                 $ErrorMessage = try { (Get-CippException -Exception $result.error).NormalizedError } catch { $result.error }
+                                $Failed++
                                 $null = $Results.Add("Error processing $($metadata.Permission) for $($metadata.TargetUser) on $($metadata.Mailbox): $ErrorMessage")
                                 Write-LogMessage -headers $Headers -API $APIName -message "Error for operation $operationGuid`: $ErrorMessage" -Sev 'Error' -tenant $TenantFilter
                             } else {
@@ -214,6 +217,7 @@ function Invoke-ExecModifyMBPerms {
                             # Fallback for unmapped results
                             if ($result.error) {
                                 $ErrorMessage = try { (Get-CippException -Exception $result.error).NormalizedError } catch { $result.error }
+                                $Failed++
                                 $null = $Results.Add("Error in $cmdletName`: $ErrorMessage")
                             } else {
                                 $null = $Results.Add("Completed $cmdletName operation")
@@ -244,6 +248,7 @@ function Invoke-ExecModifyMBPerms {
                     $null = $Results.Add($CmdletMetadata.ExpectedResult)
                     $null = $SuccessfulOps.Add($CmdletMetadata)
                 } catch {
+                    $Failed++
                     $null = $Results.Add("Error processing $($CmdletMetadata.Permission) for $($CmdletMetadata.TargetUser) on $($CmdletMetadata.Mailbox): $($_.Exception.Message)")
                 }
             }
@@ -258,6 +263,7 @@ function Invoke-ExecModifyMBPerms {
             $null = $SuccessfulOps.Add($CmdletMetadata)
             Write-LogMessage -headers $Headers -API $APIName -message "Executed $($CmdletMetadata.Permission) permission modification" -Sev 'Info' -tenant $TenantFilter
         } catch {
+            $Failed++
             Write-LogMessage -headers $Headers -API $APIName -message "Permission modification failed: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
             $null = $Results.Add("Error processing $($CmdletMetadata.Permission) for $($CmdletMetadata.TargetUser) on $($CmdletMetadata.Mailbox): $($_.Exception.Message)")
         }
@@ -278,7 +284,7 @@ function Invoke-ExecModifyMBPerms {
 
     $body = [pscustomobject]@{'Results' = @($Results) }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total $Results.Count -Failed $Failed
             Body       = $Body
         })
 }

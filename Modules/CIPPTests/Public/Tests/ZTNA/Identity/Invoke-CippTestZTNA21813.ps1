@@ -30,13 +30,13 @@ function Invoke-CippTestZTNA21813 {
             # 'roleTemplateId', not 'templateId' — the Roles cache has no templateId field at all
             # (description, displayName, id, memberCount, members, roleTemplateId), so both filters
             # below compared against $null and matched nothing.
-            $ActiveAssignments = $AssignmentsByRole.Find($Role.roleTemplateId) | Where-Object { $_.assignmentType -eq 'Assigned' }
+            $ActiveAssignments = ($AssignmentsByRole.Find($Role.roleTemplateId)).Where({ $_.assignmentType -eq 'Assigned' })
             $EligibleAssignments = $EligibilitiesByRole.Find($Role.roleTemplateId)
 
             $AllAssignments = @($ActiveAssignments) + @($EligibleAssignments)
 
             foreach ($Assignment in $AllAssignments) {
-                $User = $UserById.Find($Assignment.principalId) | Select-Object -First 1
+                $User = $UserById.First($Assignment.principalId)
                 if (-not $User) { continue }
 
                 $UserId = $User.id
@@ -112,7 +112,7 @@ function Invoke-CippTestZTNA21813 {
             $User = $UserEntry.User
             $IsGA = if ($UserEntry.IsGA) { 'Yes' } else { 'No' }
 
-            $OtherRoles = $UserEntry.Roles | Where-Object { $_ -ne 'Global Administrator' } | Sort-Object
+            $OtherRoles = $UserEntry.Roles.Where({ $_ -ne 'Global Administrator' }) | Sort-Object
             $RolesList = if ($OtherRoles.Count -gt 0) { ($OtherRoles -join ', ') } else { '-' }
 
             $UserLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/AdministrativeRole/userId/$($User.id)/hidePreviewBanner~/true"

@@ -28,7 +28,7 @@ function Invoke-ExecEditCalendarPermissions {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         Write-Warning "Error in ExecEditCalendarPermissions: $($_.Exception.Message)"
         Write-Information $_.InvocationInfo.PositionMessage
     }

@@ -14,6 +14,14 @@ function Invoke-ListOffboardTenants {
 
     try {
         $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
+    } catch {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @([PSCustomObject]@{ Results = "Failed to list offboarding tenants. $($_.Exception.Message)" })
+            })
+    }
+
+    try {
         $Tenants = @(Get-Tenants -IncludeAll)
 
         if ($TenantAccess -notcontains 'AllTenants') {
@@ -28,7 +36,7 @@ function Invoke-ListOffboardTenants {
         $Results = @([PSCustomObject]@{
                 Results = "Failed to list offboarding tenants. $($ErrorMessage.NormalizedError)"
             })
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

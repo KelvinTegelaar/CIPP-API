@@ -68,9 +68,9 @@ function New-CIPPBaseline {
         RowKey          = "$GUID"
         templateName    = "$($Baseline.templateName)"
         description     = "$($Baseline.description)"
-        assignedTo      = (ConvertTo-Json -Compress -Depth 10 -InputObject @($Baseline.assignedTenants))
-        excludedTo      = (ConvertTo-Json -Compress -Depth 10 -InputObject @($Baseline.excludedTenants))
-        excludedTenants = (ConvertTo-Json -Compress -Depth 10 -InputObject $ExcludedValues)
+        assignedTo      = [string](ConvertTo-Json -Compress -Depth 10 -InputObject @($Baseline.assignedTenants))
+        excludedTo      = [string](ConvertTo-Json -Compress -Depth 10 -InputObject @($Baseline.excludedTenants))
+        excludedTenants = [string](ConvertTo-Json -Compress -Depth 10 -InputObject $ExcludedValues)
         alertEmails     = "$($Baseline.alertEmails)"
         alertWebhookUrl = "$($Baseline.alertWebhookUrl)"
         # 'Disable Alerts': deviations are still detected and shown, but no email, webhook
@@ -81,7 +81,7 @@ function New-CIPPBaseline {
         # Negative flag on purpose: rows saved before the column existed default to
         # scheduled, exactly right.
         disableScheduledRuns = [bool]$Baseline.disableScheduledRuns
-        Stages          = (ConvertTo-Json -Compress -Depth 100 -InputObject $StageDefinitions)
+        Stages          = [string](ConvertTo-Json -Compress -Depth 100 -InputObject $StageDefinitions)
         updatedBy       = "$User"
         updatedAt       = $Now
         Source          = "$($Source ?? $ExistingRollout.Source)"
@@ -146,7 +146,7 @@ function New-CIPPBaseline {
                     scopeId          = "$($Scope.scopeId)"
                     scopeName        = "$($Scope.scopeName)"
                     stage            = $StageNumber
-                    expectedValue    = (ConvertTo-Json -Compress -Depth 100 -InputObject $Variables)
+                    expectedValue    = [string](ConvertTo-Json -Compress -Depth 100 -InputObject $Variables)
                     # A missing flag must never fail open into auto-remediation.
                     remediateEnabled = [bool]$(if ($Config -is [string]) { $false } else { $Config.remediateEnabled ?? $false })
                     alertEnabled     = [bool]$(if ($Config -is [string]) { $true } else { $Config.alertEnabled ?? $true })

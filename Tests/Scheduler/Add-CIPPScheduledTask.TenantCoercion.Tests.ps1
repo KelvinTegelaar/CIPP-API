@@ -25,17 +25,9 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $message, $Sev, $tenant, $tenantid, $LogData) }
     function New-CIPPTaskDeltaQuery { param($Trigger, $TenantFilter, $PartitionKey) }
 
-    . $FunctionPath
+    function Resolve-CIPPCommand { param($Name) }
 
-    # Build a synthetic Get-Command result: the real Add-CIPPScheduledTask gates on $Command.Module
-    # (must be an allowed CIPP module) and reads $Command.Parameters.ContainsKey(...). Rather than
-    # register real functions in a fake module, hand back an object with just those two surfaces.
-    function New-FakeCommand {
-        param([string]$Module = 'CIPPCore', [string[]]$ParamNames)
-        $params = @{}
-        foreach ($p in $ParamNames) { $params[$p] = [pscustomobject]@{ Name = $p } }
-        [pscustomobject]@{ Module = $Module; Parameters = $params }
-    }
+    . $FunctionPath
 
     # Capture what actually gets written to the ScheduledTasks table.
     $script:CapturedEntity = $null
@@ -54,11 +46,7 @@ Describe 'Add-CIPPScheduledTask tenant-parameter coercion' {
         Mock -CommandName Write-LogMessage -MockWith {
             if ($Sev -eq 'Error') { $script:LoggedErrors.Add([string]$message) }
         }
-        # Default: a command that declares its own -Tenant parameter (the gap shape). Individual
-        # tests override this for the no-tenant-parameter case.
-        Mock -CommandName Get-Command -MockWith {
-            New-FakeCommand -ParamNames @('TenantFilter', 'AuthenticationMethodId', 'Enabled')
-        }
+        Mock -CommandName Resolve-CIPPCommand -MockWith { [pscustomobject]@{ Name = $Name; ModuleName = 'CIPPCore' } }
     }
 
     It 'strips a mismatched Tenant parameter so it is never persisted' {

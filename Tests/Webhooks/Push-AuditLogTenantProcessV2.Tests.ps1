@@ -11,6 +11,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     $WebhookDir = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Webhooks'
 
     function Get-CippTable { param($TableName) }
@@ -164,6 +165,16 @@ Describe 'Push-AuditLogTenantProcessV2' {
             Push-AuditLogTenantProcessV2 -Item $script:Item | Should -BeTrue
         }
 
+        It 'scopes the directory cache to the search and clears it when the search ends' {
+            Mock -CommandName Test-CIPPAuditLogRules -MockWith {
+                $script:SeenSearchCache = $script:AuditRuleSearchLookups
+                [PSCustomObject]@{ MatchedLogs = 0 }
+            }
+            $null = Push-AuditLogTenantProcessV2 -Item $script:Item
+            $script:SeenSearchCache.Tenant | Should -Be 'contoso.com'
+            $script:AuditRuleSearchLookups | Should -BeNullOrEmpty
+        }
+
         It 'reads the search partition, never an OR-list of RowKeys' {
             # The whole point of the layout. An OR-list cannot use the index and scans the
             # partition, which is what made cost scale with the tenant's backlog.
@@ -210,6 +221,7 @@ Describe 'Push-AuditLogTenantProcessV2' {
         It 'returns the window to Downloaded when processing throws' {
             Mock -CommandName Test-CIPPAuditLogRules -MockWith { throw 'boom' }
             Push-AuditLogTenantProcessV2 -Item $script:Item | Should -BeFalse
+            $script:AuditRuleSearchLookups | Should -BeNullOrEmpty
             ($script:LedgerWrites | Where-Object { $_.RowKey -eq 'window-1' -and $_.State -eq 'Downloaded' }) |
                 Should -Not -BeNullOrEmpty
         }

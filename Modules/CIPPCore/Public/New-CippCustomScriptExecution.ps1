@@ -41,7 +41,7 @@ function New-CippCustomScriptExecution {
     try {
         # Validate ScriptGuid
         if ([string]::IsNullOrWhiteSpace($ScriptGuid)) {
-            throw 'ScriptGuid is required'
+            throw [System.ArgumentException]::new('ScriptGuid is required')
         }
 
         # Get script from database
@@ -50,7 +50,7 @@ function New-CippCustomScriptExecution {
         $Scripts = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $Scripts) {
-            throw "Script with GUID '$ScriptGuid' not found"
+            throw [System.Management.Automation.ItemNotFoundException]::new("Script with GUID '$ScriptGuid' not found")
         }
 
         # Get latest version
@@ -75,7 +75,7 @@ function New-CippCustomScriptExecution {
         $ScriptContent = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $ScriptContent
 
         # Fast static pre-check (friendly errors). ConstrainedLanguage is the real boundary.
-        Test-CustomScriptSecurity -ScriptContent $ScriptContent
+        try { Test-CustomScriptSecurity -ScriptContent $ScriptContent } catch { throw [System.ArgumentException]::new($_.Exception.Message) }
 
         # Pre-fetch the tenant-locked cache data the script asks for (trusted side), so the
         # sandbox proxy can serve it. The sandbox itself has no storage/tenant access.

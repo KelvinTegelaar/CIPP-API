@@ -12,6 +12,7 @@ BeforeAll {
     function Get-CIPPTable { param($TableName) }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
     function Update-CIPPAzDataTableEntity { param($Context, $Entity, $OperationType, [switch]$Force, $MaxRetries) }
+    function Send-CIPPAsyncDeploymentUpdate { param($JobId, $Row) }
 
     . $FunctionPath
 
@@ -35,6 +36,7 @@ Describe 'Set-CIPPAsyncDeploymentStep' {
         $script:Written = [System.Collections.Generic.List[object]]::new()
         Mock -CommandName Get-CIPPTable -MockWith { @{ Context = 'ctx' } }
         Mock -CommandName Start-Sleep -MockWith { }
+        Mock -CommandName Send-CIPPAsyncDeploymentUpdate -MockWith { }
     }
 
     It 'writes the step without -Force so a concurrent update is detected rather than overwritten' {
@@ -72,6 +74,36 @@ Describe 'Set-CIPPAsyncDeploymentStep' {
         $Steps = @($script:Written[0].Steps | ConvertFrom-Json)
         $Steps[0].Status | Should -Be 'succeeded'
         $Steps[1].Status | Should -Be 'running'
+    }
+
+    It 'pushes the row once, as accepted, so live views carry the other worker''s step too' {
+        $script:Reads = 0
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            $script:Reads++
+            if ($script:Reads -eq 1) { New-Row } else { New-Row -FirstStepStatus 'succeeded' }
+        }
+        $script:Writes = 0
+        Mock -CommandName Update-CIPPAzDataTableEntity -MockWith {
+            $script:Writes++
+            if ($script:Writes -eq 1) { throw 'Precondition Failed' }
+        }
+
+        Set-CIPPAsyncDeploymentStep -JobId 'job-1' -Name 'pat@contoso.com' -StepIndex 1 -StepStatus 'running' -Message 'In progress'
+
+        Should -Invoke Send-CIPPAsyncDeploymentUpdate -Times 1 -Exactly
+        Should -Invoke Send-CIPPAsyncDeploymentUpdate -Times 1 -Exactly -ParameterFilter {
+            $Steps = @($Row.Steps | ConvertFrom-Json)
+            $JobId -eq 'job-1' -and $Steps[0].Status -eq 'succeeded' -and $Steps[1].Status -eq 'running'
+        }
+    }
+
+    It 'pushes nothing when every write is rejected' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { New-Row }
+        Mock -CommandName Update-CIPPAzDataTableEntity -MockWith { throw 'Precondition Failed' }
+
+        Set-CIPPAsyncDeploymentStep -JobId 'job-1' -Name 'pat@contoso.com' -StepIndex 0 -StepStatus 'failed' -Message 'x'
+
+        Should -Invoke Send-CIPPAsyncDeploymentUpdate -Times 0 -Exactly
     }
 
     It 'gives up quietly after five rejected writes' {

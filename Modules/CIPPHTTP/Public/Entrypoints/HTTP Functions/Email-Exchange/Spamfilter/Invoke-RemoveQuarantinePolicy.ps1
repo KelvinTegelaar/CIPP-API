@@ -29,7 +29,7 @@ Function Invoke-RemoveQuarantinePolicy {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove Quarantine policy '$($PolicyName)' - $($ErrorMessage.NormalizedError -replace '\|Microsoft.Exchange.Management.Tasks.ValidationException\|', '')"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $StatusCode = [HttpStatusCode]::OK

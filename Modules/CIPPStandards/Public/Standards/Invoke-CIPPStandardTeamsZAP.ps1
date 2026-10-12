@@ -22,7 +22,7 @@ function Invoke-CIPPStandardTeamsZAP {
         ADDEDDATE
             2026-05-06
         POWERSHELLEQUIVALENT
-            Set-TeamsProtectionPolicy -Identity 'Teams Protection Policy' -ZapEnabled $true
+            Set-TeamsProtectionPolicy -Identity 'Default Teams Protection Policy' -ZapEnabled $true
         RECOMMENDEDBY
             "CIS"
         REQUIREDCAPABILITIES
@@ -49,7 +49,8 @@ function Invoke-CIPPStandardTeamsZAP {
     if ($MDOTestResult -eq $false) { return $true }
 
     try {
-        $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TeamsProtectionPolicy' -cmdParams @{ Identity = 'Teams Protection Policy' }).ZapEnabled
+        $Policy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TeamsProtectionPolicy' | Select-Object -First 1
+        $CurrentState = $Policy.ZapEnabled
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         if ($ErrorMessage.NormalizedError -match '\b403\b') {
@@ -73,7 +74,7 @@ function Invoke-CIPPStandardTeamsZAP {
         } else {
             try {
                 $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-TeamsProtectionPolicy' -cmdParams @{
-                    Identity   = 'Teams Protection Policy'
+                    Identity   = $Policy.Name
                     ZapEnabled = $true
                 }
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Successfully enabled Teams ZAP.' -sev Info

@@ -4,9 +4,9 @@
   "cat": "Entra (AAD) Standards",
   "tag": [],
   "impact": "Low Impact",
-  "helpText": "Deploys selected applications to the tenant, from App Approval templates or by copying permissions from a source application.",
+  "helpText": "Deploys an application to the tenant, from an App Approval template or by copying permissions from source applications. Add the standard once per application - each instance deploys and grades one app, like the other templated standards.",
   "executiveText": "Automatically deploys approved business applications across every managed tenant, keeping access and permissions consistent.",
-  "docsDescription": "Grades an empty missing-apps list against the ServicePrincipals cache. Copy mode checks configured app ids; template mode resolves each App Approval template to its type-specific identity (display name for manifests, gallery template id, or app id). Remediation deploys per template type, copying or consenting permissions as the classic did.",
+  "docsDescription": "Multi-instance: each instance grades an empty missing-apps list against the ServicePrincipals cache for one application. Copy mode checks the configured app ids; template mode resolves the App Approval template to its type-specific identity (display name for manifests, gallery template id, or app id). Remediation deploys per template type, copying or consenting permissions as the classic did. Configurations saved before this standard became multi-instance (one instance selecting several templates) are split into one instance per template the next time the baseline is read, exactly as the editor would save them today.",
   "impactColour": "info",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Portal or Graph API",
@@ -19,6 +19,12 @@
   },
   "secureScoreImpact": 0,
   "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "templateIds",
+  "identity": {
+    "partition": "AppApprovalTemplate",
+    "nameField": "TemplateName"
+  },
   "variables": {
     "mode": {
       "type": "autoComplete",
@@ -38,9 +44,8 @@
     },
     "templateIds": {
       "type": "autoComplete",
-      "multiple": true,
       "creatable": false,
-      "label": "Select Applications (App Approval Templates)",
+      "label": "Select Application (App Approval Template)",
       "omitWhenBlank": true,
       "api": {
         "url": "/api/ListAppApprovalTemplates",

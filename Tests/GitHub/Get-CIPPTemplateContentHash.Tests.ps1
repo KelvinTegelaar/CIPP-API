@@ -28,6 +28,19 @@ Describe 'Get-CIPPTemplateContentHash' {
         $A | Should -Be $B
     }
 
+    It 'hashes content containing empty objects' {
+        $A = Get-CIPPTemplateContentHash -JSON '{"standards":[{"addedFields":{}}],"b":{}}'
+        $B = Get-CIPPTemplateContentHash -JSON '{"standards":[{"addedFields":{"x":1}}],"b":{}}'
+        $A | Should -Match '^[0-9a-f]{64}$'
+        $A | Should -Not -Be $B
+    }
+
+    It 'hashes arrays of scalars by value' {
+        $A = Get-CIPPTemplateContentHash -JSON '{"n":[1,true],"s":["ab"]}'
+        $A | Should -Not -Be (Get-CIPPTemplateContentHash -JSON '{"n":[2,true],"s":["ab"]}')
+        $A | Should -Not -Be (Get-CIPPTemplateContentHash -JSON '{"n":[1,true],"s":["cd"]}')
+    }
+
     It 'returns a lowercase hex SHA256 string' {
         $Hash = Get-CIPPTemplateContentHash -JSON '{"a":1}'
         $Hash | Should -Match '^[0-9a-f]{64}$'

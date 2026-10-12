@@ -32,7 +32,7 @@ function Invoke-RemovePolicy {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Could not delete policy: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APINAME -message $Results -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Body = [pscustomobject]@{'Results' = "$Results" }

@@ -26,7 +26,7 @@ Function Invoke-EditSpamFilter {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed setting Spamfilter rule $($Name) to $($State). Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

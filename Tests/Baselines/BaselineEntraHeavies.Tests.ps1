@@ -4,7 +4,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
@@ -16,11 +16,12 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
-    . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
+    . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
     foreach ($Name in @('FIDO2PasskeyProfiles', 'CopilotLimitedMode', 'NudgeMFA', 'OauthConsent', 'DisableSelfServiceLicenses', 'AuthenticationMethods')) {
-        . (Join-Path $Baselines "Get-CIPPBaseline${Name}State.ps1")
-        . (Join-Path $Baselines "Invoke-CIPPBaseline${Name}.ps1")
+        . (Join-Path $Baselines "PrepareHooks/Get-CIPPBaseline${Name}State.ps1")
+        . (Join-Path $Baselines "Executors/Invoke-CIPPBaseline${Name}.ps1")
     }
 
     $script:Tenant = 'contoso.onmicrosoft.com'
@@ -181,9 +182,9 @@ Describe 'Get-CIPPBaselineFIDO2PasskeyProfilesState' {
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
     }
 
-    It 'refuses key restrictions with no AAGUIDs - allow mode would lock every authenticator out' {
+    It 'refuses key restrictions with no AAGUIDs once Microsoft passkeys are opted out - allow mode would lock every authenticator out' {
         Mock New-CIPPDbRequest { @($script:Fido2 | ConvertTo-Cached) }
-        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'registrationOnly'; EnforceKeyRestrictions = $true } }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'registrationOnly'; EnforceKeyRestrictions = $true; AllowMicrosoftPasskeys = $false } }
         (Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
     }
 
@@ -204,7 +205,7 @@ Describe 'Get-CIPPBaselineFIDO2PasskeyProfilesState' {
         # so the expected state must enforce when AAGUIDs are present or the executor's write (which
         # also enforces) would perpetually read back as drift.
         Mock New-CIPPDbRequest { @($script:Fido2 | ConvertTo-Cached) }
-        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'registrationOnly'; EnforceKeyRestrictions = $false; EnforcementType = 'allow'; AAGUIDs = 'de1e552d-db1d-4423-a619-566b625cdc84' } }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'registrationOnly'; EnforceKeyRestrictions = $false; EnforcementType = 'allow'; AAGUIDs = 'de1e552d-db1d-4423-a619-566b625cdc84'; AllowMicrosoftPasskeys = $false } }
         $Prepared = Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Item -TenantFilter $script:Tenant
         $Prepared.Expected.keyRestrictionsEnforced | Should -BeTrue
         @($Prepared.Expected.aaGuids) | Should -Be @('de1e552d-db1d-4423-a619-566b625cdc84')
@@ -216,11 +217,79 @@ Describe 'Get-CIPPBaselineFIDO2PasskeyProfilesState' {
             defaultProfileId = 'p-default'
             allProfiles      = @($script:Fido2.passkeyProfiles | ConvertTo-Cached)
         }
-        Invoke-CIPPBaselineFIDO2PasskeyProfiles -Remediate ([PSCustomObject]@{ passkeyTypes = 'deviceBound'; attestationEnforcement = 'registrationOnly'; enforceKeyRestrictions = $false; enforcementType = 'allow'; aaGuids = 'de1e552d-db1d-4423-a619-566b625cdc84' }) -TenantFilter $script:Tenant -Current $Current
+        Invoke-CIPPBaselineFIDO2PasskeyProfiles -Remediate ([PSCustomObject]@{ passkeyTypes = 'deviceBound'; attestationEnforcement = 'registrationOnly'; enforceKeyRestrictions = $false; enforcementType = 'allow'; allowMicrosoftPasskeys = 'False'; aaGuids = 'de1e552d-db1d-4423-a619-566b625cdc84' }) -TenantFilter $script:Tenant -Current $Current
         $Body = $script:capturedBody | ConvertFrom-Json
         $Default = @($Body.passkeyProfiles) | Where-Object { $_.id -eq 'p-default' }
         $Default.keyRestrictions.isEnforced | Should -BeTrue
         @($Default.keyRestrictions.aaGuids) | Should -Be @('de1e552d-db1d-4423-a619-566b625cdc84')
+    }
+
+    It 'adds the Microsoft passkey AAGUIDs to an allow list by default, deduplicated' {
+        Mock New-CIPPDbRequest { @($script:Fido2 | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'disabled'; EnforcementType = 'allow'; AAGUIDs = 'yubikey-guid, de1e552d-db1d-4423-a619-566b625cdc84' } }
+        $Prepared = Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Expected.aaGuids).Count | Should -Be 6
+        $Prepared.Expected.aaGuids | Should -Contain 'yubikey-guid'
+        $Prepared.Expected.aaGuids | Should -Contain '08987058-cadc-4b81-b6e1-30de50dcbe96'
+    }
+
+    It 'allows only the Microsoft passkeys when enforced with no AAGUIDs entered' {
+        Mock New-CIPPDbRequest { @($script:Fido2 | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'disabled'; EnforceKeyRestrictions = $true } }
+        $Prepared = Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.enforcementType | Should -Be 'allow'
+        @($Prepared.Expected.aaGuids).Count | Should -Be 5
+    }
+
+    It 'never adds the Microsoft passkeys to a block list or turns enforcement on by itself' {
+        Mock New-CIPPDbRequest { @($script:Fido2 | ConvertTo-Cached) }
+        $Block = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'disabled'; EnforcementType = 'block'; AAGUIDs = 'bad-guid'; AllowMicrosoftPasskeys = $true } }
+        @((Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Block -TenantFilter $script:Tenant).Expected.aaGuids) | Should -Be @('bad-guid')
+        $Off = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'disabled'; AllowMicrosoftPasskeys = $true } }
+        $Prepared = Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Off -TenantFilter $script:Tenant
+        $Prepared.Expected.keyRestrictionsEnforced | Should -BeFalse
+        @($Prepared.Expected.aaGuids).Count | Should -Be 0
+    }
+
+    It 'writes the Microsoft passkey AAGUIDs the hook expects' {
+        Mock New-GraphPostRequest { $script:capturedBody = $body }
+        $Current = [PSCustomObject]@{
+            defaultProfileId = 'p-default'
+            allProfiles      = @($script:Fido2.passkeyProfiles | ConvertTo-Cached)
+        }
+        Invoke-CIPPBaselineFIDO2PasskeyProfiles -Remediate ([PSCustomObject]@{ passkeyTypes = 'deviceBound'; attestationEnforcement = 'disabled'; enforceKeyRestrictions = 'True'; enforcementType = 'allow'; allowMicrosoftPasskeys = 'True'; aaGuids = '' }) -TenantFilter $script:Tenant -Current $Current
+        $Default = @(($script:capturedBody | ConvertFrom-Json).passkeyProfiles) | Where-Object { $_.id -eq 'p-default' }
+        $Default.keyRestrictions.isEnforced | Should -BeTrue
+        @($Default.keyRestrictions.aaGuids).Count | Should -Be 5
+    }
+
+    It 'reads AAGUIDs saved by the picker as well as the legacy comma-separated string' {
+        Mock New-CIPPDbRequest { @($script:Fido2 | ConvertTo-Cached) }
+        $Expected = @('cb69481e-8ff7-4039-93ec-0a2729a154a8', 'ee882879-721c-4913-9775-3dfcce97072a')
+        $Saved = @(
+            # the picker's option wrappers, before the engine unwraps them
+            , @(@(@{ label = 'YubiKey 5 Series (cb69481e-8ff7-4039-93ec-0a2729a154a8)'; value = 'cb69481e-8ff7-4039-93ec-0a2729a154a8' }, @{ label = 'YubiKey 5 Series (ee882879-721c-4913-9775-3dfcce97072a)'; value = 'ee882879-721c-4913-9775-3dfcce97072a' }) | ConvertTo-Cached)
+            # the engine-unwrapped array
+            , @('cb69481e-8ff7-4039-93ec-0a2729a154a8', 'ee882879-721c-4913-9775-3dfcce97072a')
+            # a legacy comma-separated value
+            , 'cb69481e-8ff7-4039-93ec-0a2729a154a8, ee882879-721c-4913-9775-3dfcce97072a'
+        )
+        foreach ($AAGUIDs in $Saved) {
+            $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'disabled'; EnforceKeyRestrictions = $true; EnforcementType = 'allow'; AllowMicrosoftPasskeys = $false; AAGUIDs = $AAGUIDs } }
+            @((Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Item -TenantFilter $script:Tenant).Expected.aaGuids) | Should -Be $Expected
+        }
+    }
+
+    It 'writes AAGUIDs spliced in as a JSON array by the picker' {
+        Mock New-GraphPostRequest { $script:capturedBody = $body }
+        $Current = [PSCustomObject]@{
+            defaultProfileId = 'p-default'
+            allProfiles      = @($script:Fido2.passkeyProfiles | ConvertTo-Cached)
+        }
+        $Remediate = '{"passkeyTypes":"deviceBound","attestationEnforcement":"disabled","enforceKeyRestrictions":true,"enforcementType":"allow","allowMicrosoftPasskeys":false,"aaGuids":["cb69481e-8ff7-4039-93ec-0a2729a154a8","ee882879-721c-4913-9775-3dfcce97072a"]}' | ConvertFrom-Json
+        Invoke-CIPPBaselineFIDO2PasskeyProfiles -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current
+        $Default = @(($script:capturedBody | ConvertFrom-Json).passkeyProfiles) | Where-Object { $_.id -eq 'p-default' }
+        @($Default.keyRestrictions.aaGuids) | Should -Be @('cb69481e-8ff7-4039-93ec-0a2729a154a8', 'ee882879-721c-4913-9775-3dfcce97072a')
     }
 }
 

@@ -38,21 +38,17 @@ function Get-CIPPBaseline {
     $DeltaTable = Get-CippTable -tablename 'Baselines'
     $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
 
-    # Identity-carrying standards (CA/Intune templates) store the raw template id in
-    # their variables; the editor's pickers and instance titles need the template's
-    # display name. Resolve lazily from the template store and hand the variable back
-    # as a {label, value} option object - the editor consumes it verbatim and unwraps
-    # back to the raw id on save. The definition's optional identity block names the
-    # partition and name field; the defaults (partition = the remediate executor name,
-    # name field = displayName) are what CA and Intune templates use, but the wider
-    # template families store rows under partitions that do NOT match their executor
-    # ('TransportTemplate', 'ExConnectorTemplate', ...) and name them 'name'/'Name'.
-    # Only picker identities are template references: free-text identities (the
-    # Autopilot/Device Prep/Apple enrollment profile names) are the value itself, and
-    # wrapping them renders '[object Object]' in the editor's text field.
+    $AllDefinitions = @()
+    try { $AllDefinitions = @(Get-CIPPBaselineDefinition) } catch { Write-Information "Get-CIPPBaseline: definition lookup failed: $($_.Exception.Message)" }
+    $MultiIdentityVariables = @{}
+    foreach ($Definition in $AllDefinitions) {
+        if ($Definition.multiple -eq $true -and $Definition.instanceIdentity) {
+            $MultiIdentityVariables[$Definition.name] = "$($Definition.instanceIdentity)"
+        }
+    }
     $IdentityDefinitions = @{}
     if ($ResolveIdentityLabels) {
-        foreach ($Definition in @(Get-CIPPBaselineDefinition)) {
+        foreach ($Definition in $AllDefinitions) {
             $IdentityType = "$($Definition.variables.$($Definition.instanceIdentity).type)"
             if ($Definition.instanceIdentity -and $IdentityType -in @('autoComplete', 'select')) {
                 $IdentityDefinitions[$Definition.name] = @{
@@ -103,6 +99,49 @@ function Get-CIPPBaseline {
         $Variables
     }
 
+
+    $InstanceId = {
+        param($Seed)
+        $Hash = [System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$Seed"))
+        ([System.Convert]::ToHexString($Hash)).Substring(0, 8).ToLower()
+    }
+
+
+    $ExpandDeltaConfigs = {
+        param($Delta)
+        $BaseName = (($Delta.standardName) -split '#')[0]
+        $Variables = $(try { $Delta.expectedValue | ConvertFrom-Json } catch { [PSCustomObject]@{} }) ?? [PSCustomObject]@{}
+        $IdentityVariable = $MultiIdentityVariables[$BaseName]
+        $NewConfig = {
+            param($InstanceKey, $ConfigVariables)
+            [PSCustomObject]@{
+                standard         = $BaseName
+                instance         = "$InstanceKey"
+                variables        = (& $EnrichIdentityVariable $InstanceKey $ConfigVariables)
+                remediateEnabled = [bool]$Delta.remediateEnabled
+                alertEnabled     = [bool]$Delta.alertEnabled
+                alertOnRemediate = [bool]$Delta.alertOnRemediate
+            }
+        }
+        # Plain assignment, not an if-EXPRESSION: collecting pipeline output unrolls a
+        # single-element array to its bare value, which would read as 'already upgraded'.
+        $RawIdentity = $null
+        if ($IdentityVariable) { $RawIdentity = $Variables.$IdentityVariable }
+        if ($RawIdentity -is [array]) {
+            $IdentityValues = @($RawIdentity | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ } | Select-Object -Unique)
+            if ($IdentityValues.Count -gt 0) {
+                $FannedOut = foreach ($IdentityValue in $IdentityValues) {
+                    $InstanceVariables = [ordered]@{}
+                    foreach ($Property in $Variables.PSObject.Properties) { $InstanceVariables[$Property.Name] = $Property.Value }
+                    $InstanceVariables[$IdentityVariable] = $IdentityValue
+                    & $NewConfig ('{0}#m{1}' -f $BaseName, (& $InstanceId $IdentityValue)) ([PSCustomObject]$InstanceVariables)
+                }
+                return [PSCustomObject]@{ Configs = @($FannedOut); FannedOut = $true }
+            }
+        }
+        [PSCustomObject]@{ Configs = @((& $NewConfig $Delta.standardName $Variables)); FannedOut = $false }
+    }
+
     # Tenant + group context for assignment expansion and display names.
     $AllTenants = @()
     try { $AllTenants = @(Get-Tenants) } catch { Write-Information "Get-CIPPBaseline: tenant list lookup failed: $($_.Exception.Message)" }
@@ -138,22 +177,22 @@ function Get-CIPPBaseline {
                 $CurrentNumber = $StageNumber
                 # One delta exists per scope; a stage's standards are the unique instance keys.
                 $StageDeltas = @($Deltas | Where-Object { [int]$_.stage -eq $CurrentNumber } | Sort-Object -Property standardName -Unique)
+
+                $Expansions = @($StageDeltas | ForEach-Object { & $ExpandDeltaConfigs $_ })
+                $StageConfigs = [System.Collections.Generic.List[object]]::new()
+                $SeenInstances = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                foreach ($Expansion in @($Expansions | Where-Object { -not $_.FannedOut }) + @($Expansions | Where-Object { $_.FannedOut })) {
+                    foreach ($Config in $Expansion.Configs) {
+                        if ($SeenInstances.Add("$($Config.instance)")) { $StageConfigs.Add($Config) }
+                    }
+                }
                 [PSCustomObject]@{
                     name            = $StageDefinition.name
                     logic           = $StageDefinition.logic
                     conditions      = @($StageDefinition.conditions)
                     # Enumerated explicitly: member access on an empty array yields a lone $null.
-                    standards       = @($StageDeltas | ForEach-Object { $_.standardName })
-                    standardsConfig = @($StageDeltas | ForEach-Object {
-                            [PSCustomObject]@{
-                                standard         = (($_.standardName) -split '#')[0]
-                                instance         = $_.standardName
-                                variables        = (& $EnrichIdentityVariable $_.standardName $(try { $_.expectedValue | ConvertFrom-Json } catch { [PSCustomObject]@{} }))
-                                remediateEnabled = [bool]$_.remediateEnabled
-                                alertEnabled     = [bool]$_.alertEnabled
-                                alertOnRemediate = [bool]$_.alertOnRemediate
-                            }
-                        })
+                    standards       = @($StageConfigs | ForEach-Object { $_.instance })
+                    standardsConfig = @($StageConfigs)
                 }
             }
             $Stages = @($Stages)

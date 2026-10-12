@@ -267,7 +267,7 @@ function Invoke-CIPPBecContainment {
                             $Target = [string]($Device.DeviceID ?? $Device.Guid)
                             try {
                                 $R = if ($Id -eq 'BlockMobileDevices') { Set-CIPPMobileDevice -Headers $Headers -Quarantine 'true' -UserId $UserPrincipalName -DeviceId ([string]$Device.DeviceID) -TenantFilter $TenantFilter -Delete 'false' -Guid ([string]$Device.Guid) -APIName $APIName } else { Set-CIPPMobileDevice -Headers $Headers -Quarantine 'false' -UserId $UserPrincipalName -DeviceId ([string]$Device.DeviceID) -TenantFilter $TenantFilter -Delete 'true' -Guid ([string]$Device.Guid) -APIName $APIName }
-                                & $Add $Id $Target ($(if ([string]$R -like 'Failed*') { 'error' } else { 'success' })) ([string]$R) $null
+                                & $Add $Id $Target 'success' ([string]$R) $null
                             } catch { & $Add $Id $Target 'error' $_.Exception.Message $null }
                         }
                     }

@@ -55,7 +55,7 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         }
 
         try {
-            $TemplateEntity.JSON | ConvertFrom-Json -Depth 10
+            Resolve-CIPPTransportRuleTemplate -Template ($TemplateEntity.JSON | ConvertFrom-Json -Depth 10) -TenantFilter $Tenant
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to parse transport rule template $TemplateId $ErrorMessage" -sev 'Error'
@@ -80,7 +80,12 @@ function Invoke-CIPPStandardTransportRuleTemplate {
                 if ($Existing) {
                     if ($Settings.overwrite) {
                         $RequestParams | Add-Member -NotePropertyValue $RequestParams.name -NotePropertyName Identity
-                        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-TransportRule' -cmdParams ($RequestParams | Select-Object -Property * -ExcludeProperty GUID, Comments, HasSenderOverride, ExceptIfHasSenderOverride, ExceptIfMessageContainsDataClassifications, MessageContainsDataClassifications, UseLegacyRegex) -useSystemMailbox $true
+                        # Set-TransportRule rejects Enabled; state changes go through Enable-/Disable-TransportRule.
+                        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-TransportRule' -cmdParams ($RequestParams | Select-Object -Property * -ExcludeProperty GUID, Comments, HasSenderOverride, ExceptIfHasSenderOverride, ExceptIfMessageContainsDataClassifications, MessageContainsDataClassifications, UseLegacyRegex, Enabled) -useSystemMailbox $true
+                        if ($null -ne $RequestParams.Enabled) {
+                            $StateCmdlet = if ("$($RequestParams.Enabled)" -in @('True', 'Enabled')) { 'Enable-TransportRule' } else { 'Disable-TransportRule' }
+                            $null = New-ExoRequest -tenantid $Tenant -cmdlet $StateCmdlet -cmdParams @{ Identity = $RequestParams.name } -useSystemMailbox $true
+                        }
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set transport rule for $tenant" -sev 'Info'
                     } else {
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Skipping transport rule for $tenant as it already exists" -sev 'Info'

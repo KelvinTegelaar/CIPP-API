@@ -33,6 +33,7 @@ Describe 'Push-CIPPDBCacheApplyBatch' {
         $script:Runs[1].OrchestratorName | Should -Be 'CIPPDBCacheExecute'
         $script:Runs[1].PSObject.Properties.Name | Should -Not -Contain 'Priority'
         @($script:Runs[1].Batch.CollectionType) | Should -Be @('Graph', 'ExchangeConfig')
+        $script:Runs.AllowCollision | Should -Be @($false, $false)
     }
 
     It 'keeps a single-tenant run whole' {

@@ -19,7 +19,7 @@ function Invoke-CippTestCIS_2_1_1 {
             return
         }
 
-        $Compliant = $SafeLinks | Where-Object {
+        $Compliant = $SafeLinks.Where({
             $_.EnableSafeLinksForEmail -eq $true -and
             $_.EnableSafeLinksForTeams -eq $true -and
             $_.EnableSafeLinksForOffice -eq $true -and
@@ -29,7 +29,7 @@ function Invoke-CippTestCIS_2_1_1 {
             $_.EnableForInternalSenders -eq $true -and
             $_.DeliverMessageAfterScan -eq $true -and
             $_.DisableUrlRewrite -eq $false
-        }
+        })
 
         if ($Compliant) {
             $Status = 'Passed'

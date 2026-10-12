@@ -154,7 +154,7 @@ function Invoke-ListSharePointExternalUsers {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Body = "Failed to list SharePoint external users: $($ErrorMessage.NormalizedError)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

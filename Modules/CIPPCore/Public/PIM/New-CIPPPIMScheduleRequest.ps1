@@ -122,16 +122,16 @@ function New-CIPPPIMScheduleRequest {
     # Everything below creates or changes a schedule, so it has to end.
     $PermanentPattern = '^\s*(noExpiration|permanent|never|none|unlimited)\s*$'
     if ($Duration -match $PermanentPattern) {
-        throw "Refusing to build a $Kind $Action request: '$Duration' asks for a permanent (no-expiration) schedule, which CIPP never creates. Supply an ISO 8601 duration such as PT8H or P1Y."
+        throw [System.ArgumentException]::new("Refusing to build a $Kind $Action request: '$Duration' asks for a permanent (no-expiration) schedule, which CIPP never creates. Supply an ISO 8601 duration such as PT8H or P1Y.")
     }
 
     $HasDuration = -not [string]::IsNullOrWhiteSpace($Duration)
     $HasEnd = $PSBoundParameters.ContainsKey('EndDateTime') -and $null -ne $EndDateTime
     if (-not $HasDuration -and -not $HasEnd) {
-        throw "Refusing to build a $Kind $Action request without an expiration: CIPP never creates permanent (no-expiration) role schedules. Supply -Duration (ISO 8601) or -EndDateTime."
+        throw [System.ArgumentException]::new("Refusing to build a $Kind $Action request without an expiration: CIPP never creates permanent (no-expiration) role schedules. Supply -Duration (ISO 8601) or -EndDateTime.")
     }
     if ($HasDuration -and $HasEnd) {
-        throw 'Specify either -Duration or -EndDateTime, not both.'
+        throw [System.ArgumentException]::new('Specify either -Duration or -EndDateTime, not both.')
     }
 
     $NowUtc = [datetime]::UtcNow
@@ -145,10 +145,10 @@ function New-CIPPPIMScheduleRequest {
         try {
             $DurationSpan = [System.Xml.XmlConvert]::ToTimeSpan($Duration)
         } catch {
-            throw "'$Duration' is not a valid ISO 8601 duration (expected a value such as PT8H, P1D, P6M or P1Y)."
+            throw [System.ArgumentException]::new("'$Duration' is not a valid ISO 8601 duration (expected a value such as PT8H, P1D, P6M or P1Y).")
         }
         if ($DurationSpan -le [timespan]::Zero) {
-            throw "Duration '$Duration' must be greater than zero."
+            throw [System.ArgumentException]::new("Duration '$Duration' must be greater than zero.")
         }
         $EffectiveSpan = $DurationSpan
         $ComputedEnd = $Start.Add($DurationSpan)
@@ -160,10 +160,10 @@ function New-CIPPPIMScheduleRequest {
     } else {
         $EndUtc = $EndDateTime.ToUniversalTime()
         if ($EndUtc -le $NowUtc) {
-            throw "EndDateTime $($EndUtc.ToString('o')) is not in the future."
+            throw [System.ArgumentException]::new("EndDateTime $($EndUtc.ToString('o')) is not in the future.")
         }
         if ($EndUtc -le $Start) {
-            throw "EndDateTime $($EndUtc.ToString('o')) is not after the start $($Start.ToString('o'))."
+            throw [System.ArgumentException]::new("EndDateTime $($EndUtc.ToString('o')) is not after the start $($Start.ToString('o')).")
         }
         $EffectiveSpan = $EndUtc - $Start
         $ComputedEnd = $EndUtc
@@ -183,7 +183,7 @@ function New-CIPPPIMScheduleRequest {
         if ($EffectiveSpan -gt $MaxSpan) {
             $Requested = [math]::Round($EffectiveSpan.TotalHours, 2)
             $Allowed = [math]::Round($MaxSpan.TotalHours, 2)
-            throw "Requested $Kind lifetime ($Requested hours) exceeds the maximum allowed ($MaxDuration = $Allowed hours). Shorten the request; CIPP does not extend limits."
+            throw [System.ArgumentException]::new("Requested $Kind lifetime ($Requested hours) exceeds the maximum allowed ($MaxDuration = $Allowed hours). Shorten the request; CIPP does not extend limits.")
         }
     }
 

@@ -25,6 +25,7 @@ function Invoke-ExecGitHubAction {
 
     $SplatParams = $Parameters | Select-Object -ExcludeProperty Action, TenantFilter | ConvertTo-Json | ConvertFrom-Json -AsHashtable
 
+    $StatusCode = [HttpStatusCode]::OK
     switch ($Action) {
         'Search' {
             $SearchResults = Search-GitHub @SplatParams
@@ -42,6 +43,7 @@ function Invoke-ExecGitHubAction {
                 $Orgs = Invoke-GitHubApiRequest -Path 'user/orgs'
                 $Results = @($Orgs)
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = @{
                     resultText = 'You may not have permission to view organizations, check your PAT scopes and try again - {0}' -f $_.Exception.Message
                     state      = 'error'
@@ -58,6 +60,7 @@ function Invoke-ExecGitHubAction {
                 $ResultText = if ($Results -is [string]) { $Results } elseif ($Results.resultText) { $Results.resultText } else { 'Template imported' }
                 Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $ResultText -Sev 'Info'
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $ErrorMessage = Get-CippException -Exception $_
                 $Results = @{
                     resultText = "Error importing template: $($ErrorMessage.NormalizedError)"
@@ -95,6 +98,7 @@ function Invoke-ExecGitHubAction {
                 }
             } catch {
                 Write-Information (Get-CippException -Exception $_ | ConvertTo-Json)
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = @{
                     resultText = 'You may not have permission to create repositories, check your PAT scopes and try again - {0}' -f $_.Exception.Message
                     state      = 'error'
@@ -103,6 +107,7 @@ function Invoke-ExecGitHubAction {
             }
         }
         default {
+            $StatusCode = [HttpStatusCode]::BadRequest
             $Results = @{
                 resultText = "Unknown action '$Action'"
                 state      = 'error'
@@ -118,7 +123,7 @@ function Invoke-ExecGitHubAction {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

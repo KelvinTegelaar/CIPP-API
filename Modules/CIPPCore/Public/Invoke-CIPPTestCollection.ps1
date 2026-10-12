@@ -157,8 +157,19 @@ function Invoke-CIPPTestCollection {
     }
 
     # Standard suites: discover functions by name pattern via Get-Command.
+    # Get-Command copies the session function table and misses trigger module-path searches, so resolve each suite once per runspace.
+    $script:CippTestSuiteCommands ??= @{}
+    $SuiteCommands = $script:CippTestSuiteCommands[$SuiteName]
+    if (-not $SuiteCommands) {
+        $SuiteCommands = @{
+            Tests = @(Get-Command -Name $SuitePatterns[$SuiteName] -Module CIPPTests -ErrorAction SilentlyContinue)
+            Setup = Get-Command -Name "Initialize-CippTestSuite$SuiteName" -Module CIPPTests -ErrorAction SilentlyContinue
+            Clear = Get-Command -Name "Clear-CippTestSuite$SuiteName" -Module CIPPTests -ErrorAction SilentlyContinue
+        }
+        if ($SuiteCommands.Tests.Count -gt 0) { $script:CippTestSuiteCommands[$SuiteName] = $SuiteCommands }
+    }
     $Pattern = $SuitePatterns[$SuiteName]
-    $TestFunctions = @(Get-Command -Name $Pattern -Module CIPPTests -ErrorAction SilentlyContinue)
+    $TestFunctions = $SuiteCommands.Tests
     if ($TestFunctions.Count -eq 0) {
         Write-Information "No test functions found for suite $SuiteName (pattern: $Pattern) — skipping"
         return @{
@@ -177,6 +188,12 @@ function Invoke-CIPPTestCollection {
 
     $Table = Get-CippTable -tablename 'CippTestResults'
     $ResultBatch = [System.Collections.Generic.List[hashtable]]::new()
+
+    # A suite can share per-tenant work across its tests: Initialize-CippTestSuite<Suite> runs first, Clear-CippTestSuite<Suite> last.
+    $SuiteSetup = $SuiteCommands.Setup
+    if ($SuiteSetup) {
+        try { & $SuiteSetup -Tenant $TenantFilter } catch { Write-Information "  [$SuiteName] Suite setup failed, tests run without it: $($_.Exception.Message)" }
+    }
 
     foreach ($TestFunction in $TestFunctions) {
         $ItemStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -201,6 +218,8 @@ function Invoke-CIPPTestCollection {
             $Timings.Add(('{0} : {1:N3}s (FAILED)' -f $TestFunction.Name, $ItemStopwatch.Elapsed.TotalSeconds))
         }
     }
+
+    if ($SuiteSetup) { & $SuiteCommands.Clear }
 
     # Final flush
     if ($ResultBatch.Count -gt 0) {

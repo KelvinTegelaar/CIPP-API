@@ -18,7 +18,7 @@ function Invoke-CippTestE8_MFA_08 {
         }
 
         $MemberIds = [System.Collections.Generic.HashSet[string]]::new(
-            [string[]]($Users | Where-Object { $_.accountEnabled -eq $true -and $_.userType -ne 'Guest' }).id)
+            [string[]]$Users.Where({ $_.accountEnabled -eq $true -and $_.userType -ne 'Guest' }).id)
 
         if ($MemberIds.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No enabled member users found.' -Risk 'High' -Name $Name -UserImpact 'High' -ImplementationEffort 'High' -Category 'E8 ML3 - MFA'
@@ -27,7 +27,7 @@ function Invoke-CippTestE8_MFA_08 {
 
         $PhishMethods = @('fido2SecurityKey','windowsHelloForBusiness','x509CertificateSingleFactor','x509CertificateMultiFactor','passKeyDeviceBound','passKeyDeviceBoundAuthenticator','passKeyDeviceBoundWindowsHello')
         $Total = 0; $NonCompliant = 0
-        foreach ($R in $Reg | Where-Object { $MemberIds.Contains($_.id) }) {
+        foreach ($R in $Reg.Where({ $MemberIds.Contains($_.id) })) {
             $Total++
             $HasPhish = $false
             foreach ($M in $R.methodsRegistered) { if ($PhishMethods -contains $M) { $HasPhish = $true; break } }

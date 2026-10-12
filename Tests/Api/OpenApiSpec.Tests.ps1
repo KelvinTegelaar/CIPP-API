@@ -265,6 +265,7 @@ Describe 'the real spec through the real projection' {
             . (Join-Path $McpRoot $Leaf)
         }
         function Get-CippMcpSpec { return $script:Spec }
+        function Get-CippRequestAllowedPermissions { $null }
         # The catalog is the whole projected surface. tools/list advertises only the
         # five-tool gateway in front of it, which is asserted separately below.
         $script:Tools = @(Get-CippMcpToolCatalog -Force -InformationAction SilentlyContinue)

@@ -137,7 +137,7 @@ function Invoke-ListSites {
 
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
     if ($Request.query.URLOnly -eq $true) {

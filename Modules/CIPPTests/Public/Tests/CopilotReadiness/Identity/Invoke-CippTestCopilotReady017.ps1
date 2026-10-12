@@ -18,7 +18,7 @@ function Invoke-CippTestCopilotReady017 {
             return
         }
 
-        $TrendPoints = @($TrendData | Where-Object { $_.reportDate } | Sort-Object reportDate)
+        $TrendPoints = @($TrendData.Where({ $_.reportDate }) | Sort-Object reportDate)
 
         if ($TrendPoints.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("No Microsoft 365 Copilot usage trend data was found for the past 7 days.`n`n")
@@ -28,9 +28,9 @@ function Invoke-CippTestCopilotReady017 {
         }
 
         # Find a consistent active user count field
-        $CountField = $TrendPoints[0].PSObject.Properties.Name | Where-Object {
+        $CountField = $TrendPoints[0].PSObject.Properties.Name.Where({
             $_ -notmatch 'report|date|id' -and $TrendPoints[0].$_ -match '^\d+$'
-        } | Select-Object -First 1
+        }, 'First')[0]
 
         # Build trend table
         $Result = [System.Text.StringBuilder]::new("## Copilot Active User Trend (Last 7 Days)`n`n")

@@ -59,6 +59,15 @@ function Push-BECRun {
         }
         $Heuristics = Get-CIPPBecHeuristics
         $WindowDays = [int]($Heuristics.window.days ?? 7)
+        # Entra ID P1/P2 keep sign-in and directory audit logs for 30 days, so those tenants get the longer window.
+        try {
+            $RunCapabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
+            if ($RunCapabilities.AAD_PREMIUM -eq $true -or $RunCapabilities.AAD_PREMIUM_P2 -eq $true) {
+                $WindowDays = [int]($Heuristics.window.premiumDays ?? $WindowDays)
+            }
+        } catch {
+            Write-Information "BEC: could not read tenant plans for $TenantFilter, using the $WindowDays-day window: $($_.Exception.Message)"
+        }
         $endDate = (Get-Date).ToUniversalTime()
         $startDate = $endDate.AddDays(-$WindowDays)
         # a retry of the first phase starts clean, never on a dead attempt's state
@@ -1179,8 +1188,8 @@ function Push-BECRun {
         Write-LogMessage -API 'BECRun' -message "BEC phase $Key failed for $($UserName): $errMessage [case $CaseId]" -tenant $TenantFilter -sev 'Error' -LogData $CippError
         & $Step $StepIndex 'failed' $errMessage
         if ($IsLast) {
-            # without the score and report there is no case: the run failed
-            Set-CIPPAsyncDeploymentStatus -JobId $CaseId -Name $UserName -Status 'failed' -Logs $errMessage
+            # without the score and report there is no case: the run failed. The report is written first,
+            # as on success, so a page told the job ended reads the outcome rather than a running case.
             try {
                 $null = Set-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -Properties @{
                     UserId            = [string]$SuspectUser
@@ -1193,6 +1202,7 @@ function Push-BECRun {
             } catch {
                 Write-Information "BEC: could not record the failed run $CaseId`: $($_.Exception.Message)"
             }
+            Set-CIPPAsyncDeploymentStatus -JobId $CaseId -Name $UserName -Status 'failed' -Logs $errMessage
         } else {
             # the later phases still run; this phase's checks show as failed on the case
             try {

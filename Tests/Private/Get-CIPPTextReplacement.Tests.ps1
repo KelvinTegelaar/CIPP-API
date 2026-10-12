@@ -18,8 +18,10 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Filter) }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Get-CIPPSchemaExtensions { }
+    function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields) }
 
     . $FunctionPath
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Tools/Convert-AzureAdObjectIdToSid.ps1')
 
     # A CippReplacemap row. Omitting -VariableType produces a row shaped like the ones that existed
     # before typing, which is what the backwards compatibility tests need.
@@ -137,6 +139,91 @@ Describe 'Get-CIPPTextReplacement' {
 
             Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"%single%"}' -EscapeForJson |
                 Should -Be '{"v":{"a":1}}'
+        }
+    }
+
+    Context 'existing types used as an array element are not spliced' {
+        BeforeEach {
+            $script:GlobalRows = @(
+                New-VariableRow -Name 'jsonlist' -Value '["Site A","Site B"]' -VariableType 'json'
+                New-VariableRow -Name 'jsonempty' -Value '[]' -VariableType 'json'
+                New-VariableRow -Name 'commalist' -Value 'Site A, Site B'
+                New-VariableRow -Name 'count' -Value '5' -VariableType 'integer'
+                New-VariableRow -Name 'unknowntype' -Value 'Site A' -VariableType 'somethingelse'
+            )
+        }
+
+        It 'nests a json array that fills an array element' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["%jsonlist%"]}' -EscapeForJson |
+                Should -Be '{"v":[["Site A","Site B"]]}'
+        }
+
+        It 'nests an empty json array that fills an array element' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["x", "%jsonempty%"]}' -EscapeForJson |
+                Should -Be '{"v":["x", []]}'
+        }
+
+        It 'keeps a comma separated string as one element' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["%commalist%"]}' -EscapeForJson |
+                Should -Be '{"v":["Site A, Site B"]}'
+        }
+
+        It 'writes an integer array element as a number' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":[1,"%count%"]}' -EscapeForJson |
+                Should -Be '{"v":[1,5]}'
+        }
+
+        It 'escapes a json variable embedded in a longer string' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"sites: %jsonlist%"}' -EscapeForJson |
+                Should -Be '{"v":"sites: [\"Site A\",\"Site B\"]"}'
+        }
+
+        It 'treats an unrecognised type as a string' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["%unknowntype%"],"w":"%unknowntype%"}' -EscapeForJson |
+                Should -Be '{"v":["Site A"],"w":"Site A"}'
+        }
+    }
+
+    Context 'a list variable expands to multiple values' {
+        BeforeEach {
+            $script:GlobalRows = @(
+                New-VariableRow -Name 'sites' -Value '["Site A","Site \"B\""]' -VariableType 'list'
+                New-VariableRow -Name 'none' -Value '[]' -VariableType 'list'
+                New-VariableRow -Name 'broken' -Value 'Site A, Site B' -VariableType 'list'
+            )
+        }
+
+        It 'splices its items into the array it is an element of' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["x", "%sites%", "y"]}' -EscapeForJson |
+                Should -Be '{"v":["x", "Site A","Site \"B\"", "y"]}'
+        }
+
+        It 'writes the array when it fills the whole value' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"%sites%"}' -EscapeForJson |
+                Should -Be '{"v":["Site A","Site \"B\""]}'
+        }
+
+        It 'removes the element when the list is empty, wherever it sits' {
+            $Cases = [ordered]@{
+                '{"v":["%none%"]}'           = '{"v":[]}'
+                '{"v":[ "%none%", "y"]}'     = '{"v":[ "y"]}'
+                '{"v":["x", "%none%", "y"]}' = '{"v":["x", "y"]}'
+                '{"v":["x","%none%"]}'       = '{"v":["x"]}'
+                '{"v":"%none%"}'             = '{"v":[]}'
+            }
+            foreach ($Case in $Cases.GetEnumerator()) {
+                Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text $Case.Key -EscapeForJson | Should -Be $Case.Value
+            }
+        }
+
+        It 'comma-joins its items inside a longer string' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"sites: %sites%"}' -EscapeForJson |
+                Should -Be '{"v":"sites: Site A, Site \"B\""}'
+        }
+
+        It 'falls back to a string when the value is not a JSON array' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["%broken%"]}' -EscapeForJson |
+                Should -Be '{"v":["Site A, Site B"]}'
         }
     }
 
@@ -643,6 +730,18 @@ Describe 'Get-CIPPTextReplacement' {
         }
     }
 
+    Context 'text without a token' {
+        It 'is returned unchanged without reading tenants or variables' {
+            $script:GlobalRows = @(New-VariableRow -Name 'sitename' -Value 'Contoso')
+            $Text = '{"requests":[{"id":"1","body":{"Identity":"user@contoso.com"}}]}'
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text $Text -EscapeForJson | Should -BeExactly $Text
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '' | Should -BeExactly ''
+            Should -Invoke Get-Tenants -Times 0 -Exactly
+            Should -Invoke Get-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+    }
+
     Context 'repeated resolution' {
         It 'is stable when the pipeline resolves the same text twice' {
             # Push-CIPPStandard resolves the settings, then the standard resolves its payload again.
@@ -653,6 +752,38 @@ Describe 'Get-CIPPTextReplacement' {
 
             $Twice | Should -Be $Once
             ($Twice | ConvertFrom-Json).v | Should -Be 'Contoso "HQ"'
+        }
+    }
+
+    Context 'directory role SIDs' {
+        BeforeEach {
+            $script:CachedRoles = @(
+                [pscustomobject]@{ id = '213b2724-13c2-4b72-b093-955d2e9f7320'; roleTemplateId = '62e90394-69f5-4237-9190-012177145e10' }
+            )
+            Mock -CommandName New-CIPPDbRequest -MockWith { $script:CachedRoles }
+        }
+
+        It 'resolves the role SID from the cached directoryRole object id' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"sid":"%globaladminsid%"}' -EscapeForJson |
+                Should -Be '{"sid":"S-1-12-1-557524772-1265767362-1570083760-544448302"}'
+            Should -Invoke New-CIPPDbRequest -Times 1 -Exactly -ParameterFilter { $Type -eq 'Roles' }
+        }
+
+        It 'throws instead of substituting an empty value when the role is not cached' {
+            { Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%deviceadminsid%' } |
+                Should -Throw '*%deviceadminsid%*'
+        }
+
+        It 'ignores a custom variable with the same name' {
+            $script:GlobalRows = @(New-VariableRow -Name 'globaladminsid' -Value 'S-1-12-1-1-2-3-4')
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%globaladminsid%' |
+                Should -Be 'S-1-12-1-557524772-1265767362-1570083760-544448302'
+        }
+
+        It 'does not read the cache when no role SID token is used' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%tenantname%' | Should -Be 'Contoso Ltd'
+            Should -Invoke New-CIPPDbRequest -Times 0 -Exactly
         }
     }
 }

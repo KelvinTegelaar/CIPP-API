@@ -5,7 +5,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function Get-CIPPSPOTenant { param($TenantFilter, [switch]$UseCertificate, [switch]$SkipCache) }
     function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields) }
@@ -15,8 +15,8 @@ BeforeAll {
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Write-Information { param($MessageData) }
 
-    . (Join-Path $Baselines 'Get-CIPPBaselineSPGuestPeoplePickerState.ps1')
-    . (Join-Path $Baselines 'Invoke-CIPPBaselineSPGuestPeoplePicker.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineSPGuestPeoplePickerState.ps1')
+    . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineSPGuestPeoplePicker.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
     function script:New-Site { param([string]$Url, [bool]$Show) [PSCustomObject]@{ Url = $Url; ShowPeoplePickerSuggestionsForGuestUsers = $Show } }

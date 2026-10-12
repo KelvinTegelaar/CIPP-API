@@ -10,10 +10,6 @@ function Invoke-ListCompliancePolicies {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $TenantFilter = $Request.Query.tenantFilter
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
@@ -103,7 +99,7 @@ function Invoke-ListCompliancePolicies {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
 

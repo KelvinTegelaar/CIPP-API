@@ -105,6 +105,7 @@ function Invoke-ExecCippReplacemap {
         return
     }
 
+    $StatusCode = [HttpStatusCode]::OK
     switch ($Action) {
         'List' {
             $Variables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId'" | ForEach-Object {
@@ -155,10 +156,10 @@ function Invoke-ExecCippReplacemap {
             $VariableType = $Request.Body.VariableType.value ?? $Request.Body.VariableType
             if ([string]::IsNullOrWhiteSpace($VariableType)) { $VariableType = 'string' }
 
-            if ($VariableType -notin @('string', 'integer', 'boolean', 'json')) {
+            if ($VariableType -notin @('string', 'integer', 'boolean', 'json', 'list')) {
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
-                        Body       = @{ Results = "'$VariableType' is not a valid variable type. Use string, integer, boolean, or json." }
+                        Body       = @{ Results = "'$VariableType' is not a valid variable type. Use string, integer, boolean, json, or list." }
                     })
             }
 
@@ -193,6 +194,19 @@ function Invoke-ExecCippReplacemap {
                             })
                     }
                 }
+                'list' {
+                    # One value per line is stored as the JSON array the substitution reads.
+                    if (-not $TrimmedValue.StartsWith('[') -and -not $TrimmedValue.StartsWith('{')) {
+                        $TrimmedValue = ConvertTo-Json -InputObject @($TrimmedValue -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) -Compress
+                        $VariableValue = $TrimmedValue
+                    }
+                    if (-not $TrimmedValue.StartsWith('[') -or -not (Test-Json -Json $TrimmedValue -ErrorAction SilentlyContinue)) {
+                        return ([HttpResponseContext]@{
+                                StatusCode = [HttpStatusCode]::BadRequest
+                                Body       = @{ Results = "Variable '$VariableName' is typed as list, but its value is not a JSON array such as [""Site A"",""Site B""]." }
+                            })
+                    }
+                }
             }
 
             $VariableEntity = @{
@@ -218,16 +232,18 @@ function Invoke-ExecCippReplacemap {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $customerId -message $Result -Sev 'Info'
                 $Body = @{ Results = $Result }
             } else {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Body = @{ Results = "Variable '$VariableName' not found" }
             }
         }
         default {
+            $StatusCode = [HttpStatusCode]::BadRequest
             $Body = @{ Results = 'Invalid action' }
         }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

@@ -22,7 +22,7 @@ function Invoke-CippTestSMB1001_2_8 {
             return
         }
 
-        $Cfg = $Auth | Select-Object -First 1
+        $Cfg = @($Auth)[0]
 
         if ($Cfg.defaultUserRolePermissions.allowedToCreateApps -ne $false) {
             $Issues.Add("Users can create app registrations (allowedToCreateApps: $($Cfg.defaultUserRolePermissions.allowedToCreateApps))")

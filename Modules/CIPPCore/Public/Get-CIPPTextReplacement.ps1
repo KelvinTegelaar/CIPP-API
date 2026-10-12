@@ -79,12 +79,38 @@ function Get-CIPPTextReplacement {
         }
     }
 
+    # A list variable holds a JSON array. Used as an array element it is spliced in as several
+    # elements; filling a whole slot it is the array; inside a longer string it is comma-joined.
+    function Expand-CIPPListToken {
+        param([string]$Text, [string]$Token, $Value, [bool]$Escape)
+        try {
+            $Items = @(ConvertFrom-Json -InputObject ([string]$Value) -Depth 100 -NoEnumerate -ErrorAction Stop | ForEach-Object { $_ })
+        } catch {
+            return $null
+        }
+        $Quoted = [regex]::Escape('"{0}"' -f $Token)
+        $Encoded = @(foreach ($Item in $Items) { ConvertTo-Json -InputObject $Item -Depth 100 -Compress })
+        if ($Encoded.Count -gt 0) {
+            $Text = $Text -replace "(?<=[\[,]\s*)$Quoted(?=\s*[\],])", (ConvertTo-CIPPLiteralReplacement -Value ($Encoded -join ','))
+        } else {
+            $Text = $Text -replace ",\s*$Quoted(?=\s*[\],])", ''
+            $Text = $Text -replace "(?<=\[\s*)$Quoted\s*,?\s*", ''
+        }
+        $Text = $Text -replace $Quoted, (ConvertTo-CIPPLiteralReplacement -Value ('[{0}]' -f ($Encoded -join ',')))
+        return Set-CIPPReplacementToken -Text $Text -Token $Token -Value ($Items -join ', ') -Escape $Escape
+    }
+
     if ($Text -isnot [string]) {
         return , $Text
     }
 
     # Without a tenant context, skip replacement lookups and return input as-is.
     if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+        return $Text
+    }
+
+    # Every token is %name%, so text without a '%' cannot change and needs no lookups
+    if (-not $Text.Contains('%')) {
         return $Text
     }
 
@@ -111,7 +137,9 @@ function Get-CIPPTextReplacement {
         '%cippuserschema%',
         '%cippurl%',
         '%defaultdomain%',
-        '%organizationid%'
+        '%organizationid%',
+        '%globaladminsid%',
+        '%deviceadminsid%'
     )
 
     # The partner tenant is resolved like any other, so addressing it by ID reaches its per-tenant
@@ -159,6 +187,13 @@ function Get-CIPPTextReplacement {
     foreach ($Replace in $Vars.GetEnumerator()) {
         $String = '%{0}%' -f $Replace.Key
         if ($string -notin $ReservedVariables) {
+            if ("$($VarTypes[$Replace.Key])" -eq 'list') {
+                $Expanded = Expand-CIPPListToken -Text $Text -Token $String -Value $Replace.Value -Escape $EscapeForJson.IsPresent
+                if ($null -ne $Expanded) {
+                    $Text = $Expanded
+                    continue
+                }
+            }
             # A variable declared as integer, boolean or json is written as a JSON literal when it
             # fills an entire string slot, so a numeric setting receives 300 rather than "300" and
             # behaves exactly like a value typed into the template by hand.
@@ -206,6 +241,26 @@ function Get-CIPPTextReplacement {
         $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
         if ($Config) {
             $Text = Set-CIPPReplacementToken -Text $Text -Token '%cippurl%' -Value $Config.Value -Escape $EscapeForJson.IsPresent
+        }
+    }
+
+    if ($Text -match '%(globaladmin|deviceadmin)sid%') {
+        # A directory role's object id never changes once activated, so the Roles cache is authoritative.
+        $RoleSidTokens = @{
+            '%globaladminsid%' = '62e90394-69f5-4237-9190-012177145e10'
+            '%deviceadminsid%' = '9f06204d-73c1-4d4c-880a-6edb90606fd8'
+        }
+        $RoleObjectIds = @{}
+        foreach ($Role in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Roles' -Fields 'id', 'roleTemplateId')) {
+            if ($Role.roleTemplateId) { $RoleObjectIds[$Role.roleTemplateId] = $Role.id }
+        }
+        foreach ($Token in $RoleSidTokens.GetEnumerator()) {
+            if ($Text -notmatch $Token.Key) { continue }
+            $RoleObjectId = $RoleObjectIds[$Token.Value]
+            if (-not $RoleObjectId) {
+                throw "Cannot resolve $($Token.Key) for ${TenantFilter}: the role is not in the cached directory roles. Sync the Roles & Assignments cache and try again."
+            }
+            $Text = Set-CIPPReplacementToken -Text $Text -Token $Token.Key -Value (Convert-AzureAdObjectIdToSid -ObjectID $RoleObjectId) -Escape $EscapeForJson.IsPresent
         }
     }
     return $Text

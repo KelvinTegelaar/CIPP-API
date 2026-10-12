@@ -14,6 +14,10 @@ function Invoke-ListRoles {
 
     try {
         $Definitions = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions?$select=id,templateId,displayName,description,isBuiltIn,isEnabled' -tenantid $TenantFilter
+        $DirectoryRoleIds = @{}
+        foreach ($Role in @(New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/directoryRoles?$select=id,roleTemplateId' -tenantid $TenantFilter)) {
+            if ($Role.roleTemplateId) { $DirectoryRoleIds[$Role.roleTemplateId] = $Role.id }
+        }
         $Assignments = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$select=id,principalId,roleDefinitionId,directoryScopeId&$top=999' -tenantid $TenantFilter
 
         # Resolve principals in bulk; $expand=principal costs seconds of Graph server time
@@ -55,14 +59,15 @@ function Invoke-ListRoles {
                 MemberCount    = $Members.Count
                 isBuiltIn      = $Definition.isBuiltIn
                 isEnabled      = $Definition.isEnabled
-                SID            = (Convert-AzureAdObjectIdToSid -ObjectID ($Definition.templateId ?? $Definition.id))
+                # Only activated roles have a directoryRole object, and so a SID.
+                SID            = if ($Definition.templateId -and $DirectoryRoleIds[$Definition.templateId]) { Convert-AzureAdObjectIdToSid -ObjectID $DirectoryRoleIds[$Definition.templateId] } else { $null }
             }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $GraphRequest = "Failed to list roles for tenant $TenantFilter. $($ErrorMessage.NormalizedError)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return [HttpResponseContext]@{

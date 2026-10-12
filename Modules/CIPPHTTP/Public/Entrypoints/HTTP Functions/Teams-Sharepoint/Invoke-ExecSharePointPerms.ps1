@@ -10,7 +10,6 @@ Function Invoke-ExecSharePointPerms {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
     $TenantFilter = $Request.Body.tenantFilter
 
@@ -42,11 +41,11 @@ Function Invoke-ExecSharePointPerms {
         # One entry per user - CippApiResults renders each with its own success/error state,
         # so multi-user grants no longer collapse into a single run-on string.
         $Result = @($State)
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total $Result.Count -Failed $Result.Where({ $_.state -eq 'error' }).Count
     } catch {
         $ErrorMessage = $_.Exception.Message
         $Result = "Failed. Error: $ErrorMessage"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

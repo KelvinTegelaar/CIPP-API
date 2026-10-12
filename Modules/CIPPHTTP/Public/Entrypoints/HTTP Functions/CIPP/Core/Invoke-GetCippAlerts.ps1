@@ -58,7 +58,7 @@ function Invoke-GetCippAlerts {
         Write-LogMessage -message "Your CIPP API is out of date. $UpdateAction" -API 'Updates' -tenant 'All Tenants' -sev Alert
     }
 
-    if ($role -like '*superadmin*') {
+    if ($role -contains 'superadmin') {
         $Alerts.Add(@{
                 title = 'Superadmin Account Warning'
                 Alert = 'You are logged in under a superadmin account. This account should not be used for normal usage.'

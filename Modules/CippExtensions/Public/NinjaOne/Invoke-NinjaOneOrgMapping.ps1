@@ -1,114 +1,120 @@
 function Invoke-NinjaOneOrgMapping {
-
-    [System.Collections.Generic.List[PSCustomObject]]$MatchedM365Tenants = @()
-    [System.Collections.Generic.List[PSCustomObject]]$MatchedNinjaOrgs = @()
+    <#
+    .SYNOPSIS
+        Auto-maps CIPP tenants to NinjaOne organizations by exact name, then by matching devices
+    .DESCRIPTION
+        Unmapped tenants are matched to a NinjaOne organization whose name exactly matches the tenant display name.
+        Tenants still unmatched are matched to the organization owning most of their Intune devices (by serial,
+        then device name), read from the ManagedDevices report cache. Existing mappings are never overwritten.
+        Runs from the mapping page and, with -NameOnly, from the extension timer.
+    .PARAMETER NameOnly
+        Skip the device match, which downloads every NinjaOne device
+    #>
+    [CmdletBinding()]
+    param(
+        [switch]$NameOnly
+    )
 
     $ExcludeSerials = @('0', 'SystemSerialNumber', 'To Be Filled By O.E.M.', 'System Serial Number', '0123456789', '123456789', '............')
     $CIPPMapping = Get-CIPPTable -TableName CippMapping
 
-
-    #Get available mappings
-    $Mappings = [pscustomobject]@{}
-    $Filter = "PartitionKey eq 'NinjaOneMapping'"
-    Get-AzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
-        $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.IntegrationName)"; value = "$($_.IntegrationId)" }
-    }
-
-    #Get Available Tenants
-    $Tenants = Get-Tenants -IncludeErrors
-    #Get available Ninja clients
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
-
+    $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
     $Token = Get-NinjaOneToken -configuration $Configuration
 
-    # Fetch Ninja Orgs
+    $Mappings = @(Get-ExtensionMapping -Extension 'NinjaOne')
+    $MappedTenantIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Mappings.RowKey), [System.StringComparer]::OrdinalIgnoreCase)
+    $MappedOrgIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Mappings.IntegrationId))
+
     $After = 0
     $PageSize = 1000
     $NinjaOrgs = do {
-        $Result = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/organizations?pageSize=$PageSize&after=$After" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -Depth 100
+        $Result = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/organizations?pageSize=$PageSize&after=$After" -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -Depth 100
         $Result
         $ResultCount = ($Result.id | Measure-Object -Maximum)
         $After = $ResultCount.maximum
-
     } while ($ResultCount.count -eq $PageSize)
 
-    # Exclude tenants already mapped.
-    Foreach ($ExistingMap in $mappings.psobject.properties) {
-        $ExistingTenant = $Tenants | Where-Object { $_.customerId -eq $ExistingMap.name }
-        $ExistingOrg = $NinjaOrgs | Where-Object { $_.id -eq $ExistingMap.value.value }
+    $OrgsById = @{}
+    $OrgsByName = @{}
+    foreach ($Org in $NinjaOrgs) {
+        $OrgsById["$($Org.id)"] = $Org
+        $Name = "$($Org.name)".Trim()
+        if (!$Name) { continue }
+        if (!$OrgsByName.ContainsKey($Name)) { $OrgsByName[$Name] = [System.Collections.Generic.List[object]]::new() }
+        $OrgsByName[$Name].Add($Org)
+    }
 
-        if (($ExistingTenant | Measure-Object).count -eq 1) {
-            $MatchedM365Tenants.add($ExistingTenant)
+    $Matched = 0
+    $AddMapping = {
+        param($Tenant, $Org, $MatchType)
+        $AddObject = @{
+            PartitionKey    = 'NinjaOneMapping'
+            RowKey          = "$($Tenant.customerId)"
+            IntegrationId   = "$($Org.id)"
+            IntegrationName = "$($Org.name)"
         }
+        Add-CIPPAzDataTableEntity @CIPPMapping -Entity $AddObject -Force
+        [void]$MappedOrgIds.Add("$($Org.id)")
+        Write-LogMessage -API 'NinjaOneAutoMap' -tenant $Tenant.defaultDomainName -message "Mapped $($Tenant.displayName) to NinjaOne organization $($Org.name) by $MatchType match" -Sev 'Info'
+    }
 
-        if (($ExistingOrg | Measure-Object).count -eq 1) {
-            $MatchedM365Tenants.add($ExistingOrg)
+    $Unmatched = foreach ($Tenant in Get-Tenants -IncludeErrors) {
+        if ($MappedTenantIds.Contains("$($Tenant.customerId)")) { continue }
+        $NameMatches = $OrgsByName["$($Tenant.displayName)".Trim()]
+        if ($NameMatches.Count -eq 1 -and !$MappedOrgIds.Contains("$($NameMatches[0].id)")) {
+            & $AddMapping $Tenant $NameMatches[0] 'organization name'
+            $Matched++
+        } else {
+            $Tenant
         }
     }
 
-    # Fetch Ninja Devices
-    $After = 0
-    $PageSize = 1000
-    $NinjaDevicesRaw = do {
-        $Result = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/devices-detailed?pageSize=$PageSize&after=$After" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -Depth 100
-        $Result
-        $ResultCount = ($Result.id | Measure-Object -Maximum)
-        $After = $ResultCount.maximum
+    if ($Unmatched -and !$NameOnly) {
+        $After = 0
+        $NinjaDevices = do {
+            $Result = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/devices-detailed?pageSize=$PageSize&after=$After" -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -Depth 100
+            $Result
+            $ResultCount = ($Result.id | Measure-Object -Maximum)
+            $After = $ResultCount.maximum
+        } while ($ResultCount.count -eq $PageSize)
 
-    } while ($ResultCount.count -eq $PageSize)
-
-
-    $NinjaDevices = $NinjaDevicesRaw | Where-Object { $null -ne $_.system.serialNumber -and $_.system.serialNumber -notin $ExcludeSerials } | ForEach-Object {
-        [pscustomobject]@{
-            ID               = $_.id
-            SystemName       = $_.systemName
-            DNSName          = $_.dnsName
-            Serial           = $_.system.serialNumber
-            BiosSerialNumber = $_.system.biosSerialNumber
-            OrgID            = $_.organizationId
-        }
-    }
-
-    # Remove any devices with duplicate serials
-    $ParsedNinjaDevices = $NinjaDevices | Where-Object { $_.Serial -in (($NinjaDevices | Group-Object Serial | Where-Object { $_.count -eq 1 }).name) }
-
-
-    # First lets match on Org names
-    foreach ($Tenant in $Tenants | Where-Object { $_.customerId -notin $MatchedM365Tenants.customerId }) {
-        $MatchedOrg = $NinjaOrgs | Where-Object { $_.name -eq $Tenant.displayName }
-        if (($MatchedOrg | Measure-Object).count -eq 1) {
-            $MatchedM365Tenants.add($Tenant)
-            $MatchedNinjaOrgs.add($MatchedOrg)
-            $AddObject = @{
-                PartitionKey    = 'NinjaOneMapping'
-                RowKey          = "$($Tenant.customerId)"
-                IntegrationId   = "$($MatchedOrg.id)"
-                IntegrationName = "$($MatchedOrg.name)"
+        # Key -> org id; a key seen in more than one org maps to $null so it never votes
+        $OrgBySerial = @{}
+        $OrgByName = @{}
+        foreach ($Device in $NinjaDevices) {
+            $OrgId = "$($Device.organizationId)"
+            foreach ($Serial in @($Device.system.serialNumber, $Device.system.biosSerialNumber)) {
+                if (!$Serial -or $Serial -in $ExcludeSerials) { continue }
+                $OrgBySerial[$Serial] = if ($OrgBySerial.ContainsKey($Serial) -and $OrgBySerial[$Serial] -ne $OrgId) { $null } else { $OrgId }
             }
-            Add-AzDataTableEntity @CIPPMapping -Entity $AddObject -Force
-            Write-LogMessage -API 'NinjaOneAutoMap_Queue'  -message "Added mapping from Organization name match for $($Tenant.customerId). to $($($MatchedOrg.name))" -Sev 'Info'
+            foreach ($DeviceName in @($Device.systemName, $Device.dnsName)) {
+                if (!$DeviceName) { continue }
+                $OrgByName[$DeviceName] = if ($OrgByName.ContainsKey($DeviceName) -and $OrgByName[$DeviceName] -ne $OrgId) { $null } else { $OrgId }
+            }
+        }
+
+        foreach ($Tenant in $Unmatched) {
+            $Votes = @{}
+            $Rows = try { Get-CIPPDbItem -TenantFilter $Tenant.defaultDomainName -Type 'ManagedDevices' } catch { continue }
+            foreach ($Row in $Rows) {
+                if ($Row.RowKey -like '*-Count') { continue }
+                $IntuneDevice = [CIPP.CippJson]::ConvertFromJson($Row.Data, [string[]]@('deviceName', 'serialNumber'))
+                $OrgId = if ($IntuneDevice.serialNumber -and $OrgBySerial[$IntuneDevice.serialNumber]) { $OrgBySerial[$IntuneDevice.serialNumber] } elseif ($IntuneDevice.deviceName) { $OrgByName[$IntuneDevice.deviceName] }
+                if ($OrgId) { $Votes[$OrgId] = 1 + $Votes[$OrgId] }
+            }
+            if ($Votes.Count -eq 0) { continue }
+            $Ranked = @($Votes.GetEnumerator() | Sort-Object Value -Descending)
+            if ($Ranked.Count -gt 1 -and $Ranked[1].Value -eq $Ranked[0].Value) { continue }
+            $Org = $OrgsById[$Ranked[0].Key]
+            if (!$Org -or $MappedOrgIds.Contains("$($Org.id)")) { continue }
+            & $AddMapping $Tenant $Org 'device'
+            $Matched++
         }
     }
 
-    # Now Let match on remaining Tenants
-
-    $Batch = Foreach ($Tenant in $Tenants | Where-Object { $_.customerId -notin $MatchedM365Tenants.customerId }) {
-        [PSCustomObject]@{
-            'NinjaAction'  = 'AutoMapTenant'
-            'M365Tenant'   = $Tenant
-            'NinjaOrgs'    = $NinjaOrgs | Where-Object { $_.id -notin $MatchedNinjaOrgs }
-            'NinjaDevices' = $ParsedNinjaDevices
-            'FunctionName' = 'NinjaOneQueue'
-        }
+    if ($Matched -gt 0) {
+        Write-LogMessage -API 'NinjaOneAutoMap' -message "NinjaOne AutoMap complete: $Matched tenant(s) mapped" -Sev 'Info'
     }
-    if (($Batch | Measure-Object).Count -gt 0) {
-        $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'NinjaOneOrchestrator'
-            Batch            = @($Batch)
-        }
-        #Write-Host ($InputObject | ConvertTo-Json)
-        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
-        Write-Host "Started permissions orchestration with ID = '$InstanceId'"
-    }
+    return "NinjaOne AutoMap complete: $Matched new tenant mapping(s) added."
 }

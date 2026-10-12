@@ -10,6 +10,7 @@ function Invoke-ExecCPVPermissions {
     $TenantFilter = $Request.Body.tenantFilter
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter -IncludeErrors
+    $StatusCode = [HttpStatusCode]::OK
 
     if ($Tenant) {
         Write-Host "Our tenant is $($Tenant.displayName) - $($Tenant.defaultDomainName)"
@@ -40,6 +41,7 @@ function Invoke-ExecCPVPermissions {
         } catch {
             "Failed to update permissions for $($Tenant.displayName): $($_.Exception.Message)"
             $Success = $false
+            $StatusCode = [HttpStatusCode]::InternalServerError
         }
 
         $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $TenantFilter | Select-Object -First 1
@@ -47,9 +49,10 @@ function Invoke-ExecCPVPermissions {
     } else {
         $GraphRequest = 'Tenant not found'
         $Success = $false
+        $StatusCode = [HttpStatusCode]::NotFound
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{
                 Results  = $GraphRequest
                 Metadata = @{

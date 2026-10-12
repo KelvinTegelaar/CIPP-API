@@ -109,6 +109,76 @@ Describe 'Set-CIPPDefaultAPDeploymentProfile assignment handling' {
         @($script:PostCalls | Where-Object { $_.uri -like '*assignments' }).Count | Should -Be 0
     }
 
+    It 'creates one exclusionGroupAssignmentTarget per excluded group not already excluded' {
+        Mock -CommandName New-GraphGETRequest -ParameterFilter { $uri -like '*assignments*' } -MockWith {
+            @(
+                [PSCustomObject]@{ id = 'a-ex1'; target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.exclusionGroupAssignmentTarget'; groupId = 'ex-1' } }
+            )
+        }
+
+        Set-CIPPDefaultAPDeploymentProfile -TenantFilter $script:Tenant -DisplayName 'AP Test' -Description '' `
+            -DeploymentMode 'singleUser' -UserType 'standard' -AssignTo $false -GroupIds @('group-1') -ExcludeGroupIds @('ex-1', 'ex-2') `
+            -HidePrivacy $true -HideTerms $true -AutoKeyboard $true -AllowWhiteGlove $true -CollectHash $false
+
+        $Exclusions = @($script:PostCalls | Where-Object { $_.uri -like '*assignments' -and $_.body -like '*exclusionGroupAssignmentTarget*' })
+        $Exclusions.Count | Should -Be 1
+        $Exclusions[0].body | Should -BeLike '*ex-2*'
+        @($script:PostCalls | Where-Object { $_.body -like '*groupAssignmentTarget*group-1*' -and $_.body -notlike '*exclusion*' }).Count | Should -Be 1
+    }
+
+    It 'with -Reconcile and all devices, removes a stray group assignment and creates the all-devices one' {
+        Mock -CommandName New-GraphGETRequest -ParameterFilter { $uri -like '*assignments*' } -MockWith {
+            @(
+                [PSCustomObject]@{ id = 'a-stray'; target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.groupAssignmentTarget'; groupId = 'group-old' } }
+            )
+        }
+
+        Set-CIPPDefaultAPDeploymentProfile -TenantFilter $script:Tenant -DisplayName 'AP Test' -Description '' `
+            -DeploymentMode 'singleUser' -UserType 'standard' -AssignTo $true -Reconcile `
+            -HidePrivacy $true -HideTerms $true -AutoKeyboard $true -AllowWhiteGlove $true -CollectHash $false
+
+        $Deletes = @($script:PostCalls | Where-Object { $_.type -eq 'DELETE' })
+        $Deletes.Count | Should -Be 1
+        $Deletes[0].uri | Should -BeLike '*/assignments/a-stray'
+        $Adds = @($script:PostCalls | Where-Object { $_.uri -like '*assignments' -and $_.type -eq 'POST' })
+        $Adds.Count | Should -Be 1
+        $Adds[0].body | Should -BeLike '*allDevicesAssignmentTarget*'
+    }
+
+    It 'with -Reconcile in group mode, removes an all-devices assignment and keeps matching groups' {
+        Mock -CommandName New-GraphGETRequest -ParameterFilter { $uri -like '*assignments*' } -MockWith {
+            @(
+                [PSCustomObject]@{ id = 'a-all'; target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget' } }
+                [PSCustomObject]@{ id = 'a-g1'; target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.groupAssignmentTarget'; groupId = 'group-1' } }
+            )
+        }
+
+        Set-CIPPDefaultAPDeploymentProfile -TenantFilter $script:Tenant -DisplayName 'AP Test' -Description '' `
+            -DeploymentMode 'singleUser' -UserType 'standard' -AssignTo $false -GroupIds @('group-1') -Reconcile `
+            -HidePrivacy $true -HideTerms $true -AutoKeyboard $true -AllowWhiteGlove $true -CollectHash $false
+
+        @($script:PostCalls | Where-Object { $_.type -eq 'DELETE' }).uri | Should -Be @('https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/profile-1/assignments/a-all')
+        @($script:PostCalls | Where-Object { $_.uri -like '*assignments' }).Count | Should -Be 0
+    }
+
+    It 'never deletes an assignment without -Reconcile' {
+        Mock -CommandName New-GraphGETRequest -ParameterFilter { $uri -like '*assignments*' } -MockWith {
+            @(
+                [PSCustomObject]@{ id = 'a-stray'; target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.groupAssignmentTarget'; groupId = 'group-old' } }
+                [PSCustomObject]@{ id = 'a-all'; target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget' } }
+            )
+        }
+
+        Set-CIPPDefaultAPDeploymentProfile -TenantFilter $script:Tenant -DisplayName 'AP Test' -Description '' `
+            -DeploymentMode 'singleUser' -UserType 'standard' -AssignTo $false -GroupIds @('group-1') `
+            -HidePrivacy $true -HideTerms $true -AutoKeyboard $true -AllowWhiteGlove $true -CollectHash $false
+        Set-CIPPDefaultAPDeploymentProfile -TenantFilter $script:Tenant -DisplayName 'AP Test' -Description '' `
+            -DeploymentMode 'singleUser' -UserType 'standard' -AssignTo $true `
+            -HidePrivacy $true -HideTerms $true -AutoKeyboard $true -AllowWhiteGlove $true -CollectHash $false
+
+        @($script:PostCalls | Where-Object { $_.type -eq 'DELETE' }).Count | Should -Be 0
+    }
+
     It 'refuses an invalid profile name without calling Graph' {
         Mock -CommandName Test-CIPPAutopilotProfileName -MockWith { [PSCustomObject]@{ IsValid = $false; Message = 'Name rejected' } }
 

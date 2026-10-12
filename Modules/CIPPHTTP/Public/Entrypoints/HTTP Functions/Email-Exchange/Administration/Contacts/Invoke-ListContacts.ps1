@@ -1,6 +1,3 @@
-using namespace System.Collections.Generic
-using namespace System.Text.RegularExpressions
-
 function Invoke-ListContacts {
     <#
     .FUNCTIONALITY
@@ -26,9 +23,9 @@ function Invoke-ListContacts {
     }
 
     # Pre-compiled regex for MailTip cleaning
-    $script:HtmlTagRegex ??= [regex]::new('<[^>]+>', [RegexOptions]::Compiled)
-    $script:LineBreakRegex ??= [regex]::new('\\n|\r\n|\r', [RegexOptions]::Compiled)
-    $script:SmtpPrefixRegex ??= [regex]::new('^SMTP:', [RegexOptions]::Compiled -bor [RegexOptions]::IgnoreCase)
+    $script:HtmlTagRegex ??= [regex]::new('<[^>]+>', [System.Text.RegularExpressions.RegexOptions]::Compiled)
+    $script:LineBreakRegex ??= [regex]::new('\\n|\r\n|\r', [System.Text.RegularExpressions.RegexOptions]::Compiled)
+    $script:SmtpPrefixRegex ??= [regex]::new('^SMTP:', [System.Text.RegularExpressions.RegexOptions]::Compiled -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
 
     function ConvertTo-ContactObject {
         param($Contact, $MailContact)

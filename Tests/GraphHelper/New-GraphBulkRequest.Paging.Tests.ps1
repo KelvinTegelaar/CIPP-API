@@ -8,6 +8,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
 
     function Get-AuthorisedRequest { param($Uri, $TenantID) }
     function Get-GraphToken { param($tenantid, $scope, $AsApp) }

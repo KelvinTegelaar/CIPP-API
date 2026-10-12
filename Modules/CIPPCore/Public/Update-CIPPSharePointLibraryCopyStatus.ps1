@@ -35,7 +35,7 @@ function Update-CIPPSharePointLibraryCopyStatus {
 
     $Operation = Get-CIPPSharePointLibraryCopyOperation -TenantFilter $TenantFilter -OperationId $OperationId
     if (-not $Operation) {
-        throw 'Library copy operation not found.'
+        throw [System.Management.Automation.ItemNotFoundException]::new('Library copy operation not found.')
     }
 
     if ($Operation.Status -in @('Completed', 'CompletedWithErrors', 'Failed') -and $Operation.SanitizedSnapshot) {

@@ -28,7 +28,7 @@ function Set-CIPPDBCacheSPOTenantSyncClientRestriction {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching SharePoint sync client restriction' -sev Debug
 
-        $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter
+        $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter -UseCertificate
 
         # An empty response is a failure too - see Set-CIPPDBCacheSPOTenant.
         if (-not $SPOTenant) {

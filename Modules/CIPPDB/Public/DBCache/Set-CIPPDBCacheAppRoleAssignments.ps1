@@ -29,10 +29,9 @@ function Set-CIPPDBCacheAppRoleAssignments {
                 $AppRoleAssignments = $SP.appRoleAssignments
                 foreach ($Assignment in $AppRoleAssignments) {
                     # Enrich with service principal info
-                    $Assignment | Add-Member -NotePropertyMembers ([ordered]@{
-                            servicePrincipalDisplayName = $SP.displayName
-                            servicePrincipalAppId       = $SP.appId
-                        }) -Force
+                    $Props = $Assignment.PSObject.Properties
+                    $Props.Remove('servicePrincipalDisplayName'); $Props.Add([psnoteproperty]::new('servicePrincipalDisplayName', $SP.displayName))
+                    $Props.Remove('servicePrincipalAppId'); $Props.Add([psnoteproperty]::new('servicePrincipalAppId', $SP.appId))
                     $AllAppRoleAssignments.Add($Assignment)
                 }
             } catch {

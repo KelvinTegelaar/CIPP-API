@@ -25,7 +25,7 @@ Function Invoke-RemoveCAPolicy {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Could not delete CA policy with ID $($policyId) : $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $body = [pscustomobject]@{'Results' = $Result }

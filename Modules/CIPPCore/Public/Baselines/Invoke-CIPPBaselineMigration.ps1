@@ -77,6 +77,9 @@ function Invoke-CIPPBaselineMigration {
         SPSyncButtonState             = @{ rename = @{ state = 'hideSyncButton' } }
         # V2 were switches (bool); V3 passes the Teams cmdlet's 'Enabled'/'Disabled' strings.
         TeamsChatProtection           = @{ value = @{ FileTypeCheck = @{ True = 'Enabled'; False = 'Disabled' }; UrlReputationCheck = @{ True = 'Enabled'; False = 'Disabled' } } }
+        # V2 'Don't change' is the 'donotconfigure' sentinel; V3 prunes blank (omitWhenBlank).
+        TeamsFilesPolicy              = @{ value = @{ FileSharingInChatsWithExternalUsers = @{ donotconfigure = '' }; NativeFileEntryPoints = @{ donotconfigure = '' }; SPChannelFilesTab = @{ donotconfigure = '' } } }
+        TeamsMessagingPolicy          = @{ value = @{ AutoShareFilesInExternalChats = @{ donotconfigure = '' } } }
         TAP                           = @{ rename = @{ config = 'isUsableOnce' } }
         unmanagedSync                 = @{ rename = @{ state = 'conditionalAccessPolicy' } }
         BitLockerKeysForOwnedDevice   = @{ rename = @{ state = 'allowed' }; value = @{ allowed = @{ allow = $true; restrict = $false } } }
@@ -410,7 +413,7 @@ function Invoke-CIPPBaselineMigration {
         $SourceMarker = "StandardsTemplateV2:$V2Guid"
         # mapper= is the migration logic version: bump it when the MAPPING changes (not the
         # source data) so unchanged V2 templates still re-commit once with the improved output.
-        $Sha = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$($Row.JSON)|reportOnly=$ReportOnly|detect=$AddDetectStandards|mapper=4"))).ToLower()
+        $Sha = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$($Row.JSON)|reportOnly=$ReportOnly|detect=$AddDetectStandards|mapper=5"))).ToLower()
         $SafeSource = ConvertTo-CIPPODataFilterValue -Value $SourceMarker
         $Existing = Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout' and Source eq '$SafeSource'" | Select-Object -First 1
         if ($Existing -and "$($Existing.SHA)" -eq $Sha) {

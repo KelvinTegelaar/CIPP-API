@@ -12,6 +12,7 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Add-CippQueueMessage { param($Cmdlet, $Parameters) }
     function Get-CIPPSchedulerBlockedCommands { }
+    function Resolve-CIPPCommand { param($Name) }
     function Get-NormalizedError { param($Message) }
     function Write-LogMessage { param($headers, $API, $message, $Sev, $Tenant) }
 
@@ -40,8 +41,8 @@ Describe 'Add-CIPPScheduledTask Push enrolment guard' {
         Mock Get-CIPPSchedulerBlockedCommands { @() }
         Mock Get-NormalizedError { $Message }
         Mock Write-LogMessage { }
-        Mock Get-Command -ParameterFilter { $Name -eq 'Get-CIPPLicenseOverview' } -MockWith {
-            [pscustomobject]@{ Name = 'Get-CIPPLicenseOverview'; Module = 'CIPPCore'; Parameters = @{ TenantFilter = 1 } }
+        Mock Resolve-CIPPCommand -ParameterFilter { $Name -eq 'Get-CIPPLicenseOverview' } -MockWith {
+            [pscustomobject]@{ Name = 'Get-CIPPLicenseOverview'; ModuleName = 'CIPPCore' }
         }
     }
 

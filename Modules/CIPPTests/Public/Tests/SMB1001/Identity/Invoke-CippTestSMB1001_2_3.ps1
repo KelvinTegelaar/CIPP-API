@@ -22,7 +22,7 @@ function Invoke-CippTestSMB1001_2_3 {
             return
         }
 
-        $Shared = @($Mailboxes | Where-Object { $_.recipientTypeDetails -in @('SharedMailbox', 'SchedulingMailbox', 'EquipmentMailbox', 'RoomMailbox') })
+        $Shared = @($Mailboxes.Where({ $_.recipientTypeDetails -in @('SharedMailbox', 'SchedulingMailbox', 'EquipmentMailbox', 'RoomMailbox') }))
 
         # List positions by id and by UPN, so the lookup keeps the first user matching either
         $UserList = @($Users)
@@ -51,7 +51,7 @@ function Invoke-CippTestSMB1001_2_3 {
             $Result = "All $($Shared.Count) shared/resource mailbox account(s) have sign-in disabled. Employees access them via delegation only."
         } else {
             $Status = 'Failed'
-            $TableRows = foreach ($M in ($EnabledShared | Select-Object -First 25)) {
+            $TableRows = foreach ($M in ($EnabledShared.Where({ $true }, 'First', 25))) {
                 "| $($M.UPN) | $($M.RecipientTypeDetails) |"
             }
             $Result = (@(

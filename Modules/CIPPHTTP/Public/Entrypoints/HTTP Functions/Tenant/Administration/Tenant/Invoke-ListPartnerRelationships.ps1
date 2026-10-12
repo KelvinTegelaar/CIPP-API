@@ -23,7 +23,7 @@ Function Invoke-ListPartnerRelationships {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $GraphRequest = @()
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 

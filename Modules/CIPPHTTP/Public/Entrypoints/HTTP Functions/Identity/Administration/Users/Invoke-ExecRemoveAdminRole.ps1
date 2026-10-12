@@ -71,7 +71,7 @@ function Invoke-ExecRemoveAdminRole {
         }
     }
 
-    $StatusCode = $Failures -gt 0 ? [HttpStatusCode]::InternalServerError : [HttpStatusCode]::OK
+    $StatusCode = Get-CippBulkStatusCode -Total $Users.Count -Failed $Failures
 
     return [HttpResponseContext]@{
         StatusCode = $StatusCode

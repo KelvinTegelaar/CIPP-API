@@ -20,7 +20,7 @@ function Invoke-CippTestZTNA24549 {
             return
         }
 
-        $AndroidPolicies = @($AllPolicies | Where-Object { $_.URLName -eq 'androidManagedAppProtection' })
+        $AndroidPolicies = @($AllPolicies.Where({ $_.URLName -eq 'androidManagedAppProtection' }))
 
         # Data exists but no Android policy at all — that is a genuine failure of this control, not
         # a missing-data skip.
@@ -29,7 +29,7 @@ function Invoke-CippTestZTNA24549 {
             return
         }
 
-        $AssignedPolicies = @($AndroidPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AssignedPolicies = @($AndroidPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedPolicies.Count -gt 0
 
         if ($Passed) {

@@ -17,7 +17,6 @@ function Invoke-ExecCustomTestRun {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = 'allTenants'
     try {
@@ -37,7 +36,7 @@ function Invoke-ExecCustomTestRun {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to start custom test run: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = [PSCustomObject]@{ Results = "Failed to start custom test run: $($ErrorMessage.NormalizedError)" }
     }
 

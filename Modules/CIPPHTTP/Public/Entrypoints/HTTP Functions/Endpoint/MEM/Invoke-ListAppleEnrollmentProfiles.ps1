@@ -33,6 +33,7 @@ function Invoke-ListAppleEnrollmentProfiles {
             $Token
         }
 
+        $Failed = 0
         $Profiles = foreach ($DepSetting in $DepOnboardingSettings) {
             if ([string]::IsNullOrWhiteSpace($DepSetting.id)) { continue }
 
@@ -61,12 +62,14 @@ function Invoke-ListAppleEnrollmentProfiles {
                     $ProfileObject
                 }
             } catch {
+                $Failed++
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to list Apple ADE profiles for token $($DepSetting.tokenName)" -Sev Warning -LogData $ErrorMessage
             }
         }
 
-        $StatusCode = [HttpStatusCode]::OK
+        # Tokens still listed, so a failed profile lookup is partial data
+        $StatusCode = $Failed ? [HttpStatusCode]::MultiStatus : [HttpStatusCode]::OK
         $Body = @{
             Results = @{
                 Tokens   = @($Tokens)

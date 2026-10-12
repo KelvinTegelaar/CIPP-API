@@ -26,6 +26,7 @@ function Invoke-AddExConnector {
         $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
     }
 
+    $Failed = 0
     $Result = foreach ($TenantFilter in $Tenants) {
         try {
             # Copy per tenant so one tenant's resolved %variable% values never feed the next tenant's replacement.
@@ -37,6 +38,7 @@ function Invoke-AddExConnector {
             "Successfully created Connector for $TenantFilter."
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully created Connector for $TenantFilter." -sev 'Info'
         } catch {
+            $Failed++
             $ErrorMessage = Get-CippException -Exception $_
             "Could not create Connector for $($TenantFilter): $($ErrorMessage.NormalizedError)"
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Could not create Connector for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev 'Error'
@@ -44,7 +46,7 @@ function Invoke-AddExConnector {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = @{Results = @($Result) }
         })
 

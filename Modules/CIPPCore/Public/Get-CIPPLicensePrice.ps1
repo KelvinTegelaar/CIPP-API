@@ -34,6 +34,10 @@ function Get-CIPPLicensePrice {
         that has no price in the requested currency (Source 'Unknown', null price), so the
         price-management page shows every SKU and each can be priced.
 
+    .PARAMETER FailOnError
+        Throw when a source cannot be read. Used by write paths that must compare against reliable
+        resolved pricing before changing an override.
+
     .FUNCTIONALITY
         Internal
     #>
@@ -42,8 +46,11 @@ function Get-CIPPLicensePrice {
         [string]$SkuId,
         [string]$Currency = 'USD',
         [switch]$ListCurrencies,
-        [switch]$IncludeUnknown
+        [switch]$IncludeUnknown,
+        [switch]$FailOnError
     )
+
+    if ($FailOnError) { $ErrorActionPreference = 'Stop' }
 
     # currency (lower) -> @{ skuId (lower) -> price object }
     $Estimate = @{}
@@ -56,22 +63,27 @@ function Get-CIPPLicensePrice {
     # catalog only carries prices keyed by GUID, so there is one SKU database, not two.
     try {
         $TablePath = Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv'
+        if ($FailOnError -and -not (Test-Path $TablePath)) { throw "SKU list not found at $TablePath" }
         if (Test-Path $TablePath) {
             foreach ($Row in (Get-Content -Path $TablePath -Raw | ConvertFrom-Csv)) {
-                $Key = ([string]$Row.GUID).ToLowerInvariant()
+                $Key = ([string]$Row.GUID).Trim().ToLowerInvariant()
                 if ([string]::IsNullOrWhiteSpace($Key) -or $SkuMeta.ContainsKey($Key)) { continue }
                 $SkuMeta[$Key] = [pscustomobject]@{ skuPartNumber = [string]$Row.String_Id; Product_Display_Name = [string]$Row.Product_Display_Name }
             }
         }
     } catch {
+        if ($FailOnError) { throw "Get-CIPPLicensePrice: failed to read the SKU list: $($_.Exception.Message)" }
         Write-Information "Get-CIPPLicensePrice: failed to read the SKU list: $($_.Exception.Message)"
     }
 
     # Shipped list prices (public, subject to drift - labelled Estimate)
     try {
         $Catalog = Get-CIPPLicenseCatalog
+        if ($FailOnError -and $null -eq $Catalog) { throw 'License catalog is unavailable.' }
+        $ProductCount = @($Catalog.products | Where-Object { $null -ne $_ }).Count
+        if ($FailOnError -and $ProductCount -eq 0) { throw 'License catalog has no products.' }
         foreach ($Product in @($Catalog.products)) {
-            $Key = ([string]$Product.skuId).ToLowerInvariant()
+            $Key = ([string]$Product.skuId).Trim().ToLowerInvariant()
             if ([string]::IsNullOrWhiteSpace($Key)) { continue }
             if (-not $SkuMeta.ContainsKey($Key)) {
                 $SkuMeta[$Key] = [pscustomobject]@{ skuPartNumber = [string]$Product.skuPartNumber; Product_Display_Name = if ($Product.name) { [string]$Product.name } else { $Key } }
@@ -94,6 +106,7 @@ function Get-CIPPLicensePrice {
             }
         }
     } catch {
+        if ($FailOnError) { throw "Get-CIPPLicensePrice: failed to read the license catalog: $($_.Exception.Message)" }
         Write-Information "Get-CIPPLicensePrice: failed to read the license catalog: $($_.Exception.Message)"
     }
 
@@ -101,7 +114,7 @@ function Get-CIPPLicensePrice {
     try {
         $Table = Get-CIPPTable -TableName 'LicensePricing'
         foreach ($Row in (Get-CIPPAzDataTableEntity @Table)) {
-            $Key = if ($Row.skuId) { ([string]$Row.skuId).ToLowerInvariant() } else { (([string]$Row.RowKey) -split '-')[0].ToLowerInvariant() }
+            $Key = if ($Row.skuId) { ([string]$Row.skuId).Trim().ToLowerInvariant() } else { (([string]$Row.RowKey) -replace '-[^-]+$', '').Trim().ToLowerInvariant() }
             if ([string]::IsNullOrWhiteSpace($Key)) { continue }
             $Cur = if ($Row.Currency) { [string]$Row.Currency } else { 'USD' }
             $null = $CurrencySet.Add($Cur)
@@ -120,6 +133,7 @@ function Get-CIPPLicensePrice {
             }
         }
     } catch {
+        if ($FailOnError) { throw "Get-CIPPLicensePrice: failed to read override table: $($_.Exception.Message)" }
         Write-Information "Get-CIPPLicensePrice: failed to read override table: $($_.Exception.Message)"
     }
 
@@ -144,7 +158,7 @@ function Get-CIPPLicensePrice {
     }
 
     if ($SkuId) {
-        return & $ResolveOne ([string]$SkuId).ToLowerInvariant()
+        return & $ResolveOne ([string]$SkuId).Trim().ToLowerInvariant()
     }
 
     # The full list is the price matrix: only SKUs that actually carry a price in this currency

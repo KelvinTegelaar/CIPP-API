@@ -15,7 +15,6 @@ function Invoke-ExecGetLicenseReportPdf {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # The tenant to report on. A single tenant; AllTenants is not supported.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter

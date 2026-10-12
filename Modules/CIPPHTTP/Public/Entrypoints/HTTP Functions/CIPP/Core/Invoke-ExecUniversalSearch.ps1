@@ -39,7 +39,7 @@ function Invoke-ExecUniversalSearch {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = "Could not connect to Azure Lighthouse API: $($ErrorMessage)"
     }
     return [HttpResponseContext]@{

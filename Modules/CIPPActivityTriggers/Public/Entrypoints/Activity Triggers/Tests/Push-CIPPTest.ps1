@@ -23,19 +23,18 @@ function Push-CIPPTest {
 
         $FunctionName = "Invoke-CippTest$TestId"
         $TestCommand = Get-Command -Name $FunctionName -Module CIPPTests -ErrorAction SilentlyContinue
-        if (-not $TestCommand) {
-            Write-LogMessage -API 'Tests' -tenant $TenantFilter -message "Test function not found: $FunctionName" -sev Error
-            return @{ testRun = $false }
-        }
+        if (-not $TestCommand) { throw "Test function not found: $FunctionName" }
 
         Write-Information "Executing $FunctionName for $TenantFilter"
-        & $TestCommand -Tenant $TenantFilter
-        Write-Host "Returning true, test has run for $tenantFilter"
+        $TestResult = & $TestCommand -Tenant $TenantFilter
+        $Table = Get-CippTable -tablename 'CippTestResults'
+        Add-CIPPAzDataTableEntity @Table -Entity $TestResult -Force
         return @{ testRun = $true }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $TenantFilter -message "Failed to run test $TestId $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        return @{ testRun = $false }
+        # Rethrow so the queue counts the task as failed.
+        throw
     }
 }

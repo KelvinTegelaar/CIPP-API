@@ -18,7 +18,7 @@ function Invoke-CippTestCIS_5_2_2_16 {
         $SharePointOnline = '00000003-0000-0ff1-ce00-000000000000'
         $TeamsServices = 'cc15fd57-2c6c-4117-a88c-83b1d56b4bbe'
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.users.includeUsers -notcontains 'None' -and
             $_.conditions.applications.includeApplications -contains $ExchangeOnline -and
@@ -28,7 +28,7 @@ function Invoke-CippTestCIS_5_2_2_16 {
             $_.conditions.clientAppTypes -contains 'mobileAppsAndDesktopClients' -and
             $_.sessionControls.secureSignInSession -and
             $_.sessionControls.secureSignInSession.isEnabled -eq $true
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

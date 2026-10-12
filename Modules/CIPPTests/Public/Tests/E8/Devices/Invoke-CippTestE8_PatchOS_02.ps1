@@ -15,7 +15,7 @@ function Invoke-CippTestE8_PatchOS_02 {
             return
         }
 
-        $Windows = $Devices | Where-Object { $_.operatingSystem -eq 'Windows' }
+        $Windows = $Devices.Where({ $_.operatingSystem -eq 'Windows' })
         if (-not $Windows) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No Windows managed devices found.' -Risk 'High' -Name $Name -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'E8 ML1 - Patch Operating Systems'
             return
@@ -40,7 +40,7 @@ function Invoke-CippTestE8_PatchOS_02 {
         } else {
             $Status = 'Failed'
             $Sb = [System.Text.StringBuilder]::new("$($Unsupported.Count) of $($Windows.Count) Windows device(s) are on unsupported builds:`n`n| Device | OS version | Reason |`n| :----- | :--------- | :----- |`n")
-            foreach ($U in ($Unsupported | Select-Object -First 50)) { $null = $Sb.Append("| $($U.Device) | $($U.OSVersion) | $($U.Reason) |`n") }
+            foreach ($U in $Unsupported.Where({ $true }, 'First', 50)) { $null = $Sb.Append("| $($U.Device) | $($U.OSVersion) | $($U.Reason) |`n") }
             $Result = $Sb.ToString()
         }
 

@@ -18,30 +18,30 @@ function Invoke-CippTestSMB1001_1_10 {
             return
         }
 
-        $ASRPolicies = $ConfigurationPolicies | Where-Object {
+        $ASRPolicies = $ConfigurationPolicies.Where({
             $_.platforms -like '*windows10*' -and
             $_.settings.settingInstance.settingDefinitionId -contains 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules'
-        }
+        })
 
         if (-not $ASRPolicies -or $ASRPolicies.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'SMB1001_1_10' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Attack Surface Reduction policies found. ASR rules block Office macro abuse, which SMB1001 1.10 requires.' -Risk 'High' -Name 'Untrusted Microsoft Office macros are disabled' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Device'
             return
         }
 
-        $MacroProtected = $ASRPolicies | Where-Object {
+        $MacroProtected = $ASRPolicies.Where({
             $children = $_.settings.settingInstance.groupSettingCollectionValue.children
-            $win32MacroSetting = $children | Where-Object { $_.settingDefinitionId -eq 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwin32apicallsfromofficemacros' }
-            $officeChildSetting = $children | Where-Object { $_.settingDefinitionId -eq 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockallofficeapplicationsfromcreatingchildprocesses' }
+            $win32MacroSetting = $children.Where({ $_.settingDefinitionId -eq 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwin32apicallsfromofficemacros' })
+            $officeChildSetting = $children.Where({ $_.settingDefinitionId -eq 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockallofficeapplicationsfromcreatingchildprocesses' })
             ($win32MacroSetting.choiceSettingValue.value -like '*_block' -or $win32MacroSetting.choiceSettingValue.value -like '*_warn') -or
             ($officeChildSetting.choiceSettingValue.value -like '*_block' -or $officeChildSetting.choiceSettingValue.value -like '*_warn')
-        }
+        })
 
         if (-not $MacroProtected -or $MacroProtected.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'SMB1001_1_10' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'ASR policies exist but none enable the Office macro protection rules (Block Win32 API calls from Office macros / Block Office child processes).' -Risk 'High' -Name 'Untrusted Microsoft Office macros are disabled' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Device'
             return
         }
 
-        $Assigned = $MacroProtected | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 }
+        $Assigned = $MacroProtected.Where({ $_.assignments -and $_.assignments.Count -gt 0 })
 
         if ($Assigned.Count -gt 0) {
             $Status = 'Passed'

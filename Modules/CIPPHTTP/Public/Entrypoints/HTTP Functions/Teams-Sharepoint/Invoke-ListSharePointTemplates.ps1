@@ -15,6 +15,7 @@ function Invoke-ListSharePointTemplates {
 
     $Table = Get-CIPPTable -TableName 'templates'
 
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $Filter = "PartitionKey eq 'SharePointTemplate'"
         $Templates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
@@ -60,10 +61,11 @@ function Invoke-ListSharePointTemplates {
         $Body = @{
             Results = "Failed to list SharePoint templates: $($_.Exception.Message)"
         }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = ConvertTo-Json -Depth 10 -InputObject @($Body)
         })
 }

@@ -10,7 +10,6 @@ function Invoke-EditIntuneScript {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     $graphUrl = 'https://graph.microsoft.com/beta'
 
@@ -119,7 +118,7 @@ function Invoke-EditIntuneScript {
                 $Result = "Failed to update Intune $scriptType script $($Request.Body.ScriptId): $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $Request.Body.TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
                 return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::BadRequest
+                        StatusCode = [HttpStatusCode]::InternalServerError
                         Body       = "Failed to update script: $($ErrorMessage.NormalizedError)"
                     })
             }

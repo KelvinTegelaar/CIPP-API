@@ -117,10 +117,10 @@ function Invoke-ExecOnboardTenant {
         } catch {
             $ErrorMsg = Get-NormalizedError -message $($_.Exception.Message)
             $Results = "Function Error: $($_.InvocationInfo.ScriptLineNumber) - $ErrorMsg"
-            $StatusCode = [HttpStatusCode]::BadRequest
+            $StatusCode = [HttpStatusCode]::InternalServerError
         }
     } else {
-        $StatusCode = [HttpStatusCode]::NotFound
+        $StatusCode = [HttpStatusCode]::BadRequest
         $Results = 'Relationship not found'
     }
     return ([HttpResponseContext]@{

@@ -10,6 +10,7 @@ function Invoke-ExecCombinedSetup {
     param($Request, $TriggerMetadata)
     #Make arraylist of Results
     $Results = [System.Collections.ArrayList]::new()
+    $StatusCode = [HttpStatusCode]::OK
     try {
         # Certificate-auth toggle for an existing install: enabling keeps the client secret as a rollback
         # and switches SAM tokens to the certificate. Idempotent with a certificate-only First Setup.
@@ -143,10 +144,11 @@ function Invoke-ExecCombinedSetup {
         $auth = Get-CIPPAuthentication
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)"; severity = 'failed' }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

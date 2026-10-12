@@ -282,7 +282,7 @@ function Invoke-ExecContainerManagement {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API $APIName -headers $Headers -message "Failed to list channels: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 return [HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
                 }
             }
@@ -381,14 +381,20 @@ function Invoke-ExecContainerManagement {
                 $CheckTime = $Request.Body.CheckTime
                 $ValidIntervals = @('0', '1h', '4h', '12h', '1d')
                 if ($CheckInterval -notin $ValidIntervals) {
-                    throw "Invalid check interval: $CheckInterval. Valid: $($ValidIntervals -join ', ')"
+                    return [HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = "Failed: Invalid check interval: $CheckInterval. Valid: $($ValidIntervals -join ', ')" }
+                    }
                 }
                 # CheckTime arrives as a string — validate as [int]. A string comparison
                 # makes '3' -gt 23 true ('3' > '2' lexicographically), rejecting 03:00-09:00.
                 if ($null -ne $CheckTime -and "$CheckTime" -ne '') {
                     $ParsedHour = 0
                     if (-not [int]::TryParse([string]$CheckTime, [ref]$ParsedHour) -or $ParsedHour -lt 0 -or $ParsedHour -gt 23) {
-                        throw "Invalid check time: $CheckTime. Must be an hour between 0 and 23."
+                        return [HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{ Results = "Failed: Invalid check time: $CheckTime. Must be an hour between 0 and 23." }
+                        }
                     }
                     $CheckTime = $ParsedHour
                 } else {
@@ -424,7 +430,7 @@ function Invoke-ExecContainerManagement {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API $APIName -headers $Headers -message "Failed to save update settings: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 return [HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
                 }
             }
@@ -433,11 +439,17 @@ function Invoke-ExecContainerManagement {
             try {
                 $NewChannel = $Request.Body.Channel
                 if ([string]::IsNullOrWhiteSpace($NewChannel)) {
-                    throw 'Channel is required'
+                    return [HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = 'Failed: Channel is required' }
+                    }
                 }
                 $IsBuildChannel = $NewChannel -notin $ValidChannels -and $NewChannel -match $BuildChannelPattern
                 if ($NewChannel -notin $ValidChannels -and -not $IsBuildChannel) {
-                    throw "Invalid channel: $NewChannel. Valid channels: $($ValidChannels -join ', '), or a branch build tag."
+                    return [HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = "Failed: Invalid channel: $NewChannel. Valid channels: $($ValidChannels -join ', '), or a branch build tag." }
+                    }
                 }
 
                 $site = Get-ContainerSiteInfo
@@ -473,7 +485,10 @@ function Invoke-ExecContainerManagement {
                     try {
                         $null = Get-GHCRImageInfo -ImageRef $imageBase -Tag $NewChannel
                     } catch {
-                        throw "Branch build '$NewChannel' was not found in the registry — it may have been cleaned up after its branch was deleted. Pick another build, or rebuild the branch."
+                        return [HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::NotFound
+                            Body       = @{ Results = "Failed: Branch build '$NewChannel' was not found in the registry — it may have been cleaned up after its branch was deleted. Pick another build, or rebuild the branch." }
+                        }
                     }
                 }
 
@@ -492,7 +507,7 @@ function Invoke-ExecContainerManagement {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API $APIName -headers $Headers -message "Failed to update channel: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 return [HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
                 }
             }

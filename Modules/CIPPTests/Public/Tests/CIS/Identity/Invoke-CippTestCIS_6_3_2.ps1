@@ -13,8 +13,8 @@ function Invoke-CippTestCIS_6_3_2 {
             return
         }
 
-        $Default = $Owa | Where-Object { $_.Identity -eq 'OwaMailboxPolicy-Default' -or $_.IsDefault -eq $true } | Select-Object -First 1
-        if (-not $Default) { $Default = $Owa | Select-Object -First 1 }
+        $Default = $Owa.Where({ $_.Identity -eq 'OwaMailboxPolicy-Default' -or $_.IsDefault -eq $true }, 'First')[0]
+        if (-not $Default) { $Default = @($Owa)[0] }
 
         if ($Default.PersonalAccountsEnabled -eq $false -and $Default.PersonalAccountCalendarsEnabled -eq $false) {
             $Status = 'Passed'

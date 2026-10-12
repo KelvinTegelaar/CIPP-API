@@ -15,9 +15,9 @@ function Invoke-CippTestE8_PatchOS_03 {
             return
         }
 
-        $Win = $Compliance | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windows10CompliancePolicy' }
-        $WithMinVersion = $Win | Where-Object { $_.osMinimumVersion }
-        $Assigned = $WithMinVersion | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 }
+        $Win = $Compliance.Where({ $_.'@odata.type' -eq '#microsoft.graph.windows10CompliancePolicy' })
+        $WithMinVersion = $Win.Where({ $_.osMinimumVersion })
+        $Assigned = $WithMinVersion.Where({ $_.assignments -and $_.assignments.Count -gt 0 })
 
         if ($Assigned) {
             $Status = 'Passed'

@@ -49,9 +49,9 @@ function Invoke-CippTestZTNA21820 {
             }
 
             # Find notification rule for requestor end-user assignment
-            $NotificationRule = $Policy.effectiveRules | Where-Object {
+            $NotificationRule = $Policy.rules.Where({
                 $_.id -like '*Notification_Requestor_EndUser_Assignment*'
-            }
+            })
 
             if ($NotificationRule) {
                 $IsDefaultRecipientsEnabled = $NotificationRule.isDefaultRecipientsEnabled

@@ -33,7 +33,7 @@ function Set-CIPPDBCacheExoRetentionPolicyTags {
             if ($Tag.AgeLimitForRetention) {
                 try { $AgeLimitDays = [int]([timespan]$Tag.AgeLimitForRetention).TotalDays } catch { $AgeLimitDays = $null }
             }
-            $Tag | Add-Member -NotePropertyName 'AgeLimitForRetentionDays' -NotePropertyValue $AgeLimitDays -Force
+            $Tag.PSObject.Properties.Remove('AgeLimitForRetentionDays'); $Tag.PSObject.Properties.Add([psnoteproperty]::new('AgeLimitForRetentionDays', $AgeLimitDays))
         }
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoRetentionPolicyTags' -Data $RetentionPolicyTags -AddCount

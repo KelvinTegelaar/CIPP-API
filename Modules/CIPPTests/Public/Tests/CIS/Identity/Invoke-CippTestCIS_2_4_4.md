@@ -3,7 +3,7 @@ ZAP for Teams retroactively purges malicious chats already delivered to Teams. W
 **Remediation Action**
 
 ```powershell
-Set-TeamsProtectionPolicy -Identity 'Teams Protection Policy' -ZapEnabled $true
+Set-TeamsProtectionPolicy -Identity 'Default Teams Protection Policy' -ZapEnabled $true
 ```
 
 **Links**

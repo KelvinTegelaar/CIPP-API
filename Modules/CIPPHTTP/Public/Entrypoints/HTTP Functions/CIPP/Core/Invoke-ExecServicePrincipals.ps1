@@ -12,6 +12,7 @@ function Invoke-ExecServicePrincipals {
     $TenantFilter = $env:TenantID
 
     $Success = $true
+    $StatusCode = [HttpStatusCode]::OK
 
     $Action = $Request.Query.Action ?? 'Default'
     try {
@@ -32,6 +33,7 @@ function Invoke-ExecServicePrincipals {
                     if ($BlockList -contains $Request.Query.AppId) {
                         $Results = 'Service Principal creation is blocked for this AppId'
                         $Success = $false
+                        $StatusCode = [HttpStatusCode]::BadRequest
                         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Error'
                     } else {
                         $Body = @{
@@ -45,12 +47,14 @@ function Invoke-ExecServicePrincipals {
                             $ErrorMessage = Get-CippException -Exception $_
                             $Results = "Unable to create service principal: $($ErrorMessage.NormalizedError)"
                             $Success = $false
+                            $StatusCode = [HttpStatusCode]::InternalServerError
                             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Error' -LogData $ErrorMessage
                         }
                     }
                 } else {
                     $Results = 'Invalid AppId'
                     $Success = $false
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Error'
                 }
             }
@@ -76,6 +80,7 @@ function Invoke-ExecServicePrincipals {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = $ErrorMessage.NormalizedError
         $Success = $false
+        $StatusCode = [HttpStatusCode]::InternalServerError
         if ($Action -eq 'Create') {
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to create service principal: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
@@ -101,7 +106,7 @@ function Invoke-ExecServicePrincipals {
 
     $Json = $Body | ConvertTo-Json -Depth 10 -Compress
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Json
         })
 }

@@ -13,7 +13,7 @@ function Invoke-CippTestORCA240 {
             return
         }
 
-        $Config = $OrgConfig | Select-Object -First 1
+        $Config = @($OrgConfig)[0]
 
         if ($Config.Enabled -eq $true) {
             $Status = 'Passed'

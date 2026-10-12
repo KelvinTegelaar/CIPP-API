@@ -17,16 +17,16 @@ function Invoke-CippTestCopilotReady016 {
             return
         }
 
-        $Summary = if ($SummaryData -is [array]) { $SummaryData | Select-Object -First 1 } else { $SummaryData }
+        $Summary = if ($SummaryData -is [array]) { @($SummaryData)[0] } else { $SummaryData }
 
         # Get numeric app columns — exclude metadata fields
         $MetaFields = @('reportRefreshDate', 'reportPeriod', 'reportDate', 'id')
-        $AppCounts = $Summary.PSObject.Properties | Where-Object {
+        $AppCounts = $Summary.PSObject.Properties.Where({
             $_.Name -notin $MetaFields -and
             $null -ne $_.Value -and
             $_.Value -is [ValueType] -and
             $_.Value -isnot [bool]
-        }
+        })
 
         $TotalAppCount = ($AppCounts | Measure-Object -Property Value -Sum).Sum ?? 0
         if (-not $AppCounts -or $TotalAppCount -eq 0) {

@@ -10,10 +10,6 @@ function Invoke-ListAppProtectionPolicies {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $TenantFilter = $Request.Query.tenantFilter
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
@@ -90,8 +86,6 @@ function Invoke-ListAppProtectionPolicies {
                 $_.body.value | Add-Member -NotePropertyName 'URLName' -NotePropertyValue $URLName -Force
                 $_.body.value
             }
-
-
 
             foreach ($Policy in $ManagedAppPolicies) {
                 $policyType = switch ($Policy.'URLName') {
@@ -191,7 +185,7 @@ function Invoke-ListAppProtectionPolicies {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
 

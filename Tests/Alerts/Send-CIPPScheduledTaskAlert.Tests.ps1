@@ -70,14 +70,15 @@ Describe 'Send-CIPPScheduledTaskAlert - PSA snooze links' {
         }
 
         Mock -CommandName Send-CIPPAlert -MockWith {
-            param($Type, $Title, $HTMLContent, $JSONContent, $TenantFilter, $AffectedUser, $PSAReference, $PSATicketId)
+            param($Type, $Title, $HTMLContent, $JSONContent, $TenantFilter, $AffectedUser, $PSAReference, $PSATicketId, $PSAConsolidationKey)
             $script:SentAlerts.Add([pscustomobject]@{
-                    Type         = $Type
-                    Title        = $Title
-                    HTMLContent  = $HTMLContent
-                    AffectedUser = $AffectedUser
-                    PSAReference = $PSAReference
-                    PSATicketId  = $PSATicketId
+                    Type                = $Type
+                    Title               = $Title
+                    HTMLContent         = $HTMLContent
+                    AffectedUser        = $AffectedUser
+                    PSAReference        = $PSAReference
+                    PSATicketId         = $PSATicketId
+                    PSAConsolidationKey = $PSAConsolidationKey
                 })
         }
     }
@@ -151,6 +152,36 @@ Describe 'Send-CIPPScheduledTaskAlert - PSA snooze links' {
 
             $script:SentAlerts.Count | Should -Be 1
             $script:SentAlerts[0].HTMLContent | Should -Match 'Snooze Individual Alerts'
+        }
+    }
+
+    # Consolidation keys on the task's identity so rewording the visible title cannot fork an
+    # open ticket; the per-user split keeps one ticket per user.
+    Context 'consolidation key' {
+        It 'keys the consolidated ticket on tenant and task' {
+            $script:LinkTicketsToUsers = $false
+
+            Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+            $script:SentAlerts.Count | Should -Be 1
+            $script:SentAlerts[0].PSAConsolidationKey | Should -Be 'contoso.com|task-1'
+            $script:SentAlerts[0].Title | Should -Be 'Alert - contoso.com - Users without MFA'
+        }
+
+        It 'keys each split ticket on tenant, task and user' {
+            Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+            @($script:SentAlerts.PSAConsolidationKey) | Should -Be @('contoso.com|task-1|user1@contoso.com', 'contoso.com|task-1|user2@contoso.com')
+            @($script:SentAlerts.Title) | Should -Be @('Alert - contoso.com - Users without MFA - User One (user1@contoso.com)', 'Alert - contoso.com - Users without MFA - User Two (user2@contoso.com)')
+        }
+
+        It 'leaves the reference out of the key' {
+            $script:TaskInfo | Add-Member -NotePropertyName Reference -NotePropertyValue 'Starter Creation' -Force
+            $script:LinkTicketsToUsers = $false
+
+            Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+            $script:SentAlerts[0].PSAConsolidationKey | Should -Be 'contoso.com|task-1'
         }
     }
 

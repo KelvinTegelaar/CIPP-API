@@ -16,11 +16,11 @@ function Invoke-CippTestORCA230 {
 
         $OverlappingDomains = [System.Collections.Generic.List[object]]::new()
         foreach ($Domain in $AcceptedDomains) {
-            $ApplicableRules = @($AntiPhishRules | Where-Object {
+            $ApplicableRules = @($AntiPhishRules.Where({
                     $_.State -eq 'Enabled' -and
                     $_.RecipientDomainIs -contains $Domain.DomainName -and
                     $_.ExceptIfRecipientDomainIs -notcontains $Domain.DomainName
-                })
+                }))
             if ($ApplicableRules.Count -gt 1) {
                 $OverlappingDomains.Add([PSCustomObject]@{
                         Domain = $Domain.DomainName

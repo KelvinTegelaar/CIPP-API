@@ -15,14 +15,27 @@ Function Invoke-RemoveSensitiveInfoType {
     $Identity = $Request.Query.Identity ?? $Request.Body.Identity ?? $Request.Body.Name
     $FingerprintPackId = '00000000-0000-0000-0001-000000000001'
 
+    if ([string]::IsNullOrWhiteSpace($Identity)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{Results = 'Failed to delete Sensitive Information Type - Identity is required.' }
+            })
+    }
+
     try {
         $Sit = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DlpSensitiveInformationType' -Compliance |
             Where-Object { $_.Name -eq $Identity -or $_.Id -eq $Identity -or $_.Identity -eq $Identity } | Select-Object -First 1
         if (-not $Sit) {
-            throw "Sensitive Information Type '$Identity' not found."
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::NotFound
+                    Body       = @{Results = "Failed to delete Sensitive Information Type $Identity - Sensitive Information Type '$Identity' not found." }
+                })
         }
         if ($Sit.Publisher -like 'Microsoft*') {
-            throw "SIT '$($Sit.Name)' is a Microsoft built-in and cannot be deleted."
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{Results = "Failed to delete Sensitive Information Type $Identity - SIT '$($Sit.Name)' is a Microsoft built-in and cannot be deleted." }
+                })
         }
 
         # Regex/keyword SITs are their own rule package and must be removed at the package level - the
@@ -39,7 +52,7 @@ Function Invoke-RemoveSensitiveInfoType {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to delete Sensitive Information Type $Identity - $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

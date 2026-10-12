@@ -30,6 +30,8 @@ BeforeAll {
 
     . $FunctionPath
     . $HelperPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     function New-TestRequest {
         param($Body)
@@ -74,12 +76,12 @@ Describe 'Invoke-ExecSetSharePointMember' {
 
         $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::OK)
         @($Response.Body.Results).Count | Should -Be 2
-        $Response.Body.Results | Should -Contain 'Successfully added a@contoso.com as a member of https://contoso.sharepoint.com/sites/hr.'
+        $Response.Body.Results.resultText | Should -Contain 'Successfully added a@contoso.com as a member of https://contoso.sharepoint.com/sites/hr.'
         Should -Invoke New-GraphPostRequest -Times 2 -Exactly -ParameterFilter { $uri -like '*/web/associatedmembergroup/users' }
         Should -Invoke Resolve-CIPPSharePointRestContext -Times 1 -Exactly
     }
 
-    It 'keeps going when one user fails and reports each outcome' {
+    It 'keeps going when one user fails, reports each outcome and returns MultiStatus' {
         Mock -CommandName New-GraphPostRequest -MockWith { throw 'User not found' } -ParameterFilter { $uri -like '*/ensureuser' -and $body -like '*bad@contoso.com*' }
         $Request = New-TestRequest @{
             tenantFilter = 'contoso.onmicrosoft.com'; Add = $true; Role = 'Visitors'; SharePointType = 'Sts'
@@ -89,12 +91,14 @@ Describe 'Invoke-ExecSetSharePointMember' {
 
         $Response = Invoke-ExecSetSharePointMember -Request $Request -TriggerMetadata $null
 
-        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::OK)
-        $Response.Body.Results[0] | Should -BeLike 'Failed to add bad@contoso.com*'
-        $Response.Body.Results[1] | Should -Be 'Successfully added good@contoso.com as a visitor of https://contoso.sharepoint.com/sites/hr.'
+        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::MultiStatus)
+        $Response.Body.Results[0].resultText | Should -BeLike 'Failed to add bad@contoso.com*'
+        $Response.Body.Results[0].state | Should -Be 'error'
+        $Response.Body.Results[1].resultText | Should -Be 'Successfully added good@contoso.com as a visitor of https://contoso.sharepoint.com/sites/hr.'
+        $Response.Body.Results[1].state | Should -Be 'success'
     }
 
-    It 'returns BadRequest when every user fails' {
+    It 'returns InternalServerError when every user fails' {
         Mock -CommandName New-GraphPostRequest -MockWith { throw 'User not found' } -ParameterFilter { $uri -like '*/ensureuser' }
         $Request = New-TestRequest @{
             tenantFilter = 'contoso.onmicrosoft.com'; Add = $true; Role = 'Members'; SharePointType = 'Sts'
@@ -104,7 +108,7 @@ Describe 'Invoke-ExecSetSharePointMember' {
 
         $Response = Invoke-ExecSetSharePointMember -Request $Request -TriggerMetadata $null
 
-        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::BadRequest)
+        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::InternalServerError)
         $Response.Body.Results | Should -BeLike '*Failed to add x@contoso.com*Failed to add y@contoso.com*'
     }
 
@@ -163,7 +167,7 @@ Describe 'Invoke-ExecSetSharePointMember' {
         $Response = Invoke-ExecSetSharePointMember -Request $Request -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::OK)
-        $Response.Body.Results | Should -Be 'Successfully removed c@contoso.com as an owner of https://contoso.sharepoint.com/sites/team.'
+        $Response.Body.Results.resultText | Should -Be 'Successfully removed c@contoso.com as an owner of https://contoso.sharepoint.com/sites/team.'
         Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*/web/associatedownergroup/users/removebyid(7)' }
         Should -Invoke Remove-CIPPGroupMember -Times 0 -Exactly
     }
@@ -175,5 +179,17 @@ Describe 'Invoke-ExecSetSharePointMember' {
 
         $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::BadRequest)
         $Response.Body.Results | Should -BeLike '*No user was selected*'
+    }
+
+    It 'returns BadRequest when a classic site has no site URL' {
+        $Request = New-TestRequest @{
+            tenantFilter = 'contoso.onmicrosoft.com'; Add = $true; Role = 'Members'; SharePointType = 'Sts'
+            user = @((New-UserOption 'a@contoso.com'))
+        }
+
+        $Response = Invoke-ExecSetSharePointMember -Request $Request -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::BadRequest)
+        $Response.Body.Results | Should -BeLike '*No site URL was provided for this site.'
     }
 }

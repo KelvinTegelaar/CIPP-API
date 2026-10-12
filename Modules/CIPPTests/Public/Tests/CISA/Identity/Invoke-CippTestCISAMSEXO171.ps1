@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO171 {
             return
         }
 
-        $AuditConfigObject = $AuditConfig | Select-Object -First 1
+        $AuditConfigObject = @($AuditConfig)[0]
 
         if ($AuditConfigObject.UnifiedAuditLogIngestionEnabled -eq $true) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: Microsoft Purview Audit (Standard) logging is enabled.`n`n")

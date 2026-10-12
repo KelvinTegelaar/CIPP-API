@@ -144,3 +144,24 @@ Describe 'Invoke-ListMessageTrace messageId sweep' {
         Should -Invoke -CommandName New-GraphGetRequest -Times 1 -Exactly
     }
 }
+
+Describe 'Invoke-ListMessageTrace Get-MessageTraceV2 fallback' {
+    BeforeEach {
+        Mock -CommandName New-GraphPostRequest -MockWith { }
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName New-ExoRequest -MockWith {
+            @([pscustomobject]@{ MessageTraceId = 'v2trace'; MessageId = 'msg1'; Status = 'Delivered'; Subject = 'hi'; RecipientAddress = 'to@contoso.com'; SenderAddress = 'from@contoso.com'; Received = (Get-Date).ToUniversalTime(); Size = 100; FromIP = '1.1.1.1'; ToIP = '2.2.2.2' })
+        }
+    }
+
+    It 'falls back when Graph does not serve message trace for a GCC tenant' {
+        Mock -CommandName New-GraphGetRequest -MockWith { throw 'Graph API is not currently supported for MS365 GCC tenants.' }
+
+        $response = Invoke-ListMessageTrace -Request (New-MessageTraceRequest -Body @{ days = 2 }) -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 200
+        $response.Body.Metadata.Source | Should -Be 'Get-MessageTraceV2'
+        Should -Invoke -CommandName New-ExoRequest -ParameterFilter { $Cmdlet -eq 'Get-MessageTraceV2' }
+        Should -Invoke -CommandName New-GraphPostRequest -Times 0 -Exactly -Because 'an unsupported cloud is not a missing service principal'
+    }
+}

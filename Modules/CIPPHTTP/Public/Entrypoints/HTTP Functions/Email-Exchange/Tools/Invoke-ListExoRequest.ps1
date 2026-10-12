@@ -8,6 +8,7 @@ function Invoke-ListExoRequest {
         Executes an arbitrary read-only Exchange Online cmdlet (Get-* or Search-*) for a tenant. Accepts cmdlet name and parameters in the request body.
     #>
     param($Request, $TriggerMetadata)
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $AllowedVerbs = @(
             'Get'
@@ -89,13 +90,18 @@ function Invoke-ListExoRequest {
                 $Body = [pscustomobject]@{
                     Results = @(@{ Error = $ErrorMessage })
                 }
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
     } catch {
         Write-Information "ExoRequest Error: $($_.Exception.Message)"
+        $Body = [pscustomobject]@{
+            Results = @(@{ Error = (Get-NormalizedError -Message $_.Exception.Message) })
+        }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = ConvertTo-Json -InputObject $Body -Compress
         })
 }

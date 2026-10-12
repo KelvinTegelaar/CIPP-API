@@ -15,6 +15,10 @@ Describe 'CippJson.ToJson matches ConvertTo-Json -Compress' {
         @{ Name = 'noted strings and dates inside a row'; Value = [pscustomobject]@{ When = Get-Date; S = (Add-Member -InputObject 'abc' -NotePropertyName X -NotePropertyValue 1 -PassThru) } }
         @{ Name = 'a row from Select-Object over parsed JSON'; Value = ('{"a":"x","b":[1,"y"],"c":{"d":2}}' | ConvertFrom-Json | Select-Object a, b, c) }
         @{ Name = 'an empty foreach result held in a row'; Value = & { $Empty = foreach ($x in @()) { $x }; [pscustomobject]@{ G = $Empty; N = 1 } } }
+        @{ Name = 'a row whose properties were enumerated'; Value = & { $R = '{"a":1,"b":{"c":[{"d":2}]}}' | ConvertFrom-Json; $null = @($R.PSObject.Properties); $null = @($R.b.PSObject.Properties); $null = @($R.b.c[0].PSObject.Properties); $R } }
+        @{ Name = 'a row whose members were enumerated'; Value = & { $R = [pscustomobject]@{ a = 1 }; $null = @($R.PSObject.Members); $null = $R | Get-Member; $null = $R.psobject.TypeNames; $R } }
+        @{ Name = 'a row whose script property serialises another row'; Value = ([pscustomobject]@{ a = 'x' } | Add-Member -MemberType ScriptProperty -Name inner -Value { [CIPP.CippJson]::ToJson([pscustomobject]@{ b = 'y' }, 5) } -PassThru) }
+        @{ Name = 'a row with added note, script and alias properties'; Value = ([pscustomobject]@{ a = 1 } | Add-Member -NotePropertyName b -NotePropertyValue 'x' -PassThru | Add-Member -MemberType ScriptProperty -Name c -Value { 2 } -PassThru | Add-Member -MemberType AliasProperty -Name d -Value a -PassThru) }
     ) {
         [CIPP.CippJson]::ToJson($Value, 100) | Should -BeExactly (Get-Expected $Value)
     }
@@ -28,5 +32,11 @@ Describe 'CippJson.ToJson matches ConvertTo-Json -Compress' {
         @{ Name = 'nesting deeper than the depth'; Value = [pscustomobject]@{ a = [pscustomobject]@{ b = [pscustomobject]@{ c = 1 } } }; Depth = 1 }
     ) {
         [CIPP.CippJson]::ToJson($Value, $(if ($Depth) { $Depth } else { 100 })) | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'CippJson.ToJson member access' {
+    It 'reads added members directly on this PowerShell instead of falling back to PSObject.Properties' {
+        [CIPP.CippJson].Assembly.GetType('CIPP.PSMembers').GetProperty('Available').GetValue($null) | Should -BeTrue
     }
 }

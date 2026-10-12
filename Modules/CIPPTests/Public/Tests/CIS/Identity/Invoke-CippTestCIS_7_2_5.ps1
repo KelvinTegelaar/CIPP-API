@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_7_2_5 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
 
         if ($Cfg.PreventExternalUsersFromResharing -eq $true) {
             $Status = 'Passed'

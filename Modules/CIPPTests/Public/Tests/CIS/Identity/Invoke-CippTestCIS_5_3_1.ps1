@@ -32,12 +32,12 @@ function Invoke-CippTestCIS_5_3_1 {
         )
 
         # Standing (permanent) active assignments = assignmentType 'Assigned' with no end date.
-        $Permanent = @($Active | Where-Object { $_.assignmentType -eq 'Assigned' -and [string]::IsNullOrEmpty($_.endDateTime) })
+        $Permanent = @($Active.Where({ $_.assignmentType -eq 'Assigned' -and [string]::IsNullOrEmpty($_.endDateTime) }))
 
-        $GaPermanent = @($Permanent | Where-Object { $_.roleDefinitionId -eq $GaTemplateId })
-        $OtherPrivPermanent = @($Permanent | Where-Object {
+        $GaPermanent = @($Permanent.Where({ $_.roleDefinitionId -eq $GaTemplateId }))
+        $OtherPrivPermanent = @($Permanent.Where({
                 $_.roleDefinitionId -ne $GaTemplateId -and $PrivilegedRoleNames -contains $RoleNames[$_.roleDefinitionId]
-            })
+            }))
 
         $Violations = @()
         if ($GaPermanent.Count -gt 2) {

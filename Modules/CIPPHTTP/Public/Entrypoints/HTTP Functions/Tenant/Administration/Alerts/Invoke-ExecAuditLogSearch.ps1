@@ -146,7 +146,7 @@ function Invoke-ExecAuditLogSearch {
                     })
             } catch {
                 return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::BadRequest
+                        StatusCode = [HttpStatusCode]::InternalServerError
                         Body       = $_.Exception.Message
                     })
             }

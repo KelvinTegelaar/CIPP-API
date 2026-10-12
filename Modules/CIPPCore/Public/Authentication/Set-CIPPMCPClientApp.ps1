@@ -6,9 +6,9 @@ function Set-CIPPMCPClientApp {
         In the split-app model an MCPAllowed API client is one of the apps an AI connector signs in
         AS (the OAuth client), while the dedicated CIPP-MCP app (New-CIPPMcpResourceApp) is the
         protected resource the token is for. Several MCPAllowed clients can coexist, each with its own
-        role, IP range, redirect URIs and Conditional Access; every one is in EasyAuth
-        allowedApplications and CIPP resolves the caller's role from its appId (azp), so keeping them
-        as distinct app registrations is what makes per-client permissions and CA work.
+        redirect URIs, and every one is in EasyAuth allowedApplications. A connector that signs a user
+        in (PKCE or client secret) runs with that user's CIPP role; the client's own role and IP range
+        apply only to app-only (client credentials) tokens.
 
         This ensures the resource app exists, then configures THIS client: the known MCP client
         callbacks (public for the PKCE clients, web for Copilot Studio), "allow public client flows",

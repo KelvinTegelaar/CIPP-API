@@ -146,6 +146,28 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
             $script:SavedEntity.VariableType | Should -Be 'json'
         }
 
+        It 'stores a valid list variable, empty included' {
+            foreach ($Value in @('["Site A","Site B"]', '[]')) {
+                $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value $Value -VariableType 'list')
+
+                $Response.StatusCode | Should -Be 200
+                $script:SavedEntity.VariableType | Should -Be 'list'
+                $script:SavedEntity.Value | Should -Be $Value
+            }
+        }
+
+        It 'stores a list typed one value per line as a JSON array' {
+            $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value "Site A`r`n  Site, B `n`nSite `"C`"" -VariableType 'list')
+
+            $Response.StatusCode | Should -Be 200
+            $script:SavedEntity.Value | Should -Be '["Site A","Site, B","Site \"C\""]'
+        }
+
+        It 'stores a single line as a one item list' {
+            $null = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value 'Site A' -VariableType 'list')
+            $script:SavedEntity.Value | Should -Be '["Site A"]'
+        }
+
         It 'accepts the {label, value} shape the type selector posts' {
             $Response = Invoke-ExecCippReplacemap -Request (
                 New-SaveRequest -Name 'lockseconds' -Value '300' -VariableType ([pscustomobject]@{ label = 'Integer'; value = 'integer' })
@@ -179,6 +201,17 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
             $Response.StatusCode | Should -Be 400
             $Response.Body.Results | Should -Match 'not valid JSON'
             $script:SavedEntity | Should -BeNullOrEmpty
+        }
+
+        It 'rejects a list that is not a JSON array' {
+            foreach ($Value in @('{"a":1}', '[not json')) {
+                $script:SavedEntity = $null
+                $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value $Value -VariableType 'list')
+
+                $Response.StatusCode | Should -Be 400 -Because $Value
+                $Response.Body.Results | Should -Match 'not a JSON array'
+                $script:SavedEntity | Should -BeNullOrEmpty
+            }
         }
 
         It 'rejects an unknown type' {

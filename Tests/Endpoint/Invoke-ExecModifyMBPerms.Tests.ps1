@@ -38,6 +38,7 @@ BeforeAll {
 
     . $PermissionFunctionPath
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     # Build a request in the bulk 'mailboxRequests' shape.
     function New-ModifyRequest {
@@ -183,6 +184,7 @@ Describe 'Invoke-ExecModifyMBPerms' {
             $response = Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
 
             ($response.Body.Results -join "`n") | Should -Match 'Error processing FullAccess for user@contoso.com on shared@contoso.com: boom'
+            $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::InternalServerError)
         }
 
         It 'falls back to individual New-ExoRequest calls when the bulk request throws' {
@@ -246,6 +248,7 @@ Describe 'Invoke-ExecModifyMBPerms' {
             $response = Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
 
             ($response.Body.Results -join "`n") | Should -Match 'Could not find user ghost@contoso.com'
+            $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::MultiStatus)
         }
     }
 

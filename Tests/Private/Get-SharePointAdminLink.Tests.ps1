@@ -154,3 +154,21 @@ Describe 'Get-SharePointAdminLink' {
         }
     }
 }
+
+Describe 'Get-SharePointAdminLink failed root site lookup' {
+    It 'rethrows a failed Graph lookup without requesting it again while fresh' {
+        Mock -CommandName New-GraphGetRequest -MockWith { throw "Target 'nosp.sharepoint.com' is not found." }
+
+        { Get-SharePointAdminLink -Public $false -TenantFilter 'nosp.onmicrosoft.com' } | Should -Throw '*is not found*'
+        { Get-SharePointAdminLink -Public $false -TenantFilter 'nosp.onmicrosoft.com' } | Should -Throw '*is not found*'
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly
+    }
+
+    It 'does not hold one tenant failure against another tenant' {
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            [PSCustomObject]@{ siteCollection = [PSCustomObject]@{ hostname = 'other.sharepoint.com' } }
+        }
+
+        (Get-SharePointAdminLink -Public $false -TenantFilter 'other.onmicrosoft.com').TenantName | Should -Be 'other'
+    }
+}

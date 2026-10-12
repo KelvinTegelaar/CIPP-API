@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_1_3_1 {
             return
         }
 
-        $Failing = $Domains | Where-Object { $_.passwordValidityPeriodInDays -lt 2147483647 -and $_.passwordValidityPeriodInDays -gt 0 }
+        $Failing = $Domains.Where({ $_.passwordValidityPeriodInDays -lt 2147483647 -and $_.passwordValidityPeriodInDays -gt 0 })
 
         if (-not $Failing -or $Failing.Count -eq 0) {
             $Status = 'Passed'

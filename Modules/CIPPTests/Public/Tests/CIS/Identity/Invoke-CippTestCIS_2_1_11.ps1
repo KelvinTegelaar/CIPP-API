@@ -18,15 +18,15 @@ function Invoke-CippTestCIS_2_1_11 {
         # a non-default policy for exactly this. Grade the best policy that meets the bar.
         # CIS v7 defines a comprehensive list of 186 extensions and requires at least 90% adoption (>= 168).
         $Policies = @($Malware)
-        $Compliant = $Policies | Where-Object { $_.EnableFileFilter -eq $true -and (($_.FileTypes | Measure-Object).Count -ge 168) } | Select-Object -First 1
+        $Compliant = $Policies.Where({ $_.EnableFileFilter -eq $true -and (($_.FileTypes | Measure-Object).Count -ge 168) }, 'First')[0]
 
         if ($Compliant) {
             $FileTypeCount = ($Compliant.FileTypes | Measure-Object).Count
             $Status = 'Passed'
             $Result = "Comprehensive attachment filtering is applied — $FileTypeCount file types blocked on '$($Compliant.Identity)'."
         } else {
-            $Default = $Policies | Where-Object { $_.IsDefault -eq $true } | Select-Object -First 1
-            if (-not $Default) { $Default = $Policies | Select-Object -First 1 }
+            $Default = $Policies.Where({ $_.IsDefault -eq $true }, 'First')[0]
+            if (-not $Default) { $Default = @($Policies)[0] }
             $FileTypeCount = ($Default.FileTypes | Measure-Object).Count
             $Status = 'Failed'
             $Result = "Attachment filter on '$($Default.Identity)' is not comprehensive (EnableFileFilter: $($Default.EnableFileFilter), FileTypes count: $FileTypeCount, expected >= 168 — 90% of the CIS v7 186-extension list)."

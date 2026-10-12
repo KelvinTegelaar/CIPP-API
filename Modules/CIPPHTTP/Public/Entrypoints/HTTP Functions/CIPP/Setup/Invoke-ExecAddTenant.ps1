@@ -8,6 +8,7 @@ function Invoke-ExecAddTenant {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $StatusCode = [HttpStatusCode]::OK
     try {
         # AnyTenant: onboarding writes tenant credentials; require unrestricted tenant scope
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
@@ -37,6 +38,7 @@ function Invoke-ExecAddTenant {
         if ($tenantId -eq $env:TenantID) {
             # If the tenant is the partner tenant, return an error because you cannot add the partner tenant as direct tenant
             $Results = @{'message' = 'You cannot add the partner tenant as a direct tenant. Please connect the tenant using the "Connect to Partner Tenant" option. '; 'severity' = 'error'; }
+            $StatusCode = [HttpStatusCode]::BadRequest
         } elseif ($ExistingTenant -and $ExistingTenant.delegatedPrivilegeStatus -ne 'directTenant') {
             # Converting an existing GDAP tenant in place would silently change how CIPP
             # authenticates to it. Require the tenant to be offboarded first so the switch is
@@ -46,6 +48,7 @@ function Invoke-ExecAddTenant {
             Remove-CIPPDirectTenantToken -TenantId $tenantId
 
             $Results = @{'message' = "$($ExistingTenant.displayName) is already onboarded as a GDAP tenant and cannot be converted to a Direct Tenant. To manage it as a Direct Tenant, remove the tenant first under Settings > Tenants, then add it again using the Direct Tenant flow."; 'severity' = 'error' }
+            $StatusCode = [HttpStatusCode]::BadRequest
             Write-LogMessage -tenant $ExistingTenant.defaultDomainName -tenantid $ExistingTenant.customerId -API 'NewTenant' -message "Blocked conversion of GDAP tenant $($ExistingTenant.displayName) to a Direct Tenant, attempted by $ServiceAccount." -Sev 'Warn'
         } elseif ($ExistingTenant) {
             # Existing direct tenant - refresh the stored credentials and service account details.
@@ -140,10 +143,11 @@ function Invoke-ExecAddTenant {
         }
     } catch {
         $Results = @{'message' = "Failed to add tenant: $($_.Exception.Message)"; 'state' = 'error'; 'severity' = 'error' }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 }

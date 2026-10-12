@@ -17,14 +17,14 @@ function Invoke-CippTestCIS_2_1_3 {
         # a rule, not on the built-in Default - so accept any policy that has them configured, not
         # only the IsDefault one (which otherwise makes a compliant tenant false-fail).
         $Policies = @($Malware)
-        $Compliant = $Policies | Where-Object { $_.EnableInternalSenderAdminNotifications -eq $true -and -not [string]::IsNullOrWhiteSpace($_.InternalSenderAdminAddress) } | Select-Object -First 1
+        $Compliant = $Policies.Where({ $_.EnableInternalSenderAdminNotifications -eq $true -and -not [string]::IsNullOrWhiteSpace($_.InternalSenderAdminAddress) }, 'First')[0]
 
         if ($Compliant) {
             $Status = 'Passed'
             $Result = "Internal sender admin notifications enabled on '$($Compliant.Identity)'. Recipient: $($Compliant.InternalSenderAdminAddress)."
         } else {
-            $Default = $Policies | Where-Object { $_.IsDefault -eq $true } | Select-Object -First 1
-            if (-not $Default) { $Default = $Policies | Select-Object -First 1 }
+            $Default = $Policies.Where({ $_.IsDefault -eq $true }, 'First')[0]
+            if (-not $Default) { $Default = @($Policies)[0] }
             $Status = 'Failed'
             $Result = "Internal sender admin notifications are not configured on '$($Default.Identity)'.`n`n- EnableInternalSenderAdminNotifications: $($Default.EnableInternalSenderAdminNotifications)`n- InternalSenderAdminAddress: '$($Default.InternalSenderAdminAddress)'"
         }

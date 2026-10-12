@@ -15,7 +15,7 @@ function Invoke-CippTestZTNA21865 {
             return
         }
 
-        $TrustedLocations = @($NamedLocations | Where-Object { $_.isTrusted -eq $true })
+        $TrustedLocations = @($NamedLocations.Where({ $_.isTrusted -eq $true }))
         $Passed = $TrustedLocations.Count -gt 0
 
         if ($Passed) {

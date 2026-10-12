@@ -14,7 +14,7 @@ function Invoke-ExecAddMultiTenantApp {
         $ApplicationResources = $request.body.permissions | Where-Object -Property origin -EQ 'Application' | ForEach-Object { @{ id = $_.id; type = 'Role' } }
         $ApplicationResourceAccess = @{ ResourceAppId = '00000003-0000-0000-c000-000000000000'; resourceAccess = $ApplicationResources }
 
-        $Results = try {
+        try {
             if ($Request.Body.CopyPermissions -eq $true) {
                 $Command = 'ExecApplicationCopy'
             } else {
@@ -48,18 +48,18 @@ function Invoke-ExecAddMultiTenantApp {
                 $null = Start-CIPPOrchestrator -InputObject $InputObject
                 $Results = 'Deploying {0} to {1}, see the logbook for details' -f $Request.Body.AppId, ($Request.Body.tenantFilter.label -join ', ')
                 Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Info'
+                $StatusCode = [HttpStatusCode]::OK
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $Results = "Function Error: $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
-
-            $StatusCode = [HttpStatusCode]::OK
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Results = "Function Error: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
-            $StatusCode = [HttpStatusCode]::BadRequest
+            $StatusCode = [HttpStatusCode]::InternalServerError
         }
     } elseif ($Request.Body.configMode -eq 'template') {
         Write-Information 'Application Approval - Template Mode'
@@ -89,12 +89,13 @@ function Invoke-ExecAddMultiTenantApp {
             $null = Start-CIPPOrchestrator -InputObject $InputObject
             $Results = 'Deploying {0} to {1}, see the logbook for details' -f $Request.Body.selectedTemplate.label, ($Request.Body.tenantFilter.label -join ', ')
             Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Info'
+            $StatusCode = [HttpStatusCode]::OK
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Results = "Error queuing application - $($ErrorMessage.NormalizedError)"
             Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
+            $StatusCode = [HttpStatusCode]::InternalServerError
         }
-        $StatusCode = [HttpStatusCode]::OK
     }
 
     return ([HttpResponseContext]@{

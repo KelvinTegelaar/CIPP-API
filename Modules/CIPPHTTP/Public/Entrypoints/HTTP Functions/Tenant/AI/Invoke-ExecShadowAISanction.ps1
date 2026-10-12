@@ -17,11 +17,26 @@ function Invoke-ExecShadowAISanction {
     $Tools = @($Request.Body.Tools ?? $Request.Body.Tool) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
     $Action = $Request.Body.Action ?? 'Sanction'
 
-    try {
-        if (-not $TenantFilter) { throw 'tenantFilter is required' }
-        if ($Tools.Count -eq 0) { throw 'No AI tool specified' }
-        if ($Action -notin @('Sanction', 'Unsanction')) { throw "Unknown action '$Action'. Use Sanction or Unsanction." }
+    if (-not $TenantFilter) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = @('Failed to update sanctioned AI tools: tenantFilter is required') }
+            })
+    }
+    if ($Tools.Count -eq 0) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = @('Failed to update sanctioned AI tools: No AI tool specified') }
+            })
+    }
+    if ($Action -notin @('Sanction', 'Unsanction')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = @("Failed to update sanctioned AI tools: Unknown action '$Action'. Use Sanction or Unsanction.") }
+            })
+    }
 
+    try {
         $Table = Get-CIPPTable -TableName 'ShadowAIConfig'
         $Results = foreach ($Tool in $Tools) {
             # Table storage forbids /, \, # and ? in row keys
@@ -54,7 +69,7 @@ function Invoke-ExecShadowAISanction {
     } catch {
         Write-LogMessage -headers $Request.Headers -API 'ExecShadowAISanction' -tenant $TenantFilter -message "Failed to update sanctioned AI tools: $($_.Exception.Message)" -Sev 'Error'
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
+                StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = @{ Results = @("Failed to update sanctioned AI tools: $($_.Exception.Message)") }
             })
     }

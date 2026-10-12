@@ -20,6 +20,9 @@ BeforeAll {
     # Get-CippMcpSpec reads $env:CIPPRootPath at runtime; the projection only needs a
     # parsed document, so it is stubbed per-test with whatever fixture is in play.
     function Get-CippMcpSpec { return $script:FixtureSpec }
+    # The caller's permissions; $null (no request context) leaves the catalog unfiltered
+    function Get-CippRequestAllowedPermissions { , $script:AllowedPermissions }
+    $script:AllowedPermissions = $null
 
     function Get-OperationFixture {
         param(
@@ -362,5 +365,39 @@ Describe 'tool identity' {
         $Tools.Count | Should -Be 1
         # the POST also lists the query parameters, so it is the one kept
         $Tools[0]._method | Should -Be 'POST'
+    }
+}
+
+Describe 'listing only what the caller may run' {
+    BeforeAll {
+        Initialize-FixtureSpec -Paths @{
+            '/api/ListUsers'   = @{ get = (Get-OperationFixture -Role 'Identity.User.Read') }
+            '/api/ListMailbox' = @{ get = (Get-OperationFixture -Role 'Exchange.Mailbox.Read' -Tag 'Email-Exchange > Administration') }
+        }
+    }
+    AfterEach { $script:AllowedPermissions = $null }
+
+    It 'keeps only tools whose role the caller holds' {
+        $script:AllowedPermissions = @('Identity.User.Read', 'Identity.User.ReadWrite')
+        (Get-ToolList).name | Should -Be @('ListUsers')
+    }
+
+    It 'matches the role regardless of case' {
+        $script:AllowedPermissions = @('exchange.mailbox.read')
+        (Get-ToolList).name | Should -Be @('ListMailbox')
+    }
+
+    It 'lists nothing for a caller whose roles grant nothing' {
+        $script:AllowedPermissions = @()
+        (Get-ToolList).Count | Should -Be 0
+    }
+
+    It 'is unfiltered outside a request' {
+        (Get-ToolList).Count | Should -Be 2
+    }
+
+    It 'never filters the unscoped catalog the gateway passthroughs use' {
+        $script:AllowedPermissions = @()
+        @(Get-CippMcpToolCatalog -InformationAction SilentlyContinue).Count | Should -Be 2
     }
 }

@@ -13,32 +13,32 @@ function Invoke-CippTestZTNA24564 {
             return
         }
 
-        $WindowsPolicies = $ConfigPolicies | Where-Object {
+        $WindowsPolicies = $ConfigPolicies.Where({
             $_.platforms -like '*windows10*'
-        }
+        })
 
         if (-not $WindowsPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24564' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Windows policies found' -Risk 'High' -Name 'Local account usage on Windows is restricted to reduce unauthorized access' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $LocalUsersGroupsPolicies = $WindowsPolicies | Where-Object {
+        $LocalUsersGroupsPolicies = $WindowsPolicies.Where({
             $settingIds = $_.settings.settingInstance.settingDefinitionId
             if ($settingIds -is [string]) {
                 $settingIds -eq 'device_vendor_msft_policy_config_localusersandgroups_configure'
             } else {
                 $settingIds -contains 'device_vendor_msft_policy_config_localusersandgroups_configure'
             }
-        }
+        })
 
         if (-not $LocalUsersGroupsPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24564' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Local Users and Groups policy configured' -Risk 'High' -Name 'Local account usage on Windows is restricted to reduce unauthorized access' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $AssignedPolicies = $LocalUsersGroupsPolicies | Where-Object {
+        $AssignedPolicies = $LocalUsersGroupsPolicies.Where({
             $_.assignments -and $_.assignments.Count -gt 0
-        }
+        })
 
         if ($AssignedPolicies) {
             $Status = 'Passed'

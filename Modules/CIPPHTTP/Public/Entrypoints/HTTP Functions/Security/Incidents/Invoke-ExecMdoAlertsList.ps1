@@ -63,7 +63,7 @@ function Invoke-ExecMDOAlertsList {
         }
     } catch {
         $Body = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     if (!$Body) {
         $StatusCode = [HttpStatusCode]::OK

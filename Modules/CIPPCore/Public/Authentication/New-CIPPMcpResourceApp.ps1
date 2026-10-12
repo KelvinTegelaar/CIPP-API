@@ -8,10 +8,9 @@ function New-CIPPMcpResourceApp {
         https://<host>/api/ExecMcp), exposes the user_impersonation scope, and is what EasyAuth
         validates incoming tokens against. It is deliberately NOT an OAuth client: it has no redirect
         URIs, no secret and no public-client flow. The apps that AI connectors sign in AS are the
-        MCPAllowed API clients (separate app registrations, each with its own role, IP range,
-        redirect URIs and Conditional Access) - keeping client and resource separate is what stops
-        the non-interactive refresh being "a token for itself" (AADSTS90009) and lets an MSP apply
-        device-compliance CA to the client apps without affecting the resource.
+        MCPAllowed API clients (separate app registrations, each with its own redirect URIs) -
+        keeping client and resource separate is what stops the non-interactive refresh being "a
+        token for itself" (AADSTS90009).
 
         Idempotent and self-healing. It resolves the resource app in this order: the appId stored in
         the CippMcpResource table; an existing CIPP-MCP app that already owns this instance's host

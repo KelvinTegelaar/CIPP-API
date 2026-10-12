@@ -18,10 +18,10 @@ function Invoke-ExecSiteBrowserLibraryCopy {
     $StatusCode = [HttpStatusCode]::OK
 
     try {
-        if ([string]::IsNullOrWhiteSpace($TenantFilter)) { throw 'tenantFilter is required.' }
-        if ([string]::IsNullOrWhiteSpace($Action)) { throw 'Action is required.' }
+        if ([string]::IsNullOrWhiteSpace($TenantFilter)) { throw [System.ArgumentException]::new('tenantFilter is required.') }
+        if ([string]::IsNullOrWhiteSpace($Action)) { throw [System.ArgumentException]::new('Action is required.') }
         if ($Action -notin @('PreflightLibraryCopy', 'StartLibraryCopy')) {
-            throw "Unknown Action '$Action'. Supported: PreflightLibraryCopy, StartLibraryCopy."
+            throw [System.ArgumentException]::new("Unknown Action '$Action'. Supported: PreflightLibraryCopy, StartLibraryCopy.")
         }
 
         $User = try {
@@ -55,13 +55,13 @@ function Invoke-ExecSiteBrowserLibraryCopy {
             APIName           = $APIName
         }
 
-        if ([string]::IsNullOrWhiteSpace($Params.SourceListId)) { throw 'SourceListId is required.' }
-        if ([string]::IsNullOrWhiteSpace($Params.DestListId)) { throw 'DestListId is required.' }
+        if ([string]::IsNullOrWhiteSpace($Params.SourceListId)) { throw [System.ArgumentException]::new('SourceListId is required.') }
+        if ([string]::IsNullOrWhiteSpace($Params.DestListId)) { throw [System.ArgumentException]::new('DestListId is required.') }
         if ([string]::IsNullOrWhiteSpace($Params.SourceSiteId) -and [string]::IsNullOrWhiteSpace($Params.SourceSiteUrl)) {
-            throw 'SourceSiteId or SourceSiteUrl is required.'
+            throw [System.ArgumentException]::new('SourceSiteId or SourceSiteUrl is required.')
         }
         if ([string]::IsNullOrWhiteSpace($Params.DestSiteId) -and [string]::IsNullOrWhiteSpace($Params.DestSiteUrl)) {
-            throw 'DestSiteId or DestSiteUrl is required.'
+            throw [System.ArgumentException]::new('DestSiteId or DestSiteUrl is required.')
         }
 
         $Result = Start-CIPPSharePointLibraryCopy @Params
@@ -70,7 +70,7 @@ function Invoke-ExecSiteBrowserLibraryCopy {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to run Action '$Action'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

@@ -1,0 +1,70 @@
+{
+  "name": "DisableOWAPersonalAccounts",
+  "label": "Disable personal email accounts and calendars in Outlook",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (6.3.2)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Prevents users from adding personal email accounts (Outlook.com, Gmail, Yahoo) in the new Outlook for Windows and from connecting personal Outlook.com or Google calendars in Outlook on the web. Applies to the default OWA mailbox policy only, so exceptions can be made with a separate policy. Changes can take up to 60 minutes to apply and personal accounts already added are disabled.",
+  "executiveText": "Keeps personal email and calendar accounts out of the corporate Outlook client, so company data cannot be moved to a personal inbox that sits outside anti-malware scanning, data loss prevention and audit logging.",
+  "docsDescription": "Sets PersonalAccountsEnabled and PersonalAccountCalendarsEnabled on the default OWA mailbox policy (OwaMailboxPolicy-Default). Neither setting applies to classic Outlook for Windows, Outlook for Mac or Outlook mobile.",
+  "impactColour": "info",
+  "addedDate": "2026-10-10",
+  "powershellEquivalent": "Set-OwaMailboxPolicy -Identity OwaMailboxPolicy-Default -PersonalAccountsEnabled $false -PersonalAccountCalendarsEnabled $false",
+  "appliesToTest": [
+    "CIS_6_3_2"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "personalAccountsEnabled": {
+      "type": "switch",
+      "label": "Allow personal email accounts in the new Outlook for Windows",
+      "default": false,
+      "recommended": false
+    },
+    "personalAccountCalendarsEnabled": {
+      "type": "switch",
+      "label": "Allow personal Outlook.com and Google calendars in Outlook on the web",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "PersonalAccountsEnabled": "%personalAccountsEnabled%",
+    "PersonalAccountCalendarsEnabled": "%personalAccountCalendarsEnabled%"
+  },
+  "read": {
+    "cacheType": "OwaMailboxPolicy",
+    "filter": [
+      {
+        "property": "Identity",
+        "value": "OwaMailboxPolicy-Default"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OwaMailboxPolicy",
+        "params": {
+          "Identity": "OwaMailboxPolicy-Default",
+          "PersonalAccountsEnabled": "%personalAccountsEnabled%",
+          "PersonalAccountCalendarsEnabled": "%personalAccountCalendarsEnabled%"
+        }
+      }
+    ]
+  }
+}

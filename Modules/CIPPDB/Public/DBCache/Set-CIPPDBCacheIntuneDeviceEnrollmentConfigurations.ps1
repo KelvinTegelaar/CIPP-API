@@ -59,7 +59,7 @@ function Set-CIPPDBCacheIntuneDeviceEnrollmentConfigurations {
                         continue
                     }
 
-                    $Configuration = $Configurations | Where-Object { $_.id -eq $AssignResult.id } | Select-Object -First 1
+                    $Configuration = $Configurations.Where({ $_.id -eq $AssignResult.id }, 'First')[0]
                     if ($Configuration) {
                         $Assignments = @($AssignResult.body.value)
                         $Configuration | Add-Member -NotePropertyName assignments -NotePropertyValue $Assignments -Force

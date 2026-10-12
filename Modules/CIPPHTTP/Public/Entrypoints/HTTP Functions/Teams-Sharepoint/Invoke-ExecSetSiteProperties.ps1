@@ -31,9 +31,11 @@ function Invoke-ExecSetSiteProperties {
     $Int64Properties = @('StorageMaximumLevel', 'StorageWarningLevel')
     $ValidLockStates = @('Unlock', 'ReadOnly', 'NoAccess')
 
-    try {
-        if (-not $SiteUrl) { throw 'SiteUrl is required.' }
+    if (-not $SiteUrl) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
 
+    try {
         $Properties = @{}
         $Changes = [System.Collections.Generic.List[string]]::new()
 
@@ -41,7 +43,7 @@ function Invoke-ExecSetSiteProperties {
             $Value = $Request.Body.$Key.value ?? $Request.Body.$Key
             if ($null -ne $Value -and "$Value" -ne '') {
                 if (-not $EnumMaps[$Key].ContainsKey([string]$Value)) {
-                    throw "Invalid value '$Value' for $Key. Valid values: $($EnumMaps[$Key].Keys -join ', ')."
+                    return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "Invalid value '$Value' for $Key. Valid values: $($EnumMaps[$Key].Keys -join ', ')." } })
                 }
                 $Properties[$Key] = [int]$EnumMaps[$Key][[string]$Value]
                 $Changes.Add("$Key=$Value")
@@ -51,7 +53,7 @@ function Invoke-ExecSetSiteProperties {
         $LockState = $Request.Body.LockState.value ?? $Request.Body.LockState
         if ($null -ne $LockState -and "$LockState" -ne '') {
             if ($LockState -notin $ValidLockStates) {
-                throw "Invalid LockState '$LockState'. Valid values: $($ValidLockStates -join ', ')."
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "Invalid LockState '$LockState'. Valid values: $($ValidLockStates -join ', ')." } })
             }
             $Properties['LockState'] = [string]$LockState
             $Changes.Add("LockState=$LockState")
@@ -87,14 +89,15 @@ function Invoke-ExecSetSiteProperties {
         }
 
         if ($Properties.Count -eq 0) {
-            throw 'No valid properties were provided to set.'
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'No valid properties were provided to set.' } })
         }
 
         # Group-connected sites only accept a small subset of tenant site properties; SPO
         # rejects the whole request if any other property is included. Filter to the
         # supported set and report what was skipped.
         $Site = Get-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $SiteUrl
-        $IsGroupSite = $Site.GroupId -and $Site.GroupId -notmatch '^0{8}-'
+        # GroupId comes back as /Guid(...)/, all zeros on a classic site
+        $IsGroupSite = $Site.GroupId -and $Site.GroupId -notmatch '0{8}-0{4}-0{4}-0{4}-0{12}'
         $Skipped = [System.Collections.Generic.List[string]]::new()
         if ($IsGroupSite) {
             $GroupSiteAllowed = @('SharingCapability', 'DefaultSharingLinkType', 'DefaultLinkPermission', 'LockState', 'StorageMaximumLevel', 'StorageWarningLevel')
@@ -105,28 +108,64 @@ function Invoke-ExecSetSiteProperties {
                 }
             }
             if ($Properties.Count -eq 0) {
-                throw "None of the selected properties can be changed on a group-connected site. Supported: $($GroupSiteAllowed -join ', ')."
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "None of the selected properties can be changed on a group-connected site. Supported: $($GroupSiteAllowed -join ', ')." } })
             }
         }
 
-        $Response = Set-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $SiteUrl -Properties $Properties
-        $CsomError = ($Response | Where-Object { $_.ErrorInfo } | Select-Object -First 1).ErrorInfo.ErrorMessage
-        if ($CsomError) {
-            throw $CsomError
+        $LockState = $Properties['LockState']
+        $CurrentLockState = [string]$Site.LockState
+        $IsLocked = $CurrentLockState -and $CurrentLockState -ne 'Unlock'
+        $LockSkipped = [System.Collections.Generic.List[string]]::new()
+        if ($IsLocked -and $LockState -ne 'Unlock') {
+            foreach ($Key in @($Properties.Keys)) {
+                if ($Key -ne 'LockState') {
+                    $Properties.Remove($Key)
+                    $LockSkipped.Add($Key)
+                }
+            }
+            if ($Properties.Count -eq 0) {
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "The site is locked ($CurrentLockState). Unlock it before changing: $($LockSkipped -join ', ')." } })
+            }
         }
 
-        $AppliedChanges = $Changes | Where-Object { ($_ -split '=')[0] -in $Properties.Keys }
-        $Results = "Successfully updated site properties for $($SiteUrl): $($AppliedChanges -join ', ')"
-        if ($Skipped.Count -gt 0) {
-            $Results += " Skipped (not supported on group-connected sites): $($Skipped -join ', ')."
+        # A locked site rejects most writes, so the lock change is its own request: first when unlocking, last when locking
+        $Requests = [System.Collections.Generic.List[hashtable]]::new()
+        if ($LockState -and $Properties.Count -gt 1 -and ($IsLocked -or $LockState -ne 'Unlock')) {
+            $Properties.Remove('LockState')
+            if ($IsLocked) { $Requests.Add(@{ LockState = $LockState }) }
+            $Requests.Add($Properties)
+            if (-not $IsLocked) { $Requests.Add(@{ LockState = $LockState }) }
+        } else {
+            $Requests.Add($Properties)
         }
+
+        $Done = [System.Collections.Generic.List[string]]::new()
+        foreach ($Batch in $Requests) {
+            $Response = Set-CIPPSPOSite -TenantFilter $TenantFilter -SiteUrl $SiteUrl -Properties $Batch
+            $CsomError = ($Response | Where-Object { $_.ErrorInfo } | Select-Object -First 1).ErrorInfo.ErrorMessage
+            if ($CsomError) {
+                throw $(if ($Done.Count -gt 0) { "$CsomError (already applied: $($Done -join ', '))" } else { $CsomError })
+            }
+            foreach ($Key in $Batch.Keys) { $Done.Add($Key) }
+        }
+
+        $AppliedChanges = $Changes.Where({ ($_ -split '=')[0] -in $Done })
+        $ResultParts = [System.Collections.Generic.List[string]]::new()
+        $ResultParts.Add("Successfully updated site properties for $($SiteUrl): $($AppliedChanges -join ', ')")
+        if ($Skipped.Count -gt 0) {
+            $ResultParts.Add("Skipped (not supported on group-connected sites): $($Skipped -join ', ').")
+        }
+        if ($LockSkipped.Count -gt 0) {
+            $ResultParts.Add("Skipped while the site is locked ($CurrentLockState), unlock it to change: $($LockSkipped -join ', ').")
+        }
+        $Results = $ResultParts -join ' '
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to update site properties for $($SiteUrl): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

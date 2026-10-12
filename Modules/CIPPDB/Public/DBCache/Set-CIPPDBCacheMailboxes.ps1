@@ -332,6 +332,7 @@ function Set-CIPPDBCacheMailboxes {
                     $PermissionInputObject = [PSCustomObject]@{
                         Batch            = @($PermissionBatches)
                         OrchestratorName = "MailboxPermissions_$TenantFilter"
+                        AllowCollision   = $false
                         PostExecution    = @{
                             FunctionName = 'StoreMailboxPermissions'
                             Parameters   = @{
@@ -349,6 +350,7 @@ function Set-CIPPDBCacheMailboxes {
                     $RuleInputObject = [PSCustomObject]@{
                         Batch            = @($RuleBatches)
                         OrchestratorName = "MailboxRules_$TenantFilter"
+                        AllowCollision   = $false
                         PostExecution    = @{
                             FunctionName = 'StoreMailboxRules'
                             Parameters   = @{

@@ -49,7 +49,7 @@ function Invoke-ListCustomScripts {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -headers $Headers -message "Failed to list custom scripts: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{ Error = $ErrorMessage.NormalizedError }
     }
 

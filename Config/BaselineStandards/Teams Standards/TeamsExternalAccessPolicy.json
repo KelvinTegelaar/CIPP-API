@@ -46,7 +46,8 @@
         "field": "EnableTeamsConsumerAccess",
         "compareType": "is",
         "compareValue": true
-      }
+      },
+      "clearOnHide": true
     }
   },
   "expected": {

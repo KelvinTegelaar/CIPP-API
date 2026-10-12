@@ -17,16 +17,20 @@ function Invoke-ExecEmptySiteRecycleBin {
     $SiteUrl = $Request.Body.SiteUrl
     $Stage = [string]($Request.Body.Stage ?? 'Both')
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($TenantFilter)) { throw 'tenantFilter is required.' }
-        if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
-        if ($Stage -notin @('First', 'Second', 'Both')) {
-            return ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
-                    Body       = @{ Results = "Invalid Stage '$Stage'. Valid values: First, Second, Both." }
-                })
-        }
+    if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'tenantFilter is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'SiteUrl is required.' } })
+    }
+    if ($Stage -notin @('First', 'Second', 'Both')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = "Invalid Stage '$Stage'. Valid values: First, Second, Both." }
+            })
+    }
 
+    try {
         $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
         $Scope = $RestContext.Scope
         $JsonAccept = $RestContext.Headers
@@ -117,13 +121,13 @@ function Invoke-ExecEmptySiteRecycleBin {
             $Results += " Partial warnings: $($Errors -join '; ')"
         }
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Info
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total ($Stage -eq 'Both' ? 2 : 1) -Failed $Errors.Count
         $Body = @{ Results = $Results; deletedAttempts = $DeletedCount }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to empty recycle bin on $($SiteUrl): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{ Results = $Results }
     }
 

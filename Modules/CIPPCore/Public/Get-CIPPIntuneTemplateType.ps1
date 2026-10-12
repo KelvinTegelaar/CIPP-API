@@ -13,7 +13,7 @@ function Get-CIPPIntuneTemplateType {
         The template's recorded Type, if any.
 
     .PARAMETER RawJson
-        The raw policy JSON to infer from when Type is empty.
+        The policy to infer from when Type is empty, as a JSON string or an already parsed object.
 
     .EXAMPLE
         Get-CIPPIntuneTemplateType -Type $Template.Type -RawJson $Template.RAWJson
@@ -30,7 +30,11 @@ function Get-CIPPIntuneTemplateType {
     }
 
     try {
-        $ParsedRaw = $RawJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+        $ParsedRaw = if ($RawJson -is [string]) {
+            $RawJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+        } else {
+            $RawJson
+        }
         $ODataType = $ParsedRaw.'@odata.type'
 
         if ($null -ne $ParsedRaw.settings -and $null -ne $ParsedRaw.technologies) { return 'Catalog' }

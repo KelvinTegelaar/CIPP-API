@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_6_2 {
             return
         }
 
-        $Cfg = $Auth | Select-Object -First 1
+        $Cfg = @($Auth)[0]
 
         # Restricted guest user role template ID
         $RestrictedGuest = '2af84b1e-32c8-42b7-82bc-daa82404023b'

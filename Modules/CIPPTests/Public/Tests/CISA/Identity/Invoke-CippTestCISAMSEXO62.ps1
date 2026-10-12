@@ -28,7 +28,7 @@ function Invoke-CippTestCISAMSEXO62 {
         foreach ($Policy in $SharingPolicies) {
             if ($Policy.Enabled) {
                 # Check if wildcard domain (*) allows detailed calendar sharing
-                $WildcardDomains = $Policy.Domains | Where-Object { $_ -match '^\*:' -and $_ -match 'CalendarSharing(FreeBusyDetail|All)' }
+                $WildcardDomains = $Policy.Domains.Where({ $_ -match '^\*:' -and $_ -match 'CalendarSharing(FreeBusyDetail|All)' })
                 if ($WildcardDomains) {
                     $FailedPolicies.Add([PSCustomObject]@{
                         'Policy Name' = $Policy.Name

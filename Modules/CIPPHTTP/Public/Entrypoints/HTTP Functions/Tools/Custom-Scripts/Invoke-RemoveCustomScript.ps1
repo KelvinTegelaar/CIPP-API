@@ -15,6 +15,7 @@ function Invoke-RemoveCustomScript {
         $ScriptGuid = $Request.Query.ScriptGuid ?? $Request.Body.ScriptGuid
 
         if ([string]::IsNullOrWhiteSpace($ScriptGuid)) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'ScriptGuid is required'
         }
 
@@ -25,6 +26,7 @@ function Invoke-RemoveCustomScript {
         $Scripts = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $Scripts) {
+            $FailCode = [HttpStatusCode]::NotFound
             throw "Script with GUID '$ScriptGuid' not found"
         }
 
@@ -85,7 +87,7 @@ function Invoke-RemoveCustomScript {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -headers $Headers -message "Failed to remove custom script: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
         $Body = @{ Error = $ErrorMessage.NormalizedError }
     }
 

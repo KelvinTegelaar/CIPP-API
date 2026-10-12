@@ -85,6 +85,28 @@
       "type": "switch",
       "label": "Allow reporting message as inappropriate content",
       "default": true
+    },
+    "AutoShareFilesInExternalChats": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Automatically share files attached in external chats",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Don't change",
+          "value": ""
+        },
+        {
+          "label": "Enabled",
+          "value": "Enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "Disabled"
+        }
+      ],
+      "default": ""
     }
   },
   "expected": {
@@ -96,7 +118,8 @@
     "CreateCustomEmojis": "%CreateCustomEmojis%",
     "DeleteCustomEmojis": "%DeleteCustomEmojis%",
     "AllowSecurityEndUserReporting": "%AllowSecurityEndUserReporting%",
-    "AllowCommunicationComplianceEndUserReporting": "%AllowCommunicationComplianceEndUserReporting%"
+    "AllowCommunicationComplianceEndUserReporting": "%AllowCommunicationComplianceEndUserReporting%",
+    "AutoShareFilesInExternalChats": "%AutoShareFilesInExternalChats%"
   },
   "read": {
     "cacheType": "CsTeamsMessagingPolicy"
@@ -115,7 +138,8 @@
           "CreateCustomEmojis": "%CreateCustomEmojis%",
           "DeleteCustomEmojis": "%DeleteCustomEmojis%",
           "AllowSecurityEndUserReporting": "%AllowSecurityEndUserReporting%",
-          "AllowCommunicationComplianceEndUserReporting": "%AllowCommunicationComplianceEndUserReporting%"
+          "AllowCommunicationComplianceEndUserReporting": "%AllowCommunicationComplianceEndUserReporting%",
+          "AutoShareFilesInExternalChats": "%AutoShareFilesInExternalChats%"
         }
       }
     ]

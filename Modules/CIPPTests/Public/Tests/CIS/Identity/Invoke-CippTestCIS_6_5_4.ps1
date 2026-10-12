@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_6_5_4 {
             return
         }
 
-        $Cfg = $Org | Select-Object -First 1
+        $Cfg = @($Org)[0]
 
         if ($Cfg.SmtpClientAuthenticationDisabled -eq $true) {
             $Status = 'Passed'

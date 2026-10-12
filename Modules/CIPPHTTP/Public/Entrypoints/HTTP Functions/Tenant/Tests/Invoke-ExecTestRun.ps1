@@ -8,7 +8,6 @@ function Invoke-ExecTestRun {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
@@ -75,7 +74,7 @@ function Invoke-ExecTestRun {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to start data collection/test run: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{ Message = "Failed to start data collection/test run for $TenantFilter" }
     }
 

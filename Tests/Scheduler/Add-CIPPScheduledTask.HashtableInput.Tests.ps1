@@ -10,6 +10,7 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Add-CippQueueMessage { param($Cmdlet, $Parameters) }
     function Get-CIPPSchedulerBlockedCommands { @() }
+    function Resolve-CIPPCommand { param($Name) }
     function Get-NormalizedError { param($Message) $Message }
     function Write-LogMessage { param($headers, $API, $message, $Sev, $tenant, $tenantid, $LogData) }
 
@@ -24,7 +25,7 @@ Describe 'Add-CIPPScheduledTask hashtable input' {
         Mock -CommandName Get-CIPPTable -MockWith { @{ Context = 'stub' } }
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { $null }
         Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { $script:CapturedEntity = $Entity }
-        Mock -CommandName Get-Command -MockWith { [pscustomobject]@{ Module = 'CIPPCore'; Parameters = @{} } }
+        Mock -CommandName Resolve-CIPPCommand -MockWith { [pscustomobject]@{ Name = $Name; ModuleName = 'CIPPCore' } }
     }
 
     It 'keeps a future ScheduledTime from a hashtable task' {

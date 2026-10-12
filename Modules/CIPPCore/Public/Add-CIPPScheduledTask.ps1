@@ -68,34 +68,14 @@ function Add-CIPPScheduledTask {
 
             $RequestedCommand = $task.Command.value ?? $task.Command
 
-            # Validate the command exists — on HttpOnly workers sibling modules aren't loaded,
-            # so import them temporarily for validation (actual execution runs on activity workers)
-            $Command = Get-Command $RequestedCommand -ErrorAction SilentlyContinue
-            $ImportedModules = [System.Collections.Generic.List[string]]::new()
-            if (-not $Command) {
-                try {
-                    foreach ($SiblingModule in @('CIPPStandards', 'CIPPAlerts', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
-                        if (-not (Get-Module -Name $SiblingModule)) {
-                            Import-Module $SiblingModule -ErrorAction SilentlyContinue
-                            if (Get-Module -Name $SiblingModule) {
-                                $ImportedModules.Add($SiblingModule)
-                            }
-                        }
-                    }
-                    $Command = Get-Command $RequestedCommand -ErrorAction SilentlyContinue
-                } finally {
-                    foreach ($Imported in $ImportedModules) {
-                        Remove-Module $Imported -ErrorAction SilentlyContinue
-                    }
-                }
-            }
+            $Command = Resolve-CIPPCommand -Name $RequestedCommand
 
             if (!$Command) {
                 Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule non-existent command: $RequestedCommand" -Sev 'Warning'
                 return "Error - The command '$RequestedCommand' does not exist and cannot be scheduled."
             }
 
-            if ($Command.Module -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
+            if ($Command.ModuleName -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPBaselines', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
                 Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule command from unauthorized module: $($Command.ModuleName)\$RequestedCommand" -Sev 'Warning'
                 return "Error - The command '$RequestedCommand' is not permitted to run as a scheduled task."
             }

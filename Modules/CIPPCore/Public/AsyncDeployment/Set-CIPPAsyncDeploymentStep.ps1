@@ -63,6 +63,7 @@ function Set-CIPPAsyncDeploymentStep {
             $Steps[$StepIndex].Message = $Message
             $Row.Steps = [string](ConvertTo-Json -InputObject @($Steps) -Compress -Depth 5)
             Update-CIPPAzDataTableEntity @Table -Entity $Row
+            Send-CIPPAsyncDeploymentUpdate -JobId $JobId -Row $Row
             return
         } catch {
             Write-Verbose "Failed to update async deployment step (attempt $Attempt): $($_.Exception.Message)"

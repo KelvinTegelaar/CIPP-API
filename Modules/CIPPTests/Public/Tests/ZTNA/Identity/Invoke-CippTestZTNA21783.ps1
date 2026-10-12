@@ -24,19 +24,19 @@ function Invoke-CippTestZTNA21783 {
 
         $PhishResistantMethods = @('windowsHelloForBusiness', 'fido2', 'x509CertificateMultiFactor')
 
-        $PhishResistantPolicies = $CAPolicies | Where-Object {
+        $PhishResistantPolicies = $CAPolicies.Where({
             $_.state -eq 'enabled' -and
             $_.grantControls.authenticationStrength -and
             $_.conditions.users.includeRoles
-        }
+        })
 
         $CoveredRoleIds = $PhishResistantPolicies.conditions.users.includeRoles | Select-Object -Unique
 
         # Conditional Access includeRoles reference role template IDs, not directory role instance IDs.
-        $UnprotectedRoles = $PrivilegedRoles | Where-Object {
+        $UnprotectedRoles = $PrivilegedRoles.Where({
             $Tid = if ($_.roleTemplateId) { [string]$_.roleTemplateId } elseif ($_.RoletemplateId) { [string]$_.RoletemplateId } else { $null }
             $Tid -notin $CoveredRoleIds
-        }
+        })
 
         if ($UnprotectedRoles.Count -eq 0) {
             $Status = 'Passed'

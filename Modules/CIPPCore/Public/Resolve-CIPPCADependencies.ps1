@@ -145,6 +145,7 @@ function Resolve-CIPPCADependencies {
                 if (!$locations) { continue }
                 foreach ($location in $locations) {
                     if (!$location.displayName) { continue }
+                    Format-CIPPNamedLocationRange -Location $location
                     $Name = $location.displayName
                     if ($LocationMap.ContainsKey($Name)) { continue }
                     $ExistingLocation = @($AllNamedLocations | Where-Object -Property displayName -EQ $Name)

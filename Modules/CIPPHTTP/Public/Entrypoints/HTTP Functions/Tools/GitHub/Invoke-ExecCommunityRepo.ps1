@@ -33,7 +33,7 @@ function Invoke-ExecCommunityRepo {
         }
 
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
+                StatusCode = [HttpStatusCode]::BadRequest
                 Body       = $Body
             })
         return
@@ -42,6 +42,7 @@ function Invoke-ExecCommunityRepo {
     $Table = Get-CIPPTable -TableName CommunityRepos
     $RepoEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
+    $StatusCode = [HttpStatusCode]::OK
     switch ($Action) {
         'Add' {
             try {
@@ -49,6 +50,12 @@ function Invoke-ExecCommunityRepo {
                     $Repo = Invoke-GitHubApiRequest -Path "repositories/$($Id)"
                 } else {
                     $Repo = Invoke-GitHubApiRequest -Path "repos/$($Request.Body.FullName)"
+                }
+                # The anonymous fallback answers a 404 with a null result instead of throwing;
+                # writing that would create a row with an empty RowKey and no name.
+                if (-not $Repo.id) {
+                    $FailCode = [HttpStatusCode]::NotFound
+                    throw "Repository '$($Request.Body.FullName ?? $Id)' was not found on GitHub. Check the owner/repo spelling; a private repository needs the GitHub integration configured with access to it."
                 }
                 $RepoEntity = @{
                     PartitionKey  = 'CommunityRepos'
@@ -74,6 +81,7 @@ function Invoke-ExecCommunityRepo {
                     state      = 'success'
                 }
             } catch {
+                $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
                 $Results = @{
                     resultText = "Unable to add repository: $($_.Exception.Message)"
                     state      = 'error'
@@ -82,6 +90,7 @@ function Invoke-ExecCommunityRepo {
         }
         'SetTemplateTypes' {
             if (!$RepoEntity) {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
                     resultText = "Repository $($Id) not found"
                     state      = 'error'
@@ -100,6 +109,7 @@ function Invoke-ExecCommunityRepo {
         'Update' {
             if ($RepoEntity) {
                 $Repo = Invoke-GitHubApiRequest -Path "repositories/$($Id)"
+                if (-not $Repo.id) { throw "Repository $($Id) was not found on GitHub." }
                 $Update = @{
                     PartitionKey  = 'CommunityRepos'
                     RowKey        = [string]$Repo.id
@@ -122,6 +132,7 @@ function Invoke-ExecCommunityRepo {
                     state      = 'success'
                 }
             } else {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
                     resultText = "Repository $($Repo.name) not found"
                     state      = 'error'
@@ -140,7 +151,12 @@ function Invoke-ExecCommunityRepo {
         }
         'UploadTemplate' {
             $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
-            $Results = Push-CIPPTemplateToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            try {
+                $Results = Push-CIPPTemplateToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            } catch {
+                $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
+                $Results = @{ resultText = $_.Exception.Message; state = 'error' }
+            }
         }
         'UploadBaseline' {
             # A baseline is not a templates-table row: Export-CIPPBaselineTemplate
@@ -149,10 +165,16 @@ function Invoke-ExecCommunityRepo {
             # their current members). Related templates are separate files, exactly the
             # shape UploadTemplate writes, so they import through the untouched path.
             $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
-            $Results = Push-CIPPBaselineToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            try {
+                $Results = Push-CIPPBaselineToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            } catch {
+                $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
+                $Results = @{ resultText = $_.Exception.Message; state = 'error' }
+            }
         }
         'SetBranch' {
             if (!$RepoEntity) {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
                     resultText = "Repository $($Id) not found"
                     state      = 'error'
@@ -215,6 +237,7 @@ function Invoke-ExecCommunityRepo {
                     }
                 }
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = @{
                     resultText = "Error importing template: $($_.Exception.Message)"
                     state      = 'error'
@@ -254,6 +277,7 @@ function Invoke-ExecCommunityRepo {
                     state      = 'success'
                 }
             } else {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
                     resultText = "Custom test '$($ScriptGuid)' not found"
                     state      = 'error'
@@ -269,10 +293,11 @@ function Invoke-ExecCommunityRepo {
                 $ScriptData = $FileContent.content | ConvertFrom-Json
 
                 if (-not $ScriptData.ScriptName -or -not $ScriptData.ScriptContent) {
+                    $FailCode = [HttpStatusCode]::BadRequest
                     throw 'Invalid custom test file: ScriptName and ScriptContent are required'
                 }
 
-                Test-CustomScriptSecurity -ScriptContent $ScriptData.ScriptContent
+                try { Test-CustomScriptSecurity -ScriptContent $ScriptData.ScriptContent } catch { $FailCode = [HttpStatusCode]::BadRequest; throw }
 
                 $ScriptTable = Get-CippTable -tablename 'CustomPowershellScripts'
                 $ScriptGuid = (New-Guid).ToString()
@@ -309,6 +334,7 @@ function Invoke-ExecCommunityRepo {
                     state      = 'success'
                 }
             } catch {
+                $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
                 $Results = @{
                     resultText = "Error importing custom test: $($_.Exception.Message)"
                     state      = 'error'
@@ -316,6 +342,7 @@ function Invoke-ExecCommunityRepo {
             }
         }
         default {
+            $StatusCode = [HttpStatusCode]::BadRequest
             $Results = @{
                 resultText = "Action $Action not supported"
                 state      = 'error'
@@ -327,6 +354,7 @@ function Invoke-ExecCommunityRepo {
         if ($Results.state -eq 'success') {
             Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results.resultText -Sev 'Info'
         } elseif ($Results.state -eq 'error') {
+            if ($StatusCode -eq [HttpStatusCode]::OK) { $StatusCode = [HttpStatusCode]::InternalServerError }
             Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results.resultText -Sev 'Error'
         }
     }
@@ -336,7 +364,7 @@ function Invoke-ExecCommunityRepo {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

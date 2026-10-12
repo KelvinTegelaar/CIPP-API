@@ -33,8 +33,10 @@ BeforeAll {
     function Test-CIPPAccess { param($Request, [switch]$TenantList, [switch]$GroupList) }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Get-CippException { param($Exception) }
+    function Get-CIPPAlertSharepointQuota { }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-CIPPAlertLifecycleKey.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Resolve-CIPPCommand.ps1')
 
     . $FunctionPath
 
@@ -92,6 +94,16 @@ Describe 'Invoke-ExecSnoozeAlert' {
         $Now = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         ([int64]$Snooze.SnoozeUntil) | Should -BeGreaterThan ($Now + 13 * 86400)
         ([int64]$Snooze.SnoozeUntil) | Should -BeLessOrEqual ($Now + 14 * 86400)
+    }
+
+    It 'files the snooze under the alert function''s real name, whatever casing the caller sent' {
+        $Request = New-SnoozeRequest
+        $Request.Body.CmdletName = 'Get-CIPPAlertSharePointQuota'
+
+        $null = Invoke-ExecSnoozeAlert -Request $Request -TriggerMetadata $null
+
+        $Snooze = Get-Written -Table 'AlertSnooze'
+        $Snooze.PartitionKey | Should -BeExactly 'Get-CIPPAlertSharepointQuota'
     }
 
     It 'writes an until-resolved snooze that keeps the item visible' {

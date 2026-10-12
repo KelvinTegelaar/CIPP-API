@@ -15,9 +15,9 @@ function Invoke-CippTestE8_PatchOS_06 {
             return
         }
 
-        $Win = $Compliance | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windows10CompliancePolicy' }
-        $WithEnc = $Win | Where-Object { $_.bitLockerEnabled -eq $true -or $_.storageRequireEncryption -eq $true }
-        $Assigned = $WithEnc | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 }
+        $Win = $Compliance.Where({ $_.'@odata.type' -eq '#microsoft.graph.windows10CompliancePolicy' })
+        $WithEnc = $Win.Where({ $_.bitLockerEnabled -eq $true -or $_.storageRequireEncryption -eq $true })
+        $Assigned = $WithEnc.Where({ $_.assignments -and $_.assignments.Count -gt 0 })
 
         if ($Assigned) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Passed' -ResultMarkdown "$($Assigned.Count) Windows compliance policy/policies require encryption (BitLocker) and are assigned." -Risk 'High' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'E8 ML3 - Patch Operating Systems'

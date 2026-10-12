@@ -10,8 +10,9 @@ function Set-CIPPSharePointSiteMember {
     authentication. A removal of a user directly added to a role group on a group-connected
     site (MemberType 'User') targets that role group rather than the M365 group.
 
-    Returns one message per user. Only throws when no user could be processed, so a partial
-    failure still reports every outcome.
+    Returns one { resultText, state } item per user (one item for the M365 group path). Only throws
+    when no user could be processed, so a partial failure still reports every outcome. Invalid input
+    throws an ArgumentException.
 
     .PARAMETER UserPrincipalName
     The UPN(s) to add or remove
@@ -60,9 +61,9 @@ function Set-CIPPSharePointSiteMember {
     $FailedCount = 0
 
     try {
-        if ($UPNs.Count -eq 0) { throw 'No user was selected.' }
+        if ($UPNs.Count -eq 0) { throw [System.ArgumentException]::new('No user was selected.') }
         if (-not $AssociatedGroups.ContainsKey($Role)) {
-            throw "Invalid role '$Role'. Valid roles are: $($AssociatedGroups.Keys -join ', ')."
+            throw [System.ArgumentException]::new("Invalid role '$Role'. Valid roles are: $($AssociatedGroups.Keys -join ', ').")
         }
 
         $UseGraphGroup = $SharePointType -eq 'Group' -and $Role -ne 'Visitors' -and ($Add -or $MemberType -ne 'User')
@@ -78,6 +79,7 @@ function Set-CIPPSharePointSiteMember {
 
             if ($Role -eq 'Owners') {
                 $Results = foreach ($UPN in $UPNs) {
+                    $State = 'success'
                     try {
                         $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$UPN`?`$select=id" -tenantid $TenantFilter).id
                         if ($Add) {
@@ -94,18 +96,20 @@ function Set-CIPPSharePointSiteMember {
                         $Message = "Failed to $(if ($Add) { 'add' } else { 'remove' }) $UPN as an owner. Error: $($ErrorMessage.NormalizedError)"
                         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev Error -LogData $ErrorMessage
                         $FailedCount++
+                        $State = 'error'
                     }
-                    $Message
+                    [PSCustomObject]@{ resultText = $Message; state = $State }
                 }
             } else {
-                if ($Add) {
-                    $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupId -Member $UPNs -TenantFilter $TenantFilter -Headers $Headers
+                $Message = if ($Add) {
+                    Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupId -Member $UPNs -TenantFilter $TenantFilter -Headers $Headers
                 } else {
-                    $Results = Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupId -Member $UPNs -TenantFilter $TenantFilter -Headers $Headers
+                    Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupId -Member $UPNs -TenantFilter $TenantFilter -Headers $Headers
                 }
+                $Results = [PSCustomObject]@{ resultText = $Message; state = 'success' }
             }
         } else {
-            if (-not $SiteUrl) { throw 'No site URL was provided for this site.' }
+            if (-not $SiteUrl) { throw [System.ArgumentException]::new('No site URL was provided for this site.') }
 
             $RestContext = Resolve-CIPPSharePointRestContext -TenantFilter $TenantFilter -SiteUrl $SiteUrl
             $Scope = $RestContext.Scope
@@ -116,6 +120,7 @@ function Set-CIPPSharePointSiteMember {
             $Article = if ($RoleLabel -match '^[aeiou]') { 'an' } else { 'a' }
 
             $Results = foreach ($UPN in $UPNs) {
+                $State = 'success'
                 try {
                     try {
                         $EnsureBody = ConvertTo-Json -Compress -InputObject @{ logonName = "i:0#.f|membership|$UPN" }
@@ -157,19 +162,21 @@ function Set-CIPPSharePointSiteMember {
                     $Message = "Failed to $(if ($Add) { 'add' } else { 'remove' }) $UPN. Error: $($ErrorMessage.NormalizedError)"
                     Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev Error -LogData $ErrorMessage
                     $FailedCount++
+                    $State = 'error'
                 }
-                $Message
+                [PSCustomObject]@{ resultText = $Message; state = $State }
             }
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Message = "Failed to modify $Role for $($SiteUrl ?? $GroupId). Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev Error -LogData $ErrorMessage
+        if ($_.Exception -is [System.ArgumentException]) { throw [System.ArgumentException]::new($Message) }
         throw $Message
     }
 
     if ($FailedCount -eq $UPNs.Count) {
-        throw ($Results -join ' ')
+        throw (@($Results.resultText) -join ' ')
     }
     return $Results
 }

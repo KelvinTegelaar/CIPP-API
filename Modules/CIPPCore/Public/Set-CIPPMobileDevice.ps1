@@ -20,7 +20,7 @@ function Set-CIPPMobileDevice(
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete Mobile Device $($Guid): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        return "Failed to delete Mobile Device $($Guid): $($ErrorMessage.NormalizedError)"
+        throw "Failed to delete Mobile Device $($Guid): $($ErrorMessage.NormalizedError)"
     }
 
     try {
@@ -37,10 +37,10 @@ function Set-CIPPMobileDevice(
         $ErrorMessage = Get-CippException -Exception $_
         if ($Quarantine -eq 'false') {
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to Allow Active Sync Device for $($UserId): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-            return "Failed to Allow Active Sync Device for $($UserId): $($ErrorMessage.NormalizedError)"
+            throw "Failed to Allow Active Sync Device for $($UserId): $($ErrorMessage.NormalizedError)"
         } elseif ($Quarantine -eq 'true') {
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to Block Active Sync Device for $($UserId): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-            return "Failed to Block Active Sync Device for $($UserId): $($ErrorMessage.NormalizedError)"
+            throw "Failed to Block Active Sync Device for $($UserId): $($ErrorMessage.NormalizedError)"
         }
     }
 }

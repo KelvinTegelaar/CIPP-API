@@ -52,6 +52,9 @@ function Invoke-ExecSnoozeAlert {
                 })
         }
 
+        # Snooze keys are case-sensitive and the alert looks them up under its real function name.
+        $CmdletName = (Resolve-CIPPCommand -Name $CmdletName).Name ?? $CmdletName
+
         # Compute content hash for this alert item
         $HashResult = Get-AlertContentHash -AlertItem $AlertItem
 

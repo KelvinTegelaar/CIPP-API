@@ -46,7 +46,6 @@ function Invoke-ExecGDAPTrace {
     # Initialize API logging
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Extract query parameters
     # TenantFilter: The customer tenant ID or domain name to test access for
@@ -343,6 +342,7 @@ function Invoke-ExecGDAPTrace {
         # ========================================================================
         $AllAccessAssignments = [System.Collections.Generic.List[object]]::new()
         $RelationshipAssignmentMap = @{}  # Maps relationshipId -> list of assignments
+        $FailedRelationships = 0
 
         foreach ($Relationship in $Relationships) {
             $RelationshipId = $Relationship.id
@@ -394,6 +394,7 @@ function Invoke-ExecGDAPTrace {
                     })
                 }
             } catch {
+                $FailedRelationships++
                 Write-LogMessage -Headers $Headers -API $APIName -message "Could not get access assignments for relationship ${RelationshipName}: $($_.Exception.Message)" -sev 'Warning'
             }
         }
@@ -855,7 +856,7 @@ function Invoke-ExecGDAPTrace {
         }
 
     return [HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
+        StatusCode = Get-CippBulkStatusCode -Total @($Relationships).Count -Failed $FailedRelationships
         Body       = $Results
         }
 

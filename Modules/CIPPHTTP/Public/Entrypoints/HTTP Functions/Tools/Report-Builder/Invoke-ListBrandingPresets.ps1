@@ -29,7 +29,7 @@ function Invoke-ListBrandingPresets {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to list branding presets: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{ Results = "Error: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

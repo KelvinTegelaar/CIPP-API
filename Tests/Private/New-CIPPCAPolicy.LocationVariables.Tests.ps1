@@ -11,6 +11,7 @@ BeforeAll {
     # Real dependencies - their behaviour is part of the path under test.
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Format-CIPPCAPolicy.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-IsGuid.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Format-CIPPNamedLocationRange.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Remove-ODataProperties.ps1')
 
     # Variable substitution stub: the tenant's custom-variable map, applied the way the real

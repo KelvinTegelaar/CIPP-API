@@ -16,11 +16,11 @@ function Invoke-CippTestZTNA24576 {
             return
         }
 
-        $WindowsHealthMonitoringPolicies = @($DeviceConfigs | Where-Object {
+        $WindowsHealthMonitoringPolicies = @($DeviceConfigs.Where({
                 $_.'@odata.type' -eq '#microsoft.graph.windowsHealthMonitoringConfiguration'
-            })
+            }))
 
-        $AssignedPolicies = @($WindowsHealthMonitoringPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AssignedPolicies = @($WindowsHealthMonitoringPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedPolicies.Count -gt 0
 
         if ($Passed) {

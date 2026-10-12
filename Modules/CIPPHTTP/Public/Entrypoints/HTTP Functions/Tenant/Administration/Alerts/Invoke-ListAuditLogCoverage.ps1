@@ -71,20 +71,27 @@ function Invoke-ListAuditLogCoverage {
         try { return ([datetimeoffset]$Value).UtcDateTime } catch { return $null }
     }
 
+    # Filter server-side. The ledger grows by one row per tenant per hour and is never small, so
+    # pulling it whole and sifting in memory is what made the coverage page time out. WindowStart
+    # is stored as a datetime column, and PartitionKey is the tenant's default domain, so a single
+    # tenant is a partition seek plus a range. A customer id in the selector falls back to TenantId.
+    $StartIso = ConvertTo-CIPPODataFilterValue -Value $StartUtc.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type Date
+    $EndIso = ConvertTo-CIPPODataFilterValue -Value $EndUtc.ToString('yyyy-MM-ddTHH:mm:ssZ') -Type Date
+    $Clauses = [System.Collections.Generic.List[string]]::new()
+    $Clauses.Add("WindowStart ge datetime'$StartIso' and WindowStart le datetime'$EndIso'")
+    if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
+        $SafeTenant = ConvertTo-CIPPODataFilterValue -Value ([string]$TenantFilter)
+        if ([string]$TenantFilter -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+            $Clauses.Add("TenantId eq '$SafeTenant'")
+        } else {
+            $Clauses.Add("PartitionKey eq '$SafeTenant'")
+        }
+    }
     $Table = Get-CIPPTable -TableName 'AuditLogCoverage'
-    $Rows = Get-CIPPAzDataTableEntity @Table
+    $Rows = Get-CIPPAzDataTableEntity @Table -Filter ($Clauses -join ' and ')
 
     $Results = foreach ($Row in $Rows) {
         $WindowStart = ConvertTo-Utc $Row.WindowStart
-        # Date range filter on the window start
-        if ($WindowStart) {
-            if ($WindowStart -lt $StartUtc -or $WindowStart -gt $EndUtc) { continue }
-        }
-
-        # Tenant selector filter (match on default domain or customer id)
-        if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
-            if (($Row.PartitionKey -ne $TenantFilter) -and ([string]$Row.TenantId -ne [string]$TenantFilter)) { continue }
-        }
 
         # Access control when not AllTenants
         if ($AllowedTenants -notcontains 'AllTenants') {

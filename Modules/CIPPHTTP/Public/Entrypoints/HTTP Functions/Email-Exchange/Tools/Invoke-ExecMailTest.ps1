@@ -73,7 +73,7 @@ Function Invoke-ExecMailTest {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = [PSCustomObject]@{
             Results = @($ErrorMessage)
         }

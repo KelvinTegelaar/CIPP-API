@@ -1,0 +1,49 @@
+{
+  "name": "M365GroupGuestSettings",
+  "label": "Microsoft 365 group guest settings",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "EIDSCA.ST08",
+    "EIDSCA.ST09"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Sets whether guests can become owners of Microsoft 365 groups and whether guests can access group content, on the tenant-wide Group.Unified directory setting. The EIDSCA recommendation is no guest owners, guest access allowed.",
+  "executiveText": "Keeps external guests from owning Teams and Microsoft 365 groups, which would let them add members and change settings, while still allowing invited guests to collaborate on the content they were given access to.",
+  "docsDescription": "Grades AllowGuestsToBeGroupOwner and AllowGuestsToAccessGroups on the Group.Unified directory setting (template 62375ab9-6b52-47ed-826b-58e47e0e304b). Values are strings on the wire and grade as strings; a tenant without the setting object grades as drift and remediation instantiates it from the template with Microsoft's defaults before writing. Every other Group.Unified value is resent from the live object, so group creation and naming settings managed by other standards are untouched. Maps to EIDSCA ST08 and ST09.",
+  "impactColour": "info",
+  "addedDate": "2026-10-10",
+  "powershellEquivalent": "Graph: PATCH settings (Group.Unified)",
+  "appliesToTest": [
+    "EIDSCAST08",
+    "EIDSCAST09"
+  ],
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "AllowGuestsToBeGroupOwner": {
+      "type": "switch",
+      "label": "Allow guests to become group owners",
+      "default": false,
+      "recommended": false
+    },
+    "AllowGuestsToAccessGroups": {
+      "type": "switch",
+      "label": "Allow guests to access group content",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "read": {
+    "cacheType": "Settings"
+  },
+  "prepare": "Get-CIPPBaselineM365GroupGuestSettingsState",
+  "remediate": {
+    "executor": "M365GroupGuestSettings",
+    "allowGuestsToBeGroupOwner": "%AllowGuestsToBeGroupOwner%",
+    "allowGuestsToAccessGroups": "%AllowGuestsToAccessGroups%"
+  }
+}

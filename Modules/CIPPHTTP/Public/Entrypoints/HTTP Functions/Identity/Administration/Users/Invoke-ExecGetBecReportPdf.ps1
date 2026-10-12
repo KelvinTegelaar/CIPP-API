@@ -16,7 +16,6 @@ function Invoke-ExecGetBecReportPdf {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter

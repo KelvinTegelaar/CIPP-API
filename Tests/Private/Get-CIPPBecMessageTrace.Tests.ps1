@@ -39,6 +39,19 @@ Describe 'Get-CIPPBecMessageTrace' {
         $script:Calls[0].Keys | Should -Not -Contain 'RecipientAddress'
     }
 
+    It 'splits a window longer than 10 days into 10-day queries, newest first' {
+        Mock New-ExoRequest { $script:Calls.Add(($cmdParams.Clone())); @(New-TraceRow -Index $script:Calls.Count) }
+        $End = [datetime]::new(2026, 8, 31, 0, 0, 0, [DateTimeKind]::Utc)
+        $Result = Get-CIPPBecMessageTrace -TenantFilter 'contoso.com' -SenderAddress 'user@contoso.com' -StartDate $End.AddDays(-25) -EndDate $End -PageSize 5
+        $Result.Complete | Should -BeTrue
+        $Result.Rows.Count | Should -Be 3
+        @($script:Calls | ForEach-Object { "$($_.StartDate)..$($_.EndDate)" }) | Should -Be @(
+            '2026-08-21T00:00:00..2026-08-31T00:00:00'
+            '2026-08-11T00:00:00..2026-08-21T00:00:00'
+            '2026-08-06T00:00:00..2026-08-11T00:00:00'
+        )
+    }
+
     It 'walks the cursor using the last row''s Received as EndDate and its recipient as StartingRecipientAddress' {
         Mock New-ExoRequest {
             $script:Calls.Add(($cmdParams.Clone()))

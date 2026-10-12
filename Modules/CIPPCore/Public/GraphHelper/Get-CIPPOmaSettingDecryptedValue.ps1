@@ -102,7 +102,7 @@ function Get-CIPPOmaSettingDecryptedValue {
                 }
             }
             # Also check for the placeholder value PGEvPg== (base64 encoded '<a/>')
-            elseif ($omaSetting.value -eq 'PGEvPg==') {
+            elseif ("$($omaSetting.value)" -eq 'PGEvPg==') {
                 Write-Warning "Found placeholder value (PGEvPg==) for OMA setting '$($omaSetting.displayName)' but no secretReferenceValueId. This setting may not be decryptable."
             }
         }

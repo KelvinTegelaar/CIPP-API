@@ -17,13 +17,14 @@ function Invoke-ExecOffboardUser {
         try {
             # RowKey of the offboarding task to run again
             $TaskId = [string]$Request.Body.TaskId
-            if (-not $TaskId) { throw 'TaskId is required' }
+            if (-not $TaskId) { $FailCode = [HttpStatusCode]::BadRequest; throw 'TaskId is required' }
             $TenantFilter = [string]($Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter)
             $Table = Get-CIPPTable -TableName 'ScheduledTasks'
             $SafeTaskId = $TaskId -replace "'", "''"
             $Task = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$SafeTaskId'"
             # Access to tenantFilter was checked on the way in; the task must belong to that tenant.
             if (-not $Task -or $Task.Command -ne 'Invoke-CIPPOffboardingJob' -or [string]$Task.Tenant -ne $TenantFilter) {
+                $FailCode = [HttpStatusCode]::NotFound
                 throw 'No offboarding task with that id exists in this tenant'
             }
 
@@ -32,7 +33,7 @@ function Invoke-ExecOffboardUser {
             } else {
                 # Zero-based index of the step, as listed in the progress row, to run again
                 $StepIndex = $Request.Body.StepIndex -as [int]
-                if ($null -eq $StepIndex) { throw 'StepIndex is required' }
+                if ($null -eq $StepIndex) { $FailCode = [HttpStatusCode]::BadRequest; throw 'StepIndex is required' }
                 # Title of that step, used to name the re-run task
                 $StepTitle = [string]$Request.Body.StepTitle
                 $Parameters = $Task.Parameters | ConvertFrom-Json
@@ -60,7 +61,7 @@ function Invoke-ExecOffboardUser {
                 })
         } catch {
             return ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
+                    StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
                     Body       = @{ Results = "Failed to queue the re-run: $($_.Exception.Message)" }
                 })
         }
@@ -88,7 +89,7 @@ function Invoke-ExecOffboardUser {
         Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -tenant $TenantFilter -message "Could not create the offboarding progress rows: $($_.Exception.Message)" -sev Warn
     }
 
-    $StatusCode = [HttpStatusCode]::OK
+    $Failed = 0
     $Results = foreach ($username in $AllUsers) {
         try {
             $Headers = $Request.Headers
@@ -126,10 +127,11 @@ function Invoke-ExecOffboardUser {
             }
             Add-CIPPScheduledTask @Params
         } catch {
-            $StatusCode = [HttpStatusCode]::Forbidden
+            $Failed++
             $_.Exception.message
         }
     }
+    $StatusCode = Get-CippBulkStatusCode -Total @($AllUsers).Count -Failed $Failed
     $body = [pscustomobject]@{'Results' = @($Results) }
     if ($DeploymentId -and -not $Request.Body.Scheduled.enabled) {
         # Only a run-now job is worth polling straight away; a scheduled one is watched from its task page.

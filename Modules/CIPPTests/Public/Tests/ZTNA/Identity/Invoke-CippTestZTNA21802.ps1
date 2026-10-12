@@ -13,7 +13,7 @@ function Invoke-CippTestZTNA21802 {
             return
         }
 
-        $AuthenticatorConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
+        $AuthenticatorConfig = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'MicrosoftAuthenticator' })
 
         if (-not $AuthenticatorConfig) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21802' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'Microsoft Authenticator configuration not found in authentication methods policy' -Risk 'Medium' -Name 'Microsoft Authenticator app shows sign-in context' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access Control'

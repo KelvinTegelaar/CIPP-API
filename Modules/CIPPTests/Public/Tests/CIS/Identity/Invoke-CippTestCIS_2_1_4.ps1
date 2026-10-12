@@ -19,7 +19,7 @@ function Invoke-CippTestCIS_2_1_4 {
             return
         }
 
-        $Compliant = $SA | Where-Object { $_.Enable -eq $true -and $_.Action -in @('Block', 'Replace', 'DynamicDelivery') }
+        $Compliant = $SA.Where({ $_.Enable -eq $true -and $_.Action -in @('Block', 'Replace', 'DynamicDelivery') })
 
         if ($Compliant) {
             $Status = 'Passed'

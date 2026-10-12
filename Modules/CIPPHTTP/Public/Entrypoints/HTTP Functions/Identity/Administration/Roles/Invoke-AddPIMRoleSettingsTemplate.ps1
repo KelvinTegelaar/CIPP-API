@@ -31,16 +31,16 @@ function Invoke-AddPIMRoleSettingsTemplate {
                 @{ label = "$Label"; value = "$Value" }
             })
 
-        if ([string]::IsNullOrWhiteSpace($TemplateName)) { throw 'templateName is required' }
+        if ([string]::IsNullOrWhiteSpace($TemplateName)) { $FailCode = [HttpStatusCode]::BadRequest; throw 'templateName is required' }
 
         # Capture mode: build the settings from a role's current PIM policy in a tenant.
         $CaptureRoleId = $Request.Body.captureRoleId.value ?? $Request.Body.captureRoleId
         $Adjustments = @()
         if (-not [string]::IsNullOrWhiteSpace("$CaptureRoleId")) {
             $CaptureTenant = $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter
-            if ([string]::IsNullOrWhiteSpace("$CaptureTenant") -or "$CaptureTenant" -eq 'AllTenants') { throw 'A single tenantFilter is required when capturing settings from a role.' }
+            if ([string]::IsNullOrWhiteSpace("$CaptureTenant") -or "$CaptureTenant" -eq 'AllTenants') { $FailCode = [HttpStatusCode]::BadRequest; throw 'A single tenantFilter is required when capturing settings from a role.' }
             $Policy = @(Get-CIPPPIMRolePolicies -TenantFilter $CaptureTenant) | Where-Object { $_.RoleDefinitionId -eq $CaptureRoleId } | Select-Object -First 1
-            if (-not $Policy) { throw "No PIM role management policy was found for role $CaptureRoleId in $CaptureTenant. Privileged Identity Management may not be onboarded there yet." }
+            if (-not $Policy) { $FailCode = [HttpStatusCode]::NotFound; throw "No PIM role management policy was found for role $CaptureRoleId in $CaptureTenant. Privileged Identity Management may not be onboarded there yet." }
             $Captured = ConvertFrom-CIPPPIMPolicyRules -Rules $Policy.Rules
             # A tenant's live policy may sit below the floor (Entra's defaults do); a template must
             # never store that, so offending values are raised and each raise is reported.
@@ -60,8 +60,8 @@ function Invoke-AddPIMRoleSettingsTemplate {
         }
 
         if ([string]::IsNullOrWhiteSpace($RoleScope)) { $RoleScope = 'PrivilegedRoles' }
-        if ($RoleScope -notin @('PrivilegedRoles', 'AllRoles', 'Custom')) { throw "roleScope '$RoleScope' is not valid. Use PrivilegedRoles, AllRoles or Custom." }
-        if ($RoleScope -eq 'Custom' -and $Roles.Count -eq 0) { throw 'Select at least one role when roleScope is Custom.' }
+        if ($RoleScope -notin @('PrivilegedRoles', 'AllRoles', 'Custom')) { $FailCode = [HttpStatusCode]::BadRequest; throw "roleScope '$RoleScope' is not valid. Use PrivilegedRoles, AllRoles or Custom." }
+        if ($RoleScope -eq 'Custom' -and $Roles.Count -eq 0) { $FailCode = [HttpStatusCode]::BadRequest; throw 'Select at least one role when roleScope is Custom.' }
 
         # Role activation, eligibility, assignment, approval and notification settings.
         $Settings = ConvertTo-CIPPPIMRoleSettings -InputObject $SettingsInput
@@ -85,7 +85,7 @@ function Invoke-AddPIMRoleSettingsTemplate {
         if (-not [string]::IsNullOrWhiteSpace($GUID)) {
             $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String
             $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'PIMRoleSettingsTemplate' and RowKey eq '$SafeGUID'"
-            if (-not $Existing) { throw "PIM role settings template $GUID was not found" }
+            if (-not $Existing) { $FailCode = [HttpStatusCode]::NotFound; throw "PIM role settings template $GUID was not found" }
         } else {
             $GUID = (New-Guid).Guid
         }
@@ -130,7 +130,7 @@ function Invoke-AddPIMRoleSettingsTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = @("Failed to save PIM role settings template: $($ErrorMessage.NormalizedError)")
         Write-LogMessage -headers $Headers -API $APIName -message $Results[0] -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
     }
 
     return [HttpResponseContext]@{

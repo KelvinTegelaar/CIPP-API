@@ -12,6 +12,8 @@ function Set-CIPPDefaultAPDeploymentProfile {
         $HideChangeAccount = $true,
         $AssignTo,
         $GroupIds,
+        $ExcludeGroupIds,
+        [switch]$Reconcile,
         $HidePrivacy,
         $HideTerms,
         $AutoKeyboard,
@@ -89,48 +91,55 @@ function Set-CIPPDefaultAPDeploymentProfile {
             $GraphRequest = $Profiles | Select-Object -Last 1
         }
 
-        if ($AssignTo -eq $true) {
+        $IncludeGroupIds = @(if ($AssignTo -ne $true) { @($GroupIds) | Where-Object { $_ } })
+        $ExcludeIds = @(@($ExcludeGroupIds) | Where-Object { $_ })
+        if ($AssignTo -eq $true -or $IncludeGroupIds.Count -gt 0 -or $ExcludeIds.Count -gt 0 -or $Reconcile) {
             try {
-                $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
-                if ($PSCmdlet.ShouldProcess($AssignTo, "Assign Autopilot profile $DisplayName")) {
-                    #Get assignments
-                    $Assignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter
-                    if (!$Assignments) {
-                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter -type POST -body $AssignBody
-                    }
-                    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Assigned autopilot profile $($DisplayName) to $($AssignTo)" -Sev 'Info'
+                $AssignmentsUri = "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments"
+                $ExistingAssignments = @(New-GraphGETRequest -uri $AssignmentsUri -tenantid $TenantFilter | Where-Object { $_ })
+                $ExpectedTargets = [System.Collections.Generic.List[object]]::new()
+                if ($AssignTo -eq $true) {
+                    $ExpectedTargets.Add([ordered]@{ '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget' })
                 }
-            } catch {
-                $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to assign Autopilot profile $($DisplayName) to $($AssignTo): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-            }
-        } elseif (@($GroupIds) -and @($GroupIds).Count -gt 0) {
-            try {
-                $Assigned = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter
-                $ExistingGroupIds = @($Assigned |
-                        Where-Object { $_.target.'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget' } |
-                        ForEach-Object { $_.target.groupId })
-                $CreatedGroupIds = [System.Collections.Generic.List[string]]::new()
-                foreach ($GroupId in @($GroupIds)) {
-                    if (-not $GroupId -or $ExistingGroupIds -contains $GroupId) { continue }
-                    $GroupAssignBody = @{
-                        target = @{
-                            '@odata.type' = '#microsoft.graph.groupAssignmentTarget'
-                            groupId       = $GroupId
+                foreach ($GroupId in $IncludeGroupIds) {
+                    $ExpectedTargets.Add([ordered]@{ '@odata.type' = '#microsoft.graph.groupAssignmentTarget'; groupId = $GroupId })
+                }
+                foreach ($GroupId in $ExcludeIds) {
+                    $ExpectedTargets.Add([ordered]@{ '@odata.type' = '#microsoft.graph.exclusionGroupAssignmentTarget'; groupId = $GroupId })
+                }
+                $TargetKey = { param($Target) "$($Target.'@odata.type')|$($Target.groupId)" }
+                $ExistingKeys = @($ExistingAssignments | ForEach-Object { & $TargetKey $_.target })
+                $ExpectedKeys = @($ExpectedTargets | ForEach-Object { & $TargetKey $_ })
+
+                $Changes = [System.Collections.Generic.List[string]]::new()
+                foreach ($Target in $ExpectedTargets) {
+                    $Key = & $TargetKey $Target
+                    if ($ExistingKeys -contains $Key) { continue }
+                    $AssignBody = @{ target = $Target } | ConvertTo-Json -Depth 5 -Compress
+                    if ($PSCmdlet.ShouldProcess($Key, "Assign Autopilot profile $DisplayName")) {
+                        $null = New-GraphPOSTRequest -uri $AssignmentsUri -tenantid $TenantFilter -type POST -body $AssignBody
+                        $Changes.Add("added $Key")
+                    }
+                }
+                # Reconcile owns the profile's assignments: anything outside the expected set is removed.
+                if ($Reconcile) {
+                    foreach ($Assignment in $ExistingAssignments) {
+                        $Key = & $TargetKey $Assignment.target
+                        if ($ExpectedKeys -contains $Key) { continue }
+                        if ($PSCmdlet.ShouldProcess($Key, "Remove Autopilot profile $DisplayName assignment")) {
+                            $null = New-GraphPOSTRequest -uri "$AssignmentsUri/$($Assignment.id)" -tenantid $TenantFilter -type DELETE
+                            $Changes.Add("removed $Key")
                         }
-                    } | ConvertTo-Json -Depth 5 -Compress
-                    if ($PSCmdlet.ShouldProcess($GroupId, "Assign Autopilot profile $DisplayName to group")) {
-                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter -type POST -body $GroupAssignBody
-                        $CreatedGroupIds.Add($GroupId)
                     }
                 }
-                if (@($CreatedGroupIds).Count -gt 0) {
-                    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Assigned autopilot profile $($DisplayName) to group(s): $($CreatedGroupIds -join ', ')" -Sev 'Info'
+                if ($Changes.Count -gt 0) {
+                    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Updated assignments of autopilot profile $($DisplayName): $($Changes -join ', ')" -Sev 'Info'
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to assign Autopilot profile $($DisplayName) to groups: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-                throw
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to assign Autopilot profile $($DisplayName): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                # A plain all-devices assignment failure never failed the profile write; keep that for the manual page.
+                if ($AssignTo -ne $true -or $Reconcile -or $ExcludeIds.Count -gt 0) { throw }
             }
         }
         "Successfully $($Type)ed profile for $($TenantFilter)"

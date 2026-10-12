@@ -196,7 +196,7 @@ Function Invoke-ListSafeLinksPolicy {
     catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -headers $Headers -API $APIName -message "Error retrieving Safe Links policies: $ErrorMessage" -Sev 'Error'
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $FinalOutput = $ErrorMessage
     }
 

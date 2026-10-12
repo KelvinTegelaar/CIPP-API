@@ -11,23 +11,28 @@ function Invoke-ExecCreateAppTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -headers $Request.headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
+    $TenantFilter = $Request.Body.TenantFilter
+    $AppId = $Request.Body.AppId
+    $DisplayName = $Request.Body.DisplayName
+    $Type = $Request.Body.Type # 'servicePrincipal' or 'application'
+    $Overwrite = $Request.Body.Overwrite -eq $true
+
+    if ([string]::IsNullOrWhiteSpace($AppId)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = (@{ Results = @(@{ resultText = 'Failed to create template: AppId is required'; state = 'error' }) } | ConvertTo-Json -Depth 10)
+            })
+    }
+
+    if ([string]::IsNullOrWhiteSpace($DisplayName)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = (@{ Results = @(@{ resultText = 'Failed to create template: DisplayName is required'; state = 'error' }) } | ConvertTo-Json -Depth 10)
+            })
+    }
 
     try {
-        $TenantFilter = $Request.Body.TenantFilter
-        $AppId = $Request.Body.AppId
-        $DisplayName = $Request.Body.DisplayName
-        $Type = $Request.Body.Type # 'servicePrincipal' or 'application'
-        $Overwrite = $Request.Body.Overwrite -eq $true
-
-        if ([string]::IsNullOrWhiteSpace($AppId)) {
-            throw 'AppId is required'
-        }
-
-        if ([string]::IsNullOrWhiteSpace($DisplayName)) {
-            throw 'DisplayName is required'
-        }
-
         # Build initial bulk request to get app registration and all service principals
         # The SP we need will be in the splist, so we don't need a separate call
         $InitialBulkRequests = @(
@@ -63,12 +68,14 @@ function Invoke-ExecCreateAppTemplate {
             $SignInAudience = $SPResult.signInAudience
         }
         if (-not [string]::IsNullOrWhiteSpace($SignInAudience) -and $SignInAudience -notin $MultiTenantAudiences) {
+            $StatusCode = [HttpStatusCode]::BadRequest
             throw "Application '$DisplayName' is single-tenant (signInAudience '$SignInAudience') and cannot be used as an Enterprise App template. Create a Manifest (single-tenant) template for this app instead."
         }
 
         # Get the app details based on type
         if ($Type -eq 'servicePrincipal') {
             if (-not $SPResult) {
+                $StatusCode = [HttpStatusCode]::NotFound
                 throw "Service principal not found for AppId: $AppId"
             }
 
@@ -145,6 +152,7 @@ function Invoke-ExecCreateAppTemplate {
         } else {
             # For app registrations (applications)
             if ($AppResult.status -ne 200 -or -not $AppResult.body) {
+                $StatusCode = [HttpStatusCode]::NotFound
                 throw "App registration not found for AppId: $AppId"
             }
 
@@ -493,7 +501,7 @@ function Invoke-ExecCreateAppTemplate {
                     details    = Get-CippException -Exception $_
                 })
         }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = $StatusCode ?? [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

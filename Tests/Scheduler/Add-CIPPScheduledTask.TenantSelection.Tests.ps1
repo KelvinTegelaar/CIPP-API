@@ -20,14 +20,9 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $message, $Sev, $tenant, $tenantid, $LogData) }
     function New-CIPPTaskDeltaQuery { param($Trigger, $TenantFilter, $PartitionKey) }
 
-    . $FunctionPath
+    function Resolve-CIPPCommand { param($Name) }
 
-    function New-FakeCommand {
-        param([string]$Module = 'CIPPCore', [string[]]$ParamNames)
-        $params = @{}
-        foreach ($p in $ParamNames) { $params[$p] = [pscustomobject]@{ Name = $p } }
-        [pscustomobject]@{ Module = $Module; Parameters = $params }
-    }
+    . $FunctionPath
 
     function New-SelectionTask {
         param($Tenants)
@@ -51,9 +46,7 @@ Describe 'Add-CIPPScheduledTask tenant selection storage' {
         Mock -CommandName Update-AzDataTableEntity -MockWith { }
         Mock -CommandName Add-CippQueueMessage -MockWith { }
         Mock -CommandName Write-LogMessage -MockWith { }
-        Mock -CommandName Get-Command -MockWith {
-            New-FakeCommand -ParamNames @('TenantFilter', 'Threshold')
-        }
+        Mock -CommandName Resolve-CIPPCommand -MockWith { [pscustomobject]@{ Name = $Name; ModuleName = 'CIPPCore' } }
     }
 
     It 'persists the selection and the version marker in the same entity as the task' {

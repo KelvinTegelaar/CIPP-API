@@ -15,7 +15,7 @@ function Invoke-CippTestE8_MFA_02 {
             return
         }
 
-        $Match = $CA | Where-Object {
+        $Match = $CA.Where({
             $_.state -eq 'enabled' -and
             ($_.conditions.users.includeUsers -contains 'All') -and
             ($_.conditions.applications.includeApplications -contains 'All') -and
@@ -23,7 +23,7 @@ function Invoke-CippTestE8_MFA_02 {
                 ($_.grantControls.builtInControls -contains 'mfa') -or
                 $_.grantControls.authenticationStrength
             )
-        }
+        })
 
         if ($Match) {
             $Status = 'Passed'

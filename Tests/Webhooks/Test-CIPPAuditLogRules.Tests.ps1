@@ -7,6 +7,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Webhooks/Test-CIPPAuditLogRules.ps1'
 
     # Called as both -TableName and -tablename; binding is case-insensitive so one covers both.
@@ -92,11 +93,18 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         # Both memos are per tenant and outlive a single call by design. Every test here uses the
         # same tenant, so without a reset the second test onwards would run against the first
         # test's rules and directory data and never touch its own mocked reads.
-        $script:AuditRuleConfigCache = @{}
+        $script:AuditRuleSetCache = $null
+        $script:AuditRuleSearchLookups = $null
         $script:AuditRuleLookupCache = @{}
         $script:AuditRuleListCache = @{}
         $script:PartnerUserMemo = $null
         $script:TrustedIpRows = @()
+        $script:LookupRows = @(
+            New-LookupRow 'users'
+            New-LookupRow 'groups'
+            New-LookupRow 'devices'
+            New-LookupRow 'servicePrincipals'
+        )
 
         Mock -CommandName Get-CIPPTable -MockWith {
             param($TableName)
@@ -126,14 +134,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
                         PsaTicketPriority = '5'
                     }
                 }
-                'cacheauditloglookups' {
-                    @(
-                        New-LookupRow 'users'
-                        New-LookupRow 'groups'
-                        New-LookupRow 'devices'
-                        New-LookupRow 'servicePrincipals'
-                    )
-                }
+                'cacheauditloglookups' { $script:LookupRows }
                 'Config' { [pscustomobject]@{ Value = 'cipp.contoso.com' } }
                 'trustedIps' { $script:TrustedIpRows }
                 default { @() }
@@ -310,8 +311,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
 
     Context 'rule configuration memo' {
         # Resolving the rule set reads the whole WebhookRules table and expands tenant groups for
-        # every surviving entry - 179 ms per invocation, paid once per slice, for an answer that
-        # does not change between slices.
+        # every entry - paid once per worker per TTL, not once per slice or per tenant.
 
         It 'resolves the rule set once across repeated calls for a tenant' {
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
@@ -323,72 +323,208 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             $script:ExpandCalls | Should -Be $AfterFirst
         }
 
-        It 'resolves separately for a different tenant' {
-            # The rule set is filtered by tenant, so one tenant's answer must never be served to
-            # another - that would evaluate these records against a different customer's rules.
-            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+        It 'reuses the rule set for another tenant but applies only the rules that cover it' {
+            # Serving one tenant's rules to another would evaluate its records against a different
+            # customer's rules.
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Filter, $Property, $First)
+                switch ($TableName) {
+                    'WebhookRules' {
+                        [pscustomobject]@{
+                            PartitionKey = 'WebhookRules'; RowKey = 'contoso-only'; Type = 'Audit'
+                            Tenants      = '[{"label":"Contoso","value":"contoso.com","type":"Tenant"}]'
+                            Conditions   = '[{"Property":{"label":"Operation"},"Operator":{"label":"eq"},"Input":{"value":"Set-Mailbox"}}]'
+                            Actions      = '["generatemail"]'
+                        }
+                    }
+                    'cacheauditloglookups' { $script:LookupRows }
+                    'Config' { [pscustomobject]@{ Value = 'cipp.contoso.com' } }
+                    default { @() }
+                }
+            }
+            Mock -CommandName Expand-CIPPTenantGroups -MockWith { param($TenantFilter) $script:ExpandCalls++; $TenantFilter }
+
+            (Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')).MatchedLogs | Should -Be 1
             $AfterFirst = $script:ExpandCalls
-            $null = Test-CIPPAuditLogRules -TenantFilter 'fabrikam.com' -Rows @(New-AuditRow -Id 'rec-2')
-            $script:ExpandCalls | Should -BeGreaterThan $AfterFirst
+            (Test-CIPPAuditLogRules -TenantFilter 'fabrikam.com' -Rows @(New-AuditRow -Id 'rec-2')).MatchedLogs | Should -Be 0
+            $script:ExpandCalls | Should -Be $AfterFirst
+        }
+
+        It 'expands exclusions only for rules that cover the tenant' {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Filter, $Property, $First)
+                switch ($TableName) {
+                    'WebhookRules' {
+                        [pscustomobject]@{
+                            PartitionKey    = 'WebhookRules'; RowKey = 'fabrikam-only'; Type = 'Audit'
+                            Tenants         = '[{"label":"Fabrikam","value":"fabrikam.com","type":"Tenant"}]'
+                            excludedTenants = '[{"label":"Group","value":"group-1","type":"Group"}]'
+                            Conditions      = '[{"Property":{"label":"Operation"},"Operator":{"label":"eq"},"Input":{"value":"Set-Mailbox"}}]'
+                            Actions         = '["generatemail"]'
+                        }
+                    }
+                    'cacheauditloglookups' { $script:LookupRows }
+                    default { @() }
+                }
+            }
+            Mock -CommandName Expand-CIPPTenantGroups -MockWith { param($TenantFilter) $script:ExpandCalls++; $TenantFilter }
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $script:ExpandCalls | Should -Be 1 -Because 'only the inclusions are expanded for a rule that does not cover the tenant'
         }
 
         It 'rebuilds once the entry has expired' {
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
             $AfterFirst = $script:ExpandCalls
-            $script:AuditRuleConfigCache['contoso.com'].Expires = [datetime]::UtcNow.AddMinutes(-1)
+            $script:AuditRuleSetCache.Expires = [datetime]::UtcNow.AddMinutes(-1)
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-2')
             $script:ExpandCalls | Should -BeGreaterThan $AfterFirst
         }
-
-        It 'drops expired entries rather than growing per tenant seen' {
-            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
-            $script:AuditRuleConfigCache['contoso.com'].Expires = [datetime]::UtcNow.AddMinutes(-1)
-            $null = Test-CIPPAuditLogRules -TenantFilter 'fabrikam.com' -Rows @(New-AuditRow -Id 'rec-2')
-            $script:AuditRuleConfigCache.Keys | Should -Not -Contain 'contoso.com'
-            $script:AuditRuleConfigCache.Keys | Should -Contain 'fabrikam.com'
-        }
     }
 
-    Context 'directory lookup memo' {
-        # The four directory hash tables are rebuilt from cached JSON blobs on every call - 95 ms
-        # per invocation, and the engine runs once per 500-record slice.
-
-        It 'rebuilds the hashtables once across repeated calls for a tenant' {
-            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
-            $script:AuditRuleLookupCache.Keys | Should -Contain 'contoso.com'
-
-            # A second call must not re-read the lookups table for this tenant.
-            $script:LookupReads = 0
-            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
-                param($TableName, $Context, $Filter, $Property, $First)
-                if ($Filter -like "*PartitionKey eq 'contoso.com'*" -and $Filter -like '*Timestamp gt*') { $script:LookupReads++ }
-                @()
-            }
-            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-2')
-            $script:LookupReads | Should -Be 0
+    Context 'directory lookups' {
+        It 'reuses a large slice''s directory for the next slice of the same search' {
+            $script:AuditRuleSearchLookups = [pscustomobject]@{ Tenant = 'contoso.com'; UserLookup = $null; GroupLookup = $null; DeviceLookup = $null; ServicePrincipalLookup = $null }
+            $Rows = @(1..60 | ForEach-Object { New-AuditRow -Id "rec-$_" })
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $Rows
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $Rows
+            Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'cacheauditloglookups' } -Times 1 -Exactly
         }
 
-        It 'keeps each tenant''s directory data separate' {
+        It 'never reuses another tenant''s directory' {
+            $script:AuditRuleSearchLookups = [pscustomobject]@{ Tenant = 'fabrikam.com'; UserLookup = @{}; GroupLookup = @{}; DeviceLookup = @{}; ServicePrincipalLookup = @{} }
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)
+            Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'cacheauditloglookups' } -Times 1 -Exactly
+        }
+
+        It 'keeps nothing between calls outside a search' {
+            $Rows = @(1..60 | ForEach-Object { New-AuditRow -Id "rec-$_" })
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $Rows
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $Rows
+            Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'cacheauditloglookups' } -Times 2 -Exactly
+        }
+
+        # A tenant is processed once per 15-minute cycle, so a per-worker memo of its directory
+        # never hit and only held memory until the next cycle.
+
+        It 'keeps no per-worker copy of the directory' {
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $script:AuditRuleLookupCache.Count | Should -Be 0
+        }
+
+        It 'reads each tenant''s own directory' {
             # Serving one tenant's user/group/device map to another would resolve GUIDs to the
             # wrong people and put their names into another customer's alerts.
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
             $null = Test-CIPPAuditLogRules -TenantFilter 'fabrikam.com' -Rows @(New-AuditRow -Id 'rec-2')
-            $script:AuditRuleLookupCache.Keys | Should -Contain 'contoso.com'
-            $script:AuditRuleLookupCache.Keys | Should -Contain 'fabrikam.com'
+            Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'cacheauditloglookups' -and $Filter -like "PartitionKey eq 'contoso.com'*" } -Times 1 -Exactly
+            Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'cacheauditloglookups' -and $Filter -like "PartitionKey eq 'fabrikam.com'*" } -Times 1 -Exactly
+        }
+    }
+
+    Context 'directory GUID mapping' {
+        BeforeEach {
+            $script:UserId = 'aaaaaaaa-1111-4111-8111-11111111abcd'
+            $script:GroupId = '22222222-2222-4222-8222-222222222222'
+            $script:DeviceId = '33333333-3333-4333-8333-333333333333'
+            $script:SpId = '44444444-4444-4444-8444-444444444444'
+            $script:SpAppId = '55555555-5555-4555-8555-555555555555'
+            $Sp = @{ id = $script:SpId; appId = $script:SpAppId; displayName = 'Contoso App'; appDisplayName = 'Contoso App'; accountEnabled = $true; servicePrincipalType = 'Application'; tags = @('WindowsAzureActiveDirectoryIntegratedApp') }
+            # Unreferenced entries prove only the referenced ones change the record.
+            $Directory = @{
+                users             = @{ $script:UserId = @{ id = $script:UserId; displayName = 'Adele'; userPrincipalName = 'adele@contoso.com'; accountEnabled = $true }; '66666666-6666-4666-8666-666666666666' = @{ id = '66666666-6666-4666-8666-666666666666'; userPrincipalName = 'unused@contoso.com' } }
+                groups            = @{ $script:GroupId = @{ id = $script:GroupId; displayName = 'Finance'; mailEnabled = $false; securityEnabled = $true } }
+                devices           = @{ $script:DeviceId = @{ id = $script:DeviceId; displayName = 'LAPTOP-01'; deviceId = '77777777-7777-4777-8777-777777777777' } }
+                servicePrincipals = @{ $script:SpId = $Sp; $script:SpAppId = $Sp }
+            }
+            $script:LookupRows = @(foreach ($Key in $Directory.Keys) {
+                    [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = $Key; Format = 'hashtable'; Data = ($Directory[$Key] | ConvertTo-Json -Compress -Depth 5) }
+                })
+
+            $script:MappedRow = New-AuditRow
+            $script:MappedRow | Add-Member -NotePropertyName 'userId' -NotePropertyValue $script:UserId
+            $script:MappedRow.auditData | Add-Member -NotePropertyMembers ([ordered]@{
+                    ObjectId     = $script:UserId
+                    GroupId      = $script:GroupId
+                    TargetDevice = $script:DeviceId
+                    AppId        = $script:SpAppId
+                    SpObjectId   = $script:SpId
+                    UpperUser    = $script:UserId.ToUpperInvariant()
+                    UnknownId    = '99999999-9999-4999-8999-999999999999'
+                })
         }
 
-        It 'rebuilds once the entry has expired' {
-            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
-            $script:AuditRuleLookupCache['contoso.com'].Expires = [datetime]::UtcNow.AddMinutes(-1)
+        It 'maps a user GUID to its UPN' {
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow)).DataToProcess)[0]
+            $data.CIPPObjectId | Should -Be 'adele@contoso.com'
+        }
 
-            $script:LookupReads = 0
-            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
-                param($TableName, $Context, $Filter, $Property, $First)
-                if ($Filter -like "*PartitionKey eq 'contoso.com'*" -and $Filter -like '*Timestamp gt*') { $script:LookupReads++ }
-                @()
-            }
-            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-2')
-            $script:LookupReads | Should -BeGreaterThan 0
+        It 'maps group, device and service principal GUIDs to their directory objects' {
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow)).DataToProcess)[0]
+            $data.CIPPGroupId.displayName | Should -Be 'Finance'
+            $data.CIPPTargetDevice.displayName | Should -Be 'LAPTOP-01'
+            $data.CIPPSpObjectId.displayName | Should -Be 'Contoso App'
+            $data.CIPPAppId.appId | Should -Be $script:SpAppId
+        }
+
+        It 'keeps the service principal fields alerting reads' {
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow)).DataToProcess)[0]
+            @($data.CIPPAppId.Keys) | Should -Be @('id', 'appId', 'displayName', 'appDisplayName', 'accountEnabled', 'servicePrincipalType', 'tags')
+            @($data.CIPPAppId.tags) | Should -Be @('WindowsAzureActiveDirectoryIntegratedApp')
+        }
+
+        It 'leaves GUIDs it cannot resolve, including a different case, unmapped' {
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow)).DataToProcess)[0]
+            $data.PSObject.Properties.Name | Should -Not -Contain 'CIPPUnknownId'
+            $data.PSObject.Properties.Name | Should -Not -Contain 'CIPPUpperUser'
+        }
+
+        It 'maps GUIDs on the root record into the stored audit record' {
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow)).DataToProcess)[0]
+            ($data.AuditRecord | ConvertFrom-Json).userId | Should -Be 'adele@contoso.com'
+        }
+
+        It 'rebuilds the lookups when the cached users blob is unreadable' {
+            $script:LookupRows = @(foreach ($Row in $script:LookupRows) {
+                    if ($Row.RowKey -eq 'users') { $Row.Data = '{not json' }
+                    $Row
+                })
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow)
+            Should -Invoke Get-CIPPTestData -ParameterFilter { $Type -eq 'Users' } -Times 1
+        }
+
+        It 'rebuilds the lookups when the cached users blob is null' {
+            $script:LookupRows = @(foreach ($Row in $script:LookupRows) {
+                    if ($Row.RowKey -eq 'users') { $Row.Data = 'null' }
+                    $Row
+                })
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow)
+            Should -Invoke Get-CIPPTestData -ParameterFilter { $Type -eq 'Users' } -Times 1
+        }
+
+        It 'maps the same way when a batch is large enough to take the full parse' {
+            $Rows = @($script:MappedRow) + @(1..60 | ForEach-Object { New-AuditRow -Id "rec-$_" })
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $Rows).DataToProcess) | Where-Object { $_.ObjectId -eq $script:UserId }
+            @($data).Count | Should -Be 1
+            $data.CIPPObjectId | Should -Be 'adele@contoso.com'
+            $data.CIPPGroupId.displayName | Should -Be 'Finance'
+            $data.CIPPAppId.appId | Should -Be $script:SpAppId
+        }
+
+        It 'still resolves an entry whose strings contain braces' {
+            $script:LookupRows = @(foreach ($Row in $script:LookupRows) {
+                    if ($Row.RowKey -eq 'groups') {
+                        $Row.Data = (@{ $script:GroupId = @{ id = $script:GroupId; displayName = 'Finance } {team}'; mailEnabled = $false; securityEnabled = $true } } | ConvertTo-Json -Compress)
+                    }
+                    $Row
+                })
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow)).DataToProcess)[0]
+            $data.CIPPGroupId.displayName | Should -Be 'Finance } {team}'
+        }
+
+        It 'maps nothing and still matches when the record holds no GUIDs' {
+            $result = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)
+            $result.MatchedLogs | Should -Be 1
+            Should -Invoke Get-CIPPTestData -Times 0
         }
     }
 

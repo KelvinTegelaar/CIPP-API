@@ -16,6 +16,7 @@ function Invoke-ExecDurableFunctions {
     $Yesterday = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     $Filter = "CreatedTime ge datetime'$Yesterday' or RuntimeStatus eq 'Pending' or RuntimeStatus eq 'Running'"
     $Instances = Get-CippAzDataTableEntity @InstancesTable -Filter $Filter
+    $StatusCode = [HttpStatusCode]::OK
 
     switch ($Request.Query.Action) {
         'ListOrchestrators' {
@@ -127,6 +128,7 @@ function Invoke-ExecDurableFunctions {
                 }
 
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Body = [PSCustomObject]@{
                     Message   = "Error resetting durables: $($_.Exception.Message)"
                     Exception = Get-CippException -Exception $_
@@ -171,7 +173,7 @@ function Invoke-ExecDurableFunctions {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

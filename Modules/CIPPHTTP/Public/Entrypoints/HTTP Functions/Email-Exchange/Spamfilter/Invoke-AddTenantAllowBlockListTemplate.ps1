@@ -10,7 +10,6 @@ function Invoke-AddTenantAllowBlockListTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
     try {
         $GUID = (New-Guid).GUID
@@ -38,7 +37,7 @@ function Invoke-AddTenantAllowBlockListTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $Headers -API $APIName -message "Failed to create Tenant Allow/Block List Template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $body = [pscustomobject]@{ 'Results' = "Failed to create Tenant Allow/Block List Template: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

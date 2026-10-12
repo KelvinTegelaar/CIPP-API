@@ -60,7 +60,7 @@ function New-CIPPApplicationCopy {
         }
 
         if ($DelegateResourceAccess) {
-            Add-CIPPDelegatedPermission -RequiredResourceAccess $ApplicationResourceAccess -ApplicationId $App -Tenantfilter $Tenant
+            Add-CIPPDelegatedPermission -RequiredResourceAccess $DelegateResourceAccess -ApplicationId $App -Tenantfilter $Tenant
         }
         if ($ApplicationResourceAccess) {
             Add-CIPPApplicationPermission -RequiredResourceAccess $ApplicationResourceAccess -ApplicationId $App -Tenantfilter $Tenant

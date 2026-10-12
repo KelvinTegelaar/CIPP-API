@@ -23,6 +23,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
 
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
     . $FunctionPath
 
     function New-PimRequest {
@@ -152,12 +153,19 @@ Describe 'Invoke-ExecPIMRoleAssignment' {
             Should -Invoke Invoke-CIPPPIMAssignmentAction -Times 1 -Exactly -ParameterFilter { $Action -eq 'Remove' }
         }
 
-        It 'returns 400 with the refusal message when the action throws' {
-            Mock Invoke-CIPPPIMAssignmentAction { throw 'Refusing: last active Global Administrator' }
+        It 'returns 400 with the refusal message when the action refuses' {
+            Mock Invoke-CIPPPIMAssignmentAction { throw [System.ArgumentException]::new('Refusing: last active Global Administrator') }
             $Response = Invoke-ExecPIMRoleAssignment -Request (New-PimRequest @{ Action = 'Remove'; Duration = $null })
             $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
             $Response.Body.Results[0].state | Should -Be 'error'
             $Response.Body.Results[0].resultText | Should -Match 'last active Global Administrator'
+        }
+
+        It 'returns 500 when the Graph call fails' {
+            Mock Invoke-CIPPPIMAssignmentAction { throw 'Graph: InternalServerError' }
+            $Response = Invoke-ExecPIMRoleAssignment -Request (New-PimRequest @{ Action = 'Remove'; Duration = $null })
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::InternalServerError)
+            $Response.Body.Results[0].state | Should -Be 'error'
         }
     }
 }

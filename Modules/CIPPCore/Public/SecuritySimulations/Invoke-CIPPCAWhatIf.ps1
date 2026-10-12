@@ -48,7 +48,7 @@ function Invoke-CIPPCAWhatIf {
     }
 
     for ($i = 0; $i -lt $Bodies.Count; $i++) {
-        $Response = $Responses | Where-Object { "$($_.id)" -eq "$i" } | Select-Object -First 1
+        $Response = $Responses.Where({ "$($_.id)" -eq "$i" }, 'First')[0]
         if ($null -eq $Response) {
             $Results.Add([PSCustomObject]@{ Index = $i; Policies = @(); Error = $(if ($BatchError) { $BatchError } else { 'No reply in the batch response.' }) })
             continue

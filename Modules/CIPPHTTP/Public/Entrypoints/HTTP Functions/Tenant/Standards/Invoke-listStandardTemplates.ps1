@@ -15,7 +15,10 @@ function Invoke-listStandardTemplates {
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $RepoTable = Get-CippTable -tablename 'CommunityRepos'
     $Repos = @(Get-CIPPAzDataTableEntity @RepoTable -Filter "PartitionKey eq 'CommunityRepos'")
+    $Total = 0
+    $Failed = 0
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+        $Total++
         $RowKey = $_.RowKey
         $RowSHA = $_.SHA
         $RowSource = $_.Source
@@ -29,6 +32,7 @@ function Invoke-listStandardTemplates {
                 $RepairedJSON = Repair-CippStandardsTemplate -Json $JSON -Reference $RowKey
             } catch {
                 Write-LogMessage -headers $Request.Headers -API 'Standards' -message "Standards template '$($RowKey)' was omitted from the response: $($_.Exception.Message)" -Sev 'Error'
+                $Failed++
                 return
             }
             $Data = $RepairedJSON | ConvertFrom-Json -Depth 100
@@ -49,6 +53,7 @@ function Invoke-listStandardTemplates {
                 Write-LogMessage -headers $Request.Headers -API 'Standards' -message "Standards template '$($RowKey)' contained corrupt data (case-duplicate keys) and was automatically repaired and re-saved." -Sev 'Warning'
             } catch {
                 Write-LogMessage -headers $Request.Headers -API 'Standards' -message "Standards template '$($RowKey)' was repaired but could not be re-saved, so it was omitted from the response: $($_.Exception.Message)" -Sev 'Error'
+                $Failed++
                 return
             }
         }
@@ -135,7 +140,7 @@ function Invoke-listStandardTemplates {
 
     if ($ID) { $Templates = $Templates | Where-Object GUID -EQ $ID }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $ID ? [HttpStatusCode]::OK : (Get-CippBulkStatusCode -Total $Total -Failed $Failed)
             Body       = @($Templates)
         })
 

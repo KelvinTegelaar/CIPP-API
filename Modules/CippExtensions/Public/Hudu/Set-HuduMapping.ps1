@@ -14,6 +14,7 @@ function Set-HuduMapping {
             RowKey          = "$($mapping.TenantId)"
             IntegrationId   = "$($mapping.IntegrationId)"
             IntegrationName = "$($mapping.IntegrationName)"
+            SyncPasswords   = [bool]($Mapping.SyncPasswords ?? $true)
         }
 
         Add-CIPPAzDataTableEntity @CIPPMapping -Entity $AddObject -Force

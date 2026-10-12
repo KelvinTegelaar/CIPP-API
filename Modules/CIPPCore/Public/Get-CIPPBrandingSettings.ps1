@@ -45,6 +45,7 @@ function Get-CIPPBrandingSettings {
             showPageNumbers  = $true
             watermarkText    = ''
             watermarkEnabled = $true
+            coverFade        = $true
             reportDefaults   = [pscustomobject]@{}
             roleColours      = [pscustomobject]@{}
         }
@@ -291,6 +292,7 @@ function Get-CIPPBrandingSettings {
         showPageNumbers  = $ShowPageNumbers
         watermarkText    = $WatermarkText
         watermarkEnabled = $WatermarkEnabled
+        coverFade        = $null -eq $BrandingConfig.coverFade -or [bool]$BrandingConfig.coverFade
         reportDefaults   = $ReportDefaults
         roleColours      = $RoleColours
         # Which of the tenant's names a report prints; 'alias' is the name CIPP shows, the old behaviour.

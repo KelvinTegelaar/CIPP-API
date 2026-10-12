@@ -34,11 +34,8 @@
       "recommended": "v=DMARC1; p=reject;"
     }
   },
-  "expected": {
-    "hasDmarc": true,
-    "record": "%RecordValue%"
-  },
   "read": {
     "cacheType": "MoeraDmarc"
-  }
+  },
+  "prepare": "Get-CIPPBaselineAddDMARCToMOERAState"
 }

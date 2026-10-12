@@ -30,10 +30,14 @@ function Invoke-ExecRemoveLibraryPermission {
     $RoleDefinitionId = $Request.Body.RoleDefinitionId
     $Label = $Request.Body.PrincipalName ?? $Request.Body.Title ?? $PrincipalId
 
-    try {
-        if ([string]::IsNullOrWhiteSpace($SiteUrl)) { throw 'SiteUrl is required.' }
-        if ([string]::IsNullOrWhiteSpace($PrincipalId)) { throw 'PrincipalId is required.' }
+    if ([string]::IsNullOrWhiteSpace($SiteUrl)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'SiteUrl is required.' } })
+    }
+    if ([string]::IsNullOrWhiteSpace($PrincipalId)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = 'PrincipalId is required.' } })
+    }
 
+    try {
         $SPScope = Resolve-CIPPSharePointPermissionScope -SiteUrl $SiteUrl -ListId $ListId -TenantFilter $TenantFilter -EnsureUniqueRoleAssignments
 
         # Read what the principal actually holds so only real bindings are removed and Limited
@@ -41,7 +45,7 @@ function Invoke-ExecRemoveLibraryPermission {
         $Assignments = @(New-GraphGetRequest -uri "$($SPScope.AssignmentUri)?`$expand=Member,RoleDefinitionBindings" -tenantid $TenantFilter -scope $SPScope.Scope -extraHeaders $SPScope.Headers -UseCertificate -AsApp $true)
         $Current = @($Assignments | Where-Object { [string]$_.Member.Id -eq [string]$PrincipalId })
         if ($Current.Count -eq 0) {
-            throw "$Label holds no permissions on $($SPScope.TargetLabel)."
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::NotFound; Body = @{ 'Results' = "$Label holds no permissions on $($SPScope.TargetLabel)." } })
         }
         if (-not $Label -or $Label -eq $PrincipalId) { $Label = $Current[0].Member.Title ?? $PrincipalId }
 
@@ -60,9 +64,9 @@ function Invoke-ExecRemoveLibraryPermission {
 
         if ($Targets.Count -eq 0) {
             if ($SkippedSystem.Count -gt 0) {
-                throw "$Label only holds $($SkippedSystem -join ', ') on $($SPScope.TargetLabel). SharePoint manages that level itself and it cannot be removed here; remove the permission that granted it instead."
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ 'Results' = "$Label only holds $($SkippedSystem -join ', ') on $($SPScope.TargetLabel). SharePoint manages that level itself and it cannot be removed here; remove the permission that granted it instead." } })
             }
-            throw "No matching permission found for $Label on $($SPScope.TargetLabel)."
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::NotFound; Body = @{ 'Results' = "No matching permission found for $Label on $($SPScope.TargetLabel)." } })
         }
 
         $Removed = [System.Collections.Generic.List[string]]::new()
@@ -92,12 +96,12 @@ function Invoke-ExecRemoveLibraryPermission {
         if ($Removed.Count -eq 0) { throw $Result }
 
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total $Targets.Count -Failed $Failed.Count
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove permission for $Label. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

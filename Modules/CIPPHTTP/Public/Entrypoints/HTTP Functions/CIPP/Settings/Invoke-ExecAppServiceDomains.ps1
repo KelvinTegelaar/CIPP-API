@@ -93,6 +93,29 @@ function Invoke-ExecAppServiceDomains {
         return @()
     }
 
+    if ($Action -in @('CheckDns', 'AddBinding', 'AddCertificate', 'Remove')) {
+        $HostNameError = try {
+            $HostName = Get-CleanHostname ($Request.Body.Hostname ?? $Request.Query.Hostname)
+            if ($HostName -like '*.azurewebsites.net') {
+                switch ($Action) {
+                    'AddBinding' { 'The default *.azurewebsites.net hostname is managed by Azure and cannot be added.' }
+                    'AddCertificate' { 'The default hostname is already secured by Azure.' }
+                    'Remove' { 'The default *.azurewebsites.net hostname cannot be removed.' }
+                }
+            } elseif ($Action -eq 'AddCertificate' -and $HostName.StartsWith('*.')) {
+                'App Service Managed Certificates do not support wildcard domains. Upload your own certificate in the Azure Portal instead.'
+            }
+        } catch {
+            $_.Exception.Message
+        }
+        if ($HostNameError) {
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = "Failed: $HostNameError" }
+            }
+        }
+    }
+
     try {
         switch ($Action) {
             'List' {
@@ -154,10 +177,6 @@ function Invoke-ExecAppServiceDomains {
             }
 
             'CheckDns' {
-                $HostName = $Request.Body.Hostname ?? $Request.Query.Hostname
-                if ([string]::IsNullOrWhiteSpace($HostName)) { throw 'Hostname is required' }
-                $HostName = Get-CleanHostname $HostName
-
                 # DoH resolver lives in the DNSHealth module; import + initialize it the same way the
                 # domain health endpoint does before resolving.
                 Import-Module DNSHealth -ErrorAction SilentlyContinue
@@ -230,11 +249,6 @@ function Invoke-ExecAppServiceDomains {
             }
 
             'AddBinding' {
-                $HostName = $Request.Body.Hostname ?? $Request.Query.Hostname
-                if ([string]::IsNullOrWhiteSpace($HostName)) { throw 'Hostname is required' }
-                $HostName = Get-CleanHostname $HostName
-                if ($HostName -like '*.azurewebsites.net') { throw 'The default *.azurewebsites.net hostname is managed by Azure and cannot be added.' }
-
                 $AppService = Get-CIPPAppServiceSite
                 $Plan = Get-DomainRecordPlan -Hostname $HostName `
                     -DefaultHostName $AppService.Site.properties.defaultHostName `
@@ -270,12 +284,6 @@ function Invoke-ExecAppServiceDomains {
             }
 
             'AddCertificate' {
-                $HostName = $Request.Body.Hostname ?? $Request.Query.Hostname
-                if ([string]::IsNullOrWhiteSpace($HostName)) { throw 'Hostname is required' }
-                $HostName = Get-CleanHostname $HostName
-                if ($HostName -like '*.azurewebsites.net') { throw 'The default hostname is already secured by Azure.' }
-                if ($HostName.StartsWith('*.')) { throw 'App Service Managed Certificates do not support wildcard domains. Upload your own certificate in the Azure Portal instead.' }
-
                 # First attempt runs inline; a certificate that is not issued by the time it returns
                 # is followed up by hidden scheduled retries (see Invoke-CIPPCustomDomainCertificate).
                 $Message = Invoke-CIPPCustomDomainCertificate -Hostname $HostName
@@ -290,11 +298,6 @@ function Invoke-ExecAppServiceDomains {
             }
 
             'Remove' {
-                $HostName = $Request.Body.Hostname ?? $Request.Query.Hostname
-                if ([string]::IsNullOrWhiteSpace($HostName)) { throw 'Hostname is required' }
-                $HostName = Get-CleanHostname $HostName
-                if ($HostName -like '*.azurewebsites.net') { throw 'The default *.azurewebsites.net hostname cannot be removed.' }
-
                 $AppService = Get-CIPPAppServiceSite
                 $Api = $AppService.ApiVersion
                 $null = New-CIPPAzRestRequest -Uri "$($AppService.ArmBase)/hostNameBindings/$HostName`?api-version=$Api" -Method DELETE -ErrorAction Stop
@@ -323,9 +326,8 @@ function Invoke-ExecAppServiceDomains {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -headers $Headers -message "AppServiceDomains '$Action' failed: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        $StatusCode = ($Action -eq 'List') ? [HttpStatusCode]::InternalServerError : [HttpStatusCode]::BadRequest
         return [HttpResponseContext]@{
-            StatusCode = $StatusCode
+            StatusCode = [HttpStatusCode]::InternalServerError
             Body       = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
         }
     }

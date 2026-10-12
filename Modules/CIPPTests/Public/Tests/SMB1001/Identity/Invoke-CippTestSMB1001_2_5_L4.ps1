@@ -21,10 +21,10 @@ function Invoke-CippTestSMB1001_2_5_L4 {
             return
         }
 
-        $Cfg = $AMP | Select-Object -First 1
-        $Sms   = $Cfg.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Sms' }   | Select-Object -First 1
-        $Voice = $Cfg.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Voice' } | Select-Object -First 1
-        $Email = $Cfg.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Email' } | Select-Object -First 1
+        $Cfg = @($AMP)[0]
+        $Sms   = $Cfg.authenticationMethodConfigurations.Where({ $_.id -eq 'Sms' }, 'First')[0]
+        $Voice = $Cfg.authenticationMethodConfigurations.Where({ $_.id -eq 'Voice' }, 'First')[0]
+        $Email = $Cfg.authenticationMethodConfigurations.Where({ $_.id -eq 'Email' }, 'First')[0]
 
         $WeakStill = @(
             if ($Sms   -and $Sms.state   -ne 'disabled') { "SMS ($($Sms.state))" }

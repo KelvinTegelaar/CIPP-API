@@ -13,7 +13,7 @@ function Invoke-CippTestZTNA21804 {
             return
         }
 
-        $matchedMethods = $authMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Sms' -or $_.id -eq 'Voice' }
+        $matchedMethods = $authMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'Sms' -or $_.id -eq 'Voice' })
 
         $testResultMarkdown = ''
 

@@ -15,6 +15,7 @@ function Invoke-ExecGDAPInvite {
     $InviteId = $Request.Body.InviteId
     $Reference = $Request.Body.Reference
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
+    $StatusCode = [HttpStatusCode]::OK
 
     # Extract technician from headers (same logic as Write-LogMessage)
     if ($Headers.'x-ms-client-principal-idp' -eq 'azureStaticWebApps' -or !$Headers.'x-ms-client-principal-idp') {
@@ -100,6 +101,7 @@ function Invoke-ExecGDAPInvite {
                         $Message = 'GDAP relationship invite created. Log in as a Global Admin in the new tenant to approve the invite.'
                     } else {
                         $Message = 'Error creating GDAP relationship request'
+                        $StatusCode = [HttpStatusCode]::InternalServerError
                     }
 
                     Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'
@@ -115,6 +117,7 @@ function Invoke-ExecGDAPInvite {
                 }
 
                 Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $env:TenantID -message $Message -Sev 'Error' -LogData (Get-CippException -Exception $_)
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
 
             $body = @{
@@ -137,6 +140,7 @@ function Invoke-ExecGDAPInvite {
                 $Message = 'Invite updated'
             } else {
                 $Message = 'Invite not found'
+                $StatusCode = [HttpStatusCode]::NotFound
             }
             $body = @{
                 Message = $Message
@@ -149,6 +153,7 @@ function Invoke-ExecGDAPInvite {
                 $Message = 'Invite deleted'
             } else {
                 $Message = 'Invite not found'
+                $StatusCode = [HttpStatusCode]::NotFound
             }
             $body = @{
                 Message = $Message
@@ -157,7 +162,7 @@ function Invoke-ExecGDAPInvite {
 
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 }

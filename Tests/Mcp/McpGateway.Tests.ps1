@@ -21,6 +21,9 @@ BeforeAll {
     }
 
     function Get-CippMcpSpec { return $script:FixtureSpec }
+    # The caller's permissions; $null (no request context) leaves the catalog unfiltered
+    function Get-CippRequestAllowedPermissions { , $script:AllowedPermissions }
+    $script:AllowedPermissions = $null
 
     function Initialize-FixtureSpec {
         param([hashtable]$Paths)

@@ -12,6 +12,7 @@ function Invoke-ExecSAMRoles {
     $Headers = $Request.Headers
 
     $SAMRolesTable = Get-CIPPTable -tablename 'SAMRoles'
+    $StatusCode = [HttpStatusCode]::OK
     switch ($Request.Query.Action) {
         'Update' {
             try {
@@ -29,6 +30,7 @@ function Invoke-ExecSAMRoles {
                 $ErrorMessage = Get-CippException -Exception $_
                 $Result = "Failed to update SAM roles: $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Body = [pscustomobject]@{'Results' = $Result }
             }
         }
@@ -48,7 +50,7 @@ function Invoke-ExecSAMRoles {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

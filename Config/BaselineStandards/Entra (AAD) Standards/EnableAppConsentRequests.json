@@ -7,9 +7,9 @@
     "aad_admin_consent_workflow"
   ],
   "impact": "Low Impact",
-  "helpText": "Enables the admin consent workflow so users can request admin approval for applications instead of being blocked outright. The selected reviewer role receives the requests, and specific users (matched by display name) can be added as reviewers alongside it.",
+  "helpText": "Enables the admin consent workflow so users can request admin approval for applications instead of being blocked outright. The selected reviewer role receives the requests, and specific users and groups (matched by display name) can be added as reviewers alongside it.",
   "executiveText": "Lets employees request administrator review when an application needs permissions they cannot grant themselves, routing risky consent decisions to IT instead of blocking work or encouraging shadow consent.",
-  "docsDescription": "Grades whether the admin consent request policy is enabled and whether the configured roles and users are present among the reviewers. Reviewer users are matched by display name, so a central MSP support account that exists as a guest in each tenant can receive per-request notifications regardless of how the guest was created. Remediation enables the workflow with 30-day requests and reviewer notifications, and MERGES the configured reviewers into the existing list - reviewers added by hand are preserved. No role selected defaults to Global Administrator.",
+  "docsDescription": "Grades whether the admin consent request policy is enabled and whether the configured roles, users and groups are present among the reviewers. Reviewer users and groups are matched by display name, so a central MSP support account that exists as a guest in each tenant, or one shared 'consent reviewers' group created in every tenant, can receive per-request notifications regardless of how it was created. Group reviewers are the members of the group, including nested groups, matching the Groups option in the Entra admin center. Remediation enables the workflow with 30-day requests and reviewer notifications, and MERGES the configured reviewers into the existing list - reviewers added by hand are preserved. No role selected defaults to Global Administrator.",
   "impactColour": "info",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Update-MgPolicyAdminConsentRequestPolicy",
@@ -38,6 +38,13 @@
       "creatable": true,
       "omitWhenBlank": true,
       "label": "Additional reviewer users (display names of existing users or guests)"
+    },
+    "ReviewerGroups": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Additional reviewer groups (display names of existing groups)"
     }
   },
   "read": {
@@ -47,6 +54,7 @@
   "remediate": {
     "executor": "EnableAppConsentRequests",
     "reviewerRoles": "%ReviewerRoles%",
-    "reviewerUsers": "%ReviewerUsers%"
+    "reviewerUsers": "%ReviewerUsers%",
+    "reviewerGroups": "%ReviewerGroups%"
   }
 }

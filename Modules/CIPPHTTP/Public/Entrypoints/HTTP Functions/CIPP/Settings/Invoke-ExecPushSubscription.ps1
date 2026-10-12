@@ -18,11 +18,20 @@ function Invoke-ExecPushSubscription {
     $Username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
     $Action = [string]$Request.Body.Action
 
-    try {
-        if (![string]::IsNullOrWhiteSpace($Headers.'x-cipp-impersonate-role')) {
-            throw 'Push notification devices cannot be changed while impersonating a role.'
-        }
+    if (![string]::IsNullOrWhiteSpace($Headers.'x-cipp-impersonate-role')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = 'Push notification devices cannot be changed while impersonating a role.' }
+            })
+    }
+    if ($Action -notin @('Subscribe', 'Unsubscribe', 'Test')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = "Unknown action '$Action'. Use Subscribe, Unsubscribe or Test." }
+            })
+    }
 
+    try {
         $Table = Get-CIPPTable -tablename 'PushSubscriptions'
         switch ($Action) {
             'Subscribe' {
@@ -30,7 +39,10 @@ function Invoke-ExecPushSubscription {
                 $Endpoint = [string]$Subscription.endpoint
                 if (![string]::IsNullOrWhiteSpace($Endpoint) -and -not $Endpoint.StartsWith('https://')) { $Endpoint = '' }
                 if ([string]::IsNullOrWhiteSpace($Endpoint) -or [string]::IsNullOrWhiteSpace($Subscription.keys.p256dh) -or [string]::IsNullOrWhiteSpace($Subscription.keys.auth)) {
-                    throw 'A push subscription needs an https endpoint and p256dh/auth keys.'
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{ Results = 'A push subscription needs an https endpoint and p256dh/auth keys.' }
+                        })
                 }
                 $RowKey = Get-StringHash -String $Endpoint
                 $DeviceName = [string]$Request.Body.DeviceName
@@ -49,7 +61,12 @@ function Invoke-ExecPushSubscription {
             'Unsubscribe' {
                 $RowKey = [string]$Request.Body.RowKey
                 $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$Username' and RowKey eq '$RowKey'"
-                if (!$Existing) { throw 'That device is not registered to you.' }
+                if (!$Existing) {
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::NotFound
+                            Body       = @{ Results = 'That device is not registered to you.' }
+                        })
+                }
                 Remove-AzDataTableEntity @Table -Entity $Existing -Force | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -message "Removed push notification device '$($Existing.DeviceName)'" -Sev 'Info'
                 $Results = @{ Results = "Removed '$($Existing.DeviceName)'." }
@@ -58,12 +75,11 @@ function Invoke-ExecPushSubscription {
                 $Outcome = Send-CIPPAlert -Type 'push' -TargetUser $Username -Title 'CIPP test notification' -PushMessage 'Push notifications are working on this device.' -Url '/cipp/preferences' -APIName $APIName
                 $Results = @{ Results = "$Outcome" }
             }
-            default { throw "Unknown action '$Action'. Use Subscribe, Unsubscribe or Test." }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Results = @{ Results = "$($_.Exception.Message)" }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

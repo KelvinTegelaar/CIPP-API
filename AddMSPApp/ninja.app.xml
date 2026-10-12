@@ -1,0 +1,15 @@
+<ApplicationInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="1.8.3.0">
+  <Name>install.ps1</Name>
+  <UnencryptedContentSize>1295</UnencryptedContentSize>
+  <FileName>ninja.intunewin</FileName>
+  <SetupFile>install.ps1</SetupFile>
+  <EncryptionInfo>
+    <EncryptionKey>8cU5FF59ZzGxtPt25obhe+5XcQhjQr+BWbhidFSx2e4=</EncryptionKey>
+    <MacKey>unszAX+2cWXFweYI61dhDz40b5QpcBuXptkfrXerQ7g=</MacKey>
+    <InitializationVector>TmoXobMA0054z6eBpJGXMw==</InitializationVector>
+    <Mac>kcZjG7mGy+dCzv4l72VCpLdfxzm3nxU0/ez6KPCplWU=</Mac>
+    <ProfileIdentifier>ProfileVersion1</ProfileIdentifier>
+    <FileDigest>xCUVblpYRlubJe4Zy2RMv7pJ2vRFMKgmkHD9s5iLuts=</FileDigest>
+    <FileDigestAlgorithm>SHA256</FileDigestAlgorithm>
+  </EncryptionInfo>
+</ApplicationInfo>

@@ -69,8 +69,9 @@ function New-CIPPAsyncDeployment {
             }
         ))
 
+    Add-CIPPRealtimeWatch -JobId $JobId
     foreach ($Name in $Names) {
-        Add-CIPPAzDataTableEntity @Table -Entity @{
+        $Row = @{
             PartitionKey = [string]$JobId
             RowKey       = [string]$Name
             Source       = [string]$Source
@@ -79,7 +80,9 @@ function New-CIPPAsyncDeployment {
             TaskId       = [string]$TaskId
             TenantFilter = [string]$TenantFilter
             Logs         = ''
-        } -Force
+        }
+        Add-CIPPAzDataTableEntity @Table -Entity $Row -Force
+        Send-CIPPAsyncDeploymentUpdate -JobId $JobId -Row $Row
     }
     return $JobId
 }

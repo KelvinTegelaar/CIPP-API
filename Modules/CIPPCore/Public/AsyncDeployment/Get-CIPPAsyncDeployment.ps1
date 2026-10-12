@@ -21,18 +21,5 @@ function Get-CIPPAsyncDeployment {
     $SafeJobId = $JobId -replace "'", "''"
     $Rows = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeJobId'"
 
-    @($Rows | ForEach-Object {
-            [PSCustomObject]@{
-                Name   = $_.RowKey
-                Source = $_.Source
-                Status = $_.Status
-                TaskId = $_.TaskId
-                # Offboarding rows are users, so the tenant rides alongside; tenant-keyed jobs leave it empty
-                TenantFilter = $_.TenantFilter
-                Steps  = @($_.Steps | ConvertFrom-Json)
-                Logs   = $_.Logs
-                # when the row last changed (a step or status update); lets callers detect abandoned jobs
-                LastUpdate = $_.Timestamp
-            }
-        })
+    @(foreach ($Row in $Rows) { ConvertTo-CIPPAsyncDeploymentRow -Row $Row })
 }

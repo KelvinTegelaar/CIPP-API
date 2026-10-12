@@ -20,10 +20,10 @@ function Invoke-CippTestZTNA21814 {
 
         foreach ($Role in $PrivilegedRoles) {
             $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.RoletemplateId
-            $RoleUsers = $RoleMembers | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.user' }
+            $RoleUsers = $RoleMembers.Where({ $_.'@odata.type' -eq '#microsoft.graph.user' })
 
             foreach ($RoleMember in $RoleUsers) {
-                $UserDetail = $UserById.Find($RoleMember.id) | Select-Object -First 1
+                $UserDetail = $UserById.First($RoleMember.id)
 
                 if ($UserDetail) {
                     $RoleData.Add([PSCustomObject]@{
@@ -37,7 +37,7 @@ function Invoke-CippTestZTNA21814 {
             }
         }
 
-        $SyncedUsers = $RoleData | Where-Object { $_.OnPremisesSyncEnabled -eq $true }
+        $SyncedUsers = $RoleData.Where({ $_.OnPremisesSyncEnabled -eq $true })
         $Passed = $SyncedUsers.Count -eq 0
 
         if ($Passed) {

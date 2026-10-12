@@ -12,7 +12,6 @@ Function Invoke-CreateSafeLinksPolicyTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     try {
         $GUID = (New-Guid).GUID
@@ -64,7 +63,7 @@ Function Invoke-CreateSafeLinksPolicyTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $Headers -API $APINAME -message "Failed to create SafeLinks policy template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to create SafeLinks policy template: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

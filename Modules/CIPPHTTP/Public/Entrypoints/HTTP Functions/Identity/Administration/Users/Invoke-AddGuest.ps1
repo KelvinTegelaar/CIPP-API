@@ -48,7 +48,7 @@ function Invoke-AddGuest {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to Invite Guest. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

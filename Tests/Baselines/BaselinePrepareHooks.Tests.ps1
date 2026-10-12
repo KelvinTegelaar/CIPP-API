@@ -19,17 +19,19 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines'
+    $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
     function New-CIPPDbRequest { param($TenantFilter, $Type) }
+    function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineCacheRows.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineDeviceRegistrationPolicyState.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineDisableBasicAuthSMTPState.ps1')
-    . (Join-Path $Baselines 'Get-CIPPBaselineActivityBasedTimeoutState.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
+    . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDeviceRegistrationPolicyState.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDisableBasicAuthSMTPState.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineActivityBasedTimeoutState.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
 
@@ -192,6 +194,14 @@ Describe 'Get-CIPPBaselineCacheRows' {
         $Rows.Count | Should -Be 1
     }
 
+    It 'does not re-collect a type that was collected and is genuinely empty' {
+        Mock New-CIPPDbRequest { @() }
+        Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'ProbeType-Count'; DataCount = 0 } }
+        Mock Set-CIPPDBCacheProbeType {}
+        @(Get-CIPPBaselineCacheRows -TenantFilter $script:Tenant -Type 'ProbeType').Count | Should -Be 0
+        Should -Invoke Set-CIPPDBCacheProbeType -Times 0
+    }
+
     It 'passes collector arguments through, so an umbrella collector is not run at full fan-out' {
         Mock New-CIPPDbRequest { @() }
         Mock Set-CIPPDBCacheProbeType {}
@@ -231,9 +241,9 @@ Describe 'Empty-but-collected caches' {
     # at No Data forever on a tenant that legitimately has nothing - the same permanent-No-Data
     # failure as the missing second cache, just triggered by an empty one.
     BeforeAll {
-        . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
-        . (Join-Path $Baselines 'Get-CIPPBaselineTeamsDisableResourceAccountsState.ps1')
-        . (Join-Path $Baselines 'Get-CIPPBaselineStaleEntraDevicesState.ps1')
+        . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineTeamsDisableResourceAccountsState.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineStaleEntraDevicesState.ps1')
         function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
     }
     BeforeEach { Mock New-CIPPDbRequest { @() } }
@@ -271,8 +281,8 @@ Describe 'Get-CIPPBaselineQuarantineRequestAlertState' {
     # address is ON the notify list. Recipients an operator added by hand are left alone.
     # An exact array compare would strip them, which is a behaviour change this must not make.
     BeforeAll {
-        . (Join-Path $Baselines 'Test-CIPPBaselineCacheCollected.ps1')
-        . (Join-Path $Baselines 'Get-CIPPBaselineQuarantineRequestAlertState.ps1')
+        . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineQuarantineRequestAlertState.ps1')
         function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
         $script:AlertName = 'CIPP User requested to release a quarantined message'
         $script:Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ NotifyUser = 'soc@contoso.com' } }
@@ -332,7 +342,7 @@ Describe 'Get-CIPPBaselineSafeAttachmentPolicyState' {
     # tenant already carries, remediation creates a SECOND policy instead of updating the one
     # that exists, and both then fight over the same rule.
     BeforeAll {
-        . (Join-Path $Baselines 'Get-CIPPBaselineSafeAttachmentPolicyState.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineSafeAttachmentPolicyState.ps1')
         $script:Domains = @([PSCustomObject]@{ Name = 'contoso.com' }, [PSCustomObject]@{ Name = 'contoso.mail.onmicrosoft.com' })
         function New-Item2 { param($Name, $Policy) [PSCustomObject]@{ Name = $Name; SafeAttachmentPolicy = $Policy; Priority = 0; RecipientDomainIs = @('contoso.com', 'contoso.mail.onmicrosoft.com') } }
         $script:Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{
@@ -384,5 +394,46 @@ Describe 'Get-CIPPBaselineSafeAttachmentPolicyState' {
     It 'does not grade RedirectAddress when none is configured' {
         $Prepared = Get-CIPPBaselineSafeAttachmentPolicyState -Item $script:Item -TenantFilter $script:Tenant
         $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'redirectAddress'
+    }
+}
+
+Describe 'Get-CIPPBaselineAddDMARCToMOERAState' {
+    # The MoeraDmarc cache holds one row per domain; a declarative read only graded the first.
+    BeforeAll {
+        . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
+        . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineAddDMARCToMOERAState.ps1')
+        function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
+        $script:Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ RecordValue = 'v=DMARC1; p=reject;' } }
+    }
+    BeforeEach { Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'MoeraDmarc-Count'; DataCount = 1 } } }
+
+    It 'names only the non-compliant domain, including one that is not first' {
+        Mock New-CIPPDbRequest {
+            @(
+                @{ domain = 'a.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1; p=reject;' }
+                @{ domain = 'b.onmicrosoft.com'; hasDmarc = $false; record = $null }
+                @{ domain = 'c.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1; p=none;' }
+            ) | ConvertTo-Cached
+        }
+        $Prepared = Get-CIPPBaselineAddDMARCToMOERAState -Item $script:Item -TenantFilter $script:Tenant
+        $Prepared.Current.domainsWithoutDmarc | Should -Be @('b.onmicrosoft.com', 'c.onmicrosoft.com')
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'is compliant when every domain matches' {
+        Mock New-CIPPDbRequest {
+            @(
+                @{ domain = 'a.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1; p=reject;' }
+                @{ domain = 'b.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1; p=reject;' }
+            ) | ConvertTo-Cached
+        }
+        $Prepared = Get-CIPPBaselineAddDMARCToMOERAState -Item $script:Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'reports a null Current when the cache was never collected' {
+        Mock New-CIPPDbRequest { @() }
+        Mock Get-CIPPDbItem { $null }
+        (Get-CIPPBaselineAddDMARCToMOERAState -Item $script:Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
     }
 }

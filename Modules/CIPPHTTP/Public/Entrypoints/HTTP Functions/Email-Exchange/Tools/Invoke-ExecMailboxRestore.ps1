@@ -119,7 +119,7 @@ function Invoke-ExecMailboxRestore {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to $($Action ?? 'create') mailbox restore request: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{
             RestoreRequest = $null
             Results        = @($ErrorMessage.NormalizedError)

@@ -18,10 +18,6 @@ function Invoke-ExecExtensionNinjaOneQueue {
                 Invoke-NinjaOneOrgMapping
                 Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message 'NinjaOne StartAutoMapping completed' -Sev 'Info'
             }
-            'AutoMapTenant' {
-                Invoke-NinjaOneOrgMappingTenant -QueueItem $QueueItem
-                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message 'NinjaOne AutoMapTenant completed' -Sev 'Info'
-            }
             'SyncTenant' {
                 Invoke-NinjaOneTenantSync -QueueItem $QueueItem
                 Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message 'NinjaOne SyncTenant completed' -Sev 'Info'

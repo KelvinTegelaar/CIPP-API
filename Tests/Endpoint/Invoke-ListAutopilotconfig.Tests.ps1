@@ -106,12 +106,12 @@ Describe 'Invoke-ListAutopilotconfig ApProfile' {
         @($Response.Body) | Should -HaveCount 0
     }
 
-    It 'surfaces a Graph error on the profile request as Forbidden' {
+    It 'surfaces a Graph error on the profile request as a server error' {
         $script:ProfileStatus = 403
 
         $Response = Invoke-ListAutopilotconfig -Request (New-ListAPRequest -Type 'ApProfile') -TriggerMetadata $null
 
-        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::Forbidden)
+        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::InternalServerError)
         $Response.Body | Should -Be 'Graph said no'
     }
 }

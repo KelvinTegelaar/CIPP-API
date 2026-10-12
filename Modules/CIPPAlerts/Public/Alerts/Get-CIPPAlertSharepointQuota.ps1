@@ -32,6 +32,7 @@ function Get-CIPPAlertSharepointQuota {
         $UsedStoragePercentage = [int](($GeoUsedStorageMB / $TenantStorageMB) * 100)
         if ($UsedStoragePercentage -gt $Value) {
             $AlertData = [PSCustomObject]@{
+                Message               = "SharePoint storage is above the $Value% quota threshold"
                 UsedStoragePercentage = $UsedStoragePercentage
                 StorageUsed           = ([math]::Round($GeoUsedStorageMB / 1024, 2))
                 StorageQuota          = ([math]::Round($TenantStorageMB / 1024, 2))

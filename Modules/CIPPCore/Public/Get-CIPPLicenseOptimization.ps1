@@ -57,6 +57,13 @@ function Get-CIPPLicenseOptimization {
     $Users = @($Users)
     $ActivityDetail = @($ActivityDetail)
 
+    # The overview (Get-CIPPLicenseOverview) already has the ExcludedLicenses table applied and tags
+    # every subscription with Microsoft's isTrial flag in TermInfo. Trial seats cost nothing, so a
+    # SKU held only on trial subscriptions is not waste and is left out here; the licenses page
+    # still shows it.
+    $OverviewKnown = $Licenses.Count -gt 0
+    $Licenses = @($Licenses | Where-Object { @($_.TermInfo).Count -eq 0 -or @($_.TermInfo | Where-Object { $_.IsTrial -ne $true }).Count -gt 0 })
+
     # --- price map (lowercased skuId -> price object) ---
     $PriceBySku = @{}
     foreach ($Price in @(Get-CIPPLicensePrice -Currency $Currency)) {
@@ -89,6 +96,19 @@ function Get-CIPPLicenseOptimization {
             Available = $Total - $Used
         }
     }
+    # Who holds which license comes from the overview's AssignedUsers, never from the raw user
+    # objects, so exclusions and the trial rule above apply to every tier. Lowercased UPN -> skuIds.
+    $SkusOfUser = @{}
+    foreach ($Lic in $Licenses) {
+        if (-not $Lic.skuId) { continue }
+        $Key = ([string]$Lic.skuId).ToLowerInvariant()
+        foreach ($Holder in @($Lic.AssignedUsers)) {
+            if (-not $Holder.userPrincipalName) { continue }
+            $UpnKey = ([string]$Holder.userPrincipalName).ToLowerInvariant()
+            if (-not $SkusOfUser.ContainsKey($UpnKey)) { $SkusOfUser[$UpnKey] = [System.Collections.Generic.List[string]]::new() }
+            if (-not $SkusOfUser[$UpnKey].Contains($Key)) { $SkusOfUser[$UpnKey].Add($Key) }
+        }
+    }
     $NameOf = {
         param($Sku)
         $Key = ([string]$Sku).ToLowerInvariant()
@@ -112,9 +132,10 @@ function Get-CIPPLicenseOptimization {
         return $false
     }
 
-    # Real (non-service, non-guest) users only for per-user tiers
+    # Real (non-service, non-guest) users the overview lists as holding a license. The user object
+    # only supplies account attributes (enabled, sign-in dates).
     $RealUsers = @($Users | Where-Object {
-            $_.assignedLicenses -and @($_.assignedLicenses).Count -gt 0 -and
+            $_.userPrincipalName -and $SkusOfUser.ContainsKey(([string]$_.userPrincipalName).ToLowerInvariant()) -and
             $_.userType -ne 'Guest' -and $_.isResourceAccount -ne $true
         })
 
@@ -174,9 +195,7 @@ function Get-CIPPLicenseOptimization {
 
         if (-not $Disabled -and -not $Inactive) { continue }
         $Bucket = if ($Disabled) { $DisabledBySku } else { $InactiveBySku }
-        foreach ($Assigned in @($User.assignedLicenses)) {
-            if (-not $Assigned.skuId) { continue }
-            $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+        foreach ($Key in $SkusOfUser[$Upn.ToLowerInvariant()]) {
             if (-not $Bucket.ContainsKey($Key)) { $Bucket[$Key] = [System.Collections.Generic.List[string]]::new() }
             $Bucket[$Key].Add($Upn)
         }
@@ -218,8 +237,7 @@ function Get-CIPPLicenseOptimization {
                       (& $ActiveIn $Activity 'teamsLastActivityDate') -or
                       (& $ActiveIn $Activity 'yammerLastActivityDate')
         if (-not $UsedExchange -or $UsedCollab) { continue }
-        foreach ($Assigned in @($User.assignedLicenses)) {
-            $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+        foreach ($Key in $SkusOfUser[([string]$User.userPrincipalName).ToLowerInvariant()]) {
             if (-not $ReviewSuiteSkus.Contains($Key)) { continue }
             if (-not $ReviewBySku.ContainsKey($Key)) { $ReviewBySku[$Key] = [System.Collections.Generic.List[string]]::new() }
             $ReviewBySku[$Key].Add([string]$User.userPrincipalName)
@@ -237,7 +255,7 @@ function Get-CIPPLicenseOptimization {
     # --- Tier 5: redundant SKU whose service plans are fully covered by another SKU the user holds ---
     $OverlapBySku = @{}
     foreach ($User in $RealUsers) {
-        $Held = @(@($User.assignedLicenses).skuId | Where-Object { $_ } | ForEach-Object { ([string]$_).ToLowerInvariant() } | Select-Object -Unique)
+        $Held = @($SkusOfUser[([string]$User.userPrincipalName).ToLowerInvariant()])
         if ($Held.Count -lt 2) { continue }
         foreach ($A in $Held) {
             if (-not $SkuInfo.ContainsKey($A) -or $SkuInfo[$A].PlanIds.Count -eq 0) { continue }
@@ -287,7 +305,7 @@ function Get-CIPPLicenseOptimization {
         PriceCoverage      = if ($TotalAssignedSeats -gt 0) { [math]::Round($PricedSeats / [double]$TotalAssignedSeats, 3) } else { 0 }
         OpportunityCount   = $Opportunities.Count
         AnonymizedReports  = $AnonymizedReports
-        DataAvailable      = ($Licenses.Count -gt 0)
+        DataAvailable      = $OverviewKnown
     }
 
     return [pscustomobject]@{

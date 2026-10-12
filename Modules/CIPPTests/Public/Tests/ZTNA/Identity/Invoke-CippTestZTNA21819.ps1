@@ -10,7 +10,7 @@ function Invoke-CippTestZTNA21819 {
     try {
         # Get Global Administrator role (template ID: 62e90394-69f5-4237-9190-012177145e10)
         $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
-        $GlobalAdminRole = $Roles | Where-Object { $_.roleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' }
+        $GlobalAdminRole = $Roles.Where({ $_.roleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' })
 
         if (-not $GlobalAdminRole) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'Activation alert for Global Administrator role assignment' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
@@ -23,9 +23,9 @@ function Invoke-CippTestZTNA21819 {
         # enforcedSettings}), so the policy was never found. roleDefinitionId carries the role's
         # TEMPLATE id, which is the correct join.
         $RoleManagementPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleManagementPolicies'
-        $GlobalAdminPolicy = $RoleManagementPolicies | Where-Object {
+        $GlobalAdminPolicy = $RoleManagementPolicies.Where({
             $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.roleDefinitionId -eq $GlobalAdminRole.roleTemplateId
-        } | Select-Object -First 1
+        }, 'First')[0]
 
         $Passed = 'Failed'
         $IsDefaultRecipientsEnabled = 'N/A'
@@ -33,9 +33,9 @@ function Invoke-CippTestZTNA21819 {
 
         if ($GlobalAdminPolicy) {
             # Find the notification rule for requestor end-user assignment
-            $NotificationRule = $GlobalAdminPolicy.effectiveRules | Where-Object {
+            $NotificationRule = $GlobalAdminPolicy.rules.Where({
                 $_.id -like '*Notification_Requestor_EndUser_Assignment*'
-            }
+            })
 
             if ($NotificationRule) {
                 $IsDefaultRecipientsEnabled = $NotificationRule.isDefaultRecipientsEnabled

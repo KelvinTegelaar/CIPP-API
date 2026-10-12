@@ -14,6 +14,7 @@ function Invoke-AddCAPolicy {
     $Tenants = $Request.body.tenantFilter.value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
 
+    $Failed = 0
     $results = foreach ($Tenant in $tenants) {
         try {
             $NewCAPolicy = @{
@@ -31,6 +32,7 @@ function Invoke-AddCAPolicy {
 
             "$CAPolicy"
         } catch {
+            $Failed++
             "$($_.Exception.Message)"
             continue
         }
@@ -40,7 +42,7 @@ function Invoke-AddCAPolicy {
     $body = [pscustomobject]@{'Results' = @($results) }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = $body
         })
 

@@ -22,7 +22,7 @@ Function Invoke-ExecDeviceDelete {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Results = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

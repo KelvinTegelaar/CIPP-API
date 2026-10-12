@@ -109,7 +109,7 @@ function Invoke-ListMailboxRules {
 
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
 
         return ([HttpResponseContext]@{

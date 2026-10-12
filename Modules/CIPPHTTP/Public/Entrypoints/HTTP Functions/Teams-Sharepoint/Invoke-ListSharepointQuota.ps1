@@ -52,6 +52,26 @@ Function Invoke-ListSharepointQuota {
             })
         }
 
+    } elseif ($TenantFilter -eq 'AllTenants') {
+        try {
+            $Rows = Get-CIPPDbItem -tenantFilter $TenantFilter -Type SharePointUsageReport -ByTenant
+            $SharePointQuotaDetails = @(foreach ($Tenant in $Rows.Keys) {
+                    $SharePointQuota = $Rows[$Tenant][0].Data | ConvertFrom-Json
+                    [PSCustomObject]@{
+                        Tenant           = $Tenant
+                        GeoUsedStorageMB = $SharePointQuota.GeoUsedStorageMB
+                        GeoLocations     = @($SharePointQuota.GeoLocations)
+                        TenantStorageMB  = $SharePointQuota.TenantStorageMB
+                        Percentage       = $SharePointQuota.Percentage
+                        Dashboard        = $SharePointQuota.Dashboard
+                    }
+                })
+        } catch {
+            return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::InternalServerError
+                Body       = $_.Exception.Message
+            })
+        }
     } else {
         try {
             $SharePointQuota = (Get-CIPPDbItem -tenantFilter $TenantFilter -Type SharePointUsageReport | Where-Object { $_.RowKey -notlike '*-Count' }).Data | ConvertFrom-Json
