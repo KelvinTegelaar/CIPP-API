@@ -60966,6 +60966,9 @@
                       "Percentage": {
                         "x-cipp-field-source": "backend"
                       },
+                      "Tenant": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "TenantStorageMB": {
                         "x-cipp-field-source": "backend"
                       }
