@@ -22,6 +22,8 @@ Describe 'Send-CIPPJITAdminApprovalNotification push' {
     BeforeEach {
         $script:OriginalNg = $env:CIPPNG
         Mock Send-CIPPAlert { }
+        Mock Write-LogMessage { throw $message }
+        Mock Get-CIPPAzDataTableEntity { }
         Mock Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'allowedUsers' } {
             [pscustomobject]@{ RowKey = 'boss@msp.com'; Roles = '["superadmin"]' }
             [pscustomobject]@{ RowKey = 'tech@msp.com'; Roles = '["superadmin"]' }
