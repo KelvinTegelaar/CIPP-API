@@ -2,7 +2,7 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     function Get-CIPPTable { param($TableName) @{ TableName = $TableName } }
     function Get-CIPPAzDataTableEntity { param($TableName, $Filter) }
-    function Get-CIPPJITAdminApprovalRequirement { param($Roles) }
+    function Get-CIPPJITAdminApprovalRequirement { param($Roles, $TenantFilter) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Set-CIPPUserJITAdmin.ps1')
 
@@ -21,6 +21,7 @@ Describe 'Set-CIPPUserJITAdmin approval guard' {
 
     It 'blocks an elevation with no approved request' {
         { Set-CIPPUserJITAdmin @Grant -WhatIf } | Should -Throw '*no approved JIT Admin request*'
+        Should -Invoke Get-CIPPJITAdminApprovalRequirement -ParameterFilter { $TenantFilter -eq 'contoso.com' }
     }
 
     It 'blocks an elevation that adds roles beyond the approved request' {

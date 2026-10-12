@@ -26413,6 +26413,27 @@
                   "Action": {
                     "type": "string"
                   },
+                  "ApprovalTenants": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "description": "Tenants or tenant groups where approval applies; none selected means every tenant"
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "Tenants or tenant groups where approval applies; none selected means every tenant"
+                        },
+                        "value": {
+                          "type": "string",
+                          "description": "Tenants or tenant groups where approval applies; none selected means every tenant"
+                        }
+                      }
+                    },
+                    "description": "Tenants or tenant groups where approval applies; none selected means every tenant"
+                  },
                   "ApprovalTriggerRoles": {
                     "type": "array",
                     "items": {

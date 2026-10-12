@@ -12,7 +12,7 @@ BeforeAll {
     function Add-CIPPScheduledTask { param($Task, $hidden, [switch]$RunNow) }
     function Set-CIPPUserJITAdmin { param($TenantFilter, $User, $Roles, $Groups, $Action, $Expiration, $StartDate, $Reason, $Headers, $APIName) }
     function Set-CIPPUserJITAdminProperties { param($TenantFilter, $UserId, $Expiration, $StartDate, $Reason, $CreatedBy) }
-    function Get-CIPPJITAdminApprovalRequirement { param($Roles) }
+    function Get-CIPPJITAdminApprovalRequirement { param($Roles, $TenantFilter) }
     function Add-CIPPAzDataTableEntity { param($TableName, $Entity, [switch]$Force) }
     function Update-AzDataTableEntity { param($TableName, $Entity) }
     function Send-CIPPJITAdminApprovalNotification { param($ApprovalRequest, $Status, $Note, $Results) }
@@ -87,6 +87,7 @@ Describe 'Invoke-ExecJITAdmin approval' {
             $Entity.RoleIds -eq '["62e90394-69f5-4237-9190-012177145e10"]' -and $Entity.ApproverRoles -eq '["admin"]'
         }
         Should -Invoke Send-CIPPJITAdminApprovalNotification -Times 1 -ParameterFilter { $Status -eq 'Requested' }
+        Should -Invoke Get-CIPPJITAdminApprovalRequirement -ParameterFilter { $TenantFilter -eq 'contoso.com' }
         Should -Invoke Add-CIPPScheduledTask -Times 0
         Should -Invoke Set-CIPPUserJITAdminProperties -Times 0
     }

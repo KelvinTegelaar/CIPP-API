@@ -53,7 +53,7 @@ function Set-CIPPUserJITAdmin {
         [string]$ApprovalRequestId
     )
 
-    if ($Action -in @('AddRoles', 'AddGroups', 'AddRolesAndGroups') -and (Get-CIPPJITAdminApprovalRequirement -Roles $Roles)) {
+    if ($Action -in @('AddRoles', 'AddGroups', 'AddRolesAndGroups') -and (Get-CIPPJITAdminApprovalRequirement -Roles $Roles -TenantFilter $TenantFilter)) {
         $ApprovalTable = Get-CIPPTable -TableName 'JITAdminRequests'
         $ParsedId = [guid]::Empty
         $Approval = if ([guid]::TryParse($ApprovalRequestId, [ref]$ParsedId)) {

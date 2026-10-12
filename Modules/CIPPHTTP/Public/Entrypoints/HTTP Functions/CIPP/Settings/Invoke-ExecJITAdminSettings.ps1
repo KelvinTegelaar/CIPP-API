@@ -33,6 +33,7 @@ function Invoke-ExecJITAdminSettings {
                     MaxDuration          = $JITAdminConfig.MaxDuration
                     RequireApproval      = [bool]$JITAdminConfig.RequireApproval
                     ApprovalTriggerRoles = @(if ($JITAdminConfig.ApprovalTriggerRoles) { $JITAdminConfig.ApprovalTriggerRoles | ConvertFrom-Json })
+                    ApprovalTenants      = @(if ($JITAdminConfig.ApprovalTenants) { $JITAdminConfig.ApprovalTenants | ConvertFrom-Json })
                     ApproverRoles        = @(if ($JITAdminConfig.ApproverRoles) { $JITAdminConfig.ApproverRoles | ConvertFrom-Json | ForEach-Object { @{ label = $_; value = $_ } } })
                     RequiredApprovals    = [math]::Max(1, [int]$JITAdminConfig.RequiredApprovals)
                 }
@@ -60,6 +61,8 @@ function Invoke-ExecJITAdminSettings {
 
                 # Roles that need approval; none selected means every JIT Admin request needs approval
                 $TriggerRoles = @($Request.Body.ApprovalTriggerRoles | Where-Object { $_.value } | ForEach-Object { @{ label = $_.label; value = $_.value } })
+                # Tenants or tenant groups where approval applies; none selected means every tenant
+                $ApprovalTenants = @($Request.Body.ApprovalTenants | Where-Object { $_.value } | ForEach-Object { @{ label = $_.label; value = $_.value; type = $_.type } })
                 # CIPP roles whose users can approve requests
                 $ApproverRoles = @($Request.Body.ApproverRoles.value | Where-Object { $_ })
                 if ([bool]$Request.Body.RequireApproval -and $ApproverRoles.Count -eq 0) {
@@ -69,6 +72,7 @@ function Invoke-ExecJITAdminSettings {
                 }
                 $JITAdminConfig | Add-Member -NotePropertyName RequireApproval -NotePropertyValue ([bool]$Request.Body.RequireApproval) -Force
                 $JITAdminConfig | Add-Member -NotePropertyName ApprovalTriggerRoles -NotePropertyValue ([string](ConvertTo-Json -InputObject $TriggerRoles -Compress)) -Force
+                $JITAdminConfig | Add-Member -NotePropertyName ApprovalTenants -NotePropertyValue ([string](ConvertTo-Json -InputObject $ApprovalTenants -Compress)) -Force
                 $JITAdminConfig | Add-Member -NotePropertyName ApproverRoles -NotePropertyValue ([string](ConvertTo-Json -InputObject $ApproverRoles -Compress)) -Force
                 $JITAdminConfig | Add-Member -NotePropertyName RequiredApprovals -NotePropertyValue ([math]::Max(1, ($Request.Body.RequiredApprovals -as [int]))) -Force
 
@@ -83,7 +87,7 @@ function Invoke-ExecJITAdminSettings {
                     'Successfully removed JIT Admin maximum duration limit'
                 }
                 $ApprovalMessage = if ($JITAdminConfig.RequireApproval) {
-                    "approval required: $($JITAdminConfig.RequiredApprovals) from $($ApproverRoles -join ', ')"
+                    "approval required: $($JITAdminConfig.RequiredApprovals) from $($ApproverRoles -join ', ') in $(if ($ApprovalTenants.Count -gt 0) { "$($ApprovalTenants.Count) tenant selection(s)" } else { 'all tenants' })"
                 } else {
                     'approval not required'
                 }
