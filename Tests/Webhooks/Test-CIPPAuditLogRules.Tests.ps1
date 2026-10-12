@@ -350,6 +350,28 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             $script:ExpandCalls | Should -Be $AfterFirst
         }
 
+        It 'expands exclusions only for rules that cover the tenant' {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                param($TableName, $Context, $Filter, $Property, $First)
+                switch ($TableName) {
+                    'WebhookRules' {
+                        [pscustomobject]@{
+                            PartitionKey    = 'WebhookRules'; RowKey = 'fabrikam-only'; Type = 'Audit'
+                            Tenants         = '[{"label":"Fabrikam","value":"fabrikam.com","type":"Tenant"}]'
+                            excludedTenants = '[{"label":"Group","value":"group-1","type":"Group"}]'
+                            Conditions      = '[{"Property":{"label":"Operation"},"Operator":{"label":"eq"},"Input":{"value":"Set-Mailbox"}}]'
+                            Actions         = '["generatemail"]'
+                        }
+                    }
+                    'cacheauditloglookups' { $script:LookupRows }
+                    default { @() }
+                }
+            }
+            Mock -CommandName Expand-CIPPTenantGroups -MockWith { param($TenantFilter) $script:ExpandCalls++; $TenantFilter }
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
+            $script:ExpandCalls | Should -Be 1 -Because 'only the inclusions are expanded for a rule that does not cover the tenant'
+        }
+
         It 'rebuilds once the entry has expired' {
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow -Id 'rec-1')
             $AfterFirst = $script:ExpandCalls

@@ -199,7 +199,8 @@ function Test-CIPPAuditLogRules {
             HasLocationData        = $null
         }
 
-        # In-process memo of the expanded rule set, shared by every tenant and filtered per call. Rebuilding it reads the whole
+        # Memo of the expanded rule set. Script scope lasts one worker invocation, so it is reused by the slices of
+        # one search, then filtered per call. Rebuilding it reads the whole
         # WebhookRules table and calls Expand-CIPPTenantGroups for every entry that survives, which
         # measured 179 ms on every invocation - and the engine is invoked once per slice, so a
         # tenant with a large backlog paid it over and over for an answer that had not changed.
@@ -223,16 +224,13 @@ function Test-CIPPAuditLogRules {
                 if ($null -eq $Tenants) {
                     continue
                 }
-                # Expand tenant groups in inclusions and exclusions alike
-                $ExcludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue
-                if ($ExcludedTenants) {
-                    $ExcludedTenants = @(Expand-CIPPTenantGroups -TenantFilter $ExcludedTenants)
-                }
                 [pscustomobject]@{
-                    Expanded = @((Expand-CIPPTenantGroups -TenantFilter $Tenants).value)
-                    Rule     = [pscustomobject]@{
+                    Expanded         = @((Expand-CIPPTenantGroups -TenantFilter $Tenants).value)
+                    ExcludedTenants  = $ConfigEntry.excludedTenants
+                    ExcludedExpanded = $false
+                    Rule             = [pscustomobject]@{
                         Tenants           = $Tenants
-                        Excluded          = $ExcludedTenants
+                        Excluded          = $null
                         Conditions        = $ConfigEntry.Conditions
                         Actions           = $ConfigEntry.Actions
                         BecActions        = $ConfigEntry.BecActions
@@ -246,7 +244,17 @@ function Test-CIPPAuditLogRules {
             $script:AuditRuleSetCache = [pscustomobject]@{ Expires = $Now.Add($ConfigTtl); Rules = @($Rules) }
         }
         $Configuration = @(foreach ($Entry in $script:AuditRuleSetCache.Rules) {
-                if ($Entry.Expanded -contains $TenantFilter -or $Entry.Expanded -contains 'AllTenants') { $Entry.Rule }
+                if ($Entry.Expanded -notcontains $TenantFilter -and $Entry.Expanded -notcontains 'AllTenants') { continue }
+                # Exclusions are expanded only for rules that cover the tenant, as each expansion reads the tenant list.
+                if (-not $Entry.ExcludedExpanded) {
+                    $ExcludedTenants = $Entry.ExcludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    if ($ExcludedTenants) {
+                        $ExcludedTenants = @(Expand-CIPPTenantGroups -TenantFilter $ExcludedTenants)
+                    }
+                    $Entry.Rule.Excluded = $ExcludedTenants
+                    $Entry.ExcludedExpanded = $true
+                }
+                $Entry.Rule
             })
 
         # Only the referenced entries of a cached blob, as the same hashtable a full ConvertFrom-Json -AsHashtable gives.
