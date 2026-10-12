@@ -25,10 +25,14 @@ function Invoke-CIPPBaselineFIDO2PasskeyProfiles {
     $Enforce = [bool]($Remediate.enforceKeyRestrictions -eq $true -or "$($Remediate.enforceKeyRestrictions)" -eq 'True')
     $EnforcementType = "$($Remediate.enforcementType)"
     if ([string]::IsNullOrWhiteSpace($EnforcementType)) { $EnforcementType = 'allow' }
-    $AAGUIDs = @("$($Remediate.aaGuids)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-    # A profile's AAGUID list only takes effect while key restrictions are enforced; sent with
-    # isEnforced = $false the list is stored but never applied. Supplying AAGUIDs implies enforcement.
+    $AAGUIDs = @(@($Remediate.aaGuids) | ForEach-Object { "$($_.value ?? $_)" -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    # The list only takes effect while isEnforced = $true, so supplying AAGUIDs implies enforcement.
     if ($AAGUIDs.Count -gt 0) { $Enforce = $true }
+    # Windows Hello and Authenticator passkeys stay allowed unless the operator opts out.
+    if ($Enforce -and $EnforcementType -eq 'allow' -and "$($Remediate.allowMicrosoftPasskeys)" -ne 'False') {
+        $AAGUIDs = @($AAGUIDs; '08987058-cadc-4b81-b6e1-30de50dcbe96', '9ddd1817-af5a-4672-a2b9-3e3dd95000a9', '6028b017-b1d4-4c02-b4b3-afcdafc96bb2', 'de1e552d-db1d-4423-a619-566b625cdc84', '90a3ccdf-635c-4729-a248-9b709135078f')
+    }
+    $AAGUIDs = @($AAGUIDs | Sort-Object -Unique)
 
     $UpdatedProfiles = @(@($Current.allProfiles) | ForEach-Object {
             if ("$($_.id)" -eq $DefaultId) {
