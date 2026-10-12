@@ -27,6 +27,14 @@ function New-CIPPTravelPolicy {
     .PARAMETER PolicyName
     The display name used for both the conditional access policy and the named location.
 
+    .PARAMETER ExistingLocations
+    Optional IDs of existing named locations that should also be allowed (excluded from the block),
+    for example the home country or office IP ranges. These locations are referenced only and are
+    never modified or deleted by Remove-CIPPTravelPolicy.
+
+    .PARAMETER AllowTrusted
+    Also allow sign-ins from all locations marked as trusted in the tenant ('AllTrusted').
+
     .PARAMETER APIName
     The name of the API operation being performed. Defaults to 'New-CIPPTravelPolicy'.
     #>
@@ -37,6 +45,8 @@ function New-CIPPTravelPolicy {
         [Parameter(Mandatory = $true)][string[]]$Users,
         [Parameter(Mandatory = $true)][string[]]$Countries,
         [Parameter(Mandatory = $true)][string]$PolicyName,
+        [string[]]$ExistingLocations,
+        [bool]$AllowTrusted = $false,
         [string]$APIName = 'New-CIPPTravelPolicy'
     )
     try {
@@ -49,6 +59,18 @@ function New-CIPPTravelPolicy {
             }
         }
 
+        # Existing named locations are passed as IDs. New-CIPPCAPolicy only replaces display names found
+        # in LocationInfo, so GUIDs are left untouched and referenced as-is.
+        $ExcludeLocations = [System.Collections.Generic.List[string]]::new()
+        $ExcludeLocations.Add($PolicyName)
+        foreach ($LocationId in @($ExistingLocations | Where-Object { $_ })) {
+            if ($LocationId -notmatch $GuidRegex) {
+                throw "Existing named location '$LocationId' is not a valid named location ID."
+            }
+            if (-not $ExcludeLocations.Contains($LocationId)) { $ExcludeLocations.Add($LocationId) }
+        }
+        if ($AllowTrusted) { $ExcludeLocations.Add('AllTrusted') }
+
         $RawJSON = ConvertTo-Json -Depth 10 -InputObject @{
             displayName   = $PolicyName
             state         = 'enabled'
@@ -58,7 +80,7 @@ function New-CIPPTravelPolicy {
                 clientAppTypes = @('all')
                 locations      = @{
                     includeLocations = @('All')
-                    excludeLocations = @($PolicyName)
+                    excludeLocations = @($ExcludeLocations)
                 }
             }
             grantControls = @{
@@ -75,7 +97,10 @@ function New-CIPPTravelPolicy {
             )
         }
         $null = New-CIPPCAPolicy -RawJSON $RawJSON -TenantFilter $TenantFilter -Overwrite $true -ReplacePattern 'none' -APIName $APIName -Headers $Headers
-        $Result = "Created temporary travel policy '$PolicyName' allowing sign-ins from $($Countries -join ', ') only."
+        $AlsoAllowed = @()
+        if (@($ExistingLocations | Where-Object { $_ }).Count -gt 0) { $AlsoAllowed += "$(@($ExistingLocations | Where-Object { $_ }).Count) existing named location(s)" }
+        if ($AllowTrusted) { $AlsoAllowed += 'all trusted locations' }
+        $Result = "Created temporary travel policy '$PolicyName' allowing sign-ins from $($Countries -join ', ')$(if ($AlsoAllowed) { ' and ' + ($AlsoAllowed -join ', ') }) only."
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         return $Result
     } catch {
