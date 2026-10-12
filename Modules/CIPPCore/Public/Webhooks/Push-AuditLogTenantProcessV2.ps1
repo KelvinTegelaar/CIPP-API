@@ -34,6 +34,8 @@ function Push-AuditLogTenantProcessV2 {
     # unchanged even though the read is now one partition.
     $SliceSize = 500
 
+    # Test-CIPPAuditLogRules keeps a large slice's directory here for the search's later slices; cleared when the search ends.
+    $script:AuditRuleSearchLookups = [pscustomobject]@{ Tenant = $TenantFilter; UserLookup = $null; GroupLookup = $null; DeviceLookup = $null; ServicePrincipalLookup = $null }
     try {
         $CacheWebhooksTable = Get-CippTable -TableName 'CacheWebhooks'
         $ProcessedCount = 0
@@ -92,11 +94,8 @@ function Push-AuditLogTenantProcessV2 {
                 # try/catch, not -ErrorAction: ConvertFrom-Json parse failures are terminating, so
                 # without the catch one garbled row aborts the whole batch via the outer catch.
                 try {
-                    # -InputObject rather than a pipeline, once per record. A null JSON column binds
-                    # as a terminating error here where the pipeline form simply emitted nothing,
-                    # but both land on $Parsed = $null and the poison path below, so the row is
-                    # treated identically.
-                    $Parsed = ConvertFrom-Json -InputObject $Entity.JSON -ErrorAction Stop
+                    # CippJson reads like ConvertFrom-Json; a null or empty JSON column gives $null and the poison path below.
+                    $Parsed = [CIPP.CippJson]::ConvertFromJson([string]$Entity.JSON)
                 } catch {
                     $Parsed = $null
                 }
@@ -203,5 +202,7 @@ function Push-AuditLogTenantProcessV2 {
         }
         Write-Information ('Push-AuditLogTenantProcessV2: Error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
         return $false
+    } finally {
+        $script:AuditRuleSearchLookups = $null
     }
 }
