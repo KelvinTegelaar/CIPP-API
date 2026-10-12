@@ -50,7 +50,8 @@ Describe 'Start-LogRetentionCleanup' {
 
     It 'keeps deleting while full batches come back' {
         $script:Calls = 0
-        Mock Get-AzDataTableEntity {
+        Mock Get-AzDataTableEntity -ParameterFilter { $TableName -eq 'AuditLogCoverage' } { @() }
+        Mock Get-AzDataTableEntity -ParameterFilter { $TableName -eq 'CippLogs' } {
             $script:Calls++
             $Size = if ($script:Calls -eq 1) { 5000 } else { 10 }
             1..$Size | ForEach-Object { [pscustomobject]@{ PartitionKey = '20200101'; RowKey = "$_" } }
@@ -58,5 +59,20 @@ Describe 'Start-LogRetentionCleanup' {
         Start-LogRetentionCleanup
         Should -Invoke Remove-CIPPAzDataTableEntity -Times 2 -Exactly
         Should -Invoke Write-LogMessage -ParameterFilter { $message -like 'Deleted 5010 old log entries in 2 batch*' }
+    }
+
+    It 'trims the audit-log coverage ledger to 30 days by Timestamp, in batches' {
+        $script:CoverageCalls = 0
+        Mock Get-AzDataTableEntity -ParameterFilter { $TableName -eq 'CippLogs' } { @() }
+        Mock Get-AzDataTableEntity -ParameterFilter { $TableName -eq 'AuditLogCoverage' } {
+            $script:CoverageCalls++
+            $Size = if ($script:CoverageCalls -eq 1) { 5000 } else { 3 }
+            1..$Size | ForEach-Object { [pscustomobject]@{ PartitionKey = 'contoso.example'; RowKey = "$_" } }
+        }
+        Start-LogRetentionCleanup
+        $Expected = (Get-Date).ToUniversalTime().AddDays(-30).ToString('yyyy-MM-dd')
+        Should -Invoke Get-AzDataTableEntity -ParameterFilter { $TableName -eq 'AuditLogCoverage' -and $Filter -like "Timestamp lt datetime'$Expected*'" -and $First -eq 5000 }
+        Should -Invoke Remove-CIPPAzDataTableEntity -Times 2 -Exactly -ParameterFilter { $TableName -eq 'AuditLogCoverage' }
+        Should -Invoke Write-LogMessage -ParameterFilter { $message -like 'Deleted 5003 audit-log coverage ledger rows older than 30 days' }
     }
 }

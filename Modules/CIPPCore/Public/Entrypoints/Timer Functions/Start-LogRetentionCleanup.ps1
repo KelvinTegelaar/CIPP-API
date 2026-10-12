@@ -94,7 +94,33 @@ function Start-LogRetentionCleanup {
             }
         }
 
-        Write-LogMessage -API 'LogRetentionCleanup' -message "Log cleanup completed. Total logs deleted: $TotalDeletedCount (retention: $RetentionDays days)" -Sev 'Info'
+        # The audit-log coverage ledger (one row per tenant per hour, plus reconciliation and manual
+        # rows) has no other retention. The engine needs about 50 hours of it and the page defaults
+        # to 48, so 30 days keeps enough to investigate a late-reported gap without carrying the
+        # log retention window. Rows stop changing once a window is processed, so Timestamp is a
+        # safe age; it is not a key, so this is a scan, but it only runs once a day.
+        $CoverageRetentionDays = 30
+        $CoverageDeletedCount = 0
+        if ($PSCmdlet.ShouldProcess('AuditLogCoverage', 'Cleaning up old coverage ledger rows')) {
+            $CoverageTable = Get-CippTable -tablename 'AuditLogCoverage'
+            $CutoffIso = (Get-Date).ToUniversalTime().AddDays(-$CoverageRetentionDays).ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $CoverageFilter = "Timestamp lt datetime'$CutoffIso'"
+            $HasMoreRecords = $true
+            while ($HasMoreRecords) {
+                $OldRows = Get-AzDataTableEntity @CoverageTable -Filter $CoverageFilter -Property @('PartitionKey', 'RowKey') -First $BatchSize
+                $BatchCount = ($OldRows | Measure-Object).Count
+                if ($BatchCount -gt 0) {
+                    Remove-CIPPAzDataTableEntity @CoverageTable -Entity $OldRows -Force
+                    $CoverageDeletedCount += $BatchCount
+                }
+                $HasMoreRecords = $BatchCount -eq $BatchSize
+            }
+            if ($CoverageDeletedCount -gt 0) {
+                Write-LogMessage -API 'LogRetentionCleanup' -message "Deleted $CoverageDeletedCount audit-log coverage ledger rows older than $CoverageRetentionDays days" -Sev 'Info'
+            }
+        }
+
+        Write-LogMessage -API 'LogRetentionCleanup' -message "Log cleanup completed. Total logs deleted: $TotalDeletedCount, coverage ledger rows deleted: $CoverageDeletedCount (retention: $RetentionDays days)" -Sev 'Info'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
