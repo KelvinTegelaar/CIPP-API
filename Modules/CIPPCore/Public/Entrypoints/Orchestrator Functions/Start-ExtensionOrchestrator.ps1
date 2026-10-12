@@ -20,6 +20,13 @@ function Start-ExtensionOrchestrator {
 
     # NinjaOne Extension
     if ($Configuration.NinjaOne.Enabled -eq $true) {
+        if ($PSCmdlet.ShouldProcess('Invoke-NinjaOneOrgMapping')) {
+            try {
+                Invoke-NinjaOneOrgMapping -NameOnly | Out-Null
+            } catch {
+                Write-LogMessage -API 'NinjaOneAutoMap' -message "NinjaOne background AutoMap failed: $($_.Exception.Message)" -Sev 'Error'
+            }
+        }
         if ($PSCmdlet.ShouldProcess('Invoke-NinjaOneExtensionScheduler')) {
             Invoke-NinjaOneExtensionScheduler
         }
