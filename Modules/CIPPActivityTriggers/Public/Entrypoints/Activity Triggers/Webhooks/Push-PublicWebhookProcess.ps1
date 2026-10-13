@@ -7,6 +7,7 @@ function Push-PublicWebhookProcess {
 
     $Table = Get-CIPPTable -TableName WebhookIncoming
     $Webhook = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Item.RowKey)'"
+    if (-not $Webhook) { return }
     try {
         if ($Webhook.Type -eq 'GraphSubscription') {
             Invoke-CippGraphWebhookProcessing -Data ($Webhook.Data | ConvertFrom-Json) -CIPPID $Webhook.CIPPID -WebhookInfo ($Webhook.Webhookinfo | ConvertFrom-Json)
