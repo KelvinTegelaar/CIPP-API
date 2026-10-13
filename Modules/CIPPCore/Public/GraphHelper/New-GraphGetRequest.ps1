@@ -60,7 +60,7 @@ function New-GraphGetRequest {
         }
 
         if (!$headers['User-Agent']) {
-            $headers['User-Agent'] = Get-CippUserAgent
+            $headers['User-Agent'] = Get-CippUserAgent -SharePoint:($uri -match '^https://[^/]+\.sharepoint(-[a-z]+)?\.')
         }
 
 
@@ -172,11 +172,11 @@ function New-GraphGetRequest {
                             $ShouldRetry = $true
                         }
                     }
-                    # Check for "Resource temporarily unavailable" / SharePoint CSOM throttling
+                    # 503 (SharePoint's internal busy signal) and "Resource temporarily unavailable" / SharePoint CSOM throttling
                     # ("Server busy, please retry" is transient and safe to retry).
-                    elseif ($Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*' -or $Message -like '*Server busy*') {
+                    elseif ($_.Exception.Response.StatusCode -eq 503 -or $Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*' -or $Message -like '*Server busy*') {
                         if ($RetryCount -lt $MaxRetries) {
-                            $WaitTime = Get-Random -Minimum 1.1 -Maximum 3.1  # Random sleep between 1-2 seconds
+                            $WaitTime = $_.Exception.Response.Headers['Retry-After'] ? [int]$_.Exception.Response.Headers['Retry-After'] : (Get-Random -Minimum 1.1 -Maximum 3.1)  # Random sleep between 1-2 seconds
                             Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"
                             $ShouldRetry = $true
                         }

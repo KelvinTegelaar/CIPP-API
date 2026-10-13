@@ -75,6 +75,90 @@ Describe 'CIPPRateLimiter' {
         [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/users/u2/authentication/methods', 'GET', $null, $A).Wait | Should -Be ([timespan]::Zero)
     }
 
+    It 'holds every SharePoint endpoint of the tenant when one of them is throttled' {
+        $A = Get-AuthHeader 'tenant-a'
+        $Claim = [CIPP.CIPPRateLimiter]::Acquire('https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery', 'POST', '<Request />', $A)
+        [CIPP.CIPPRateLimiter]::Observe($Claim, 429, (Get-ResponseHeader 60), '429 TOO MANY REQUESTS')
+
+        foreach ($Uri in @(
+                'https://graph.microsoft.com/v1.0/sites/root'
+                'https://graph.microsoft.com/beta/drives/b!abc/root/children'
+                'https://graph.microsoft.com/v1.0/users/john@contoso.com/drive/root'
+                'https://graph.microsoft.com/v1.0/groups/6f1d2c3e-0000-4000-8000-0000000000a1/sites/root'
+                'https://contoso.sharepoint.com/sites/hr/_api/web'
+                'https://contoso-my.sharepoint.com/personal/john/_vti_bin/sites.asmx'
+            )) {
+            [CIPP.CIPPRateLimiter]::Acquire($Uri, 'GET', $null, $A).Wait.TotalSeconds | Should -BeGreaterThan 59 -Because $Uri
+        }
+        [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/users/john@contoso.com', 'GET', $null, $A).Wait | Should -Be ([timespan]::Zero)
+        [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, (Get-AuthHeader 'tenant-b')).Wait | Should -Be ([timespan]::Zero)
+    }
+
+    It 'holds callers for a long SharePoint block instead of releasing them into it' {
+        $A = Get-AuthHeader 'tenant-a'
+        $Claim = [CIPP.CIPPRateLimiter]::Acquire('https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery', 'POST', '<Request />', $A)
+        [CIPP.CIPPRateLimiter]::Observe($Claim, 429, (Get-ResponseHeader 280), '429 TOO MANY REQUESTS')
+        [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, $A).Wait.TotalSeconds | Should -BeGreaterThan 279
+        [CIPP.CIPPRateLimiter]::MaxWait.TotalSeconds | Should -BeGreaterThan 300
+    }
+
+    It 'holds the SharePoint admin endpoint when a Graph $batch sites sub-request is throttled' {
+        $A = Get-AuthHeader 'tenant-a'
+        $Body = @{ requests = @(@{ id = '1'; method = 'GET'; url = '/sites/contoso.sharepoint.com:/sites/hr' }) } | ConvertTo-Json -Depth 5
+        $Claim = [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/$batch', 'POST', $Body, $A)
+        [CIPP.CIPPRateLimiter]::Observe($Claim, 200, (Get-ResponseHeader), '{"responses":[{"id":"1","status":429,"headers":{"Retry-After":"30"}}]}')
+
+        [CIPP.CIPPRateLimiter]::Acquire('https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery', 'POST', '<Request />', $A).Wait.TotalSeconds | Should -BeGreaterThan 29
+    }
+
+    Context 'SharePoint resource-unit pacing' {
+        BeforeAll {
+            $Csom = 'https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery'
+            $SiteRead = '<Request><ObjectPaths><Method Name="GetSitePropertiesByUrl" /></ObjectPaths></Request>'
+            $Write = '<Request><Actions><SetProperty Id="1" ObjectPathId="2" Name="SharingCapability" /></Actions></Request>'
+            function Get-Wait($Uri, $Body, $Auth) { [CIPP.CIPPRateLimiter]::Acquire($Uri, 'POST', $Body, $Auth).Wait }
+            function Get-SharePointBucket { @([CIPP.CIPPRateLimiter]::GetDiagnostics().Buckets).Where({ $_.Key -like '*|sharepoint' }, 'First')[0] }
+        }
+
+        It 'lets 150 units through, then waits: 25 site reads at 6 units, 150 Graph reads at 1' {
+            $A = Get-AuthHeader 'tenant-a'
+            # The bucket refills 18 units/s while the claims are made, so assert either side of the boundary.
+            1..23 | ForEach-Object { Get-Wait $Csom $SiteRead $A | Should -Be ([timespan]::Zero) }
+            @(1..7 | ForEach-Object { Get-Wait $Csom $SiteRead $A })[-1] | Should -BeGreaterThan ([timespan]::Zero)
+
+            $B = Get-AuthHeader 'tenant-b'
+            1..140 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, $B).Wait | Should -Be ([timespan]::Zero) }
+            @(1..60 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, $B).Wait })[-1] | Should -BeGreaterThan ([timespan]::Zero)
+        }
+
+        It 'charges CSOM writes 20 and Graph permissions 3 from the same tenant budget' {
+            $A = Get-AuthHeader 'tenant-a'
+            1..7 | ForEach-Object { Get-Wait $Csom $Write $A | Should -Be ([timespan]::Zero) }
+            @(1..3 | ForEach-Object { Get-Wait $Csom $Write $A })[-1] | Should -BeGreaterThan ([timespan]::Zero)
+
+            $B = Get-AuthHeader 'tenant-b'
+            1..45 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/drives/b!x/items/01AB/permissions', 'GET', $null, $B).Wait | Should -Be ([timespan]::Zero) }
+            @(1..30 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://contoso.sharepoint.com/_api/web', 'GET', $null, $B).Wait })[-1] | Should -BeGreaterThan ([timespan]::Zero)
+        }
+
+        It 'raises the rate while callers keep waiting, but not on the first burst, and lowers it again on a 429' {
+            $A = Get-AuthHeader 'tenant-a'
+            1..30 | ForEach-Object { $null = Get-Wait $Csom $SiteRead $A }
+            (Get-SharePointBucket).LearnedPerSecond | Should -BeNullOrEmpty
+
+            # 30 s of waiting later, the next waiting claim probes 10% higher.
+            $Buckets = [CIPP.CIPPRateLimiter].GetField('_buckets', [Reflection.BindingFlags]'NonPublic,Static').GetValue($null)
+            $Bucket = $Buckets['tenant-a|sharepoint']
+            $Bucket.GetType().GetField('LastRaise').SetValue($Bucket, [datetime]::UtcNow.AddSeconds(-31).Ticks)
+            $null = Get-Wait $Csom $SiteRead $A
+            (Get-SharePointBucket).LearnedPerSecond | Should -Be 19.8
+
+            $Claim = [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, $A)
+            [CIPP.CIPPRateLimiter]::Observe($Claim, 429, (Get-ResponseHeader 1), '')
+            (Get-SharePointBucket).LearnedPerSecond | Should -Be 18
+        }
+    }
+
     It 'counts every EXO batch sub-request against the tenant budget, after a burst of 90% of the minute' {
         $A = Get-AuthHeader 'tenant-a'
         $Sub = 'https://outlook.office365.com/adminapi/beta/tenant-a/InvokeCommand'

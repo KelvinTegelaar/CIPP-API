@@ -36,7 +36,6 @@ function Set-CIPPDBCacheSPOSites {
         # it IS accurate for, and one authoritative per-site read - batched and concurrency-capped to stay
         # under SharePoint's CSOM throttle - fills in the rest. A per-site read failure falls back to the
         # enumeration value for that site.
-        $Sites = @(Get-CIPPSPOSite -TenantFilter $TenantFilter -UseCertificate | Where-Object { $_ -and $_.Url })
 
         # Fields the enumeration only returns as defaults - take the authoritative per-site value, and
         # fall back to the (less accurate) enumeration value when the per-site read did not return.
@@ -51,56 +50,62 @@ function Set-CIPPDBCacheSPOSites {
             'IsHubSite', 'IsTeamsConnected', 'IsTeamsChannelConnected', 'WebsCount', 'Status'
         )
 
-        $AuthByUrl = @{}
-        if ($Sites.Count -gt 0) {
+        # Accurate from the enumeration. Enum values stay numeric as CSOM returns them.
+        $EnumerationFields = @(
+            'Url', 'Title', 'Template', 'GroupId', 'SharingCapability', 'DefaultSharingLinkType',
+            'DefaultLinkPermission', 'SharingDomainRestrictionMode', 'SharingAllowedDomainList',
+            'SharingBlockedDomainList', 'OverrideTenantAnonymousLinkExpirationPolicy',
+            'AnonymousLinkExpirationInDays', 'LockState', 'StorageMaximumLevel', 'StorageWarningLevel',
+            'StorageUsage', 'InheritVersionPolicyFromTenant', 'EnableAutoExpirationVersionTrim',
+            'MajorVersionLimit', 'ExpireVersionsAfterDays', 'ConditionalAccessPolicy'
+        )
+
+        # Read, merged and written a chunk at a time so a tenant with tens of thousands of sites never
+        # holds them all at once.
+        $Writer = { Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOSites' -AddCount -ClearOnEmpty }.GetSteppablePipeline()
+        $Writer.Begin($true)
+        $Chunk = [System.Collections.Generic.List[object]]::new()
+        $Cached = 0
+        $Missing = 0
+        $BulkError = $null
+        $WriteChunk = {
+            $AuthByUrl = @{}
             try {
-                foreach ($Result in @(Get-CIPPSPOSiteBulk -TenantFilter $TenantFilter -SiteUrls @($Sites.Url) -MaxConcurrency 4 -BatchSize 5 -Properties $AuthoritativeFields -UseCertificate)) {
+                foreach ($Result in @(Get-CIPPSPOSiteBulk -TenantFilter $TenantFilter -SiteUrls @($Chunk.Url) -MaxConcurrency 4 -BatchSize 8 -Properties $AuthoritativeFields -UseCertificate)) {
                     if ($Result.Success -and $Result.Site) { $AuthByUrl["$($Result.SiteUrl)"] = $Result.Site }
                 }
-                $Missing = $Sites.Count - $AuthByUrl.Count
-                if ($Missing -gt 0) {
-                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SPOSites: $Missing of $($Sites.Count) sites fell back to enumeration values (authoritative per-site read did not return them)" -sev Debug
-                }
             } catch {
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SPOSites: authoritative per-site read failed; falling back to the enumeration values for this run: $($_.Exception.Message)" -sev Warning
+                $BulkError = $_.Exception.Message
             }
+            foreach ($Site in $Chunk) {
+                $Auth = $AuthByUrl["$($Site.Url)"]
+                if (-not $Auth) { $Missing++ }
+                $Source = if ($Auth) { $Auth } else { $Site }
+                $Row = [ordered]@{ id = "$($Site.SiteId)" }
+                foreach ($Field in $EnumerationFields) { $Row[$Field] = $Site.$Field }
+                $Row['GroupId'] = "$($Site.GroupId)"
+                foreach ($Field in $AuthoritativeFields) { $Row[$Field] = $Source.$Field }
+                $Writer.Process([PSCustomObject]$Row)
+                $Cached++
+            }
+            $Chunk.Clear()
         }
 
-        $Rows = @(foreach ($Site in $Sites) {
-                $Auth = $AuthByUrl["$($Site.Url)"]
-                $Source = if ($Auth) { $Auth } else { $Site }
-                # Accurate from the enumeration (kept as-is to preserve id/format stability). Enum values
-                # stay numeric as CSOM returns them.
-                $Row = [ordered]@{
-                    id                                          = "$($Site.SiteId)"
-                    Url                                         = $Site.Url
-                    Title                                       = $Site.Title
-                    Template                                    = $Site.Template
-                    GroupId                                     = "$($Site.GroupId)"
-                    SharingCapability                           = $Site.SharingCapability
-                    DefaultSharingLinkType                      = $Site.DefaultSharingLinkType
-                    DefaultLinkPermission                       = $Site.DefaultLinkPermission
-                    SharingDomainRestrictionMode                = $Site.SharingDomainRestrictionMode
-                    SharingAllowedDomainList                    = $Site.SharingAllowedDomainList
-                    SharingBlockedDomainList                    = $Site.SharingBlockedDomainList
-                    OverrideTenantAnonymousLinkExpirationPolicy = $Site.OverrideTenantAnonymousLinkExpirationPolicy
-                    AnonymousLinkExpirationInDays               = $Site.AnonymousLinkExpirationInDays
-                    LockState                                   = $Site.LockState
-                    StorageMaximumLevel                         = $Site.StorageMaximumLevel
-                    StorageWarningLevel                         = $Site.StorageWarningLevel
-                    StorageUsage                                = $Site.StorageUsage
-                    InheritVersionPolicyFromTenant              = $Site.InheritVersionPolicyFromTenant
-                    EnableAutoExpirationVersionTrim             = $Site.EnableAutoExpirationVersionTrim
-                    MajorVersionLimit                           = $Site.MajorVersionLimit
-                    ExpireVersionsAfterDays                     = $Site.ExpireVersionsAfterDays
-                    ConditionalAccessPolicy                     = $Site.ConditionalAccessPolicy
-                }
-                foreach ($Field in $AuthoritativeFields) { $Row[$Field] = $Source.$Field }
-                [PSCustomObject]$Row
-            })
+        Get-CIPPSPOSite -TenantFilter $TenantFilter -UseCertificate -Properties (@('SiteId') + $EnumerationFields + $AuthoritativeFields) | ForEach-Object {
+            if ($_ -and $_.Url) {
+                $Chunk.Add($_)
+                if ($Chunk.Count -ge 500) { . $WriteChunk }
+            }
+        }
+        if ($Chunk.Count -gt 0) { . $WriteChunk }
+        $Writer.End()
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOSites' -Data $Rows -AddCount -ClearOnEmpty
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Rows.Count) SharePoint site settings" -sev Debug
+        if ($BulkError) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SPOSites: authoritative per-site read failed; $Missing of $Cached sites fell back to the enumeration values for this run: $BulkError" -sev Warning
+        } elseif ($Missing -gt 0) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SPOSites: $Missing of $Cached sites fell back to enumeration values (authoritative per-site read did not return them)" -sev Debug
+        }
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $Cached SharePoint site settings" -sev Debug
 
     } catch {
         # A tenant with no SharePoint app-only consent answers 401 every run until that changes;
