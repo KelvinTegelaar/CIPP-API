@@ -134,6 +134,9 @@ function Push-AuditLogSearchCreationV2 {
                 } catch {}
                 Add-CIPPAzDataTableEntity @Ledger -Entity @{ PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Skipped'; LastError = $LedgerError; LastErrorUtc = $Now } -OperationType UpsertMerge
                 Write-Information "AuditLogV2: $DisableStatus for $TenantFilter; disabled for 24h"
+                if ($Result.Outcome -eq 'AccessDenied') {
+                    Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log collection paused for 24 hours: $LedgerError" -sev Warning
+                }
             } else {
                 # Other transient: retry this window next cycle; dead-letter at cap.
                 $RetryTotal = [int]$Row.RetryCount + 1
