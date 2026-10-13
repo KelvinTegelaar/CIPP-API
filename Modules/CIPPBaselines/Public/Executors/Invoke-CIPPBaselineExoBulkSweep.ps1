@@ -15,7 +15,9 @@ function Invoke-CIPPBaselineExoBulkSweep {
                       engine projects Current down to the expected keys before comparing.
 
         Spec (fully rendered):
-          writes[]      - ordered groups, each { from, cmdlet, params, compliance }. 'from'
+          writes[]      - ordered groups, each { from, cmdlet, params, compliance, concurrency }.
+                          'concurrency' (default 16, capped at 32) is how many 10-cmdlet batches run at once;
+                          CIPPRateLimiter holds EXO to 45 requests/s and its Rate-Limit budget. 'from'
                           names the property on -Current holding the objects (default
                           'targets'); a group naming a property that does not exist is an
                           authoring error and throws, one that exists and is empty is nothing
@@ -79,7 +81,7 @@ function Invoke-CIPPBaselineExoBulkSweep {
         }
 
         $Attempted += $Objects.Count
-        $Results = @(New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Requests) -useSystemMailbox $true -Compliance:([bool]($Write.compliance ?? $false)))
+        $Results = @(New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Requests) -useSystemMailbox $true -Compliance:([bool]($Write.compliance ?? $false)) -MaxConcurrency ([Math]::Max(1, [int]($Write.concurrency ?? 16))))
         foreach ($Result in $Results) {
             if ($Result.error) {
                 $Failed++

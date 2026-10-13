@@ -122,6 +122,7 @@ function Invoke-CIPPDBCacheCollection {
             'ExoHostedContentFilterRule'
             'ExoGlobalQuarantinePolicy'
             'ExoOMEConfiguration'
+            'ExoIRMConfiguration'
             'ExoMailboxPlans'
             'ExoRetentionPolicyTags'
             'ExoRetentionPolicies'

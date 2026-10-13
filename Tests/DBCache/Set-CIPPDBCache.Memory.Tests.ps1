@@ -86,6 +86,7 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPAutoExpandingArchiveState.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-SPOUsageRootWebTemplate.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPSharePointSiteUsageRows.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Start-CIPPMailboxDataStage.ps1')
 
     . (Get-CollectorPath 'Set-CIPPDBCacheGroups')
     . (Get-CollectorPath 'Set-CIPPDBCacheTeams')
@@ -514,9 +515,9 @@ Describe 'DBCache collectors reworked for bounded memory' {
             Mock -CommandName Start-CIPPOrchestrator -MockWith {
                 if ($InputObject.OrchestratorName -like 'MailboxPermissions*') { $script:Captured = $InputObject }
             }
-            # 120 mailboxes -> 3 permission batches of 50/50/20. The delegate (id-120) sits in batch 3,
+            # 400 mailboxes -> 3 permission batches of 160/160/80. The delegate (id-400) sits in batch 3,
             # so batches 1 and 2 must still carry it for the id -> UPN lookup to resolve.
-            $Many = 1..120 | ForEach-Object {
+            $Many = 1..400 | ForEach-Object {
                 [pscustomobject]@{
                     id                        = "id-$_"
                     ExternalDirectoryObjectId = "id-$_"
@@ -525,7 +526,7 @@ Describe 'DBCache collectors reworked for bounded memory' {
                     PrimarySMTPAddress        = "u$_@contoso.com"
                     ArchiveGuid               = '00000000-0000-0000-0000-000000000000'
                     EmailAddresses            = @()
-                    GrantSendOnBehalfTo       = if ($_ -eq 1) { @('id-120') } else { @() }
+                    GrantSendOnBehalfTo       = if ($_ -eq 1) { @('id-400') } else { @() }
                 }
             }
             Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-Mailbox' } -MockWith { [pscustomobject]@{ Value = $Many } }
@@ -534,13 +535,46 @@ Describe 'DBCache collectors reworked for bounded memory' {
 
             $Batches = @($script:Captured.Batch)
             $Batches.Count | Should -Be 3
-            # Batch 1: its own 50 + the single delegate entry appended = 51. Crucially not 120.
-            @($Batches[0].MailboxData).Count | Should -Be 51
-            @($Batches[0].MailboxData)[-1].UPN | Should -Be 'u120@contoso.com'
+            # Batch 1: its own 160 + the single delegate entry appended = 161. Crucially not 400.
+            @($Batches[0].MailboxData).Count | Should -Be 161
+            @($Batches[0].MailboxData)[-1].UPN | Should -Be 'u400@contoso.com'
             # The appended delegate entry carries no GrantSendOnBehalfTo, so it emits no rows itself.
             @($Batches[0].MailboxData)[-1].GrantSendOnBehalfTo | Should -BeNullOrEmpty
             # Batch 3 already contains the delegate, so nothing is appended.
-            @($Batches[2].MailboxData).Count | Should -Be 20
+            @($Batches[2].MailboxData).Count | Should -Be 80
+        }
+
+        It 'starts only the permissions stage; calendar and rules follow from its store step' {
+            $script:Runs = [System.Collections.Generic.List[object]]::new()
+            Mock -CommandName Start-CIPPOrchestrator -MockWith { $script:Runs.Add($InputObject) }
+            $Many = 1..400 | ForEach-Object {
+                [pscustomobject]@{ id = "id-$_"; ExternalDirectoryObjectId = "id-$_"; UserPrincipalName = "u$_@contoso.com"; DisplayName = "User $_"; PrimarySMTPAddress = "u$_@contoso.com"; ArchiveGuid = '00000000-0000-0000-0000-000000000000'; EmailAddresses = @(); GrantSendOnBehalfTo = @() }
+            }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-Mailbox' } -MockWith { [pscustomobject]@{ Value = $Many } }
+
+            Set-CIPPDBCacheMailboxes -TenantFilter 'contoso.com'
+
+            $script:Runs.Count | Should -Be 1
+            $Run = $script:Runs[0]
+            $Run.OrchestratorName | Should -Be 'MailboxPermissions_contoso.com'
+            $Run.MaxConcurrency | Should -Be 1
+            $Run.PostExecution.FunctionName | Should -Be 'StoreMailboxData'
+            $Run.PostExecution.Parameters.Type | Should -Be 'Permissions'
+            $Run.PostExecution.Parameters.Remaining | Should -Be @('CalendarPermissions', 'Rules')
+            @($Run.Batch | ForEach-Object { @($_.Mailboxes).Count }) | Should -Be @(160, 160, 80)
+            @($Run.Batch.FunctionName | Sort-Object -Unique) | Should -Be @('GetMailboxPermissionsBatch')
+        }
+
+        It 'starts with the first requested type when permissions are not asked for' {
+            $script:Runs = [System.Collections.Generic.List[object]]::new()
+            Mock -CommandName Start-CIPPOrchestrator -MockWith { $script:Runs.Add($InputObject) }
+
+            Set-CIPPDBCacheMailboxes -TenantFilter 'contoso.com' -Types @('Rules')
+
+            $script:Runs.Count | Should -Be 1
+            $script:Runs[0].OrchestratorName | Should -Be 'MailboxRules_contoso.com'
+            @($script:Runs[0].Batch.Mailboxes) | Should -Be @('u1@contoso.com', 'u2@contoso.com', 'u3@contoso.com', 'u4@contoso.com', 'u5@contoso.com')
+            @($script:Runs[0].PostExecution.Parameters.Remaining).Count | Should -Be 0
         }
 
         It 'still writes every mailbox row' {

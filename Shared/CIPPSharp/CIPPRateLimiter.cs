@@ -13,14 +13,16 @@ namespace CIPP
     // Retry-After blocks its tenant + endpoint for all workers, not just the caller that hit it.
     public static class CIPPRateLimiter
     {
-        internal sealed record Rule(string Name, Regex Match, double PerSecond, int Burst);
+        internal sealed record Rule(string Name, Regex Match, double PerSecond, int Burst, int Reserve = 0);
 
-        // Token buckets measured live (CA What If: ~10-14 burst refilling ~1/s; EXO: 3000 per fixed minute).
+        // Token buckets measured live (CA What If: ~10-14 burst refilling ~1/s). EXO: 3000 per fixed minute and 900
+        // concurrent requests per tenant, so a large burst is safe: 45/s sustained, and the Rate-Limit headers pace the
+        // rest of the window (Reserve = requests assumed already in flight when the server counted).
         private static readonly Rule[] _rules =
         {
             new("ca-service",   Pattern(@"^graph\.microsoft\.com/(v1\.0|beta)/(identity/conditionalAccess/|identityProtection/|riskyUsers|riskDetections)"), 0.9, 10),
             new("auth-methods", Pattern(@"^graph\.microsoft\.com/(v1\.0|beta)/users/[^/]+/authentication/"), 20, 20),
-            new("exo-adminapi", Pattern(@"^outlook\.office365\.com/adminapi/"), 45, 300),
+            new("exo-adminapi", Pattern(@"^outlook\.office365\.com/adminapi/"), 45, 2700, 300),
         };
 
         private sealed class Bucket
@@ -31,6 +33,10 @@ namespace CIPP
             public long Waits;
             public long WaitedMs;
             public long Throttled;
+            public long BudgetHolds;
+            public long PacedUntil;
+            public double PacedPerSecond;
+            public int PacedBurst;
         }
 
         public sealed class Claim
@@ -120,10 +126,14 @@ namespace CIPP
                     if (rule is not null)
                     {
                         // GCRA token bucket: Burst tokens, refilled at PerSecond; a burst drains it and later claims wait for the refill.
-                        var interval = (long)(TimeSpan.TicksPerSecond / rule.PerSecond);
+                        // A server-reported budget (ObserveBudget) slows both until its window resets.
+                        var paced = bucket.PacedUntil > now;
+                        var perSecond = paced ? Math.Min(rule.PerSecond, bucket.PacedPerSecond) : rule.PerSecond;
+                        var burst = paced ? Math.Min(rule.Burst, bucket.PacedBurst) : rule.Burst;
+                        var interval = (long)(TimeSpan.TicksPerSecond / perSecond);
                         var tat = Math.Max(bucket.Tat, start);
                         bucket.Tat = tat + cost * interval;
-                        start = Math.Max(start, bucket.Tat - rule.Burst * interval);
+                        start = Math.Max(start, bucket.Tat - burst * interval);
                     }
                     bucket.Claims += cost;
                     if (start > now)
@@ -142,6 +152,7 @@ namespace CIPP
         public static void Observe(Claim? claim, int statusCode, IReadOnlyDictionary<string, string[]>? headers, string? content)
         {
             if (claim is null || claim.Keys.Count == 0) return;
+            ObserveBudget(claim, headers);
 
             if (statusCode == 429 || (statusCode == 503 && RetryAfter(headers) is not null))
             {
@@ -172,6 +183,7 @@ namespace CIPP
             }
             var json = HttpBody.Utf8(body);
             if (json is null) { Observe(claim, statusCode, headers, HttpBody.Decode(body)); return; }
+            ObserveBudget(claim, headers);
             var span = json.Value.Span;
             if (span.IndexOf("\"status\":429"u8) < 0 && span.IndexOf("\"status\": 429"u8) < 0) return;
             try
@@ -180,6 +192,24 @@ namespace CIPP
                 ObserveBatch(claim, doc);
             }
             catch (JsonException) { }
+        }
+
+        // EXO reports its per-tenant minute budget on every response. What is left after the in-flight reserve is
+        // spread over the time left in the window, so calls slow down before the cap instead of running into 429s;
+        // only an already-spent reserve holds until the reset.
+        private static void ObserveBudget(Claim claim, IReadOnlyDictionary<string, string[]>? headers)
+        {
+            if (headers is null || !headers.TryGetValue("Rate-Limit-Remaining", out var remainingValues) ||
+                remainingValues.Length == 0 || !int.TryParse(remainingValues[0], out var remaining)) return;
+            var seconds = headers.TryGetValue("Rate-Limit-Reset", out var reset) && reset.Length > 0 ? ParseRetryAfter(reset[0]) ?? 0 : 0;
+            if (seconds <= 0) return;
+            foreach (var (key, (rule, _)) in claim.Costs)
+            {
+                if (rule is null) continue;
+                var usable = remaining - rule.Reserve;
+                if (usable <= 0) { Hold(key, seconds); continue; }
+                Pace(key, (double)usable / seconds, Math.Min(rule.Burst, usable), seconds);
+            }
         }
 
         private static void ObserveBatch(Claim claim, JsonDocument doc)
@@ -218,6 +248,8 @@ namespace CIPP
                         r.Value.Waits,
                         r.Value.WaitedMs,
                         r.Value.Throttled,
+                        r.Value.BudgetHolds,
+                        PacedPerSecond = r.Value.PacedUntil > now ? Math.Round(r.Value.PacedPerSecond, 1) : (double?)null,
                         BlockedForMs = Math.Max(0, (r.Value.BlockedUntil - now) / TimeSpan.TicksPerMillisecond),
                     })
                     .ToArray(),
@@ -241,10 +273,33 @@ namespace CIPP
             }
         }
 
+        private static void Hold(string key, int seconds)
+        {
+            var bucket = _buckets.GetOrAdd(key, _ => new Bucket());
+            var until = DateTime.UtcNow.AddSeconds(Math.Clamp(seconds, 1, MaxRetryAfterSeconds)).Ticks;
+            lock (bucket)
+            {
+                if (until <= bucket.BlockedUntil) return;
+                bucket.BlockedUntil = until;
+                bucket.BudgetHolds++;
+            }
+        }
+
+        private static void Pace(string key, double perSecond, int burst, int seconds)
+        {
+            var bucket = _buckets.GetOrAdd(key, _ => new Bucket());
+            lock (bucket)
+            {
+                bucket.PacedPerSecond = Math.Max(perSecond, 0.1);
+                bucket.PacedBurst = Math.Max(burst, 1);
+                bucket.PacedUntil = DateTime.UtcNow.AddSeconds(Math.Clamp(seconds, 1, MaxRetryAfterSeconds)).Ticks;
+            }
+        }
+
         private static void Prune(long now)
         {
             foreach (var (key, bucket) in _buckets)
-                if (bucket.Tat < now && bucket.BlockedUntil < now) _buckets.TryRemove(key, out _);
+                if (bucket.Tat < now && bucket.BlockedUntil < now && bucket.PacedUntil < now) _buckets.TryRemove(key, out _);
         }
 
         private static int? RetryAfter(IReadOnlyDictionary<string, string[]>? headers) =>

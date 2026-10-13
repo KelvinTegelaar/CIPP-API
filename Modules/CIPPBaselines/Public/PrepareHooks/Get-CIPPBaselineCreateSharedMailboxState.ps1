@@ -35,7 +35,7 @@ function Get-CIPPBaselineCreateSharedMailboxState {
     if ([string]::IsNullOrWhiteSpace($Address)) { return @{ Current = $null } }
     try { $null = [System.Net.Mail.MailAddress]::new($Address) } catch {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "CreateSharedMailbox: '$Address' is not a valid email address and cannot be evaluated." -Sev 'Error'
-        return @{ Current = $null; NoDataReason = "the configured address '$Address' is not a valid email address" }
+        return @{ Current = $null; NoDataReason = "the configured address '$Address' is not a valid email address"; ConfigError = $true }
     }
 
     $Existing = @($Mailboxes | Where-Object {

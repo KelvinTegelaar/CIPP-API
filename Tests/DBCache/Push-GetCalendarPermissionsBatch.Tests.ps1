@@ -116,6 +116,8 @@ Describe 'Push-GetCalendarPermissionsBatch' {
         @($script:ExoCalls | Where-Object { $_.Cmdlet -eq 'Get-MailboxFolderStatistics' }).Count | Should -Be 0
         $Phase2 = @($script:ExoCalls | Where-Object { $_.Cmdlet -eq 'Get-MailboxFolderPermission' })
         $Phase2[0].Array[0].CmdletInput.Parameters.Identity | Should -Be 'user1@contoso.com:\Kalender'
+        # Only the fields the stored rows use; the full object is ~a third larger on the wire.
+        $Phase2[0].Select | Should -Be 'Identity,User,AccessRights,FolderName'
     }
 
     It 'returns the permissions it read under the Get-MailboxFolderPermission key' {

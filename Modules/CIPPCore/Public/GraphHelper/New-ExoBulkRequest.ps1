@@ -21,6 +21,9 @@ function New-ExoBulkRequest {
         [switch]$AnchorPerMailbox
     )
 
+    # Measured on EXO: past 32 batches in flight a tenant's requests only get slower.
+    $MaxConcurrency = [Math]::Clamp($MaxConcurrency, 1, 32)
+
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         if ($Compliance.IsPresent) {
             $Resource = 'https://ps.compliance.protection.outlook.com'
@@ -162,9 +165,14 @@ function New-ExoBulkRequest {
             # emitted under Prefer: odata.continue-on-error). SendConcurrent only sees the outer 200, so
             # retry those here: rebuild the throttled sub-requests into fresh batches, honour Retry-After
             # (else a capped exponential backoff), and swap the successful results back in by id.
+            # A mailbox caught mid-failover or mid-move fails the same way and succeeds moments later.
+            $TransientError = 'TransientException|MailboxCrossSiteFailoverException|MailboxInfoStaleException|MailboxOfflineException'
             $RateLimitRetry = 0
             while ($RateLimitRetry -lt 3) {
-                $Throttled = @($ReturnedData.Where({ $_.status -eq 429 -and $_.id -and $IdToBatchRequest.ContainsKey($_.id) }))
+                $Throttled = @($ReturnedData.Where({
+                            $_.id -and $IdToBatchRequest.ContainsKey($_.id) -and
+                            ($_.status -eq 429 -or ($_.status -ge 400 -and "$($_.body.error.message) $($_.body.error.details.message)" -match $TransientError))
+                        }))
                 if ($Throttled.Count -eq 0) { break }
                 $RateLimitRetry++
                 $RetryAfter = 0
@@ -247,8 +255,10 @@ function New-ExoBulkRequest {
                 $OperationGuid = $IdToOperationGuid[$itemId]  # Will be $null if not provided
                 $body = if ($item.body -is [System.Management.Automation.PSCustomObject]) { $item.body } else { $item.body.PSObject.Copy() }
 
-                if ($body.'@adminapi.warnings') {
-                    Write-Warning ($body.'@adminapi.warnings' | Out-String)
+                # A never-used mailbox has no data to return; EXO warns per mailbox, which is noise at scale.
+                $Warnings = @(@($body.'@adminapi.warnings').Where({ $_ -and "$_" -notmatch "hasn't logged on to mailbox" }))
+                if ($Warnings.Count -gt 0) {
+                    Write-Warning ($Warnings | Out-String)
                 }
                 if (![string]::IsNullOrEmpty($body.error.details.message) -or ![string]::IsNullOrEmpty($body.error.message)) {
                     if ($body.error.details.message) {
@@ -302,8 +312,10 @@ function New-ExoBulkRequest {
                 $OperationGuid = $IdToOperationGuid[$item.id]  # Will be $null if not provided
                 $body = if ($item.body -is [System.Management.Automation.PSCustomObject]) { $item.body } else { $item.body.PSObject.Copy() }
 
-                if ($body.'@adminapi.warnings') {
-                    Write-Warning ($body.'@adminapi.warnings' | Out-String)
+                # A never-used mailbox has no data to return; EXO warns per mailbox, which is noise at scale.
+                $Warnings = @(@($body.'@adminapi.warnings').Where({ $_ -and "$_" -notmatch "hasn't logged on to mailbox" }))
+                if ($Warnings.Count -gt 0) {
+                    Write-Warning ($Warnings | Out-String)
                 }
                 if (![string]::IsNullOrEmpty($body.error.details.message) -or ![string]::IsNullOrEmpty($body.error.message)) {
                     if ($body.error.details.message) {

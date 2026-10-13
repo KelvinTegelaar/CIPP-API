@@ -80,6 +80,7 @@ function Invoke-CIPPBaselineMigration {
         # V2 'Don't change' is the 'donotconfigure' sentinel; V3 prunes blank (omitWhenBlank).
         TeamsFilesPolicy              = @{ value = @{ FileSharingInChatsWithExternalUsers = @{ donotconfigure = '' }; NativeFileEntryPoints = @{ donotconfigure = '' }; SPChannelFilesTab = @{ donotconfigure = '' } } }
         TeamsMessagingPolicy          = @{ value = @{ AutoShareFilesInExternalChats = @{ donotconfigure = '' } } }
+        MessageEncryption             = @{ value = @{ EnablePdfEncryption = @{ donotchange = '' }; DecryptAttachmentForEncryptOnly = @{ donotchange = '' }; SimplifiedClientAccessDoNotForwardDisabled = @{ donotchange = '' }; SimplifiedClientAccessEncryptOnlyDisabled = @{ donotchange = '' }; TransportDecryptionSetting = @{ donotchange = '' } } }
         TAP                           = @{ rename = @{ config = 'isUsableOnce' } }
         unmanagedSync                 = @{ rename = @{ state = 'conditionalAccessPolicy' } }
         BitLockerKeysForOwnedDevice   = @{ rename = @{ state = 'allowed' }; value = @{ allowed = @{ allow = $true; restrict = $false } } }

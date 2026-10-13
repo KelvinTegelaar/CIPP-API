@@ -7785,6 +7785,151 @@
     ]
   },
   {
+    "name": "standards.MessageEncryption",
+    "cat": "Exchange Standards",
+    "tag": [],
+    "helpText": "Enables Microsoft Purview Message Encryption by turning on Azure RMS licensing for Exchange Online, and turns on simplified client access so the Encrypt button appears in Outlook on the web and the new Outlook. The optional settings default to \"Do not change\", which leaves the tenant's current value alone and out of the drift check. Branding is configured in the Set Encrypted Message Branding (OME) standard.",
+    "docsDescription": "Grades AzureRMSLicensingEnabled and SimplifiedClientAccessEnabled as true, plus EnablePdfEncryption, DecryptAttachmentForEncryptOnly, SimplifiedClientAccessDoNotForwardDisabled, SimplifiedClientAccessEncryptOnlyDisabled and TransportDecryptionSetting when the baseline picks a value. Remediation sends the graded values in one Set-IRMConfiguration call.",
+    "executiveText": "Turns on the built-in encryption that lets staff send protected email to anyone, including recipients outside the organization. Uses licensing the organization already owns, removing the need for a separate secure-email product.",
+    "label": "Enable Purview Message Encryption",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-08-04",
+    "powershellEquivalent": "Set-IRMConfiguration -AzureRMSLicensingEnabled $true -SimplifiedClientAccessEnabled $true",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "EXCHANGE_S_STANDARD",
+      "EXCHANGE_S_ENTERPRISE",
+      "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_ENTERPRISE_GOV",
+      "EXCHANGE_LITE"
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.MessageEncryption.EnablePdfEncryption",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Encrypt PDF attachments",
+        "helperText": "Applies Encrypt-only and Do Not Forward protection to PDF attachments as well as the message body.",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "Enable",
+            "value": true
+          },
+          {
+            "label": "Disable",
+            "value": false
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MessageEncryption.DecryptAttachmentForEncryptOnly",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Let recipients save Encrypt-only attachments unprotected",
+        "helperText": "When enabled, attachments on Encrypt-only mail are decrypted when the recipient downloads them.",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "Enable",
+            "value": true
+          },
+          {
+            "label": "Disable",
+            "value": false
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MessageEncryption.SimplifiedClientAccessDoNotForwardDisabled",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Do Not Forward option in the Outlook Encrypt menu",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "Hide",
+            "value": true
+          },
+          {
+            "label": "Show",
+            "value": false
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MessageEncryption.SimplifiedClientAccessEncryptOnlyDisabled",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Encrypt-only option in the Outlook Encrypt menu",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "Hide",
+            "value": true
+          },
+          {
+            "label": "Show",
+            "value": false
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MessageEncryption.TransportDecryptionSetting",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Transport decryption",
+        "helperText": "Disabled leaves protected mail encrypted in transit, Optional decrypts it where possible and delivers either way, Mandatory rejects mail it cannot decrypt.",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "Disabled",
+            "value": "Disabled"
+          },
+          {
+            "label": "Optional",
+            "value": "Optional"
+          },
+          {
+            "label": "Mandatory",
+            "value": "Mandatory"
+          }
+        ],
+        "default": ""
+      }
+    ]
+  },
+  {
     "name": "standards.MessageExpiration",
     "cat": "Exchange Standards",
     "tag": [],
@@ -7819,6 +7964,29 @@
         }
       }
     ]
+  },
+  {
+    "name": "standards.MigrateOneDriveShortcuts",
+    "cat": "SharePoint Standards",
+    "tag": [],
+    "helpText": "Finds SharePoint library shortcuts sitting in each user's OneDrive root and moves them into the Shortcuts folder (PATCH move into special/shortcuts), matching the optional Microsoft UI location.",
+    "docsDescription": "Over time Add shortcut to OneDrive can leave many remote library links in the OneDrive root. Microsoft also supports placing those links in an optional Shortcuts folder. Each enabled member user's OneDrive root is listed (batched, with Prefer Include-Feature=AddToOneDrive) into the OneDriveRootShortcuts cache, refreshed when older than 3 hours; remoteItem shortcuts still outside Shortcuts are moved into special/shortcuts. Users without a provisioned OneDrive are skipped.",
+    "executiveText": "Keeps employee OneDrive roots tidy by moving SharePoint library shortcuts into the dedicated Shortcuts folder instead of leaving them scattered among personal files.",
+    "label": "Migrate OneDrive root shortcuts to the Shortcuts folder",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-09-08",
+    "powershellEquivalent": "PATCH drive/items/{id} parentReference → special/shortcuts",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "SHAREPOINTWAC",
+      "SHAREPOINTSTANDARD",
+      "SHAREPOINTENTERPRISE",
+      "SHAREPOINTENTERPRISE_EDU",
+      "SHAREPOINTENTERPRISE_GOV",
+      "ONEDRIVEENTERPRISE"
+    ],
+    "addedComponent": []
   },
   {
     "name": "standards.NudgeMFA",
@@ -8127,6 +8295,27 @@
     "addedComponent": []
   },
   {
+    "name": "standards.OneDriveLicensedQuota",
+    "cat": "SharePoint Standards",
+    "tag": [],
+    "helpText": "Raises the OneDrive storage quota to 5 TB for users whose license includes that entitlement. Microsoft provisions every OneDrive at 1 TB and does not apply the licensed entitlement automatically. Users already at or above 5 TB, for example raised further by Microsoft support, are left untouched.",
+    "docsDescription": "Microsoft provisions every OneDrive with a 1 TB quota regardless of license. Users holding OneDrive for Business (Plan 2), SharePoint Online (Plan 2), or a bundle that includes one of these (Microsoft 365/Office 365 E3/E5, A3/A5, G3/G5) are entitled to 5 TB, but an admin has to raise the quota manually. Entitled users come from the Users cache (enabled accounts with an enabled qualifying service plan); their OneDrive quotas come from the OneDriveQuotas cache, which is refreshed when older than 3 hours and after every remediation. Every provisioned OneDrive below 5 TB is reported and raised to 5 TB with the warning level at 90%. Quotas already at or above 5 TB, for example increased to 25 TB by Microsoft support, are never lowered. Microsoft only permits quotas above 1 TB when the subscription has five or more users on a qualifying plan, so tenants below that threshold are reported as compliant and left unchanged.",
+    "executiveText": "Ensures employees receive the full OneDrive storage their licenses already include. Microsoft grants 5 TB of storage with most enterprise licenses but only provisions 1 TB by default, leaving paid-for capacity unused. Automatically correcting the allocation prevents storage shortages and support tickets without any additional licensing cost.",
+    "label": "Raise OneDrive storage quota for entitled users",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-08-21",
+    "powershellEquivalent": "Set-SPOSite -Identity https://tenant-my.sharepoint.com/personal/user -StorageQuota 5242880",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "SHAREPOINTENTERPRISE",
+      "SHAREPOINTENTERPRISE_EDU",
+      "SHAREPOINTENTERPRISE_GOV",
+      "ONEDRIVEENTERPRISE"
+    ],
+    "addedComponent": []
+  },
+  {
     "name": "standards.OneDriveSharingCapability",
     "cat": "SharePoint Standards",
     "tag": [
@@ -8230,6 +8419,45 @@
         "type": "textField",
         "label": "BCC recipient for suspicious outbound mail",
         "omitWhenBlank": true
+      }
+    ]
+  },
+  {
+    "name": "standards.PIMRoleSettings",
+    "cat": "Templates",
+    "tag": [],
+    "helpText": "Deploys a Privileged Identity Management role settings template to the tenant: activation limits, MFA or authentication context, justification, approval, eligibility and active-assignment expiry and notification rules for the roles the template covers. Templates cannot weaken settings below CIPP's secure floor.",
+    "docsDescription": "Deploys a Privileged Identity Management role settings template to the tenant. The template defines, for a set of roles, the maximum activation duration, whether activation requires MFA or an authentication context, justification, ticket and approval requirements, the maximum lifetime of eligible and active assignments, and additional notification recipients. Each covered role grades separately against the template, and remediation patches only the policy rules that differ. Templates are validated against CIPP's secure floor (activation within 24 hours with MFA or an authentication context and a justification; eligible and active assignments must expire within a year; active assignments require a justification) and a template below it reports an error rather than being applied. Requires Entra ID P2.",
+    "executiveText": "Enforces consistent Privileged Identity Management settings so that administrator roles can only be used for a limited time, after strong authentication and with a recorded reason. This keeps standing administrative access to a minimum and makes every use of privilege visible and accountable.",
+    "label": "PIM Role Settings Template",
+    "impact": "High Impact",
+    "impactColour": "danger",
+    "addedDate": "2026-08-23",
+    "powershellEquivalent": "Update-MgBetaPolicyRoleManagementPolicyRule",
+    "recommendedBy": [
+      "CIPP"
+    ],
+    "requiredCapabilities": [
+      "AAD_PREMIUM_P2"
+    ],
+    "multiple": true,
+    "addedComponent": [
+      {
+        "name": "standards.PIMRoleSettings.TemplateList",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Select PIM Role Settings Template",
+        "required": true,
+        "api": {
+          "url": "/api/ListPIMRoleSettingsTemplates",
+          "labelField": "templateName",
+          "valueField": "GUID",
+          "queryKey": "ListPIMRoleSettingsTemplates",
+          "showRefresh": true,
+          "templateView": {
+            "title": "PIM Role Settings Template"
+          }
+        }
       }
     ]
   },
@@ -8458,6 +8686,41 @@
         "default": false,
         "type": "switch",
         "label": "Remove entries outside the configured lists"
+      }
+    ]
+  },
+  {
+    "name": "standards.PlannerBlockTaskDelete",
+    "cat": "Teams Standards",
+    "tag": [],
+    "helpText": "Sets the Planner user policy that blocks each in-scope member from deleting Planner tasks they did not create. Applies across all basic Planner plans for that user (not a single board). Only enabled members with an enabled Microsoft Planner (PROJECTWORKMANAGEMENT) service plan are touched. Optionally limit the sweep to members of named groups or skip members of named groups. Only members who are not already blocked are written. May also prevent those users from deleting plans. Requires CIPP-SAM consent for ProjectWorkManagement OrgSettings-Planner permissions.",
+    "docsDescription": "Uses the Planner tenant admin UserPolicy API (tasks.office.com) to grade and set blockDeleteTasksNotCreatedBySelf for each in-scope enabled member account that has an enabled PROJECTWORKMANAGEMENT (Microsoft Planner) service plan. Guest accounts, disabled accounts, and members without that plan are ignored. Group names are resolved per tenant by display name and expanded to their transitive user members: include groups restrict the sweep to those members, exclude groups remove them from it. A configured group that does not exist in a tenant, or a failed membership lookup, reports an error rather than grading the wrong accounts. Policies come from the PlannerUserPolicies cache, which reads each candidate individually (the API has no list or batch endpoint) and is refreshed when older than 3 hours and after every remediation; a user with no policy yet counts as non-compliant. Remediate PUTs the setting for each non-compliant user. The policy is per user and applies to all basic plans that user can access; it is not board-scoped. Known side effect: the same policy can also block plan deletion. Requires application permissions OrgSettings-Planner.ReadWrite.All on ProjectWorkManagement (tasks.office.com), consented via CIPP-SAM repair and CPV refresh.",
+    "executiveText": "Stops employees from deleting Planner tasks they did not create, reducing accidental loss on boards used as shared work queues. Can be limited to a department security group so only those staff are locked down.",
+    "label": "Block Planner users from deleting tasks they did not create",
+    "impact": "Medium Impact",
+    "impactColour": "warning",
+    "addedDate": "2026-09-16",
+    "powershellEquivalent": "Set-PlannerUserPolicy -UserAadIdOrPrincipalName user@domain.com -BlockDeleteTasksNotCreatedBySelf $true",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "PROJECTWORKMANAGEMENT"
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.PlannerBlockTaskDelete.includeGroups",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "omitWhenBlank": true,
+        "label": "Only apply to members of these groups (display names; blank = all Planner-licensed enabled members)"
+      },
+      {
+        "name": "standards.PlannerBlockTaskDelete.excludeGroups",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "omitWhenBlank": true,
+        "label": "Skip members of these groups (display names)"
       }
     ]
   },
@@ -9713,6 +9976,116 @@
           "altLabelField": "Name",
           "valueField": "GUID",
           "queryKey": "ListSensitivityLabelTemplates"
+        }
+      }
+    ]
+  },
+  {
+    "name": "standards.SetDefaultMailboxFont",
+    "cat": "Exchange Standards",
+    "tag": [],
+    "helpText": "Sets the default compose font name, size and colour for all user and shared mailboxes. Font size is the 1-7 scale Exchange stores, not a point size. Applies to Outlook on the web and new Outlook only - classic Outlook for Windows/Mac uses its own local font settings and is not affected.",
+    "docsDescription": "Loops through all UserMailbox and SharedMailbox recipients and sets the Outlook on the web default compose font using `Set-MailboxMessageConfiguration`. The font is read from the MailboxMessageConfiguration cache, refreshed when older than 3 hours, and mailboxes already matching the configured font are skipped, so steady-state runs make no writes. Mailboxes whose message configuration cannot be read are reported as drift. Font size is the integer 1-7 scale Exchange stores rather than a point size: 3 is the Exchange default and corresponds to 12pt. Note that these settings apply to Outlook on the web and the new Outlook client only; classic Outlook for Windows and Mac read their compose font from local client settings. See [Microsoft's documentation.](https://learn.microsoft.com/powershell/module/exchangepowershell/set-mailboxmessageconfiguration)",
+    "executiveText": "Applies a consistent default font, size and colour to outgoing email so that messages from across the organisation look uniform and on-brand. This affects the web and new Outlook clients; users can still change the font on an individual message.",
+    "label": "Set default mailbox font, size and colour",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-08-04",
+    "powershellEquivalent": "Set-MailboxMessageConfiguration -DefaultFontName -DefaultFontSize -DefaultFontColor",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "EXCHANGE_S_STANDARD",
+      "EXCHANGE_S_ENTERPRISE",
+      "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_ENTERPRISE_GOV",
+      "EXCHANGE_LITE"
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.SetDefaultMailboxFont.DefaultFontName",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": true,
+        "required": true,
+        "label": "Default font name",
+        "helperText": "Font applied to new messages. You can type a font that is not in this list.",
+        "options": [
+          {
+            "label": "Aptos",
+            "value": "Aptos"
+          },
+          {
+            "label": "Arial",
+            "value": "Arial"
+          },
+          {
+            "label": "Calibri",
+            "value": "Calibri"
+          },
+          {
+            "label": "Cambria",
+            "value": "Cambria"
+          },
+          {
+            "label": "Georgia",
+            "value": "Georgia"
+          },
+          {
+            "label": "Helvetica",
+            "value": "Helvetica"
+          },
+          {
+            "label": "Segoe UI",
+            "value": "Segoe UI"
+          },
+          {
+            "label": "Tahoma",
+            "value": "Tahoma"
+          },
+          {
+            "label": "Times New Roman",
+            "value": "Times New Roman"
+          },
+          {
+            "label": "Trebuchet MS",
+            "value": "Trebuchet MS"
+          },
+          {
+            "label": "Verdana",
+            "value": "Verdana"
+          }
+        ]
+      },
+      {
+        "name": "standards.SetDefaultMailboxFont.DefaultFontSize",
+        "type": "number",
+        "required": true,
+        "label": "Default font size (1-7)",
+        "default": 3,
+        "helperText": "Exchange stores a 1-7 size scale, not a point size. 3 is the Exchange default and corresponds to 12pt; lower is smaller, higher is larger.",
+        "validators": {
+          "min": {
+            "value": 1,
+            "message": "Minimum value is 1"
+          },
+          "max": {
+            "value": 7,
+            "message": "Maximum value is 7"
+          }
+        }
+      },
+      {
+        "name": "standards.SetDefaultMailboxFont.DefaultFontColor",
+        "type": "textField",
+        "required": true,
+        "label": "Default font colour",
+        "placeholder": "#000000",
+        "helperText": "Six-digit hex colour in the #xxxxxx format, for example #000000. Exchange stores six digits, so shorthand such as #000 is not accepted.",
+        "validators": {
+          "pattern": {
+            "value": "^#[0-9A-Fa-f]{6}$",
+            "message": "Must be a six-digit hex colour such as #000000"
+          }
         }
       }
     ]

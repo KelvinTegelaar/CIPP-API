@@ -1,0 +1,48 @@
+{
+  "name": "PlannerBlockTaskDelete",
+  "label": "Block Planner users from deleting tasks they did not create",
+  "cat": "Teams Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Sets the Planner user policy that blocks each in-scope member from deleting Planner tasks they did not create. Applies across all basic Planner plans for that user (not a single board). Only enabled members with an enabled Microsoft Planner (PROJECTWORKMANAGEMENT) service plan are touched. Optionally limit the sweep to members of named groups or skip members of named groups. Only members who are not already blocked are written. May also prevent those users from deleting plans. Requires CIPP-SAM consent for ProjectWorkManagement OrgSettings-Planner permissions.",
+  "executiveText": "Stops employees from deleting Planner tasks they did not create, reducing accidental loss on boards used as shared work queues. Can be limited to a department security group so only those staff are locked down.",
+  "docsDescription": "Uses the Planner tenant admin UserPolicy API (tasks.office.com) to grade and set blockDeleteTasksNotCreatedBySelf for each in-scope enabled member account that has an enabled PROJECTWORKMANAGEMENT (Microsoft Planner) service plan. Guest accounts, disabled accounts, and members without that plan are ignored. Group names are resolved per tenant by display name and expanded to their transitive user members: include groups restrict the sweep to those members, exclude groups remove them from it. A configured group that does not exist in a tenant, or a failed membership lookup, reports an error rather than grading the wrong accounts. Policies come from the PlannerUserPolicies cache, which reads each candidate individually (the API has no list or batch endpoint) and is refreshed when older than 3 hours and after every remediation; a user with no policy yet counts as non-compliant. Remediate PUTs the setting for each non-compliant user. The policy is per user and applies to all basic plans that user can access; it is not board-scoped. Known side effect: the same policy can also block plan deletion. Requires application permissions OrgSettings-Planner.ReadWrite.All on ProjectWorkManagement (tasks.office.com), consented via CIPP-SAM repair and CPV refresh.",
+  "impactColour": "warning",
+  "addedDate": "2026-09-16",
+  "powershellEquivalent": "Set-PlannerUserPolicy -UserAadIdOrPrincipalName user@domain.com -BlockDeleteTasksNotCreatedBySelf $true",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "PROJECTWORKMANAGEMENT"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "includeGroups": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Only apply to members of these groups (display names; blank = all Planner-licensed enabled members)"
+    },
+    "excludeGroups": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Skip members of these groups (display names)"
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "PlannerUserPolicies",
+    "requiredCaches": [
+      "PlannerUserPolicies"
+    ]
+  },
+  "prepare": "Get-CIPPBaselinePlannerBlockTaskDeleteState",
+  "remediate": {
+    "executor": "PlannerBlockTaskDelete"
+  }
+}

@@ -74,7 +74,7 @@ function Push-GetCalendarPermissionsBatch {
             }
 
             Write-Information "Phase 1: Bulk Get-MailboxFolderStatistics for $($CacheMissMailboxes.Count) mailboxes"
-            $FolderStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($FolderStatsRequests) -Select 'Name,FolderType' -MaxConcurrency 5
+            $FolderStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($FolderStatsRequests) -Select 'Name,FolderType' -MaxConcurrency 32
 
             # One call returns EVERY calendar folder flattened under one OperationGuid, so
             # last-wins cached whatever the mailbox listed last - 'United States holidays' for
@@ -140,7 +140,7 @@ function Push-GetCalendarPermissionsBatch {
 
         if ($PermissionRequests) {
             Write-Information "Phase 2: Bulk Get-MailboxFolderPermission for $(@($PermissionRequests).Count) mailboxes"
-            $PermissionResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($PermissionRequests) -useSystemMailbox $true -MaxConcurrency 5
+            $PermissionResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($PermissionRequests) -useSystemMailbox $true -Select 'Identity,User,AccessRights,FolderName' -MaxConcurrency 32
 
             foreach ($Perm in $PermissionResults) {
                 if ($Perm.error) {

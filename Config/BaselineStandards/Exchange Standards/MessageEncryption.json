@@ -1,0 +1,176 @@
+{
+  "name": "MessageEncryption",
+  "label": "Enable Purview Message Encryption",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables Microsoft Purview Message Encryption by turning on Azure RMS licensing for Exchange Online, and turns on simplified client access so the Encrypt button appears in Outlook on the web and the new Outlook. The optional settings default to \"Do not change\", which leaves the tenant's current value alone and out of the drift check. Branding is configured in the Set Encrypted Message Branding (OME) standard.",
+  "executiveText": "Turns on the built-in encryption that lets staff send protected email to anyone, including recipients outside the organization. Uses licensing the organization already owns, removing the need for a separate secure-email product.",
+  "docsDescription": "Grades AzureRMSLicensingEnabled and SimplifiedClientAccessEnabled as true, plus EnablePdfEncryption, DecryptAttachmentForEncryptOnly, SimplifiedClientAccessDoNotForwardDisabled, SimplifiedClientAccessEncryptOnlyDisabled and TransportDecryptionSetting when the baseline picks a value. Remediation sends the graded values in one Set-IRMConfiguration call.",
+  "impactColour": "info",
+  "addedDate": "2026-08-04",
+  "powershellEquivalent": "Set-IRMConfiguration -AzureRMSLicensingEnabled $true -SimplifiedClientAccessEnabled $true",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "EnablePdfEncryption": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Encrypt PDF attachments",
+      "helperText": "Applies Encrypt-only and Do Not Forward protection to PDF attachments as well as the message body.",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not change",
+          "value": ""
+        },
+        {
+          "label": "Enable",
+          "value": true
+        },
+        {
+          "label": "Disable",
+          "value": false
+        }
+      ],
+      "default": ""
+    },
+    "DecryptAttachmentForEncryptOnly": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Let recipients save Encrypt-only attachments unprotected",
+      "helperText": "When enabled, attachments on Encrypt-only mail are decrypted when the recipient downloads them.",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not change",
+          "value": ""
+        },
+        {
+          "label": "Enable",
+          "value": true
+        },
+        {
+          "label": "Disable",
+          "value": false
+        }
+      ],
+      "default": ""
+    },
+    "SimplifiedClientAccessDoNotForwardDisabled": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Do Not Forward option in the Outlook Encrypt menu",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not change",
+          "value": ""
+        },
+        {
+          "label": "Hide",
+          "value": true
+        },
+        {
+          "label": "Show",
+          "value": false
+        }
+      ],
+      "default": ""
+    },
+    "SimplifiedClientAccessEncryptOnlyDisabled": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Encrypt-only option in the Outlook Encrypt menu",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not change",
+          "value": ""
+        },
+        {
+          "label": "Hide",
+          "value": true
+        },
+        {
+          "label": "Show",
+          "value": false
+        }
+      ],
+      "default": ""
+    },
+    "TransportDecryptionSetting": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Transport decryption",
+      "helperText": "Disabled leaves protected mail encrypted in transit, Optional decrypts it where possible and delivers either way, Mandatory rejects mail it cannot decrypt.",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Do not change",
+          "value": ""
+        },
+        {
+          "label": "Disabled",
+          "value": "Disabled"
+        },
+        {
+          "label": "Optional",
+          "value": "Optional"
+        },
+        {
+          "label": "Mandatory",
+          "value": "Mandatory"
+        }
+      ],
+      "default": ""
+    }
+  },
+  "expected": {
+    "AzureRMSLicensingEnabled": true,
+    "SimplifiedClientAccessEnabled": true,
+    "EnablePdfEncryption": "%EnablePdfEncryption%",
+    "DecryptAttachmentForEncryptOnly": "%DecryptAttachmentForEncryptOnly%",
+    "SimplifiedClientAccessDoNotForwardDisabled": "%SimplifiedClientAccessDoNotForwardDisabled%",
+    "SimplifiedClientAccessEncryptOnlyDisabled": "%SimplifiedClientAccessEncryptOnlyDisabled%",
+    "TransportDecryptionSetting": "%TransportDecryptionSetting%"
+  },
+  "read": {
+    "cacheType": "ExoIRMConfiguration"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-IRMConfiguration",
+        "params": {
+          "AzureRMSLicensingEnabled": true,
+          "SimplifiedClientAccessEnabled": true,
+          "EnablePdfEncryption": "%EnablePdfEncryption%",
+          "DecryptAttachmentForEncryptOnly": "%DecryptAttachmentForEncryptOnly%",
+          "SimplifiedClientAccessDoNotForwardDisabled": "%SimplifiedClientAccessDoNotForwardDisabled%",
+          "SimplifiedClientAccessEncryptOnlyDisabled": "%SimplifiedClientAccessEncryptOnlyDisabled%",
+          "TransportDecryptionSetting": "%TransportDecryptionSetting%"
+        }
+      }
+    ]
+  }
+}
