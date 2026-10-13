@@ -42,6 +42,8 @@ function Get-GraphToken {
                 [CIPP.CIPPTokenCache]::Remove($SharedTokenCacheKey)
             }
         }
+        $CachedFailure = [CIPP.CIPPTokenCache]::Lookup("$SharedTokenCacheKey|failed", 0)
+        if ($CachedFailure.Found) { throw "Could not get token: $($CachedFailure.TokenPayloadJson)" }
     }
 
     # ── Slow path: need a new token — do table lookups + token acquisition ──
@@ -63,6 +65,12 @@ function Get-GraphToken {
                 } catch {
                     [CIPP.CIPPTokenCache]::Remove($SharedTokenCacheKey)
                 }
+            }
+            $CachedFailure = [CIPP.CIPPTokenCache]::Lookup("$SharedTokenCacheKey|failed", 0)
+            if ($CachedFailure.Found) {
+                [CIPP.CIPPTokenCache]::ReleaseLock($SharedTokenCacheKey)
+                $LockAcquired = $false
+                throw "Could not get token: $($CachedFailure.TokenPayloadJson)"
             }
         }
     }
@@ -228,6 +236,10 @@ function Get-GraphToken {
             }
 
             if (!$donotset) { Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant }
+            # Errors that only an admin can fix: fail fast for 30 min instead of re-asking Entra on every call.
+            if ($UseSharedTokenCache -and $SharedTokenCacheKey -and $Tenant.LastGraphError -match 'AADSTS(7000215|7000222|700082|9002313|50173|700016|7000229|500014|500011|90002|50020|65001|50076|50079|53003)\b') {
+                [CIPP.CIPPTokenCache]::Store("$SharedTokenCacheKey|failed", [string]$Tenant.LastGraphError, [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 1800)
+            }
             throw "Could not get token: $($Tenant.LastGraphError)"
         }
     } finally {

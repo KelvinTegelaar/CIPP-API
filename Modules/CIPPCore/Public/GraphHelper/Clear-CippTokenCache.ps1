@@ -14,7 +14,7 @@ function Clear-CippTokenCache {
         outside the Craft host) - it becomes a no-op.
 
     .PARAMETER TenantFilter
-        Tenant (GUID) whose cached tokens should be dropped. Omit to clear every entry.
+        Tenant (GUID or any of its domains) whose cached tokens should be dropped. Omit to clear every entry.
 
     .EXAMPLE
         Clear-CippTokenCache -TenantFilter $TenantFilter
@@ -37,7 +37,24 @@ function Clear-CippTokenCache {
 
     try {
         $Removed = if ($TenantFilter) {
-            [CIPP.CIPPTokenCache]::RemoveByTenant($TenantFilter)
+            # Tokens are keyed by whatever identifier the caller used, so drop the GUID and every domain.
+            $Ids = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            $null = $Ids.Add($TenantFilter)
+            try {
+                $TenantsTable = Get-CippTable -tablename 'Tenants'
+                $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
+                $Rows = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and (customerId eq '$SafeTenant' or defaultDomainName eq '$SafeTenant' or initialDomainName eq '$SafeTenant')" -Property customerId, defaultDomainName, initialDomainName
+                foreach ($Row in @($Rows)) {
+                    foreach ($Id in @($Row.customerId, $Row.defaultDomainName, $Row.initialDomainName)) {
+                        if ($Id) { $null = $Ids.Add([string]$Id) }
+                    }
+                }
+            } catch {
+                Write-Verbose "Could not resolve the identifiers of $TenantFilter : $($_.Exception.Message)"
+            }
+            $Count = 0
+            foreach ($Id in $Ids) { $Count = $Count + [CIPP.CIPPTokenCache]::RemoveByTenant($Id) }
+            $Count
         } else {
             [CIPP.CIPPTokenCache]::Clear()
         }

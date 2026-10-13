@@ -521,6 +521,17 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             $data.CIPPGroupId.displayName | Should -Be 'Finance } {team}'
         }
 
+        It 'still matches without enrichment, and caches nothing, when the directory lookup fails' {
+            $script:LookupRows = @()
+            Mock -CommandName New-GraphBulkRequest -MockWith { throw 'Could not get token: invalid_grant:AADSTS50079: MFA required' }
+
+            $result = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow) -WarningAction SilentlyContinue
+
+            $result.MatchedLogs | Should -Be 1
+            @($result.DataToProcess)[0].PSObject.Properties.Name | Should -Not -Contain 'CIPPObjectId'
+            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { @($Entity).RowKey -contains 'users' } -Times 0 -Exactly
+        }
+
         It 'maps nothing and still matches when the record holds no GUIDs' {
             $result = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @(New-AuditRow)
             $result.MatchedLogs | Should -Be 1

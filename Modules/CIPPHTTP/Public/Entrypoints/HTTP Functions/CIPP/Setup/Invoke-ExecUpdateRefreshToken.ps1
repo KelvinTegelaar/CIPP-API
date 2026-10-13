@@ -54,10 +54,6 @@ function Invoke-ExecUpdateRefreshToken {
             $null = Clear-CippTokenCache
         } else {
             $null = Clear-CippTokenCache -TenantFilter $Request.body.tenantId
-            $TenantsTable = Get-CippTable -tablename 'Tenants'
-            $SafeTenantId = ConvertTo-CIPPODataFilterValue -Value $Request.body.tenantId -Type String
-            $Domain = (Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and customerId eq '$SafeTenantId'" -Property defaultDomainName).defaultDomainName
-            if ($Domain) { $null = Clear-CippTokenCache -TenantFilter $Domain }
         }
 
         if ($IsPartnerTenant) {

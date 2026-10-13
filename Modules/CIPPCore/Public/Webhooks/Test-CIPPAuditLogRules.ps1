@@ -296,6 +296,7 @@ function Test-CIPPAuditLogRules {
 
         # Check if cached data needs refresh (wrong format or corrupted)
         $NeedsRefresh = $false
+        $LookupFailed = $false
         if ($Lookups) {
             try {
                 # Test-Json validates without building the objects.
@@ -366,7 +367,14 @@ function Test-CIPPAuditLogRules {
                         method = 'GET'
                     }
                 )
-                $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
+                try {
+                    $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
+                } catch {
+                    # Rules still run on the raw records; only GUID-to-name enrichment is lost.
+                    Write-Warning "Directory lookup failed for $TenantFilter, processing audit logs without name enrichment: $($_.Exception.Message)"
+                    $Response = $null
+                    $LookupFailed = $true
+                }
                 $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value ?? @()
                 $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
                 $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
@@ -436,9 +444,11 @@ function Test-CIPPAuditLogRules {
                     Format       = 'hashtable'
                 }
             )
-            # Save the cached lookups
-            Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force
-            Write-Information "Cached directory hashtable lookups for tenant $TenantFilter"
+            # Save the cached lookups, unless they are empty because the lookup failed
+            if (-not $LookupFailed) {
+                Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force
+                Write-Information "Cached directory hashtable lookups for tenant $TenantFilter"
+            }
         } else {
             # Use cached lookups - check if they're already hashtables or need conversion
             $UsersLookup = $Lookups | Where-Object { $_.RowKey -eq 'users' }
