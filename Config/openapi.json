@@ -45094,6 +45094,83 @@
         "x-cipp-role": "Tenant.ConditionalAccess.Read"
       }
     },
+    "/api/ListCAPolicyImpact": {
+      "get": {
+        "summary": "ListCAPolicyImpact",
+        "operationId": "ListCAPolicyImpact",
+        "tags": [
+          "Tenant > Conditional"
+        ],
+        "description": "Shows how a single Conditional Access policy was evaluated against recent interactive sign-ins, like\nthe Entra portal's Policy impact view: sign-ins per UTC day split by the policy's result (success,\nfailure, not applied and the report-only equivalents), totals for the window, and a capped sample\nof sign-ins per day where the policy's controls were not met. Built from the sign-in log, because\nthe portal's own impact report is not reachable by other applications. Days is 1, 7 or 30. Segment\n(0-based, ten days each, counted back from now) reads one part of the window so the caller can show\nthe newest days first; omit it to read the whole window in one call.",
+        "parameters": [
+          {
+            "name": "Days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "GUID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Segment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.ConditionalAccess.Read"
+      }
+    },
     "/api/ListCASituations": {
       "get": {
         "summary": "ListCASituations",
