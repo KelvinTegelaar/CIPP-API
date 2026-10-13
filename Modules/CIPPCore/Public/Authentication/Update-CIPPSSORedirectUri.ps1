@@ -159,7 +159,7 @@ function Update-CIPPSSORedirectUri {
                 # Rebuild the Graph resourceAccess as the union of what's already declared and the
                 # missing scopes, so nothing already consented is dropped.
                 $MergedGraphAccess = [System.Collections.Generic.List[object]]::new()
-                foreach ($Access in @($GraphEntry.resourceAccess)) { $MergedGraphAccess.Add(@{ id = $Access.id; type = $Access.type }) }
+                foreach ($Access in $GraphEntry.resourceAccess) { $MergedGraphAccess.Add(@{ id = $Access.id; type = $Access.type }) }
                 foreach ($ScopeId in $MissingScopeIds) { $MergedGraphAccess.Add(@{ id = $ScopeId; type = 'Scope' }) }
 
                 # Preserve any non-Graph resource entries untouched.
