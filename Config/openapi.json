@@ -14180,6 +14180,9 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "AlertReNotify": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Command": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -45101,7 +45104,7 @@
         "tags": [
           "Tenant > Conditional"
         ],
-        "description": "Shows how a single Conditional Access policy was evaluated against recent interactive sign-ins, like\nthe Entra portal's Policy impact view: sign-ins per UTC day split by the policy's result (success,\nfailure, not applied and the report-only equivalents), totals for the window, and a capped sample\nof sign-ins per day where the policy's controls were not met. Built from the sign-in log, because\nthe portal's own impact report is not reachable by other applications. Days is 1, 7 or 30. Segment\n(0-based, ten days each, counted back from now) reads one part of the window so the caller can show\nthe newest days first; omit it to read the whole window in one call.",
+        "description": "Shows how a single Conditional Access policy was evaluated against recent interactive sign-ins, like\nthe Entra portal's Policy impact view: sign-ins per UTC day split by the policy's result (success,\nfailure, not applied and the report-only equivalents), totals for the window, and a capped sample\nof sign-ins per day where the policy's controls were not met. Days is 1, 7 or 30.",
         "parameters": [
           {
             "name": "Days",
@@ -50196,6 +50199,9 @@
                       },
                       "AlertComment": {
                         "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "AlertReNotify": {
                         "x-cipp-field-source": "storage"
                       },
                       "Command": {
@@ -59809,6 +59815,9 @@
                       },
                       "AlertComment": {
                         "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "AlertReNotify": {
                         "x-cipp-field-source": "storage"
                       },
                       "Command": {

@@ -21,6 +21,7 @@ BeforeAll {
     . (Join-Path $Helper 'Get-AlertContentHash.ps1')
     . (Join-Path $Helper 'Get-CIPPAlertLifecycleKey.ps1')
     . (Join-Path $Helper 'Write-AlertTrace.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Set-CippScheduledTaskContext.ps1')
 
     function New-StoredRow {
         param($Message, $Status = 'Open', $ReopenCount = '0', $ResolvedAt = '', $LastSeen = '2026-09-20T10:00:00.0000000Z', $SnoozeUntilResolved = '', $SnoozeRowKey = '')
@@ -225,6 +226,31 @@ Describe 'Write-AlertTrace' {
         @($Result)[0].Message | Should -Be 'second'
         (Get-WrittenRow -Message 'first').FirstSeen | Should -BeLike '2026-09-20*'
         (Get-WrittenRow -Message 'first').Status | Should -Be 'Open'
+    }
+
+    It 'returns continuing items again when the alert task has re-notify on, but never snoozed ones' {
+        $Hash = (Get-AlertContentHash -AlertItem @{ Message = 'snoozed' }).ContentHash
+        $script:Snoozes = @{ $Hash = [pscustomobject]@{ SnoozeUntil = '0'; UntilResolved = 'False'; KeepVisible = 'False'; SnoozeReason = ''; SnoozedBy = 'ops@contoso.com'; RowKey = 'contoso.onmicrosoft.com-hash' } }
+        $script:Existing = @(
+            (New-StoredRow -Message 'first'),
+            (New-StoredRow -Message 'snoozed' -Status 'Snoozed')
+        )
+        $Data = @(
+            [pscustomobject]@{ Message = 'first' }
+            [pscustomobject]@{ Message = 'snoozed' }
+        )
+
+        try {
+            Set-CippScheduledTaskContext -TaskId 'task1' -AlertReNotify $true
+            $Result = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $Data
+        } finally {
+            Set-CippScheduledTaskContext -TaskId $null
+        }
+
+        @($Result).Message | Should -Be @('first')
+        (Get-WrittenRow -Message 'first').Status | Should -Be 'Open'
+        (Get-WrittenRow -Message 'snoozed').Status | Should -Be 'Snoozed'
+        Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $Data | Should -BeNullOrEmpty
     }
 
     It 'ignores duplicate items within one run' {

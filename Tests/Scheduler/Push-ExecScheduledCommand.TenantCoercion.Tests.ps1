@@ -12,7 +12,7 @@ BeforeAll {
     if (-not $FunctionPath) { throw 'Could not locate Push-ExecScheduledCommand.ps1 under Modules/' }
 
     # Stubs for the module surface Push-ExecScheduledCommand touches.
-    function Set-CippScheduledTaskContext { param($TaskId) }
+    function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify) }
     function Set-CippUserAgentContext { param($Headers, $Source, $TaskId) }
     function Get-CippTable { param($tablename) }
     function Get-AzDataTableEntity { param($Context, $Filter) }

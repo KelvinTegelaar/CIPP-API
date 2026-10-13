@@ -29,7 +29,7 @@ function Push-ExecScheduledCommand {
     # Initialize AsyncLocal storage for thread-safe per-invocation context
     # Store task id in CIPPCore module-scoped AsyncLocal storage so Write-LogMessage can read it -
     # global vars are unreliable in Azure Functions
-    Set-CippScheduledTaskContext -TaskId $Item.TaskInfo.RowKey
+    Set-CippScheduledTaskContext -TaskId $Item.TaskInfo.RowKey -AlertReNotify ([string]$Item.TaskInfo.AlertReNotify -eq 'True')
 
     # Store action source + creating user identity (from stored headers) for outbound User-Agent attribution
     Set-CippUserAgentContext -Headers $Item.Parameters.Headers -Source 'scheduled-task' -TaskId $Item.TaskInfo.RowKey
