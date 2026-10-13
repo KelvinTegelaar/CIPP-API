@@ -24,9 +24,15 @@ function Invoke-ExecCombinedSetup {
                     $null = Update-CIPPSAMCertificate -ErrorAction Stop
                     $Cert = Get-CIPPSAMCertificate -SkipCache -ErrorAction Stop
                     if (-not $Cert) { throw 'No SAM certificate is available to authenticate with.' }
-                    $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $true -Force
-                    $env:CertificateAuthMode = $true
-                    $Results.add('Enabled certificate authentication. CIPP now authenticates with the SAM certificate instead of the client secret. The client secret is kept as a rollback - disable this option to switch back.')
+                    # Only switch over once the certificate has proven it can obtain a token.
+                    $Probe = Test-CIPPSAMCertificateAuth
+                    if (-not $Probe.Success) {
+                        $Results.add("Could not enable certificate authentication: the SAM certificate $($Probe.Thumbprint) could not obtain a token ($($Probe.Error)). The client secret remains in use.")
+                    } else {
+                        $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $true -Force
+                        $env:CertificateAuthMode = $true
+                        $Results.add('Enabled certificate authentication. CIPP now authenticates with the SAM certificate instead of the client secret. The client secret is kept as a rollback - disable this option to switch back.')
+                    }
                 } catch {
                     $Results.add("Could not enable certificate authentication: $($_.Exception.Message). The existing authentication method is unchanged.")
                 }

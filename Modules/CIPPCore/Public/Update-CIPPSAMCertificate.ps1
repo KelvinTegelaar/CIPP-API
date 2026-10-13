@@ -219,6 +219,11 @@ function Update-CIPPSAMCertificate {
         }
     }
 
+    # Keep the process-wide preload in line with what is now registered on the app.
+    if ($Current.PfxBase64) {
+        Update-CIPPSAMCertificateEnvCache -Name 'SAMCertificate' -PfxBase64 $Current.PfxBase64
+    }
+
     $ResultThumbprint = $Current.Thumbprint
     $ResultNotAfter = $Current.NotAfter
     Write-LogMessage -API 'SAMCertificate' -message "SAM certificate reconciled for $AppId. Thumbprint: $ResultThumbprint, drift=$Drift, removed $($Classification.RemovedCount) CIPP debris." -sev 'Info'

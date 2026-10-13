@@ -20,6 +20,7 @@ BeforeAll {
     function Invoke-CIPPRestMethod { param($Method, $Uri, $Body, $ContentType) }
     function Get-CippKeyVaultName {}
     function Get-CippKeyVaultSecret { param($VaultName, $Name, [switch]$AsPlainText) }
+    function Update-CIPPSAMCertificateEnvCache { param($Name, $PfxBase64) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-GraphToken.ps1')
 }
@@ -106,5 +107,67 @@ Describe 'Get-GraphToken certificate-exclusive gating' {
             $Body['client_secret'] -eq 'other-app-secret' -and
             -not $Body.ContainsKey('client_assertion')
         }
+    }
+}
+
+Describe 'Get-GraphToken stale SAM certificate self-heal' {
+    BeforeEach {
+        $script:SavedEnv = @{}
+        foreach ($Name in 'CertificateAuthMode', 'ApplicationID', 'ApplicationSecret', 'TenantID', 'RefreshToken', 'SetFromProfile') {
+            $script:SavedEnv[$Name] = [Environment]::GetEnvironmentVariable($Name)
+        }
+        $env:ApplicationID = 'sam-app-id'
+        $env:ApplicationSecret = 'sam-secret'
+        $env:TenantID = '11111111-2222-3333-4444-555555555555'
+        $env:RefreshToken = 'sam-refresh-token'
+        $env:SetFromProfile = 'true'
+        $env:CertificateAuthMode = $true
+
+        Mock Get-CippTable { @{} }
+        Mock Get-CIPPAzDataTableEntity { $null }
+        Mock Update-AzDataTableEntity {}
+        Mock Update-CIPPSAMCertificateEnvCache {}
+        # The runspace cache serves an old cert; storage holds the registered one.
+        Mock Get-CIPPSAMCertificate { [pscustomobject]@{ Certificate = 'OLD-CERT'; Thumbprint = 'OLD' } }
+        Mock Get-CIPPSAMCertificate { [pscustomobject]@{ Certificate = 'NEW-CERT'; Thumbprint = 'NEW'; PfxBase64 = 'NEW-PFX' } } -ParameterFilter { $SkipCache }
+        Mock Get-GraphTokenFromCert { throw 'AADSTS700027: Client assertion contains an invalid signature.' } -ParameterFilter { $Certificate -eq 'OLD-CERT' }
+        Mock Get-GraphTokenFromCert { @{ access_token = 'new-cert-token'; expires_in = 3600 } } -ParameterFilter { $Certificate -eq 'NEW-CERT' }
+        Mock New-CIPPCertificateAssertion { "assertion-for-$Certificate" }
+        Mock Invoke-CIPPRestMethod {
+            if ($Body['client_assertion'] -eq 'assertion-for-OLD-CERT') { throw 'AADSTS700027: Client assertion contains an invalid signature.' }
+            @{ access_token = 'delegated-token'; expires_in = 3600 }
+        }
+    }
+
+    AfterEach {
+        foreach ($Name in $script:SavedEnv.Keys) {
+            if ($null -eq $script:SavedEnv[$Name]) {
+                Remove-Item "env:$Name" -ErrorAction SilentlyContinue
+            } else {
+                Set-Item "env:$Name" -Value $script:SavedEnv[$Name]
+            }
+        }
+    }
+
+    It 'retries an app-only token once with the stored certificate when the cached one is rejected' {
+        $Result = Get-GraphToken -AsApp $true
+
+        $Result.Authorization | Should -Be 'Bearer new-cert-token'
+        Should -Invoke Get-GraphTokenFromCert -Times 2 -Exactly
+        Should -Invoke Update-CIPPSAMCertificateEnvCache -Times 1 -Exactly -ParameterFilter { $PfxBase64 -eq 'NEW-PFX' }
+    }
+
+    It 'retries a delegated token once with an assertion signed by the stored certificate' {
+        $Result = Get-GraphToken
+
+        $Result.Authorization | Should -Be 'Bearer delegated-token'
+        Should -Invoke Invoke-CIPPRestMethod -Times 2 -Exactly
+    }
+
+    It 'propagates the error when the stored certificate is the one that was rejected' {
+        Mock Get-CIPPSAMCertificate { [pscustomobject]@{ Certificate = 'OLD-CERT'; Thumbprint = 'OLD' } } -ParameterFilter { $SkipCache }
+
+        { Get-GraphToken -AsApp $true } | Should -Throw '*AADSTS700027*'
+        Should -Invoke Get-GraphTokenFromCert -Times 1 -Exactly
     }
 }

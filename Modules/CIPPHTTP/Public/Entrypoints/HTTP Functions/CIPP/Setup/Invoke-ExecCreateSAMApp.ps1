@@ -96,7 +96,16 @@ function Invoke-ExecCreateSAMApp {
                     $CertResult = Update-CIPPSAMCertificate -ApplicationId $AppId.appId -Headers @{ authorization = "Bearer $($Token.access_token)" } -ErrorAction Stop
                     Write-Information "Registered SAM certificate for certificate-only setup. Thumbprint: $($CertResult.Thumbprint), storage mode: $($CertResult.StorageMode)"
                 } catch {
+                    $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $false -Force
+                    $env:CertificateAuthMode = $null
                     throw "Certificate-only setup was selected but the SAM certificate could not be registered on the application. Setup cannot continue without a credential. $($_.Exception.Message)"
+                }
+                # The certificate is the only credential, so it must prove it can obtain a token.
+                $Probe = Test-CIPPSAMCertificateAuth -ApplicationId $AppId.appId -TenantId $TenantId
+                if (-not $Probe.Success) {
+                    $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $false -Force
+                    $env:CertificateAuthMode = $null
+                    throw "Certificate-only setup failed: the SAM certificate $($Probe.Thumbprint) could not obtain a token ($($Probe.Error))."
                 }
                 $AppPassword = $null
             } else {

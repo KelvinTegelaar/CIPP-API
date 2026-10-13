@@ -13,6 +13,7 @@ BeforeAll {
     function New-CIPPSAMCertificate { }
     function Set-CIPPSAMCertificate { }
     function Update-AppManagementPolicy { }
+    function Update-CIPPSAMCertificateEnvCache { param($Name, $PfxBase64) }
     function Write-LogMessage { }
     function Get-CippException { param($Exception) @{ message = $Exception.Exception.Message } }
 
@@ -75,6 +76,7 @@ Describe 'Update-CIPPSAMCertificate' {
 
         Mock -CommandName Update-AppManagementPolicy -MockWith { @{ PolicyAction = $null } }
         Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Update-CIPPSAMCertificateEnvCache -MockWith { }
         Mock -CommandName New-GraphPOSTRequest -MockWith {
             param($type, $uri, $Body)
             $script:PatchBodies.Add([string]$Body)
@@ -199,6 +201,9 @@ Describe 'Update-CIPPSAMCertificate' {
         $Keys = @($Parsed.keyCredentials)
         $Keys.Count | Should -Be 2
         ($Keys | Where-Object { $_.key -eq $script:CurrentCert.PublicKeyBase64 }).Count | Should -Be 1
+        Should -Invoke Update-CIPPSAMCertificateEnvCache -Times 1 -Exactly -ParameterFilter {
+            $Name -eq 'SAMCertificate' -and $PfxBase64 -eq $script:CurrentCert.PfxBase64
+        }
     }
 
     It 'mints on near expiry and keeps previous current plus new' {

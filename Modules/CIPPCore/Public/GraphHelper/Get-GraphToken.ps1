@@ -178,20 +178,35 @@ function Get-GraphToken {
                 $SAMCert = Get-CIPPSAMCertificate -ErrorAction Stop
                 if (-not $SAMCert) { throw 'No SAM certificate available. Run Update-CIPPSAMCertificate to create one.' }
             }
-            if ($UseCertificate -eq $true -and $AuthBody.grant_type -eq 'client_credentials') {
-                # App-only with certificate: use the dedicated cert token function
-                # (has its own cache under the same key and the AADSTS700027 retry)
-                $AccessToken = Get-GraphTokenFromCert -TenantId $tenantid -AppId $AuthBody.client_id -Scope $scope -Certificate $SAMCert.Certificate -SkipCache:($SkipCache -eq $true) -ErrorAction Stop
-                if (-not $AccessToken.access_token) { throw "Could not get a token using the SAM certificate for $tenantid" }
-            } else {
-                if ($UseCertificate -eq $true) {
-                    # Delegated with certificate: authenticate the app with a signed assertion
-                    # instead of the client secret; the refresh token still provides user context
-                    $null = $AuthBody.Remove('client_secret')
-                    $AuthBody.client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
-                    $AuthBody.client_assertion = New-CIPPCertificateAssertion -TenantId $tenantid -AppId $AuthBody.client_id -Certificate $SAMCert.Certificate
+            for ($CertAttempt = 1; $CertAttempt -le 2; $CertAttempt++) {
+                try {
+                    if ($UseCertificate -eq $true -and $AuthBody.grant_type -eq 'client_credentials') {
+                        # App-only with certificate: use the dedicated cert token function
+                        # (has its own cache under the same key and the AADSTS700027 retry)
+                        $AccessToken = Get-GraphTokenFromCert -TenantId $tenantid -AppId $AuthBody.client_id -Scope $scope -Certificate $SAMCert.Certificate -SkipCache:($SkipCache -eq $true) -ErrorAction Stop
+                        if (-not $AccessToken.access_token) { throw "Could not get a token using the SAM certificate for $tenantid" }
+                    } else {
+                        if ($UseCertificate -eq $true) {
+                            # Delegated with certificate: authenticate the app with a signed assertion
+                            # instead of the client secret; the refresh token still provides user context
+                            $null = $AuthBody.Remove('client_secret')
+                            $AuthBody.client_assertion_type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+                            $AuthBody.client_assertion = New-CIPPCertificateAssertion -TenantId $tenantid -AppId $AuthBody.client_id -Certificate $SAMCert.Certificate
+                        }
+                        $AccessToken = (Invoke-CIPPRestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop)
+                    }
+                    if ($CertAttempt -gt 1 -and $SAMCert.PfxBase64) {
+                        Update-CIPPSAMCertificateEnvCache -Name 'SAMCertificate' -PfxBase64 $SAMCert.PfxBase64
+                    }
+                    break
+                } catch {
+                    # A cached certificate may no longer be registered on the app: retry once with the stored one.
+                    $TokenError = $_
+                    if ($UseCertificate -ne $true -or $CertAttempt -gt 1 -or "$($TokenError.ErrorDetails.Message) $($TokenError.Exception.Message)" -notmatch 'AADSTS700027') { throw $TokenError }
+                    $StoredCert = try { Get-CIPPSAMCertificate -SkipCache -ErrorAction Stop } catch { $null }
+                    if (-not $StoredCert -or $StoredCert.Thumbprint -eq $SAMCert.Thumbprint) { throw $TokenError }
+                    $SAMCert = $StoredCert
                 }
-                $AccessToken = (Invoke-CIPPRestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop)
             }
             if ($null -eq $AccessToken.expires_on -and $AccessToken.expires_in) {
                 $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in

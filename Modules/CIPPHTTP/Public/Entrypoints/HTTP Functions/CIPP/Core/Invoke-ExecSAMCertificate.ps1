@@ -28,26 +28,49 @@ function Invoke-ExecSAMCertificate {
                 $Stored = Get-CIPPSAMCertificate -SkipCache -ErrorAction SilentlyContinue
                 if ($null -eq $Stored) {
                     $Body = @{
-                        Configured = $false
-                        Results    = 'No SAM certificate found. One will be created automatically by the weekly token update, or use the Renew action to create it now.'
+                        Configured    = $false
+                        ApplicationId = $env:ApplicationID
+                        Results       = 'No SAM certificate found. One will be created automatically by the weekly token update, or use the Renew action to create it now.'
                     }
                 } else {
                     $RegisteredOnApp = $false
+                    $Registered = [System.Collections.Generic.List[object]]::new()
                     try {
                         $AppRegistration = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($env:ApplicationID)')?`$select=id,keyCredentials" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
                         # Graph returns customKeyIdentifier as the hex thumbprint string, but tolerate base64 as well
                         $Identifiers = @($AppRegistration.keyCredentials.customKeyIdentifier)
                         $RegisteredOnApp = $Identifiers -contains $Stored.Thumbprint -or $Identifiers -contains [Convert]::ToBase64String([Convert]::FromHexString($Stored.Thumbprint))
+                        foreach ($Credential in @($AppRegistration.keyCredentials | Where-Object { $_.type -eq 'AsymmetricX509Cert' })) {
+                            $KeyId = [string]$Credential.customKeyIdentifier
+                            $CredentialThumbprint = $null
+                            if ($KeyId -match '^[0-9A-Fa-f]{40}$') {
+                                $CredentialThumbprint = $KeyId.ToUpperInvariant()
+                            } else {
+                                try { $CredentialThumbprint = [Convert]::ToHexString([Convert]::FromBase64String($KeyId)) } catch { $CredentialThumbprint = $null }
+                            }
+                            $Registered.Add([pscustomobject]@{
+                                    DisplayName   = $Credential.displayName
+                                    KeyId         = $Credential.keyId
+                                    StartDateTime = $Credential.startDateTime
+                                    EndDateTime   = $Credential.endDateTime
+                                    Thumbprint    = $CredentialThumbprint
+                                    ThisInstance  = $null -ne $CredentialThumbprint -and $CredentialThumbprint -eq $Stored.Thumbprint
+                                })
+                        }
                     } catch {
+                        $Registered.Clear()
                         Write-Warning "Could not check app registration key credentials: $($_.Exception.Message)"
                     }
                     $Body = @{
                         Configured      = $true
+                        ApplicationId   = $env:ApplicationID
                         Thumbprint      = $Stored.Thumbprint
+                        Subject         = $Stored.Certificate.Subject
                         NotBefore       = $Stored.NotBefore
                         NotAfter        = $Stored.NotAfter
                         DaysRemaining   = [math]::Floor(($Stored.NotAfter - (Get-Date).ToUniversalTime()).TotalDays)
                         RegisteredOnApp = $RegisteredOnApp
+                        RegisteredCertificates = @($Registered)
                     }
                 }
                 $StatusCode = [HttpStatusCode]::OK
