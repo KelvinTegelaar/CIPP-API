@@ -122,7 +122,7 @@ Describe 'Invoke-CIPPStandardDevicePrepProfile assignment handling' {
 
         Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
         Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*configurationPolicies' } -MockWith {
-            @([PSCustomObject]@{ name = 'TEST_PREP_PROFILE'; id = 'policy-1' })
+            @([PSCustomObject]@{ name = 'TEST_PREP_PROFILE'; id = 'policy-1'; templateReference = @{ templateId = '80d33118-b7b4-40d8-b15f-81be745e053f_1' } })
         }
         Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*expand=settings*' } -MockWith { New-PolicyDetail -DeviceGroupId 'device-group-1' }
         Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*/groups?*' } -MockWith { @() }
@@ -204,6 +204,18 @@ Describe 'Invoke-CIPPStandardDevicePrepProfile assignment handling' {
             @($script:PostCalls).Count | Should -Be 0
             $script:CompareFields[0].Current.PSObject.Properties.Name | Should -Not -Contain 'isAssigned'
             $script:CompareFields[0].Expected.PSObject.Properties.Name | Should -Not -Contain 'isAssigned'
+        }
+    }
+
+    Context 'a same-named policy from another template' {
+        It 'is not treated as the profile, so it is never deleted' {
+            Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*configurationPolicies' } -MockWith {
+                @([PSCustomObject]@{ name = 'TEST_PREP_PROFILE'; id = 'other-policy'; templateReference = @{ templateId = '' } })
+            }
+            Invoke-CIPPStandardDevicePrepProfile -Tenant $script:Tenant -Settings (New-ProfileSettings -Timeout 20)
+
+            @($script:PostCalls | Where-Object { $_.type -eq 'DELETE' }).Count | Should -Be 0
+            @($script:PostCalls | Where-Object { $_.uri -like "*other-policy*" }).Count | Should -Be 0
         }
     }
 

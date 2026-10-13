@@ -3,11 +3,12 @@ function Get-CIPPBaselineDevicePrepProfileState {
     .SYNOPSIS
         Prepare hook for DevicePrepProfile: one named Autopilot Device Preparation profile.
     .DESCRIPTION
-        Finds the configured profile by name in the IntuneConfigurationPolicies cache and
+        Finds the configured profile by name (and device-prep template) in the IntuneConfigurationPolicies cache and
         parses the enrollment_autopilot_dpp settings back into the classic's property set.
         The device security group resolves by name LIVE (the classic did the same lookup for
         its expected value); a group that does not exist yet grades as an empty id - the
-        executor creates it when CreateNewGroup allows. The group Intune actually enrols devices
+        executor creates it when CreateNewGroup allows. A resolved group's owners are read LIVE and
+        graded for the Intune Provisioning Client, which the executor adds in place. The group Intune actually enrols devices
         into is read LIVE too, from the marker CIPP wrote when it applied one or from the
         membership target action - never from the settings string the portal displays, which
         every create writes whether or not the group was ever applied.
@@ -35,7 +36,8 @@ function Get-CIPPBaselineDevicePrepProfileState {
     # The identity may arrive as an option object ({label, value}) from some save paths.
     $ProfileName = "$($V.ProfileName.value ?? $V.ProfileName)"
     if ([string]::IsNullOrWhiteSpace($ProfileName)) { return @{ Current = $null } }
-    $Policy = @($Policies | Where-Object { "$($_.name)" -eq $ProfileName }) | Select-Object -First 1
+    # Name alone could match an unrelated policy the executor would then delete; require the device-prep template.
+    $Policy = @($Policies | Where-Object { "$($_.name)" -eq $ProfileName -and "$($_.templateReference.templateId)" -like '80d33118-b7b4-40d8-b15f-81be745e053f*' }) | Select-Object -First 1
 
     $DeploymentType = [string]($V.DeploymentType.value ?? $V.DeploymentType ?? '0')
     $JoinType = [string]($V.JoinType.value ?? $V.JoinType ?? '0')
@@ -51,14 +53,21 @@ function Get-CIPPBaselineDevicePrepProfileState {
     # Resolve the device security group by name, exactly the classic's lookup. Creation is
     # the executor's job - a compare must never write.
     $DeviceGroupId = ''
+    $HasProvisioningOwner = $null
     if (-not [string]::IsNullOrWhiteSpace("$($V.DeviceGroupName)")) {
         try {
-            $EscapedName = "$($V.DeviceGroupName)" -replace "'", "''"
-            $GroupFilter = [System.Uri]::EscapeDataString("startsWith(displayName,'$EscapedName') and mailEnabled eq false and securityEnabled eq true")
-            $MatchedGroups = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$filter=$GroupFilter" -tenantid $TenantFilter)
-            if ($MatchedGroups.Count -gt 0) { $DeviceGroupId = "$($MatchedGroups[0].id)" }
+            $DeviceGroupId = "$((Get-CIPPBaselineDevicePrepGroup -GroupName "$($V.DeviceGroupName)" -TenantFilter $TenantFilter).id)"
         } catch {
             Write-Information "Baselines: DevicePrepProfile group lookup for '$($V.DeviceGroupName)' failed: $($_.Exception.Message)"
+        }
+        # Intune needs the Provisioning Client to own the group; an unreadable owner list stays ungraded.
+        if (-not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
+            try {
+                $Owners = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$DeviceGroupId/owners?`$select=id,appId" -tenantid $TenantFilter)
+                $HasProvisioningOwner = @($Owners | Where-Object { "$($_.appId)" -eq 'f1346770-5b25-470b-88bd-d5744ab7952c' }).Count -gt 0
+            } catch {
+                Write-Information "Baselines: DevicePrepProfile owner lookup for group '$DeviceGroupId' failed: $($_.Exception.Message)"
+            }
         }
     }
 
@@ -117,6 +126,12 @@ function Get-CIPPBaselineDevicePrepProfileState {
         $MembershipTarget = Get-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId "$($Policy.id)" -TenantFilter $TenantFilter
         $Expected | Add-Member -NotePropertyName 'deviceGroupId' -NotePropertyValue $DeviceGroupId
         $Current | Add-Member -NotePropertyName 'deviceGroupId' -NotePropertyValue ([string]$MembershipTarget.GroupId)
+    }
+
+    # Group-level and repaired in place, so it is graded whether or not the profile exists.
+    if ($null -ne $HasProvisioningOwner) {
+        $Expected | Add-Member -NotePropertyName 'deviceGroupProvisioningOwner' -NotePropertyValue $true
+        $Current | Add-Member -NotePropertyName 'deviceGroupProvisioningOwner' -NotePropertyValue $HasProvisioningOwner
     }
 
     # Assignment dimension: graded only when requested AND readable.

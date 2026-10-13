@@ -10,7 +10,8 @@ function Invoke-CIPPBaselineDevicePrepProfile {
         is resolved (or, when CreateNewGroup allows, created with the Intune Provisioning Client as
         owner) before either branch, because the group Intune enrols devices into is applied
         through setEnrollmentTimeDeviceMembershipTarget on the policy rather than by the settings
-        string, so both branches have to write it.
+        string, so both branches have to write it. An existing group graded without the Intune
+        Provisioning Client as owner gets it added through owners/$ref, never by recreating.
     .FUNCTIONALITY
         Internal
     #>
@@ -42,25 +43,40 @@ function Invoke-CIPPBaselineDevicePrepProfile {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "DevicePrepProfile: $($AssignmentTarget.Unsupported)" -Sev 'Warning'
     }
 
-    # Resolve or create the device security group, the classic's flow.
+    # Resolve or create the device security group; the Intune Provisioning Client must own it either way.
+    $IntuneProvisioningAppId = 'f1346770-5b25-470b-88bd-d5744ab7952c'
+    $GetProvisioningSpId = {
+        $ServicePrincipal = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId eq '$IntuneProvisioningAppId'&`$select=id" -tenantid $TenantFilter
+        $SpId = "$($ServicePrincipal.id)"
+        if ([string]::IsNullOrWhiteSpace($SpId)) {
+            $SpBody = @{ appId = $IntuneProvisioningAppId } | ConvertTo-Json -Compress
+            $CreatedSp = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -body $SpBody -type POST
+            $SpId = "$($CreatedSp.id)"
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message 'Created the Intune Provisioning Client service principal.' -Sev 'Info'
+        }
+        $SpId
+    }
     $DeviceGroupId = ''
     if (-not [string]::IsNullOrWhiteSpace("$($Remediate.deviceGroupName)")) {
         $GroupName = "$($Remediate.deviceGroupName)"
-        $EscapedName = $GroupName -replace "'", "''"
-        $GroupFilter = [System.Uri]::EscapeDataString("startsWith(displayName,'$EscapedName') and mailEnabled eq false and securityEnabled eq true")
-        $MatchedGroups = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$filter=$GroupFilter" -tenantid $TenantFilter)
-        if ($MatchedGroups.Count -gt 0) {
-            $DeviceGroupId = "$($MatchedGroups[0].id)"
-        } elseif ($Remediate.createNewGroup -eq $true) {
-            $IntuneProvisioningAppId = 'f1346770-5b25-470b-88bd-d5744ab7952c'
-            $ServicePrincipal = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId eq '$IntuneProvisioningAppId'&`$select=id" -tenantid $TenantFilter
-            $SpId = "$($ServicePrincipal.id)"
-            if ([string]::IsNullOrWhiteSpace($SpId)) {
-                $SpBody = @{ appId = $IntuneProvisioningAppId } | ConvertTo-Json -Compress
-                $CreatedSp = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -body $SpBody -type POST
-                $SpId = "$($CreatedSp.id)"
-                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message 'Created the Intune Provisioning Client service principal.' -Sev 'Info'
+        $MatchedGroup = Get-CIPPBaselineDevicePrepGroup -GroupName $GroupName -TenantFilter $TenantFilter
+        if ($MatchedGroup) {
+            $DeviceGroupId = "$($MatchedGroup.id)"
+            # Only a graded-missing owner is added; a group-level fix that never touches the profile.
+            if ($Current.deviceGroupProvisioningOwner -eq $false) {
+                try {
+                    $SpId = & $GetProvisioningSpId
+                    $OwnerBody = @{ '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$SpId" } | ConvertTo-Json -Compress
+                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/groups/$DeviceGroupId/owners/`$ref" -tenantid $TenantFilter -body $OwnerBody -type POST
+                    Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Added the Intune Provisioning Client as owner of the security group '$($MatchedGroup.displayName)'." -Sev 'Info'
+                } catch {
+                    if ("$($_.Exception.Message)" -notmatch 'already exist') {
+                        Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "DevicePrepProfile: failed to add the Intune Provisioning Client as owner of '$($MatchedGroup.displayName)': $($_.Exception.Message)" -Sev 'Error'
+                    }
+                }
             }
+        } elseif ($Remediate.createNewGroup -eq $true) {
+            $SpId = & $GetProvisioningSpId
             $GroupBody = @{
                 displayName         = $GroupName
                 description         = 'Device Preparation security group managed by CIPP'
@@ -77,8 +93,8 @@ function Invoke-CIPPBaselineDevicePrepProfile {
         }
     }
 
-    # Settings already correct means only the assignment or the membership target drifted:
-    # repair them in place.
+    # Settings already correct means only the assignment, membership target or group owner
+    # drifted: repair them in place (the owner was handled above).
     if ($Current.settingsCorrect -eq $true -and -not [string]::IsNullOrWhiteSpace("$($Current.policyId)")) {
         # isAssigned is absent when the assignment could not be graded, and a blind re-post is
         # the safe answer there; a graded-correct assignment is left alone.
