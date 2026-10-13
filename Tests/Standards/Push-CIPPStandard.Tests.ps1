@@ -32,7 +32,7 @@ BeforeAll {
     # binding makes signature drift fail loudly here instead of silently landing in $args.
     function Test-CIPPRerun { [CmdletBinding()] param($Type, $Tenant, $API, $BaseTime, $Settings) }
     function Set-CippStandardInfoContext { [CmdletBinding()] param($StandardInfo) }
-    function Set-CippUserAgentContext { [CmdletBinding()] param($Source, $TemplateId) }
+    function Set-CippUserAgentContext { [CmdletBinding()] param([string]$Source, [string]$TemplateId) }
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $message, $sev, $LogData, $headers) }
     function Get-CippException { [CmdletBinding()] param($Exception) }
     function Get-CIPPTable { [CmdletBinding()] param($tablename) }
@@ -145,7 +145,7 @@ Describe 'Push-CIPPStandard settings handling' {
             # Called twice: once with the context, once with $null to clear it in the finally block.
             if ($null -ne $StandardInfo) { $script:CapturedStandardInfo = $StandardInfo }
         }
-        Mock -CommandName Set-CippUserAgentContext -MockWith { }
+        Mock -CommandName Set-CippUserAgentContext -MockWith { $script:CapturedUserAgentTemplateId = $TemplateId }
         Mock -CommandName Get-CippException -MockWith { @{} }
         Mock -CommandName Get-CIPPTable -MockWith { @{} }
         Mock -CommandName Get-CIPPSchemaExtensions -MockWith { @() }
@@ -397,6 +397,18 @@ Describe 'Push-CIPPStandard settings handling' {
             Push-CIPPStandard -Item (New-QueueItem -Settings $Settings -Standard 'AntiPhishPolicy')
 
             $script:CapturedSettings.sharePath | Should -Be '\\srv\share$\folder'
+        }
+    }
+
+    Context 'merged template tiers' {
+        It 'passes one template id to the user agent when tiers merged several' {
+            $Item = New-QueueItem -Settings ([pscustomobject]@{ remediate = $true }) -Standard 'AntiPhishPolicy'
+            $Item.TemplateId = @('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002')
+
+            Push-CIPPStandard -Item $Item
+
+            $script:CapturedStandard | Should -Be 'AntiPhishPolicy'
+            $script:CapturedUserAgentTemplateId | Should -Be 'aaaaaaaa-0000-0000-0000-000000000001'
         }
     }
 
