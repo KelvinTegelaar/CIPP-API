@@ -68,6 +68,7 @@ function Get-CIPPSchedulerBlockedCommands {
 
         # End-tenant secret material - recovery keys & admin passwords, PostExecution would exfiltrate them
         'Get-CIPPLAPSPassword'
+        'Get-CIPPMacOSLapsPassword'
         'Get-CIPPBitlockerKey'
         'Search-CIPPBitlockerKeys'
         'Get-CIPPFileVaultKey'
