@@ -24532,7 +24532,7 @@
         "tags": [
           "Endpoint > MEM"
         ],
-        "description": "Retrieves the Windows LAPS local administrator password for a device, identified by its Entra device GUID. Returns a live credential in plain text; the retrieval is written to the CIPP audit log.",
+        "description": "Retrieves the LAPS local administrator password for a device. Platform selects Windows (the default), where guid is the Entra device ID, or macOS, where guid is the Intune managed device ID. Returns a live credential in plain text; the retrieval is written to the CIPP audit log.",
         "requestBody": {
           "required": true,
           "content": {
@@ -24541,6 +24541,9 @@
                 "type": "object",
                 "properties": {
                   "guid": {
+                    "type": "string"
+                  },
+                  "Platform": {
                     "type": "string"
                   },
                   "TenantFilter": {
@@ -24570,6 +24573,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
