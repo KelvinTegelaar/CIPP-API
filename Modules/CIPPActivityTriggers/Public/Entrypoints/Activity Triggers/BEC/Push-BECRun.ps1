@@ -122,8 +122,11 @@ function Push-BECRun {
     $Skip = { param($Requirement) New-CIPPBecCollectorResult -Data @() -Skipped $true -Requirement $Requirement }
     $Collect = {
         param($Name, [scriptblock]$Body)
+        Write-Information "BEC: $Name started"
+        $CollectorTimer = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             & $Body
+            Write-Information "BEC: $Name finished in $([int]$CollectorTimer.Elapsed.TotalSeconds)s"
         } catch {
             $CollectorError = Get-CippException -Exception $_
             Write-LogMessage -API 'BECRun' -message "BEC collector $Name failed for $($UserName): $($CollectorError.NormalizedError)" -tenant $TenantFilter -sev Warning -LogData $CollectorError
