@@ -23,6 +23,10 @@ namespace CIPP
         {
             new("ca-service",   Pattern(@"^graph\.microsoft\.com/(v1\.0|beta)/(identity/conditionalAccess/|identityProtection/|riskyUsers|riskDetections)"), 0.9, 10),
             new("auth-methods", Pattern(@"^graph\.microsoft\.com/(v1\.0|beta)/users/[^/]+/authentication/"), 20, 20),
+            // Identity and access reports (sign-ins, directory audits, provisioning, authentication-method and credential
+            // reports): 5 requests per 10 seconds per app and tenant, as documented; measured, a fresh bucket takes 12-20 and
+            // every $batch sub-request counts.
+            new("entra-reports", Pattern(@"^graph\.microsoft\.com/(v1\.0|beta)/(auditLogs(/|$)|reports/(authenticationMethods|credentialUser|getCredentialUser|credentialUsage|getCredentialUsage|userCredentialUsage|azureADUserFeatureUsage|getAzureADUserFeatureUsage|applicationSignIn|getApplicationSignIn|relyingParty|getRelyingParty))"), 0.5, 10),
             new("exo-adminapi", Pattern(@"^outlook\.office365\.com/adminapi/"), 45, 2700, 300),
             // SharePoint charges CSOM, SOAP, _api and Graph's SharePoint endpoints to one per-app quota per tenant, in
             // resource units. The lowest licence band allows ~1,250 a minute: 18/s plus a 150 burst stays under it. Larger
@@ -66,6 +70,21 @@ namespace CIPP
         private static readonly ConcurrentDictionary<string, string> _tenantByToken = new(StringComparer.Ordinal);
 
         private static Regex Pattern(string p) => new(p, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+        /// <summary>The measured budget a Graph $batch sub-request falls under.</summary>
+        public sealed record BatchBudget(string Name, int Burst);
+
+        /// <summary>
+        /// A $batch lands all its sub-requests at once, so the limiter can only space whole batches: a caller keeps the
+        /// sub-requests of one budget in a batch within its burst. Null when the URL has no measured budget.
+        /// </summary>
+        public static BatchBudget? BatchBudgetFor(string relativeUrl, string version = "beta")
+        {
+            if (_disabled || string.IsNullOrEmpty(relativeUrl)) return null;
+            var target = $"graph.microsoft.com/{version}/{relativeUrl.Split('?')[0].TrimStart('/')}";
+            var rule = _rules.FirstOrDefault(r => r.Match.IsMatch(target));
+            return rule is null ? null : new BatchBudget(rule.Name, rule.Burst);
+        }
 
         /// <summary>Reserves capacity for a request and returns how long to wait before sending it, or null when the request is not tracked.</summary>
         public static Claim? Acquire(string uri, string method, string? body, IEnumerable<KeyValuePair<string, string>>? headers)

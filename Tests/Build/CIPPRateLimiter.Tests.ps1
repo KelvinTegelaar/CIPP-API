@@ -45,6 +45,27 @@ Describe 'CIPPRateLimiter' {
         [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/groups', 'GET', $null, $A).Wait | Should -Be ([timespan]::Zero)
     }
 
+    It 'spaces the identity reports at 5 sub-requests per 10 seconds per tenant after a burst of 10, sign-ins and audits sharing it' {
+        $A = Get-AuthHeader 'tenant-a'
+        $Batch = { param($Urls) @{ requests = @($Urls | ForEach-Object -Begin { $n = 0 } -Process { @{ id = "$((++$n))"; method = 'GET'; url = $_ } }) } | ConvertTo-Json -Depth 5 }
+        $Ten = @(1..8 | ForEach-Object { 'auditLogs/signIns?$top=1' }) + @('auditLogs/directoryAudits', 'reports/authenticationMethods/userRegistrationDetails')
+        [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/beta/$batch', 'POST', (& $Batch $Ten), $A).Wait | Should -Be ([timespan]::Zero) -Because 'the first ten fit the burst'
+        $Next = [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/beta/$batch', 'POST', (& $Batch @('auditLogs/signIns', 'auditLogs/signIns')), $A).Wait.TotalSeconds
+        $Next | Should -BeGreaterThan 3
+        $Next | Should -BeLessOrEqual 4.1
+        [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/beta/auditLogs/signIns', 'GET', $null, (Get-AuthHeader 'tenant-b')).Wait | Should -Be ([timespan]::Zero)
+        [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/beta/reports/getOffice365ActiveUserDetail(period=''D7'')', 'GET', $null, $A).Wait | Should -Be ([timespan]::Zero) -Because 'usage reports have their own limits'
+    }
+
+    It 'tells a batch caller the burst of the budget a sub-request falls under' {
+        $Reports = [CIPP.CIPPRateLimiter]::BatchBudgetFor("auditLogs/signIns?`$filter=createdDateTime ge 2026-10-01T00:00:00Z&`$top=999", 'beta')
+        $Reports.Name | Should -Be 'entra-reports'
+        $Reports.Burst | Should -Be 10
+        [CIPP.CIPPRateLimiter]::BatchBudgetFor('/reports/credentialUserRegistrationDetails', 'beta').Burst | Should -Be 10
+        [CIPP.CIPPRateLimiter]::BatchBudgetFor('identity/conditionalAccess/evaluate', 'v1.0').Name | Should -Be 'ca-service'
+        [CIPP.CIPPRateLimiter]::BatchBudgetFor('users/u1/memberOf', 'v1.0') | Should -BeNullOrEmpty
+        [CIPP.CIPPRateLimiter]::BatchBudgetFor('reports/getOffice365ActiveUserDetail(period=''D7'')', 'beta') | Should -BeNullOrEmpty
+    }
     It 'holds back a claim that was scheduled before the key got throttled' {
         $A = Get-AuthHeader 'tenant-a'
         $Early = [CIPP.CIPPRateLimiter]::Acquire($Evaluate, 'POST', '{}', $A)
