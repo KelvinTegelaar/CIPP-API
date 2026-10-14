@@ -752,7 +752,8 @@ namespace CIPP
 
             using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(uri));
             // A request defaults to HTTP/1.1, so EnableMultipleHttp2Connections alone never multiplexes.
-            if (selection.Pool == "Exo")
+            // These are the lanes that enable it; a host without h2 falls back to 1.1 in the TLS handshake.
+            if (selection.Pool is "Graph" or "Exo" or "PartnerCenter" or "AdminPlane" or "Default")
             {
                 request.Version       = HttpVersion.Version20;
                 request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
