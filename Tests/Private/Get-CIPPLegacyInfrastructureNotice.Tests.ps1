@@ -8,7 +8,7 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPLegacyInfrastructureNotice.ps1')
 
-    $script:EnvNames = @('CIPPNG', 'CIPP_HOSTED', 'AzureWebJobsStorage', 'NonLocalHostAzurite')
+    $script:EnvNames = @('CIPPNG', 'CIPP_HOSTED', 'AzureWebJobsStorage', 'NonLocalHostAzurite', 'CIPP_LEGACY_NOTICE_PREVIEW')
     $script:MigrationGuide = 'https://docs.cipp.app/setup/maintaining-cipp/migrating-to-the-new-infrastructure'
 }
 
@@ -49,7 +49,8 @@ Describe 'Get-CIPPLegacyInfrastructureNotice' {
         $Notice.type | Should -Be 'warning'
         $Notice.title | Should -Be 'Legacy infrastructure'
         $Notice.Alert | Should -BeLike '*legacy Function App infrastructure*'
-        $Notice.Alert | Should -BeLike '*stop receiving updates*'
+        $Notice.Alert | Should -BeLike '*no longer receives updates starting December 2026*'
+        $Notice.Alert | Should -BeLike '*faster*'
         $Notice.link | Should -Be $script:MigrationGuide
         $Notice.linkText | Should -Be 'Migration guide'
     }
@@ -59,12 +60,21 @@ Describe 'Get-CIPPLegacyInfrastructureNotice' {
         Get-CIPPLegacyInfrastructureNotice | Should -BeNullOrEmpty
     }
 
+    It 'shows the notice anywhere when the preview override is set' {
+        $env:CIPPNG = 'true'
+        $env:CIPP_LEGACY_NOTICE_PREVIEW = 'true'
+        (Get-CIPPLegacyInfrastructureNotice).noticeId | Should -Be 'legacy-function-app-infrastructure'
+    }
+
     It 'is shaped like a maintenance notice so the banner can render it' {
         $Notice = Get-CIPPLegacyInfrastructureNotice
 
         $Notice.maintenance | Should -BeTrue
         $Notice.noticeId | Should -Be 'legacy-function-app-infrastructure'
         $Notice.dismissible | Should -BeFalse
+        $Notice.prominent | Should -BeTrue
+        $Notice.blocking | Should -BeTrue
+        $Notice.cutoff | Should -Be '2026-12-01T00:00:00Z'
         $Notice.active | Should -BeFalse
         $Notice.Keys | Should -Contain 'startTime'
         $Notice.Keys | Should -Contain 'endTime'
