@@ -76,6 +76,11 @@ Describe 'Invoke-CIPPBecIPAnalysis' {
         @($Analysis.Verdicts.Reasons.Code) | Should -Not -Contain 'KnownNetwork'
     }
 
+    It 'samples colleagues from the last 7 days at most, however long the window' {
+        Mock Get-CIPPBecColleagueSample { @() }
+        $null = Invoke-CIPPBecIPAnalysis -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -Results $script:Results -Heuristics $script:Heuristics -WindowStart ([datetime]::UtcNow.AddDays(-30)) -UsageLocation 'AU' -SampleColleagues
+        Should -Invoke Get-CIPPBecColleagueSample -Times 1 -ParameterFilter { $StartDate -gt [datetime]::UtcNow.AddDays(-7).AddMinutes(-5) }
+    }
     It 're-uses the stored baseline and peers of the case instead of fetching them again' {
         $Known = @([pscustomobject]@{ IP = '198.51.100.7'; OtherUsersBefore = 0; OtherUsersInWindowOnly = 0; Users = @() })
         $null = Invoke-Analysis -Extra @{ Baseline = $script:Baseline; KnownPeers = $Known }

@@ -148,7 +148,9 @@ function Invoke-CIPPBecIPAnalysis {
     if ($SampleColleagues) {
         try {
             Write-Information 'BEC IP analysis: colleague sample'
-            $Colleagues = @(Get-CIPPBecColleagueSample -TenantFilter $TenantFilter -ExcludeUserId $UserId -StartDate $WindowStart -Count ([int]($Heuristics.baseline.colleagueSample ?? 8)))
+            # who signed in recently is all the sample needs; a tenant-wide search past 7 days lands in Graph's 504s
+            $SampleFrom = if ($WindowStart.ToUniversalTime() -gt [datetime]::UtcNow.AddDays(-7)) { $WindowStart } else { [datetime]::UtcNow.AddDays(-7) }
+            $Colleagues = @(Get-CIPPBecColleagueSample -TenantFilter $TenantFilter -ExcludeUserId $UserId -StartDate $SampleFrom -Count ([int]($Heuristics.baseline.colleagueSample ?? 8)))
             if ($Colleagues.Count -gt 0) {
                 $Sampled = Get-CIPPBecCorrelatedUserPeers -TenantFilter $TenantFilter -UserIds $Colleagues -IPs @($Preliminary.IP) -StartDate $BaselineStart -WindowStart $WindowStart
                 foreach ($Key in $Sampled.Keys) {
