@@ -145,6 +145,7 @@ function Start-AuditLogSearchCreationV2 {
                     OrchestratorName = 'AuditLogSearchCreationV2'
                     Batch            = @($Batch)
                     SkipLog          = $true
+                    Priority         = 3
                 }
                 Start-CIPPOrchestrator -InputObject $InputObject
             }

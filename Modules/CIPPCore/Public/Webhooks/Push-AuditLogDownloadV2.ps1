@@ -188,6 +188,7 @@ function Push-AuditLogDownloadV2 {
                     OrchestratorName = "AuditLogProcessV2-$TenantFilter"
                     QueueFunction    = [PSCustomObject]@{ FunctionName = 'AuditLogProcessingBatchV2'; Parameters = @{ TenantFilter = $TenantFilter } }
                     SkipLog          = $true
+                    Priority         = 3
                 })
         }
         return @{ TenantFilter = $TenantFilter; Success = $true; Downloaded = $Downloaded }

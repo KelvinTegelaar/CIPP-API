@@ -62,6 +62,7 @@ function Start-AuditLogIngestionV2 {
                         OrchestratorName = "AuditLogIngestV2-$TenantFilter"
                         Batch            = @([PSCustomObject]@{ FunctionName = 'AuditLogDownloadV2'; TenantFilter = $TenantFilter })
                         SkipLog          = $true
+                        Priority         = 3
                     })
             }
         }
@@ -76,6 +77,7 @@ function Start-AuditLogIngestionV2 {
                         OrchestratorName = "AuditLogProcessV2-$TenantFilter"
                         QueueFunction    = [PSCustomObject]@{ FunctionName = 'AuditLogProcessingBatchV2'; Parameters = @{ TenantFilter = $TenantFilter } }
                         SkipLog          = $true
+                        Priority         = 3
                     })
             }
         }
