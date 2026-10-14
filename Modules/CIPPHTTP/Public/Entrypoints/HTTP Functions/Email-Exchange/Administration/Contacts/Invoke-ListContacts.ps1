@@ -48,7 +48,7 @@ function Invoke-ListContacts {
         if ($Contact.MobilePhone) { $phoneCapacity++ }
 
         $phones = if ($phoneCapacity -gt 0) {
-            $phoneList = [List[hashtable]]::new($phoneCapacity)
+            $phoneList = [System.Collections.Generic.List[hashtable]]::new($phoneCapacity)
             if ($Contact.Phone) {
                 $phoneList.Add(@{ type = 'business'; number = $Contact.Phone })
             }
