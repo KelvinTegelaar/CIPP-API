@@ -724,6 +724,14 @@ function Invoke-CIPPBaselineStandard {
                 }
                 $ExecutorOutput = & $ExecutorName -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current
             } catch {
+                    if ($Compliant) {
+                    Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "`"$Label`" is already compliant; the forced rewrite was rejected and ignored: $($_.Exception.Message) - Run $RunId" -Sev 'Info'
+                    $Result.Compliant = $true
+                    $Result.Outcome = 'Compliant'
+                    $Result.Status = 'Compliant'
+                    Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
+                    return $Result
+                }
                 Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to change `"$Label`" to $ExpectedJson`: $($_.Exception.Message) - Run $RunId" -Sev 'Error' -LogData (Get-CippException -Exception $_)
                 $Result.Outcome = 'Error'
                 # A failed write is not tenant drift: the row must not show Drift with an
