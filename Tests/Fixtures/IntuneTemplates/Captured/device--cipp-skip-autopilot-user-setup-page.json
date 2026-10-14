@@ -1,0 +1,28 @@
+{
+  "DisplayName": "CIPP: Skip Autopilot User Setup Page",
+  "Description": "Skips the autopilot user setup page",
+  "Type": "Device",
+  "Policy": {
+    "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
+    "roleScopeTagIds": [
+      "0"
+    ],
+    "deviceManagementApplicabilityRuleOsEdition": null,
+    "deviceManagementApplicabilityRuleOsVersion": null,
+    "deviceManagementApplicabilityRuleDeviceMode": null,
+    "description": "Skips the autopilot user setup page",
+    "displayName": "CIPP: Skip Autopilot User Setup Page",
+    "version": 2,
+    "omaSettings": [
+      {
+        "@odata.type": "#microsoft.graph.omaSettingBoolean",
+        "displayName": "SkipUserSetupPage",
+        "description": null,
+        "omaUri": "./Device/Vendor/MSFT/DMClient/Provider/MS DM Server/FirstSyncStatus/SkipUserStatusPage",
+        "secretReferenceValueId": null,
+        "isEncrypted": false,
+        "value": true
+      }
+    ]
+  }
+}

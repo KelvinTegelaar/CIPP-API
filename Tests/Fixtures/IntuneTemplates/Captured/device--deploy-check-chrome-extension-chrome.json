@@ -1,0 +1,26 @@
+{
+  "DisplayName": "Deploy Check Chrome Extension (Chrome)",
+  "Description": "Deploys and configures the Check Chrome extension for Google Chrome browsers",
+  "Type": "Device",
+  "Policy": {
+    "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
+    "roleScopeTagIds": [
+      "0"
+    ],
+    "deviceManagementApplicabilityRuleOsEdition": null,
+    "deviceManagementApplicabilityRuleOsVersion": null,
+    "deviceManagementApplicabilityRuleDeviceMode": null,
+    "description": "Deploys and configures the Check Chrome extension for Google Chrome browsers",
+    "displayName": "Deploy Check Chrome Extension (Chrome)",
+    "version": 3,
+    "omaSettings": [
+      {
+        "@odata.type": "#microsoft.graph.omaSettingString",
+        "displayName": "Chrome Extension Settings",
+        "description": "Configure Check Chrome extension settings",
+        "omaUri": "./Device/Vendor/MSFT/Policy/Config/Chrome~Policy~googlechrome/ExtensionSettings",
+        "value": "{\n  \"benimdeioplgkhanklclahllklceahbe\": {\n    \"update_url\": \"https://clients2.google.com/service/update2/crx\",\n    \"installation_mode\": \"force_installed\",\n    \"settings\": {\n      \"customBranding\": {\n        \"supportEmail\": \"\",\n        \"logoUrl\": \"\",\n        \"primaryColor\": \"\",\n        \"companyName\": \"\",\n        \"productName\": \"\"\n      },\n      \"enableDebugLogging\": false,\n      \"enableCippReporting\": true,\n      \"cippTenantId\": \"contoso.onmicrosoft.com\",\n      \"enableValidPageBadge\": true,\n      \"customRulesUrl\": \"\",\n      \"showNotifications\": true,\n      \"cippServerUrl\": \"https://cipp.example.com\",\n      \"enablePageBlocking\": true,\n      \"updateInterval\": \"12\"\n    }\n  }\n}"
+      }
+    ]
+  }
+}

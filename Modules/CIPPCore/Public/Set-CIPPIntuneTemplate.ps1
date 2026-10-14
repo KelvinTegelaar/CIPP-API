@@ -21,7 +21,7 @@ function Set-CIPPIntuneTemplate {
     $APIName = 'Set-CIPPIntuneTemplate'
     if (!$DisplayName) { throw 'You must enter a displayname' }
 
-    $Validation = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType $templateType -DisplayName $DisplayName
+    $Validation = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType $templateType -DisplayName $DisplayName -IncludeCatalogChecks:$PayloadChanged
     if (-not $Validation.IsValid) {
         $Reason = $Validation.Errors -join ' '
         if ($PayloadChanged) {

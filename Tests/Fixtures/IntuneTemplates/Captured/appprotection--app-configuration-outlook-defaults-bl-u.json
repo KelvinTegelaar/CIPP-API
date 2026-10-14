@@ -1,0 +1,48 @@
+{
+  "DisplayName": "App Configuration - Outlook Defaults - BL - U",
+  "Description": "v1.0",
+  "Type": "AppProtection",
+  "Policy": {
+    "@odata.context": "https://graph.microsoft.com/beta/$metadata#deviceAppManagement/targetedManagedAppConfigurations/$entity",
+    "displayName": "App Configuration - Outlook Defaults - BL - U",
+    "description": "v1.0",
+    "createdDateTime": "2026-10-14T05:01:25.9258256Z",
+    "lastModifiedDateTime": "2026-10-14T05:01:25Z",
+    "roleScopeTagIds": [
+      "0"
+    ],
+    "id": "A_d7494e72-1667-4d08-bcbb-7d1a92f84448",
+    "version": "\"f76c14e7-08fc-47e2-9752-3242a3bc909f\"",
+    "deployedAppCount": 0,
+    "isAssigned": false,
+    "targetedAppManagementLevels": "unspecified",
+    "appGroupType": "selectedPublicApps",
+    "customSettings": [
+      {
+        "name": "com.microsoft.outlook.Mail.DefaultSignatureEnabled",
+        "value": "false"
+      },
+      {
+        "name": "com.microsoft.outlook.Mail.ExternalRecipientsToolTipEnabled",
+        "value": "true"
+      },
+      {
+        "name": "com.microsoft.intune.mam.areWearablesAllowed",
+        "value": "false"
+      },
+      {
+        "name": "com.microsoft.outlook.Contacts.LocalSyncEnabled",
+        "value": "true"
+      },
+      {
+        "name": "com.microsoft.outlook.Contacts.LocalSyncEnabled.UserChangeAllowed",
+        "value": "true"
+      },
+      {
+        "name": "com.microsoft.outlook.Calendar.Notifications.IntuneMAMOnly",
+        "value": "1"
+      }
+    ],
+    "@odata.type": "#microsoft.graph.targetedManagedAppConfiguration"
+  }
+}

@@ -77,21 +77,27 @@ function Get-CIPPIntuneDefinitionIndex {
         # Definitions without options are the common case; leaving this $null keeps the projection
         # small and lets callers test it before attempting a lookup.
         $Options = $null
+        $RequiredChildIds = $null
         if ($Definition.options) {
             $Options = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::OrdinalIgnoreCase)
             foreach ($Option in $Definition.options) {
                 if ($null -eq $Option.id) { continue }
                 $Options["$($Option.id)"] = "$($Option.displayName)"
+                if ($Option.requiredChildIds) {
+                    $RequiredChildIds ??= [System.Collections.Generic.Dictionary[string, string[]]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    $RequiredChildIds["$($Option.id)"] = [string[]]$Option.requiredChildIds
+                }
             }
         }
 
         # A definition with no display name stringifies to '', which is falsy - the call sites
         # already treat that as "no label" and fall back to the setting id.
         $Index[$Id] = @{
-            displayName  = "$($Definition.displayName)"
-            options      = $Options
-            minimumCount = $Definition.minimumCount
-            maximumCount = $Definition.maximumCount
+            displayName      = "$($Definition.displayName)"
+            options          = $Options
+            requiredChildIds = $RequiredChildIds
+            minimumCount     = $Definition.minimumCount
+            maximumCount     = $Definition.maximumCount
         }
     }
 
