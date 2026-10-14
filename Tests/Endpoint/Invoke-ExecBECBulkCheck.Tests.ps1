@@ -70,7 +70,7 @@ Describe 'Invoke-ExecBECBulkCheck' {
         $script:Orchestrations.Count | Should -Be 2 -Because 'each investigation is its own sequential orchestration'
         $script:Orchestrations[0].Sequential | Should -BeTrue
         $Batch = @($script:Orchestrations[0].Batch)
-        $Batch.Count | Should -Be 14
+        $Batch.Count | Should -Be 15
         $Batch[0].FunctionName | Should -Be 'BECRun'
         $Batch[0].QueueId | Should -Be 'queue-1'
         $Batch[0].userName | Should -Be 'a@contoso.com'

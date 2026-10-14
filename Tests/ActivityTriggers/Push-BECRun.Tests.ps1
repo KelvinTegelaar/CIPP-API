@@ -45,7 +45,7 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($TableName, $Entity, [switch]$Force, $OperationType) }
     function Get-CIPPAzDataTableEntity { param($TableName, $Filter, $Property, $First) }
     function Remove-CIPPAzDataTableEntity { param($TableName, $Entity, [switch]$Force) }
-    function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers, $TechnicianIPs, [switch]$SampleColleagues) }
+    function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers, $TechnicianIPs, $TravelWindows, [switch]$SampleColleagues, [switch]$SkipPeerLookup) }
 
     # Real pieces under test alongside the run
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/ConvertTo-CIPPBecHostAddress.ps1')
@@ -172,6 +172,45 @@ Describe 'Push-BECRun' {
         Mock Get-CIPPPartnerUserLookup { @{ '0123abcd-4567-4890-8abc-def012345678' = @{ userPrincipalName = 'tech@msp.example' } } }
     }
 
+    It 'looks up the other accounts on the addresses in a step of its own, on the first step''s baseline' {
+        $script:AnalysisCalls = [System.Collections.Generic.List[object]]::new()
+        Mock Invoke-CIPPBecIPAnalysis {
+            $script:AnalysisCalls.Add([pscustomobject]@{ Skip = $SkipPeerLookup.IsPresent; Sample = $SampleColleagues.IsPresent; Baseline = $Baseline })
+            [pscustomobject]@{
+                Baseline    = New-CIPPBecCollectorResult -Data ([pscustomobject]@{ Successful = 12 }) -Count 12
+                Guidance    = Empty
+                PeersResult = New-CIPPBecCollectorResult -Data @([pscustomobject]@{ IP = '203.0.113.10' })
+                Peers       = @{ '203.0.113.10' = [pscustomobject]@{ IP = '203.0.113.10'; OtherUsers = 0 } }
+                Geo         = @{}
+                Verdicts    = @([pscustomobject]@{ IP = '203.0.113.10'; Verdict = $(if ($SkipPeerLookup) { 'Suspicious' } else { 'LikelyAttacker' }) })
+                Events      = @()
+            }
+        }
+        Invoke-BecRun -Item $script:Item
+        $script:AnalysisCalls.Count | Should -Be 2
+        $script:AnalysisCalls[0].Skip | Should -BeTrue
+        $script:AnalysisCalls[0].Sample | Should -BeFalse
+        $script:AnalysisCalls[1].Skip | Should -BeFalse
+        $script:AnalysisCalls[1].Sample | Should -BeTrue
+        $script:AnalysisCalls[1].Baseline.Successful | Should -Be 12 -Because 'the lookup step re-uses the saved baseline'
+        $script:Saved.Results.IPVerdicts[0].Verdict | Should -Be 'LikelyAttacker' -Because 'the lookup step''s verdicts replace the first pass'
+        @($script:Saved.Results.IPPeers).Count | Should -Be 1
+    }
+
+    It 'keeps the first verdicts when the other-account lookup fails' {
+        Mock Invoke-CIPPBecIPAnalysis {
+            if ($SampleColleagues) { throw 'The request to graph timed out after 100s.' }
+            [pscustomobject]@{ Baseline = (Empty); Guidance = (Empty); PeersResult = (Empty); Peers = @{}; Geo = @{}; Events = @(); Verdicts = @([pscustomobject]@{ IP = '203.0.113.10'; Verdict = 'Suspicious' }) }
+        }
+        Invoke-BecRun -Item $script:Item
+        $script:Saved.Properties.Status | Should -Be 'Completed'
+        $script:Saved.Results.IPVerdicts[0].Verdict | Should -Be 'Suspicious'
+        $script:Saved.Results.SuspectUserSignIns[0].IPVerdict | Should -Be 'Suspicious' -Because 'the rows keep the first step''s stamps'
+        $script:Saved.Results.Completeness.IPVerdicts.Complete | Should -BeTrue
+        $script:Saved.Results.Completeness.IPPeers.Complete | Should -BeFalse
+        $script:Saved.Results.Completeness.IPPeers.Error | Should -Not -BeNullOrEmpty
+    }
+
     It 'runs every collector (a legacy Scope on the queue item is ignored), flattens their data and scores the signals' {
         Invoke-BecRun -Item ($script:Item + @{ Scope = 'Quick'; RequestedFromIP = '192.0.2.77'; RequestedBy = 'tech@msp.com' })
         foreach ($Collector in 'Get-CIPPBecMailboxInventory', 'Get-CIPPBecUserGrants', 'Get-CIPPBecTransportRules', 'Get-CIPPBecReceivedMailFindings', 'Get-CIPPBecDirectoryAudits', 'Get-CIPPBecRegisteredDevices', 'Get-CIPPBecNonInteractiveSignIns', 'Get-CIPPBecMailActivity', 'Get-CIPPBecRiskState') {
@@ -288,7 +327,7 @@ Describe 'Push-BECRun' {
         $R.Completeness.'Tenant users, MFA methods and applications'.Error | Should -Match 'bulk blew up'
         $R.UserGrants[0].Risk | Should -Be 'CatalogMatch' -Because 'the phases after the failed one still ran'
         $script:Saved.Properties.IncompleteCount | Should -BeGreaterThan 0
-        Should -Invoke Set-CippBecCaseContext -Times 14 -ParameterFilter { [string]::IsNullOrEmpty($CaseId) }
+        Should -Invoke Set-CippBecCaseContext -Times 15 -ParameterFilter { [string]::IsNullOrEmpty($CaseId) }
     }
 
     It 'fails the run when the last phase (score and report) fails' {
@@ -309,14 +348,14 @@ Describe 'Push-BECRun' {
     }
 
     Context 'live progress (the async-deployment job the page polls)' {
-        It 'creates the job when the queue did not, marks the run Running, walks each of the fourteen phases running then done, and ends succeeded' {
+        It 'creates the job when the queue did not, marks the run Running, walks each of the fifteen phases running then done, and ends succeeded' {
             Invoke-BecRun -Item $script:Item
-            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-test01' -and $Names -contains 'victim@contoso.com' -and @($StepTitles).Count -eq 14 -and $Source -eq 'BEC' }
+            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-test01' -and $Names -contains 'victim@contoso.com' -and @($StepTitles).Count -eq 15 -and $Source -eq 'BEC' }
             Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $Properties.Status -eq 'Running' -and $Properties.StartedAt }
             @($script:StatusCalls.Status) | Should -Be @('running', 'succeeded')
             $script:StatusCalls[-1].Logs | Should -Match 'threat level High'
-            @(($script:StepCalls | Where-Object { $_.Status -eq 'running' }).Index) | Should -Be @(0..13) -Because 'the phases run in order'
-            @(($script:StepCalls | Where-Object { $_.Status -eq 'succeeded' }).Index) | Should -Be @(0..13)
+            @(($script:StepCalls | Where-Object { $_.Status -eq 'running' }).Index) | Should -Be @(0..14) -Because 'the phases run in order'
+            @(($script:StepCalls | Where-Object { $_.Status -eq 'succeeded' }).Index) | Should -Be @(0..14)
             ($script:StepCalls | Where-Object { $_.Status -eq 'succeeded' })[-1].Message | Should -Match '^Threat level High'
             @($script:StepCalls | Where-Object { $_.Status -eq 'failed' }).Count | Should -Be 0
             $script:StepCalls | ForEach-Object { $_.JobId | Should -Be 'BEC-20260820120000-test01'; $_.Name | Should -Be 'victim@contoso.com' }
@@ -335,7 +374,7 @@ Describe 'Push-BECRun' {
         It 'recreates the job at start so a Craft retry shows a clean progression instead of the dead attempt''s steps' {
             Mock Get-CIPPAsyncDeployment { @([pscustomobject]@{ Name = 'victim@contoso.com'; Status = 'running'; Steps = @([pscustomobject]@{ Title = 'x'; Status = 'succeeded'; Message = 'Done' }); Logs = '' }) }
             Invoke-BecRun -Item $script:Item
-            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-test01' -and @($StepTitles).Count -eq 14 }
+            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-test01' -and @($StepTitles).Count -eq 15 }
             @($script:StatusCalls.Status) | Should -Be @('running', 'succeeded')
         }
 

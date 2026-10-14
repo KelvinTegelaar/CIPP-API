@@ -3,11 +3,12 @@ function Get-CIPPBecIPPeers {
     .SYNOPSIS
         Finds the other accounts in the tenant that signed in from each address.
     .DESCRIPTION
-        For each IP, one Graph batch reads the tenant's interactive sign-ins from it (paged to the end)
-        and the first page of non-interactive ones both before and during the window (an office egress
-        address can carry tens of thousands of token refreshes; the first 999 of each already show who
-        uses it - read as one newest-first page, a busy address would show only the window and hide
-        the colleagues before it). It answers two opposite questions:
+        For each IP, one Graph batch reads the first page of the tenant's sign-ins from it (interactive
+        and non-interactive) before the window and, separately, during it. A sign-in search costs Graph
+        the time range it covers, not the rows it returns, so neither is paged further: an office
+        egress address can carry tens of thousands of token refreshes and the first 999 of each already
+        show who uses it (read as one newest-first page, a busy address would show only the window and
+        hide the colleagues before it). It answers two opposite questions:
         - Many colleagues on the address before the window: an office or VPN exit - evidence the user's.
         - Other accounts on it only during the window, with no history: the attacker reaching further.
         An IPv6 address is looked up by its /64 (every device on a LAN has its own address inside the
@@ -65,9 +66,8 @@ function Get-CIPPBecIPPeers {
     $Window = $WindowStart.ToUniversalTime()
     $WindowText = $Window.ToString('yyyy-MM-ddTHH:mm:ssZ')
     $Select = 'userId,userPrincipalName,createdDateTime,status,ipAddress'
-    $NonInteractive = "signInEventTypes/any(t: t eq 'nonInteractiveUser')"
+    $AnyType = "signInEventTypes/any(t: t eq 'interactiveUser' or t eq 'nonInteractiveUser')"
     $Requests = [System.Collections.Generic.List[object]]::new()
-    $NoPaginate = [System.Collections.Generic.List[string]]::new()
     $Groups = @($Lookups.Values)
     for ($i = 0; $i -lt $Groups.Count; $i++) {
         $Group = $Groups[$i]
@@ -76,19 +76,16 @@ function Get-CIPPBecIPPeers {
         } else {
             "ipAddress eq '$(ConvertTo-CIPPODataFilterValue -Value $Group.Address -Type String)'"
         }
-        $Requests.Add(@{ id = "i$i"; method = 'GET'; url = "auditLogs/signIns?`$filter=$Match and createdDateTime ge $From&`$top=999&`$select=$Select" })
-        $Requests.Add(@{ id = "n$i"; method = 'GET'; url = "auditLogs/signIns?`$filter=$Match and createdDateTime ge $WindowText and $NonInteractive&`$top=999&`$select=$Select" })
-        $NoPaginate.Add("n$i")
+        $Requests.Add(@{ id = "w$i"; method = 'GET'; url = "auditLogs/signIns?`$filter=$Match and createdDateTime ge $WindowText and $AnyType&`$top=999&`$select=$Select" })
         if ($Window -gt $StartDate.ToUniversalTime()) {
-            $Requests.Add(@{ id = "b$i"; method = 'GET'; url = "auditLogs/signIns?`$filter=$Match and createdDateTime ge $From and createdDateTime lt $WindowText and $NonInteractive&`$top=999&`$select=$Select" })
-            $NoPaginate.Add("b$i")
+            $Requests.Add(@{ id = "b$i"; method = 'GET'; url = "auditLogs/signIns?`$filter=$Match and createdDateTime ge $From and createdDateTime lt $WindowText and $AnyType&`$top=999&`$select=$Select" })
         }
     }
-    $Responses = @(New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -asapp $true -Version 'beta' -NoPaginateIds @($NoPaginate))
+    $Responses = @(New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -asapp $true -Version 'beta' -NoPaginateIds @($Requests.id))
 
     for ($i = 0; $i -lt $Groups.Count; $i++) {
         $Group = $Groups[$i]
-        $Parts = @($Responses | Where-Object { $_.id -in @("i$i", "n$i", "b$i") })
+        $Parts = @($Responses | Where-Object { $_.id -in @("w$i", "b$i") })
         $Failed = @($Parts | Where-Object { [int]$_.status -ge 400 })
         $Before = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         $During = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -120,7 +117,7 @@ function Get-CIPPBecIPPeers {
                 Users                  = @($All | Sort-Object)
                 # ponytail: capped at 100 per address (an office exit can carry hundreds); the counts above stay exact
                 Accounts               = @($Accounts.Values | Sort-Object -Property LastSeen -Descending | Select-Object -First 100)
-                Sampled                = [bool](@($Parts | Where-Object { $_.id -in @("n$i", "b$i") -and $_.body.'@odata.nextLink' }).Count)
+                Sampled                = [bool](@($Parts | Where-Object { $_.body.'@odata.nextLink' }).Count)
                 Error                  = if ($Failed.Count -gt 0) { [string]$Failed[0].body.error.message } else { $null }
             }
         }

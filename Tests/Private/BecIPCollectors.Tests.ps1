@@ -61,17 +61,17 @@ Describe 'Get-CIPPBecSignInBaseline' {
 }
 
 Describe 'Get-CIPPBecIPPeers' {
-    It 'splits other accounts into before and only-in-window, excluding the investigated user, and samples service sign-ins' {
+    It 'splits other accounts into before and only-in-window, excluding the investigated user, and marks a full page as sampled' {
         Mock New-GraphBulkRequest {
             @(
-                [pscustomobject]@{ id = 'i0'; status = 200; body = [pscustomobject]@{ value = @(
+                [pscustomobject]@{ id = 'b0'; status = 200; body = [pscustomobject]@{ value = @(
                             [pscustomobject]@{ userId = 'me'; userPrincipalName = 'victim@contoso.com'; createdDateTime = '2026-09-01T00:00:00Z' }
                             [pscustomobject]@{ userId = 'a'; userPrincipalName = 'a@contoso.com'; createdDateTime = '2026-09-01T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
                             [pscustomobject]@{ userId = 'a'; userPrincipalName = 'a@contoso.com'; createdDateTime = '2026-09-03T00:00:00Z'; status = [pscustomobject]@{ errorCode = 50126 } }
                         ) } }
-                [pscustomobject]@{ id = 'n0'; status = 200; body = [pscustomobject]@{ '@odata.nextLink' = 'more'; value = @([pscustomobject]@{ userId = 'b'; userPrincipalName = 'b@contoso.com'; createdDateTime = '2026-09-02T00:00:00Z' }) } }
-                [pscustomobject]@{ id = 'i1'; status = 200; body = [pscustomobject]@{ value = @([pscustomobject]@{ userId = 'c'; userPrincipalName = 'c@contoso.com'; createdDateTime = '2026-09-20T00:00:00Z' }) } }
-                [pscustomobject]@{ id = 'n1'; status = 200; body = [pscustomobject]@{ value = @() } }
+                [pscustomobject]@{ id = 'w0'; status = 200; body = [pscustomobject]@{ '@odata.nextLink' = 'more'; value = @([pscustomobject]@{ userId = 'b'; userPrincipalName = 'b@contoso.com'; createdDateTime = '2026-09-02T00:00:00Z' }) } }
+                [pscustomobject]@{ id = 'w1'; status = 200; body = [pscustomobject]@{ value = @([pscustomobject]@{ userId = 'c'; userPrincipalName = 'c@contoso.com'; createdDateTime = '2026-09-20T00:00:00Z' }) } }
+                [pscustomobject]@{ id = 'b1'; status = 200; body = [pscustomobject]@{ value = @() } }
             )
         }
         $Peers = Get-CIPPBecIPPeers -TenantFilter 'contoso.com' -UserId 'me' -IPs @('203.0.113.10', '198.51.100.7') -StartDate '2026-08-15' -WindowStart '2026-09-16'
@@ -86,15 +86,18 @@ Describe 'Get-CIPPBecIPPeers' {
         $A.LastSeen | Should -Be '2026-09-03T00:00:00Z'
         $Peers['203.0.113.10'].Accounts.UserPrincipalName | Should -Not -Contain 'victim@contoso.com'
         $Peers['198.51.100.7'].OtherUsersInWindowOnly | Should -Be 1
-        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { @($NoPaginateIds) -contains 'n0' -and @($NoPaginateIds) -contains 'n1' -and $Requests[0].url -match "ipAddress eq '203.0.113.10'" }
+        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter {
+            # two searches per address, both sign-in types each, and none paged past its first 999
+            @($Requests).Count -eq 4 -and @($NoPaginateIds).Count -eq 4 -and $Requests[0].url -match "ipAddress eq '203.0.113.10'" -and
+            @($Requests | Where-Object { $_.url -notmatch "t eq 'interactiveUser' or t eq 'nonInteractiveUser'" }).Count -eq 0
+        }
     }
 
-    It 'reads the non-interactive sign-ins before the window separately, so a busy address still shows its colleagues' {
+    It 'reads the sign-ins before the window separately, so a busy address still shows its colleagues' {
         Mock New-GraphBulkRequest {
             @(
-                [pscustomobject]@{ id = 'i0'; status = 200; body = [pscustomobject]@{ value = @() } }
                 # the in-window page is full of token refreshes...
-                [pscustomobject]@{ id = 'n0'; status = 200; body = [pscustomobject]@{ '@odata.nextLink' = 'more'; value = @([pscustomobject]@{ userId = 'x'; userPrincipalName = 'x@contoso.com'; createdDateTime = '2026-09-20T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }) } }
+                [pscustomobject]@{ id = 'w0'; status = 200; body = [pscustomobject]@{ '@odata.nextLink' = 'more'; value = @([pscustomobject]@{ userId = 'x'; userPrincipalName = 'x@contoso.com'; createdDateTime = '2026-09-20T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }) } }
                 # ...and the colleagues show up in the before-window page
                 [pscustomobject]@{ id = 'b0'; status = 200; body = [pscustomobject]@{ value = @(
                             [pscustomobject]@{ userId = 'a'; userPrincipalName = 'a@contoso.com'; createdDateTime = '2026-09-01T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
@@ -105,14 +108,14 @@ Describe 'Get-CIPPBecIPPeers' {
         $Peers = Get-CIPPBecIPPeers -TenantFilter 'contoso.com' -UserId 'me' -IPs @('203.0.113.10') -StartDate '2026-08-15' -WindowStart '2026-09-16'
         $Peers['203.0.113.10'].OtherUsersBefore | Should -Be 2
         Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter {
-            $N = $Requests | Where-Object { $_.id -eq 'n0' }; $B = $Requests | Where-Object { $_.id -eq 'b0' }
+            $N = $Requests | Where-Object { $_.id -eq 'w0' }; $B = $Requests | Where-Object { $_.id -eq 'b0' }
             $N.url -notmatch 'createdDateTime lt ' -and $B.url -match 'createdDateTime lt ' -and @($NoPaginateIds) -contains 'b0'
         }
     }
 
     It 'looks an IPv6 address up by its /64 once for all its addresses, and keeps only sign-ins inside it' {
         Mock New-GraphBulkRequest {
-            @([pscustomobject]@{ id = 'i0'; status = 200; body = [pscustomobject]@{ value = @(
+            @([pscustomobject]@{ id = 'b0'; status = 200; body = [pscustomobject]@{ value = @(
                             [pscustomobject]@{ userId = 'a'; userPrincipalName = 'a@contoso.com'; ipAddress = '2001:db8:1:2::77'; createdDateTime = '2026-09-01T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
                             [pscustomobject]@{ userId = 'b'; userPrincipalName = 'b@contoso.com'; ipAddress = '2001:db8:1:2:9::1'; createdDateTime = '2026-09-02T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
                             [pscustomobject]@{ userId = 'z'; userPrincipalName = 'z@contoso.com'; ipAddress = '2001:db8:1:20::1'; createdDateTime = '2026-09-02T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
@@ -123,7 +126,7 @@ Describe 'Get-CIPPBecIPPeers' {
             $Peers[$IP].OtherUsersBefore | Should -Be 2
             $Peers[$IP].Network | Should -Be '2001:db8:1:2::/64'
         }
-        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { @($Requests).Count -eq 3 -and $Requests[0].url -match "startswith\(ipAddress,'2001:db8:1:2:'\)" }
+        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { @($Requests).Count -eq 2 -and $Requests[0].url -match "startswith\(ipAddress,'2001:db8:1:2:'\)" }
     }
 
     It 'returns nothing without calling Graph when there are no addresses' {

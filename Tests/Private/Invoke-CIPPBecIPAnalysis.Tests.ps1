@@ -51,6 +51,17 @@ Describe 'Invoke-CIPPBecIPAnalysis' {
         Should -Invoke Get-CIPPBecIPPeers -Times 0 -Because 'a settled service address needs no other-account lookup'
     }
 
+    It 'looks up only the most suspicious addresses past the cap, and reports the rest as not looked up' {
+        $Capped = $script:Heuristics | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+        $Capped.caps.peerLookups = 1
+        $Results = $script:Results | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+        $Results.SuspectUserSignIns = @($Results.SuspectUserSignIns) + [pscustomobject]@{ IPAddress = '192.0.2.50'; Status = 'Success'; Country = 'AU'; City = 'Perth'; ASN = '4739'; CreatedDateTime = '2026-09-21T01:00:00Z' }
+        $Analysis = Invoke-CIPPBecIPAnalysis -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -Results $Results -Heuristics $Capped -WindowStart ([datetime]'2026-09-16') -UsageLocation 'AU'
+        Should -Invoke Get-CIPPBecIPPeers -Times 1 -ParameterFilter { @($IPs).Count -eq 1 -and $IPs[0] -eq '198.51.100.7' }
+        $Analysis.PeersResult.Complete | Should -BeFalse
+        $Analysis.PeersResult.Cap | Should -Be '1 of 2 addresses (most suspicious first)'
+    }
+
     It 're-uses the stored baseline and peers of the case instead of fetching them again' {
         $Known = @([pscustomobject]@{ IP = '198.51.100.7'; OtherUsersBefore = 0; OtherUsersInWindowOnly = 0; Users = @() })
         $null = Invoke-Analysis -Extra @{ Baseline = $script:Baseline; KnownPeers = $Known }

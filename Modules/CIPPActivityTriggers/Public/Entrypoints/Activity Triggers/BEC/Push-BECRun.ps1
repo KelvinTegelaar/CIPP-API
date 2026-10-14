@@ -872,7 +872,7 @@ function Push-BECRun {
                 & $Save @{ MailActivity = @($Activity.Data); MailActivitySummary = $Activity.Summary; MailRecords = @($Activity.Records | Where-Object { $_ }); RiskState = $Risk.Data }
             }
 
-            'IPAnalysis' {
+            { $_ -in @('IPAnalysis', 'IPPeers') } {
                 $SuspectUserSignIns = & $Rows 'SuspectUserSignIns'
                 $NonInteractiveSignIns = & $Rows 'NonInteractiveSignIns'
                 $RuleChangesLog = & $Rows 'RuleChangesLog'
@@ -899,18 +899,20 @@ function Push-BECRun {
                         $Row | Add-Member -NotePropertyName 'ActorResolved' -NotePropertyValue $Who.Actor -Force
                     }
                 }
-                & $StampActor $RuleChangesLog 'UserKey'
-                & $StampActor $PermissionsLog 'UserId'
-                & $StampActor $SafelistChanges 'UserKey'
-                & $StampActor $SharingChanges 'UserKey'
-                & $StampActor $TransportRuleChanges 'Actor'
-                & $StampActor $DirectoryAudits 'InitiatedBy' 'InitiatedByType' 'InitiatedById'
-                & $StampActor $MailActivity 'Actor'
+                if ($Key -eq 'IPAnalysis') {
+                    & $StampActor $RuleChangesLog 'UserKey'
+                    & $StampActor $PermissionsLog 'UserId'
+                    & $StampActor $SafelistChanges 'UserKey'
+                    & $StampActor $SharingChanges 'UserKey'
+                    & $StampActor $TransportRuleChanges 'Actor'
+                    & $StampActor $DirectoryAudits 'InitiatedBy' 'InitiatedByType' 'InitiatedById'
+                    & $StampActor $MailActivity 'Actor'
+                }
 
                 # Which addresses are the attacker's: sign-in baseline, CIPP's IP allow/block list and the
-                # tenant's own lists, geo, and the other accounts on each address. The IP review re-run calls
-                # the same analysis with the investigator's overrides.
-                Write-Information 'Full scope: IP analysis'
+                # tenant's own lists and geo, then (IPPeers, a step and task timeout of its own) the other accounts
+                # on each address. The IP review re-run calls the same analysis with the investigator's overrides.
+                Write-Information "Full scope: $Key"
                 $IPDraft = [pscustomobject]@{
                     SuspectUserSignIns       = $SuspectUserSignIns
                     NonInteractiveSignIns    = $NonInteractiveSignIns
@@ -927,18 +929,29 @@ function Push-BECRun {
                 }
                 # the technician who started the run: their address is theirs, not the user's or the attacker's
                 $TechnicianIPs = @(if ($Item.RequestedFromIP) { [pscustomobject]@{ IP = [string]$Item.RequestedFromIP; By = [string]$Item.RequestedBy } })
-                $IPAnalysis = & $Collect 'IPAnalysis' { Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Results $IPDraft -Heuristics $Heuristics -WindowStart $startDate -UsageLocation $State.UsageLocation -Anchor $UserName -SampleColleagues -TechnicianIPs $TechnicianIPs -TravelWindows (& $Rows 'TravelWindows') }
+                $AnalysisParams = @{ TenantFilter = $TenantFilter; UserId = $SuspectUser; UserPrincipalName = $UserName; Results = $IPDraft; Heuristics = $Heuristics; WindowStart = $startDate; UsageLocation = $State.UsageLocation; Anchor = $UserName; TechnicianIPs = $TechnicianIPs; TravelWindows = (& $Rows 'TravelWindows') }
+                if ($Key -eq 'IPPeers') { $AnalysisParams.SampleColleagues = $true; $AnalysisParams.Baseline = $State.IPBaseline } else { $AnalysisParams.SkipPeerLookup = $true }
+                $IPAnalysis = & $Collect $Key { Invoke-CIPPBecIPAnalysis @AnalysisParams }
+                if ($Key -eq 'IPPeers' -and -not $IPAnalysis.PSObject.Properties['Verdicts']) {
+                    # the first step's verdicts stand; only this step's own check is marked failed
+                    & $Mark 'IPPeers' $IPAnalysis
+                    & $Save @{}
+                    break
+                }
                 if ($IPAnalysis.PSObject.Properties['Verdicts']) {
-                    & $Mark 'SignInBaseline' $IPAnalysis.Baseline
-                    & $Mark 'IPGuidance' $IPAnalysis.Guidance
-                    & $Mark 'IPPeers' $IPAnalysis.PeersResult
+                    if ($Key -eq 'IPPeers') {
+                        & $Mark 'IPPeers' $IPAnalysis.PeersResult
+                    } else {
+                        & $Mark 'SignInBaseline' $IPAnalysis.Baseline
+                        & $Mark 'IPGuidance' $IPAnalysis.Guidance
+                    }
                     & $Mark 'IPVerdicts' ([pscustomobject]@{ Complete = $true; Count = @($IPAnalysis.Verdicts).Count })
                     $IPVerdicts = @($IPAnalysis.Verdicts)
                     $IPBaseline = $IPAnalysis.Baseline.Data
                     $IPGuidance = @($IPAnalysis.Guidance.Data)
                     $IPPeers = @($IPAnalysis.Peers.Values)
                 } else {
-                    & $Mark 'SignInBaseline' $IPAnalysis; & $Mark 'IPGuidance' $IPAnalysis; & $Mark 'IPPeers' $IPAnalysis; & $Mark 'IPVerdicts' $IPAnalysis
+                    & $Mark 'SignInBaseline' $IPAnalysis; & $Mark 'IPGuidance' $IPAnalysis; & $Mark 'IPVerdicts' $IPAnalysis
                     $IPVerdicts = @(); $IPBaseline = $null; $IPGuidance = @(); $IPPeers = @()
                 }
                 Set-CIPPBecIPVerdictStamp -Results $IPDraft -Verdicts $IPVerdicts

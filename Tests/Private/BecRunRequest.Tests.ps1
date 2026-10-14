@@ -19,11 +19,11 @@ Describe 'New-CIPPBecRunRequest requester address' {
 }
 
 Describe 'Get-CIPPBecRunSteps' {
-    It 'defines the fourteen phases of the investigation in order, with the score last' {
+    It 'defines the fifteen phases of the investigation in order, with the score last' {
         $Steps = @(Get-CIPPBecRunSteps)
-        $Steps.Key | Should -Be @('AuditLog', 'SignIns', 'MailboxRules', 'SentMail', 'Tenant', 'MailboxInventory', 'Grants', 'TransportRules', 'ReceivedMail', 'Directory', 'Activity', 'IPAnalysis', 'AttackerActivity', 'Score')
+        $Steps.Key | Should -Be @('AuditLog', 'SignIns', 'MailboxRules', 'SentMail', 'Tenant', 'MailboxInventory', 'Grants', 'TransportRules', 'ReceivedMail', 'Directory', 'Activity', 'IPAnalysis', 'IPPeers', 'AttackerActivity', 'Score')
         $Steps | ForEach-Object { $_.Title | Should -Not -BeNullOrEmpty }
-        @($Steps.Key | Select-Object -Unique).Count | Should -Be 14 -Because 'keys index the steps'
+        @($Steps.Key | Select-Object -Unique).Count | Should -Be 15 -Because 'keys index the steps'
     }
 }
 
@@ -50,7 +50,7 @@ Describe 'New-CIPPBecRunRequest' {
         $script:Jobs[0].JobId | Should -Be $Prepared.CaseId -Because 'the page polls progress by case id'
         $script:Jobs[0].Names | Should -Be @('victim@contoso.com')
         $script:Jobs[0].Source | Should -Be 'BEC'
-        @($script:Jobs[0].StepTitles).Count | Should -Be 14
+        @($script:Jobs[0].StepTitles).Count | Should -Be 15
         $Prepared.Item.FunctionName | Should -Be 'BECRun'
         $Prepared.Item.UserID | Should -Be 'u1'
         $Prepared.Item.userName | Should -Be 'victim@contoso.com'
@@ -73,6 +73,6 @@ Describe 'New-CIPPBecRunRequest' {
         $script:Jobs[0].Names | Should -Be @('u2')
         $Prepared.Item.QueueId | Should -Be 'q-1'
         $Prepared.Item.QueueName | Should -Be 'BEC investigation u2'
-        @($Prepared.InputObject.Batch | Where-Object { $_.QueueId -eq 'q-1' }).Count | Should -Be 14
+        @($Prepared.InputObject.Batch | Where-Object { $_.QueueId -eq 'q-1' }).Count | Should -Be 15
     }
 }

@@ -5,7 +5,8 @@
   },
   "caps": {
     "auditLogPages": 10,
-    "mailActivityPages": 10
+    "mailActivityPages": 10,
+    "peerLookups": 20
   },
   "score": {
     "thresholds": {

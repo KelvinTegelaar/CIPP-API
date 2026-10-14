@@ -43,6 +43,8 @@ function Invoke-CIPPBecIPAnalysis {
         The addresses of the technicians who ran or reviewed the case ({ IP, By }).
     .PARAMETER TravelWindows
         The user's approved trips (Get-CIPPBecTravelWindows).
+    .PARAMETER SkipPeerLookup
+        Leave out the tenant-wide other-account lookup (the run does it in a step of its own).
     .PARAMETER SampleColleagues
         Correlate a random sample of recently active colleagues (the first run; a review re-uses the
         peers stored on the case, which already include them).
@@ -65,7 +67,8 @@ function Invoke-CIPPBecIPAnalysis {
         [hashtable]$ExtraPeers = @{},
         [object[]]$TechnicianIPs = @(),
         [object[]]$TravelWindows = @(),
-        [switch]$SampleColleagues
+        [switch]$SampleColleagues,
+        [switch]$SkipPeerLookup
     )
 
     $BaselineDays = [int]($Heuristics.baseline.days ?? 30)
@@ -125,8 +128,12 @@ function Invoke-CIPPBecIPAnalysis {
     foreach ($Peer in @($KnownPeers | Where-Object { $_ -and $_.IP })) { $Peers[[string]$Peer.IP] = $Peer }
     $ToLookUp = @($Preliminary | Where-Object { $_.Verdict -notin @('Safe', 'Service', 'LikelyUser') -and -not $Peers.ContainsKey($_.IP) } | ForEach-Object { $_.IP })
     $PeerError = $null
-    Write-Information "BEC IP analysis: other-account lookup for $($ToLookUp.Count) of $($Preliminary.Count) address(es)"
-    if ($ToLookUp.Count -gt 0) {
+    # each address costs Graph a tenant-wide sign-in search, so only the most suspicious are looked up (the verdicts come sorted)
+    $PeerLimit = [int]($Heuristics.caps.peerLookups ?? 20)
+    $PeerCap = if ($ToLookUp.Count -gt $PeerLimit) { "$PeerLimit of $($ToLookUp.Count) addresses (most suspicious first)" }
+    if ($PeerCap) { $ToLookUp = $ToLookUp[0..($PeerLimit - 1)] }
+    if ($ToLookUp.Count -gt 0 -and -not $SkipPeerLookup) {
+        Write-Information "BEC IP analysis: other-account lookup for $($ToLookUp.Count) of $($Preliminary.Count) address(es)"
         try {
             $Found = Get-CIPPBecIPPeers -TenantFilter $TenantFilter -UserId $UserId -IPs $ToLookUp -StartDate $BaselineStart -WindowStart $WindowStart
             foreach ($Key in $Found.Keys) { $Peers[$Key] = $Found[$Key] }
@@ -176,7 +183,7 @@ function Invoke-CIPPBecIPAnalysis {
         Baseline    = $BaselineResult
         Guidance    = $Guidance
         Peers       = $Peers
-        PeersResult = New-CIPPBecCollectorResult -Data @($Peers.Values) -Error $PeerError
+        PeersResult = New-CIPPBecCollectorResult -Data @($Peers.Values) -Error $PeerError -Cap $PeerCap -Complete (-not $PeerCap)
         Geo         = $Geo
         Verdicts    = $Verdicts
         Events      = $Events
