@@ -7,6 +7,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
 
     # --- in-memory table storage -------------------------------------------------------------
     function Get-CippTable { param($tablename) @{ TableName = $tablename } }
@@ -148,6 +149,7 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheSharePointSharingLinks.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPActivityTriggers/Public/Entrypoints/Activity Triggers/SharePoint Sharing/Push-DBCacheSharePointSiteSharingLinks.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPActivityTriggers/Public/Entrypoints/Activity Triggers/SharePoint Sharing/Push-StoreSharePointSharingLinks.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPActivityTriggers/Public/Entrypoints/Activity Triggers/SharePoint Sharing/Push-SharingLinksDispatchDrives.ps1')
 
     # --- shared builders ------------------------------------------------------------------------
     function New-SiteItem {
@@ -167,11 +169,12 @@ BeforeAll {
         }
     }
 
-    # Runs a site task, then every drive task it queued (and any tasks those queue in turn),
-    # the way the orchestrator would.
+    # Runs a site task, queues its drive tasks through the site run's post-execution, then runs
+    # every queued task (and any tasks those queue in turn), the way the orchestrator would.
     function Invoke-SiteAndDrives {
         param($SiteItem)
-        Push-DBCacheSharePointSiteSharingLinks -Item $SiteItem
+        $DriveTasks = Push-DBCacheSharePointSiteSharingLinks -Item $SiteItem
+        Push-SharingLinksDispatchDrives -Item @{ Parameters = @{ TenantFilter = $SiteItem.TenantFilter }; Results = @(, $DriveTasks) }
         $Cursor = 0
         while ($Cursor -lt $script:Orchestrations.Count) {
             $Queued = $script:Orchestrations[$Cursor]
@@ -269,15 +272,32 @@ Describe 'Per-drive sharing-links scan' {
                 throw "Unrouted GET: $Uri"
             }
 
-            Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId)
+            $Tasks = @(Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId))
 
-            $script:Orchestrations.Count | Should -Be 1
-            $Tasks = @($script:Orchestrations[0].Batch)
+            $script:Orchestrations.Count | Should -Be 0
             $Tasks.Count | Should -Be 1
             $Tasks[0].DriveId | Should -Be 'b!docs'
             # The dispatch total the drive tasks complete against matches what was dispatched.
             $DrivesRow = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'drives-*' }
             [int]$DrivesRow.DriveCount | Should -Be 1
+        }
+
+        It 'queues the drives of every site as one run of at most two at a time' {
+            $Drive = { param($Id, $Site) [pscustomobject]@{ FunctionName = 'DBCacheSharePointSiteSharingLinks'; TenantFilter = 'contoso.com'; SiteId = $Site; DriveId = $Id } }
+            Push-SharingLinksDispatchDrives -Item @{
+                Parameters = @{ TenantFilter = 'contoso.com' }
+                Results    = @(, @((& $Drive 'b!one' 'site1'), (& $Drive 'b!two' 'site1')); @(); (& $Drive 'b!three' 'site2'))
+            }
+
+            $script:Orchestrations.Count | Should -Be 1
+            $script:Orchestrations[0].OrchestratorName | Should -Be 'SharingLinksDrives_contoso.com'
+            $script:Orchestrations[0].MaxConcurrency | Should -Be 2
+            @($script:Orchestrations[0].Batch.DriveId) | Should -Be @('b!one', 'b!two', 'b!three')
+        }
+
+        It 'queues nothing when no site has drives' {
+            Push-SharingLinksDispatchDrives -Item @{ Parameters = @{ TenantFilter = 'contoso.com' }; Results = @(@(), @()) }
+            $script:Orchestrations.Count | Should -Be 0
         }
 
         It 'completes the site as failed when the drive listing is refused' {
@@ -515,8 +535,7 @@ Describe 'Per-drive sharing-links scan' {
                 throw "Unrouted GET: $Uri"
             }
 
-            Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
-            $DriveTask = @($script:Orchestrations[0].Batch)[0]
+            $DriveTask = @(Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true))[0]
             Push-DBCacheSharePointSiteSharingLinks -Item $DriveTask
 
             # Page 1's rows are persisted, the resume position is saved, and the task re-queued
@@ -551,8 +570,7 @@ Describe 'Per-drive sharing-links scan' {
             $ScanId = 'scan-throttle-1'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
 
-            Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
-            $DriveTask = @($script:Orchestrations[0].Batch)[0]
+            $DriveTask = @(Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true))[0]
             Push-DBCacheSharePointSiteSharingLinks -Item $DriveTask
 
             # Page 1 persisted, checkpoint points at page 2, and a resume task carries the
@@ -571,8 +589,7 @@ Describe 'Per-drive sharing-links scan' {
             $ScanId = 'scan-throttle-2'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
 
-            Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
-            $DriveTask = @($script:Orchestrations[0].Batch)[0]
+            $DriveTask = @(Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true))[0]
             $DriveTask | Add-Member -NotePropertyName RequeueCount -NotePropertyValue 6 -Force
             Push-DBCacheSharePointSiteSharingLinks -Item $DriveTask
 

@@ -111,3 +111,79 @@ Describe 'New-ExoBulkRequest @adminapi.warnings' {
         Should -Invoke Write-Warning -Times 2 -Exactly -ParameterFilter { $Message -like '*no settings have been modified*' -and $Message -notlike "*hasn't logged on*" }
     }
 }
+
+Describe 'New-ExoBulkRequest whole-batch failures on the concurrent path' {
+    BeforeAll {
+        $Probe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+        $Probe.Start(); $Port = $Probe.LocalEndpoint.Port; $Probe.Stop()
+        $Source = Get-Content -Raw (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/New-ExoBulkRequest.ps1')
+        . ([scriptblock]::Create($Source.Replace("'https://outlook.office365.com'", "'http://127.0.0.1:$Port'")))
+
+        $script:Server = [hashtable]::Synchronized(@{ Mode = ''; Hits = 0 })
+        $script:Listener = [System.Net.HttpListener]::new()
+        $script:Listener.Prefixes.Add("http://127.0.0.1:$Port/")
+        $script:Listener.Start()
+        $Listener = $script:Listener
+        $State = $script:Server
+        $script:ServerJob = Start-ThreadJob -ScriptBlock {
+            $Listener = $using:Listener
+            $State = $using:State
+            $Parked = [System.Collections.Generic.List[object]]::new()
+            while ($Listener.IsListening) {
+                try { $Context = $Listener.GetContext() } catch { break }
+                $Requests = @(([System.IO.StreamReader]::new($Context.Request.InputStream).ReadToEnd() | ConvertFrom-Json).requests)
+                if ($Requests.id -contains 'a0@contoso.com') {
+                    $State.Hits++
+                    if ($State.Mode -eq 'timeout') { $Parked.Add($Context); continue }
+                    $Context.Response.StatusCode = 429
+                    $Context.Response.AddHeader('Retry-After', '1')
+                    $Bytes = [System.Text.Encoding]::UTF8.GetBytes('{"error":{"code":"TooManyRequests","message":"throttled"}}')
+                } else {
+                    $Body = @{ responses = @($Requests | ForEach-Object { @{ id = $_.id; status = 200; body = @{ value = @(@{ Identity = $_.id }) } } }) }
+                    $Bytes = [System.Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 10))
+                }
+                $Context.Response.ContentType = 'application/json'
+                $Context.Response.OutputStream.Write($Bytes, 0, $Bytes.Length)
+                $Context.Response.Close()
+            }
+        }
+        $script:Twenty = foreach ($Prefix in 'a', 'b') {
+            foreach ($i in 0..9) { @{ CmdletInput = @{ CmdletName = 'Get-MailboxFolderPermission'; Parameters = @{ Identity = "$Prefix$i@contoso.com" } }; OperationGuid = "$Prefix$i@contoso.com" } }
+        }
+    }
+
+    AfterAll {
+        $script:Listener.Stop()
+        $script:ServerJob | Remove-Job -Force
+    }
+
+    BeforeEach {
+        $script:Server.Hits = 0
+        $script:Retried = [System.Collections.Generic.List[object]]::new()
+        Mock Start-Sleep {}
+        Mock Write-Host {}
+        Mock Invoke-CIPPRestMethod {
+            $Requests = @(($Body | ConvertFrom-Json).requests)
+            foreach ($Request in $Requests) { $script:Retried.Add($Request.id) }
+            @{ responses = @($Requests | ForEach-Object { [PSCustomObject]@{ id = $_.id; status = 200; body = [PSCustomObject]@{ value = @([PSCustomObject]@{ Identity = $_.id }) } } }) }
+        }
+    }
+
+    It 'hands a batch still throttled after its retries to the sub-request retry loop' {
+        $script:Server.Mode = 'throttle'
+        $Result = @(New-ExoBulkRequest -tenantid 'contoso.onmicrosoft.com' -cmdletArray @($script:Twenty) -MaxConcurrency 32)
+        $script:Server.Hits | Should -Be 4
+        $script:Retried.Count | Should -Be 10
+        @($Result.Where({ $_.error })).Count | Should -Be 0
+        @($Result.Identity | Sort-Object -Unique).Count | Should -Be 20
+    }
+
+    It 'returns a timed-out batch as per-item errors instead of dropping it' {
+        $script:Server.Mode = 'timeout'
+        $Result = @(New-ExoBulkRequest -tenantid 'contoso.onmicrosoft.com' -cmdletArray @($script:Twenty) -MaxConcurrency 32 -TimeoutSec 1)
+        $script:Retried.Count | Should -Be 0
+        @($Result.Where({ $_.error })).Count | Should -Be 10
+        @($Result.Where({ $_.error }).OperationGuid | Sort-Object) | Should -Be @(0..9 | ForEach-Object { "a$_@contoso.com" })
+        @($Result.Where({ $_.Identity })).Count | Should -Be 10
+    }
+}

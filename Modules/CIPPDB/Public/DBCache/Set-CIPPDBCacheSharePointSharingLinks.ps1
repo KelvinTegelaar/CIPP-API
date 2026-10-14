@@ -124,10 +124,16 @@
             }
         }
 
+        # A user's refresh would otherwise run the whole scan at P1, ahead of every scheduled task.
         $InputObject = [PSCustomObject]@{
             Batch            = @($Batch)
             OrchestratorName = "SharePointSharingLinks_$TenantFilter"
+            Priority         = [Math]::Max(2, (Resolve-CIPPOrchestratorPriority -OpContext (Get-Variable -Name 'CraftOperationContext' -Scope Global -ValueOnly -ErrorAction SilentlyContinue)))
             SkipLog          = $true
+            PostExecution    = @{
+                FunctionName = 'SharingLinksDispatchDrives'
+                Parameters   = @{ TenantFilter = $TenantFilter }
+            }
         }
 
         $null = Start-CIPPOrchestrator -InputObject $InputObject

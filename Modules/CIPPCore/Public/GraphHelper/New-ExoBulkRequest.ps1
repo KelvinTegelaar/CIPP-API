@@ -112,7 +112,7 @@ function New-ExoBulkRequest {
                 $BatchBodyJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $BatchBodyJson
                 # Clone the headers as they stood for this batch's POST (X-AnchorMailbox/X-CmdletName are
                 # mutated per sub-request above); the $batch envelope also carries per-request headers.
-                $BatchPayloads.Add(@{ Json = $BatchBodyJson; Headers = $Headers.Clone() })
+                $BatchPayloads.Add(@{ Json = $BatchBodyJson; Headers = $Headers.Clone(); Ids = @($BatchRequests.id) })
             }
 
             # Dispatch a set of batch payloads and return the flattened sub-responses. -MaxConcurrency 1
@@ -138,17 +138,28 @@ function New-ExoBulkRequest {
                         $ConcRequests.Add($ConcRequest)
                     }
                     foreach ($ConcResult in [CIPP.CIPPRestClient]::SendConcurrent($ConcRequests, $Concurrency, 3)) {
-                        if ($ConcResult.Error) {
-                            Write-Host "EXO bulk batch failed after $($ConcResult.Attempts) attempt(s): $($ConcResult.Error)"
+                        $Parsed = $null
+                        if (-not $ConcResult.Error -and $ConcResult.IsSuccess) {
+                            try { $Parsed = [CIPP.CippJson]::ConvertFromResponse($ConcResult.Result) } catch { $Parsed = $null }
+                        }
+                        if ($Parsed.responses) {
+                            foreach ($Response in $Parsed.responses) { $Out.Add($Response) }
                             continue
                         }
-                        try {
-                            $Parsed = [CIPP.CippJson]::ConvertFromResponse($ConcResult.Result)
-                        } catch {
-                            Write-Host "EXO bulk batch: could not parse response (HTTP $($ConcResult.StatusCode))"
-                            continue
+                        # A batch that failed as a whole still answers for each of its sub-requests, so a 429 reaches the
+                        # retry loop below and anything else reaches the caller as a per-item error instead of vanishing.
+                        $RetryAfter = if ($ConcResult.Result) { @($ConcResult.Result.ResponseHeaders['Retry-After'])[0] }
+                        $Detail = if ($ConcResult.Error) { $ConcResult.Error } elseif ($ConcResult.Result.HasContent) { $ConcResult.Result.Content.Substring(0, [Math]::Min(300, $ConcResult.Result.Content.Length)) }
+                        Write-Host "EXO bulk batch failed (HTTP $($ConcResult.StatusCode), $($ConcResult.Attempts) attempt(s), Retry-After $RetryAfter): $Detail"
+                        $Status = if ($ConcResult.StatusCode -eq 429) { 429 } elseif ($ConcResult.TimedOut) { 504 } elseif ($ConcResult.StatusCode -ge 400) { $ConcResult.StatusCode } else { 502 }
+                        foreach ($Id in $Payloads[$ConcResult.Index].Ids) {
+                            $Out.Add([pscustomobject]@{
+                                    id      = $Id
+                                    status  = $Status
+                                    headers = [pscustomobject]@{ 'Retry-After' = $RetryAfter }
+                                    body    = [pscustomobject]@{ error = [pscustomobject]@{ code = "HTTP$Status"; message = "Exchange batch request failed (HTTP $Status): $Detail" } }
+                                })
                         }
-                        foreach ($Response in $Parsed.responses) { $Out.Add($Response) }
                     }
                 } else {
                     foreach ($Payload in $Payloads) {
@@ -187,11 +198,12 @@ function New-ExoBulkRequest {
                     $RetryBody = @{ requests = @($Slice) }
                     $RetryJson = [CIPP.CippJson]::ToJson($RetryBody, 10) ?? (ConvertTo-Json -InputObject $RetryBody -Depth 10)
                     $RetryJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $RetryJson
-                    $RetryPayloads.Add(@{ Json = $RetryJson; Headers = if ($AnchorPerMailbox) { $Slice[0].headers.Clone() } else { $Headers.Clone() } })
+                    $RetryPayloads.Add(@{ Json = $RetryJson; Headers = if ($AnchorPerMailbox) { $Slice[0].headers.Clone() } else { $Headers.Clone() }; Ids = @($Slice.id) })
                 }
 
+                # Halve the fan-out each round: firing every throttled batch back at once re-trips the same limit.
                 $Replacements = @{}
-                foreach ($Response in (Send-BatchPayloadSet $RetryPayloads $BatchURL $MaxConcurrency $TimeoutSec)) { if ($Response.id) { $Replacements[$Response.id] = $Response } }
+                foreach ($Response in (Send-BatchPayloadSet $RetryPayloads $BatchURL ([Math]::Max(1, $MaxConcurrency -shr $RateLimitRetry)) $TimeoutSec)) { if ($Response.id) { $Replacements[$Response.id] = $Response } }
                 for ($i = 0; $i -lt $ReturnedData.Count; $i++) {
                     if ($ReturnedData[$i].id -and $Replacements.ContainsKey($ReturnedData[$i].id)) { $ReturnedData[$i] = $Replacements[$ReturnedData[$i].id] }
                 }

@@ -8,8 +8,9 @@ function Push-DBCacheSharePointSiteSharingLinks {
         One activity, two roles, discriminated by the payload:
 
         Site task ($Item.DriveId absent) - lists the site's document libraries, records how many
-        drive tasks the site owns (drives-{site} row), and dispatches one drive task per drive
-        through a child orchestration. Sites whose drives cannot be listed (locked/blocked sites,
+        drive tasks the site owns (drives-{site} row), and returns one drive task per drive; the
+        site run's post-execution queues every site's drives as one capped run per tenant
+        (Push-SharingLinksDispatchDrives). Sites whose drives cannot be listed (locked/blocked sites,
         throttling) complete immediately as failed. The Preservation Hold Library is skipped by
         URL segment: it is a hidden system library that cannot carry sharing links and is often
         by far the largest drive on the site.
@@ -338,12 +339,7 @@ function Push-DBCacheSharePointSiteSharingLinks {
                     Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: could not update queue $($Item.QueueId) with drive tasks: $($_.Exception.Message)" -sev Debug
                 }
             }
-            $null = Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
-                    Batch            = @($Batch)
-                    OrchestratorName = "SharingLinksDrives_$($TenantFilter)_$([guid]::NewGuid().ToString('N').Substring(0, 8))"
-                    SkipLog          = $true
-                })
-            return @()
+            return @($Batch)
         } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: failed dispatching drives for '$SiteUrl': $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
             Complete-Site -Failed
