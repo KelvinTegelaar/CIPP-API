@@ -43394,6 +43394,10 @@
                       "Attempts": {
                         "x-cipp-field-source": "storage"
                       },
+                      "CandidateCount": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
                       "CreatedUtc": {
                         "x-cipp-field-source": "storage"
                       },
@@ -43428,7 +43432,6 @@
                         "x-cipp-field-source": "storage"
                       },
                       "RowKey": {
-                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "SearchId": {
@@ -43460,11 +43463,9 @@
                         "x-cipp-field-source": "storage,frontend"
                       },
                       "WindowEnd": {
-                        "type": "string",
                         "x-cipp-field-source": "storage,frontend"
                       },
                       "WindowStart": {
-                        "type": "string",
                         "x-cipp-field-source": "storage,frontend"
                       }
                     }

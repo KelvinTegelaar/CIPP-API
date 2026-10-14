@@ -59,6 +59,7 @@ function Start-DomainOrchestrator {
             $InputObject = [PSCustomObject]@{
                 Batch            = @($Batch)
                 OrchestratorName = 'DomainAnalyser_Tenants'
+                AllowCollision   = $false
                 SkipLog          = $true
             }
         }

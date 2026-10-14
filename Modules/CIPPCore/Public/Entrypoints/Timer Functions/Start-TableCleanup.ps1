@@ -183,6 +183,7 @@ function Start-TableCleanup {
     $InputObject = @{
         Batch            = @($Batch)
         OrchestratorName = 'TableCleanup'
+        AllowCollision   = $false
         Priority         = 8
         SkipLog          = $true
     }

@@ -18,7 +18,11 @@ function Invoke-ExecTestRun {
             'tests' {
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting tests-only run for tenant: $TenantFilter" -sev Info
                 $InstanceId = Start-CIPPDBTestsRun -TenantFilter $TenantFilter -Force
-                $ResultMessage = "Successfully started test run for $TenantFilter"
+                $ResultMessage = if ("$($InstanceId.InstanceId)" -like '*-Skipped') {
+                    "A test run for $TenantFilter is already running, so this request was skipped"
+                } else {
+                    "Successfully started test run for $TenantFilter"
+                }
             }
             'cache' {
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting cache-only collection for tenant: $TenantFilter" -sev Info

@@ -34,6 +34,7 @@ function Invoke-NinjaOneExtensionScheduler {
     $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.IntegrationId -and $_.IntegrationId -ne '' }
     # Names each queued sync after its tenant (mapping rows only carry the tenant id).
     $TenantDomains = @{}
+    $InstanceId = $null
 
     # Same check as the integration test button, once, before queuing a task per mapped tenant.
     $ApiCheck = {
@@ -61,6 +62,7 @@ function Invoke-NinjaOneExtensionScheduler {
         if (($Batch | Measure-Object).Count -gt 0) {
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'NinjaOneOrchestrator'
+                AllowCollision   = $false
                 Priority         = 6
                 Batch            = @($Batch)
             }
@@ -76,7 +78,8 @@ function Invoke-NinjaOneExtensionScheduler {
         }
         Add-AzDataTableEntity @Table -Entity $AddObject -Force
 
-        Write-LogMessage -API 'NinjaOneSync' -message "NinjaOne Daily Synchronization Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" -Sev 'Info'
+        $Queued = if ("$InstanceId" -like '*-Skipped') { 'Skipped (a NinjaOne sync is still running)' } else { 'Queued' }
+        Write-LogMessage -API 'NinjaOneSync' -message "NinjaOne Daily Synchronization $Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" -Sev 'Info'
 
     } else {
         if ($LastRunTime -lt (Get-Date).AddMinutes(-90)) {
@@ -110,6 +113,7 @@ function Invoke-NinjaOneExtensionScheduler {
             if (($Batch | Measure-Object).Count -gt 0) {
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'NinjaOneOrchestrator'
+                    AllowCollision   = $false
                     Priority         = 6
                     Batch            = @($Batch)
                 }
@@ -119,7 +123,8 @@ function Invoke-NinjaOneExtensionScheduler {
             }
 
             if (($CatchupTenants | Measure-Object).count -gt 0) {
-                Write-LogMessage -API 'NinjaOneSync' -message "NinjaOne Synchronization Catchup Queued for $(($CatchupTenants | Measure-Object).count) Tenants" -Sev 'Info'
+                $Queued = if ("$InstanceId" -like '*-Skipped') { 'Skipped (a NinjaOne sync is still running)' } else { 'Queued' }
+                Write-LogMessage -API 'NinjaOneSync' -message "NinjaOne Synchronization Catchup $Queued for $(($CatchupTenants | Measure-Object).count) Tenants" -Sev 'Info'
             }
 
         }

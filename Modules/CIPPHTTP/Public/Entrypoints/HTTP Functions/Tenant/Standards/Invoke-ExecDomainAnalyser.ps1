@@ -29,7 +29,9 @@ function Invoke-ExecDomainAnalyser {
     }
 
     $OrchStatus = Start-DomainOrchestrator @Params
-    if ($OrchStatus) {
+    if ("$OrchStatus" -like '*-Skipped') {
+        $Message = 'A Domain Analyser run for all tenants is already running, so this request was skipped'
+    } elseif ($OrchStatus) {
         $Message = 'Domain Analyser started'
     } else {
         $Message = 'Domain Analyser error: check logs'

@@ -67,6 +67,7 @@ function Start-SchedulerOrchestrator {
     }
     $InputObject = [PSCustomObject]@{
         OrchestratorName = 'SchedulerOrchestrator'
+        AllowCollision   = $false
         Batch            = @($Batch)
         SkipLog          = $true
     }

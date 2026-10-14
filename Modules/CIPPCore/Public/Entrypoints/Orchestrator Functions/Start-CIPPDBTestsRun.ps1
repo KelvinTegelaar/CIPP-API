@@ -98,6 +98,7 @@ function Start-CIPPDBTestsRun {
         $NameSuffix = if ($TenantFilter -ne 'allTenants') { "-$TenantFilter" } else { '' }
         $InputObject = [PSCustomObject]@{
             OrchestratorName = "TestsList$NameSuffix"
+            AllowCollision   = $TenantFilter -ne 'allTenants'
             Batch            = @($Batch)
             SkipLog          = $true
             PostExecution    = @{
@@ -117,7 +118,11 @@ function Start-CIPPDBTestsRun {
 
         return @{
             InstanceId = $InstanceId
-            Message    = "Tests orchestration started: $($AllTenantsList.Count) tenant orchestrators will be created"
+            Message    = if ("$InstanceId" -like '*-Skipped') {
+                'Tests orchestration skipped: a tests run for all tenants is still running'
+            } else {
+                "Tests orchestration started: $($AllTenantsList.Count) tenant orchestrators will be created"
+            }
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

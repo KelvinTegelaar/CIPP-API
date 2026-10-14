@@ -16,7 +16,7 @@ function Invoke-ExecCPVRefresh {
     return @{
         StatusCode = [System.Net.HttpStatusCode]::OK
         Body       = @{
-            Results  = 'CPV Refresh has been triggered'
+            Results  = if ("$InstanceId" -like '*-Skipped') { 'A CPV Refresh is already running, so this request was skipped' } else { 'CPV Refresh has been triggered' }
             Metadata = @{
                 InstanceId = $InstanceId
             }
