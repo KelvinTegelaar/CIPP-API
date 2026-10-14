@@ -152,14 +152,14 @@ Describe 'CIPPRateLimiter' {
             @(1..60 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, $B).Wait })[-1] | Should -BeGreaterThan ([timespan]::Zero)
         }
 
-        It 'charges CSOM writes 20 and Graph permissions 3 from the same tenant budget' {
+        It 'charges CSOM writes 20 and Graph permissions 5 from the same tenant budget' {
             $A = Get-AuthHeader 'tenant-a'
             1..7 | ForEach-Object { Get-Wait $Csom $Write $A | Should -Be ([timespan]::Zero) }
             @(1..3 | ForEach-Object { Get-Wait $Csom $Write $A })[-1] | Should -BeGreaterThan ([timespan]::Zero)
 
             $B = Get-AuthHeader 'tenant-b'
-            1..45 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/drives/b!x/items/01AB/permissions', 'GET', $null, $B).Wait | Should -Be ([timespan]::Zero) }
-            @(1..30 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://contoso.sharepoint.com/_api/web', 'GET', $null, $B).Wait })[-1] | Should -BeGreaterThan ([timespan]::Zero)
+            1..30 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/drives/b!x/items/01AB/permissions', 'GET', $null, $B).Wait | Should -Be ([timespan]::Zero) }
+            @(1..10 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://contoso.sharepoint.com/_api/web', 'GET', $null, $B).Wait })[-1] | Should -BeGreaterThan ([timespan]::Zero)
         }
 
         It 'raises the rate while callers keep waiting, but not on the first burst, and lowers it again on a 429' {

@@ -333,9 +333,10 @@ namespace CIPP
             }
         }
 
-        // Resource units measured on a lowest-band tenant: Graph and _api reads 1 (lists too), permissions ~2.5, the CSOM
-        // site-list page ~2.4, and a GetSitePropertiesByUrl request ~5.5 however many sites it reads. CSOM writes were not
-        // burned; a write sweep throttled at ~1/s, so they are charged ~20.
+        // Resource units measured on a lowest-band tenant: Graph and _api reads 1 (lists too), the CSOM site-list page ~2.4,
+        // and a GetSitePropertiesByUrl request ~5.5 however many sites it reads. Permissions are charged the documented 5: at 3
+        // a sharing-links scan was throttled ~530 times at the 18/s floor. CSOM writes were not burned; a write sweep
+        // throttled at ~1/s, so they are charged ~20.
         private static int SharePointCost(string target, string? body)
         {
             if (body is not null && target.EndsWith("/client.svc/ProcessQuery", StringComparison.OrdinalIgnoreCase))
@@ -347,7 +348,7 @@ namespace CIPP
                 return 1;
             }
             return target.EndsWith("/permissions", StringComparison.OrdinalIgnoreCase) ||
-                   target.Contains("/permissions/", StringComparison.OrdinalIgnoreCase) ? 3 : 1;
+                   target.Contains("/permissions/", StringComparison.OrdinalIgnoreCase) ? 5 : 1;
         }
 
         private static void Hold(string key, int seconds)
