@@ -55,6 +55,7 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/New-CIPPBecCaseId.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecScore.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecRunSteps.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Search-CIPPBecSignIn.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecErrorInfo.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Set-CIPPBecIPVerdictStamp.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Find-CIPPBecApprovedTravel.ps1')
@@ -133,6 +134,11 @@ Describe 'Push-BECRun' {
                     'IntuneDevices' { [pscustomobject]@{ id = 'IntuneDevices'; status = 403; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'No Intune licence' } } } }
                     'SuspectUser' { [pscustomobject]@{ id = 'SuspectUser'; status = 200; body = [pscustomobject]@{ id = 'user-guid'; displayName = 'Victim'; userPrincipalName = 'victim@contoso.com'; usageLocation = 'NL'; country = 'Netherlands' } } }
                     'MaliciousSPs*' { [pscustomobject]@{ id = $Request.id; status = 200; body = [pscustomobject]@{ value = @() } } }
+                    # the user's sign-ins, read in 7-day slices: the row sits in the newest slice
+                    's[0-9]*' {
+                        $Rows = @(if ($Request.url -like '*signIns*' -and $Request.id -eq "s$(@($Requests).Count - 1)") { [pscustomobject]@{ id = 's1'; createdDateTime = '2026-08-19T03:00:00Z'; resourceDisplayName = 'Office 365 Exchange Online'; clientAppUsed = 'Browser'; conditionalAccessStatus = 'success'; status = [pscustomobject]@{ errorCode = 0 }; ipAddress = '203.0.113.10'; location = [pscustomobject]@{ countryOrRegion = 'NG'; city = 'Lagos' } } })
+                        [pscustomobject]@{ id = $Request.id; status = 200; body = [pscustomobject]@{ value = $Rows } }
+                    }
                 }
             }
         }

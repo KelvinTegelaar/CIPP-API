@@ -54952,6 +54952,14 @@
             }
           },
           {
+            "name": "AppId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "BaselineRunId",
             "in": "query",
             "required": false,
@@ -54996,10 +55004,18 @@
           {
             "name": "Filter",
             "in": "query",
-            "description": "When true, the Severity/User/Tenant/API/StartDate/EndDate query filters are applied; otherwise the current day is returned unfiltered.",
+            "description": "When true, the Severity/User/Tenant/API/IP/AppId/StartDate/EndDate query filters are applied; otherwise the current day is returned unfiltered.",
             "required": false,
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "IP",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           },
           {

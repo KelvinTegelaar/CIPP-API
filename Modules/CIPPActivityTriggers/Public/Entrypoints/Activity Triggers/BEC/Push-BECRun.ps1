@@ -251,8 +251,7 @@ function Push-BECRun {
                 try {
                     # Every interactive sign-in in the window, paged to the end: the score's foreign sign-in
                     # signals count these, so a newest-N cut would hide the first foreign access.
-                    $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$SuspectUser') and createdDateTime ge $($startDate.ToString('yyyy-MM-ddTHH:mm:ssZ'))&`$top=999&`$orderby=createdDateTime desc"
-                    $SuspectUserSignIns = @(New-GraphGetRequest -uri $URI -tenantid $TenantFilter | Select-Object @{ Name = 'CreatedDateTime'; Expression = $SignInDate },
+                    $SuspectUserSignIns = @((Search-CIPPBecSignIn -TenantFilter $TenantFilter -Filter "userId eq '$SuspectUser'" -StartDate $startDate -AsApp $false).Rows | Select-Object @{ Name = 'CreatedDateTime'; Expression = $SignInDate },
                         id,
                         @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
                         @{ Name = 'ClientAppUsed'; Expression = { $_.clientAppUsed } },

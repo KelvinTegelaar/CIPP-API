@@ -1,6 +1,6 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    function New-GraphGetRequest { param($uri, $tenantid, $AsApp, $noPagination) }
+    function Search-CIPPBecSignIn { param($TenantFilter, $Filter, $StartDate, $EndDate, $Select, $AsApp) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) $Value }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/New-CIPPBecCollectorResult.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecNonInteractiveSignIns.ps1')
@@ -30,17 +30,16 @@ BeforeAll {
 
 Describe 'Get-CIPPBecNonInteractiveSignIns' {
     BeforeEach {
-        Mock New-GraphGetRequest { @($script:SignIns) }
+        Mock Search-CIPPBecSignIn { [pscustomobject]@{ Rows = @($script:SignIns); Incomplete = $false } }
         Mock ConvertTo-CIPPODataFilterValue { $Value }
         $script:SignIns = @()
     }
 
-    It 'queries the beta sign-in log for the user''s non-interactive events inside the window, newest first, paged to the end' {
+    It 'searches the user''s non-interactive sign-ins from the window start' {
         $null = Get-CIPPBecNonInteractiveSignIns -TenantFilter 'contoso.com' -UserId $script:UserId -StartDate $script:Start -UsageLocation 'NL'
         Should -Invoke ConvertTo-CIPPODataFilterValue -Times 1 -ParameterFilter { $Value -eq $script:UserId -and $Type -eq 'Guid' }
-        Should -Invoke New-GraphGetRequest -Times 1 -ParameterFilter {
-            $uri -eq "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userId eq '$($script:UserId)' and signInEventTypes/any(t: t eq 'nonInteractiveUser') and createdDateTime ge 2026-08-14T00:00:00Z&`$top=999&`$orderby=createdDateTime desc" -and
-            $tenantid -eq 'contoso.com' -and $AsApp -eq $true -and $noPagination -ne $true
+        Should -Invoke Search-CIPPBecSignIn -Times 1 -ParameterFilter {
+            $Filter -eq "userId eq '$($script:UserId)' and signInEventTypes/any(t: t eq 'nonInteractiveUser')" -and $TenantFilter -eq 'contoso.com' -and $StartDate -eq $script:Start
         }
     }
 
@@ -123,7 +122,7 @@ Describe 'Get-CIPPBecNonInteractiveSignIns' {
     }
 
     It 'lets a Graph failure propagate to the caller instead of reporting an empty sign-in list' {
-        Mock New-GraphGetRequest { throw 'Graph unavailable' }
+        Mock Search-CIPPBecSignIn { throw 'Graph unavailable' }
         { Get-CIPPBecNonInteractiveSignIns -TenantFilter 'contoso.com' -UserId $script:UserId -StartDate $script:Start -UsageLocation 'NL' } | Should -Throw -ExpectedMessage '*Graph unavailable*'
     }
 }

@@ -43,7 +43,6 @@ function Get-CIPPBecSignInBaseline {
     $From = $StartDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     $To = $EndDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     $Select = 'createdDateTime,ipAddress,autonomousSystemNumber,location,status,conditionalAccessStatus,appDisplayName,resourceDisplayName'
-    $Filter = "userId eq '$SafeId' and createdDateTime ge $From and createdDateTime lt $To"
     $Errors = [System.Collections.Generic.List[string]]::new()
     $Incomplete = $false
     $Rows = [System.Collections.Generic.List[object]]::new()
@@ -70,22 +69,16 @@ function Get-CIPPBecSignInBaseline {
             $Rows.Add([pscustomobject]@{ Kind = 'Interactive'; SignIn = $Logon })
         }
     }
-    $Requests = @(
-        @{ id = 'Interactive'; method = 'GET'; url = "auditLogs/signIns?`$filter=$Filter&`$top=999&`$select=$Select" }
-        @{ id = 'NonInteractive'; method = 'GET'; url = "auditLogs/signIns?`$filter=$Filter and signInEventTypes/any(t: t eq 'nonInteractiveUser')&`$top=999&`$select=$Select" }
-    )
-    $Responses = if ($FromAuditLog) { @() } else { @(New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true -Version 'beta') }
-    foreach ($Id in @(if (-not $FromAuditLog) { 'Interactive', 'NonInteractive' })) {
-        $Response = @($Responses | Where-Object { $_.id -eq $Id })
-        $Failed = @($Response | Where-Object { [int]$_.status -ge 400 })
-        if ($Response.Count -eq 0 -or $Failed.Count -gt 0) {
-            $Errors.Add("$Id sign-ins: $(if ($Failed.Count -gt 0) { $Failed[0].body.error.message } else { 'no response' })")
+    $Kinds = [ordered]@{ Interactive = "userId eq '$SafeId'"; NonInteractive = "userId eq '$SafeId' and signInEventTypes/any(t: t eq 'nonInteractiveUser')" }
+    foreach ($Id in @(if (-not $FromAuditLog) { $Kinds.Keys })) {
+        try {
+            $Found = Search-CIPPBecSignIn -TenantFilter $TenantFilter -Filter $Kinds[$Id] -StartDate $StartDate -EndDate $EndDate -Select $Select
+        } catch {
+            $Errors.Add("$Id sign-ins: $($_.Exception.Message)")
             continue
         }
-        if (@($Response | Where-Object { $_.PagingIncomplete }).Count -gt 0) { $Incomplete = $true }
-        foreach ($SignIn in @($Response.body.value)) {
-            if ($SignIn) { $Rows.Add([pscustomobject]@{ Kind = $Id; SignIn = $SignIn }) }
-        }
+        if ($Found.Incomplete) { $Incomplete = $true }
+        foreach ($SignIn in $Found.Rows) { $Rows.Add([pscustomobject]@{ Kind = $Id; SignIn = $SignIn }) }
     }
 
     $ByIP = @{}

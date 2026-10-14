@@ -35,3 +35,24 @@ Describe 'Invoke-CIPPStandardAddDMARCToMOERA alert' {
         }
     }
 }
+
+Describe 'Invoke-CIPPStandardAddDMARCToMOERA record comparison' {
+    BeforeEach {
+        Mock Write-LogMessage {}
+        Mock Write-Warning {}
+        Mock Write-StandardsAlert {}
+        Mock New-GraphGetRequest { @(@{ id = 'a.onmicrosoft.com' }) }
+    }
+
+    It 'treats a record without the trailing semicolon as matching' {
+        Mock Read-DmarcPolicy { [PSCustomObject]@{ Record = 'v=DMARC1;p=reject' } }
+        Invoke-CIPPStandardAddDMARCToMOERA -Tenant 'contoso.onmicrosoft.com' -Settings ([PSCustomObject]@{ alert = $true })
+        Should -Invoke Write-StandardsAlert -Times 0
+    }
+
+    It 'still flags a record with a different policy' {
+        Mock Read-DmarcPolicy { [PSCustomObject]@{ Record = 'v=DMARC1; p=none' } }
+        Invoke-CIPPStandardAddDMARCToMOERA -Tenant 'contoso.onmicrosoft.com' -Settings ([PSCustomObject]@{ alert = $true })
+        Should -Invoke Write-StandardsAlert -Times 1
+    }
+}

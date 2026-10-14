@@ -19,9 +19,9 @@ function Get-CIPPBaselineAddDMARCToMOERAState {
         return @{ Current = $null }
     }
 
-    $Desired = "$($Item.Variables.RecordValue)"
+    $Desired = (("$($Item.Variables.RecordValue)" -split ';').Trim() -ne '') -join ';'
     $NonCompliant = @(foreach ($Row in $Rows) {
-            if (-not $Row.hasDmarc -or "$($Row.record)" -ne $Desired) { "$($Row.domain)" }
+            if (-not $Row.hasDmarc -or ((("$($Row.record)" -split ';').Trim() -ne '') -join ';') -ne $Desired) { "$($Row.domain)" }
         }) | Sort-Object
 
     @{
