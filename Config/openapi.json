@@ -39741,6 +39741,90 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecTestMessage": {
+      "post": {
+        "summary": "ExecTestMessage",
+        "operationId": "ExecTestMessage",
+        "tags": [
+          "Email-Exchange > Tools"
+        ],
+        "description": "Runs Exchange Online's Test-Message against a tenant: a test message is pushed through the\nmail flow rule (and optionally unified DLP) evaluation pipeline and Exchange emails a report\nof every rule that matched to the SendReportTo mailbox. Nothing is returned inline. The\nmessage is either an uploaded .eml (MessageFileBase64) or a minimal one CIPP builds from\nSubject and Body. Because the message really enters the pipeline, rule actions such as\nblock, moderate or notify can fire for it. The dropped message's trace carries the rules\nthat acted, so an async deployment job (DeploymentId) waits for it on the queue and\npushes the verdict live; the page follows it through ListAsyncDeployment.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Body": {
+                    "type": "string"
+                  },
+                  "MessageFileBase64": {
+                    "type": "string"
+                  },
+                  "Recipients": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
+                  "Sender": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "SendReportTo": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "Subject": {
+                    "type": "string",
+                    "description": "Minimal RFC 5322 message. CRLF line endings and a Message-ID keep it well-formed for the pipeline; the sender and recipients on the command still decide the envelope."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "TransportRules": {
+                    "type": "boolean"
+                  },
+                  "UnifiedDlpRules": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.TransportRule.ReadWrite"
+      }
+    },
     "/api/ExecTestRefresh": {
       "post": {
         "summary": "ExecTestRefresh",

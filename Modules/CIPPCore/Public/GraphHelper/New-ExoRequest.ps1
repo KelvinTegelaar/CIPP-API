@@ -169,7 +169,9 @@ function New-ExoRequest {
                     $Message = if ($ReportedError.error.details.message) {
                         $ReportedError.error.details.message
                     } elseif ($ReportedError.error.innererror) {
-                        $ReportedError.error.innererror.internalException.message
+                        # Not every innererror carries an internalException; fall through to its own
+                        # message and then the top-level one rather than losing the body entirely.
+                        $ReportedError.error.innererror.internalException.message ?? $ReportedError.error.innererror.message ?? $ReportedError.error.message
                     } elseif ($ReportedError.error.message) { $ReportedError.error.message }
                 } catch { $Message = $_.ErrorDetails }
                 if ($null -eq $Message) { $Message = $ErrorMess }
