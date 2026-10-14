@@ -199,63 +199,7 @@ function Test-CIPPAuditLogRules {
             HasLocationData        = $null
         }
 
-        # Memo of the expanded rule set. Script scope lasts one worker invocation, so it is reused by the slices of
-        # one search, then filtered per call. Rebuilding it reads the whole
-        # WebhookRules table and calls Expand-CIPPTenantGroups for every entry that survives, which
-        # measured 179 ms on every invocation - and the engine is invoked once per slice, so a
-        # tenant with a large backlog paid it over and over for an answer that had not changed.
-        #
-        # The cost is a bounded staleness in when a rule edit takes effect. Two minutes is well
-        # inside the latency the pipeline already has: the ingestion timer runs every 15 minutes and
-        # the search window trails real time by longer than that, so this does not become the reason
-        # an alert is late.
-        $ConfigTtl = [TimeSpan]::FromMinutes(2)
-        $Now = [datetime]::UtcNow
-        if ($null -eq $script:AuditRuleSetCache -or $script:AuditRuleSetCache.Expires -le $Now) {
-            $ConfigTable = Get-CIPPTable -TableName 'WebhookRules'
-            $Rules = foreach ($ConfigEntry in (Get-CIPPAzDataTableEntity @ConfigTable)) {
-                if ($ConfigEntry.Disabled -eq $true) {
-                    continue
-                }
-                if ([string]::IsNullOrEmpty($ConfigEntry.Tenants)) {
-                    continue
-                }
-                $Tenants = $ConfigEntry.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue
-                if ($null -eq $Tenants) {
-                    continue
-                }
-                [pscustomobject]@{
-                    Expanded         = @((Expand-CIPPTenantGroups -TenantFilter $Tenants).value)
-                    ExcludedTenants  = $ConfigEntry.excludedTenants
-                    ExcludedExpanded = $false
-                    Rule             = [pscustomobject]@{
-                        Tenants           = $Tenants
-                        Excluded          = $null
-                        Conditions        = $ConfigEntry.Conditions
-                        Actions           = $ConfigEntry.Actions
-                        BecActions        = $ConfigEntry.BecActions
-                        LogType           = $ConfigEntry.Type
-                        AlertComment      = $ConfigEntry.AlertComment
-                        CustomSubject     = $ConfigEntry.CustomSubject
-                        PsaTicketPriority = $ConfigEntry.PsaTicketPriority
-                    }
-                }
-            }
-            $script:AuditRuleSetCache = [pscustomobject]@{ Expires = $Now.Add($ConfigTtl); Rules = @($Rules) }
-        }
-        $Configuration = @(foreach ($Entry in $script:AuditRuleSetCache.Rules) {
-                if ($Entry.Expanded -notcontains $TenantFilter -and $Entry.Expanded -notcontains 'AllTenants') { continue }
-                # Exclusions are expanded only for rules that cover the tenant, as each expansion reads the tenant list.
-                if (-not $Entry.ExcludedExpanded) {
-                    $ExcludedTenants = $Entry.ExcludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue
-                    if ($ExcludedTenants) {
-                        $ExcludedTenants = @(Expand-CIPPTenantGroups -TenantFilter $ExcludedTenants)
-                    }
-                    $Entry.Rule.Excluded = $ExcludedTenants
-                    $Entry.ExcludedExpanded = $true
-                }
-                $Entry.Rule
-            })
+        $Configuration = @(Get-CIPPAuditLogRuleSet -TenantFilter $TenantFilter)
 
         # Only the referenced entries of a cached blob, as the same hashtable a full ConvertFrom-Json -AsHashtable gives.
         # Entries are flat objects, so a cut at a '}' inside a string is invalid JSON and takes the full parse instead.

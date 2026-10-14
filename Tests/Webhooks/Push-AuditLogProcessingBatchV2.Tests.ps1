@@ -26,22 +26,18 @@ Describe 'Push-AuditLogProcessingBatchV2' {
     BeforeEach {
         $script:Stamped = [System.Collections.Generic.List[string]]::new()
         $script:VanishedRowKey = $null
-        $script:CacheReadFilters = [System.Collections.Generic.List[string]]::new()
 
         $script:LedgerRows = @(
             [PSCustomObject]@{ PartitionKey = 'contoso.com'; RowKey = 'window-1'; SearchId = 'search-1'; State = 'Downloaded'; RecordCount = 10; Timestamp = [DateTimeOffset]::UtcNow }
             [PSCustomObject]@{ PartitionKey = 'contoso.com'; RowKey = 'window-2'; SearchId = 'search-2'; State = 'Downloaded'; RecordCount = 20; Timestamp = [DateTimeOffset]::UtcNow }
         )
-        # Legacy pre-partitioning rows; empty on any instance that has cycled once.
-        $script:LegacyCacheRows = @()
 
         Mock -CommandName Get-CippTable -MockWith { param($TableName) @{ Context = "ctx:$TableName" } }
 
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
             param($Context, $Filter, $Property)
             if ($Context -like '*AuditLogCoverage*') { return $script:LedgerRows }
-            $script:CacheReadFilters.Add([string]$Filter)
-            return $script:LegacyCacheRows
+            return @()
         }
 
         # Mirrors the table service: an update on a row that no longer exists fails.
@@ -143,26 +139,6 @@ Describe 'Push-AuditLogProcessingBatchV2' {
             $script:LedgerRows = @()
             @(Push-AuditLogProcessingBatchV2 -Item @{ TenantFilter = 'contoso.com' }).Count | Should -Be 0
             Should -Invoke Update-CIPPAzDataTableEntity -Times 0
-        }
-    }
-
-    Context 'legacy rows written before per-search partitioning' {
-
-        It 'batches leftover rows from the old tenant partition' {
-            $script:LedgerRows = @()
-            $script:LegacyCacheRows = @(
-                1..750 | ForEach-Object { [PSCustomObject]@{ PartitionKey = 'contoso.com'; RowKey = ('old-{0:D3}' -f $_) } }
-            )
-            $Batches = @(Push-AuditLogProcessingBatchV2 -Item @{ TenantFilter = 'contoso.com' })
-            @($Batches).Count | Should -Be 2
-            @($Batches[0].LegacyRowIds).Count | Should -Be 500
-            @($Batches[1].LegacyRowIds).Count | Should -Be 250
-        }
-
-        It 'reads the legacy partition by key only, never pulling JSON payloads' {
-            $script:LegacyCacheRows = @([PSCustomObject]@{ PartitionKey = 'contoso.com'; RowKey = 'old-1' })
-            $null = Push-AuditLogProcessingBatchV2 -Item @{ TenantFilter = 'contoso.com' }
-            $script:CacheReadFilters | Should -Contain "PartitionKey eq 'contoso.com'"
         }
     }
 }
