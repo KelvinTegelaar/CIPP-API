@@ -11,7 +11,9 @@ function Get-CIPPBecSignInBaseline {
         { From, To, SignIns, Successful, IPs[{ IP, SignIns, Interactive, NonInteractive, Share, Days,
         FirstSeen, LastSeen, ASN, Country, City, Apps }], ASNs[{ ASN, SignIns, Share }],
         Locations[{ Country, City, SignIns, Share }] }. Graph keeps sign-ins for 30 days (7 without
-        Entra P1), so a longer baseline simply returns what exists.
+        Entra P1), so a longer baseline simply returns what exists. -FromAuditLog reads the user's
+        interactive logons from the unified audit log instead (kept for 180 days), for a baseline that
+        lies past the sign-in log's reach; it has no network number, and locations come from the geo lookup.
     .PARAMETER TenantFilter
         Tenant default domain name.
     .PARAMETER UserId
@@ -20,6 +22,10 @@ function Get-CIPPBecSignInBaseline {
         Baseline start (UTC).
     .PARAMETER EndDate
         Baseline end (UTC) - the start of the investigation window.
+    .PARAMETER UserPrincipalName
+        The user's UPN, which the audit log names them by.
+    .PARAMETER FromAuditLog
+        Read the baseline from the unified audit log instead of the sign-in log.
     .FUNCTIONALITY
         Internal
     #>
@@ -28,7 +34,9 @@ function Get-CIPPBecSignInBaseline {
         [Parameter(Mandatory = $true)][string]$TenantFilter,
         [Parameter(Mandatory = $true)][string]$UserId,
         [Parameter(Mandatory = $true)][datetime]$StartDate,
-        [Parameter(Mandatory = $true)][datetime]$EndDate
+        [Parameter(Mandatory = $true)][datetime]$EndDate,
+        [string]$UserPrincipalName,
+        [switch]$FromAuditLog
     )
 
     $SafeId = ConvertTo-CIPPODataFilterValue -Value $UserId -Type Guid
@@ -36,16 +44,38 @@ function Get-CIPPBecSignInBaseline {
     $To = $EndDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     $Select = 'createdDateTime,ipAddress,autonomousSystemNumber,location,status,conditionalAccessStatus,appDisplayName,resourceDisplayName'
     $Filter = "userId eq '$SafeId' and createdDateTime ge $From and createdDateTime lt $To"
+    $Errors = [System.Collections.Generic.List[string]]::new()
+    $Incomplete = $false
+    $Rows = [System.Collections.Generic.List[object]]::new()
+    if ($FromAuditLog) {
+        $AuditParams = @{ TenantFilter = $TenantFilter; StartDate = $StartDate; EndDate = $EndDate; UserIds = @(@($UserPrincipalName, $UserId) | Where-Object { $_ }); RecordType = 'AzureActiveDirectoryStsLogon' }
+        if ($UserPrincipalName) { $AuditParams.Anchor = $UserPrincipalName }
+        $Audit = Search-CIPPBecAuditLog @AuditParams
+        if (-not $Audit.Complete) { $Incomplete = $true }
+        $Logons = @(foreach ($Record in @($Audit.Records)) {
+                $AD = $Record.AuditData
+                # the audit log writes UTC without a zone
+                $When = [string]$AD.CreationTime
+                if ($When -and $When -notmatch '(Z|[+-]\d\d:\d\d)$') { $When = "$($When)Z" }
+                [pscustomobject]@{ ipAddress = [string]$AD.ClientIP; createdDateTime = $When; conditionalAccessStatus = 'success'; status = [pscustomobject]@{ errorCode = $(if ($AD.Operation -eq 'UserLoggedIn') { 0 } else { 1 }) }; location = $null }
+            })
+        $Geo = @{}
+        $LogonIPs = @($Logons | ForEach-Object { ConvertTo-CIPPBecHostAddress -Address $_.ipAddress } | Where-Object { $_ } | Select-Object -Unique)
+        if ($LogonIPs.Count -gt 0) {
+            try { $Geo = Get-CIPPGeoIPLocationBatch -IPs $LogonIPs } catch { $Errors.Add("baseline locations: $($_.Exception.Message)") }
+        }
+        foreach ($Logon in $Logons) {
+            $Place = $Geo[(ConvertTo-CIPPBecHostAddress -Address $Logon.ipAddress)]
+            if ($Place) { $Logon.location = [pscustomobject]@{ countryOrRegion = $Place.CountryOrRegion; city = $Place.City } }
+            $Rows.Add([pscustomobject]@{ Kind = 'Interactive'; SignIn = $Logon })
+        }
+    }
     $Requests = @(
         @{ id = 'Interactive'; method = 'GET'; url = "auditLogs/signIns?`$filter=$Filter&`$top=999&`$select=$Select" }
         @{ id = 'NonInteractive'; method = 'GET'; url = "auditLogs/signIns?`$filter=$Filter and signInEventTypes/any(t: t eq 'nonInteractiveUser')&`$top=999&`$select=$Select" }
     )
-    $Responses = @(New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true -Version 'beta')
-
-    $Errors = [System.Collections.Generic.List[string]]::new()
-    $Incomplete = $false
-    $Rows = [System.Collections.Generic.List[object]]::new()
-    foreach ($Id in @('Interactive', 'NonInteractive')) {
+    $Responses = if ($FromAuditLog) { @() } else { @(New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true -Version 'beta') }
+    foreach ($Id in @(if (-not $FromAuditLog) { 'Interactive', 'NonInteractive' })) {
         $Response = @($Responses | Where-Object { $_.id -eq $Id })
         $Failed = @($Response | Where-Object { [int]$_.status -ge 400 })
         if ($Response.Count -eq 0 -or $Failed.Count -gt 0) {

@@ -59,14 +59,14 @@ function Push-BECRun {
         }
         $Heuristics = Get-CIPPBecHeuristics
         $WindowDays = [int]($Heuristics.window.days ?? 7)
-        # Entra ID P1/P2 keep sign-in and directory audit logs for 30 days, so those tenants get the longer window.
+        # A user licensed for Entra ID P1/P2 gets the 30-day window those plans keep sign-in and directory audit logs for.
         try {
-            $RunCapabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
-            if ($RunCapabilities.AAD_PREMIUM -eq $true -or $RunCapabilities.AAD_PREMIUM_P2 -eq $true) {
+            $UserPlans = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($SuspectUser)?`$select=assignedPlans" -tenantid $TenantFilter -AsApp $true
+            if (@($UserPlans.assignedPlans | Where-Object { $_.service -eq 'AADPremiumService' -and $_.capabilityStatus -eq 'Enabled' }).Count -gt 0) {
                 $WindowDays = [int]($Heuristics.window.premiumDays ?? $WindowDays)
             }
         } catch {
-            Write-Information "BEC: could not read tenant plans for $TenantFilter, using the $WindowDays-day window: $($_.Exception.Message)"
+            Write-Information "BEC: could not read the plans of $SuspectUser, using the $WindowDays-day window: $($_.Exception.Message)"
         }
         $endDate = (Get-Date).ToUniversalTime()
         $startDate = $endDate.AddDays(-$WindowDays)

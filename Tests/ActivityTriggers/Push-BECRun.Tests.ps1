@@ -452,19 +452,24 @@ Describe 'Push-BECRun' {
         $script:Saved.Properties.Status | Should -Be 'Completed'
     }
 
-    It 'uses the 30-day window for a tenant with Entra ID P1 or P2' {
-        Mock Get-CIPPTenantCapabilities { [pscustomobject]@{ AAD_PREMIUM = $true } }
+    It 'uses the 30-day window for a user licensed for Entra ID P1 or P2' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ assignedPlans = @([pscustomobject]@{ service = 'AADPremiumService'; capabilityStatus = 'Enabled' }) } } -ParameterFilter { $uri -like '*assignedPlans*' }
         Invoke-BecRun -Item $script:Item
         $script:Saved.Results.AnalysisWindowDays | Should -Be 30
         Should -Invoke Get-CIPPBecMessageTrace -ParameterFilter { ($EndDate - $StartDate).TotalDays -eq 30 }
     }
 
-    It 'keeps the 7-day window without Entra ID P1 or P2, or when the plan read fails' {
-        Mock Get-CIPPTenantCapabilities { [pscustomobject]@{ INTUNE_A = $true } }
+    It 'keeps the 7-day window for an unlicensed user in a P1 tenant, a suspended plan, or a failed plan read' {
+        Mock Get-CIPPTenantCapabilities { [pscustomobject]@{ AAD_PREMIUM_P2 = $true } }
+        Mock New-GraphGetRequest { [pscustomobject]@{ assignedPlans = @([pscustomobject]@{ service = 'exchange'; capabilityStatus = 'Enabled' }) } } -ParameterFilter { $uri -like '*assignedPlans*' }
+        Invoke-BecRun -Item $script:Item
+        $script:Saved.Results.AnalysisWindowDays | Should -Be 7 -Because 'the tenant''s plans do not decide the window'
+
+        Mock New-GraphGetRequest { [pscustomobject]@{ assignedPlans = @([pscustomobject]@{ service = 'AADPremiumService'; capabilityStatus = 'Suspended' }) } } -ParameterFilter { $uri -like '*assignedPlans*' }
         Invoke-BecRun -Item $script:Item
         $script:Saved.Results.AnalysisWindowDays | Should -Be 7
 
-        Mock Get-CIPPTenantCapabilities { throw 'CacheCapabilities unavailable' }
+        Mock New-GraphGetRequest { throw 'Graph 503' } -ParameterFilter { $uri -like '*assignedPlans*' }
         Invoke-BecRun -Item $script:Item
         $script:Saved.Results.AnalysisWindowDays | Should -Be 7
     }

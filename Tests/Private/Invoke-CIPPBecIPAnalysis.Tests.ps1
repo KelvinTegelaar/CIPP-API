@@ -1,8 +1,8 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     function Get-CIPPBecIPGuidance { param($TenantFilter, $Anchor) }
-    function Get-CIPPBecSignInBaseline { param($TenantFilter, $UserId, $StartDate, $EndDate) }
-    function Get-CIPPBecIPPeers { param($TenantFilter, $UserId, $IPs, $StartDate, $WindowStart) }
+    function Get-CIPPBecSignInBaseline { param($TenantFilter, $UserId, $UserPrincipalName, $StartDate, $EndDate, [switch]$FromAuditLog) }
+    function Get-CIPPBecIPPeers { param($TenantFilter, $UserId, $UserPrincipalName, $IPs, $StartDate, $WindowStart) }
     function Get-CIPPBecColleagueSample { param($TenantFilter, $ExcludeUserId, $StartDate, $Count) }
     function Get-CIPPBecCorrelatedUserPeers { param($TenantFilter, $UserIds, $IPs, $StartDate, $WindowStart) }
     function Get-CIPPGeoIPLocationBatch { param([string[]]$IPs) }
@@ -60,6 +60,20 @@ Describe 'Invoke-CIPPBecIPAnalysis' {
         Should -Invoke Get-CIPPBecIPPeers -Times 1 -ParameterFilter { @($IPs).Count -eq 1 -and $IPs[0] -eq '198.51.100.7' }
         $Analysis.PeersResult.Complete | Should -BeFalse
         $Analysis.PeersResult.Cap | Should -Be '1 of 2 addresses (most suspicious first)'
+    }
+
+    It 'reads the baseline of a 30-day window from the audit log, which keeps what the sign-in log no longer does' {
+        $null = Invoke-CIPPBecIPAnalysis -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -Results $script:Results -Heuristics $script:Heuristics -WindowStart ([datetime]::UtcNow.AddDays(-30)) -UsageLocation 'AU'
+        Should -Invoke Get-CIPPBecSignInBaseline -Times 1 -ParameterFilter { $FromAuditLog.IsPresent -and $UserPrincipalName -eq 'victim@contoso.com' }
+        $null = Invoke-CIPPBecIPAnalysis -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -Results $script:Results -Heuristics $script:Heuristics -WindowStart ([datetime]::UtcNow.AddDays(-7)) -UsageLocation 'AU'
+        Should -Invoke Get-CIPPBecSignInBaseline -Times 1 -ParameterFilter { -not $FromAuditLog.IsPresent }
+    }
+
+    It 'leaves the network signals out when the baseline has no network numbers' {
+        $NoAsns = [pscustomobject]@{ Successful = 30; IPs = @([pscustomobject]@{ IP = '203.0.113.10'; SignIns = 30; Share = 1.0; Days = 15 }); ASNs = @(); Locations = @([pscustomobject]@{ Country = 'AU'; City = 'Sydney'; Share = 1.0 }) }
+        $Analysis = Invoke-Analysis -Extra @{ Baseline = $NoAsns }
+        @($Analysis.Verdicts.Reasons.Code) | Should -Not -Contain 'NewNetwork'
+        @($Analysis.Verdicts.Reasons.Code) | Should -Not -Contain 'KnownNetwork'
     }
 
     It 're-uses the stored baseline and peers of the case instead of fetching them again' {
