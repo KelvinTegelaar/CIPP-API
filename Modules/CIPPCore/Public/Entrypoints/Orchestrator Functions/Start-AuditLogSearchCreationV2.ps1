@@ -143,6 +143,7 @@ function Start-AuditLogSearchCreationV2 {
             if ($PSCmdlet.ShouldProcess('Start-AuditLogSearchCreationV2', 'Create audit log searches')) {
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'AuditLogSearchCreationV2'
+                    AllowCollision   = $false
                     Batch            = @($Batch)
                     SkipLog          = $true
                     Priority         = 3
