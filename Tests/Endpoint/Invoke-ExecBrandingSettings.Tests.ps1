@@ -328,6 +328,28 @@ Describe 'Invoke-ExecBrandingSettings' {
             $Saved.colour | Should -Be '#342858'
         }
 
+        It 'stores the per-role report colours' {
+            Invoke-ExecBrandingSettings -Request (New-Request @{
+                    Action      = 'SavePreset'
+                    name        = 'Client Facing'
+                    roleColours = @{ headingColour = '#AA0000'; footerColour = '' }
+                }) | Out-Null
+
+            $Roles = (Get-Saved -PartitionKey 'BrandingPresets').roleColours | ConvertFrom-Json
+            $Roles.headingColour | Should -Be '#AA0000'
+            $Roles.footerColour | Should -Be ''
+        }
+
+        It 'rejects a role colour that is not hex' {
+            $Response = Invoke-ExecBrandingSettings -Request (New-Request @{
+                    Action      = 'SavePreset'
+                    name        = 'Client Facing'
+                    roleColours = @{ headingColour = 'red' }
+                })
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+            $Response.Body.Results | Should -BeLike '*headingColour*'
+        }
+
         It 'updates in place when given an existing id' {
             Invoke-ExecBrandingSettings -Request (New-Request @{
                     Action = 'SavePreset'

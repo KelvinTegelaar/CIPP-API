@@ -102,6 +102,9 @@ function New-CIPPGraphSubscription {
             }
 
         } else {
+            # Callers pass the host from an old subscription row or extension setting, which goes stale when the instance URL changes.
+            $BaseURL = (Get-CIPPHostname) ?? $BaseURL
+
             # First check if there is an existing Webhook in place
             $WebhookFilter = "PartitionKey eq '$($TenantFilter)'"
             $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
