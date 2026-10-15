@@ -11039,7 +11039,7 @@
           "Email-Exchange > Spamfilter"
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -11048,10 +11048,16 @@
                   "name": {
                     "type": "string"
                   },
-                  "state": {
+                  "State": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
                     "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
               }
             }
           }
@@ -11059,6 +11065,14 @@
         "parameters": [
           {
             "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "State",
             "in": "query",
             "required": false,
             "schema": {
@@ -27094,13 +27108,31 @@
       }
     },
     "/api/ExecListBackup": {
-      "get": {
+      "post": {
         "summary": "ExecListBackup",
         "operationId": "ExecListBackup",
         "tags": [
           "CIPP > Core"
         ],
         "description": "Lists stored CIPP backups, optionally narrowed by Type, tenantFilter or BackupName. NameOnly=true returns just the backup names and the items each one contains, without the backup payload.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
         "parameters": [
           {
             "name": "BackupName",
@@ -71831,7 +71863,7 @@
           "Email-Exchange > Spamfilter"
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -71839,8 +71871,14 @@
                 "properties": {
                   "name": {
                     "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
               }
             }
           }
