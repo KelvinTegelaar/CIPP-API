@@ -64,6 +64,7 @@ function Invoke-NinjaOneExtensionScheduler {
                 OrchestratorName = 'NinjaOneOrchestrator'
                 AllowCollision   = $false
                 Priority         = 6
+                MaxConcurrency   = 4
                 Batch            = @($Batch)
             }
             #Write-Host ($InputObject | ConvertTo-Json)
@@ -115,6 +116,7 @@ function Invoke-NinjaOneExtensionScheduler {
                     OrchestratorName = 'NinjaOneOrchestrator'
                     AllowCollision   = $false
                     Priority         = 6
+                    MaxConcurrency   = 4
                     Batch            = @($Batch)
                 }
                 #Write-Host ($InputObject | ConvertTo-Json)

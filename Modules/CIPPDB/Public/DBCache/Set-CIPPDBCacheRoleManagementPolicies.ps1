@@ -44,7 +44,7 @@ function Set-CIPPDBCacheRoleManagementPolicies {
 
         $Uri = "https://graph.microsoft.com/beta/policies/roleManagementPolicyAssignments?`$filter=scopeId eq '/' and scopeType eq 'DirectoryRole'&`$expand=policy(`$expand=rules,effectiveRules)"
         New-GraphGetRequest -uri $Uri -tenantid $TenantFilter -AsApp $true |
-            Select-Object -Property policyId, roleDefinitionId, scopeId, scopeType,
+            Select-Object -Property id, policyId, roleDefinitionId, scopeId, scopeType,
             @{ Name = 'rules'; Expression = { $_.policy.rules } },
             @{ Name = 'effectiveRules'; Expression = { $_.policy.effectiveRules } } |
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RoleManagementPolicies' -AddCount

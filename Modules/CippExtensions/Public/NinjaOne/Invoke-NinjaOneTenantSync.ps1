@@ -289,7 +289,17 @@ function Invoke-NinjaOneTenantSync {
 
         # Replace direct Graph/Exchange calls with cached data
         $ExtensionCache = Get-CippExtensionReportingData -TenantFilter $Customer.defaultDomainName -IncludeMailboxes -SkipMailboxPermissions -Properties @{
-            ManagedDevices = 'id', 'deviceName', 'serialNumber', 'azureADDeviceId', 'usersLoggedOn', 'complianceState', 'operatingSystem', 'osVersion', 'enrolledDateTime', 'lastSyncDateTime',
+            Users                          = 'id', 'displayName', 'userPrincipalName', 'accountEnabled', 'userType', 'assignedLicenses', 'assignedPlans', 'proxyAddresses', 'jobTitle', 'mobilePhone', 'businessPhones', 'officeLocation'
+            Groups                         = 'id', 'displayName', 'members', 'mailEnabled', 'mail', 'securityEnabled', 'groupTypes'
+            Roles                          = 'id', 'roleTemplateId', 'displayName', 'description', 'members'
+            ConditionalAccessPolicies      = 'id', 'displayName', 'conditions'
+            Domains                        = 'id', 'isVerified'
+            Organization                   = 'createdDateTime', 'assignedPlans', 'onPremisesSyncEnabled'
+            LicenseOverview                = 'skuId', 'skuPartNumber', 'CountUsed', 'TotalLicenses', 'TermInfo', 'ServicePlans'
+            IntuneDeviceCompliancePolicies = 'id', 'displayName'
+            SecureScore                    = 'createdDateTime', 'maxScore', 'currentScore', 'controlScores'
+            SecureScoreControlProfiles     = 'id', 'title', 'maxScore', 'rank'
+            ManagedDevices ='id', 'deviceName', 'serialNumber', 'azureADDeviceId', 'usersLoggedOn', 'complianceState', 'operatingSystem', 'osVersion', 'enrolledDateTime', 'lastSyncDateTime',
             'userDisplayName', 'userPrincipalName', 'ownerType', 'deviceType', 'make', 'model', 'manufacturer', 'managementState', 'managementAgent', 'deviceRegistrationState', 'jailBroken',
             'deviceEnrollmentType', 'azureADRegistered', 'joinType', 'securityPatchLevel', 'chassisType', 'autopilotEnrolled', 'hardwareInformation'
             Mailboxes     = 'ExternalDirectoryObjectId', 'DeliverToMailboxAndForward', 'ForwardingAddress', 'ForwardingSmtpAddress', 'LitigationHoldEnabled', 'HiddenFromAddressListsEnabled'
