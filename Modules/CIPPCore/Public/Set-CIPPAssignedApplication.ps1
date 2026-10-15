@@ -201,13 +201,14 @@ function Set-CIPPAssignedApplication {
 
         # Determine which existing assignments (if any) must be preserved.
         #   append              -> keep all existing (minus ones the new set overrides)
-        #   replace + direction -> keep everything except the direction being edited
+        #   replace + direction -> keep everything except the direction being edited; include
+        #                          covers All Users / All Devices too, so Replace means "only these"
         #                          (Custom Group action only; legacy replace overwrites everything)
         $DirectionScoped = -not [string]::IsNullOrWhiteSpace($AssignmentDirection)
-        $EditedType = switch ($AssignmentDirection) {
-            'exclude' { '#microsoft.graph.exclusionGroupAssignmentTarget' }
-            'include' { '#microsoft.graph.groupAssignmentTarget' }
-            default { $null }
+        $EditedTypes = switch ($AssignmentDirection) {
+            'exclude' { @('#microsoft.graph.exclusionGroupAssignmentTarget') }
+            'include' { @('#microsoft.graph.groupAssignmentTarget', '#microsoft.graph.allLicensedUsersAssignmentTarget', '#microsoft.graph.allDevicesAssignmentTarget') }
+            default { @() }
         }
         $PreserveExisting = ($AssignmentMode -eq 'append') -or ($AssignmentMode -eq 'replace' -and $DirectionScoped)
 
@@ -228,9 +229,9 @@ function Set-CIPPAssignedApplication {
             foreach ($ExistingAssignment in @($ExistingAssignments)) {
                 $ExistingType = $ExistingAssignment.target.'@odata.type'
                 $Keep = if ($AssignmentMode -eq 'replace' -and $DirectionScoped) {
-                    # Direction-scoped replace: drop every target of the edited type, keep the rest
-                    # (the other direction plus All Users / All Devices broad targets).
-                    $ExistingType -ne $EditedType
+                    # Direction-scoped replace: drop every target of the edited direction, keep the other.
+                    # Exclude keeps All Users / All Devices, the exclusions narrow them.
+                    $ExistingType -notin $EditedTypes
                 } else {
                     # Append: keep existing unless the new set overrides the same group/target.
                     switch ($ExistingType) {
