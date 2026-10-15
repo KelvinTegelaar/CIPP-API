@@ -67166,8 +67166,25 @@
         "tags": [
           "Email-Exchange > Spamfilter"
         ],
-        "description": "Lists user reported email threat submissions (Defender Submissions with source 'user') for a tenant.",
+        "description": "Lists user reported messages (Outlook Report button) for a tenant. Source=AuditLog (default) reads the unified\naudit log two weeks per page, Source=Submissions reads the Defender Submissions list from Graph.",
         "parameters": [
+          {
+            "name": "nextLink",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Source",
+            "in": "query",
+            "description": "AuditLog (default) or Submissions",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
@@ -67261,9 +67278,9 @@
                         "type": "string",
                         "x-cipp-field-source": "graph-entity"
                       },
-                      "source": {
+                      "Source": {
                         "type": "object",
-                        "x-cipp-field-source": "graph-entity"
+                        "x-cipp-field-source": "graph-entity,frontend"
                       },
                       "Status": {
                         "type": "object",
