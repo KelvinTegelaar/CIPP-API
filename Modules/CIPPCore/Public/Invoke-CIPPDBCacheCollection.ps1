@@ -187,10 +187,7 @@ function Invoke-CIPPDBCacheCollection {
         )
         SharePoint         = @(
             'SPOTenant'
-            'SPOSites'
-            'SPOTenantSyncClientRestriction'
             'SharePointAdminSettings'
-            'SharePointSiteUsage'
             'SharePointUsageReport'
             'SiteActivity'
             'OneDriveUsage'

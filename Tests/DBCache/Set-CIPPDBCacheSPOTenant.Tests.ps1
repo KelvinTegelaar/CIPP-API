@@ -1,6 +1,6 @@
-# The two SPO collectors split their failures in two, and these tests hold that split in place.
+# The SPO tenant collector splits its failures in two, and these tests hold that split in place.
 #
-# Both read the SharePoint admin SOAP endpoint, which answers 401 when the service principal has no
+# It reads the SharePoint admin SOAP endpoint, which answers 401 when the service principal has no
 # SharePoint consent in the tenant. That is a standing state - it answers 401 every night until the
 # CPV permissions are reset - so it is recorded and skipped rather than failing the activity.
 # Everything else rethrows: swallowing it left Invoke-CIPPDBCacheCollection counting the type as a
@@ -15,7 +15,6 @@ BeforeAll {
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheSPOTenant.ps1')
-    . (Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheSPOTenantSyncClientRestriction.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
 
@@ -67,62 +66,6 @@ Describe 'Set-CIPPDBCacheSPOTenant' {
         { Set-CIPPDBCacheSPOTenant -TenantFilter $script:Tenant } | Should -Not -Throw
         Should -Invoke Add-CIPPDbItem -Times 1 -ParameterFilter { $Type -eq 'SPOTenant' }
         Should -Invoke Write-LogMessage -Times 0 -ParameterFilter { $sev -eq 'Error' }
-        Should -Invoke Get-CIPPSPOTenant -Times 1 -ParameterFilter { $UseCertificate }
-    }
-}
-
-Describe 'Set-CIPPDBCacheSPOTenantSyncClientRestriction' {
-    BeforeEach {
-        Mock Write-LogMessage {}
-        Mock Add-CIPPDbItem {}
-    }
-
-    It 'records missing SharePoint consent as a warning without failing the activity' {
-        Mock Get-CIPPSPOTenant { throw (New-SPOAccessDeniedException) }
-
-        { Set-CIPPDBCacheSPOTenantSyncClientRestriction -TenantFilter $script:Tenant } | Should -Not -Throw
-        Should -Invoke Add-CIPPDbItem -Times 0
-        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter {
-            $sev -eq 'Warning' -and $message -like '*SharePoint admin access denied*'
-        }
-    }
-
-    It 'rethrows any other failure from the admin endpoint' {
-        Mock Get-CIPPSPOTenant { throw 'The remote server returned an error: (500) Internal Server Error' }
-
-        { Set-CIPPDBCacheSPOTenantSyncClientRestriction -TenantFilter $script:Tenant } |
-            Should -Throw '*500*'
-        Should -Invoke Add-CIPPDbItem -Times 0
-        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter {
-            $sev -eq 'Error' -and $message -like '*Failed to cache SPO sync client restriction*'
-        }
-    }
-
-    It 'rethrows when the endpoint answers with nothing' {
-        Mock Get-CIPPSPOTenant { $null }
-
-        { Set-CIPPDBCacheSPOTenantSyncClientRestriction -TenantFilter $script:Tenant } |
-            Should -Throw '*no tenant configuration*'
-        Should -Invoke Add-CIPPDbItem -Times 0
-    }
-
-    It 'projects the restriction fields and stays quiet on success' {
-        Mock Get-CIPPSPOTenant {
-            [PSCustomObject]@{
-                TenantRestrictionEnabled = $true
-                AllowedDomainList        = @('contoso.com')
-                BlockMacSync             = $false
-                ConditionalAccessPolicy  = 'AllowLimitedAccess'
-            }
-        }
-
-        { Set-CIPPDBCacheSPOTenantSyncClientRestriction -TenantFilter $script:Tenant } | Should -Not -Throw
-        Should -Invoke Add-CIPPDbItem -Times 1 -ParameterFilter {
-            $Type -eq 'SPOTenantSyncClientRestriction' -and
-            $Data[0].TenantRestrictionEnabled -eq $true -and
-            $Data[0].ConditionalAccessPolicy -eq 'AllowLimitedAccess' -and
-            $Data[0].TenantFilter -eq 'contoso.onmicrosoft.com'
-        }
         Should -Invoke Get-CIPPSPOTenant -Times 1 -ParameterFilter { $UseCertificate }
     }
 }

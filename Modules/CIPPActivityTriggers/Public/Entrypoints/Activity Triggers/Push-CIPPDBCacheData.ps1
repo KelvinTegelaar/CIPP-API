@@ -239,6 +239,16 @@ function Push-CIPPDBCacheData {
                     QueueId        = $QueueId
                     QueueName      = "DB Cache SharePoint - $TenantFilter"
                 })
+            # The per-site collectors scale with site count, so each gets its own task time limit
+            foreach ($Name in 'SPOSites', 'SharePointSiteUsage') {
+                $Tasks.Add(@{
+                        FunctionName = 'ExecCIPPDBCache'
+                        Name         = $Name
+                        TenantFilter = $TenantFilter
+                        QueueId      = $QueueId
+                        QueueName    = "DB Cache $Name - $TenantFilter"
+                    })
+            }
             # SharePointSharingLinks and OneDriveLongPaths run adhoc — full drive walks are too slow for nightly
         } else {
             Write-Host "Skipping SharePoint data collection for $TenantFilter - no required license"
