@@ -117,7 +117,7 @@ function Get-CippTestDataFieldManifest {
             'ExoTransportConfig'                 = @('SmtpClientAuthenticationDisabled')
             'ExoTransportRules'                  = @('Name', 'State', 'Priority', 'SetSCL', 'SetSpamConfidenceLevel', 'SetHeaderName', 'SetHeaderValue', 'SenderDomainIs')
             'FormsSettings'                      = @('isInOrgFormsPhishingScanEnabled')
-            'Groups'                             = @('id', 'displayName', 'mail', 'visibility', 'groupTypes', 'members', 'isAssignableToRole')
+            'Groups'                             = @('id', 'displayName', 'mail', 'visibility', 'groupTypes', 'isAssignableToRole')
             'Guests'                             = @('id', 'displayName', 'userPrincipalName', 'accountEnabled', 'signInActivity', 'createdDateTime', 'sponsors')
             # URLName is added by the collector (Add-Member), not returned by Graph. It carries the
             # Graph resource each policy came from (iosManagedAppProtection /
@@ -157,7 +157,7 @@ function Get-CippTestDataFieldManifest {
             'Settings'                           = @('id', 'templateId', 'displayName', 'values', 'isOfficeStoreEnabled', 'isAppAndServicesTrialEnabled', 'isInOrgFormsPhishingScanEnabled')
             'SPOTenant'                          = @('LegacyAuthProtocolsEnabled', 'EnableAzureADB2BIntegration', 'SharingCapability', 'ODBSharingCapability', 'PreventExternalUsersFromResharing', 'SharingDomainRestrictionMode', 'SharingAllowedDomainList', 'SharingBlockedDomainList', 'DefaultSharingLinkType', 'DefaultLinkPermission', 'ExternalUserExpirationRequired', 'ExternalUserExpireInDays', 'EmailAttestationRequired', 'EmailAttestationReAuthDays', 'DisallowInfectedFileDownload')
             'UserRegistrationDetails'            = @('id', 'userPrincipalName', 'userDisplayName', 'isMfaCapable', 'isMfaRegistered', 'methodsRegistered')
-            'Users'                              = @('id', 'userPrincipalName', 'displayName', 'accountEnabled', 'userType', 'onPremisesSyncEnabled', 'assignedLicenses', 'assignedPlans', 'signInActivity', 'passwordPolicies')
+            'Users'                              = @('id', 'userPrincipalName', 'displayName', 'accountEnabled', 'userType', 'onPremisesSyncEnabled', 'assignedLicenses', 'signInActivity', 'passwordPolicies')
         }
     }
 
