@@ -1,20 +1,20 @@
 function Push-StoreSharePointSharingLinks {
     <#
     .SYNOPSIS
-        Finalises a sharing-links scan: prunes rows for vanished drives and refreshes the count.
+        Finalises a sharing-links scan: prunes rows for vanished drives and records the tenant summary.
 
     .DESCRIPTION
         Runs once per scan, invoked inline by whichever Push-DBCacheSharePointSiteSharingLinks
         activity completes the tenant's last pending site. Site activities write their rows to
-        the reporting DB as they scan, so there is nothing to aggregate here; what remains is
-        cross-site housekeeping no single site can decide alone:
+        the CippSharingLinks table as they scan, so there is nothing to aggregate here; what
+        remains is cross-site housekeeping no single site can decide alone:
 
         - Drives whose state row was not touched by this scan belong to deleted drives or sites,
           so their cached rows are removed - unless the drive's site is on the scan's failed
           list, in which case its rows survive one more cycle rather than vanish on a transient
           error.
-        - The {Type}-Count row is recomputed from the rows actually present, which also absorbs
-          whatever adds and tombstones the incremental scans made along the way.
+        - The 'summary' state row's link count is recomputed from the rows actually present,
+          which also absorbs whatever adds and tombstones the incremental scans made.
 
         Idempotent by design: the completion counter's conditional update makes a duplicate
         invocation rare, and re-running prune + recount produces the same result.
@@ -33,8 +33,6 @@ function Push-StoreSharePointSharingLinks {
         $TenantFilter = $Item.Parameters.TenantFilter ?? $TenantFilter
         $ScanId = $Item.Parameters.ScanId ?? $ScanId
     }
-    $TenantFilter = Resolve-CIPPSharingLinksTenantFilter -TenantFilter $TenantFilter
-    $CacheType = 'SharePointSharingLinks'
 
     try {
         # If a newer scan superseded this one between the last site completing and this read,
@@ -70,9 +68,9 @@ function Push-StoreSharePointSharingLinks {
                 # Marker keys carry the sanitised site id; sanitise this row's SiteId the same
                 # way before membership testing.
                 $DriveSiteKey = [string]$DriveState.SiteId
-                if ($DriveSiteKey -and $FailedSites.Contains((ConvertTo-CIPPSharingLinksKeySegment -Value $DriveSiteKey))) { continue }
-                $DriveKeySegment = ConvertTo-CIPPSharingLinksKeySegment -Value "$($DriveState.DriveId)"
-                $PrunedRows += Remove-CIPPSharingLinksRowsByPrefix -TenantFilter $TenantFilter -Prefix "$CacheType-${DriveKeySegment}_"
+                if ($DriveSiteKey -and $FailedSites.Contains(([string]$DriveSiteKey -replace '[/\\#?]', '_' -replace '[\u0000-\u001F\u007F-\u009F]', ''))) { continue }
+                $DriveKeySegment = ([string]$DriveState.DriveId -replace '[/\\#?]', '_' -replace '[\u0000-\u001F\u007F-\u009F]', '')
+                $PrunedRows += Remove-CIPPSharingLinksRowsByPrefix -TenantFilter $TenantFilter -Prefix "${DriveKeySegment}_"
                 Remove-CIPPAzDataTableEntity @StateTable -Entity $DriveState -Force
                 $PrunedDrives++
             }
@@ -82,24 +80,18 @@ function Push-StoreSharePointSharingLinks {
             # definition - including rows for drives deleted before delta state existed, which
             # the per-drive prune above can never find.
             if ([bool]$Scan.FullSweep) {
-                $PrunedRows += Remove-CIPPSharingLinksRowsByPrefix -TenantFilter $TenantFilter -Prefix "$CacheType-" -ExceptRunId $ScanId -ExceptRowKeys @("$CacheType-Count")
+                $PrunedRows += Remove-CIPPSharingLinksRowsByPrefix -TenantFilter $TenantFilter -ExceptScanId $ScanId
             }
         }
 
         # Recount from what is actually stored; incremental scans add and tombstone rows all
         # through the run, so a running total would drift where this cannot.
-        $CountRowKey = "$CacheType-Count"
-        $LinkCount = 0
-        foreach ($Row in (Get-CIPPSharingLinksRowKeysByPrefix -TenantFilter $TenantFilter -Prefix "$CacheType-")) {
-            if ($Row.RowKey -and $Row.RowKey -ne $CountRowKey) { $LinkCount++ }
-        }
-
-        $ReportingTable = Get-CippTable -tablename 'CippReportingDB'
-        $null = Add-CIPPAzDataTableEntity @ReportingTable -Entity @{
+        $LinkCount = @(Get-CIPPSharingLinksRowKeysByPrefix -TenantFilter $TenantFilter).Count
+        $null = Add-CIPPAzDataTableEntity @StateTable -Entity @{
             PartitionKey = $TenantFilter
-            RowKey       = $CountRowKey
-            DataCount    = [int]$LinkCount
-            Type         = $CacheType
+            RowKey       = 'summary'
+            LinkCount    = [int]$LinkCount
+            CompletedUtc = [string]([DateTimeOffset]::UtcNow.ToString('o'))
         } -Force
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links sync finalised: $LinkCount links cached, $PrunedDrives stale drives pruned ($PrunedRows rows), $($FailedSites.Count) sites failed" -sev Info

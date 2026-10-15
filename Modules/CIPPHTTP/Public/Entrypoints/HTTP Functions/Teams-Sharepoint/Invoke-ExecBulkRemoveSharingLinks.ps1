@@ -6,10 +6,10 @@ function Invoke-ExecBulkRemoveSharingLinks {
         Sharepoint.Site.ReadWrite
     .DESCRIPTION
         Revokes all sharing links / external direct grants on one site in bulk, sourced from
-        the SharePointSharingLinks reporting cache. Scope selects which classifications are
-        revoked: Anonymous (anyone links only), External (anonymous + external), or All
-        (every cached link on the site, including internal). Because the source is the
-        reporting cache, links created after the last sharing sync are not covered.
+        the cached sharing links (the sharing links sync). Scope selects which classifications
+        are revoked: Anonymous (anyone links only), External (anonymous + external), or All
+        (every cached link on the site, including internal). Because the source is the cache,
+        links created after the last sharing sync are not covered.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -37,7 +37,7 @@ function Invoke-ExecBulkRemoveSharingLinks {
         $Classifications = $ScopeClassifications[[string]$Scope]
 
         try {
-            $AllLinks = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SharePointSharingLinks')
+            $AllLinks = @(Get-CIPPSharingLinks -TenantFilter $TenantFilter)
         } catch {
             throw "Could not read the sharing links cache: $($_.Exception.Message). Run a sharing report sync first."
         }
@@ -74,12 +74,12 @@ function Invoke-ExecBulkRemoveSharingLinks {
             $Link = $Targets[[int]$Response.id]
             $Status = [int]$Response.status
             # 2xx = revoked; 404 = the link was already gone (treat as revoked). Either way, clean
-            # the reporting cache row so it does not linger.
+            # the cached row so it does not linger.
             if (($Status -ge 200 -and $Status -lt 300) -or $Status -eq 404) {
                 $Revoked.Add($(if ($Status -eq 404) { "$($Link.fileName) (already removed)" } else { "$($Link.fileName) ($($Link.classification))" }))
                 if ($Link.id) {
-                    try { Remove-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSharingLinks' -ItemId $Link.id } catch {
-                        Write-Information "Revoked link but could not update reporting cache row $($Link.id): $($_.Exception.Message)"
+                    try { Remove-CIPPSharingLink -TenantFilter $TenantFilter -Id $Link.id } catch {
+                        Write-Information "Revoked link but could not update sharing links cache row $($Link.id): $($_.Exception.Message)"
                     }
                 }
             } else {

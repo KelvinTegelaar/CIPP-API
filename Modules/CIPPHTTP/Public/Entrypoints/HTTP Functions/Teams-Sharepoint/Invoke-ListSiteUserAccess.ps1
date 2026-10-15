@@ -19,8 +19,8 @@ function Invoke-ListSiteUserAccess {
           resolved through transitiveMemberOf so nested groups count
         - A tenant-wide claim (Everyone, Everyone except external users, All Users), which every
           internal user matches
-        - Sharing links and direct item shares the user received, read from the
-          SharePointSharingLinks cache rather than live
+        - Sharing links and direct item shares the user received, read from the cached
+          sharing links rather than live
 
         When a library is given and it still inherits, its permissions are the site's, so the
         site is evaluated and the result says so.
@@ -173,7 +173,7 @@ function Invoke-ListSiteUserAccess {
         # --- Sharing links this user received, from the cache ---
         $SharingLinksChecked = $false
         try {
-            $CachedLinks = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SharePointSharingLinks')
+            $CachedLinks = @(Get-CIPPSharingLinks -TenantFilter $TenantFilter)
             $SharingLinksChecked = $CachedLinks.Count -gt 0
             $SiteHost = ([System.Uri]$SiteUrl).AbsoluteUri.TrimEnd('/')
             foreach ($Link in $CachedLinks) {

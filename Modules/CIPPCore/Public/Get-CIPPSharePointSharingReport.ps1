@@ -5,7 +5,7 @@ function Get-CIPPSharePointSharingReport {
     .SYNOPSIS
         The SharePoint & OneDrive sharing report for a tenant, compiled from the CIPP reporting cache.
     .DESCRIPTION
-        Rolls up the cached SharePointSharingLinks, SharePointSiteUsage and OneDriveUsage datasets into
+        Rolls up the cached sharing links (CippSharingLinks) and the SharePointSiteUsage and OneDriveUsage datasets into
         the shape the Sharing page (ListSharePointSharing) and the sharing PDF consume: environment,
         file and storage summaries per workload, link counts by classification, the sharing sprawl
         signals (anonymous links that allow editing, anonymous links with no expiry, folder-level
@@ -40,12 +40,24 @@ function Get-CIPPSharePointSharingReport {
     $CacheData = @{}
     $CacheSynced = @{}
     $CacheTimestamps = [System.Collections.Generic.List[object]]::new()
-    foreach ($Type in @('SharePointSharingLinks', 'SharePointSiteUsage', 'OneDriveUsage')) {
+    foreach ($Type in @('SharePointSiteUsage', 'OneDriveUsage')) {
         $CacheData[$Type] = try { @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type) } catch { @() }
         $CountRow = try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type -CountsOnly | Select-Object -First 1 } catch { $null }
         $CacheSynced[$Type] = [bool]$CountRow
         if ($CountRow.Timestamp) { $CacheTimestamps.Add($CountRow.Timestamp) }
     }
+    $CacheData['SharePointSharingLinks'] = try { @(Get-CIPPSharingLinks -TenantFilter $TenantFilter) } catch { @() }
+    $LinksSummary = try {
+        $StateTable = Get-CippTable -tablename 'CippSharingLinksState'
+        $SafeTenant = ConvertTo-CIPPODataFilterValue -Value (@(Get-Tenants -TenantFilter $TenantFilter -IncludeErrors)[0].defaultDomainName ?? $TenantFilter) -Type String
+        Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeTenant' and RowKey eq 'summary'"
+    } catch { $null }
+    $CacheSynced['SharePointSharingLinks'] = [bool]$LinksSummary
+    # Libraries a scan stopped part way (throttling, outages); their links are partial until the next sync resumes them.
+    $PausedLibraries = try {
+        @(Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeTenant' and RowKey ge 'delta-' and RowKey lt 'delta.'" -Property @('RowKey', 'ResumeUri')).Where({ $_.ResumeUri }).Count
+    } catch { 0 }
+    if ($LinksSummary.CompletedUtc) { $CacheTimestamps.Add([DateTimeOffset]::Parse([string]$LinksSummary.CompletedUtc)) }
     $LastDataRefresh = $CacheTimestamps | Sort-Object | Select-Object -First 1
 
     # --- Environment summaries per workload. Teams-connected sites (rootWebTemplate 'Group' and 'Team Channel') are
@@ -89,6 +101,7 @@ function Get-CIPPSharePointSharingReport {
             passwordProtectedLinks  = @($Links | Where-Object { $_.hasPassword -eq $true }).Count
             externalRecipients      = $TopRecipients.Count
             linksSynced             = $CacheSynced['SharePointSharingLinks']
+            pausedLibraries         = $PausedLibraries
             usageSynced             = ($CacheSynced['SharePointSiteUsage'] -or $CacheSynced['OneDriveUsage'])
             lastDataRefresh         = $LastDataRefresh
         }
@@ -98,6 +111,7 @@ function Get-CIPPSharePointSharingReport {
         topLibraries  = @(Get-RankedCount @($Links | Where-Object { $_.driveName }) { $Site = & $SiteOf $_; if ($Site) { "$Site / $($_.driveName)" } else { [string]$_.driveName } } 'library' 'links' 10)
         topRecipients = @($TopRecipients | Select-Object -First 10)
         links         = @($Links)
+        scan          = $(try { Get-CIPPSharingLinksScanStatus -TenantFilter $TenantFilter } catch { $null })
     }
     return $Body
 }

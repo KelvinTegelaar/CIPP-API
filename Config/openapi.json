@@ -16951,7 +16951,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Revokes all sharing links / external direct grants on one site in bulk, sourced from\nthe SharePointSharingLinks reporting cache. Scope selects which classifications are\nrevoked: Anonymous (anyone links only), External (anonymous + external), or All\n(every cached link on the site, including internal). Because the source is the\nreporting cache, links created after the last sharing sync are not covered.",
+        "description": "Revokes all sharing links / external direct grants on one site in bulk, sourced from\nthe cached sharing links (the sharing links sync). Scope selects which classifications\nare revoked: Anonymous (anyone links only), External (anonymous + external), or All\n(every cached link on the site, including internal). Because the source is the cache,\nlinks created after the last sharing sync are not covered.",
         "requestBody": {
           "required": true,
           "content": {
@@ -32749,7 +32749,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Revokes a sharing link (or direct sharing grant) on a SharePoint or OneDrive item by\ndeleting the permission from the drive item. Also removes the revoked link from the\nSharePointSharingLinks reporting cache so the sharing report reflects it immediately.",
+        "description": "Revokes a sharing link (or direct sharing grant) on a SharePoint or OneDrive item by\ndeleting the permission from the drive item. Also removes the revoked link from the\ncached sharing links so the sharing report reflects it immediately.",
         "requestBody": {
           "required": true,
           "content": {
@@ -61398,8 +61398,17 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Compiles the SharePoint & OneDrive sharing report for a tenant from CACHED data in the\nCIPP reporting database (SharePointSharingLinks, SharePointSiteUsage, OneDriveUsage).\nNo live Graph enumeration is performed - refresh the data by syncing those caches\n(ExecCIPPDBCache). Returns environment/file/storage summaries per workload, sharing link\ncounts by classification, chart datasets and the individual sharing link rows.\n\nAlso rolls up the sharing sprawl signals held in the same rows: anonymous links that allow\nediting, anonymous links with no expiry, folder-level external shares (one share exposes\neverything below it), and the busiest libraries and external recipients.",
+        "description": "Compiles the SharePoint & OneDrive sharing report for a tenant from CACHED data: the\ncached sharing links plus the SharePointSiteUsage and OneDriveUsage datasets. No live\nGraph enumeration is performed - refresh the data by syncing those caches\n(ExecCIPPDBCache). Returns environment/file/storage summaries per workload, sharing link\ncounts by classification, chart datasets, the individual sharing link rows, and the state\nof any sharing links scan still running (when it started, its queue and its current phase).\n\nAlso rolls up the sharing sprawl signals held in the same rows: anonymous links that allow\nediting, anonymous links with no expiry, folder-level external shares (one share exposes\neverything below it), and the busiest libraries and external recipients.",
         "parameters": [
+          {
+            "name": "ScanStatusOnly",
+            "in": "query",
+            "description": "Only the running scan's progress, library by library - cheap enough to poll while a scan runs.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
@@ -62795,7 +62804,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Explains how one user can reach a SharePoint site or document library: every route that\ngrants them access, and the permission level each route carries. This is the effective\naccess answer that the permission lists cannot give on their own, because those show who\nholds a grant rather than who the grant resolves to.\n\nRoutes checked, live:\n- Site collection administrator (full control over everything in the site)\n- A permission granted straight to the user\n- Membership of a SharePoint group that holds a permission, including the Owners,\n  Members and Visitors groups\n- Membership of an Entra security group or Microsoft 365 group that holds a permission,\n  resolved through transitiveMemberOf so nested groups count\n- A tenant-wide claim (Everyone, Everyone except external users, All Users), which every\n  internal user matches\n- Sharing links and direct item shares the user received, read from the\n  SharePointSharingLinks cache rather than live\n\nWhen a library is given and it still inherits, its permissions are the site's, so the\nsite is evaluated and the result says so.\n\nLimited Access is reported but flagged, because on its own it grants no ability to open\nor list anything - SharePoint adds it so a user can traverse to an item they were given\naccess to further down.",
+        "description": "Explains how one user can reach a SharePoint site or document library: every route that\ngrants them access, and the permission level each route carries. This is the effective\naccess answer that the permission lists cannot give on their own, because those show who\nholds a grant rather than who the grant resolves to.\n\nRoutes checked, live:\n- Site collection administrator (full control over everything in the site)\n- A permission granted straight to the user\n- Membership of a SharePoint group that holds a permission, including the Owners,\n  Members and Visitors groups\n- Membership of an Entra security group or Microsoft 365 group that holds a permission,\n  resolved through transitiveMemberOf so nested groups count\n- A tenant-wide claim (Everyone, Everyone except external users, All Users), which every\n  internal user matches\n- Sharing links and direct item shares the user received, read from the cached\n  sharing links rather than live\n\nWhen a library is given and it still inherits, its permissions are the site's, so the\nsite is evaluated and the result says so.\n\nLimited Access is reported but flagged, because on its own it grants no ability to open\nor list anything - SharePoint adds it so a user can traverse to an item they were given\naccess to further down.",
         "parameters": [
           {
             "name": "ListId",
