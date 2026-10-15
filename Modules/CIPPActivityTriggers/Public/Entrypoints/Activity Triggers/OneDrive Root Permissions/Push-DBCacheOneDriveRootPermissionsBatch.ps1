@@ -344,7 +344,7 @@ function Push-DBCacheOneDriveRootPermissionsBatch {
         $OwnerPrincipalName = $Drive.owner.user.userPrincipalName ?? $Drive.owner.user.email
         if (-not $OwnerPrincipalName -and $OwnerObjectId) {
             try {
-                $OwnerUser = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$OwnerObjectId?`$select=userPrincipalName" -tenantid $TenantFilter -asapp $true
+                $OwnerUser = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($OwnerObjectId)?`$select=userPrincipalName" -tenantid $TenantFilter -asapp $true
                 $OwnerPrincipalName = $OwnerUser.userPrincipalName
             } catch {
                 $OwnerPrincipalName = $null

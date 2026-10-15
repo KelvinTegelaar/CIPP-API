@@ -97,7 +97,6 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 RawJSON                   = $JSONObj
                 Overwrite                 = $true
                 APIName                   = 'Standards'
-                Headers                   = $Request.Headers
                 DisableSD                 = $Settings.DisableSD
                 CreateGroups              = $Settings.CreateGroups ?? $false
                 PreloadedCAPolicies       = $AllCAPolicies

@@ -166,7 +166,7 @@ function Invoke-ExecCreateAppTemplate {
                     Write-Information "App Registration $AppId already exists in partner tenant"
                     $AppId = $ExistingApp.appId
                     $App = $ExistingApp
-                    Write-LogMessage -headers $Request.headers -API $APINAME -message "App Registration $($AppDetails.displayName) already exists in partner tenant" -Sev 'Info'
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "App Registration $($DisplayName) already exists in partner tenant" -Sev 'Info'
                 } else {
                     Write-Information "Copying App Registration $AppId from customer tenant $TenantFilter to partner tenant"
                     $PropertiesToRemove = @(
@@ -230,7 +230,7 @@ function Invoke-ExecCreateAppTemplate {
                         appId = $AppId
                     }
                     $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -type POST -body ($Body | ConvertTo-Json -Depth 10)
-                    Write-LogMessage -headers $Request.headers -API $APINAME -message "App Registration $($AppDetails.displayName) copied to partner tenant" -Sev 'Info'
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "App Registration $($DisplayName) copied to partner tenant" -Sev 'Info'
                 }
             }
 

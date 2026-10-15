@@ -6,7 +6,7 @@ function Test-CIPPAccessPermissions {
         $Headers
     )
 
-    $User = $request.headers.'x-ms-client-principal'
+    $User = $Headers
     Write-LogMessage -Headers $User -API $APINAME -message 'Started permissions check' -Sev 'Debug'
     $Messages = [System.Collections.Generic.List[string]]::new()
     $ErrorMessages = [System.Collections.Generic.List[string]]::new()

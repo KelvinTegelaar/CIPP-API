@@ -182,7 +182,7 @@ function Invoke-ListDomainHealth {
             }
         }
     } catch {
-        Write-LogMessage -API $APINAME -tenant $($name) -headers $Request.Headers -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -API $APINAME -headers $Request.Headers -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

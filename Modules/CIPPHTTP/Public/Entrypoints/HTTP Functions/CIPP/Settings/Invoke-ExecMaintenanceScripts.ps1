@@ -69,7 +69,7 @@ Function Invoke-ExecMaintenanceScripts {
             }
         }
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantfilter) -message "Failed to retrieve maintenance scripts. Error: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Failed to retrieve maintenance scripts. Error: $($_.Exception.Message)" -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{Status = "Failed to retrieve maintenance scripts $($_.Exception.Message)" }
     }

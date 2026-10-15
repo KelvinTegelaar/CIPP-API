@@ -80,7 +80,7 @@ function Invoke-ListMailboxRules {
                     SkipLog          = $true
                 }
                 #Write-Host ($InputObject | ConvertTo-Json)
-                Start-CIPPOrchestrator -InputObject $InputObject
+                $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
                 Write-Host "Started mailbox rules orchestration with ID = '$InstanceId'"
             }
 

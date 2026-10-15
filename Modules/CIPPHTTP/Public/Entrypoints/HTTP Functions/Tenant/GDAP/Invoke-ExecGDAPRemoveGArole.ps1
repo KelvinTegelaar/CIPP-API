@@ -8,6 +8,7 @@ Function Invoke-ExecGDAPRemoveGArole {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
     $GDAPID = $Request.Query.GDAPId ?? $Request.Body.GDAPId
 
     try {
