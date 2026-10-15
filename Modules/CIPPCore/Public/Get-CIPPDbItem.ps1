@@ -38,7 +38,9 @@ function Get-CIPPDbItem {
 
         # Return the data rows grouped by tenant (ordered: domain -> rows), managed tenants only.
         [Parameter(Mandatory = $false)]
-        [switch]$ByTenant
+        [switch]$ByTenant,
+
+        [string]$TableName = 'CippReportingDB'
     )
 
     try {
@@ -47,7 +49,7 @@ function Get-CIPPDbItem {
             $TenantFilter = $script:CIPPLockedTenant
         }
 
-        $Table = Get-CippTable -tablename 'CippReportingDB'
+        $Table = Get-CippTable -tablename $TableName
 
         # $null = whole table; a scoped caller asking for allTenants reads only the tenants it may see
         $Partitions = $null

@@ -12,18 +12,15 @@ function Push-StoreSharePointPermissions {
         timeout, worker reclaim), dropping its ~20 sites from the fan-in. Rather than discard the
         entire run, the sites that WERE collected are written fresh and every expected site that did
         not come back is carried over from the prior cache and flagged Skipped - the same treatment a
-        per-site Skip already gets. This keeps the report (and its -Count row's timestamp) alive
-        across the common case of one flaky batch instead of letting the whole cache expire under the
-        30-day reporting retention. ExpectedSiteIds - passed by Set-CIPPDBCacheSharePointPermissions -
+        per-site Skip already gets. ExpectedSiteIds - passed by Set-CIPPDBCacheSharePointPermissions -
         is what lets a site whose batch failed (carry it over) be told apart from a site that no
         longer exists (let it fall out). An older in-flight orchestration queued before that parameter
         existed falls back to the previous all-or-nothing behaviour, because without the id set a
         short result set cannot be reconciled safely.
 
         No-progress guard: the write only happens when at least one site was actually collected this
-        run. A run where nothing came back leaves the prior cache untouched - it is NOT rewritten with
-        fresh timestamps (which would launder stale data past the retention window) and its -Count row
-        is not restamped - so genuinely stale data still ages out and expires honestly.
+        run. A run where nothing came back leaves the prior cache untouched and its -Count row is not
+        restamped, so the report's last refresh stays honest.
 
         Memory: rows are streamed into a single Add-CIPPDbItem invocation (one invocation keeps its
         RunId-based orphan cleanup authoritative) and each site's collected rows are released as they
@@ -69,9 +66,7 @@ function Push-StoreSharePointPermissions {
             }
         }
 
-        # Nothing collected this run. Leave the prior cache untouched rather than restamp it with
-        # fresh timestamps (which would hide stale data from the retention window) or write a fresh
-        # -Count row over data we did not refresh.
+        # Nothing collected this run: leave the prior cache and its -Count row untouched.
         if ($CollectedCount -eq 0) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SharePoint permissions: no sites collected this run for $TenantFilter (expected $ExpectedSiteCount, returned $ActualCount); prior cache left untouched" -sev Error
             return
@@ -110,7 +105,7 @@ function Push-StoreSharePointPermissions {
                 } catch {}
             }
             $PartEsc = $DbTenant -replace "'", "''"
-            $Table = Get-CippTable -tablename 'CippReportingDB'
+            $Table = Get-CippTable -tablename 'CippSharePointPermissions'
             foreach ($Id in $RestoreIds) {
                 $Key = [string]$Id
                 # Match Add-CIPPDbItem's path-character RowKey sanitisation so the prefix lines up with
@@ -183,7 +178,7 @@ function Push-StoreSharePointPermissions {
                     foreach ($Row in $PriorAssignmentsBySiteId[$Key]) { $Stats.Assignments++; $Row }
                 }
             }
-        } | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointPermissions' -AddCount
+        } | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointPermissions' -TableName 'CippSharePointPermissions' -AddCount
 
         $RestoredSites = $PriorAssignmentsBySiteId.Keys.Count
         $Sev = if ($MissingIds.Count -gt 0 -or $SkippedIds.Count -gt 0) { 'Warning' } else { 'Info' }

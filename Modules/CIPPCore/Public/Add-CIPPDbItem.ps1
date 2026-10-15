@@ -35,12 +35,14 @@ function Add-CIPPDbItem {
         # single-invocation cleanup below does. Omit for the default: a new id per call.
         [string]$RunId,
 
+        [string]$TableName = 'CippReportingDB',
+
         [ValidateRange(0, 60)]
         [int]$SkewMarginMinutes = 5
     )
 
     begin {
-        $Table = Get-CippTable -tablename 'CippReportingDB'
+        $Table = Get-CippTable -tablename $TableName
         $BatchSize = 100
         $Batch = [System.Collections.Generic.List[hashtable]]::new($BatchSize)
         # Track batch duplicates separately from the full authoritative run used for cleanup.

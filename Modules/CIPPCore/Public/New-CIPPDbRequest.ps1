@@ -69,7 +69,9 @@ function New-CIPPDbRequest {
 
         # Read and parse this many rows at a time, emitting records as each page is parsed
         [ValidateRange(1, 10000)]
-        [int]$PageSize
+        [int]$PageSize,
+
+        [string]$TableName = 'CippReportingDB'
     )
 
     try {
@@ -82,7 +84,7 @@ function New-CIPPDbRequest {
             throw 'TenantFilter is required.'
         }
 
-        $Table = Get-CippTable -tablename 'CippReportingDB'
+        $Table = Get-CippTable -tablename $TableName
 
         if (-not $script:CIPPDbRequestTenantCache) {
             $script:CIPPDbRequestTenantCache = @{}

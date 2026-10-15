@@ -8,13 +8,8 @@ function Push-StoreStorageCleanupScan {
         flattens their Site and Library rows into a single row set, and writes StorageCleanupScan
         once via Add-CIPPDbItem.
 
-        Completeness guard: if the number of site results does not match ExpectedSiteCount the
-        function throws without writing. The cache is written in replace mode, so writing a partial
-        set would silently discard every site the failed batches were responsible for.
-
-        Merge-on-Skip: when a site returns Skipped, its Library rows are restored from the existing
-        cache (matched on siteId) so a transient SPO failure does not erase cleanup signals that
-        were collected successfully on an earlier run.
+        Partial runs: a site that came back Skipped, or that no batch returned (ExpectedSiteIds), keeps
+        its prior Site and Library rows, flagged Skipped. A run that collected nothing writes nothing.
 
     .FUNCTIONALITY
         Entrypoint
@@ -24,6 +19,8 @@ function Push-StoreStorageCleanupScan {
 
     $TenantFilter = $Item.Parameters.TenantFilter
     $ExpectedSiteCount = [int]$Item.Parameters.ExpectedSiteCount
+    $ExpectedSiteIds = @($Item.Parameters.ExpectedSiteIds | Where-Object { $_ })
+    $TableName = 'CippStorageCleanupScan'
 
     try {
         $SiteResults = [System.Collections.Generic.List[object]]::new()
@@ -34,52 +31,73 @@ function Push-StoreStorageCleanupScan {
         }
 
         $ActualCount = $SiteResults.Count
-        if ($ActualCount -ne $ExpectedSiteCount) {
+        # Runs queued before ExpectedSiteIds existed cannot tell a lost batch from a deleted site.
+        if ($ExpectedSiteIds.Count -eq 0 -and $ActualCount -ne $ExpectedSiteCount) {
             throw "StorageCleanupScan completeness check failed for $TenantFilter : expected $ExpectedSiteCount site results, got $ActualCount"
         }
 
-        $SkippedResults = @($SiteResults | Where-Object { $_.CollectionStatus -eq 'Skipped' })
-        $MergedCount = 0
-        $PriorRowsBySiteId = @{}
-        if ($SkippedResults.Count -gt 0) {
-            foreach ($Existing in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'StorageCleanupScan')) {
-                if ($Existing.rowType -ne 'Library') { continue }
+        $ReturnedIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $Restore = [System.Collections.Generic.List[object]]::new()
+        $CollectedCount = 0
+        foreach ($SiteResult in $SiteResults) {
+            $null = $ReturnedIds.Add([string]$SiteResult.SiteId)
+            if ($SiteResult.CollectionStatus -eq 'Skipped') { $Restore.Add($SiteResult.SiteRow) } else { $CollectedCount++ }
+        }
+        if ($CollectedCount -eq 0) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "StorageCleanupScan: no sites collected this run for $TenantFilter (expected $ExpectedSiteCount, returned $ActualCount); prior cache left untouched" -sev Error
+            return
+        }
+        foreach ($Id in $ExpectedSiteIds) {
+            if ($ReturnedIds.Contains([string]$Id)) { continue }
+            $Restore.Add([PSCustomObject]@{ rowType = 'Site'; id = "${Id}_site"; siteId = [string]$Id; collectionStatus = 'Skipped'; collectionError = 'Site was not returned by its collection batch this run.' })
+        }
+
+        $PriorSiteRows = @{}
+        $PriorLibraryRows = @{}
+        if ($Restore.Count -gt 0) {
+            $RestoreIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Restore.siteId), [System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($Existing in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -TableName $TableName)) {
                 $Key = [string]$Existing.siteId
-                if (-not $Key) { continue }
-                if (-not $PriorRowsBySiteId.ContainsKey($Key)) {
-                    $PriorRowsBySiteId[$Key] = [System.Collections.Generic.List[object]]::new()
+                if (-not $RestoreIds.Contains($Key)) { continue }
+                if ($Existing.rowType -eq 'Site') {
+                    $PriorSiteRows[$Key] = $Existing
+                } elseif ($Existing.rowType -eq 'Library') {
+                    if (-not $PriorLibraryRows.ContainsKey($Key)) { $PriorLibraryRows[$Key] = [System.Collections.Generic.List[object]]::new() }
+                    $PriorLibraryRows[$Key].Add($Existing)
                 }
-                $PriorRowsBySiteId[$Key].Add($Existing)
             }
         }
 
         $AllRows = [System.Collections.Generic.List[object]]::new()
         foreach ($SiteResult in $SiteResults) {
-            if ($SiteResult.SiteRow) { $AllRows.Add($SiteResult.SiteRow) }
-
-            if ($SiteResult.CollectionStatus -eq 'Skipped') {
-                $Key = [string]$SiteResult.SiteId
-                if ($Key -and $PriorRowsBySiteId.ContainsKey($Key)) {
-                    foreach ($Row in $PriorRowsBySiteId[$Key]) { $AllRows.Add($Row) }
-                    $MergedCount++
+            if ($SiteResult.CollectionStatus -eq 'Skipped') { continue }
+            $AllRows.Add($SiteResult.SiteRow)
+            foreach ($Row in @($SiteResult.Rows)) { if ($Row) { $AllRows.Add($Row) } }
+        }
+        $Restored = 0
+        foreach ($SkippedRow in $Restore) {
+            $Key = [string]$SkippedRow.siteId
+            $SiteRow = $PriorSiteRows[$Key]
+            if ($SiteRow) {
+                # The prior row keeps its recycle totals; only the status and error are this run's.
+                foreach ($Name in 'collectionStatus', 'collectionError') {
+                    $SiteRow.PSObject.Properties.Remove($Name)
+                    $SiteRow.PSObject.Properties.Add([psnoteproperty]::new($Name, $SkippedRow.$Name))
                 }
-                continue
+            } else {
+                $SiteRow = $SkippedRow
             }
-
-            foreach ($Row in @($SiteResult.Rows)) {
-                if ($Row) { $AllRows.Add($Row) }
+            $AllRows.Add($SiteRow)
+            if ($PriorLibraryRows.ContainsKey($Key)) {
+                $Restored++
+                $AllRows.AddRange($PriorLibraryRows[$Key])
             }
         }
 
-        if ($SkippedResults.Count -gt 0) {
-            $RemainingSkipped = $SkippedResults.Count - $MergedCount
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "StorageCleanupScan: $($SkippedResults.Count) of $ActualCount sites returned Skipped from collection; restored $MergedCount from prior cache; $RemainingSkipped have no library rows" -sev Warning
-        }
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -TableName $TableName -Data @($AllRows) -AddCount
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -Data @($AllRows) -AddCount
-
-        $LibraryCount = @($AllRows | Where-Object { $_.rowType -eq 'Library' }).Count
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $LibraryCount StorageCleanupScan libraries across $ActualCount sites ($MergedCount merge-on-Skip) from $(@($Item.Results).Count) batches" -sev Info
+        $Sev = if ($Restore.Count -gt 0) { 'Warning' } else { 'Info' }
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached StorageCleanupScan for $TenantFilter : $CollectedCount of $ExpectedSiteCount sites collected, $($Restore.Count) skipped or missing ($Restored restored from the prior scan)" -sev $Sev
         return
 
     } catch {
