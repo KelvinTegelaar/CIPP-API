@@ -8693,8 +8693,8 @@
     "name": "standards.PlannerBlockTaskDelete",
     "cat": "Teams Standards",
     "tag": [],
-    "helpText": "Sets the Planner user policy that blocks each in-scope member from deleting Planner tasks they did not create. Applies across all basic Planner plans for that user (not a single board). Only enabled members with an enabled Microsoft Planner (PROJECTWORKMANAGEMENT) service plan are touched. Optionally limit the sweep to members of named groups or skip members of named groups. Only members who are not already blocked are written. May also prevent those users from deleting plans. Requires CIPP-SAM consent for ProjectWorkManagement OrgSettings-Planner permissions.",
-    "docsDescription": "Uses the Planner tenant admin UserPolicy API (tasks.office.com) to grade and set blockDeleteTasksNotCreatedBySelf for each in-scope enabled member account that has an enabled PROJECTWORKMANAGEMENT (Microsoft Planner) service plan. Guest accounts, disabled accounts, and members without that plan are ignored. Group names are resolved per tenant by display name and expanded to their transitive user members: include groups restrict the sweep to those members, exclude groups remove them from it. A configured group that does not exist in a tenant, or a failed membership lookup, reports an error rather than grading the wrong accounts. Policies come from the PlannerUserPolicies cache, which reads each candidate individually (the API has no list or batch endpoint) and is refreshed when older than 3 hours and after every remediation; a user with no policy yet counts as non-compliant. Remediate PUTs the setting for each non-compliant user. The policy is per user and applies to all basic plans that user can access; it is not board-scoped. Known side effect: the same policy can also block plan deletion. Requires application permissions OrgSettings-Planner.ReadWrite.All on ProjectWorkManagement (tasks.office.com), consented via CIPP-SAM repair and CPV refresh.",
+    "helpText": "Stops users from deleting Planner tasks that someone else created. Applies to all of a user's plans, and may also stop them from deleting plans. Use the group fields to limit who it applies to.",
+    "docsDescription": "Sets Planner's per-user policy that blocks deleting tasks created by someone else. The policy covers every plan the user can access (not a single board) and can also block deleting plans. Only enabled member accounts with a Planner license are checked; guests and disabled accounts are skipped. Use include groups to apply it to specific people only, and exclude groups to leave people out. If a named group can't be found, the standard reports an error instead of checking the wrong people. Planner can't list every user's setting at once, so each user is read individually and cached for up to 3 hours; users with no policy yet count as non-compliant. Remediation only changes users who aren't already blocked.",
     "executiveText": "Stops employees from deleting Planner tasks they did not create, reducing accidental loss on boards used as shared work queues. Can be limited to a department security group so only those staff are locked down.",
     "label": "Block Planner users from deleting tasks they did not create",
     "impact": "Medium Impact",
@@ -8712,7 +8712,7 @@
         "multiple": true,
         "creatable": true,
         "omitWhenBlank": true,
-        "label": "Only apply to members of these groups (display names; blank = all Planner-licensed enabled members)"
+        "label": "Only apply to members of these groups (leave blank for all users)"
       },
       {
         "name": "standards.PlannerBlockTaskDelete.excludeGroups",
