@@ -333,8 +333,8 @@ function Invoke-NinjaOneTenantSync {
             foreach ($SkuId in $SubUser.assignedLicenses.skuId) {
                 if ($null -eq $SkuId -or -not $PlanIdsBySku.ContainsKey([string]$SkuId)) { continue }
                 $LicensePlanIds = $PlanIdsBySku[[string]$SkuId]
-                $MatchedPlans = $SubUser.AssignedPlans | Where-Object { $_.servicePlanId -in $LicensePlanIds }
-                $LicenseAssigned['{0}|{1}' -f $SubUser.id, $SkuId] = $(try { $(Get-Date(($MatchedPlans | Group-Object assignedDateTime | Sort-Object Count -Desc | Select-Object -First 1).name) -Format u) } catch { 'Unknown' })
+                $MatchedPlans = $SubUser.AssignedPlans.Where({ $_.servicePlanId -in $LicensePlanIds })
+                $LicenseAssigned['{0}|{1}' -f $SubUser.id, $SkuId] = $(try { $(Get-Date(@($MatchedPlans | Group-Object assignedDateTime | Sort-Object Count -Desc)[0].name) -Format u) } catch { 'Unknown' })
             }
         }
         $RawDomains = $ExtensionCache.Domains
@@ -1144,7 +1144,7 @@ function Invoke-NinjaOneTenantSync {
                 }
 
 
-                $aliases = (($user.ProxyAddresses | Where-Object { $_ -cnotmatch 'SMTP' -and $_ -notmatch '.onmicrosoft.com' }) -replace 'SMTP:', ' ') -join ', '
+                $aliases = (($user.ProxyAddresses.Where({ $_ -cnotmatch 'SMTP' -and $_ -notmatch '.onmicrosoft.com' })) -replace 'SMTP:', ' ') -join ', '
 
 
                 $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
