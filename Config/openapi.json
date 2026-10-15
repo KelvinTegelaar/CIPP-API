@@ -38268,6 +38268,72 @@
         "x-cipp-role": "Tenant.AI.ReadWrite"
       }
     },
+    "/api/ExecSharePointPermissionsSync": {
+      "post": {
+        "summary": "Start a SharePoint permissions report sync",
+        "operationId": "ExecSharePointPermissionsSync",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Queues a refresh of one of the cached datasets the SharePoint permissions report is built from, for a single tenant.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "The cached dataset to refresh.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SharePointPermissions"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Reports.ReadWrite"
+      }
+    },
     "/api/ExecSharePointPerms": {
       "post": {
         "summary": "ExecSharePointPerms",
@@ -38344,6 +38410,142 @@
           }
         ],
         "x-cipp-role": "Sharepoint.Site.ReadWrite"
+      }
+    },
+    "/api/ExecSharePointSharingSync": {
+      "post": {
+        "summary": "Start a SharePoint sharing report sync",
+        "operationId": "ExecSharePointSharingSync",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Queues a refresh of one of the cached datasets the SharePoint sharing report is built from, for a single tenant.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "The cached dataset to refresh.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OneDriveUsage",
+                "SharePointSharingLinks",
+                "SharePointSiteUsage"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Reports.ReadWrite"
+      }
+    },
+    "/api/ExecSharePointStorageSync": {
+      "post": {
+        "summary": "Start a SharePoint storage report sync",
+        "operationId": "ExecSharePointStorageSync",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Queues a refresh of one of the cached datasets the SharePoint storage report is built from, for a single tenant.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "The cached dataset to refresh.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OneDriveUsage",
+                "SharePointSiteUsage",
+                "StorageCleanupScan"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Reports.ReadWrite"
       }
     },
     "/api/ExecSharePointTemplate": {
