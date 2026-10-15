@@ -5,7 +5,7 @@ BeforeAll {
     function Get-CippTable { param($tablename) @{} }
     function Get-CIPPAzDataTableEntity { param($Filter, $Property) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
-    function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
+    function Remove-AzDataTableEntity { param($Entity, [switch]$Force) }
     function Write-LogMessage { param($API, $tenant, $message, $sev) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPDbItem.ps1')
@@ -15,7 +15,7 @@ Describe 'Add-CIPPDbItem authoritative empty collections' {
     BeforeEach {
         Mock Write-LogMessage {}
         Mock Add-CIPPAzDataTableEntity {}
-        Mock Remove-CIPPAzDataTableEntity {}
+        Mock Remove-AzDataTableEntity {}
         Mock Get-CIPPAzDataTableEntity {
             @(
                 [PSCustomObject]@{
@@ -37,7 +37,7 @@ Describe 'Add-CIPPDbItem authoritative empty collections' {
     It 'clears existing rows and writes count zero when ClearOnEmpty is explicit' {
         Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'IntuneIntents' -Data @() -AddCount -ClearOnEmpty
 
-        Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
+        Should -Invoke Remove-AzDataTableEntity -Times 1 -ParameterFilter {
             $Entity.RowKey -eq 'IntuneIntents-old-policy'
         }
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
@@ -48,7 +48,7 @@ Describe 'Add-CIPPDbItem authoritative empty collections' {
     It 'preserves existing rows for an empty collection without ClearOnEmpty' {
         Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'IntuneIntents' -Data @() -AddCount
 
-        Should -Invoke Remove-CIPPAzDataTableEntity -Times 0
+        Should -Invoke Remove-AzDataTableEntity -Times 0
     }
 
     It 'removes recently stale rows from a non-empty authoritative collection' {
@@ -56,7 +56,7 @@ Describe 'Add-CIPPDbItem authoritative empty collections' {
 
         Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'IntuneIntents' -Data @($Policy) -AddCount -ClearOnEmpty
 
-        Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
+        Should -Invoke Remove-AzDataTableEntity -Times 1 -ParameterFilter {
             $Entity.RowKey -eq 'IntuneIntents-old-policy'
         }
     }
@@ -81,30 +81,46 @@ Describe 'Add-CIPPDbItem authoritative empty collections' {
         $Policy = [PSCustomObject]@{ id = 'new-policy'; displayName = 'New policy' }
         Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'IntuneIntents' -Data @($Policy) -AddCount -ClearOnEmpty
 
-        Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+        Should -Invoke Remove-AzDataTableEntity -Times 1 -Exactly -ParameterFilter {
             @($Entity).Count -eq 1 -and @($Entity)[0].RowKey -eq 'IntuneIntents-earlier-run'
         }
     }
 
-    It 'projects every row-level split marker so the cleanup reassembles split orphans instead of dropping them' {
-        # Regression for #462. Get-AzDataTableLargeEntity only reassembles a split entity when the
-        # projection carries all of OriginalEntityId, PartIndex and PartCount. Selecting a subset
-        # (OriginalEntityId alone) made the module recognise a split row but fail to reassemble it,
-        # throw IncompleteEntity, and drop the whole entity - so the sweep never saw stale split
-        # rows from earlier runs and one uncollectable generation accumulated per run. The sweep
-        # relies on reassembly (each logical entity carries its RunId), so all three must be present.
-        Mock Get-CIPPAzDataTableEntity { @() }
+    It 'reads raw rows and deletes a split orphan''s parts without touching a live entity''s parts' {
+        # The sweep projects no split markers, so the module returns physical rows and no part
+        # lookups are needed. A split entity's RunId sits on only one of its rows, so its part rows
+        # are grouped under the root key and kept or deleted with it.
+        $script:Flushed = [System.Collections.Generic.List[object]]::new()
+        Mock Add-CIPPAzDataTableEntity { $script:Flushed.AddRange(@($Entity)) }
+        Mock Get-CIPPAzDataTableEntity {
+            $Live = @($script:Flushed | Where-Object { $_.RowKey -ne 'IntuneIntents-Count' })[0]
+            @(
+                [PSCustomObject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'IntuneIntents-old' }
+                [PSCustomObject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'IntuneIntents-old-part1'; RunId = 'earlier-run' }
+                [PSCustomObject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'IntuneIntents-new-policy'; RunId = $Live.RunId }
+                [PSCustomObject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'IntuneIntents-new-policy-part1' }
+                [PSCustomObject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'IntuneIntents-Count' }
+            )
+        }
 
         Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'IntuneIntents' -Data @(
             [PSCustomObject]@{ id = 'new-policy' }
-        )
+        ) -AddCount
 
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
-            $Property -contains 'OriginalEntityId' -and
-            $Property -contains 'PartIndex' -and
-            $Property -contains 'PartCount' -and
-            $Property -contains 'RunId'
+            $Property -contains 'RunId' -and $Property -notcontains 'OriginalEntityId' -and $Property -notcontains 'PartIndex' -and $Property -notcontains 'PartCount'
         }
+        Should -Invoke Remove-AzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            (@($Entity.RowKey) | Sort-Object) -join ',' -eq 'IntuneIntents-old,IntuneIntents-old-part1'
+        }
+    }
+
+    It 'skips the delete when the cleanup query returns nothing' {
+        Mock Get-CIPPAzDataTableEntity {}
+
+        Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'IntuneIntents' -Data @([PSCustomObject]@{ id = 'a' })
+
+        Should -Invoke Remove-AzDataTableEntity -Times 0
     }
 
     It 'stamps every written row with the run id the cleanup keys on' {
