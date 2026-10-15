@@ -56,7 +56,7 @@ function Invoke-CIPPStandardintuneRestrictUserDeviceJoin {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Device join restriction is already configured (users allowed to join: $DesiredStateText)." -sev Info
         } elseif ($IsAdminConfigurable -eq $false) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Cannot remediate device join restriction: azureADJoin.isAdminConfigurable is false for this tenant. Skipping remediation.' -sev Warn
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Cannot remediate device join restriction: azureADJoin.isAdminConfigurable is false for this tenant. Skipping remediation.' -sev Warning
         } else {
             try {
                 $PreviousSetting.azureADJoin.allowedToJoin = @{ '@odata.type' = $DesiredOdataType; users = $null; groups = $null }

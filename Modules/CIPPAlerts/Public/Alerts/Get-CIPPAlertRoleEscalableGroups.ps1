@@ -118,7 +118,7 @@ function Get-CIPPAlertRoleEscalableGroups {
         }
 
         if ($findings.Count -eq 0) {
-            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Role-escalable groups alert: no role-escalation group paths found" -sev 'Information'
+            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Role-escalable groups alert: no role-escalation group paths found" -sev 'Info'
         }
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data @($findings)
     } catch {

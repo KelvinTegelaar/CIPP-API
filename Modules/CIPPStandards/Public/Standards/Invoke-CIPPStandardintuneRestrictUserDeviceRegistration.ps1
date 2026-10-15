@@ -56,7 +56,7 @@ function Invoke-CIPPStandardintuneRestrictUserDeviceRegistration {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Device registration restriction is already configured (users allowed to register: $DesiredStateText)." -sev Info
         } elseif ($IsAdminConfigurable -eq $false) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Cannot remediate device registration restriction: azureADRegistration.isAdminConfigurable is false for this tenant (commonly because Intune is enabled). Skipping remediation.' -sev Warn
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Cannot remediate device registration restriction: azureADRegistration.isAdminConfigurable is false for this tenant (commonly because Intune is enabled). Skipping remediation.' -sev Warning
         } else {
             try {
                 $PreviousSetting.azureADRegistration.allowedToRegister = @{ '@odata.type' = $DesiredOdataType; users = $null; groups = $null }

@@ -38,7 +38,7 @@ function Invoke-CIPPStandardallowOAuthTokens {
         $CurrentState = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -tenantid $Tenant
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the allowOTPTokens state for $Tenant. Error: $ErrorMessage" -Sev Error
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the allowOAuthTokens state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $StateIsCorrect = ($CurrentState.state -eq 'enabled')

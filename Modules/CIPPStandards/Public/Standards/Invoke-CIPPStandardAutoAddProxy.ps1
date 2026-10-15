@@ -36,7 +36,7 @@ function Invoke-CIPPStandardAutoAddProxy {
         $QueueItem
     )
 
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AutoArchive' -TenantFilter $Tenant -Preset Exchange
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AutoAddProxy' -TenantFilter $Tenant -Preset Exchange
     if ($TestResult -eq $false) {
         return $true
     }

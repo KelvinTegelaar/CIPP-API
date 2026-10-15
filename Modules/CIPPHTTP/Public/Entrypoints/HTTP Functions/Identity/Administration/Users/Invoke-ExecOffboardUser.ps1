@@ -86,7 +86,7 @@ function Invoke-ExecOffboardUser {
     try {
         $DeploymentId = New-CIPPAsyncDeployment -Names $AllUsers -Source 'Offboarding' -TenantFilter $TenantFilter
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -tenant $TenantFilter -message "Could not create the offboarding progress rows: $($_.Exception.Message)" -sev Warn
+        Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -tenant $TenantFilter -message "Could not create the offboarding progress rows: $($_.Exception.Message)" -sev Warning
     }
 
     $Failed = 0

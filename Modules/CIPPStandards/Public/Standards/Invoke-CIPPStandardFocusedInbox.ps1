@@ -48,7 +48,7 @@ function Invoke-CIPPStandardFocusedInbox {
 
     # Input validation
     if ([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'ExternalMFATrusted: Invalid state parameter set' -sev Error
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'FocusedInbox: Invalid state parameter set' -sev Error
         return
     }
 

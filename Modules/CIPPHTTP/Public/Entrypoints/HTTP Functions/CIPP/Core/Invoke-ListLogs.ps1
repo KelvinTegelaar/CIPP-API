@@ -120,6 +120,8 @@ function Invoke-ListLogs {
     # When true, the Severity/User/Tenant/API/IP/AppId/StartDate/EndDate query filters are applied; otherwise the current day is returned unfiltered.
     if ($Request.Query.Filter -eq $true) {
         $LogLevel = if ($Request.Query.Severity) { ($Request.Query.Severity).split(',') } else { 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert' }
+        # The UI's Warning option sends 'Warn'; rows are logged as either spelling
+        if ($LogLevel -contains 'Warn') { $LogLevel = @($LogLevel) + 'Warning' | Select-Object -Unique }
         $Username = $Request.Query.User ?? '*'
         $TenantFilter = $Request.Query.Tenant
         $ApiFilter = $Request.Query.API

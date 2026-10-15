@@ -40,7 +40,7 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
     #>
 
     param ($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'ThirdPartyStorageServicesRestricted' -TenantFilter $Tenant -Preset SharePoint
+    $TestResult = Test-CIPPStandardLicense -StandardName 'RestrictThirdPartyStorageServices' -TenantFilter $Tenant -Preset SharePoint
 
     if ($TestResult -eq $false) {
         return $true

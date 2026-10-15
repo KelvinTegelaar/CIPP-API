@@ -440,7 +440,7 @@ function Invoke-CIPPOffboardingJob {
                     $null = New-CIPPAsyncDeployment -JobId $DeploymentId -Names @($Username) -StepTitles (@($Batch | ForEach-Object { $_.Title }) + $NotifySteps) -Source 'Offboarding' -TaskId $TaskInfo.RowKey -TenantFilter $TenantFilter
                 } catch {
                     # Progress is a nice-to-have: a storage hiccup here must not fail the offboarding itself.
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Could not write the progress row for $Username : $($_.Exception.Message)" -sev Warn
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Could not write the progress row for $Username : $($_.Exception.Message)" -sev Warning
                 }
             }
             for ($i = 0; $i -lt $Batch.Count; $i++) {
