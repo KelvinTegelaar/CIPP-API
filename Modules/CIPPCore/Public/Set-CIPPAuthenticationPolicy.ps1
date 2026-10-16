@@ -4,7 +4,14 @@ function Set-CIPPAuthenticationPolicy {
         # TenantFilter (not Tenant) so the scheduler treats this as the protected tenant scope;
         # the alias keeps existing -Tenant callers working
         [Parameter(Mandatory = $true)][Alias('Tenant')]$TenantFilter,
-        [Parameter(Mandatory = $true)][ValidateSet('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate', 'QRCodePin')]$AuthenticationMethodId,
+        # Built-in methods are keyed by name; external authentication methods (third-party MFA
+        # providers such as Duo or Okta) are keyed by their configuration's GUID.
+        [Parameter(Mandatory = $true)]
+        [ValidateScript({
+                $_ -in @('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate', 'QRCodePin') -or
+                $_ -match '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
+            }, ErrorMessage = "'{0}' is not a built-in authentication method name (FIDO2, MicrosoftAuthenticator, SMS, TemporaryAccessPass, HardwareOATH, softwareOath, Voice, Email, x509Certificate, QRCodePin) or the GUID of an external authentication method.")]
+        $AuthenticationMethodId,
         [Parameter(Mandatory = $true)][bool]$Enabled, # true = enabled or false = disabled
         $MicrosoftAuthenticatorSoftwareOathEnabled,
         [ValidateSet('default', 'enabled', 'disabled')]$MicrosoftAuthenticatorDisplayLocation,
@@ -181,6 +188,14 @@ function Set-CIPPAuthenticationPolicy {
                 $OptionalLogMessage = "with QR code lifetime $QRCodeLifetimeInDays days and PIN length $QRCodePinLength"
             }
         }
+        # External authentication method (third-party MFA provider), keyed by configuration GUID.
+        # Only state and targeting apply; the provider settings (appId, OIDC) are left as read.
+        { $_ -match '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$' } {
+            if ($CurrentInfo.displayName) {
+                $OptionalLogMessage = "for external method '$($CurrentInfo.displayName)'"
+            }
+        }
+
         default {
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive." -sev Error
             throw "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
