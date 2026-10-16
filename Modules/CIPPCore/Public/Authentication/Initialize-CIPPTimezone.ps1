@@ -120,6 +120,14 @@ function Initialize-CIPPTimezone {
     # The scheduler reads CraftTZ once, when it starts. If it already did, the assignment above
     # is too late and cron would stay on UTC until the next restart - so apply it directly too.
     # SetTimezone reseeds the affected tasks, so this cannot double-fire or skip one. It throws
-    # if the scheduler is not constructed yet, in which case CraftTZ covers us.
-    try { [Craft.Services.SchedulerBridge]::SetTimezone($Timezone) } catch { Write-Information "[Timezone-Init] Scheduler not ready for a timezone update (it will read CraftTZ): $($_.Exception.Message)" }
+    # InvalidOperationException if the scheduler has not started yet (always so during warmup),
+    # in which case it reads CraftTZ when it does.
+    try {
+        [Craft.Services.SchedulerBridge]::SetTimezone($Timezone)
+    } catch {
+        $SchedulerError = $_.Exception.InnerException ?? $_.Exception
+        if ($SchedulerError -isnot [System.InvalidOperationException]) {
+            Write-Warning "[Timezone-Init] Could not apply timezone to the scheduler: $($SchedulerError.Message)"
+        }
+    }
 }
