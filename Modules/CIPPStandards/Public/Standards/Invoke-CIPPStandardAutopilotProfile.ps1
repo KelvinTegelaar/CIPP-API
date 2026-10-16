@@ -27,12 +27,12 @@ function Invoke-CIPPStandardAutopilotProfile {
             {"type":"radio","name":"standards.AutopilotProfile.AssignTo","label":"Assign the profile to","options":[{"label":"Do not assign","value":"none"},{"label":"All devices","value":"allDevices"},{"label":"Custom group(s)","value":"customGroup"}],"defaultValue":"allDevices"}
             {"type":"textField","required":false,"name":"standards.AutopilotProfile.customGroup","label":"Group name(s) to assign","helpText":"Used when 'Custom group(s)' is selected. Wildcards are allowed. Multiple group names are comma-separated."}
             {"type":"textField","required":false,"name":"standards.AutopilotProfile.excludeGroup","label":"Exclude group(s)","helpText":"Group name(s) to exclude from the assignment. Wildcards are allowed. Multiple group names are comma-separated."}
-            {"type":"switch","name":"standards.AutopilotProfile.SelfDeployingMode","label":"Enable Self-deploying Mode","defaultValue":true}
+            {"type":"switch","name":"standards.AutopilotProfile.SelfDeployingMode","label":"Enable Self-deploying Mode","defaultValue":true,"helperText":"Self-deploying (shared) profiles cannot use White Glove / pre-provisioned deployment, so pre-provisioning is always off while this is enabled."}
             {"type":"switch","name":"standards.AutopilotProfile.HideTerms","label":"Hide Terms and Conditions","defaultValue":true}
             {"type":"switch","name":"standards.AutopilotProfile.HidePrivacy","label":"Hide Privacy Settings","defaultValue":true}
             {"type":"switch","name":"standards.AutopilotProfile.HideChangeAccount","label":"Hide Change Account Options","defaultValue":true}
             {"type":"switch","name":"standards.AutopilotProfile.NotLocalAdmin","label":"Setup user as a standard user (not local admin)","defaultValue":true}
-            {"type":"switch","name":"standards.AutopilotProfile.AllowWhiteGlove","label":"Allow White Glove OOBE","defaultValue":true}
+            {"type":"switch","name":"standards.AutopilotProfile.AllowWhiteGlove","label":"Allow White Glove OOBE","defaultValue":true,"helperText":"Only available for user-driven profiles. Self-deploying mode always sets this to off.","condition":{"field":"standards.AutopilotProfile.SelfDeployingMode","compareType":"isNot","compareValue":true}}
             {"type":"switch","name":"standards.AutopilotProfile.AutoKeyboard","label":"Automatically configure keyboard","defaultValue":true}
         IMPACT
             Low Impact
