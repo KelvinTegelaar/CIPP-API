@@ -42948,6 +42948,33 @@
         "description": "Lists Intune app protection policies for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -43019,6 +43046,33 @@
         ],
         "description": "Lists Intune managed applications for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -43355,6 +43409,33 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
@@ -45243,6 +45324,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -46226,6 +46334,33 @@
         ],
         "description": "Lists Intune device compliance policies for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -52727,6 +52862,33 @@
         "description": "Compiles where each Entra group is used (Conditional Access, Intune assignments, group-based\nlicensing, Teams, nested groups, Entra roles, enterprise applications, Exchange transport\nrules) from the CIPP reporting database cache. Always served from cache — no live Graph calls.",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           }
         ],
@@ -53107,6 +53269,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -53214,6 +53403,33 @@
           {
             "name": "InactiveDays",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
             "required": false,
             "schema": {
               "type": "integer"
@@ -53594,6 +53810,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -53682,6 +53925,33 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
@@ -53842,6 +54112,33 @@
         ],
         "description": "Lists Intune device management scripts (Windows, macOS, Linux, and remediation scripts) for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -55709,6 +56006,33 @@
         "description": "Lists mailbox forwarding rules and configurations for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -55896,6 +56220,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -56061,6 +56412,33 @@
         ],
         "description": "Lists inbox rules configured on mailboxes in a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -56702,6 +57080,33 @@
         ],
         "description": "Lists Microsoft Defender for Endpoint onboarding status for devices in a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance. Automatically uses the reporting database when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -57516,6 +57921,33 @@
         ],
         "description": "Lists OAuth application consent grants and permissions for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -61068,6 +61500,33 @@
         "description": "Lists shared mailboxes that have direct sign-in enabled (account not disabled), which is a security concern.\nSupports UseReportDB=true to read cached data from the reporting database (required for AllTenants).",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -62814,6 +63273,33 @@
         "description": "Lists SharePoint sites or OneDrive usage for a tenant. Requires a Type parameter (SharePointSiteUsage or OneDriveUsageAccount). SharePoint live data uses SPO admin RLD plus Graph enrichment; OneDrive live data uses Graph usage reports. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -63850,6 +64336,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -63951,6 +64464,33 @@
         ],
         "description": "Lists Microsoft Teams user activity reports for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -64163,6 +64703,33 @@
         ],
         "description": "Lists Microsoft Teams voice and PSTN usage for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -64776,6 +65343,33 @@
         ],
         "description": "Lists Tenant Allow/Block List entries (senders, URLs, file hashes, IPs) from Exchange Online Protection. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },

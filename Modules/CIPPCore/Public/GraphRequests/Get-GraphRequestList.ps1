@@ -510,10 +510,15 @@ function Get-GraphRequestList {
                     $SpanFilter = "PartitionKey eq '{0}' and RowKey ge '{1}' and RowKey le '{2}~' and Timestamp ge datetime'{3}'" -f $PartitionKey, $SpanFirst, $SpanLast, $Timestamp
                     # Budget is enforced per whole tenant; the rest of a span past it is discarded
                     # and re-fetched by the next page.
+                    $SpanData = [System.Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
                     foreach ($Row in @(Get-CIPPAzDataTableEntity @Table -Filter $SpanFilter)) {
-                        if (-not $SpanSet.Contains([string]$Row.RowKey)) { continue }
-                        if ($BudgetReached) { break }
-                        $LastEmitted = [string]$Row.RowKey
+                        if ($SpanSet.Contains([string]$Row.RowKey)) { $SpanData[[string]$Row.RowKey] = $Row }
+                    }
+                    # Emit in plan order: the store's row order is not ordinal (Azurite), and the token resumes by plan order.
+                    for ($SpanIndex = $SpanStart; $SpanIndex -lt $Index -and -not $BudgetReached; $SpanIndex++) {
+                        $LastEmitted = $Remaining[$SpanIndex]
+                        $Row = $null
+                        if (-not $SpanData.TryGetValue($LastEmitted, [ref]$Row)) { continue }
                         if ($Row.Data) {
                             $d = $Row.Data.Trim()
                             if ($d.Length -gt 2 -and $d[0] -eq '[' -and $d[-1] -eq ']') {

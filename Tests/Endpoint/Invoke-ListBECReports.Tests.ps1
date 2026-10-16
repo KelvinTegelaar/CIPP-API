@@ -7,6 +7,8 @@ BeforeAll {
     }
     function Get-CIPPBecReport { param($TenantFilter, $CaseId, $UserId, [switch]$IncludeResults) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = [string]$Exception.Exception.Message } }
+    function Get-Tenants { param([switch]$IncludeErrors) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Select-CippAllowedTenantData.ps1')
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ListBECReports.ps1' | Select-Object -First 1
     . $FunctionPath.FullName
 
@@ -78,6 +80,20 @@ Describe 'Invoke-ListBECReports' {
         ($Single.Body -is [array]) | Should -BeTrue -Because 'the table page only renders Array.isArray data'
         $Single.Body.Count | Should -Be 1
         $Single.Body[0].CaseId | Should -Be 'BEC-20260820120000-aaa001'
+    }
+
+    It 'returns only the runs of tenants a restricted caller may see' {
+        $Other = [pscustomobject]@{ PartitionKey = 'fabrikam.com'; RowKey = 'BEC-20260822090000-ccc003'; CaseId = 'BEC-20260822090000-ccc003'; Tenant = 'fabrikam.com'; UserId = 'u3'; Status = 'Completed' }
+        Mock Get-CIPPBecReport { @($script:Contained, $Other) }
+        Mock Get-Tenants { [pscustomobject]@{ customerId = 'cid-contoso'; defaultDomainName = 'contoso.com' } }
+        $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = @('cid-contoso') }
+        try {
+            $Response = Invoke-ListBECReports -Request (New-Request) -TriggerMetadata $null
+        } finally {
+            $script:CippAllowedTenantsStorage = $null
+        }
+        $Response.StatusCode | Should -Be 200
+        @($Response.Body).Tenant | Should -Be @('contoso.com')
     }
 
     It 'reports a storage failure as a formatted error' {

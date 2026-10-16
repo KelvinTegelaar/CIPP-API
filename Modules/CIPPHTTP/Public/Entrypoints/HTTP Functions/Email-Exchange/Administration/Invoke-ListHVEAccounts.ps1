@@ -81,20 +81,32 @@ function Invoke-ListHVEAccounts {
 
         if ($UseReportDB) {
             try {
-                # 'AllTenants' hits Get-CIPPDbItem's cross-partition sentinel ('allTenants', and -ne is
-                # case-insensitive), so the read returns every tenant's rows. CippReportingDB partitions
-                # by defaultDomainName; narrow to the caller's allowed tenants before responding.
-                $HVEItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'HVEAccounts' | Where-Object { $_.RowKey -ne 'HVEAccounts-Count' } | Select-CippAllowedTenantData -TenantProperty 'PartitionKey'
-                if (-not $HVEItems) {
-                    $GraphRequest = @()
-                } else {
-                    $CacheTimestamp = ($HVEItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
-                    $GraphRequest = foreach ($Item in $HVEItems) {
-                        $Account = $Item.Data | ConvertFrom-Json
-                        $Account | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
-                        $Account
+                $ReadAccounts = {
+                    param($Tenant)
+                    # 'AllTenants' hits Get-CIPPDbItem's cross-partition sentinel ('allTenants', and -ne is
+                    # case-insensitive), so the read returns every tenant's rows. CippReportingDB partitions
+                    # by defaultDomainName; narrow to the caller's allowed tenants before responding.
+                    $HVEItems = Get-CIPPDbItem -TenantFilter $Tenant -Type 'HVEAccounts' | Where-Object { $_.RowKey -ne 'HVEAccounts-Count' } | Select-CippAllowedTenantData -TenantProperty 'PartitionKey'
+                    if ($HVEItems) {
+                        $CacheTimestamp = ($HVEItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
+                        foreach ($Item in $HVEItems) {
+                            $Account = $Item.Data | ConvertFrom-Json
+                            $Account | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+                            $Account
+                        }
                     }
                 }
+                # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
+                if ($Request.Query.manualPagination -eq $true) {
+                    # Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.
+                    $PageSize = $Request.Query.PageSize -as [int]
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::OK
+                            # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                            Body       = Get-CIPPReportPage -TenantFilter $TenantFilter -Type 'HVEAccounts' -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -Report $ReadAccounts
+                        })
+                }
+                $GraphRequest = @(& $ReadAccounts $TenantFilter)
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
                 Write-Host "Error retrieving HVE accounts from report database: $($_.Exception.Message)"

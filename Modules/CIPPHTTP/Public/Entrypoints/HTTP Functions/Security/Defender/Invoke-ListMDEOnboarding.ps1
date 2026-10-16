@@ -19,6 +19,16 @@ function Invoke-ListMDEOnboarding {
     try {
         if ($UseReportDB) {
             try {
+                # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
+                if ($Request.Query.manualPagination -eq $true) {
+                    # Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.
+                    $PageSize = $Request.Query.PageSize -as [int]
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::OK
+                            # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                            Body       = Get-CIPPReportPage -TenantFilter $TenantFilter -Type 'MDEOnboarding' -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -Report { param($Tenant) Get-CIPPMDEOnboardingReport -TenantFilter $Tenant -ErrorAction Stop }
+                        })
+                }
                 $GraphRequest = Get-CIPPMDEOnboardingReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
