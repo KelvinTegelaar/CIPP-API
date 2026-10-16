@@ -932,10 +932,15 @@ function Invoke-NinjaOneTenantSync {
         $InputSalt = & $GetHash ((@($MyInvocation.MyCommand.Definition) + @(foreach ($Helper in 'Get-NinjaOneInfoCard', 'Get-NinjaOneLinks', 'Get-NinjaOneCard') { (Get-Command $Helper -ErrorAction SilentlyContinue).Definition })) -join "`n")
         $SkippedUserDocs = 0
         $DocWriteTimeoutSec = 300
-        # Pending user documents go out in batches of 100, a wave of 4 at a time, whenever 400 are queued and at the end;
+        $DocWriteConcurrency = 8
+        $UserDocStats = [ordered]@{ SkipInput = 0; SkipContent = 0; Create = 0; UpdateNoMap = 0; UpdateDocMoved = 0; UpdateDocEdited = 0; UpdateChanged = 0 }
+        $ChangedFieldCounts = [ordered]@{}
+        # Pending user documents go out in batches of 100, a wave of $DocWriteConcurrency at a time, whenever a wave's worth is queued and at the end;
         # after a wave in which NinjaOne timed out the rest wait for the next sync
-        $UserDocState = @{ Stopped = $false }
+        $UserDocState = @{ Stopped = $false; EditedSample = $null }
         $SendUserDocs = {
+            $S = $UserDocStats
+            Write-Information "User docs: $($S.SkipInput + $S.SkipContent + $S.Create + $S.UpdateNoMap + $S.UpdateDocMoved + $S.UpdateDocEdited + $S.UpdateChanged)/$SyncUserCount users | skipped: inputs unchanged $($S.SkipInput), content unchanged $($S.SkipContent) | sent: new $($S.Create), no map row $($S.UpdateNoMap), doc id changed $($S.UpdateDocMoved), doc edited in NinjaOne $($S.UpdateDocEdited), content changed $($S.UpdateChanged) | changed fields: $(@(foreach ($Key in $ChangedFieldCounts.Keys) { "$Key=$($ChangedFieldCounts[$Key])" }) -join ', ')"
             if ($UserDocState.Stopped) { $NinjaUserCreation.Clear(); $NinjaUserUpdates.Clear(); return }
             $UserDocBatches = @(
                 foreach ($Pending in @(@{ Kind = 'creation'; Method = 'POST'; Items = $NinjaUserCreation }, @{ Kind = 'update'; Method = 'PATCH'; Items = $NinjaUserUpdates })) {
@@ -943,10 +948,10 @@ function Invoke-NinjaOneTenantSync {
                         [PSCustomObject]@{ Kind = $Pending.Kind; Method = $Pending.Method; Items = $Pending.Items.GetRange($Offset, [Math]::Min(100, $Pending.Items.Count - $Offset)) }
                     }
                 })
-            for ($Wave = 0; $Wave -lt $UserDocBatches.Count -and -not $UserDocState.Stopped; $Wave += 4) {
-                $WaveBatches = @($UserDocBatches[$Wave..([Math]::Min($Wave + 3, $UserDocBatches.Count - 1))])
+            for ($Wave = 0; $Wave -lt $UserDocBatches.Count -and -not $UserDocState.Stopped; $Wave += $DocWriteConcurrency) {
+                $WaveBatches = @($UserDocBatches[$Wave..([Math]::Min($Wave + $DocWriteConcurrency - 1, $UserDocBatches.Count - 1))])
                 Write-Information "Writing NinjaOne user documents: batches $($Wave + 1)-$($Wave + $WaveBatches.Count) of $($UserDocBatches.Count)"
-                $WaveResults = @(Invoke-NinjaOneRequestBatch -Configuration $Configuration -Token $Token -Concurrency 4 -MaxRetries 0 -TimeoutSec $DocWriteTimeoutSec -Requests @(
+                $WaveResults = @(Invoke-NinjaOneRequestBatch -Configuration $Configuration -Token $Token -Concurrency $DocWriteConcurrency -MaxRetries 0 -TimeoutSec $DocWriteTimeoutSec -Requests @(
                         foreach ($Batch in $WaveBatches) { @{ Method = $Batch.Method; Path = '/api/v2/organization/documents'; Body = "[$($Batch.Items.Body -join ',')]" } }))
                 for ($i = 0; $i -lt $WaveBatches.Count; $i++) {
                     $Result = $WaveResults[$i]
@@ -1047,6 +1052,10 @@ function Invoke-NinjaOneTenantSync {
         & $ArchiveDocuments $DuplicateDocs 'user'
         $CurrentUserDocs = @($NinjaOneUserDocs | Where-Object { -not $ArchivedDocIds.Contains("$($_.documentId)") })
         $NinjaUserDocByName = [CIPP.CippIndex]::Build($CurrentUserDocs, @(foreach ($Doc in $CurrentUserDocs) { , ($($Doc.documentName) ?? $null) }))
+        $SyncUserCount = @($SyncUsers).Count
+        if ($Configuration.UserDocumentsEnabled -eq $True) {
+            Write-Information "User docs start: $SyncUserCount users, $(@($NinjaOneUserDocs).Count) NinjaOne user docs ($($NinjaUserDocById.PSBase.Count) user ids, $($DuplicateDocs.Count) duplicates), $($UsersMap.Count) map rows ($(@($UsersMap.Where({ $_.FieldHashes })).Count) with hashes)"
+        }
         $CasById = [CIPP.CippIndex]::Build($CASFull, @(foreach ($Mailbox in $CASFull) { , ($($Mailbox.ExternalDirectoryObjectId) ?? $null) }))
         $MailboxById = [CIPP.CippIndex]::Build($MailboxDetailedFull, @(foreach ($Mailbox in $MailboxDetailedFull) { , ($($Mailbox.ExternalDirectoryObjectId) ?? $null) }))
         $MailboxStatsByUpn = [CIPP.CippIndex]::Build($MailboxStatsFull, @(foreach ($Stats in $MailboxStatsFull) { , ($($Stats.userPrincipalName) ?? $null) }))
@@ -1406,6 +1415,7 @@ function Invoke-NinjaOneTenantSync {
                     $MappedUser.DocUpdateTime -and [math]::Abs([double]$MappedUser.DocUpdateTime - [double]$NinjaOneUser.documentUpdateTime) -lt 1
                     if ($DocUntouched -and $InputHash -and $MappedUser.InputHash -eq $InputHash) {
                         $SkippedUserDocs++
+                        $UserDocStats.SkipInput++
                         continue
                     }
 
@@ -1470,15 +1480,22 @@ function Invoke-NinjaOneTenantSync {
                     if ($StoredHashes -and $MappedUser.FieldHashes -eq $FieldHashText) {
                         # Inputs moved but the document did not: remember them so the next run skips the build
                         $SkippedUserDocs++
+                        $UserDocStats.SkipContent++
                         $MappedUser | Add-Member -NotePropertyName InputHash -NotePropertyValue $InputHash -Force
                         $UserMapRefreshes.Add($MappedUser)
                     } elseif ($NinjaOneUser) {
                         $PendingDocHashes[$User.id] = @{ Fields = $FieldHashText; Input = $InputHash }
+                        $UpdateReason = if (-not $MappedUser.FieldHashes) { 'UpdateNoMap' } elseif ("$($MappedUser.NinjaOneID)" -ne "$($NinjaOneUser.documentId)") { 'UpdateDocMoved' } elseif (-not $DocUntouched) { 'UpdateDocEdited' } else { 'UpdateChanged' }
+                        $UserDocStats[$UpdateReason]++
+                        if ($UpdateReason -eq 'UpdateDocEdited' -and -not $UserDocState.EditedSample) { $UserDocState.EditedSample = "stored $($MappedUser.DocUpdateTime), NinjaOne $($NinjaOneUser.documentUpdateTime)" }
                         # Unchanged fields are left out; cippUserID always goes so the response can be matched to the user
                         $SendFields = $UserFields
                         if ($StoredHashes) {
                             $SendFields = @{ cippUserID = $UserFields.cippUserID }
-                            foreach ($Key in $UserFields.Keys) { if ($StoredHashes[$Key] -ne $FieldHashes[$Key]) { $SendFields[$Key] = $UserFields[$Key] } }
+                            foreach ($Key in $UserFields.Keys) {
+                                if ($StoredHashes[$Key] -ne $FieldHashes[$Key]) { $SendFields[$Key] = $UserFields[$Key]; $ChangedFieldCounts[$Key] = 1 + $ChangedFieldCounts[$Key] }
+                            }
+                            if ($StoredHashes['_name'] -ne $FieldHashes['_name']) { $ChangedFieldCounts['_name'] = 1 + $ChangedFieldCounts['_name'] }
                         }
                         $UpdateObject = [PSCustomObject]@{
                             PartitionKey = $Customer.CustomerId
@@ -1491,10 +1508,11 @@ function Invoke-NinjaOneTenantSync {
                         } | ConvertTo-Json -Depth 100)"
                         }
                         $NinjaUserUpdates.Add($UpdateObject)
-                        if ($NinjaUserUpdates.Count + $NinjaUserCreation.Count -ge 400) { & $SendUserDocs }
+                        if ($NinjaUserUpdates.Count + $NinjaUserCreation.Count -ge 100 * $DocWriteConcurrency) { & $SendUserDocs }
 
                     } else {
                         $PendingDocHashes[$User.id] = @{ Fields = $FieldHashText; Input = $InputHash }
+                        $UserDocStats.Create++
                         $CreateObject = [PSCustomObject]@{
                             PartitionKey = $Customer.CustomerId
                             RowKey       = $User.id
@@ -1507,7 +1525,7 @@ function Invoke-NinjaOneTenantSync {
                         } | ConvertTo-Json -Depth 100)"
                         }
                         $NinjaUserCreation.Add($CreateObject)
-                        if ($NinjaUserUpdates.Count + $NinjaUserCreation.Count -ge 400) { & $SendUserDocs }
+                        if ($NinjaUserUpdates.Count + $NinjaUserCreation.Count -ge 100 * $DocWriteConcurrency) { & $SendUserDocs }
                     }
 
 
@@ -1526,6 +1544,7 @@ function Invoke-NinjaOneTenantSync {
             & $SendUserDocs
             if ($UserMapRefreshes.Count) { Add-CIPPAzDataTableEntity @UsersMapTable -Entity @($UserMapRefreshes) -Force }
             Write-Information "Skipped $SkippedUserDocs unchanged NinjaOne user documents"
+            if ($UserDocState.EditedSample) { Write-Information "User docs edited in NinjaOne since the last write, first: $($UserDocState.EditedSample)" }
 
 
             # Relate Users to Devices
