@@ -8,6 +8,9 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    if (-not ('CIPP.CIPPTokenCache' -as [type])) {
+        Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
+    }
 
     function Get-CIPPAuthentication { $true }
     function Get-CippTable { param($tablename) }
@@ -27,6 +30,7 @@ BeforeAll {
 
 Describe 'Get-GraphToken certificate-exclusive gating' {
     BeforeEach {
+        $null = [CIPP.CIPPTokenCache]::Clear()
         # A clean, non-direct-tenant environment: the tenant we ask for equals $env:TenantID so the
         # direct-tenant refresh-token branch is never taken.
         $script:SavedEnv = @{}
@@ -112,6 +116,7 @@ Describe 'Get-GraphToken certificate-exclusive gating' {
 
 Describe 'Get-GraphToken stale SAM certificate self-heal' {
     BeforeEach {
+        $null = [CIPP.CIPPTokenCache]::Clear()
         $script:SavedEnv = @{}
         foreach ($Name in 'CertificateAuthMode', 'ApplicationID', 'ApplicationSecret', 'TenantID', 'RefreshToken', 'SetFromProfile') {
             $script:SavedEnv[$Name] = [Environment]::GetEnvironmentVariable($Name)
