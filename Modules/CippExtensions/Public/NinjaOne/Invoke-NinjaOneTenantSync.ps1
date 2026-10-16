@@ -303,9 +303,7 @@ function Invoke-NinjaOneTenantSync {
         [System.Collections.Generic.List[PSCustomObject]]$NinjaLicenseCreation = @()
 
         # Replace direct Graph/Exchange calls with cached data
-        $ExtensionCache = Get-CippExtensionReportingData -TenantFilter $Customer.defaultDomainName -IncludeMailboxes -SkipMailboxPermissions -Properties @{
-            Users                          = 'id', 'displayName', 'userPrincipalName', 'accountEnabled', 'userType', 'assignedLicenses', 'proxyAddresses', 'jobTitle', 'mobilePhone', 'businessPhones', 'officeLocation'
-            Groups                         = 'id', 'displayName', 'mailEnabled', 'mail', 'securityEnabled', 'groupTypes'
+        $ExtensionCache = Get-CippExtensionReportingData -TenantFilter $Customer.defaultDomainName -IncludeMailboxes -SkipMailboxPermissions -Exclude 'Groups', 'Users' -Properties @{
             Roles                          = 'id', 'roleTemplateId', 'displayName', 'description', 'members'
             ConditionalAccessPolicies      = 'id', 'displayName', 'conditions'
             Domains                        = 'id', 'isVerified'
@@ -324,8 +322,6 @@ function Invoke-NinjaOneTenantSync {
         }
 
         # Map cached data to variables
-        $Users = $ExtensionCache.Users
-        $licensedUsers = $Users | Where-Object { $null -ne $_.assignedLicenses.skuId }
         $AllRoles = $ExtensionCache.AllRoles
         $Devices = $ExtensionCache.Devices
         $DeviceCompliancePolicies = $ExtensionCache.DeviceCompliancePolicies
@@ -337,21 +333,34 @@ function Invoke-NinjaOneTenantSync {
         $SecureScoreProfiles = $ExtensionCache.SecureScoreControlProfiles
         $TenantDetails = $ExtensionCache.Organization
         $RawDomains = $ExtensionCache.Domains
-        $AllGroups = $ExtensionCache.Groups
         $Licenses = $ExtensionCache.Licenses
-        # Plans are streamed: held for every licensed user they dominate the sync's memory, and the license page needs one date per user and license
         $PlanIdsBySku = @{}
         foreach ($License in $Licenses) { if ($null -ne $License.skuId) { $PlanIdsBySku[[string]$License.skuId] = $License.servicePlans.servicePlanID } }
+        $ToDate = { param($Value) if ($Value -is [datetime]) { $Value.ToString('yyyy-MM-dd') } elseif ($Value) { $Parsed = [datetime]::MinValue; if ([datetime]::TryParse("$Value", [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind, [ref]$Parsed)) { $Parsed.ToString('yyyy-MM-dd') } else { "$Value" } } }
+        $PlanSetBySku = @{}
+        foreach ($SkuId in $PlanIdsBySku.Keys) { $PlanSetBySku[$SkuId] = @{}; foreach ($PlanId in $PlanIdsBySku[$SkuId]) { if ($null -ne $PlanId) { $PlanSetBySku[$SkuId]["$PlanId"] = $true } } }
+        # Users are read once and streamed: plans are dropped after each user's licences get the day most of their plans were assigned on
         $LicenseAssigned = @{}
-        New-CIPPDbRequest -TenantFilter $Customer.defaultDomainName -Type 'Users' -Fields 'id', 'assignedLicenses', 'assignedPlans' -PageSize 1000 | ForEach-Object {
+        $Users = @(New-CIPPDbRequest -TenantFilter $Customer.defaultDomainName -Type 'Users' -Fields 'id', 'displayName', 'userPrincipalName', 'accountEnabled', 'userType', 'assignedLicenses', 'proxyAddresses', 'jobTitle', 'mobilePhone', 'businessPhones', 'officeLocation', 'assignedPlans' -PageSize 1000 | ForEach-Object {
             $SubUser = $_
             foreach ($SkuId in $SubUser.assignedLicenses.skuId) {
-                if ($null -eq $SkuId -or -not $PlanIdsBySku.ContainsKey([string]$SkuId)) { continue }
-                $LicensePlanIds = $PlanIdsBySku[[string]$SkuId]
-                $MatchedPlans = $SubUser.AssignedPlans.Where({ $_.servicePlanId -in $LicensePlanIds })
-                $LicenseAssigned['{0}|{1}' -f $SubUser.id, $SkuId] = $(try { $(Get-Date(@($MatchedPlans | Group-Object assignedDateTime | Sort-Object Count -Desc)[0].name) -Format u) } catch { 'Unknown' })
+                $PlanSet = $PlanSetBySku["$SkuId"]
+                if (-not $PlanSet) { continue }
+                $DayCounts = [ordered]@{}
+                foreach ($Plan in $SubUser.assignedPlans) {
+                    if (-not $PlanSet["$($Plan.servicePlanId)"]) { continue }
+                    $Day = $Plan.assignedDateTime
+                    if ($Day -is [datetime]) { $Day = $Day.Date }
+                    if ($null -ne $Day) { $DayCounts[$Day] = 1 + $DayCounts[$Day] }
+                }
+                $Assigned = $null
+                $AssignedCount = 0
+                foreach ($Day in $DayCounts.Keys) { if ($DayCounts[$Day] -gt $AssignedCount) { $Assigned = $Day; $AssignedCount = $DayCounts[$Day] } }
+                $LicenseAssigned['{0}|{1}' -f $SubUser.id, $SkuId] = (& $ToDate $Assigned) ?? 'Unknown'
             }
-        }
+            $SubUser.assignedPlans = $null
+            $SubUser
+        })
         $RawDomains = $ExtensionCache.Domains
         $AllConditionalAccessPolicies = $ExtensionCache.ConditionalAccess
 
@@ -430,45 +439,33 @@ function Invoke-NinjaOneTenantSync {
 
         Write-Verbose "$(Get-Date) - Parsing Groups"
 
-        # Members are streamed: held for every group they dominate the sync's memory, and only member and device ids are used
-        # Keys reproduce member enumeration over the member objects: nothing for no members, the value for one, an array otherwise
-        $GroupMembersById = @{}
-        New-CIPPDbRequest -TenantFilter $Customer.defaultDomainName -Type 'Groups' -Fields 'id', 'members' -PageSize 1000 | ForEach-Object {
-            $MemberIds = [System.Collections.Generic.List[object]]::new()
-            $DeviceIds = [System.Collections.Generic.List[object]]::new()
-            foreach ($Member in $_.members) { $MemberIds.Add($Member.id); $DeviceIds.Add($Member.deviceId) }
-            $GroupMembersById[[string]$_.id] = [pscustomobject]@{
-                MemberIds  = $MemberIds
-                MemberKeys = switch ($MemberIds.Count) { 0 { $null } 1 { $MemberIds[0] } default { $MemberIds.ToArray() } }
-                DeviceKeys = switch ($DeviceIds.Count) { 0 { $null } 1 { $DeviceIds[0] } default { $DeviceIds.ToArray() } }
-            }
-        }
-        $Groups = foreach ($Group in $AllGroups) {
-            $GroupMembers = $GroupMembersById[[string]$Group.id]
-            [pscustomobject]@{
-                ID          = $Group.id
-                DisplayName = $Group.displayName
-                MemberIds   = $GroupMembers.MemberIds
-                MemberKeys  = $GroupMembers.MemberKeys
-                DeviceKeys  = $GroupMembers.DeviceKeys
-            }
-        }
+        # Groups are read once and streamed: members are held only as member and device ids, from member enumeration
+        # (nothing for no members, the value for one, an array otherwise)
+        $UserGroupRowById = @{}
+        $Groups = @(New-CIPPDbRequest -TenantFilter $Customer.defaultDomainName -Type 'Groups' -Fields 'id', 'displayName', 'mailEnabled', 'mail', 'securityEnabled', 'groupTypes', 'members' -PageSize 1000 | ForEach-Object {
+                if (-not $UserGroupRowById.ContainsKey([string]$_.id)) {
+                    $UserGroupRowById[[string]$_.id] = [PSCustomObject]@{
+                        'Display Name'   = $_.displayName
+                        'Mail Enabled'   = $_.mailEnabled
+                        'Mail'           = $_.mail
+                        'Security Group' = $_.securityEnabled
+                        'Group Types'    = $_.groupTypes -join ','
+                    }
+                }
+                $MemberKeys = $_.members.id
+                [pscustomobject]@{
+                    ID          = $_.id
+                    DisplayName = $_.displayName
+                    MemberIds   = $MemberKeys
+                    MemberKeys  = $MemberKeys
+                    DeviceKeys  = $_.members.deviceId
+                }
+            })
 
         $GroupById = [CIPP.CippIndex]::Build($Groups, @(foreach ($Group in $Groups) { , ($($Group.id) ?? $null) }))
         $GroupsByMemberId = [CIPP.CippIndex]::Build($Groups, @(foreach ($Group in $Groups) { , ($Group.MemberKeys) }))
         $GroupsByDeviceId = [CIPP.CippIndex]::Build($Groups, @(foreach ($Group in $Groups) { , ($Group.DeviceKeys) }))
         $UserById = [CIPP.CippIndex]::Build($Users, @(foreach ($User in $Users) { , ($($User.id) ?? $null) }))
-        $UserGroupRowById = @{}
-        foreach ($Group in $AllGroups) {
-            if ($UserGroupRowById.ContainsKey([string]$Group.id)) { continue }
-            $UserGroupRowById[[string]$Group.id] = [PSCustomObject]@{
-                'Display Name'   = $Group.displayName
-                'Mail Enabled'   = $Group.mailEnabled
-                'Mail'           = $Group.mail
-                'Security Group' = $Group.securityEnabled
-                'Group Types'    = $Group.groupTypes -join ','
-            }
-        }
 
         Write-Verbose "$(Get-Date) - Parsing Conditional Access Polcies"
 
@@ -691,8 +688,8 @@ function Invoke-NinjaOneTenantSync {
                                     Name           = $Policy.DisplayName
                                     User           = $Stat.username
                                     Status         = $Stat.status
-                                    'Last Report'  = $(if (($Date = $Stat.lastReportedDateTime[0]) -is [datetime]) { $Date.ToString('yyyy-MM-dd HH:mm:ss') } else { "$(Get-Date($Date) -Format 'yyyy-MM-dd HH:mm:ss')" })
-                                    'Grace Expiry' = $(if (($Date = $Stat.complianceGracePeriodExpirationDateTime[0]) -is [datetime]) { $Date.ToString('yyyy-MM-dd HH:mm:ss') } else { "$(Get-Date($Date) -Format 'yyyy-MM-dd HH:mm:ss')" })
+                                    'Last Report'  = & $ToDate $Stat.lastReportedDateTime[0]
+                                    'Grace Expiry' = & $ToDate $Stat.complianceGracePeriodExpirationDateTime[0]
                                 })
                         }
                     }
@@ -792,8 +789,8 @@ function Invoke-NinjaOneTenantSync {
                         'Primary User'       = $Device.userDisplayName
                         'Primary User Email' = $Device.userPrincipalName
                         'Owner'              = $Device.ownerType
-                        'Enrolled'           = $Device.enrolledDateTime
-                        'Last Checkin'       = $Device.lastSyncDateTime
+                        'Enrolled'           = & $ToDate $Device.enrolledDateTime
+                        'Last Checkin'       = & $ToDate $Device.lastSyncDateTime
                         'Compliant'          = $Compliance
                         'Management Type'    = $Device.managementAgent
                     }
@@ -1224,7 +1221,7 @@ function Invoke-NinjaOneTenantSync {
                     $OneDriveCardData = [PSCustomObject]@{
                         'One Drive URL'            = '<a href="' + ($UserOneDriveStats.siteUrl) + '">' + ($UserOneDriveStats.siteUrl) + '</a>'
                         'Is Deleted'               = "$($UserOneDriveStats.isDeleted)"
-                        'Last Activity Date'       = "$($UserOneDriveStats.lastActivityDate)"
+                        'Last Activity Date'       = "$(& $ToDate $UserOneDriveStats.lastActivityDate)"
                         'File Count'               = "$(& $RoundCount $UserOneDriveStats.fileCount)"
                         'Active File Count'        = "$(& $RoundCount $UserOneDriveStats.activeFileCount)"
                         'Storage Used'             = "$([math]::Round($UserOneDriveUse, 1)) GB"
@@ -1427,7 +1424,7 @@ function Invoke-NinjaOneTenantSync {
                                 Mailbox  = $MailboxDetailsCardData
                                 Settings = $MailboxSettingsCard
                                 OneDrive = $OneDriveCardData
-                                Devices  = @(foreach ($D in $UserDevicesDetailsRaw) { [ordered]@{ l = $D.DeviceLink; e = $D.Enrolled; s = $D.LastSync; o = $D.OS; v = $D.OSVersion; c = $D.Compliance; m = $D.Model; k = $D.Make } })
+                                Devices  = @(foreach ($D in $UserDevicesDetailsRaw) { [ordered]@{ l = $D.DeviceLink; e = & $ToDate $D.Enrolled; s = & $ToDate $D.LastSync; o = $D.OS; v = $D.OSVersion; c = $D.Compliance; m = $D.Model; k = $D.Make } })
                             }, 20)
                     $InputHash = if ($InputJson) { [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($InputJson.ToCharArray()))) }
                     $MappedUser = $UsersMapById.Find($User.id)
@@ -1465,8 +1462,8 @@ function Invoke-NinjaOneTenantSync {
 
 
                     $UserDeviceDetailsTable = $UserDevicesDetailsRaw | Select-Object @{N = 'Name'; E = { $_.DeviceLink } },
-                    @{n = 'Enrolled'; e = { $_.Enrolled } },
-                    @{n = 'Last Sync'; e = { $_.LastSync } },
+                    @{n = 'Enrolled'; e = { & $ToDate $_.Enrolled } },
+                    @{n = 'Last Sync'; e = { & $ToDate $_.LastSync } },
                     @{n = 'OS'; e = { $_.OS } },
                     @{n = 'OS Version'; e = { $_.OSVersion } },
                     @{n = 'State'; e = { $_.Compliance } },
@@ -1685,8 +1682,8 @@ function Invoke-NinjaOneTenantSync {
                 $LicenseOverviewCardHTML = Get-NinjaOneInfoCard -Title 'License Details' -Data $LicenseSummary -Icon 'fas fa-file-invoice'
 
                 $SubscriptionsHTML = $MatchedSubscriptions | Select-Object @{'n' = 'Subscription Licenses'; 'e' = { $_.totalLicenses } },
-                @{'n' = 'Created'; 'e' = { $_.createdDateTime } },
-                @{'n' = 'Renewal'; 'e' = { $_.nextLifecycleDateTime } },
+                @{'n' = 'Created'; 'e' = { & $ToDate $_.createdDateTime } },
+                @{'n' = 'Renewal'; 'e' = { & $ToDate $_.nextLifecycleDateTime } },
                 @{'n' = 'Trial'; 'e' = { $_.isTrial } },
                 @{'n' = 'Status'; 'e' = { $_.Status } } | ConvertTo-Html -As Table -Fragment
 
@@ -1992,7 +1989,7 @@ function Invoke-NinjaOneTenantSync {
                 'Tenant Name'    = $Customer.displayName
                 'Default Domain' = $Customer.defaultDomainName
                 'Tenant ID'      = $Customer.customerId
-                'Creation Date'  = $TenantDetails.createdDateTime
+                'Creation Date'  = & $ToDate $TenantDetails.createdDateTime
                 'Domains'        = $customerDomains
                 'Admin Users'    = ($AdminUsers | Select-Object -Property DisplayName -Unique | ForEach-Object { "$($_.DisplayName)" }) -join ', '
 
@@ -2376,7 +2373,7 @@ function Invoke-NinjaOneTenantSync {
 
             # Groups
             $WidgetData.add([PSCustomObject]@{
-                    Value       = ($AllGroups | Measure-Object).count
+                    Value       = $Groups.Count
                     Description = 'Groups'
                     Colour      = '#CCCCCC'
                     Link        = "https://$CIPPUrl/identity/administration/groups?tenantFilter=$($Customer.defaultDomainName)"
