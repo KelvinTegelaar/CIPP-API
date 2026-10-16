@@ -936,55 +936,40 @@ function Invoke-NinjaOneTenantSync {
             [System.Collections.Generic.List[PSCustomObject]]$UsersMap = @()
         }
 
-        [System.Collections.Generic.List[PSCustomObject]]$NinjaUserUpdates = @()
-        [System.Collections.Generic.List[PSCustomObject]]$NinjaUserCreation = @()
-
         $UsersMapById = [CIPP.CippIndex]::Build($UsersMap, @(foreach ($Map in $UsersMap) { , ($($Map.M365ID) ?? $null) }))
-        $PendingDocHashes = @{}
-        [System.Collections.Generic.List[PSCustomObject]]$UserMapRefreshes = @()
-        # Code changes that alter the HTML must invalidate every stored fingerprint
-        $InputSalt = & $GetHash ((@($MyInvocation.MyCommand.Definition) + @(foreach ($Helper in 'Get-NinjaOneInfoCard', 'Get-NinjaOneLinks', 'Get-NinjaOneCard') { (Get-Command $Helper -ErrorAction SilentlyContinue).Definition })) -join "`n")
-        $SkippedUserDocs = 0
+        # Documents are built from their inputs by Invoke-NinjaOneUserDocWrite, so its code and the HTML helpers decide when every fingerprint is stale
+        $InputSalt = & $GetHash ((@(foreach ($Helper in 'Invoke-NinjaOneUserDocWrite', 'Get-NinjaOneInfoCard', 'Get-NinjaOneLinks', 'Get-NinjaOneCard') { (Get-Command $Helper -ErrorAction SilentlyContinue).Definition }) + "$CIPPUrl|$($Customer.defaultDomainName)") -join "`n")
         $DocWriteTimeoutSec = 300
-        $DocWriteConcurrency = 8
-        $UserDocStats = [ordered]@{ SkipInput = 0; SkipContent = 0; Create = 0; UpdateNoMap = 0; UpdateDocMoved = 0; UpdateDocEdited = 0; UpdateChanged = 0 }
-        $ChangedFieldCounts = [ordered]@{}
-        # Pending user documents go out in batches of 100, a wave of $DocWriteConcurrency at a time, whenever a wave's worth is queued and at the end;
-        # after a wave in which NinjaOne timed out the rest wait for the next sync
-        $UserDocState = @{ Stopped = $false; EditedSample = $null }
-        $SendUserDocs = {
-            $S = $UserDocStats
-            Write-Information "User docs: $($S.SkipInput + $S.SkipContent + $S.Create + $S.UpdateNoMap + $S.UpdateDocMoved + $S.UpdateDocEdited + $S.UpdateChanged)/$SyncUserCount users | skipped: inputs unchanged $($S.SkipInput), content unchanged $($S.SkipContent) | sent: new $($S.Create), no map row $($S.UpdateNoMap), doc id changed $($S.UpdateDocMoved), doc edited in NinjaOne $($S.UpdateDocEdited), content changed $($S.UpdateChanged) | changed fields: $(@(foreach ($Key in $ChangedFieldCounts.Keys) { "$Key=$($ChangedFieldCounts[$Key])" }) -join ', ')"
-            if ($UserMapRefreshes.Count) { Add-CIPPAzDataTableEntity @UsersMapTable -Entity @($UserMapRefreshes) -Force; $UserMapRefreshes.Clear() }
-            if ($UserDocState.Stopped) { $NinjaUserCreation.Clear(); $NinjaUserUpdates.Clear(); return }
-            $UserDocBatches = @(
-                foreach ($Pending in @(@{ Kind = 'creation'; Method = 'POST'; Items = $NinjaUserCreation }, @{ Kind = 'update'; Method = 'PATCH'; Items = $NinjaUserUpdates })) {
-                    for ($Offset = 0; $Offset -lt $Pending.Items.Count; $Offset += 100) {
-                        [PSCustomObject]@{ Kind = $Pending.Kind; Method = $Pending.Method; Items = $Pending.Items.GetRange($Offset, [Math]::Min(100, $Pending.Items.Count - $Offset)) }
+        $SkippedUserDocs = 0
+        # Changed users are written in this task when they fit one wave of document batches; more are staged in chunks
+        # of 2000 that a child run writes two at a time, and NinjaOneUserDocFinish records the end of the sync
+        $InlineDocLimit = 800
+        $StageChunkSize = 2000
+        $StageTable = Get-CippTable -tablename 'NinjaOneUserDocStage'
+        # Rows of a run that never started or finished, which no chunk run can still be reading after a day
+        $StaleStage = @(Get-CIPPAzDataTableEntity @StageTable -Filter "PartitionKey ge '$($Customer.CustomerId)_' and PartitionKey lt '$($Customer.CustomerId)``' and Timestamp lt datetime'$((Get-Date).ToUniversalTime().AddDays(-1).ToString('yyyy-MM-ddTHH:mm:ssZ'))'" -Property PartitionKey, RowKey)
+        if ($StaleStage) { Remove-CIPPAzDataTableEntity -Force @StageTable -Entity $StaleStage }
+        $StageState = @{ Partition = '{0}_{1}' -f $Customer.CustomerId, [guid]::NewGuid().ToString('N'); Chunks = 0; Staged = 0 }
+        $PendingDocs = [System.Collections.Generic.List[object]]::new()
+        $StageDocs = {
+            Add-CIPPAzDataTableEntity @StageTable -Force -Entity @(foreach ($Pending in $PendingDocs) {
+                    [PSCustomObject]@{
+                        PartitionKey       = $StageState.Partition
+                        RowKey             = '{0:D4}-{1}' -f $StageState.Chunks, $Pending.UserId
+                        UserId             = $Pending.UserId
+                        Input              = $Pending.Input
+                        InputHash          = $Pending.InputHash
+                        DocumentId         = $Pending.DocumentId
+                        DocUntouched       = $Pending.DocUntouched
+                        MapNinjaOneID      = $Pending.MapNinjaOneID
+                        MapFieldHashes     = $Pending.MapFieldHashes
+                        MapDocUpdateTime   = $Pending.MapDocUpdateTime
+                        NinjaDocUpdateTime = $Pending.NinjaDocUpdateTime
                     }
                 })
-            for ($Wave = 0; $Wave -lt $UserDocBatches.Count -and -not $UserDocState.Stopped; $Wave += $DocWriteConcurrency) {
-                $WaveBatches = @($UserDocBatches[$Wave..([Math]::Min($Wave + $DocWriteConcurrency - 1, $UserDocBatches.Count - 1))])
-                $WaveTimer = [System.Diagnostics.Stopwatch]::StartNew()
-                $WaveResults = @(Invoke-NinjaOneRequestBatch -Configuration $Configuration -Token $Token -Concurrency $DocWriteConcurrency -MaxRetries 0 -TimeoutSec $DocWriteTimeoutSec -Requests @(
-                        foreach ($Batch in $WaveBatches) { @{ Method = $Batch.Method; Path = '/api/v2/organization/documents'; Body = "[$($Batch.Items.Body -join ',')]" } }))
-                Write-Information "Wrote NinjaOne user documents: batches $($Wave + 1)-$($Wave + $WaveBatches.Count) of $($UserDocBatches.Count) ($(@(foreach ($Batch in $WaveBatches) { "$($Batch.Items.Count) $($Batch.Kind)" }) -join ', ')) in $([int]$WaveTimer.Elapsed.TotalSeconds) s"
-                for ($i = 0; $i -lt $WaveBatches.Count; $i++) {
-                    $Result = $WaveResults[$i]
-                    if ($Result.IsSuccess) {
-                        & $RecordUserDocs @($Result.Result.Content | ConvertFrom-Json -Depth 100)
-                        continue
-                    }
-                    if ($Result.TimedOut) {
-                        $UserDocState.Stopped = $true
-                        Write-LogMessage -tenant $Customer.defaultDomainName -API 'NinjaOneSync' -message "NinjaOne did not answer a user document write for $($Customer.displayName) within $DocWriteTimeoutSec seconds. The remaining user document writes are skipped this run and retried on the next sync." -Sev 'Warning'
-                    }
-                    $Reason = if ($Result.Error) { $Result.Error } else { "HTTP $($Result.StatusCode) $($Result.Result.Content)" }
-                    Write-LogMessage -tenant $Customer.defaultDomainName -API 'NinjaOneSync' -message "NinjaOne user document $($WaveBatches[$i].Kind) failed for $($Customer.displayName). NinjaOne rejects the whole batch if any single document is invalid, so all $($WaveBatches[$i].Items.Count) user(s) in this batch were not written: $Reason" -Sev 'Error'
-                }
-            }
-            $NinjaUserCreation.Clear()
-            $NinjaUserUpdates.Clear()
+            $StageState.Chunks = $StageState.Chunks + 1
+            $StageState.Staged = $StageState.Staged + $PendingDocs.Count
+            $PendingDocs.Clear()
         }
         $GetDocHash = {
             param($Name, $Fields)
@@ -996,44 +981,6 @@ function Invoke-NinjaOneTenantSync {
                 $null = $Canon.Append("`n").Append($Key).Append('=').Append($(if ($Value -is [hashtable]) { $Value.html } else { $Value }))
             }
             & $GetHash $Canon.ToString()
-        }
-        $GetFieldHashes = {
-            param($Name, $Fields)
-            $Hashes = [ordered]@{ '_name' = (& $GetHash $Name).Substring(0, 16) }
-            $Keys = [string[]]$Fields.Keys
-            [array]::Sort($Keys, [System.StringComparer]::Ordinal)
-            foreach ($Key in $Keys) {
-                $Value = $Fields[$Key]
-                $Hashes[$Key] = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$(if ($Value -is [hashtable]) { $Value.html } else { $Value })".ToCharArray()))).Substring(0, 16)
-            }
-            $Hashes
-        }
-        $RecordUserDocs = {
-            param($UserDocResults)
-            $MapWrites = foreach ($UserDoc in $UserDocResults | Where-Object { $Null -ne $_ -and $_ -ne '' }) {
-                $Field = @($UserDoc.updatedFields) + @($UserDoc.fields) | Where-Object { $_.name -eq 'cippUserID' } | Select-Object -First 1
-                if ($Null -eq $Field.value -or $Field.value -eq '') {
-                    Write-Error "Unmatched Doc: $($UserDoc | ConvertTo-Json -Depth 100)"
-                    continue
-                }
-                $MappedUser = $UsersMapById.Find($Field.value)
-                if (($MappedUser | Measure-Object).count -eq 0) {
-                    $MappedUser = [PSCustomObject]@{
-                        PartitionKey = $Customer.CustomerId
-                        RowKey       = $Field.value
-                        NinjaOneID   = $UserDoc.documentId
-                        M365ID       = $Field.value
-                    }
-                    $UsersMap.Add($MappedUser)
-                    $UsersMapById.AddItem($Field.value, $MappedUser)
-                }
-                $MappedUser.NinjaOneID = $UserDoc.documentId
-                $MappedUser | Add-Member -NotePropertyName FieldHashes -NotePropertyValue "$($PendingDocHashes[$Field.value].Fields)" -Force
-                $MappedUser | Add-Member -NotePropertyName InputHash -NotePropertyValue "$($PendingDocHashes[$Field.value].Input)" -Force
-                $MappedUser | Add-Member -NotePropertyName DocUpdateTime -NotePropertyValue "$($UserDoc.documentUpdateTime)" -Force
-                $MappedUser
-            }
-            if ($MapWrites) { Add-CIPPAzDataTableEntity @UsersMapTable -Entity @($MapWrites) -Force }
         }
         $NinjaUserDocById = [CIPP.CippIndex]::Build($NinjaOneUserDocs, @(foreach ($Doc in $NinjaOneUserDocs) { , ($($Doc.ParsedFields.cippUserID) ?? $null) }))
 
@@ -1340,52 +1287,6 @@ function Invoke-NinjaOneTenantSync {
                 }
 
 
-                $Microsoft365UserLinksData = @(
-                    @{
-                        Name = 'Entra ID'
-                        Link = "https://aad.portal.azure.com/$($Customer.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.id)"
-                        Icon = 'fas fa-users-cog'
-                    },
-                    @{
-                        Name = 'Sign-In Logs'
-                        Link = "https://aad.portal.azure.com/$($Customer.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/SignIns/userId/$($User.id)"
-                        Icon = 'fas fa-users-cog'
-                    },
-                    @{
-                        Name = 'Teams Admin'
-                        Link = "https://admin.teams.microsoft.com/users/$($User.id)/account?delegatedOrg=$($Customer.defaultDomainName)"
-                        Icon = 'fas fa-users'
-                    },
-                    @{
-                        Name = 'Intune (User)'
-                        Link = "https://endpoint.microsoft.com/$($Customer.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.ID)"
-                        Icon = 'fas fa-laptop'
-                    },
-                    @{
-                        Name = 'Intune (Devices)'
-                        Link = "https://endpoint.microsoft.com/$($Customer.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Devices/userId/$($User.ID)"
-                        Icon = 'fas fa-laptop'
-                    }
-                )
-
-                $CIPPUserLinksData = @(
-                    @{
-                        Name = 'View User'
-                        Link = "https://$($CIPPURL)/identity/administration/users/user?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)"
-                        Icon = 'far fa-eye'
-                    },
-                    @{
-                        Name = 'Edit User'
-                        Link = "https://$($CIPPURL)/identity/administration/users/user/edit?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)"
-                        Icon = 'fas fa-users-cog'
-                    },
-                    @{
-                        Name = 'Research Compromise'
-                        Link = "https://$($CIPPURL)/identity/administration/bec/case?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)"
-                        Icon = 'fas fa-user-secret'
-                    }
-                )
-
                 # Actions
                 $ActionsHTML = @"
                                 <a href="https://$($CIPPUrl)/identity/administration/users/user?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)" title="View in CIPP" class="btn secondary"><i class="fas fa-shield-halved" style="color: #337ab7;"></i></a>&nbsp;
@@ -1415,141 +1316,42 @@ function Invoke-NinjaOneTenantSync {
 
                 if ($Configuration.UserDocumentsEnabled -eq $True) {
 
-                    # Fingerprint of everything the document is built from: unchanged inputs on an untouched document skip the HTML build
+                    # Everything the document is built from: unchanged inputs on an untouched document skip it, changed ones are written
                     $InputJson = [CIPP.CippJson]::ToJson([ordered]@{
-                                Salt     = $InputSalt
-                                User     = [ordered]@{ accountEnabled = $User.accountEnabled; skus = @($User.assignedLicenses.skuId); businessPhones = @($User.businessPhones); displayName = $User.displayName; id = $User.id; jobTitle = $User.jobTitle; mobilePhone = $User.mobilePhone; officeLocation = $User.officeLocation; proxyAddresses = @($User.proxyAddresses); userPrincipalName = $User.userPrincipalName }
-                                Licenses = $userLicenses
-                                Groups   = @($UserGroups)
-                                Policies = @($UserPolicies.displayName)
+                            Salt = $InputSalt
+                            Doc  = [ordered]@{
+                                Id       = $User.id
+                                Upn      = $User.userPrincipalName
+                                Name     = "$($User.displayName) ($($User.userPrincipalName))"
+                                Overview = $UserOverviewCard
                                 Mailbox  = $MailboxDetailsCardData
                                 Settings = $MailboxSettingsCard
                                 OneDrive = $OneDriveCardData
-                                Devices  = @(foreach ($D in $UserDevicesDetailsRaw) { [ordered]@{ l = $D.DeviceLink; e = & $ToDate $D.Enrolled; s = & $ToDate $D.LastSync; o = $D.OS; v = $D.OSVersion; c = $D.Compliance; m = $D.Model; k = $D.Make } })
-                            }, 20)
+                                Policies = $UserPoliciesFormatted
+                                Groups   = @($UserGroups)
+                                Devices  = @(foreach ($D in $UserDevicesDetailsRaw) { [ordered]@{ Name = $D.DeviceLink; Enrolled = & $ToDate $D.Enrolled; 'Last Sync' = & $ToDate $D.LastSync; OS = $D.OS; 'OS Version' = $D.OSVersion; State = $D.Compliance; Model = $D.Model; Manufacturer = $D.Make } })
+                            }
+                        }, 20)
                     $InputHash = if ($InputJson) { [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($InputJson.ToCharArray()))) }
                     $MappedUser = $UsersMapById.Find($User.id)
                     $DocUntouched = $NinjaOneUser -and $MappedUser.FieldHashes -and "$($MappedUser.NinjaOneID)" -eq "$($NinjaOneUser.documentId)" -and
                     $MappedUser.DocUpdateTime -and [math]::Abs([double]$MappedUser.DocUpdateTime - [double]$NinjaOneUser.documentUpdateTime) -lt 1
                     if ($DocUntouched -and $InputHash -and $MappedUser.InputHash -eq $InputHash) {
                         $SkippedUserDocs++
-                        $UserDocStats.SkipInput++
                         continue
                     }
-
-                    # Format into Ninja HTML
-                    # Links
-                    $M365UserLinksHTML = Get-NinjaOneLinks -Data $Microsoft365UserLinksData -Title 'Portals' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
-                    $CIPPUserLinksHTML = Get-NinjaOneLinks -Data $CIPPUserLinksData -Title 'CIPP Links' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
-                    $UserLinksHTML = '<div class="row g-3"><div class="col-md-12 col-lg-6 d-flex">' + $M365UserLinksHTML + '</div><div class="col-md-12 col-lg-6 d-flex">' + $CIPPUserLinksHTML + '</div></div>'
-
-
-                    # UsersSummaryCards:
-                    $UserOverviewCardHTML = Get-NinjaOneInfoCard -Title 'User Details' -Data $UserOverviewCard -Icon 'fas fa-user'
-                    $MailboxDetailsCardHTML = Get-NinjaOneInfoCard -Title 'Mailbox Details' -Data $MailboxDetailsCardData -Icon 'fas fa-envelope'
-                    $MailboxSettingsCardHTML = Get-NinjaOneInfoCard -Title 'Mailbox Settings' -Data $MailboxSettingsCard -Icon 'fas fa-envelope'
-                    $OneDriveCardHTML = Get-NinjaOneInfoCard -Title 'OneDrive Details' -Data $OneDriveCardData -Icon 'fas fa-envelope'
-                    $UserPolciesCard = Get-NinjaOneCard -Title 'Assigned Conditional Access Policies' -Body $UserPoliciesFormatted
-
-
-                    $UserSummaryHTML = '<div class="row g-3">' +
-                    '<div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $UserOverviewCardHTML +
-                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $MailboxDetailsCardHTML +
-                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $MailboxSettingsCardHTML +
-                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $OneDriveCardHTML +
-                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $UserPolciesCard +
-                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceSummaryCardHTML +
-                    '</div></div></div>'
-
-
-                    $UserDeviceDetailsTable = $UserDevicesDetailsRaw | Select-Object @{N = 'Name'; E = { $_.DeviceLink } },
-                    @{n = 'Enrolled'; e = { & $ToDate $_.Enrolled } },
-                    @{n = 'Last Sync'; e = { & $ToDate $_.LastSync } },
-                    @{n = 'OS'; e = { $_.OS } },
-                    @{n = 'OS Version'; e = { $_.OSVersion } },
-                    @{n = 'State'; e = { $_.Compliance } },
-                    @{n = 'Model'; e = { $_.Model } },
-                    @{n = 'Manufacturer'; e = { $_.Make } }
-
-                    $UserDeviceDetailHTML = $UserDeviceDetailsTable | ConvertTo-Html -As Table -Fragment
-                    $UserDeviceDetailHTML = ([System.Web.HttpUtility]::HtmlDecode($UserDeviceDetailHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
-
-
-                    $UserFields = @{
-                        cippUserLinks   = @{'html' = $UserLinksHTML }
-                        cippUserSummary = @{'html' = $UserSummaryHTML }
-                        cippUserGroups  = @{'html' = "$($UserGroups | ConvertTo-Html -As Table -Fragment)" }
-                        cippUserDevices = @{'html' = $UserDeviceDetailHTML }
-                        cippUserID      = $User.id
-                        cippUserUPN     = $User.userPrincipalName
-                    }
-
-
-                    $DocumentName = "$($User.displayName) ($($User.userPrincipalName))"
-                    $FieldHashes = & $GetFieldHashes $DocumentName $UserFields
-                    $FieldHashText = @(foreach ($Key in $FieldHashes.Keys) { "$Key=$($FieldHashes[$Key])" }) -join ';'
-                    # What NinjaOne holds is what we last wrote only while the document is untouched since that write
-                    $StoredHashes = $null
-                    if ($DocUntouched) {
-                        $StoredHashes = @{}
-                        foreach ($Pair in "$($MappedUser.FieldHashes)".Split(';')) { $Kv = $Pair.Split('=', 2); $StoredHashes[$Kv[0]] = $Kv[1] }
-                    }
-
-                    if ($StoredHashes -and $MappedUser.FieldHashes -eq $FieldHashText) {
-                        # Inputs moved but the document did not: remember them so the next run skips the build
-                        $SkippedUserDocs++
-                        $UserDocStats.SkipContent++
-                        $MappedUser | Add-Member -NotePropertyName InputHash -NotePropertyValue $InputHash -Force
-                        $UserMapRefreshes.Add($MappedUser)
-                        if ($UserMapRefreshes.Count -ge 1000) { & $SendUserDocs }
-                    } elseif ($NinjaOneUser) {
-                        $PendingDocHashes[$User.id] = @{ Fields = $FieldHashText; Input = $InputHash }
-                        $UpdateReason = if (-not $MappedUser.FieldHashes) { 'UpdateNoMap' } elseif ("$($MappedUser.NinjaOneID)" -ne "$($NinjaOneUser.documentId)") { 'UpdateDocMoved' } elseif (-not $DocUntouched) { 'UpdateDocEdited' } else { 'UpdateChanged' }
-                        $UserDocStats[$UpdateReason]++
-                        if ($UpdateReason -eq 'UpdateDocEdited' -and -not $UserDocState.EditedSample) { $UserDocState.EditedSample = "stored $($MappedUser.DocUpdateTime), NinjaOne $($NinjaOneUser.documentUpdateTime)" }
-                        # Unchanged fields are left out; cippUserID always goes so the response can be matched to the user
-                        $SendFields = $UserFields
-                        if ($StoredHashes) {
-                            $SendFields = @{ cippUserID = $UserFields.cippUserID }
-                            foreach ($Key in $UserFields.Keys) {
-                                if ($StoredHashes[$Key] -ne $FieldHashes[$Key]) { $SendFields[$Key] = $UserFields[$Key]; $ChangedFieldCounts[$Key] = 1 + $ChangedFieldCounts[$Key] }
-                            }
-                            if ($StoredHashes['_name'] -ne $FieldHashes['_name']) { $ChangedFieldCounts['_name'] = 1 + $ChangedFieldCounts['_name'] }
-                        }
-                        $UpdateObject = [PSCustomObject]@{
-                            PartitionKey = $Customer.CustomerId
-                            RowKey       = $User.id
-                            Action       = 'Update'
-                            Body         = "$(@{
-                            documentId   = $NinjaOneUser.documentId
-                            documentName = $DocumentName
-                            fields       = $SendFields
-                        } | ConvertTo-Json -Depth 100)"
-                        }
-                        $NinjaUserUpdates.Add($UpdateObject)
-                        if ($NinjaUserUpdates.Count + $NinjaUserCreation.Count -ge 100 * $DocWriteConcurrency) { & $SendUserDocs }
-
-                    } else {
-                        $PendingDocHashes[$User.id] = @{ Fields = $FieldHashText; Input = $InputHash }
-                        $UserDocStats.Create++
-                        $CreateObject = [PSCustomObject]@{
-                            PartitionKey = $Customer.CustomerId
-                            RowKey       = $User.id
-                            Action       = 'Create'
-                            Body         = "$(@{
-                            documentName       = $DocumentName
-                            documentTemplateId = ($NinjaOneUsersTemplate.id)
-                            organizationId     = [int]$NinjaOneOrg
-                            fields             = $UserFields
-                        } | ConvertTo-Json -Depth 100)"
-                        }
-                        $NinjaUserCreation.Add($CreateObject)
-                        if ($NinjaUserUpdates.Count + $NinjaUserCreation.Count -ge 100 * $DocWriteConcurrency) { & $SendUserDocs }
-                    }
-
-
-
-
+                    $PendingDocs.Add([PSCustomObject]@{
+                            UserId             = $User.id
+                            Input              = $InputJson
+                            InputHash          = $InputHash
+                            DocumentId         = $NinjaOneUser.documentId
+                            DocUntouched       = [bool]$DocUntouched
+                            MapNinjaOneID      = $MappedUser.NinjaOneID
+                            MapFieldHashes     = $MappedUser.FieldHashes
+                            MapDocUpdateTime   = $MappedUser.DocUpdateTime
+                            NinjaDocUpdateTime = $NinjaOneUser.documentUpdateTime
+                        })
+                    if ($PendingDocs.Count -ge $StageChunkSize) { & $StageDocs }
                 }
             } catch {
                 Write-Error "User $($User.UserPrincipalName): A fatal error occurred while processing user $_"
@@ -1559,10 +1361,57 @@ function Invoke-NinjaOneTenantSync {
 
 
 
+        $UserDocsFannedOut = $false
         if ($Configuration.UserDocumentsEnabled -eq $True) {
-            & $SendUserDocs
-            Write-Information "Skipped $SkippedUserDocs unchanged NinjaOne user documents"
-            if ($UserDocState.EditedSample) { Write-Information "User docs edited in NinjaOne since the last write, first: $($UserDocState.EditedSample)" }
+            Write-Information "User docs: $SyncUserCount users | inputs unchanged $SkippedUserDocs | changed $($StageState.Staged + $PendingDocs.Count)"
+            if ($StageState.Chunks -eq 0 -and $PendingDocs.Count -le $InlineDocLimit) {
+                if ($PendingDocs.Count) {
+                    $null = Invoke-NinjaOneUserDocWrite -Items $PendingDocs -Configuration $Configuration -Token $Token -Customer $Customer -TemplateId $NinjaOneUsersTemplate.id -OrganizationId $NinjaOneOrg -CIPPUrl $CIPPUrl -TimeoutSec $DocWriteTimeoutSec
+                    # Documents created just now get their relations and license links in this run
+                    [System.Collections.Generic.List[PSCustomObject]]$UsersMap = @(Get-CIPPAzDataTableEntity @UsersMapTable -Filter $UsersFilter)
+                    $UsersMapById = [CIPP.CippIndex]::Build($UsersMap, @(foreach ($Map in $UsersMap) { , ($($Map.M365ID) ?? $null) }))
+                }
+            } else {
+                if ($PendingDocs.Count) { & $StageDocs }
+                $ChunkRun = Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
+                        OrchestratorName = "NinjaOneUserDocs_$($Customer.defaultDomainName)"
+                        AllowCollision   = $false
+                        MaxConcurrency   = 2
+                        SkipLog          = $true
+                        Batch            = @(for ($Chunk = 0; $Chunk -lt $StageState.Chunks; $Chunk++) {
+                                [PSCustomObject]@{
+                                    FunctionName   = 'NinjaOneUserDocChunk'
+                                    TenantFilter   = $Customer.defaultDomainName
+                                    CustomerId     = $Customer.CustomerId
+                                    DisplayName    = $Customer.displayName
+                                    RunPartition   = $StageState.Partition
+                                    Chunk          = $Chunk
+                                    TemplateId     = $NinjaOneUsersTemplate.id
+                                    OrganizationId = $NinjaOneOrg
+                                    CIPPUrl        = $CIPPUrl
+                                }
+                            })
+                        PostExecution    = @{
+                            FunctionName = 'NinjaOneUserDocFinish'
+                            Parameters   = @{
+                                TenantFilter = $Customer.defaultDomainName
+                                CustomerId   = $Customer.CustomerId
+                                DisplayName  = $Customer.displayName
+                                RunPartition = $StageState.Partition
+                                Users        = $StageState.Staged
+                                Chunks       = $StageState.Chunks
+                            }
+                        }
+                    })
+                if ("$ChunkRun" -like '*-Skipped') {
+                    $Staged = @(Get-CIPPAzDataTableEntity @StageTable -Filter "PartitionKey eq '$($StageState.Partition)'" -Property PartitionKey, RowKey)
+                    if ($Staged) { Remove-CIPPAzDataTableEntity -Force @StageTable -Entity $Staged }
+                    Write-LogMessage -tenant $Customer.defaultDomainName -API 'NinjaOneSync' -message "NinjaOne user documents for $($Customer.displayName) are still being written by the previous sync, so its $($StageState.Staged) changed users wait for the next one." -Sev 'Warning'
+                } else {
+                    $UserDocsFannedOut = $true
+                    Write-Information "User docs: $($StageState.Staged) changed users staged in $($StageState.Chunks) chunks of up to $StageChunkSize"
+                }
+            }
 
 
             # Relate Users to Devices
@@ -2648,10 +2497,12 @@ function Invoke-NinjaOneTenantSync {
         Write-Information "Total Fetch Time: $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds)"
         Write-Information "Completed Total Time: $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds)"
 
-        # Set Last End Time
-        $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))) -Force
-        $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Completed' -Force
-        Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
+        # A sync whose user documents were fanned out ends when NinjaOneUserDocFinish runs
+        if (-not $UserDocsFannedOut) {
+            $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))) -Force
+            $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Completed' -Force
+            Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
+        }
 
         Write-LogMessage -tenant $Customer.defaultDomainName -API 'NinjaOneSync' -message "Completed NinjaOne Sync for $($Customer.displayName). Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds) seconds. Data fetched in $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds) seconds. Total processing time $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds) seconds" -Sev 'info'
 
