@@ -23,6 +23,7 @@ function Get-CIPPAlertTERRL {
 
             if ($UsagePercentage -gt $Threshold) {
                 $AlertData = [PSCustomObject]@{
+                    Id                 = 'TERRL' # stable identity; Message carries live numbers
                     UsagePercentage    = $UsagePercentage
                     CurrentVolume      = $TerrlStatus.ObservedValue
                     ThresholdLimit     = $TerrlStatus.Threshold

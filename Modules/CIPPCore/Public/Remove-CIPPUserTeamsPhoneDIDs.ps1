@@ -23,7 +23,7 @@ function Remove-CIPPUserTeamsPhoneDIDs {
         }
 
         # Initialize collections for results
-        $Results = [List[string]]::new()
+        $Results = [System.Collections.Generic.List[string]]::new()
         $SuccessCount = 0
         $ErrorCount = 0
 

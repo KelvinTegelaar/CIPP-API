@@ -4,7 +4,7 @@ function Get-CIPPBaselineCATemplateState {
         Prepare hook for ConditionalAccessTemplate: normalized Expected/Current for compare.
     .DESCRIPTION
         Produces the comparable pair for one CA template against one tenant, entirely from
-        CIPPDb caches - no live Graph at compare time, and NO frontend compare help: the
+        CIPPDb caches (plus the id lookup below), and NO frontend compare help: the
         engine's verdict is the only verdict. Both sides normalize to one canonical
         vocabulary; every rule below closes a documented false-drift source from the old
         standards engine:
@@ -18,7 +18,8 @@ function Get-CIPPBaselineCATemplateState {
           one side to strings and reported type-mismatch drift)
         - locations translate GUID->displayName via the template's LocationInfo plus the
           tenant NamedLocations cache; All/AllTrusted pass through
-        - users/groups translate GUID->displayName via the Users/Groups caches; unresolved
+        - users/groups translate GUID->displayName via the Users/Groups caches, then one live
+          directoryObjects/getByIds for ids those caches do not hold yet; still-unresolved
           GUIDs stay GUIDs so raw-GUID templates still match
         - the tenant's 'Vacation Exclusion*' groups are removed from the live excludeGroups
           (New-CIPPCAPolicy re-adds them on every deploy - deliberate, not drift)
@@ -147,10 +148,38 @@ function Get-CIPPBaselineCATemplateState {
         $Policy
     }
 
-    $Expected = & $Normalize $Template $false
-
     # --- the live side, from the ConditionalAccessPolicies cache
     $Policies = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' | Where-Object { $_ })
+    $Live = @($Policies | Where-Object { $_.displayName -eq $Template.displayName })
+    if ($Live.Count -gt 1) {
+        Write-Information "Baselines: $($Live.Count) CA policies named '$($Template.displayName)' exist on $TenantFilter - comparing the first."
+    }
+    $Live = $Live | Select-Object -First 1
+
+    # The Users/Groups caches lag the CA cache (groups created by a deploy or vacation mode are
+    # missing until the next collection), so resolve leftover user/group ids live in one call.
+    $Unresolved = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Side in @('includeUsers', 'excludeUsers', 'includeGroups', 'excludeGroups')) {
+        foreach ($Value in @($Template.conditions.users.$Side) + @($Live.conditions.users.$Side)) {
+            $Guid = [guid]::Empty
+            if ($Value -and [guid]::TryParse("$Value", [ref]$Guid) -and -not $NameById.ContainsKey("$Value")) { $null = $Unresolved.Add("$Value") }
+        }
+    }
+    if ($Unresolved.Count -gt 0) {
+        # getByIds takes at most 1000 ids; any beyond that stay GUIDs until the caches catch up.
+        $Body = ConvertTo-Json -Compress -InputObject @{ ids = @($Unresolved | Select-Object -First 1000); types = @('user', 'group') }
+        try {
+            $ByIds = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/directoryObjects/getByIds?$select=id,displayName' -tenantid $TenantFilter -body $Body
+            foreach ($Object in @($ByIds.value ?? $ByIds)) {
+                if ($Object.id -and $Object.displayName) { $NameById["$($Object.id)"] = "$($Object.displayName)" }
+            }
+        } catch {
+            Write-Information "Baselines: resolving CA user/group ids on $TenantFilter failed: $($_.Exception.Message)"
+        }
+    }
+
+    $Expected = & $Normalize $Template $false
+
     if ($Policies.Count -eq 0) {
         # The collector stamps a Count metadata row even for a tenant with zero CA
         # policies. Metadata present means the template's policy is really missing
@@ -165,11 +194,6 @@ function Get-CIPPBaselineCATemplateState {
         return @{ Expected = $Expected; Current = $null }
     }
 
-    $Live = @($Policies | Where-Object { $_.displayName -eq $Template.displayName })
-    if ($Live.Count -gt 1) {
-        Write-Information "Baselines: $($Live.Count) CA policies named '$($Template.displayName)' exist on $TenantFilter - comparing the first."
-    }
-    $Live = $Live | Select-Object -First 1
     if (-not $Live) {
         if ($ConfiguredState -and $ConfiguredState -ne 'donotchange') { $Expected.state = $ConfiguredState }
         return @{

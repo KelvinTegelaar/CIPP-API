@@ -49,6 +49,7 @@ function Get-CippAlertSecureScore {
                     if ($DropPercentage -ge $InputValue.InputValue) {
                         $SecureScoreResult = [PSCustomObject]@{
                             Message        = "Secure Score dropped by $DropPercentage% (from $($PreviousScore.currentScore) to $($SecureScore.currentScore))"
+                            Id             = 'SecureScoreDrop' # stable identity; Message carries live numbers
                             Tenant         = $TenantFilter
                             CurrentScore   = $SecureScore.currentScore
                             PreviousScore  = $PreviousScore.currentScore

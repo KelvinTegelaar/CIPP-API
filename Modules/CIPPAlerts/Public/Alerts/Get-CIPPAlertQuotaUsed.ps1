@@ -35,6 +35,7 @@ function Get-CIPPAlertQuotaUsed {
         if ($UsagePercent -ge $Threshold) {
             [PSCustomObject]@{
                 Message                         = "$($_.userPrincipalName): Mailbox is more than $($Threshold)% full. Mailbox is $UsagePercent% full"
+                Id                              = $_.userPrincipalName # stable identity; Message carries live usage %
                 Owner                           = $_.userPrincipalName
                 RecipientType                   = $_.recipientType
                 UsagePercent                    = $UsagePercent
