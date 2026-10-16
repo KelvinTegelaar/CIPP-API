@@ -193,20 +193,35 @@ function Invoke-NinjaOneTenantSync {
 
 
             # Get NinjaOne Users
-            [System.Collections.Generic.List[PSCustomObject]]$NinjaOneUserDocs = ((Invoke-WebRequest -WebSession $NinjaSession -Uri "https://$($Configuration.Instance)/api/v2/organization/documents?organizationIds=$($NinjaOneOrg)&templateIds=$($NinjaOneUsersTemplate.id)" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -Depth 100)
-
-            foreach ($NinjaDoc in $NinjaOneUserDocs) {
-                $ParsedFields = [pscustomobject]@{}
-                foreach ($Field in $NinjaDoc.Fields) {
-                    if ($Field.value.text) {
-                        $FieldVal = $Field.value.text
-                    } else {
-                        $FieldVal = $Field.value
-                    }
-                    $ParsedFields | Add-Member -NotePropertyName $Field.name -NotePropertyValue $FieldVal
-                }
-                $NinjaDoc | Add-Member -NotePropertyName 'ParsedFields' -NotePropertyValue $ParsedFields -Force
+            $UserDocsResult = @(Invoke-NinjaOneRequestBatch -Configuration $Configuration -Token $Token -Requests @(@{ Method = 'GET'; Path = "/api/v2/organization/documents?organizationIds=$($NinjaOneOrg)&templateIds=$($NinjaOneUsersTemplate.id)" }))[0]
+            if (-not $UserDocsResult.IsSuccess) { throw "Failed to fetch NinjaOne user documents: $(if ($UserDocsResult.Error) { $UserDocsResult.Error } else { "HTTP $($UserDocsResult.StatusCode)" })" }
+            # The endpoint has no paging and returns every field's HTML, so only the ids, names, update times and user ids are read from the raw bytes
+            $UserDocsBytes = $UserDocsResult.Result.ContentBytes
+            $UserDocsOffset = if ($UserDocsBytes.Length -ge 3 -and $UserDocsBytes[0] -eq 0xEF -and $UserDocsBytes[1] -eq 0xBB -and $UserDocsBytes[2] -eq 0xBF) { 3 } else { 0 }
+            $UserDocsJson = [System.Text.Json.JsonDocument]::Parse([System.ReadOnlyMemory[byte]]::new($UserDocsBytes, $UserDocsOffset, $UserDocsBytes.Length - $UserDocsOffset), [System.Text.Json.JsonDocumentOptions]::new())
+            try {
+                [System.Collections.Generic.List[PSCustomObject]]$NinjaOneUserDocs = @(foreach ($Doc in $UserDocsJson.RootElement.EnumerateArray()) {
+                        $UserIdValue = $null
+                        $Value = [System.Text.Json.JsonElement]::new()
+                        if ($Doc.TryGetProperty('fields', [ref]$Value) -and $Value.ValueKind -eq 'Array') {
+                            foreach ($Field in $Value.EnumerateArray()) {
+                                if ($Field.GetProperty('name').GetString() -ne 'cippUserID') { continue }
+                                $FieldValue = [System.Text.Json.JsonElement]::new()
+                                if ($Field.TryGetProperty('value', [ref]$FieldValue) -and $FieldValue.ValueKind -eq 'String') { $UserIdValue = $FieldValue.GetString() }
+                            }
+                        }
+                        [PSCustomObject]@{
+                            documentId         = $Doc.GetProperty('documentId').GetInt64()
+                            documentName       = $Doc.GetProperty('documentName').GetString()
+                            documentUpdateTime = if ($Doc.TryGetProperty('documentUpdateTime', [ref]$Value) -and $Value.ValueKind -eq 'Number') { $Value.GetDouble() }
+                            ParsedFields       = [PSCustomObject]@{ cippUserID = $UserIdValue }
+                        }
+                    })
+            } finally {
+                $UserDocsJson.Dispose()
             }
+            $UserDocsResult = $null
+            $UserDocsBytes = $null
 
             Write-Information 'Fetched NinjaOne User Docs'
         }
@@ -544,7 +559,8 @@ function Invoke-NinjaOneTenantSync {
         $ParsedDeviceIds = [CIPP.CippIndex]::Build((, $ParsedDevices), @(foreach ($All in (, $ParsedDevices)) { , ($($All.id) ?? $null) }))
         $DevicesToProcess = $Devices | Where-Object { -not $ParsedDeviceIds.Has($_.id) }
         $DeviceMapById = [CIPP.CippIndex]::Build($DeviceMap, @(foreach ($Map in $DeviceMap) { , ($($Map.M365ID) ?? $null) }))
-        $GetHash = { param([string]$Text) [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($Text))) }
+        # PowerShell copies a string passed to a .NET method on every call, a char array it passes as is
+        $GetHash = { param([string]$Text) [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($Text.ToCharArray()))) }
         # Device fields and relations carry no NinjaOne change time, so unchanged ones are still re-sent weekly
         $IsFresh = {
             param($Time)
@@ -941,6 +957,7 @@ function Invoke-NinjaOneTenantSync {
         $SendUserDocs = {
             $S = $UserDocStats
             Write-Information "User docs: $($S.SkipInput + $S.SkipContent + $S.Create + $S.UpdateNoMap + $S.UpdateDocMoved + $S.UpdateDocEdited + $S.UpdateChanged)/$SyncUserCount users | skipped: inputs unchanged $($S.SkipInput), content unchanged $($S.SkipContent) | sent: new $($S.Create), no map row $($S.UpdateNoMap), doc id changed $($S.UpdateDocMoved), doc edited in NinjaOne $($S.UpdateDocEdited), content changed $($S.UpdateChanged) | changed fields: $(@(foreach ($Key in $ChangedFieldCounts.Keys) { "$Key=$($ChangedFieldCounts[$Key])" }) -join ', ')"
+            if ($UserMapRefreshes.Count) { Add-CIPPAzDataTableEntity @UsersMapTable -Entity @($UserMapRefreshes) -Force; $UserMapRefreshes.Clear() }
             if ($UserDocState.Stopped) { $NinjaUserCreation.Clear(); $NinjaUserUpdates.Clear(); return }
             $UserDocBatches = @(
                 foreach ($Pending in @(@{ Kind = 'creation'; Method = 'POST'; Items = $NinjaUserCreation }, @{ Kind = 'update'; Method = 'PATCH'; Items = $NinjaUserUpdates })) {
@@ -950,9 +967,10 @@ function Invoke-NinjaOneTenantSync {
                 })
             for ($Wave = 0; $Wave -lt $UserDocBatches.Count -and -not $UserDocState.Stopped; $Wave += $DocWriteConcurrency) {
                 $WaveBatches = @($UserDocBatches[$Wave..([Math]::Min($Wave + $DocWriteConcurrency - 1, $UserDocBatches.Count - 1))])
-                Write-Information "Writing NinjaOne user documents: batches $($Wave + 1)-$($Wave + $WaveBatches.Count) of $($UserDocBatches.Count)"
+                $WaveTimer = [System.Diagnostics.Stopwatch]::StartNew()
                 $WaveResults = @(Invoke-NinjaOneRequestBatch -Configuration $Configuration -Token $Token -Concurrency $DocWriteConcurrency -MaxRetries 0 -TimeoutSec $DocWriteTimeoutSec -Requests @(
                         foreach ($Batch in $WaveBatches) { @{ Method = $Batch.Method; Path = '/api/v2/organization/documents'; Body = "[$($Batch.Items.Body -join ',')]" } }))
+                Write-Information "Wrote NinjaOne user documents: batches $($Wave + 1)-$($Wave + $WaveBatches.Count) of $($UserDocBatches.Count) ($(@(foreach ($Batch in $WaveBatches) { "$($Batch.Items.Count) $($Batch.Kind)" }) -join ', ')) in $([int]$WaveTimer.Elapsed.TotalSeconds) s"
                 for ($i = 0; $i -lt $WaveBatches.Count; $i++) {
                     $Result = $WaveResults[$i]
                     if ($Result.IsSuccess) {
@@ -988,7 +1006,7 @@ function Invoke-NinjaOneTenantSync {
             [array]::Sort($Keys, [System.StringComparer]::Ordinal)
             foreach ($Key in $Keys) {
                 $Value = $Fields[$Key]
-                $Hashes[$Key] = (& $GetHash "$(if ($Value -is [hashtable]) { $Value.html } else { $Value })").Substring(0, 16)
+                $Hashes[$Key] = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$(if ($Value -is [hashtable]) { $Value.html } else { $Value })".ToCharArray()))).Substring(0, 16)
             }
             $Hashes
         }
@@ -1056,6 +1074,8 @@ function Invoke-NinjaOneTenantSync {
         if ($Configuration.UserDocumentsEnabled -eq $True) {
             Write-Information "User docs start: $SyncUserCount users, $(@($NinjaOneUserDocs).Count) NinjaOne user docs ($($NinjaUserDocById.PSBase.Count) user ids, $($DuplicateDocs.Count) duplicates), $($UsersMap.Count) map rows ($(@($UsersMap.Where({ $_.FieldHashes })).Count) with hashes)"
         }
+        # Usage counts keep two significant figures so daily growth does not rewrite every user document
+        $RoundCount = { param($Count) $N = $Count -as [double]; if ($N -ge 100) { $Step = [math]::Pow(10, [math]::Floor([math]::Log10($N)) - 1); [math]::Round($N / $Step) * $Step } else { $Count } }
         $CasById = [CIPP.CippIndex]::Build($CASFull, @(foreach ($Mailbox in $CASFull) { , ($($Mailbox.ExternalDirectoryObjectId) ?? $null) }))
         $MailboxById = [CIPP.CippIndex]::Build($MailboxDetailedFull, @(foreach ($Mailbox in $MailboxDetailedFull) { , ($($Mailbox.ExternalDirectoryObjectId) ?? $null) }))
         $MailboxStatsByUpn = [CIPP.CippIndex]::Build($MailboxStatsFull, @(foreach ($Stats in $MailboxStatsFull) { , ($($Stats.userPrincipalName) ?? $null) }))
@@ -1175,7 +1195,7 @@ function Invoke-NinjaOneTenantSync {
                         Enabled = $True
                         Used    = $UserOneDriveUse
                         Total   = $UserOneDriveTotal
-                        Percent = ($UserOneDriveUse / $UserOneDriveTotal) * 100
+                        Percent = [math]::Round(($UserOneDriveUse / $UserOneDriveTotal) * 100)
                     }
 
                     $OneDriveUseColor = if ($OneDriveUse.Percent -ge 95) {
@@ -1205,10 +1225,10 @@ function Invoke-NinjaOneTenantSync {
                         'One Drive URL'            = '<a href="' + ($UserOneDriveStats.siteUrl) + '">' + ($UserOneDriveStats.siteUrl) + '</a>'
                         'Is Deleted'               = "$($UserOneDriveStats.isDeleted)"
                         'Last Activity Date'       = "$($UserOneDriveStats.lastActivityDate)"
-                        'File Count'               = "$($UserOneDriveStats.fileCount)"
-                        'Active File Count'        = "$($UserOneDriveStats.activeFileCount)"
-                        'Storage Used (Byte)'      = "$($UserOneDriveStats.storageUsedInBytes)"
-                        'Storage Allocated (Byte)' = "$($UserOneDriveStats.storageAllocatedInBytes)"
+                        'File Count'               = "$(& $RoundCount $UserOneDriveStats.fileCount)"
+                        'Active File Count'        = "$(& $RoundCount $UserOneDriveStats.activeFileCount)"
+                        'Storage Used'             = "$([math]::Round($UserOneDriveUse, 1)) GB"
+                        'Storage Allocated'        = "$([math]::Round($UserOneDriveTotal, 1)) GB"
                         'One Drive Usage'          = $OneDriveParsed
 
                     }
@@ -1229,7 +1249,7 @@ function Invoke-NinjaOneTenantSync {
                         Enabled = $True
                         Used    = $UserMailUse
                         Total   = $UserMailTotal
-                        Percent = ($UserMailUse / $UserMailTotal) * 100
+                        Percent = [math]::Round(($UserMailUse / $UserMailTotal) * 100)
                     }
 
                     $MailboxUseColor = if ($MailboxUse.Percent -ge 95) {
@@ -1259,7 +1279,7 @@ function Invoke-NinjaOneTenantSync {
                     try {
                         $MailboxProhibitSendQuota = [math]::Round($UserMailSettings.ProhibitSendQuota / 1024 / 1024 / 1024, 2)
                         $MailboxProhibitSendReceiveQuota = [math]::Round($UserMailSettings.ProhibitSendReceiveQuota / 1024 / 1024 / 1024, 2)
-                        $MailboxStorageUsed = [math]::Round($UserMailSettings.StorageUsedInBytes / 1024 / 1024 / 1024, 2)
+                        $MailboxStorageUsed = [math]::Round($UserMailSettings.StorageUsedInBytes / 1024 / 1024 / 1024, 1)
                     } catch {
                         $MailboxProhibitSendQuota = 0
                         $MailboxProhibitSendReceiveQuota = 0
@@ -1270,7 +1290,7 @@ function Invoke-NinjaOneTenantSync {
                         #'Permissions'                 = "$($UserMailSettings.Permissions | ConvertTo-Html -Fragment | Out-String)"
                         'Prohibit Send Quota'         = "$($MailboxProhibitSendQuota) GB"
                         'Prohibit Send Receive Quota' = "$($MailboxProhibitSendReceiveQuota) GB"
-                        'Item Count'                  = "$($UserMailSettings.ItemCount)"
+                        'Item Count'                  = "$(& $RoundCount $UserMailSettings.ItemCount)"
                         'Total Mailbox Size'          = "$($MailboxStorageUsed) GB"
                         'Mailbox Usage'               = $MailboxParsed
                     }
@@ -1404,12 +1424,12 @@ function Invoke-NinjaOneTenantSync {
                                 Licenses = $userLicenses
                                 Groups   = @($UserGroups)
                                 Policies = @($UserPolicies.displayName)
-                                Mail     = $UserMailSettings
-                                Stats    = $StatsRequest
-                                OneDrive = $UserOneDriveStats
+                                Mailbox  = $MailboxDetailsCardData
+                                Settings = $MailboxSettingsCard
+                                OneDrive = $OneDriveCardData
                                 Devices  = @(foreach ($D in $UserDevicesDetailsRaw) { [ordered]@{ l = $D.DeviceLink; e = $D.Enrolled; s = $D.LastSync; o = $D.OS; v = $D.OSVersion; c = $D.Compliance; m = $D.Model; k = $D.Make } })
                             }, 20)
-                    $InputHash = if ($InputJson) { & $GetHash $InputJson }
+                    $InputHash = if ($InputJson) { [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($InputJson.ToCharArray()))) }
                     $MappedUser = $UsersMapById.Find($User.id)
                     $DocUntouched = $NinjaOneUser -and $MappedUser.FieldHashes -and "$($MappedUser.NinjaOneID)" -eq "$($NinjaOneUser.documentId)" -and
                     $MappedUser.DocUpdateTime -and [math]::Abs([double]$MappedUser.DocUpdateTime - [double]$NinjaOneUser.documentUpdateTime) -lt 1
@@ -1483,6 +1503,7 @@ function Invoke-NinjaOneTenantSync {
                         $UserDocStats.SkipContent++
                         $MappedUser | Add-Member -NotePropertyName InputHash -NotePropertyValue $InputHash -Force
                         $UserMapRefreshes.Add($MappedUser)
+                        if ($UserMapRefreshes.Count -ge 1000) { & $SendUserDocs }
                     } elseif ($NinjaOneUser) {
                         $PendingDocHashes[$User.id] = @{ Fields = $FieldHashText; Input = $InputHash }
                         $UpdateReason = if (-not $MappedUser.FieldHashes) { 'UpdateNoMap' } elseif ("$($MappedUser.NinjaOneID)" -ne "$($NinjaOneUser.documentId)") { 'UpdateDocMoved' } elseif (-not $DocUntouched) { 'UpdateDocEdited' } else { 'UpdateChanged' }
@@ -1542,7 +1563,6 @@ function Invoke-NinjaOneTenantSync {
 
         if ($Configuration.UserDocumentsEnabled -eq $True) {
             & $SendUserDocs
-            if ($UserMapRefreshes.Count) { Add-CIPPAzDataTableEntity @UsersMapTable -Entity @($UserMapRefreshes) -Force }
             Write-Information "Skipped $SkippedUserDocs unchanged NinjaOne user documents"
             if ($UserDocState.EditedSample) { Write-Information "User docs edited in NinjaOne since the last write, first: $($UserDocState.EditedSample)" }
 
