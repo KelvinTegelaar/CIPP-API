@@ -65,6 +65,7 @@ function Start-CIPPMailboxDataStage {
                     Parameters   = @{
                         TenantFilter = $TenantFilter
                         Type         = $Type
+                        Batches      = $Batches.Count
                         Remaining    = @($Stages | Select-Object -Skip ($Index + 1))
                         QueueId      = $QueueId
                     }

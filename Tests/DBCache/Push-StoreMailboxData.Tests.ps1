@@ -39,6 +39,7 @@ Describe 'Push-StoreMailboxData' {
         @($Run.Batch | ForEach-Object { @($_.Mailboxes).Count }) | Should -Be @(320, 80)
         @($Run.Batch.QueueId | Sort-Object -Unique) | Should -Be @('q1')
         $Run.PostExecution.Parameters.Type | Should -Be 'CalendarPermissions'
+        $Run.PostExecution.Parameters.Batches | Should -Be 2
         @($Run.PostExecution.Parameters.Remaining) | Should -Be @('Rules')
     }
 
@@ -80,5 +81,25 @@ Describe 'Push-StoreMailboxData' {
 
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Error' -and $message -like '*Permissions*table unavailable*' }
         $script:Runs[0].OrchestratorName | Should -Be 'MailboxRules_contoso.com'
+    }
+
+    It 'keeps the previous cache when a batch failed, and still starts the next stage' {
+        $Item = New-StageItem 'CalendarPermissions' @('Rules')
+        $Item.Parameters.Batches = 2
+
+        Push-StoreMailboxData -Item $Item
+
+        Should -Invoke Push-StoreMailboxPermissions -Times 0 -Exactly
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Warning' -and $message -like '1 of 2 CalendarPermissions batches failed*' }
+        $script:Runs[0].OrchestratorName | Should -Be 'MailboxRules_contoso.com'
+    }
+
+    It 'stores when every batch returned' {
+        $Item = New-StageItem 'Rules' @()
+        $Item.Parameters.Batches = 1
+
+        Push-StoreMailboxData -Item $Item
+
+        Should -Invoke Push-StoreMailboxRules -Times 1 -Exactly
     }
 }

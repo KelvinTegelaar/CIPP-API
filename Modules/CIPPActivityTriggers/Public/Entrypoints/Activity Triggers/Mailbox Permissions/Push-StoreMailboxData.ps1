@@ -13,8 +13,12 @@ function Push-StoreMailboxData {
     param($Item)
 
     $Parameters = $Item.Parameters
+    # Failed batches return no result; storing the rest would delete their mailboxes' cached rows.
+    $Missing = [int]$Parameters.Batches - @($Item.Results).Count
     try {
-        if ($Parameters.Type -eq 'Rules') {
+        if ($Missing -gt 0) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $Parameters.TenantFilter -message "$Missing of $($Parameters.Batches) $($Parameters.Type) batches failed; preserving the previous cache" -sev Warning
+        } elseif ($Parameters.Type -eq 'Rules') {
             Push-StoreMailboxRules -Item $Item
         } else {
             Push-StoreMailboxPermissions -Item $Item
