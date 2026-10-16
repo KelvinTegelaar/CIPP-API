@@ -488,14 +488,17 @@ namespace CIPP
         /// NinjaOne client — *.ninjarmm.com / *.ninjaone.com. The tenant sync fans out
         /// per-device and per-document writes, and NinjaOne scales close to linearly with
         /// concurrency (300 device PATCHes: 98s at 1 in flight, 12s at 8, 6s at 16), so it gets its own
-        /// lane instead of queueing behind the 5-connection catch-all. Cap: 12 connections.
+        /// lane instead of queueing behind the 5-connection catch-all. HTTP/2 multiplexes every tenant
+        /// sync's requests on one connection per host (34 concurrent document PATCHes shared one), so
+        /// the cap counts sockets and in-flight requests are bounded by each caller's concurrency.
+        /// Cap: 12 connections.
         /// </summary>
         private static HttpClient BuildNinjaOneClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
-            EnableMultipleHttp2Connections = false,
+            EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
             MaxConnectionsPerServer        = MaxConn("NinjaOneMaxConnectionsPerServer", 12),
@@ -751,7 +754,7 @@ namespace CIPP
             using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(uri));
             // A request defaults to HTTP/1.1, so EnableMultipleHttp2Connections alone never multiplexes.
             // These are the lanes that enable it; a host without h2 falls back to 1.1 in the TLS handshake.
-            if (selection.Pool is "Graph" or "Exo" or "PartnerCenter" or "AdminPlane" or "SPO" or "Default")
+            if (selection.Pool is "Graph" or "Exo" or "PartnerCenter" or "AdminPlane" or "SPO" or "NinjaOne" or "Default")
             {
                 request.Version       = HttpVersion.Version20;
                 request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;

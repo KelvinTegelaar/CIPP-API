@@ -336,7 +336,8 @@ function Invoke-NinjaOneTenantSync {
         $Licenses = $ExtensionCache.Licenses
         $PlanIdsBySku = @{}
         foreach ($License in $Licenses) { if ($null -ne $License.skuId) { $PlanIdsBySku[[string]$License.skuId] = $License.servicePlans.servicePlanID } }
-        $ToDate = { param($Value) if ($Value -is [datetime]) { $Value.ToString('yyyy-MM-dd') } elseif ($Value) { $Parsed = [datetime]::MinValue; if ([datetime]::TryParse("$Value", [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind, [ref]$Parsed)) { $Parsed.ToString('yyyy-MM-dd') } else { "$Value" } } }
+        # Dates keep the format they had, without the time: a DateTime as the culture's short date, a string up to its time part
+        $ToDate = { param($Value, $Format = 'd') if ($Value -is [datetime]) { $Value.ToString($Format) } elseif ("$Value" -match '^(.+?)[T ]\d{1,2}:\d{2}') { $Matches[1] } else { $Value } }
         $PlanSetBySku = @{}
         foreach ($SkuId in $PlanIdsBySku.Keys) { $PlanSetBySku[$SkuId] = @{}; foreach ($PlanId in $PlanIdsBySku[$SkuId]) { if ($null -ne $PlanId) { $PlanSetBySku[$SkuId]["$PlanId"] = $true } } }
         # Users are read once and streamed: plans are dropped after each user's licences get the day most of their plans were assigned on
@@ -356,7 +357,7 @@ function Invoke-NinjaOneTenantSync {
                 $Assigned = $null
                 $AssignedCount = 0
                 foreach ($Day in $DayCounts.Keys) { if ($DayCounts[$Day] -gt $AssignedCount) { $Assigned = $Day; $AssignedCount = $DayCounts[$Day] } }
-                $LicenseAssigned['{0}|{1}' -f $SubUser.id, $SkuId] = (& $ToDate $Assigned) ?? 'Unknown'
+                $LicenseAssigned['{0}|{1}' -f $SubUser.id, $SkuId] = (& $ToDate $Assigned 'yyyy-MM-dd') ?? 'Unknown'
             }
             $SubUser.assignedPlans = $null
             $SubUser
@@ -688,8 +689,8 @@ function Invoke-NinjaOneTenantSync {
                                     Name           = $Policy.DisplayName
                                     User           = $Stat.username
                                     Status         = $Stat.status
-                                    'Last Report'  = & $ToDate $Stat.lastReportedDateTime[0]
-                                    'Grace Expiry' = & $ToDate $Stat.complianceGracePeriodExpirationDateTime[0]
+                                    'Last Report'  = & $ToDate $Stat.lastReportedDateTime[0] 'yyyy-MM-dd'
+                                    'Grace Expiry' = & $ToDate $Stat.complianceGracePeriodExpirationDateTime[0] 'yyyy-MM-dd'
                                 })
                         }
                     }

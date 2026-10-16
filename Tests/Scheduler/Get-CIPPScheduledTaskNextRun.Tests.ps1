@@ -32,10 +32,28 @@ Describe 'Get-CIPPScheduledTaskNextRun' {
     }
 
     It 'does not replay a backlog when the last run is far in the past' {
-        # A task stuck or disabled for a year must schedule one run from now, not catch up.
+        # A task stuck or disabled for a year must schedule one run in the next interval, not catch up.
         $Now = Get-UnixNow
         $Next = Get-CIPPScheduledTaskNextRun -Recurrence '1d' -ScheduledTime 1
-        $Next | Should -BeGreaterOrEqual ($Now + 86400)
-        $Next | Should -BeLessOrEqual ($Now + 86400 + 5)
+        $Next | Should -BeGreaterThan $Now
+        $Next | Should -BeLessOrEqual ($Now + 86400)
+    }
+
+    It 'keeps the original slot when a run is late by more than one interval' {
+        $Now = Get-UnixNow
+        $Last = $Now - (3 * 3600) - 600
+        $Next = Get-CIPPScheduledTaskNextRun -Recurrence '1h' -ScheduledTime $Last
+        $Next | Should -Be ($Last + 4 * 3600)
+        $Next | Should -BeOfType [int64]
+        (Get-CIPPScheduledTaskNextRun -Recurrence '1d' -ScheduledTime ($Now - 86400 * 5 - 60)) | Should -Be ($Now - 60 + 86400)
+    }
+
+    It 'returns the slot due now so a run-now keeps the schedule' {
+        $Now = Get-UnixNow
+        $Next = $Now + 1800
+        Get-CIPPScheduledTaskNextRun -Recurrence '1h' -ScheduledTime $Next -Due | Should -Be ($Next - 3600)
+        Get-CIPPScheduledTaskNextRun -Recurrence '1h' -ScheduledTime ($Now + 3 * 3600 + 1800) -Due | Should -Be ($Next - 3600)
+        Get-CIPPScheduledTaskNextRun -Recurrence '1h' -ScheduledTime ($Now - 600) -Due | Should -Be ($Now - 600)
+        Get-CIPPScheduledTaskNextRun -Recurrence '0' -ScheduledTime $Next -Due | Should -Be 0
     }
 }

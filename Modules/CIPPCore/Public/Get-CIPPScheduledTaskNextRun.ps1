@@ -4,13 +4,15 @@ function Get-CIPPScheduledTaskNextRun {
         Next run time for a scheduled task, in unix seconds, or 0 when it does not repeat.
     .DESCRIPTION
         Recurrence is stored as 30m, 1h, 1d and so on; a bare number is a day count, the shape older
-        tasks carry. A run further back than one interval is treated as starting now, so a task that
-        was disabled or stuck does not replay a backlog of missed runs.
+        tasks carry. The next run is the first ScheduledTime + n * interval after now, so a late run keeps
+        its original slot and a task that was disabled or stuck does not replay missed runs.
+        -Due returns the latest slot at or before now instead, for running a task early without moving its slots.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][AllowNull()]$Recurrence,
-        [Parameter(Mandatory = $true)][AllowNull()]$ScheduledTime
+        [Parameter(Mandatory = $true)][AllowNull()]$ScheduledTime,
+        [switch]$Due
     )
 
     $Value = [string]$Recurrence
@@ -26,7 +28,11 @@ function Get-CIPPScheduledTaskNextRun {
 
     $Now = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
     $Last = [int64]($ScheduledTime ?? 0)
-    if ($Last -lt ($Now - $SecondsToAdd)) { $Last = $Now }
+    if ($Due) {
+        if ($Last -le $Now) { return $Last }
+        return $Last - [int64][Math]::Ceiling(($Last - $Now) / $SecondsToAdd) * $SecondsToAdd
+    }
+    if ($Last -ge $Now) { return $Last + $SecondsToAdd }
 
-    return $Last + $SecondsToAdd
+    return $Last + ([int64][Math]::Floor(($Now - $Last) / $SecondsToAdd) + 1) * $SecondsToAdd
 }

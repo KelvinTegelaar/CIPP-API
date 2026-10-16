@@ -11,6 +11,8 @@ BeforeAll {
         Select-Object -First 1 -ExpandProperty FullName
     if (-not $FunctionPath) { throw 'Could not locate Push-ExecScheduledCommand.ps1 under Modules/' }
 
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPScheduledTaskNextRun.ps1')
+
     # Stubs for the module surface Push-ExecScheduledCommand touches.
     function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify) }
     function Set-CippUserAgentContext { param($Headers, $Source, $TaskId) }
