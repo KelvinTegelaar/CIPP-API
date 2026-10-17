@@ -15401,7 +15401,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -15425,6 +15430,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -15433,7 +15448,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -15475,10 +15500,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -16668,7 +16700,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -16692,6 +16729,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -16700,7 +16747,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -16742,10 +16799,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -18063,7 +18127,8 @@
                     "type": "string"
                   },
                   "ApplicationSecret": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "A pasted secret has no known keyId, so stop attributing any app secret to this instance."
                   },
                   "baselineOption": {
                     "type": "string"
@@ -18106,50 +18171,13 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                   "properties": {
-                    "APIKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ApplicationId": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ApplicationSecret": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "RefreshToken": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
                     },
-                    "RowKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "SASUrl": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "SecretValue": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "severity": {
                       "x-cipp-field-source": "backend"
-                    },
-                    "TenantId": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     }
                   }
                 }
@@ -26460,7 +26488,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -26484,6 +26517,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -26492,7 +26535,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -26531,10 +26584,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -27188,7 +27248,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -27212,6 +27277,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -27220,7 +27295,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -27262,10 +27347,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -31082,7 +31174,12 @@
                     "Action": {
                       "x-cipp-field-source": "backend"
                     },
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -31106,6 +31203,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -31114,7 +31221,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -31159,10 +31276,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -33350,7 +33474,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -33374,6 +33503,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -33382,7 +33521,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -33424,10 +33573,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -34796,6 +34952,215 @@
           }
         ],
         "x-cipp-role": "CIPP.AppSettings.ReadWrite"
+      }
+    },
+    "/api/ExecSAMCredentials": {
+      "post": {
+        "summary": "Health and management of the CIPP-SAM application's secrets, certificates and refresh tokens.",
+        "operationId": "ExecSAMCredentials",
+        "tags": [
+          "CIPP > Setup"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "keyId": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ApplicationId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "colour": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverFooterText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverImage": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverImageId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverImageIds": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverStock": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverUploads": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Enabled": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "logo": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "logoImageId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "logoImageIds": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "logoUploads": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "MaxDuration": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "reportDefaults": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Resolver": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RetentionDays": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "roleColours": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "secondaryColour": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "showFooter": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "StandardsExcludeAllTenants": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timezone": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "TimezoneSource": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Value": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "watermarkEnabled": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "watermarkText": {
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecSAMRoles": {

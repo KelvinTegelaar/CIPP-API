@@ -36,13 +36,22 @@ function Start-UpdateTokensTimer {
             Write-LogMessage -API 'Update Tokens' -message 'Error updating refresh token, see Log Data for details. Will try again in 7 days.' -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
         }
 
+        # Credentials before this run, so the changes it makes can be acknowledged to the credential monitor.
+        # Unknown before-state acknowledges nothing, so no unrelated change is swallowed.
+        $CredentialsBefore = $null
+        try { $CredentialsBefore = @((Get-CIPPSAMCredentials).Credentials | ForEach-Object keyId) } catch { }
+
         # Check application secret expiration for $env:ApplicationId and generate a new application secret if expiration is within 30 days.
         try {
             $AppId = $env:ApplicationID
             $AppRegistration = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')?`$select=id,passwordCredentials,servicePrincipalLockConfiguration" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
-            # sort by latest expiration date and get the first one
-            $LastPasswordCredential = $AppRegistration.passwordCredentials | Sort-Object -Property endDateTime -Descending | Select-Object -First 1
             $PasswordCredentials = $AppRegistration.passwordCredentials | Sort-Object -Property endDateTime -Descending
+            # Judge expiry on this instance's own secret when it is tracked; other instances or
+            # integrations may hold newer secrets on the same app.
+            $ConfigTable = Get-CIPPTable -tablename 'Config'
+            $AppCache = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'AppCache' and RowKey eq 'AppCache'"
+            $TrackedCredential = if ($AppCache.SecretKeyId) { $PasswordCredentials | Where-Object { $_.keyId -eq $AppCache.SecretKeyId } | Select-Object -First 1 }
+            $LastPasswordCredential = $TrackedCredential ?? ($PasswordCredentials | Select-Object -First 1)
 
             try {
                 $AppPolicyStatus = Update-AppManagementPolicy
@@ -59,37 +68,14 @@ function Start-UpdateTokensTimer {
                 Write-Information "Certificate authentication is enabled for $AppId; skipping client secret generation."
             } elseif ($LastPasswordCredential.endDateTime -lt (Get-Date).AddDays(30).ToUniversalTime()) {
                 Write-Information "Application secret for $AppId is expiring soon. Generating a new application secret."
-                $AppSecret = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppRegistration.id)/addPassword" -Body '{"passwordCredential":{"displayName":"UpdateTokens"}}' -NoAuthCheck $true -AsApp $true -ErrorAction Stop
-                Write-Information "New application secret generated for $AppId. Expiration date: $($AppSecret.endDateTime)."
+                try {
+                    $AppSecret = Update-CIPPSAMSecret -ApplicationObjectId $AppRegistration.id -DisplayName 'UpdateTokens' -Source 'ScheduledRotation' -APIName 'Update Tokens'
+                    Write-Information "New application secret generated for $AppId. Expiration date: $($AppSecret.EndDateTime)."
+                } catch {
+                    Write-LogMessage -API 'Update Tokens' -message "Failed to rotate the application secret for $AppId, see Log Data for details. Will try again in 7 days." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+                }
             } else {
                 Write-Information "Application secret for $AppId is valid until $($LastPasswordCredential.endDateTime). No need to generate a new application secret."
-            }
-
-            if ($AppSecret) {
-                try {
-                    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
-                        $Table = Get-CIPPTable -tablename 'DevSecrets'
-                        $Secret = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
-                        $Secret.ApplicationSecret = $AppSecret.secretText
-                        Add-AzDataTableEntity @Table -Entity $Secret -Force
-                    } else {
-                        Set-CippKeyVaultSecret -VaultName $KV -Name 'ApplicationSecret' -SecretValue (ConvertTo-SecureString -String $AppSecret.secretText -AsPlainText -Force)
-                    }
-                    Write-LogMessage -API 'Update Tokens' -message "New application secret generated for $AppId. Expiration date: $($AppSecret.endDateTime)." -sev 'INFO'
-                } catch {
-                    # Storing the new secret failed. It exists on the app registration but not where CIPP reads
-                    # it, and as the newest credential it would suppress regeneration on the next run - leaving
-                    # the stored secret permanently stale. Roll the new secret back off the app registration so
-                    # state stays consistent and regeneration is retried on the next run.
-                    Write-LogMessage -API 'Update Tokens' -message "Failed to store new application secret for $AppId. Rolling back the generated secret, see Log Data for details. Will try again in 7 days." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
-                    try {
-                        New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppRegistration.id)/removePassword" -Body "{`"keyId`":`"$($AppSecret.keyId)`"}" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
-                        Write-Information "Rolled back unstored application secret with keyId $($AppSecret.keyId)."
-                    } catch {
-                        Write-LogMessage -API 'Update Tokens' -message "Failed to roll back unstored application secret with keyId $($AppSecret.keyId) for $AppId, see Log Data for details." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
-                    }
-                    $AppSecret = $null
-                }
             }
 
             # Clean up expired application secrets
@@ -99,7 +85,7 @@ function Start-UpdateTokensTimer {
                 foreach ($Secret in $ExpiredSecrets) {
                     try {
                         New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppRegistration.id)/removePassword" -Body "{`"keyId`":`"$($Secret.keyId)`"}" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
-                        Write-Information "Removed expired application secret with keyId $($Secret.keyId)."
+                        Write-LogMessage -API 'Update Tokens' -tenant 'Global' -message "Scheduled cleanup: removed expired CIPP-SAM client secret '$($Secret.displayName)' (keyId $($Secret.keyId)) from $AppId." -sev 'Alert'
                     } catch {
                         Write-LogMessage -API 'Update Tokens' -message "Error removing expired application secret with keyId $($Secret.keyId), see Log Data for details." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
                     }
@@ -139,6 +125,38 @@ function Start-UpdateTokensTimer {
             Write-LogMessage -API 'Update Tokens' -message 'Error updating SAM certificate, will try again in 7 days' -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
         }
 
+        # Rotate the CIPP-SSO client secret within 30 days of expiry. Isolated so SSO failures never block SAM work.
+        try {
+            $MigrationTable = Get-CIPPTable -tablename 'SSOMigration'
+            $Migration = Get-CIPPAzDataTableEntity @MigrationTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'"
+            $SSOAppId = $Migration.AppId
+            if (-not $SSOAppId) {
+                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+                    $DevTable = Get-CIPPTable -tablename 'DevSecrets'
+                    $SSOAppId = (Get-CIPPAzDataTableEntity @DevTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'SSO'").SSOAppId
+                } else {
+                    try { $SSOAppId = Get-CippKeyVaultSecret -Name 'SSOAppId' -AsPlainText -ErrorAction Stop } catch { $SSOAppId = $null }
+                }
+            }
+            if ($SSOAppId) {
+                $SSOApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$SSOAppId')?`$select=id,passwordCredentials" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
+                $NewestSSOSecret = $SSOApp.passwordCredentials | Sort-Object -Property endDateTime -Descending | Select-Object -First 1
+                if ($NewestSSOSecret.endDateTime -lt (Get-Date).AddDays(30).ToUniversalTime()) {
+                    try {
+                        $NewSSOSecret = Add-CIPPSSOAppSecret -ObjectId $SSOApp.id -AppId $SSOAppId
+                        Set-CIPPSSOStoredCredentials -AppSecret $NewSSOSecret
+                        Write-LogMessage -API 'Update Tokens' -tenant 'Global' -message "Scheduled rotation: new CIPP-SSO client secret created for $SSOAppId (previous secret keyId $($NewestSSOSecret.keyId) expires $($NewestSSOSecret.endDateTime)). No action needed beyond the restart below." -sev 'Alert'
+                        # A restart from a timer would interrupt running work; the previous secret stays valid until it expires.
+                        Write-LogMessage -API 'Update Tokens' -tenant 'Global' -message "Restart required: CIPP keeps signing in with the previous CIPP-SSO secret until the instance restarts. Restart before $($NewestSSOSecret.endDateTime) to apply the new secret." -sev 'Warning'
+                    } catch {
+                        Write-LogMessage -API 'Update Tokens' -tenant 'Global' -message "Scheduled rotation: failed to rotate the CIPP-SSO client secret for $SSOAppId, will try again in 7 days." -sev 'Error' -LogData (Get-CippException -Exception $_)
+                    }
+                }
+            }
+        } catch {
+            Write-Warning "Error checking the CIPP-SSO client secret $($_.Exception.Message)."
+        }
+
         # Get new refresh token for each direct added tenant
         $TenantList = Get-Tenants -IncludeAll | Where-Object { $_.Excluded -eq $false -and $_.delegatedPrivilegeStatus -eq 'directTenant' }
         if ($TenantList.Count -eq 0) {
@@ -174,6 +192,13 @@ function Start-UpdateTokensTimer {
                 }
             }
         }
+
+        # Changes this run made still alert, worded as scheduled so they do not read as a compromise.
+        try {
+            $CredentialsAfter = Get-CIPPSAMCredentials
+            $Changed = if ($null -ne $CredentialsBefore) { @(Compare-Object -ReferenceObject $CredentialsBefore -DifferenceObject @($CredentialsAfter.Credentials | ForEach-Object keyId) | ForEach-Object InputObject) } else { @() }
+            $null = Compare-CIPPSAMCredentialSnapshot -Acknowledge $Changed -AcknowledgeNote 'Changed by this CIPP instance during the scheduled token update.' -CredentialState $CredentialsAfter
+        } catch { Write-Warning "Could not refresh the SAM credential snapshot: $($_.Exception.Message)" }
 
         # Write an information log with the current time.
         Write-Information "UpdateTokens completed: $currentUTCtime"

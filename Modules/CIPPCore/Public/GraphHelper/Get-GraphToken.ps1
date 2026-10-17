@@ -91,6 +91,12 @@ function Get-GraphToken {
                 } -Force
             }
         }
+        # Same ApplicationId but rotated secret, new refresh token or changed auth mode: writers bump
+        # CredentialVersion (Set-CIPPCredentialVersion) and every other runspace reloads here.
+        if ($AppCache.CredentialVersion -and $env:CIPPCredentialVersion -ne $AppCache.CredentialVersion) {
+            $CIPPAuth = Get-CIPPAuthentication
+            $env:CIPPCredentialVersion = [string]$AppCache.CredentialVersion
+        }
         $refreshToken = $env:RefreshToken
         #Get list of tenants that have 'directTenant' set to true
         #get directtenants directly from table, avoid get-tenants due to performance issues
@@ -252,8 +258,11 @@ function Get-GraphToken {
 
             if (!$donotset) { Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant }
             # Errors that only an admin can fix: fail fast for 30 min instead of re-asking Entra on every call.
+            # An invalid client secret (7000215) is the exception: a freshly rotated secret returns it
+            # while Entra replicates, so it is only held for a minute.
             if ($UseSharedTokenCache -and $SharedTokenCacheKey -and $Tenant.LastGraphError -match 'AADSTS(7000215|7000222|700082|9002313|50173|700016|7000229|500014|500011|90002|50020|65001|50076|50079|53003)\b') {
-                [CIPP.CIPPTokenCache]::Store("$SharedTokenCacheKey|failed", [string]$Tenant.LastGraphError, [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 1800)
+                $FailureTtl = if ($Tenant.LastGraphError -match 'AADSTS7000215\b') { 60 } else { 1800 }
+                [CIPP.CIPPTokenCache]::Store("$SharedTokenCacheKey|failed", [string]$Tenant.LastGraphError, [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $FailureTtl)
             }
             throw "Could not get token: $($Tenant.LastGraphError)"
         }

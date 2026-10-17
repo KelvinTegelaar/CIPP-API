@@ -16,8 +16,18 @@ BeforeAll {
     function Update-CIPPSAMCertificate {}
     function Write-LogMessage { param($API, $message, $sev, $tenant, $tenantid, $LogData) }
     function Get-CippException { param($Exception) }
+    function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
+    function Get-CippKeyVaultName {}
+    function Get-CippKeyVaultSecret { param($VaultName, $Name, [switch]$AsPlainText) }
+    function Set-CippKeyVaultSecret { param($VaultName, $Name, $SecretValue) }
+    function Get-CIPPSAMCredentials {}
+    function Compare-CIPPSAMCredentialSnapshot { param($Acknowledge, $AcknowledgeNote, $CredentialState) }
+    function Set-CIPPSAMCredentialRecord { param($KeyId, $Source, $Label, $Headers) }
+    function Add-CIPPSSOAppSecret { param($ObjectId, $AppId) }
+    function Set-CIPPSSOStoredCredentials { param($AppSecret) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Entrypoints/Timer Functions/Start-UpdateTokensTimer.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Update-CIPPSAMSecret.ps1')
 }
 
 Describe 'Start-UpdateTokensTimer certificate mode' {
@@ -42,6 +52,10 @@ Describe 'Start-UpdateTokensTimer certificate mode' {
         Mock Update-CIPPSAMCertificate { [pscustomobject]@{ Renewed = $false; Thumbprint = 'abc'; NotAfter = (Get-Date).AddYears(1) } }
         Mock Write-LogMessage {}
         Mock Get-CippException { @{} }
+        Mock Add-CIPPAzDataTableEntity {}
+        Mock Get-CIPPSAMCredentials { [pscustomobject]@{ Credentials = @() } }
+        Mock Compare-CIPPSAMCredentialSnapshot {}
+        Mock Set-CIPPSAMCredentialRecord { 'CIPP' }
     }
 
     AfterEach {
@@ -65,5 +79,66 @@ Describe 'Start-UpdateTokensTimer certificate mode' {
         Start-UpdateTokensTimer -Confirm:$false
 
         Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -match 'addPassword' }
+    }
+}
+
+Describe 'Start-UpdateTokensTimer tracked secret expiry' {
+    BeforeEach {
+        $script:SavedEnv = @{}
+        foreach ($Name in 'CertificateAuthMode', 'ApplicationID', 'TenantID', 'AzureWebJobsStorage') { $script:SavedEnv[$Name] = [Environment]::GetEnvironmentVariable($Name) }
+        Remove-Item env:CertificateAuthMode -ErrorAction SilentlyContinue
+        $env:ApplicationID = 'sam-app-id'
+        $env:TenantID = '11111111-2222-3333-4444-555555555555'
+        $env:AzureWebJobsStorage = 'UseDevelopmentStorage=true'
+
+        Mock Get-GraphToken { @{ Refresh_token = 'refresh-token' } }
+        Mock Get-CIPPTable { @{} }
+        Mock Get-Tenants { @() }
+        Mock Add-AzDataTableEntity {}
+        Mock Add-CIPPAzDataTableEntity {}
+        # This instance's secret expires in 10 days; another CIPP instance's secret on the same app runs for a year.
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { $Filter -match 'AppCache' } { [pscustomobject]@{ ApplicationId = 'sam-app-id'; SecretKeyId = 'ours' } }
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { $Filter -match "RowKey eq 'Secret'" } { [pscustomobject]@{ PartitionKey = 'Secret'; RowKey = 'Secret'; RefreshToken = '' } }
+        Mock Get-CIPPAzDataTableEntity { $null }
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{
+                id                                = 'app-obj-id'
+                passwordCredentials               = @(
+                    [pscustomobject]@{ keyId = 'ours'; displayName = 'UpdateTokens'; endDateTime = (Get-Date).AddDays(10).ToUniversalTime() }
+                    [pscustomobject]@{ keyId = 'theirs'; displayName = 'UpdateTokens'; endDateTime = (Get-Date).AddDays(365).ToUniversalTime() }
+                )
+                servicePrincipalLockConfiguration = [pscustomobject]@{ isEnabled = $true }
+            }
+        }
+        Mock New-GraphPostRequest { [pscustomobject]@{ secretText = 's'; keyId = 'new'; endDateTime = (Get-Date).AddYears(1) } }
+        Mock Update-AppManagementPolicy { [pscustomobject]@{ PolicyAction = 'none' } }
+        Mock Update-CIPPSAMCertificate { [pscustomobject]@{ Renewed = $false } }
+        Mock Write-LogMessage {}
+        Mock Get-CippException { @{} }
+        Mock Get-CIPPSAMCredentials { [pscustomobject]@{ Credentials = @() } }
+        Mock Compare-CIPPSAMCredentialSnapshot {}
+        Mock Set-CIPPSAMCredentialRecord { 'CIPP' }
+    }
+
+    AfterEach {
+        foreach ($Name in $script:SavedEnv.Keys) {
+            if ($null -eq $script:SavedEnv[$Name]) { Remove-Item "env:$Name" -ErrorAction SilentlyContinue }
+            else { Set-Item "env:$Name" -Value $script:SavedEnv[$Name] }
+        }
+    }
+
+    It 'rotates when the tracked secret expires soon even though a newer secret exists' {
+        Start-UpdateTokensTimer -Confirm:$false
+
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -match 'addPassword' }
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Entity.SecretKeyId -eq 'new' }
+    }
+
+    It 'falls back to the newest secret when the tracked keyId is gone from the app' {
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { $Filter -match 'AppCache' } { [pscustomobject]@{ ApplicationId = 'sam-app-id'; SecretKeyId = 'deleted' } }
+
+        Start-UpdateTokensTimer -Confirm:$false
+
+        Should -Invoke New-GraphPostRequest -Times 0 -Exactly -ParameterFilter { $uri -match 'addPassword' }
     }
 }

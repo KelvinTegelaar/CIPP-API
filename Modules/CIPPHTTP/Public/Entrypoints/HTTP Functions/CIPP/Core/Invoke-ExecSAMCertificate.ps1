@@ -76,7 +76,17 @@ function Invoke-ExecSAMCertificate {
                 $StatusCode = [HttpStatusCode]::OK
             }
             'Renew' {
-                $Result = Update-CIPPSAMCertificate -Force -ErrorAction Stop
+                # Unknown before-state acknowledges nothing, so no unrelated change is mislabelled as CIPP's own.
+                $Before = $null
+                try { $Before = @((Get-CIPPSAMCredentials).Credentials | ForEach-Object keyId) } catch { }
+                $Actor = 'CIPP'
+                try { $Actor = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails ?? 'CIPP' } catch { }
+                $Result = Update-CIPPSAMCertificate -Force -LogHeaders $Request.Headers -APIName $Request.Params.CIPPEndpoint -ErrorAction Stop
+                try {
+                    $After = Get-CIPPSAMCredentials
+                    $Changed = if ($null -ne $Before) { @(Compare-Object -ReferenceObject $Before -DifferenceObject @($After.Credentials | ForEach-Object keyId) | ForEach-Object InputObject) } else { @() }
+                    $null = Compare-CIPPSAMCredentialSnapshot -Acknowledge $Changed -AcknowledgeNote "Certificate renewed by CIPP (manual, by $Actor)." -CredentialState $After
+                } catch { Write-Warning "Could not refresh the SAM credential snapshot: $($_.Exception.Message)" }
                 $Body = @{
                     Results     = "SAM certificate renewed. Thumbprint: $($Result.Thumbprint), expires: $($Result.NotAfter)"
                     Thumbprint  = $Result.Thumbprint
@@ -87,7 +97,7 @@ function Invoke-ExecSAMCertificate {
             }
         }
     } catch {
-        Write-LogMessage -API 'ExecSAMCertificate' -message "Failed to process SAM certificate request: $($_.Exception.Message)" -sev 'Error' -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -headers $Request.Headers -API 'ExecSAMCertificate' -tenant 'Global' -message "Failed to process SAM certificate $Action request: $($_.Exception.Message)" -sev 'Error' -LogData (Get-CippException -Exception $_)
         $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{
             Results = "Failed to process SAM certificate request: $($_.Exception.Message)"

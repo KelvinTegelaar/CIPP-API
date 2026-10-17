@@ -55,6 +55,7 @@ function Invoke-ExecUpdateRefreshToken {
         } else {
             $null = Clear-CippTokenCache -TenantFilter $Request.body.tenantId
         }
+        $null = Set-CIPPCredentialVersion
 
         if ($IsPartnerTenant) {
             try {

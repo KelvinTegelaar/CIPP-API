@@ -25,6 +25,8 @@ function Invoke-ExecCippFunction {
         'Set-CIPPSAMCertificate'
         'Update-CIPPSAMCertificate'
         'ConvertTo-CIPPSAMCertificateInfo'
+        'Update-CIPPSAMSecret'
+        'Set-CIPPSAMCredentialRecord'
     )
 
     $Function = $Request.Body.FunctionName

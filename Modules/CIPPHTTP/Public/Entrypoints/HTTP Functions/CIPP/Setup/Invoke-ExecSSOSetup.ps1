@@ -200,6 +200,19 @@ function Invoke-ExecSSOSetup {
             } catch {
                 Write-Information "[SSO-Setup] Redirect URI status check failed (non-fatal): $($_.Exception.Message)"
             }
+
+            # Best-effort: the card shows when the newest SSO secret expires; the token timer rotates it.
+            if ($Body.Results -is [hashtable] -and $Body.Results.appId) {
+                try {
+                    $SSOApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($Body.Results.appId)')?`$select=passwordCredentials" -AsApp $true -NoAuthCheck $true
+                    $NewestSecret = $SSOApp.passwordCredentials | Sort-Object -Property endDateTime -Descending | Select-Object -First 1
+                    $Body.Results.secretExpires = $NewestSecret.endDateTime
+                    $Body.Results.secretKeyId = $NewestSecret.keyId
+                } catch {
+                    $Body.Results.secretExpires = $null
+                    $Body.Results.secretKeyId = $null
+                }
+            }
         }
 
         'RefreshRedirectUris' {
@@ -593,7 +606,9 @@ function Invoke-ExecSSOSetup {
 
                 & $SaveMigrationRow @{ LastError = '' }
 
-                Write-LogMessage -API $APIName -headers $Headers -message "SSO app secret rotated for $($Existing.AppId)" -sev Info
+                $Actor = 'CIPP'
+                try { $Actor = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails ?? 'CIPP' } catch { }
+                Write-LogMessage -API $APIName -headers $Headers -tenant 'Global' -message "Manual rotation by $Actor`: new CIPP-SSO client secret created for $($Existing.AppId)" -sev Alert
                 $Body = @{
                     Results = @{
                         message  = 'Client secret rotated successfully. The new secret will be picked up from Key Vault on next restart.'
@@ -602,7 +617,7 @@ function Invoke-ExecSSOSetup {
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API $APIName -headers $Headers -message "SSO secret rotation failed: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                Write-LogMessage -API $APIName -headers $Headers -tenant 'Global' -message "SSO secret rotation failed: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 $StatusCode = [HttpStatusCode]::InternalServerError
                 $Body = @{ Results = "Secret rotation failed: $($ErrorMessage.NormalizedError)" }
             }

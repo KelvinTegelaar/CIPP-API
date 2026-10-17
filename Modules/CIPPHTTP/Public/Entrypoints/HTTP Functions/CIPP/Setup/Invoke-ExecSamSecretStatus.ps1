@@ -37,49 +37,7 @@ function Invoke-ExecSamSecretStatus {
                 })
         }
 
-        # Same placeholder set the deployment template seeds and Get-CIPPAuthentication skips.
-        $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
-        $Configured = $env:ApplicationID -and $env:ApplicationID -notmatch $PlaceholderPattern -and
-        $env:ApplicationSecret -and $env:ApplicationSecret -notmatch $PlaceholderPattern -and
-        $env:TenantID -and $env:TenantID -notmatch $PlaceholderPattern
-
-        if (-not $Configured) {
-            $Results = @{
-                ready   = $false
-                reason  = 'notConfigured'
-                message = 'The application registration has not been created yet. Complete the application step first.'
-            }
-        } else {
-            # A client credentials request is the cheapest way to ask Entra whether the secret is
-            # live, and going direct deliberately bypasses CIPP's token cache - a token cached
-            # before the secret was replaced would report ready when it is not. The authority has
-            # to be tenant scoped; /common and /organizations do not accept this grant.
-            $Body = @{
-                client_id     = $env:ApplicationID
-                client_secret = $env:ApplicationSecret
-                scope         = 'https://graph.microsoft.com/.default'
-                grant_type    = 'client_credentials'
-            }
-            $Response = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$($env:TenantID)/oauth2/v2.0/token" -Method POST -Body $Body -ContentType 'application/x-www-form-urlencoded' -SkipHttpErrorCheck
-
-            if ($Response.access_token) {
-                $Results = @{ ready = $true; reason = 'ready' }
-            } elseif ($Response.error_description -match 'AADSTS7000215') {
-                $Results = @{
-                    ready   = $false
-                    reason  = 'propagating'
-                    message = 'The application secret has been created but Microsoft has not finished activating it. This usually takes a few minutes and needs nothing recreating.'
-                }
-            } else {
-                # Anything else is a real problem - a deleted secret, a disabled application -
-                # and must not be presented as something waiting will fix.
-                $Results = @{
-                    ready   = $false
-                    reason  = 'error'
-                    message = $Response.error_description ?? 'The application secret could not be validated.'
-                }
-            }
-        }
+        $Results = Test-CIPPSAMSecret
     } catch {
         $Results = @{
             ready   = $false

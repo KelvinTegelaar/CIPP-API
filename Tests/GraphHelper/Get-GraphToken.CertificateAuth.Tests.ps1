@@ -34,7 +34,7 @@ Describe 'Get-GraphToken certificate-exclusive gating' {
         # A clean, non-direct-tenant environment: the tenant we ask for equals $env:TenantID so the
         # direct-tenant refresh-token branch is never taken.
         $script:SavedEnv = @{}
-        foreach ($Name in 'CertificateAuthMode', 'ApplicationID', 'ApplicationSecret', 'TenantID', 'RefreshToken', 'SetFromProfile') {
+        foreach ($Name in 'CertificateAuthMode', 'ApplicationID', 'ApplicationSecret', 'TenantID', 'RefreshToken', 'SetFromProfile', 'CIPPCredentialVersion') {
             $script:SavedEnv[$Name] = [Environment]::GetEnvironmentVariable($Name)
         }
         $env:ApplicationID = 'sam-app-id'
@@ -112,6 +112,17 @@ Describe 'Get-GraphToken certificate-exclusive gating' {
             -not $Body.ContainsKey('client_assertion')
         }
     }
+    It 'holds an invalid-client-secret failure for about a minute, not the 30 minutes other admin errors get' {
+        Mock Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property) if ($Filter -like "*Tenants*" -and $Filter -notlike "*directTenant*") { [pscustomobject]@{ RowKey = 't'; LastGraphError = ''; LastGraphTokenError = '' } } }
+        Mock Invoke-CIPPRestMethod { throw 'invalid_client:AADSTS7000215: Invalid client secret provided.' }
+        $Key = [CIPP.CIPPTokenCache]::BuildKey($env:TenantID, 'https://graph.microsoft.com/.default', $false, $env:ApplicationID, 'refresh_token')
+
+        { Get-GraphToken } | Should -Throw '*AADSTS7000215*'
+
+        $Failure = [CIPP.CIPPTokenCache]::Lookup("$Key|failed", 0)
+        $Failure.Found | Should -BeTrue
+        ($Failure.ExpiresOnUnix - [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()) | Should -BeLessOrEqual 60
+    }
 }
 
 Describe 'Get-GraphToken stale SAM certificate self-heal' {
@@ -174,5 +185,26 @@ Describe 'Get-GraphToken stale SAM certificate self-heal' {
 
         { Get-GraphToken -AsApp $true } | Should -Throw '*AADSTS700027*'
         Should -Invoke Get-GraphTokenFromCert -Times 1 -Exactly
+    }
+
+    It 'reloads credentials when the AppCache CredentialVersion differs from this runspace' {
+        $env:CIPPCredentialVersion = 'v1'
+        Mock Get-CIPPAuthentication { $true }
+        Mock Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property) if ($Filter -like "*AppCache*") { [pscustomobject]@{ ApplicationId = 'sam-app-id'; CredentialVersion = 'v2' } } }
+
+        $null = Get-GraphToken -AsApp $true
+
+        Should -Invoke Get-CIPPAuthentication -Times 1 -Exactly
+        $env:CIPPCredentialVersion | Should -Be 'v2'
+    }
+
+    It 'does not reload when the CredentialVersion already matches' {
+        $env:CIPPCredentialVersion = 'v2'
+        Mock Get-CIPPAuthentication { $true }
+        Mock Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property) if ($Filter -like "*AppCache*") { [pscustomobject]@{ ApplicationId = 'sam-app-id'; CredentialVersion = 'v2' } } }
+
+        $null = Get-GraphToken -AsApp $true
+
+        Should -Invoke Get-CIPPAuthentication -Times 0 -Exactly
     }
 }
