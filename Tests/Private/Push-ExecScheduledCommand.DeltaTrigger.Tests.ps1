@@ -28,6 +28,7 @@ BeforeAll {
     function Clear-CIPPImmutableID { param($UserID, $TenantFilter, $APIName) }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPScheduledTaskNextRun.ps1')
 
     $script:TaskEpoch = 1700000000
     function Get-UnixNow { [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds }

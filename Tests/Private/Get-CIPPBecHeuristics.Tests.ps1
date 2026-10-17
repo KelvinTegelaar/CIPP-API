@@ -55,8 +55,13 @@ Describe 'Get-CIPPBecHeuristics' {
 
     It 'merges the delegated names from RiskyPermissions.json into catalogNames' {
         $H = Get-CIPPBecHeuristics
-        $H.riskyScopes.catalogNames | Should -Not -BeNullOrEmpty
-        @($H.riskyScopes.catalogNames) | Should -Not -Contain 'RoleManagement.ReadWrite.Directory' -Because 'application permissions are not delegated scopes'
+        $Catalog = Get-Content (Join-Path $script:BackendRoot 'Config/RiskyPermissions.json') -Raw | ConvertFrom-Json
+        $Delegated = @($Catalog | Where-Object type -EQ 'Delegated' | ForEach-Object name)
+        $ApplicationOnly = @($Catalog | Where-Object { $_.type -eq 'Application' -and $_.name -notin $Delegated } | ForEach-Object name)
+        $Delegated | Should -Not -BeNullOrEmpty
+        $ApplicationOnly | Should -Not -BeNullOrEmpty
+        foreach ($Name in $Delegated) { @($H.riskyScopes.catalogNames) | Should -Contain $Name }
+        foreach ($Name in $ApplicationOnly) { @($H.riskyScopes.catalogNames) | Should -Not -Contain $Name -Because 'application permissions are not delegated scopes' }
     }
 
     It 'throws when the file is missing' {
