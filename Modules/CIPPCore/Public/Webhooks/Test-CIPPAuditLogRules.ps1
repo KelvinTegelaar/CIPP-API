@@ -680,6 +680,10 @@ function Test-CIPPAuditLogRules {
                             Write-Information "Error flattening ModifiedProperties for $($AuditRecord.id): $($_.Exception.Message)"
                         }
                     }
+                    if ($Data.Actor) {
+                        # One string so a rule can test who acted (e.g. MS-PIM); -notlike against the Actor array itself is always true.
+                        $Flattened['CIPPActor'] = @(foreach ($ActorEntry in $Data.Actor) { [string]$ActorEntry.ID }) -join ', '
+                    }
                     if ($Flattened.Count -gt 0) {
                         $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue
                     }

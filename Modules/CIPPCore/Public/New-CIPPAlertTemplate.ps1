@@ -320,10 +320,10 @@ function New-CIPPAlertTemplate {
                 $ButtonText = 'User Management'
                 $AfterButtonText = '<p>If this is incorrect, use the user management screen to reenable MFA</p>'
             }
-            'Remove Member from a role.' {
+            { $_ -in @('Remove member from role.', 'Remove Member from a role.') } {
                 $Title = "$($Tenant) - Role change detected for $($data.ObjectId)"
                 $Table = ($data.CIPPModifiedProperties | ConvertFrom-Json | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = "<p>$($data.UserId) has removed $($data.ObjectId) to the $(($data.ModifiedProperties | Where-Object -Property Name -EQ 'Role.DisplayName').NewValue) role. The information about the role can be found in the table below.</p>$Table"
+                $IntroText = "<p>$($data.UserId) has removed $($data.ObjectId) from the $(($data.ModifiedProperties | Where-Object -Property Name -EQ 'Role.DisplayName').OldValue) role. The information about the role can be found in the table below.</p>$Table"
                 if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
                 if ($LocationInfo) {
                     $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
