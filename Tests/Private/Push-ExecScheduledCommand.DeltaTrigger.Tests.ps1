@@ -120,14 +120,15 @@ Describe 'Push-ExecScheduledCommand delta trigger' {
             [int64]$Final.ScheduledTime | Should -Be ($Base + 900)
         }
 
-        It 'pulls a long stale schedule forward instead of setting a run time in the past' {
+        It 'pulls a long stale schedule forward to its next slot instead of setting a run time in the past' {
             Mock -CommandName Get-DeltaQueryUrl -MockWith { throw 'Delta Query not found.' }
 
             $Base = Get-UnixNow
             $Final = Invoke-Task -Task (New-DeltaTask -Recurrence '15m' -ScheduledTime $script:TaskEpoch)
 
-            [int64]$Final.ScheduledTime | Should -BeGreaterOrEqual ($Base + 900)
+            [int64]$Final.ScheduledTime | Should -BeGreaterThan $Base
             [int64]$Final.ScheduledTime | Should -BeLessOrEqual ($Base + 960)
+            ([int64]$Final.ScheduledTime - $script:TaskEpoch) % 900 | Should -Be 0 -Because 'a late task keeps its original slot'
         }
 
         It 'catches a failure from the delta refresh as well as the lookup' {
