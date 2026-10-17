@@ -277,6 +277,60 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         }
     }
 
+    Context 'a credential change with a KeyDescription' {
+        BeforeAll {
+            # Same shape as Entra's KeyDescription old/new values: a JSON array of the full key list.
+            function New-KeyRow {
+                param([string[]]$OldKeys, [string[]]$NewKeys)
+                $Row = New-AuditRow
+                $Row.auditData.ModifiedProperties = @(
+                    [pscustomobject]@{
+                        Name     = 'KeyDescription'
+                        OldValue = ConvertTo-Json -InputObject @($OldKeys) -Compress
+                        NewValue = ConvertTo-Json -InputObject @($NewKeys) -Compress
+                    }
+                )
+                $Row
+            }
+            $script:OldSecret = '[KeyIdentifier=11111111-1111-1111-1111-111111111111,KeyType=Password,KeyUsage=Verify,DisplayName=existing]'
+            $script:OldCert = '[KeyIdentifier=33333333-3333-3333-3333-333333333333,KeyType=AsymmetricX509Cert,KeyUsage=Verify,DisplayName=CN=existing]'
+            $script:NewSecret = '[KeyIdentifier=22222222-2222-2222-2222-222222222222,KeyType=Password,KeyUsage=Verify,DisplayName=backdoor]'
+            $script:NewCert = '[KeyIdentifier=44444444-4444-4444-4444-444444444444,KeyType=AsymmetricX509Cert,KeyUsage=Verify,DisplayName=CN=backdoor]'
+            $script:NewSigningCert = '[KeyIdentifier=55555555-5555-5555-5555-555555555555,KeyType=AsymmetricX509Cert,KeyUsage=Sign,DisplayName=CN=saml]'
+        }
+
+        It 'lists only the keys that were added' {
+            $Row = New-KeyRow -OldKeys @($script:OldCert) -NewKeys @($script:OldCert, $script:NewSecret)
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.CIPPAddedKeyTypes | Should -Be 'Password'
+            $data.CIPPAddedKeys | Should -Be 'Password: 22222222-2222-2222-2222-222222222222'
+        }
+
+        It 'is empty when a key was only removed' {
+            $Row = New-KeyRow -OldKeys @($script:OldSecret, $script:OldCert) -NewKeys @($script:OldCert)
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.CIPPAddedKeyTypes | Should -Be ''
+        }
+
+        It 'reports a certificate swapped in place of another' {
+            $Row = New-KeyRow -OldKeys @($script:OldCert) -NewKeys @($script:NewCert)
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.CIPPAddedKeyTypes | Should -Be 'AsymmetricX509Cert'
+        }
+
+        It 'reports both types once when several keys were added' {
+            $Row = New-KeyRow -OldKeys @() -NewKeys @($script:NewSecret, $script:NewCert, $script:OldSecret)
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.CIPPAddedKeyTypes | Should -Be 'Password,AsymmetricX509Cert'
+        }
+
+        It 'ignores signing keys, which cannot be used to sign in as the app' {
+            $Row = New-KeyRow -OldKeys @() -NewKeys @($script:NewSigningCert)
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.CIPPAddedKeyTypes | Should -Be ''
+        }
+    }
+
     Context 'a record carrying an ignore-listed extended property' {
         BeforeEach {
             # 'Consent:Set' is on $ExtendedPropertiesIgnoreList inside the function.

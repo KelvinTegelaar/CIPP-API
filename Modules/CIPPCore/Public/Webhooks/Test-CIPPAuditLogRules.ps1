@@ -29,6 +29,7 @@ function Test-CIPPAuditLogRules {
             [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
         )
         $script:PartnerUpnRegex = [regex]'user_([0-9a-f]{32})@([^@]+\.onmicrosoft\.com)'
+        $script:KeyDescriptionRegex = [regex]'\[KeyIdentifier=(?<Id>[^,\]]*),KeyType=(?<Type>[^,\]]*),KeyUsage=(?<Usage>[^,\]]*)'
         $script:PartnerExchangeRegex = [regex]'([^\\]+\.onmicrosoft\.com)\\tenant:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}),\s*object:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})'
 
         # Helper function to map GUIDs and partner UPNs to user objects (Optimized with hashtable lookups)
@@ -657,6 +658,23 @@ function Test-CIPPAuditLogRules {
                                 if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
                                 $Flattened["$($Prop.Name)"] = "$($Prop.NewValue)"
                                 $Flattened["Previous_Value_$($Prop.Name)"] = "$($Prop.OldValue)"
+                                if ($Prop.Name -eq 'KeyDescription') {
+                                    # Keys in the new list but not the old; only Verify keys can sign in as the app.
+                                    $OldKeyIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                                    foreach ($KeyMatch in $script:KeyDescriptionRegex.Matches([string]$Prop.OldValue)) {
+                                        [void]$OldKeyIds.Add($KeyMatch.Groups['Id'].Value)
+                                    }
+                                    $AddedKeyTypes = [System.Collections.Generic.List[string]]::new()
+                                    $AddedKeys = [System.Collections.Generic.List[string]]::new()
+                                    foreach ($KeyMatch in $script:KeyDescriptionRegex.Matches([string]$Prop.NewValue)) {
+                                        if ($KeyMatch.Groups['Usage'].Value -ne 'Verify' -or $OldKeyIds.Contains($KeyMatch.Groups['Id'].Value)) { continue }
+                                        $KeyType = $KeyMatch.Groups['Type'].Value
+                                        $AddedKeys.Add("$($KeyType): $($KeyMatch.Groups['Id'].Value)")
+                                        if (-not $AddedKeyTypes.Contains($KeyType)) { $AddedKeyTypes.Add($KeyType) }
+                                    }
+                                    $Flattened['CIPPAddedKeyTypes'] = $AddedKeyTypes -join ','
+                                    $Flattened['CIPPAddedKeys'] = $AddedKeys -join ', '
+                                }
                             }
                         } catch {
                             Write-Information "Error flattening ModifiedProperties for $($AuditRecord.id): $($_.Exception.Message)"
