@@ -40,6 +40,9 @@ Describe 'App-initiated audit log presets' {
         @{ Preset = 'AppAddedCertificateToServicePrincipal'; Operation = 'Add service principal credentials.'; Key = 'AsymmetricX509Cert' }
         @{ Preset = 'AppAddedSecretToAppRegistration'; Operation = 'AppCredential'; Key = 'Password' }
         @{ Preset = 'AppAddedCertificateToAppRegistration'; Operation = 'AppCredential'; Key = 'AsymmetricX509Cert' }
+        # A key supplied in the create request is logged under Create rather than Update.
+        @{ Preset = 'AppAddedSecretToAppRegistration'; Operation = "Create application $([char]0x2013) Certificates and secrets management "; Key = 'Password' }
+        @{ Preset = 'AppAddedCertificateToAppRegistration'; Operation = "Create application $([char]0x2013) Certificates and secrets management "; Key = 'AsymmetricX509Cert' }
         @{ Preset = 'AppGrantedApplicationPermission'; Operation = 'Add app role assignment to service principal.' }
         @{ Preset = 'AppGrantedDelegatedPermission'; Operation = 'Add delegated permission grant.' }
         @{ Preset = 'AppAddedOwnerToApp'; Operation = 'Add owner to application.' }
@@ -84,6 +87,8 @@ Describe 'User-initiated audit log presets' {
         @{ Preset = 'UserAddedCertificateToServicePrincipal'; Operation = 'Add service principal credentials.'; Key = 'AsymmetricX509Cert' }
         @{ Preset = 'UserAddedSecretToAppRegistration'; Operation = 'AppCredential'; Key = 'Password' }
         @{ Preset = 'UserAddedCertificateToAppRegistration'; Operation = 'AppCredential'; Key = 'AsymmetricX509Cert' }
+        @{ Preset = 'UserAddedSecretToAppRegistration'; Operation = "Create application $([char]0x2013) Certificates and secrets management "; Key = 'Password' }
+        @{ Preset = 'UserAddedCertificateToAppRegistration'; Operation = "Create application $([char]0x2013) Certificates and secrets management "; Key = 'AsymmetricX509Cert' }
         @{ Preset = 'UserGrantedApplicationPermission'; Operation = 'Add app role assignment to service principal.' }
         @{ Preset = 'UserGrantedDelegatedPermission'; Operation = 'Add delegated permission grant.' }
         @{ Preset = 'UserAddedOwnerToApp'; Operation = 'Add owner to application.' }

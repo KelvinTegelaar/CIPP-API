@@ -40,6 +40,9 @@ function Get-CIPPDbItem {
         [Parameter(Mandatory = $false)]
         [switch]$ByTenant,
 
+        # A default domain already resolved through Get-Tenants: reads that partition without another tenant lookup.
+        [string]$Partition,
+
         [string]$TableName = 'CippReportingDB'
     )
 
@@ -47,6 +50,7 @@ function Get-CIPPDbItem {
         # Enforce tenant lock when running inside custom script execution
         if ($script:CIPPLockedTenant) {
             $TenantFilter = $script:CIPPLockedTenant
+            $Partition = $null
         }
 
         $Table = Get-CippTable -tablename $TableName
@@ -54,7 +58,10 @@ function Get-CIPPDbItem {
         # $null = whole table; a scoped caller asking for allTenants reads only the tenants it may see
         $Partitions = $null
         $Managed = $null
-        if ($TenantFilter -ne 'allTenants') {
+        if ($Partition) {
+            $TenantFilter = $Partition
+            $Partitions = @($Partition)
+        } elseif ($TenantFilter -ne 'allTenants') {
             $Tenant = Get-Tenants -TenantFilter $TenantFilter
             if (-not $Tenant) {
                 throw "Tenant '$TenantFilter' not found"

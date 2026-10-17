@@ -104,3 +104,39 @@ Describe 'Push-ListGraphRequestQueue pre-write cleanup' {
         }
     }
 }
+
+# A tenant where the query matches nothing, or where Graph fails, must still write that tenant's
+# row. Indexing the empty result and passing the exception (not the error record) to
+# Get-CippException both threw "Cannot index into a null array" and failed the whole task.
+Describe 'Push-ListGraphRequestQueue empty and failed tenants' {
+    BeforeAll {
+        $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+        function Get-NormalizedError { param($message) $message }
+        . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-CippException.ps1')
+    }
+
+    BeforeEach {
+        $script:Written = $null
+        Mock -CommandName Get-CIPPTable -MockWith { @{ Context = 'stub' } }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { @() }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { $script:Written = $Entity }
+    }
+
+    It 'writes an empty result set when the query matches nothing in the tenant' {
+        Mock -CommandName Get-GraphRequestList -MockWith { }
+
+        Push-ListGraphRequestQueue -Item $script:Item | Should -BeTrue
+
+        $script:Written.Data | Should -Be '[]'
+    }
+
+    It 'writes a status row when Graph fails for the tenant' {
+        Mock -CommandName Get-GraphRequestList -MockWith { throw 'Forbidden' }
+
+        Push-ListGraphRequestQueue -Item $script:Item | Should -BeTrue
+
+        $Row = $script:Written.Data | ConvertFrom-Json
+        $Row.Tenant | Should -Be 'contoso.com'
+        $Row.CippStatus | Should -Be 'Could not connect to tenant. Forbidden'
+    }
+}
