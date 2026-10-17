@@ -13,10 +13,6 @@ function Push-AuditLogProcessingBatchV2 {
         ledger already had a state machine for it.
 
         A search left in Processing beyond the stale window is reclaimed so a crashed run retries.
-
-        LEGACY: rows written before per-search partitioning live under PartitionKey = <tenant> and
-        are picked up by a compatibility pass. CacheWebhooks is transient, so this stops finding
-        anything within a cycle or two and can be removed a release later.
     .FUNCTIONALITY
         Entrypoint
     #>
@@ -63,27 +59,6 @@ function Push-AuditLogProcessingBatchV2 {
         } catch {
             Write-Information "AuditLogProcessingBatchV2: window $($Row.RowKey) for $TenantFilter vanished before it could be claimed; skipping"
         }
-    }
-
-    # --- Legacy: rows still sitting in the old per-tenant partition ---
-    # Only reached while an upgrade drains; costs one keys-only read of a partition that is empty
-    # on any instance that has already cycled.
-    try {
-        $CacheTable = Get-CippTable -TableName 'CacheWebhooks'
-        $LegacyRows = @(Get-CIPPAzDataTableEntity @CacheTable -Filter "PartitionKey eq '$TenantFilter'" -Property PartitionKey, RowKey)
-        if ($LegacyRows.Count -gt 0) {
-            Write-Information "AuditLogProcessingBatchV2: $($LegacyRows.Count) legacy pre-partition row(s) for $TenantFilter"
-            $LegacyIds = @($LegacyRows.RowKey)
-            for ($i = 0; $i -lt $LegacyIds.Count; $i += 500) {
-                $BatchItems.Add([PSCustomObject]@{
-                        TenantFilter = $TenantFilter
-                        LegacyRowIds = @($LegacyIds[$i..([Math]::Min($i + 499, $LegacyIds.Count - 1))])
-                        FunctionName = 'AuditLogTenantProcessV2'
-                    })
-            }
-        }
-    } catch {
-        Write-Information "AuditLogProcessingBatchV2: legacy sweep skipped for ${TenantFilter}: $($_.Exception.Message)"
     }
 
     if ($BatchItems.Count -eq 0) {

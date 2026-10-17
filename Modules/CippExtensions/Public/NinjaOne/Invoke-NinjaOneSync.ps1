@@ -27,6 +27,7 @@ function Invoke-NinjaOneSync {
         if (($Batch | Measure-Object).Count -gt 0) {
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'NinjaOneOrchestrator'
+                MaxConcurrency   = 4
                 Batch            = @($Batch)
             }
             #Write-Host ($InputObject | ConvertTo-Json)

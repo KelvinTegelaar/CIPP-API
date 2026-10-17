@@ -59,14 +59,14 @@ function Push-BECRun {
         }
         $Heuristics = Get-CIPPBecHeuristics
         $WindowDays = [int]($Heuristics.window.days ?? 7)
-        # Entra ID P1/P2 keep sign-in and directory audit logs for 30 days, so those tenants get the longer window.
+        # A user licensed for Entra ID P1/P2 gets the 30-day window those plans keep sign-in and directory audit logs for.
         try {
-            $RunCapabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
-            if ($RunCapabilities.AAD_PREMIUM -eq $true -or $RunCapabilities.AAD_PREMIUM_P2 -eq $true) {
+            $UserPlans = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($SuspectUser)?`$select=assignedPlans" -tenantid $TenantFilter -AsApp $true
+            if (@($UserPlans.assignedPlans | Where-Object { $_.service -eq 'AADPremiumService' -and $_.capabilityStatus -eq 'Enabled' }).Count -gt 0) {
                 $WindowDays = [int]($Heuristics.window.premiumDays ?? $WindowDays)
             }
         } catch {
-            Write-Information "BEC: could not read tenant plans for $TenantFilter, using the $WindowDays-day window: $($_.Exception.Message)"
+            Write-Information "BEC: could not read the plans of $SuspectUser, using the $WindowDays-day window: $($_.Exception.Message)"
         }
         $endDate = (Get-Date).ToUniversalTime()
         $startDate = $endDate.AddDays(-$WindowDays)
@@ -122,8 +122,11 @@ function Push-BECRun {
     $Skip = { param($Requirement) New-CIPPBecCollectorResult -Data @() -Skipped $true -Requirement $Requirement }
     $Collect = {
         param($Name, [scriptblock]$Body)
+        Write-Information "BEC: $Name started"
+        $CollectorTimer = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             & $Body
+            Write-Information "BEC: $Name finished in $([int]$CollectorTimer.Elapsed.TotalSeconds)s"
         } catch {
             $CollectorError = Get-CippException -Exception $_
             Write-LogMessage -API 'BECRun' -message "BEC collector $Name failed for $($UserName): $($CollectorError.NormalizedError)" -tenant $TenantFilter -sev Warning -LogData $CollectorError
@@ -248,8 +251,7 @@ function Push-BECRun {
                 try {
                     # Every interactive sign-in in the window, paged to the end: the score's foreign sign-in
                     # signals count these, so a newest-N cut would hide the first foreign access.
-                    $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$SuspectUser') and createdDateTime ge $($startDate.ToString('yyyy-MM-ddTHH:mm:ssZ'))&`$top=999&`$orderby=createdDateTime desc"
-                    $SuspectUserSignIns = @(New-GraphGetRequest -uri $URI -tenantid $TenantFilter | Select-Object @{ Name = 'CreatedDateTime'; Expression = $SignInDate },
+                    $SuspectUserSignIns = @((Search-CIPPBecSignIn -TenantFilter $TenantFilter -Filter "userId eq '$SuspectUser'" -StartDate $startDate -AsApp $false).Rows | Select-Object @{ Name = 'CreatedDateTime'; Expression = $SignInDate },
                         id,
                         @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
                         @{ Name = 'ClientAppUsed'; Expression = { $_.clientAppUsed } },
@@ -869,7 +871,7 @@ function Push-BECRun {
                 & $Save @{ MailActivity = @($Activity.Data); MailActivitySummary = $Activity.Summary; MailRecords = @($Activity.Records | Where-Object { $_ }); RiskState = $Risk.Data }
             }
 
-            'IPAnalysis' {
+            { $_ -in @('IPAnalysis', 'IPPeers') } {
                 $SuspectUserSignIns = & $Rows 'SuspectUserSignIns'
                 $NonInteractiveSignIns = & $Rows 'NonInteractiveSignIns'
                 $RuleChangesLog = & $Rows 'RuleChangesLog'
@@ -896,18 +898,20 @@ function Push-BECRun {
                         $Row | Add-Member -NotePropertyName 'ActorResolved' -NotePropertyValue $Who.Actor -Force
                     }
                 }
-                & $StampActor $RuleChangesLog 'UserKey'
-                & $StampActor $PermissionsLog 'UserId'
-                & $StampActor $SafelistChanges 'UserKey'
-                & $StampActor $SharingChanges 'UserKey'
-                & $StampActor $TransportRuleChanges 'Actor'
-                & $StampActor $DirectoryAudits 'InitiatedBy' 'InitiatedByType' 'InitiatedById'
-                & $StampActor $MailActivity 'Actor'
+                if ($Key -eq 'IPAnalysis') {
+                    & $StampActor $RuleChangesLog 'UserKey'
+                    & $StampActor $PermissionsLog 'UserId'
+                    & $StampActor $SafelistChanges 'UserKey'
+                    & $StampActor $SharingChanges 'UserKey'
+                    & $StampActor $TransportRuleChanges 'Actor'
+                    & $StampActor $DirectoryAudits 'InitiatedBy' 'InitiatedByType' 'InitiatedById'
+                    & $StampActor $MailActivity 'Actor'
+                }
 
                 # Which addresses are the attacker's: sign-in baseline, CIPP's IP allow/block list and the
-                # tenant's own lists, geo, and the other accounts on each address. The IP review re-run calls
-                # the same analysis with the investigator's overrides.
-                Write-Information 'Full scope: IP analysis'
+                # tenant's own lists and geo, then (IPPeers, a step and task timeout of its own) the other accounts
+                # on each address. The IP review re-run calls the same analysis with the investigator's overrides.
+                Write-Information "Full scope: $Key"
                 $IPDraft = [pscustomobject]@{
                     SuspectUserSignIns       = $SuspectUserSignIns
                     NonInteractiveSignIns    = $NonInteractiveSignIns
@@ -924,18 +928,29 @@ function Push-BECRun {
                 }
                 # the technician who started the run: their address is theirs, not the user's or the attacker's
                 $TechnicianIPs = @(if ($Item.RequestedFromIP) { [pscustomobject]@{ IP = [string]$Item.RequestedFromIP; By = [string]$Item.RequestedBy } })
-                $IPAnalysis = & $Collect 'IPAnalysis' { Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Results $IPDraft -Heuristics $Heuristics -WindowStart $startDate -UsageLocation $State.UsageLocation -Anchor $UserName -SampleColleagues -TechnicianIPs $TechnicianIPs -TravelWindows (& $Rows 'TravelWindows') }
+                $AnalysisParams = @{ TenantFilter = $TenantFilter; UserId = $SuspectUser; UserPrincipalName = $UserName; Results = $IPDraft; Heuristics = $Heuristics; WindowStart = $startDate; UsageLocation = $State.UsageLocation; Anchor = $UserName; TechnicianIPs = $TechnicianIPs; TravelWindows = (& $Rows 'TravelWindows') }
+                if ($Key -eq 'IPPeers') { $AnalysisParams.SampleColleagues = $true; $AnalysisParams.Baseline = $State.IPBaseline } else { $AnalysisParams.SkipPeerLookup = $true }
+                $IPAnalysis = & $Collect $Key { Invoke-CIPPBecIPAnalysis @AnalysisParams }
+                if ($Key -eq 'IPPeers' -and -not $IPAnalysis.PSObject.Properties['Verdicts']) {
+                    # the first step's verdicts stand; only this step's own check is marked failed
+                    & $Mark 'IPPeers' $IPAnalysis
+                    & $Save @{}
+                    break
+                }
                 if ($IPAnalysis.PSObject.Properties['Verdicts']) {
-                    & $Mark 'SignInBaseline' $IPAnalysis.Baseline
-                    & $Mark 'IPGuidance' $IPAnalysis.Guidance
-                    & $Mark 'IPPeers' $IPAnalysis.PeersResult
+                    if ($Key -eq 'IPPeers') {
+                        & $Mark 'IPPeers' $IPAnalysis.PeersResult
+                    } else {
+                        & $Mark 'SignInBaseline' $IPAnalysis.Baseline
+                        & $Mark 'IPGuidance' $IPAnalysis.Guidance
+                    }
                     & $Mark 'IPVerdicts' ([pscustomobject]@{ Complete = $true; Count = @($IPAnalysis.Verdicts).Count })
                     $IPVerdicts = @($IPAnalysis.Verdicts)
                     $IPBaseline = $IPAnalysis.Baseline.Data
                     $IPGuidance = @($IPAnalysis.Guidance.Data)
                     $IPPeers = @($IPAnalysis.Peers.Values)
                 } else {
-                    & $Mark 'SignInBaseline' $IPAnalysis; & $Mark 'IPGuidance' $IPAnalysis; & $Mark 'IPPeers' $IPAnalysis; & $Mark 'IPVerdicts' $IPAnalysis
+                    & $Mark 'SignInBaseline' $IPAnalysis; & $Mark 'IPGuidance' $IPAnalysis; & $Mark 'IPVerdicts' $IPAnalysis
                     $IPVerdicts = @(); $IPBaseline = $null; $IPGuidance = @(); $IPPeers = @()
                 }
                 Set-CIPPBecIPVerdictStamp -Results $IPDraft -Verdicts $IPVerdicts

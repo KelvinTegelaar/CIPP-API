@@ -120,7 +120,7 @@ function New-CIPPMFAConnectorToken {
             Write-LogMessage -headers $Headers -API 'MFAConnector' -tenant $TenantFilter -message "App management policy for the Azure Multi-Factor Auth Client: $($PolicyUpdate.PolicyAction)" -sev Info
         }
     } catch {
-        Write-LogMessage -headers $Headers -API 'MFAConnector' -tenant $TenantFilter -message "Failed to update app management policy for the Azure Multi-Factor Auth Client: $($_.Exception.Message)" -sev Warn
+        Write-LogMessage -headers $Headers -API 'MFAConnector' -tenant $TenantFilter -message "Failed to update app management policy for the Azure Multi-Factor Auth Client: $($_.Exception.Message)" -sev Warning
     }
 
     $SecretStart = (Get-Date).AddMinutes(-5)

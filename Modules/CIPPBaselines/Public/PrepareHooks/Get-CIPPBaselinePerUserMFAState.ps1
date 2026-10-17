@@ -14,10 +14,10 @@ function Get-CIPPBaselinePerUserMFAState {
         $TenantFilter
     )
 
-    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' | Where-Object { $_ })
+    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' -Fields 'userPrincipalName', 'displayName', 'userType', 'accountEnabled', 'perUserMfaState').Where({ $_ })
     if ($Users.Count -eq 0) { return @{ Current = $null } }
 
-    $WithoutMFA = @($Users | Where-Object {
+    $WithoutMFA = $Users.Where({
             $_.userType -eq 'Member' -and
             $_.accountEnabled -eq $true -and
             $_.displayName -ne 'On-Premises Directory Synchronization Service Account' -and
@@ -27,7 +27,7 @@ function Get-CIPPBaselinePerUserMFAState {
     @{
         Current = [PSCustomObject]@{
             offenders = @($WithoutMFA.userPrincipalName | Sort-Object)
-            targets   = @($WithoutMFA | ForEach-Object { [PSCustomObject]@{ id = "$($_.userPrincipalName)" } })
+            targets   = @(foreach ($User in $WithoutMFA) { [PSCustomObject]@{ id = "$($User.userPrincipalName)" } })
         }
     }
 }

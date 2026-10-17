@@ -21,7 +21,7 @@ function Send-CIPPJITAdminApprovalNotification {
             'Approved' { "JIT Admin request approved: $($ApprovalRequest.TargetUser) ($Tenant)" }
             'Rejected' { "JIT Admin request rejected: $($ApprovalRequest.TargetUser) ($Tenant)" }
         }
-        $Path = '/identity/administration/jit-admin/requests'
+        $Path = "/identity/administration/jit-admin/requests?tenantFilter=$Tenant"
         $ConfigTable = Get-CIPPTable -TableName Config
         $CippUrl = (Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'").Value
 

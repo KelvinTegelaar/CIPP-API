@@ -39,7 +39,7 @@ function Invoke-CIPPCustomDomainCertificate {
 
     if ($AppService.Site.properties.hostNames -notcontains $Hostname) {
         $Message = "No hostname binding exists for '$Hostname' - the domain was removed or never added. Nothing to do."
-        Write-LogMessage -API 'CustomDomains' -message $Message -sev Warn
+        Write-LogMessage -API 'CustomDomains' -message $Message -sev Warning
         return $Message
     }
 

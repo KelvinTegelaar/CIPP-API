@@ -53,8 +53,6 @@ function Invoke-ListDomainHealth {
 
     Set-DnsResolver -Resolver $Resolver
 
-    $UserRoles = Get-CIPPAccessRole -Request $Request
-
     $APIName = $Request.Params.CIPPEndpoint
 
 
@@ -107,8 +105,12 @@ function Invoke-ListDomainHealth {
                         if ($Request.Query.Selector) {
                             $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
 
-                            # Restricted callers may only persist selectors onto an in-scope row
-                            if (('admin' -in $UserRoles -or 'editor' -in $UserRoles) -and (-not $Restricted -or $DomainInfo)) {
+                            # Saving selectors writes the Domains row, so gate it on the permission the Domain
+                            # Analyser write endpoints already require, not on role names: a role-name check
+                            # skipped superadmin and custom roles that grant the permission (issue #898).
+                            # Restricted callers may only persist selectors onto an in-scope row.
+                            $CanWriteSelectors = @(Get-CippRequestAllowedPermissions) -contains 'Tenant.DomainAnalyser.ReadWrite'
+                            if ($CanWriteSelectors -and (-not $Restricted -or $DomainInfo)) {
                                 $DkimSelectors = [string]($DkimQuery.Selectors | ConvertTo-Json -Compress)
                                 if ($DomainInfo) {
                                     $DomainInfo.DkimSelectors = $DkimSelectors
@@ -182,7 +184,7 @@ function Invoke-ListDomainHealth {
             }
         }
     } catch {
-        Write-LogMessage -API $APINAME -tenant $($name) -headers $Request.Headers -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -API $APINAME -headers $Request.Headers -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

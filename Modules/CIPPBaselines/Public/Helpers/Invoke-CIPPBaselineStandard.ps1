@@ -450,7 +450,9 @@ function Invoke-CIPPBaselineStandard {
                 throw "Prepare function $($Definition.prepare) is not available."
             }
             $Prepared = & $Definition.prepare -Item $Item -TenantFilter $TenantFilter
-            if ($null -eq $Prepared.Current -and $CacheCollector -and -not $JustRefreshed) {
+            # ConfigError: the hook cannot grade because of the baseline's own settings, so fresh data
+            # would not help and re-collecting (a full per-object read for some caches) is skipped.
+            if ($null -eq $Prepared.Current -and $CacheCollector -and -not $JustRefreshed -and -not $Prepared.ConfigError) {
                 try {
                     $null = & $CacheCollector @CollectorArgs
                     $Prepared = & $Definition.prepare -Item $Item -TenantFilter $TenantFilter
@@ -496,6 +498,17 @@ function Invoke-CIPPBaselineStandard {
                 }
             }
         }
+
+        # A prepare hook that names why it cannot grade leaves nothing to compare or act on. The tenant is
+        # licensed by now, so that is an error, and the executor must not run against no data.
+        if ($null -eq $Current -and $PrepareNoDataReason) {
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "$($Item.Standard): $PrepareNoDataReason - Run $RunId" -Sev 'Error'
+            $Result.Outcome = 'Error'
+            $Result.Status = if ("$PriorStatus".StartsWith('Denied')) { $PriorStatus } else { 'Error' }
+            if (-not $GradeOnly) { Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId -Detail "Error: $PrepareNoDataReason" }
+            return $Result
+        }
+
         $CheckBeforeRun = $Definition.checkBeforeRun -ne $false
 
         $ReadDefaults = $Definition.read.defaults
@@ -711,6 +724,14 @@ function Invoke-CIPPBaselineStandard {
                 }
                 $ExecutorOutput = & $ExecutorName -Remediate $Rendered -TenantFilter $TenantFilter -Current $Current
             } catch {
+                    if ($Compliant) {
+                    Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "`"$Label`" is already compliant; the forced rewrite was rejected and ignored: $($_.Exception.Message) - Run $RunId" -Sev 'Info'
+                    $Result.Compliant = $true
+                    $Result.Outcome = 'Compliant'
+                    $Result.Status = 'Compliant'
+                    Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId
+                    return $Result
+                }
                 Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Failed to change `"$Label`" to $ExpectedJson`: $($_.Exception.Message) - Run $RunId" -Sev 'Error' -LogData (Get-CippException -Exception $_)
                 $Result.Outcome = 'Error'
                 # A failed write is not tenant drift: the row must not show Drift with an

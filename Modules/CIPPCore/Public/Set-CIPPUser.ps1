@@ -242,7 +242,7 @@ function Set-CIPPUser {
                 else { 'Security' }
             }
         } catch {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -Sev 'Warn' -message "Could not look up group types, falling back to the types supplied by the request: $($_.Exception.Message)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -Sev 'Warning' -message "Could not look up group types, falling back to the types supplied by the request: $($_.Exception.Message)"
         }
     }
 

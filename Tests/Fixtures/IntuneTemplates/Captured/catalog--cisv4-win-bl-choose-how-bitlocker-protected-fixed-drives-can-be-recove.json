@@ -1,0 +1,111 @@
+{
+  "DisplayName": "CISv4 - WIN - BL - 'Choose how BitLocker-protected fixed  drives can be recovered: Allow data recovery agent",
+  "Description": "This policy setting allows you to control how BitLocker-protected fixed data drives are recovered in the absence of the required credentials. This policy setting is applied when you turn on BitLocker.\nThe \"Allow data recovery agent\" check box is used to specify whether a Data Recovery Agent can be used with BitLocker-protected fixed data drives. Before a Data Recovery Agent can be used it must be added from the Public Key Policies item in either the Group Policy Management Console or the Local Group Policy Editor. Consult the BitLocker Drive Encryption Deployment Guide on Microsoft TechNet for more information about adding Data Recovery Agents.\n\nThe recommended state for this setting is: Enabled: True.",
+  "Type": "Catalog",
+  "Policy": {
+    "name": "CISv4 - WIN - BL - 'Choose how BitLocker-protected fixed  drives can be recovered: Allow data recovery agent",
+    "description": "This policy setting allows you to control how BitLocker-protected fixed data drives are recovered in the absence of the required credentials. This policy setting is applied when you turn on BitLocker.\nThe \"Allow data recovery agent\" check box is used to specify whether a Data Recovery Agent can be used with BitLocker-protected fixed data drives. Before a Data Recovery Agent can be used it must be added from the Public Key Policies item in either the Group Policy Management Console or the Local Group Policy Editor. Consult the BitLocker Drive Encryption Deployment Guide on Microsoft TechNet for more information about adding Data Recovery Agents.\n\nThe recommended state for this setting is: Enabled: True.",
+    "settings": [
+      {
+        "id": "0",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions",
+          "settingInstanceTemplateReference": null,
+          "auditRuleInformation": null,
+          "choiceSettingValue": {
+            "settingValueTemplateReference": null,
+            "value": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_1",
+            "children": [
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvrecoverykeyusagedropdown_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvrecoverykeyusagedropdown_name_2",
+                  "children": []
+                }
+              },
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvrecoverypasswordusagedropdown_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvrecoverypasswordusagedropdown_name_2",
+                  "children": []
+                }
+              },
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvallowdra_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvallowdra_name_1",
+                  "children": []
+                }
+              },
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvactivedirectorybackupdropdown_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvactivedirectorybackupdropdown_name_1",
+                  "children": []
+                }
+              },
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvrequireactivedirectorybackup_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvrequireactivedirectorybackup_name_0",
+                  "children": []
+                }
+              },
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvhiderecoverypage_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvhiderecoverypage_name_0",
+                  "children": []
+                }
+              },
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvactivedirectorybackup_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_fixeddrivesrecoveryoptions_fdvactivedirectorybackup_name_0",
+                  "children": []
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "platforms": "windows10",
+    "technologies": "mdm",
+    "templateReference": {
+      "templateId": "",
+      "templateFamily": "none",
+      "templateDisplayName": null,
+      "templateDisplayVersion": null
+    }
+  }
+}

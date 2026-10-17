@@ -121,7 +121,7 @@ function Invoke-ExecDnsConfig {
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API $APIName -tenant $($name) -headers $Headers -message "DNS Config API failed. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message "DNS Config API failed. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

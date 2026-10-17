@@ -8,16 +8,23 @@ function Set-CippScheduledTaskContext {
         is used instead of global scope, which is not reliable in Azure Functions.
     .PARAMETER TaskId
         The scheduled task RowKey. Pass $null or empty to clear.
+    .PARAMETER AlertReNotify
+        The alert task's re-notify setting, read by Write-AlertTrace. Reset on every call.
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
     param(
-        [string]$TaskId
+        [string]$TaskId,
+        [bool]$AlertReNotify
     )
 
     if (-not $script:CippScheduledTaskIdStorage) {
         $script:CippScheduledTaskIdStorage = [System.Threading.AsyncLocal[string]]::new()
     }
     $script:CippScheduledTaskIdStorage.Value = $TaskId
+    if (-not $script:CippAlertReNotifyStorage) {
+        $script:CippAlertReNotifyStorage = [System.Threading.AsyncLocal[bool]]::new()
+    }
+    $script:CippAlertReNotifyStorage.Value = $AlertReNotify
 }

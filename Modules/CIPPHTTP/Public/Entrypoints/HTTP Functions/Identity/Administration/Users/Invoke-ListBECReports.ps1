@@ -19,7 +19,7 @@ function Invoke-ListBECReports {
     try {
         $Params = @{ TenantFilter = $TenantFilter }
         if ($UserId) { $Params.UserId = $UserId }
-        $Runs = @(Get-CIPPBecReport @Params)
+        $Runs = @(Get-CIPPBecReport @Params | Select-CippAllowedTenantData -TenantProperty 'Tenant')
         $Body = @($Runs | ForEach-Object {
                 [pscustomobject]@{
                     CaseId            = $_.CaseId

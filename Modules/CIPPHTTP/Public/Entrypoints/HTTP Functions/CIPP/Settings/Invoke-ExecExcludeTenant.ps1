@@ -34,6 +34,7 @@ Function Invoke-ExecExcludeTenant {
         $Name = $Request.Query.tenantFilter
         if ($Request.Query.AddExclusion) {
             $Tenants = Get-Tenants -IncludeAll | Where-Object { $Request.body.value -contains $_.customerId }
+            $Name = $Tenants.defaultDomainName -join ','
 
             $Excluded = foreach ($Tenant in $Tenants) {
                 $Tenant.Excluded = $true
@@ -48,13 +49,14 @@ Function Invoke-ExecExcludeTenant {
 
         if ($Request.Query.RemoveExclusion) {
             $Tenants = Get-Tenants -IncludeAll | Where-Object { $Request.body.value -contains $_.customerId }
+            $Name = $Tenants.defaultDomainName -join ','
             foreach ($Tenant in $Tenants) {
                 $Tenant.Excluded = $false
                 $Tenant.ExcludeUser = ''
                 $Tenant.ExcludeDate = ''
                 Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             }
-            Write-LogMessage -API $APIName -tenant $($Name) -headers $Headers -message "Removed exclusion for customer $($Name)" -Sev 'Info'
+            Write-LogMessage -API $APIName -tenant $($Name) -headers $Headers -message "Removed exclusion for customer(s): $($Name)" -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Success. We've removed $Name from the excluded tenants." }
         }
     } catch {

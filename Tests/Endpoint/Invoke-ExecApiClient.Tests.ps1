@@ -26,6 +26,8 @@ BeforeAll {
     function New-CIPPAPIConfig { param($Headers, $ClientId, $AppName, [switch]$ResetSecret) [pscustomobject]@{ ApplicationID = 'new-app'; AppName = 'New Client'; Results = 'ok' } }
     function Set-CIPPMCPClientApp { param($AppId, $Headers) @{ Success = $true; ClientAppId = $AppId; ResourceAppId = 'resource-app' } }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
+    function Get-CippProtectedAppId { @() }
+    function New-GraphGetRequest { param($uri, $NoAuthCheck, $asapp, [switch]$ComplexFilter) }
 
     . $FunctionPath
 
@@ -84,5 +86,47 @@ Describe 'Invoke-ExecApiClient - MCP client configuration' {
         $null = Invoke-ExecApiClient -Request (New-AddUpdateRequest -McpAllowed $false)
 
         Should -Invoke Set-CIPPMCPClientApp -Times 0 -Exactly
+    }
+}
+
+Describe 'Invoke-ExecApiClient - protected SSO/SAM apps' {
+    BeforeEach {
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Get-CippProtectedAppId -MockWith { @('sso-app', 'sam-app') }
+        Mock -CommandName New-CIPPAPIConfig -MockWith { }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { [pscustomobject]@{ RowKey = 'sso-app'; AppName = 'CIPP-SSO'; Role = 'readonly' } }
+    }
+
+    It 'hides protected apps from the existing-app picker' {
+        Mock -CommandName New-GraphGetRequest -MockWith { @([pscustomobject]@{ appId = 'sso-app' }, [pscustomobject]@{ appId = 'api-app' }) }
+        $Request = [pscustomobject]@{ Headers = @{}; Query = [pscustomobject]@{ Action = 'ListAvailable' }; Body = $null }
+
+        $Response = Invoke-ExecApiClient -Request $Request
+
+        @($Response.Body.Results.appId) | Should -Be @('api-app')
+    }
+
+    It 'refuses to add a protected app as an existing client' {
+        $Request = [pscustomobject]@{
+            Headers = @{}
+            Query   = [pscustomobject]@{ Action = 'AddUpdate' }
+            Body    = [pscustomobject]@{ Action = 'AddUpdate'; ClientId = [pscustomobject]@{ value = 'sso-app' }; Role = [pscustomobject]@{ value = 'readonly' }; CIPPAPI = @{ ResetSecret = $true } }
+        }
+
+        $Response = Invoke-ExecApiClient -Request $Request
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+        Should -Invoke New-CIPPAPIConfig -Times 0 -Exactly
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+    }
+
+    It 'refuses to reset the secret of a protected app' {
+        $Request = [pscustomobject]@{ Headers = @{}; Query = [pscustomobject]@{ Action = 'ResetSecret' }; Body = [pscustomobject]@{ ClientId = 'sso-app' } }
+
+        $Response = Invoke-ExecApiClient -Request $Request
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+        Should -Invoke New-CIPPAPIConfig -Times 0 -Exactly
     }
 }

@@ -9,9 +9,9 @@ Function Invoke-EditSpamFilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $TenantFilter = $request.Query.tenantFilter
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $Name = $Request.Query.name ?? $Request.Body.name
-    $State = $State ?? $Request.Body.state
+    $State = $Request.Query.State ?? $Request.Body.State
 
     try {
         $Params = @{

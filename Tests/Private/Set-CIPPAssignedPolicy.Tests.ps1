@@ -176,6 +176,43 @@ Describe 'Set-CIPPAssignedPolicy' {
         }
     }
 
+    Context 'direction-scoped replace (Custom Group action)' {
+        BeforeEach {
+            $script:ExcludedId = '22222222-2222-2222-2222-222222222222'
+            Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*/assignments' } -MockWith {
+                @(
+                    [PSCustomObject]@{ target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget' } }
+                    [PSCustomObject]@{ target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget' } }
+                    [PSCustomObject]@{ target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.exclusionGroupAssignmentTarget'; groupId = $script:ExcludedId } }
+                )
+            }
+        }
+
+        # Keeping the broad targets made Include + Replace a no-op: All Devices plus a group is still All Devices.
+        It 'include replaces All Users / All Devices with the picked groups and keeps exclusions' {
+            $null = Set-CIPPAssignedPolicy -GroupIds @($script:SalesId) -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace' -AssignmentDirection 'include'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Targets = @(($body | ConvertFrom-Json).assignments.target)
+                $Targets.Count -eq 2 -and
+                ($Targets | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget' }).groupId -eq $script:SalesId -and
+                ($Targets | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.exclusionGroupAssignmentTarget' }).groupId -eq $script:ExcludedId
+            }
+        }
+
+        It 'exclude keeps All Users / All Devices, the exclusions narrow them' {
+            $null = Set-CIPPAssignedPolicy -ExcludeGroupIds @($script:SalesId) -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace' -AssignmentDirection 'exclude'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Types = @(($body | ConvertFrom-Json).assignments.target.'@odata.type')
+                $Types.Count -eq 3 -and
+                $Types -contains '#microsoft.graph.allDevicesAssignmentTarget' -and
+                $Types -contains '#microsoft.graph.allLicensedUsersAssignmentTarget' -and
+                @(($body | ConvertFrom-Json).assignments.target.groupId) -notcontains $script:ExcludedId
+            }
+        }
+    }
+
     Context 'WhatIf' {
         It 'does not post and does not throw' {
             $Result = Set-CIPPAssignedPolicy -GroupName 'Sales Users' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -WhatIf

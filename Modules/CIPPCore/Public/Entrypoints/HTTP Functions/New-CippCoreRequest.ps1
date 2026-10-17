@@ -51,6 +51,13 @@ function New-CippCoreRequest {
     if ($DisabledEndpoint) {
         Write-Information "Endpoint $($Request.Params.CIPPEndpoint) is disabled via feature flag: $($DisabledEndpoint.Name)"
         $HttpTotalStopwatch.Stop()
+        if ($Request.Params.CIPPEndpoint -eq 'ExecMcp') {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::ServiceUnavailable
+                    Headers    = @{ 'Content-Type' = 'application/json' }
+                    Body       = (@{ jsonrpc = '2.0'; id = $null; error = @{ code = -32001; message = 'The MCP Server feature is disabled on this CIPP instance. Enable it in CIPP > Application Settings > Features.' } } | ConvertTo-Json -Compress)
+                })
+        }
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::ServiceUnavailable
                 Body       = "This feature has been disabled: $($DisabledEndpoint.Description)"

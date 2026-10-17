@@ -89,8 +89,8 @@ Describe 'Invoke-ExecBECCheck' {
             $Response.Body.GUID | Should -Be 'BEC-20260820120000-new001'
             $Response.Body.Status | Should -Be 'Waiting'
             Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $Replace.IsPresent -and $Properties.Status -eq 'Waiting' -and $Properties.UserId -eq 'u1' -and $Properties.RequestedBy -eq 'tech@msp.com' -and $CaseId -eq 'BEC-20260820120000-new001' }
-            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-new001' -and $Names -contains 'user@contoso.com' -and @($StepTitles).Count -eq 14 -and $Source -eq 'BEC' }
-            Should -Invoke Start-CIPPOrchestrator -Times 1 -ParameterFilter { $InputObject.Sequential -and @($InputObject.Batch).Count -eq 14 -and $InputObject.Batch[0].FunctionName -eq 'BECRun' -and $InputObject.Batch[0].Step -eq 'AuditLog' -and $InputObject.Batch[0].CaseId -eq 'BEC-20260820120000-new001' -and $InputObject.Batch[0].UserID -eq 'u1' -and $InputObject.Batch[0].RequestedFromIP -eq '2001:db8::77' }
+            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-new001' -and $Names -contains 'user@contoso.com' -and @($StepTitles).Count -eq 15 -and $Source -eq 'BEC' }
+            Should -Invoke Start-CIPPOrchestrator -Times 1 -ParameterFilter { $InputObject.Sequential -and @($InputObject.Batch).Count -eq 15 -and $InputObject.Batch[0].FunctionName -eq 'BECRun' -and $InputObject.Batch[0].Step -eq 'AuditLog' -and $InputObject.Batch[0].CaseId -eq 'BEC-20260820120000-new001' -and $InputObject.Batch[0].UserID -eq 'u1' -and $InputObject.Batch[0].RequestedFromIP -eq '2001:db8::77' }
             Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $Properties.RequestedFromIP -eq '2001:db8::77' } -Because "the requester's first x-forwarded-for hop, without port or brackets, is recorded as the technician's address"
         }
 
@@ -116,7 +116,7 @@ Describe 'Invoke-ExecBECCheck' {
             $Response.Body.Progress.Steps[1].Status | Should -Be 'running'
             Should -Invoke Get-CIPPBecReport -Times 1 -ParameterFilter { $CaseId -eq 'BEC-w' -and $IncludeResults.IsPresent }
             Should -Invoke Get-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-w' }
-            Should -Invoke Set-CIPPBecReport -Times 0 -Because 'a run that progressed a minute ago is not stale'
+            Should -Invoke Set-CIPPBecReport -Times 0
             Should -Invoke Add-CIPPRealtimeWatch -Times 1 -Exactly -ParameterFilter { $JobId -eq 'BEC-w' } -Because 'the reader follows the case live from here instead of polling'
         }
 
@@ -129,29 +129,12 @@ Describe 'Invoke-ExecBECCheck' {
             $Response.Body.Containment[0].Actions | Should -Be @('RevokeSessions')
         }
 
-        It 'marks a run with no progress for longer than 20 minutes as failed, on the job rows too, and says why' {
-            Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'BEC-stale'; Status = 'Running'; Scope = 'Full'; RequestedAt = (Get-Date).ToUniversalTime().AddMinutes(-50).ToString('o'); StartedAt = (Get-Date).ToUniversalTime().AddMinutes(-45).ToString('o') } }
-            Mock Get-CIPPAsyncDeployment { @([pscustomobject]@{ Name = 'user@contoso.com'; Status = 'running'; LastUpdate = [DateTimeOffset]::UtcNow.AddMinutes(-35); Steps = @([pscustomobject]@{ Title = 'Audit log'; Status = 'succeeded'; Message = 'Done' }, [pscustomobject]@{ Title = 'Sign-ins'; Status = 'running'; Message = 'Reading sign-ins' }); Logs = '' }) }
-            $Response = Invoke-ExecBECCheck -Request (New-Request @{ tenantFilter = 'contoso.com'; GUID = 'BEC-stale' }) -TriggerMetadata $null
-            $Response.StatusCode | Should -Be 200
-            $Response.Body.Waiting | Should -BeFalse
-            $Response.Body.Status | Should -Be 'Error'
-            $Response.Body.Error | Should -Match 'No progress for more than 20 minutes'
-            Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $CaseId -eq 'BEC-stale' -and $Properties.Status -eq 'Error' -and $Properties.ErrorMessage -match 'No progress' }
-            Should -Invoke Set-CIPPAsyncDeploymentStep -Times 1 -ParameterFilter { $JobId -eq 'BEC-stale' -and $StepIndex -eq 1 -and $StepStatus -eq 'failed' }
-            Should -Invoke Set-CIPPAsyncDeploymentStatus -Times 1 -ParameterFilter { $JobId -eq 'BEC-stale' -and $Status -eq 'failed' }
-            Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $message -match 'marked failed' }
-        }
-
-        It 'judges a queued run with no job rows by when it was requested' {
-            Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'BEC-q'; Status = 'Waiting'; Scope = 'Full'; RequestedAt = (Get-Date).ToUniversalTime().AddMinutes(-5).ToString('o') } }
-            Mock Get-CIPPAsyncDeployment { @() }
-            (Invoke-ExecBECCheck -Request (New-Request @{ tenantFilter = 'contoso.com'; GUID = 'BEC-q' }) -TriggerMetadata $null).Body.Waiting | Should -BeTrue
-            Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'BEC-q'; Status = 'Waiting'; Scope = 'Full'; RequestedAt = (Get-Date).ToUniversalTime().AddMinutes(-25).ToString('o') } }
-            $Old = Invoke-ExecBECCheck -Request (New-Request @{ tenantFilter = 'contoso.com'; GUID = 'BEC-q' }) -TriggerMetadata $null
-            $Old.Body.Waiting | Should -BeFalse
-            $Old.Body.Error | Should -Match 'abandoned'
-            Should -Invoke Set-CIPPAsyncDeploymentStatus -Times 0 -Because 'there are no job rows to mark'
+        It 'keeps a quiet run waiting however long its phase has been running' {
+            Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'BEC-slow'; Status = 'Running'; RequestedAt = (Get-Date).ToUniversalTime().AddMinutes(-50).ToString('o'); StartedAt = (Get-Date).ToUniversalTime().AddMinutes(-45).ToString('o') } }
+            Mock Get-CIPPAsyncDeployment { @([pscustomobject]@{ Name = 'user@contoso.com'; Status = 'running'; LastUpdate = [DateTimeOffset]::UtcNow.AddMinutes(-35); Steps = @([pscustomobject]@{ Title = 'Attacker IPs'; Status = 'running'; Message = '' }); Logs = '' }) }
+            (Invoke-ExecBECCheck -Request (New-Request @{ tenantFilter = 'contoso.com'; GUID = 'BEC-slow' }) -TriggerMetadata $null).Body.Waiting | Should -BeTrue
+            Should -Invoke Set-CIPPBecReport -Times 0
+            Should -Invoke Set-CIPPAsyncDeploymentStatus -Times 0
         }
 
         It 'reports Waiting without progress when the job rows are missing' {

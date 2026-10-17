@@ -116,6 +116,8 @@ Describe 'Push-GetCalendarPermissionsBatch' {
         @($script:ExoCalls | Where-Object { $_.Cmdlet -eq 'Get-MailboxFolderStatistics' }).Count | Should -Be 0
         $Phase2 = @($script:ExoCalls | Where-Object { $_.Cmdlet -eq 'Get-MailboxFolderPermission' })
         $Phase2[0].Array[0].CmdletInput.Parameters.Identity | Should -Be 'user1@contoso.com:\Kalender'
+        # Only the fields the stored rows use; the full object is ~a third larger on the wire.
+        $Phase2[0].Select | Should -Be 'Identity,User,AccessRights,FolderName'
     }
 
     It 'returns the permissions it read under the Get-MailboxFolderPermission key' {
@@ -130,5 +132,18 @@ Describe 'Push-GetCalendarPermissionsBatch' {
 
         @($Result['Get-MailboxFolderPermission']).Count | Should -Be 1
         @($Result['Get-MailboxFolderPermission'])[0].User | Should -Be 'Default'
+    }
+
+    It 'leaves out mailboxes whose UPN is not a valid table key so the rest still cache' {
+        $script:FolderStats = @(
+            New-FolderStat -UPN 'user1@contoso.com' -Name 'Calendar' -FolderType 'Calendar'
+            New-FolderStat -UPN 'a#b@contoso.com' -Name 'Calendar' -FolderType 'Calendar'
+        )
+
+        $null = Push-GetCalendarPermissionsBatch -Item (New-WorkItem -Mailboxes @('user1@contoso.com', 'a#b@contoso.com'))
+
+        @($script:Written.RowKey) | Should -Be @('user1@contoso.com')
+        $Phase2 = @($script:ExoCalls | Where-Object { $_.Cmdlet -eq 'Get-MailboxFolderPermission' })
+        @($Phase2[0].Array.CmdletInput.Parameters.Identity) | Should -Contain 'a#b@contoso.com:\Calendar'
     }
 }

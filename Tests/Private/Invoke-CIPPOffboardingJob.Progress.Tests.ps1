@@ -115,7 +115,7 @@ Describe 'Invoke-CIPPOffboardingJob live progress' {
 
         Should -Invoke Start-CIPPOrchestrator -Times 1 -Exactly
         $Result | Should -BeLike 'Offboarding job started*'
-        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Warn' -and $message -like '*progress row*' }
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Warning' -and $message -like '*progress row*' }
     }
 
     It 'leaves progress alone when no job id was given' {

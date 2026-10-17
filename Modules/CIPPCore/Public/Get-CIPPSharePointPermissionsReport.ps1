@@ -3,9 +3,9 @@ function Get-CIPPSharePointPermissionsReport {
     .FUNCTIONALITY
         Internal
     .SYNOPSIS
-        The SharePoint permissions report for a tenant, compiled from the CIPP reporting cache.
+        The SharePoint permissions report for a tenant, compiled from the CippSharePointPermissions table.
     .DESCRIPTION
-        Rolls up the cached SharePointPermissions dataset into the shape the Permissions page
+        Rolls up the cached SharePointPermissions rows into the shape the Permissions page
         (ListSharePointPermissions) and the permissions PDF consume: the scan summary, the oversharing
         signals worth acting on, chart datasets and the individual permission assignments. No live
         enumeration is performed; refresh the data by syncing that cache (ExecCIPPDBCache).
@@ -48,9 +48,8 @@ function Get-CIPPSharePointPermissionsReport {
                 ForEach-Object { [PSCustomObject]@{ $KeyName = $_.Name; $ValueName = $_.Count } })
     }
 
-    # --- Cached dataset from the CIPP reporting database ---
-    $CacheRows = try { @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SharePointPermissions') } catch { @() }
-    $CountRow = try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointPermissions' -CountsOnly | Select-Object -First 1 } catch { $null }
+    $CacheRows = try { @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SharePointPermissions' -TableName 'CippSharePointPermissions') } catch { @() }
+    $CountRow = try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointPermissions' -TableName 'CippSharePointPermissions' -CountsOnly | Select-Object -First 1 } catch { $null }
 
     $SiteRows = @($CacheRows | Where-Object { $_.rowType -eq 'Site' })
     $Assignments = @($CacheRows | Where-Object { $_.rowType -eq 'Assignment' })

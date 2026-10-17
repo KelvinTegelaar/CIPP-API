@@ -41,6 +41,39 @@ Describe 'NinjaOne sync fan-out API check' {
         Should -Invoke Start-CIPPOrchestrator -Times 1 -Exactly -ParameterFilter { $InputObject.Batch.Count -eq 2 }
     }
 
+    It 'starts the sync with collisions off, so a still-running sync is not doubled up' {
+        Mock Get-NinjaOneToken { [pscustomobject]@{ access_token = 'tok' } }
+
+        Invoke-NinjaOneExtensionScheduler
+
+        Should -Invoke Start-CIPPOrchestrator -Times 1 -Exactly -ParameterFilter { $InputObject.AllowCollision -eq $false }
+    }
+
+    It 'logs the daily sync as skipped, not queued, while a sync is still running' {
+        Mock Get-NinjaOneToken { [pscustomobject]@{ access_token = 'tok' } }
+        Mock Start-CIPPOrchestrator { 'Craft-NinjaOneOrchestrator-Skipped' }
+
+        { Invoke-NinjaOneExtensionScheduler } | Should -Not -Throw
+
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $message -like 'NinjaOne Daily Synchronization Skipped*for 2 Tenants' }
+        Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $message -like '*Queued*' }
+    }
+
+    It 'logs the catchup sync as skipped while a sync is still running' {
+        $Interval = ((Get-Date).Hour * 4) + [math]::Floor((Get-Date).Minute / 15)
+        $script:Settings = @(
+            [pscustomobject]@{ RowKey = 'NinjaSyncTime'; SettingValue = ($Interval + 10) % 96 }
+            [pscustomobject]@{ RowKey = 'NinjaLastRunTime'; SettingValue = (Get-Date).AddHours(-2).ToString('o') }
+        )
+        Mock Get-NinjaOneToken { [pscustomobject]@{ access_token = 'tok' } }
+        Mock Start-CIPPOrchestrator { 'Craft-NinjaOneOrchestrator-Skipped' }
+
+        Invoke-NinjaOneExtensionScheduler
+
+        Should -Invoke Start-CIPPOrchestrator -Times 1 -Exactly -ParameterFilter { $InputObject.AllowCollision -eq $false }
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $message -like 'NinjaOne Synchronization Catchup Skipped*for 2 Tenants' }
+    }
+
     It 'queues nothing and logs once when the API check fails, but still records the run' {
         Mock Get-NinjaOneToken { $null }
 

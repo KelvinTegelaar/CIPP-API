@@ -20,15 +20,24 @@ function Invoke-ListServiceHealthIssues {
 
     if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {
         try {
-            $DbTenant = if ($TenantFilter -eq 'AllTenants') { 'allTenants' } else { $TenantFilter }
-            $RowsByTenant = Get-CIPPDbItem -TenantFilter $DbTenant -Type 'ServiceHealthIssues' -ByTenant
-            if ($RowsByTenant.Count -eq 0) {
-                throw "No service health issues data found for $TenantFilter. Run a cache sync first."
+            # AllTenants reads one tenant's partition at a time in key order, so only that tenant's rows are held
+            $Tenants = if ($TenantFilter -eq 'AllTenants') {
+                $Domains = [string[]]@((Get-Tenants -IncludeErrors).defaultDomainName | Where-Object { $_ })
+                [System.Array]::Sort($Domains, [System.StringComparer]::Ordinal)
+                $Domains
+            } else {
+                $TenantFilter
             }
+            $HasRows = $false
             # The same Microsoft issue is posted to every tenant, so AllTenants returns each once with the tenants it reached
             $ById = [ordered]@{}
-            foreach ($Tenant in $RowsByTenant.Keys) {
-                foreach ($Row in $RowsByTenant[$Tenant]) {
+            foreach ($Tenant in $Tenants) {
+                $Rows = if ($TenantFilter -eq 'AllTenants') { Get-CIPPDbItem -Partition $Tenant -Type 'ServiceHealthIssues' } else { Get-CIPPDbItem -TenantFilter $Tenant -Type 'ServiceHealthIssues' }
+                foreach ($Row in $Rows) {
+                    if ($Row.RowKey -eq 'ServiceHealthIssues-Count') { continue }
+                    $HasRows = $true
+                    # A resolved single-issue row carries its whole post history; skip it unparsed when only open issues are wanted
+                    if ($Open -and $Row.Data -and $Row.Data[0] -eq '{' -and $Row.Data.Contains('"isResolved":true')) { continue }
                     $Parsed = try { [CIPP.CippJson]::ConvertFromJson($Row.Data, $null) } catch { continue }
                     foreach ($Record in @($Parsed)) {
                         if ($Open -and $Record.isResolved -eq $true) { continue }
@@ -45,6 +54,9 @@ function Invoke-ListServiceHealthIssues {
                         $Entry.Details.Add([pscustomobject]@{ Tenant = $Tenant; details = $Record.details })
                     }
                 }
+            }
+            if (-not $HasRows) {
+                throw "No service health issues data found for $TenantFilter. Run a cache sync first."
             }
             $Results = foreach ($Entry in $ById.Values) {
                 $Properties = $Entry.Record.PSObject.Properties

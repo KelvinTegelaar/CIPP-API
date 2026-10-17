@@ -1,0 +1,33 @@
+{
+  "Built": {
+    "name": "CIPP builder test - windows-no-entries",
+    "description": "Built by the CIPP settings catalog builder; safe to delete.",
+    "platforms": "windows10",
+    "technologies": "mdm",
+    "settings": [
+      {
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationSetting",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist",
+          "choiceSettingValue": {
+            "value": "device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_1",
+            "children": [
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance",
+                "settingDefinitionId": "device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_extensioninstallforcelistdesc",
+                "simpleSettingCollectionValue": []
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "Intune": {
+    "Accepted": false,
+    "Error": "device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_extensioninstallforcelistdesc: Simple Setting Collection Value should not be empty."
+  },
+  "Recaptured": null,
+  "ValidatorCode": "EmptyCollectionValue"
+}

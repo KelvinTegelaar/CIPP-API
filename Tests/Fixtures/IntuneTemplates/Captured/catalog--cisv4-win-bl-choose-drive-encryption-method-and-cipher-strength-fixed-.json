@@ -1,0 +1,67 @@
+{
+  "DisplayName": "CISv4 - WIN - BL - Choose drive encryption method and cipher  strength fixed data drives",
+  "Description": "This policy setting determines which encryption method should be used for fixed data drives.\n\nThe recommended state for this setting is: XTS-AES 128-bit (default) or XTS-AES \n256-bit",
+  "Type": "Catalog",
+  "Policy": {
+    "name": "CISv4 - WIN - BL - Choose drive encryption method and cipher  strength fixed data drives",
+    "description": "This policy setting determines which encryption method should be used for fixed data drives.\n\nThe recommended state for this setting is: XTS-AES 128-bit (default) or XTS-AES \n256-bit",
+    "settings": [
+      {
+        "id": "0",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "device_vendor_msft_bitlocker_encryptionmethodbydrivetype",
+          "settingInstanceTemplateReference": null,
+          "auditRuleInformation": null,
+          "choiceSettingValue": {
+            "settingValueTemplateReference": null,
+            "value": "device_vendor_msft_bitlocker_encryptionmethodbydrivetype_1",
+            "children": [
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_encryptionmethodbydrivetype_encryptionmethodwithxtsfdvdropdown_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_encryptionmethodbydrivetype_encryptionmethodwithxtsfdvdropdown_name_7",
+                  "children": []
+                }
+              },
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_encryptionmethodbydrivetype_encryptionmethodwithxtsosdropdown_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_encryptionmethodbydrivetype_encryptionmethodwithxtsosdropdown_name_6",
+                  "children": []
+                }
+              },
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_encryptionmethodbydrivetype_encryptionmethodwithxtsrdvdropdown_name",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_encryptionmethodbydrivetype_encryptionmethodwithxtsrdvdropdown_name_3",
+                  "children": []
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "platforms": "windows10",
+    "technologies": "mdm",
+    "templateReference": {
+      "templateId": "",
+      "templateFamily": "none",
+      "templateDisplayName": null,
+      "templateDisplayVersion": null
+    }
+  }
+}

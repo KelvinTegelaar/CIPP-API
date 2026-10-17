@@ -1,153 +1,167 @@
 function Push-AuditLogSearchCreationV2 {
     <#
     .SYNOPSIS
-        Per-tenant audit-log search creation activity (V2). Seeds owed regular (35-min) and 12-hour
-        reconciliation windows into the AuditLogCoverage ledger, then creates Graph searches for the
-        due ones - oldest first, capped per cycle, with manual throttle handling.
+        Audit-log search creation activity (V2) for a chunk of tenants. Seeds owed regular (35-min) and 12-hour
+        reconciliation windows into the AuditLogCoverage ledger, then creates the Graph searches for every
+        tenant's due windows in one concurrent multi-tenant call.
     .DESCRIPTION
-        1. Seed owed regular windows (Get-CippAuditLogPlannedWindows) and reconciliation windows
-           (Get-CippAuditLogReconciliationWindows) as Planned ledger rows.
-        2. Take the oldest <= MaxPerCycle (6) due Planned windows (regular + reconciliation combined)
-           and create a Graph search for each, with auto-retry DISABLED (New-CippAuditLogSearchV2 ->
-           maxRetries 1).
-        3. Throttling: the createSearch 429 is a per-tenant cap of ~10 concurrent searches, not a rate
-           limit, so on a 429 we stop and defer the current window AND all remaining queued windows to
-           the next cycle (no Attempts increment - a cap is not a failure, so it never dead-letters).
-           Other transient errors (UnknownError, 5xx, gateway) retry the individual window with backoff
-           and dead-letter at MaxAttempts. AuditingDisabled and AccessDenied (token failure - e.g.
-           AADSTS7000229 missing service principal) cache the tenant as disabled for 24h and stop.
+        Per tenant:
+        1. Plan owed regular windows (Get-CippAuditLogPlannedWindows) and reconciliation windows
+           (Get-CippAuditLogReconciliationWindows).
+        2. Take the freshest regular window plus the oldest of the remaining due windows, <= MaxPerCycle (6).
+        Then every tenant's searches are created together (New-CippAuditLogSearchV2: one $batch per tenant,
+        tenants sent concurrently), and each tenant's ledger rows are written in one call with their outcome:
+          * Created -> State Created with the SearchId.
+          * 429 -> the tenant's ~10 concurrent-search cap is full: stays Planned for the next cycle, no Attempts
+            increment (a cap is not a failure, so it never dead-letters).
+          * AuditingDisabled / AccessDenied -> Skipped, and the tenant is disabled for 24h.
+          * Other transient errors (already re-sent in-call) -> Planned with backoff, dead-lettered at MaxAttempts.
 
-        Capping at 6/cycle keeps us well under the ~10 concurrent-search ceiling (they complete within
-        the cycle and free slots). Oldest-first means gaps/backlog/reconciliation drain before the
-        freshest window; in steady state only the one new window is due, so latency is unaffected.
+        Capping at 6/cycle keeps each tenant under the ~10 concurrent-search ceiling. In steady state only the one
+        new window is due per tenant.
     .FUNCTIONALITY
         Entrypoint
     #>
     [CmdletBinding()]
     param($Item)
 
-    $TenantFilter = $Item.TenantFilter
-    $TenantId = $Item.TenantId
     $MaxPerCycle = 6
     $MaxAttempts = 8
+    # Items queued before chunking carry a single tenant.
+    $Tenants = if ($Item.Tenants) { @($Item.Tenants) } else { @([pscustomobject]@{ TenantFilter = $Item.TenantFilter; TenantId = $Item.TenantId }) }
 
-    try {
-        $Ledger = Get-CippTable -TableName 'AuditLogCoverage'
-        # Whole partition: re-planned MANUAL-* rows need re-creating too. No split markers - these rows never split.
-        $TenantKey = ([string]$TenantFilter).Replace("'", "''")
-        $Rows = @(Get-CIPPAzDataTableEntity @Ledger -Filter "PartitionKey eq '$TenantKey'" `
-                -Property 'RowKey', 'WindowStart', 'WindowEnd', 'State', 'NextAttemptUtc', 'Attempts', 'RetryCount', 'ThrottleCount')
-        $Now = (Get-Date).ToUniversalTime()
+    $Ledger = Get-CippTable -TableName 'AuditLogCoverage'
+    $Now = (Get-Date).ToUniversalTime()
+    $Plans = [System.Collections.Generic.List[object]]::new()
+    $Searches = [System.Collections.Generic.List[object]]::new()
 
-        # 1) Seed owed regular + reconciliation windows as Planned.
-        foreach ($Window in (Get-CippAuditLogPlannedWindows -ExistingRows $Rows -Now $Now)) {
-            $Entity = @{
-                PartitionKey = [string]$TenantFilter; RowKey = [string]$Window.RowKey; TenantId = [string]$TenantId
-                WindowStart = [datetime]$Window.WindowStart; WindowEnd = [datetime]$Window.WindowEnd
-                State = 'Planned'; Type = 'Window'; Attempts = 0; RetryCount = 0; ThrottleCount = 0; SearchId = ''; LastError = ''
-            }
-            Add-CIPPAzDataTableEntity @Ledger -Entity $Entity -Force
-            $Rows += [pscustomobject]$Entity
-        }
-        foreach ($Window in (Get-CippAuditLogReconciliationWindows -ExistingRows $Rows -Now $Now)) {
-            $Entity = @{
-                PartitionKey = [string]$TenantFilter; RowKey = [string]$Window.RowKey; TenantId = [string]$TenantId
-                WindowStart = [datetime]$Window.WindowStart; WindowEnd = [datetime]$Window.WindowEnd
-                State = 'Planned'; Type = 'Reconciliation'; Attempts = 0; RetryCount = 0; ThrottleCount = 0; SearchId = ''; LastError = ''
-            }
-            Add-CIPPAzDataTableEntity @Ledger -Entity $Entity -Force
-            $Rows += [pscustomobject]$Entity
-        }
-
-        # 2) Build the create batch: the freshest regular window FIRST (so live events alert
-        #    fast even during a backlog), then the oldest of whatever remains - regular +
-        #    reconciliation - to drain gaps before they age out. Reconciliation windows are
-        #    never "current"; they flow through the oldest-first backfill slots unchanged.
-        $Due = @($Rows | Where-Object {
-                $_.State -eq 'Planned' -and (-not $_.NextAttemptUtc -or ([datetimeoffset]$_.NextAttemptUtc).UtcDateTime -le $Now)
-            } | Sort-Object @{ Expression = { ([datetimeoffset]$_.WindowStart).UtcDateTime } })
-        if ($Due.Count -eq 0) {
-            Write-Information "AuditLogV2: no due windows for $TenantFilter"
-            return $true
-        }
-        # Newest regular (14-digit RowKey) window = the live period; reconciliation (RECON-*) is never current.
-        $CurrentWindow = @($Due | Where-Object { [string]$_.RowKey -match '^\d{14}$' } | Select-Object -Last 1)
-        if ($CurrentWindow.Count -gt 0) {
-            $CurrentKey = [string]$CurrentWindow[0].RowKey
-            $Backfill = @($Due | Where-Object { [string]$_.RowKey -ne $CurrentKey } | Select-Object -First ($MaxPerCycle - 1))
-            $Batch = @($CurrentWindow[0]) + $Backfill
-        } else {
-            # Only reconciliation windows are due: oldest-first, capped.
-            $Batch = @($Due | Select-Object -First $MaxPerCycle)
-        }
-
-        # 3) Create searches (no auto-retry). On 429 or a tenant-level disable, defer current +
-        #    remaining to next cycle.
-        $Bail = $false
-        $BailReason = ''
-        foreach ($Row in $Batch) {
-            if ($Bail) {
-                # Deferred (not attempted): just set NextAttemptUtc, leave Attempts/State as Planned.
-                Add-CIPPAzDataTableEntity @Ledger -Entity @{
-                    PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Planned'
-                    NextAttemptUtc = (Get-CippAuditLogNextAttempt -Attempts 1)
-                    ThrottleCount = ([int]$Row.ThrottleCount + 1); LastError = $BailReason; LastErrorUtc = $Now
-                } -OperationType UpsertMerge
-                continue
+    foreach ($Tenant in $Tenants) {
+        $TenantFilter = [string]$Tenant.TenantFilter
+        try {
+            # Whole partition: re-planned MANUAL-* rows need re-creating too. No split markers - these rows never split.
+            $TenantKey = $TenantFilter.Replace("'", "''")
+            $Rows = [System.Collections.Generic.List[object]]::new()
+            foreach ($Row in @(Get-CIPPAzDataTableEntity @Ledger -Filter "PartitionKey eq '$TenantKey'" `
+                        -Property 'RowKey', 'WindowStart', 'WindowEnd', 'State', 'NextAttemptUtc', 'Attempts', 'RetryCount', 'ThrottleCount')) {
+                $Rows.Add($Row)
             }
 
-            $Start = ([datetimeoffset]$Row.WindowStart).UtcDateTime
-            $End = ([datetimeoffset]$Row.WindowEnd).UtcDateTime
-            $Result = New-CippAuditLogSearchV2 -TenantFilter $TenantFilter -StartTime $Start -EndTime $End
-            $Attempts = [int]$Row.Attempts + 1
+            # 1) Owed windows join the plan as Planned rows; they are written below together with their outcome.
+            $New = @{}
+            foreach ($Window in (Get-CippAuditLogPlannedWindows -ExistingRows $Rows -Now $Now)) {
+                $Row = [pscustomobject]@{ RowKey = [string]$Window.RowKey; WindowStart = [datetime]$Window.WindowStart; WindowEnd = [datetime]$Window.WindowEnd; State = 'Planned'; Type = 'Window' }
+                $New[$Row.RowKey] = $Row
+                $Rows.Add($Row)
+            }
+            foreach ($Window in (Get-CippAuditLogReconciliationWindows -ExistingRows $Rows -Now $Now)) {
+                $Row = [pscustomobject]@{ RowKey = [string]$Window.RowKey; WindowStart = [datetime]$Window.WindowStart; WindowEnd = [datetime]$Window.WindowEnd; State = 'Planned'; Type = 'Reconciliation' }
+                $New[$Row.RowKey] = $Row
+                $Rows.Add($Row)
+            }
 
-            if ($Result.Outcome -eq 'Created' -and $Result.Id) {
-                Add-CIPPAzDataTableEntity @Ledger -Entity @{
-                    PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Created'
-                    SearchId = [string]$Result.Id; Attempts = 0; CreatedUtc = $Now
-                    SearchStatus = [string]$Result.Status; LastPolledUtc = $Now
-                } -OperationType UpsertMerge
-                Write-Information "AuditLogV2: created search for $TenantFilter window $($Row.RowKey)"
-            } elseif ($Result.Throttled) {
-                # 429 = tenant cap full. Defer this window (no Attempts bump - a cap isn't a failure) and bail.
-                $Bail = $true
-                $BailReason = 'Deferred: tenant search cap (429)'
-                Add-CIPPAzDataTableEntity @Ledger -Entity @{
-                    PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Planned'
-                    NextAttemptUtc = (Get-CippAuditLogNextAttempt -Attempts 1)
-                    ThrottleCount = ([int]$Row.ThrottleCount + 1); LastError = 'Tenant search cap (429)'; LastErrorUtc = $Now
-                } -OperationType UpsertMerge
-                Write-Information "AuditLogV2: 429 for $TenantFilter - deferring this + remaining windows to next cycle"
-            } elseif ($Result.Outcome -eq 'AuditingDisabled' -or $Result.Outcome -eq 'AccessDenied') {
-                # AuditingDisabled = unified auditing off; AccessDenied = we can't get a token for the
-                # tenant at all (e.g. missing service principal). Either way: disable for 24h and stop.
-                $Bail = $true
-                $BailReason = 'Deferred: tenant audit log collection disabled'
-                $DisableStatus = if ($Result.Outcome -eq 'AccessDenied') { [string]$Result.Status } else { 'AuditingDisabledTenant' }
-                $LedgerError = if ($Result.Message) { [string]$Result.Message } else { $DisableStatus }
+            # 2) The freshest regular window FIRST (so live events alert fast even during a backlog), then the
+            #    oldest of whatever remains - regular + reconciliation - to drain gaps before they age out.
+            $Due = @($Rows | Where-Object {
+                    $_.State -eq 'Planned' -and (-not $_.NextAttemptUtc -or ([datetimeoffset]$_.NextAttemptUtc).UtcDateTime -le $Now)
+                } | Sort-Object @{ Expression = { ([datetimeoffset]$_.WindowStart).UtcDateTime } })
+            $CurrentWindow = $Due.Where({ [string]$_.RowKey -match '^\d{14}$' }, 'Last', 1)
+            $Batch = if ($CurrentWindow.Count -gt 0) {
+                $CurrentKey = [string]$CurrentWindow[0].RowKey
+                @($CurrentWindow[0]; $Due.Where({ [string]$_.RowKey -ne $CurrentKey }, 'First', $MaxPerCycle - 1))
+            } else {
+                @($Due.Where({ $true }, 'First', $MaxPerCycle))
+            }
+
+            $Plans.Add([pscustomobject]@{ TenantFilter = $TenantFilter; TenantId = [string]$Tenant.TenantId; New = $New; Batch = @($Batch) })
+            foreach ($Row in $Batch) {
+                $Searches.Add(@{
+                        TenantFilter = $TenantFilter
+                        RowKey       = [string]$Row.RowKey
+                        StartTime    = ([datetimeoffset]$Row.WindowStart).UtcDateTime
+                        EndTime      = ([datetimeoffset]$Row.WindowEnd).UtcDateTime
+                    })
+            }
+        } catch {
+            Write-Information ('Push-AuditLogSearchCreationV2: could not plan {0}: {1}' -f $TenantFilter, $_.Exception.Message)
+        }
+    }
+
+    $Results = @{}
+    if ($Searches.Count -gt 0) {
+        foreach ($Result in (New-CippAuditLogSearchV2 -Searches $Searches.ToArray())) {
+            if ($Result) { $Results['{0}|{1}' -f $Result.TenantFilter, $Result.RowKey] = $Result }
+        }
+    }
+
+    $Created = 0
+    foreach ($Plan in $Plans) {
+        $TenantFilter = $Plan.TenantFilter
+        try {
+            $Entities = @{}
+            foreach ($Row in $Plan.New.Values) {
+                $Entities[$Row.RowKey] = @{
+                    PartitionKey = $TenantFilter; RowKey = $Row.RowKey; TenantId = $Plan.TenantId
+                    WindowStart = $Row.WindowStart; WindowEnd = $Row.WindowEnd; State = 'Planned'; Type = $Row.Type
+                    Attempts = 0; RetryCount = 0; ThrottleCount = 0; SearchId = ''; LastError = ''
+                }
+            }
+            $Disabled = $null
+            foreach ($Row in $Plan.Batch) {
+                $Result = $Results['{0}|{1}' -f $TenantFilter, $Row.RowKey]
+                if (-not $Result) { continue }
+                $Entity = $Entities[[string]$Row.RowKey]
+                if (-not $Entity) {
+                    $Entity = @{ PartitionKey = $TenantFilter; RowKey = [string]$Row.RowKey }
+                    $Entities[[string]$Row.RowKey] = $Entity
+                }
+                if ($Result.Outcome -eq 'Created' -and $Result.Id) {
+                    $Entity.State = 'Created'; $Entity.SearchId = [string]$Result.Id; $Entity.Attempts = 0; $Entity.CreatedUtc = $Now
+                    $Entity.SearchStatus = [string]$Result.Status; $Entity.LastPolledUtc = $Now
+                    $Created++
+                } elseif ($Result.Throttled) {
+                    $Entity.State = 'Planned'; $Entity.NextAttemptUtc = (Get-CippAuditLogNextAttempt -Attempts 1)
+                    $Entity.ThrottleCount = [int]$Row.ThrottleCount + 1; $Entity.LastError = 'Tenant search cap (429)'; $Entity.LastErrorUtc = $Now
+                } elseif ($Result.Outcome -eq 'AuditingDisabled' -or $Result.Outcome -eq 'AccessDenied') {
+                    $Disabled = $Result
+                    $Entity.State = 'Skipped'; $Entity.LastError = if ($Result.Message) { [string]$Result.Message } else { [string]$Result.Status }; $Entity.LastErrorUtc = $Now
+                } else {
+                    $Attempts = [int]$Row.Attempts + 1
+                    $Entity.Attempts = $Attempts; $Entity.RetryCount = [int]$Row.RetryCount + 1
+                    $Entity.LastError = [string]$Result.Message; $Entity.LastErrorUtc = $Now
+                    if ($Attempts -ge $MaxAttempts) {
+                        $Entity.State = 'DeadLetter'
+                    } else {
+                        $Entity.State = 'Planned'; $Entity.NextAttemptUtc = (Get-CippAuditLogNextAttempt -Attempts $Attempts)
+                    }
+                }
+            }
+            if ($Entities.Count -gt 0) {
+                Add-CIPPAzDataTableEntity @Ledger -Entity @($Entities.Values) -OperationType UpsertMerge
+            }
+
+            if ($Disabled) {
+                # AuditingDisabled = unified auditing off; AccessDenied = no token or no audit permission. Disable for 24h.
+                $DisableStatus = if ($Disabled.Outcome -eq 'AccessDenied') { [string]$Disabled.Status } else { 'AuditingDisabledTenant' }
                 try {
                     $AuditDisabledTable = Get-CIPPTable -TableName 'AuditLogDisabledTenants'
                     Add-CIPPAzDataTableEntity @AuditDisabledTable -Entity @{
-                        PartitionKey = 'AuditDisabledTenant'; RowKey = [string]$TenantFilter; TenantFilter = [string]$TenantFilter
+                        PartitionKey = 'AuditDisabledTenant'; RowKey = $TenantFilter; TenantFilter = $TenantFilter
                         Status = $DisableStatus; ExpiresAtUnix = [int64]([datetimeoffset]::UtcNow.AddHours(24).ToUnixTimeSeconds())
                     } -Force
-                } catch {}
-                Add-CIPPAzDataTableEntity @Ledger -Entity @{ PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Skipped'; LastError = $LedgerError; LastErrorUtc = $Now } -OperationType UpsertMerge
+                } catch {
+                    Write-Information "AuditLogV2: could not record $TenantFilter as disabled: $($_.Exception.Message)"
+                }
                 Write-Information "AuditLogV2: $DisableStatus for $TenantFilter; disabled for 24h"
-            } else {
-                # Other transient: retry this window next cycle; dead-letter at cap.
-                $RetryTotal = [int]$Row.RetryCount + 1
-                if ($Attempts -ge $MaxAttempts) {
-                    Add-CIPPAzDataTableEntity @Ledger -Entity @{ PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'DeadLetter'; Attempts = $Attempts; RetryCount = $RetryTotal; LastError = [string]$Result.Message; LastErrorUtc = $Now } -OperationType UpsertMerge
-                } else {
-                    Add-CIPPAzDataTableEntity @Ledger -Entity @{ PartitionKey = $TenantFilter; RowKey = $Row.RowKey; State = 'Planned'; Attempts = $Attempts; RetryCount = $RetryTotal; NextAttemptUtc = (Get-CippAuditLogNextAttempt -Attempts $Attempts); LastError = [string]$Result.Message; LastErrorUtc = $Now } -OperationType UpsertMerge
+                if ($Disabled.Outcome -eq 'AccessDenied') {
+                    $LogMessage = if ($Disabled.Message) { [string]$Disabled.Message } else { $DisableStatus }
+                    Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log collection paused for 24 hours: $LogMessage" -sev Warning
                 }
             }
+        } catch {
+            Write-Information ('Push-AuditLogSearchCreationV2: could not record searches for {0}: {1}' -f $TenantFilter, $_.Exception.Message)
         }
-        return $true
-    } catch {
-        Write-Information ('Push-AuditLogSearchCreationV2 error for {0}: {1}' -f $TenantFilter, $_.Exception.Message)
-        Write-Information $_.InvocationInfo.PositionMessage
-        return $false
     }
+
+    Write-Information "AuditLogV2: created $Created of $($Searches.Count) search(es) for $($Plans.Count) tenant(s)"
+    return $true
 }

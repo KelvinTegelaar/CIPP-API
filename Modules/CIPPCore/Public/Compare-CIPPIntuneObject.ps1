@@ -495,7 +495,7 @@ function Compare-CIPPIntuneObject {
                 # it guarantees permanent phantom drift, so skip it entirely.
                 if ($null -eq $child -or -not "$($child.settingDefinitionId)") { continue }
                 $childIntuneObj = $IntuneCollectionIndex[$child.settingDefinitionId]
-                $childLabel = if ($childIntuneObj?.displayName) {
+                $childLabel = if (${childIntuneObj}?.displayName) {
                     $childIntuneObj.displayName
                 } else {
                     $child.settingDefinitionId
@@ -609,7 +609,7 @@ function Compare-CIPPIntuneObject {
                 }
                 default {
                     if ($settingInstance.simpleSettingValue?.value) {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId
@@ -622,7 +622,7 @@ function Compare-CIPPIntuneObject {
                             Source = 'Reference'
                         }
                     } elseif ($settingInstance.simpleSettingCollectionValue) {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId
@@ -635,7 +635,7 @@ function Compare-CIPPIntuneObject {
                             Source = 'Reference'
                         }
                     } elseif ($settingInstance.choiceSettingValue?.value) {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId
@@ -656,7 +656,7 @@ function Compare-CIPPIntuneObject {
                             foreach ($cr in $childResults) { $cr }
                         }
                     } elseif ($settingInstance.choiceSettingCollectionValue) {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId
@@ -672,7 +672,7 @@ function Compare-CIPPIntuneObject {
                             Source = 'Reference'
                         }
                     } else {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId
@@ -709,7 +709,7 @@ function Compare-CIPPIntuneObject {
                 }
                 default {
                     if ($settingInstance.simpleSettingValue?.value) {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId
@@ -722,7 +722,7 @@ function Compare-CIPPIntuneObject {
                             Source = 'Difference'
                         }
                     } elseif ($settingInstance.simpleSettingCollectionValue) {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId
@@ -735,7 +735,7 @@ function Compare-CIPPIntuneObject {
                             Source = 'Difference'
                         }
                     } elseif ($settingInstance.choiceSettingValue?.value) {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId
@@ -756,7 +756,7 @@ function Compare-CIPPIntuneObject {
                             foreach ($cr in $childResults) { $cr }
                         }
                     } elseif ($settingInstance.choiceSettingCollectionValue) {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId
@@ -772,7 +772,7 @@ function Compare-CIPPIntuneObject {
                             Source = 'Difference'
                         }
                     } else {
-                        $label = if ($intuneObj?.displayName) {
+                        $label = if (${intuneObj}?.displayName) {
                             $intuneObj.displayName
                         } else {
                             $settingInstance.settingDefinitionId

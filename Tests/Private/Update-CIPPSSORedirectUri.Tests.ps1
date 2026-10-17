@@ -46,6 +46,7 @@ Describe 'Update-CIPPSSORedirectUri scope backfill' {
         $script:AppScopeIds = @($script:OpenId, $script:ProfileScope, $script:Email)
         # Any extra (non-Graph) requiredResourceAccess entries the app carries.
         $script:ExtraResources = @()
+        $script:NoGraphEntry = $false
 
         Mock -CommandName Get-CippKeyVaultName -MockWith { 'stub-vault' }
         Mock -CommandName Get-CippKeyVaultSecret -MockWith {
@@ -67,9 +68,11 @@ Describe 'Update-CIPPSSORedirectUri scope backfill' {
                 web                    = [PSCustomObject]@{ redirectUris = @($script:Callback) }
                 requiredResourceAccess = @(
                     @($script:ExtraResources)
-                    [PSCustomObject]@{
-                        resourceAppId  = $script:GraphResourceId
-                        resourceAccess = @($script:AppScopeIds | ForEach-Object { [PSCustomObject]@{ id = $_; type = 'Scope' } })
+                    if (-not $script:NoGraphEntry) {
+                        [PSCustomObject]@{
+                            resourceAppId  = $script:GraphResourceId
+                            resourceAccess = @($script:AppScopeIds | ForEach-Object { [PSCustomObject]@{ id = $_; type = 'Scope' } })
+                        }
                     }
                 )
             }
@@ -130,6 +133,17 @@ Describe 'Update-CIPPSSORedirectUri scope backfill' {
             $Resources = ($body | ConvertFrom-Json).requiredResourceAccess
             ($Resources | Where-Object { $_.resourceAppId -eq '00000002-0000-0000-c000-000000000000' }) -and
             (($Resources | Where-Object { $_.resourceAppId -eq $script:GraphResourceId }).resourceAccess.id -contains $script:OfflineAccess)
+        }
+    }
+
+    It 'declares every scope without a null id when the app has no Graph entry at all' {
+        $script:NoGraphEntry = $true
+
+        Update-CIPPSSORedirectUri
+
+        Should -Invoke -CommandName New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+            $GraphAccess = @((($body | ConvertFrom-Json).requiredResourceAccess | Where-Object { $_.resourceAppId -eq $script:GraphResourceId }).resourceAccess)
+            $GraphAccess.Count -eq 4 -and @($GraphAccess | Where-Object { -not $_.id }).Count -eq 0
         }
     }
 }

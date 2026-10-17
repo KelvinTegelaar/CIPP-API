@@ -5,7 +5,7 @@ BeforeAll {
     . (Join-Path $TestsRoot 'CopilotReadiness/Identity/Invoke-CippTestCopilotReady004.ps1')
     . (Join-Path $TestsRoot 'CopilotReadiness/Identity/Invoke-CippTestCopilotReady007.ps1')
 
-    function Get-CIPPTestData { param($TenantFilter, $Type) $script:Data[$Type] }
+    function Get-CIPPTestData { param($TenantFilter, $Type, $Fields, [switch]$Stream) $script:Data[$Type] }
     function Add-CippTestResult { param($TenantFilter, $TestId, $TestType, $Status, $ResultMarkdown, $Risk, $Name, $UserImpact, $ImplementationEffort, $Category) $script:Result = @{ Status = $Status; Markdown = "$ResultMarkdown" } }
     function Write-LogMessage { }
     function Get-CippException { param($Exception) @{ NormalizedError = $Exception.Exception.Message } }

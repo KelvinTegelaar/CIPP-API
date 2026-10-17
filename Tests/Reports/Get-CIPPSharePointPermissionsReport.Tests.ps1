@@ -7,7 +7,7 @@ BeforeAll {
 
     # Static stubs for the cache reads. No pass-through mocks.
     function New-CIPPDbRequest {
-        param($TenantFilter, $Type, $Fields)
+        param($TenantFilter, $Type, $Fields, $TableName)
         @(
             [pscustomobject]@{ rowType = 'Site'; siteName = 'Sales'; siteUrl = 'https://x/sites/Sales'; librariesScanned = 2; librariesWithUniquePermissions = 1; collectionStatus = 'Completed' }
             [pscustomobject]@{ rowType = 'Site'; siteName = 'Broken'; siteUrl = 'https://x/sites/Broken'; librariesScanned = 0; librariesWithUniquePermissions = 0; collectionStatus = 'Skipped'; collectionError = 'boom' }
@@ -19,7 +19,7 @@ BeforeAll {
             [pscustomobject]@{ rowType = 'Assignment'; principalId = $null; scope = 'Library' }
         )
     }
-    function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) [pscustomobject]@{ Timestamp = [datetime]'2026-09-01' } }
+    function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly, $TableName) [pscustomobject]@{ Timestamp = [datetime]'2026-09-01' } }
 }
 
 Describe 'Get-CIPPSharePointPermissionsReport' {

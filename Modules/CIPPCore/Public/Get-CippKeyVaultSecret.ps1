@@ -16,6 +16,9 @@ function Get-CippKeyVaultSecret {
     .PARAMETER AsPlainText
     Returns the secret value as plain text instead of SecureString.
 
+    .PARAMETER IncludeAttributes
+    Returns @{ Value; Updated; Created } with the plain-text value and the secret's timestamps.
+
     .EXAMPLE
     Get-CippKeyVaultSecret -Name 'ApplicationID' -AsPlainText
 
@@ -32,7 +35,10 @@ function Get-CippKeyVaultSecret {
         [string]$Name,
 
         [Parameter(Mandatory = $false)]
-        [switch]$AsPlainText
+        [switch]$AsPlainText,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeAttributes
     )
 
     try {
@@ -72,6 +78,14 @@ function Get-CippKeyVaultSecret {
                     Write-Error "Failed to retrieve secret '$Name' from vault '$VaultName' after $maxRetries attempts: $($_.Exception.Message)"
                     throw "Failed to retrieve secret '$Name' from vault '$VaultName' after $maxRetries attempts: $($_.Exception.Message)"
                 }
+            }
+        }
+
+        if ($IncludeAttributes) {
+            return @{
+                Value   = $response.value
+                Updated = if ($response.attributes.updated) { [DateTimeOffset]::FromUnixTimeSeconds([long]$response.attributes.updated) } else { $null }
+                Created = if ($response.attributes.created) { [DateTimeOffset]::FromUnixTimeSeconds([long]$response.attributes.created) } else { $null }
             }
         }
 

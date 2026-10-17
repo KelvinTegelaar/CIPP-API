@@ -299,7 +299,8 @@ function Invoke-CIPPStandardDevicePrepProfile {
         return
     }
 
-    $ExistingPolicy = $ExistingPolicies | Where-Object { $_.Name -eq $ProfileName } | Select-Object -First 1
+    # Name alone could match an unrelated Settings Catalog policy, which a drift fix would delete.
+    $ExistingPolicy = $ExistingPolicies | Where-Object { $_.Name -eq $ProfileName -and "$($_.templateReference.templateId)" -like '80d33118-b7b4-40d8-b15f-81be745e053f*' } | Select-Object -First 1
     $PolicyExists = $null -ne $ExistingPolicy
 
     # Parse current settings

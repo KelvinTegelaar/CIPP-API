@@ -5,8 +5,8 @@ function Invoke-ListSharePointPermissions {
     .ROLE
         Sharepoint.Site.Read
     .DESCRIPTION
-        Compiles the SharePoint permissions report for a tenant from CACHED data in the CIPP
-        reporting database (SharePointPermissions). No live enumeration is performed - refresh the
+        Compiles the SharePoint permissions report for a tenant from CACHED data in the
+        CippSharePointPermissions table. No live enumeration is performed - refresh the
         data by syncing that cache (ExecCIPPDBCache). Returns the scan summary, the oversharing
         signals worth acting on, chart datasets and the individual permission assignments.
 

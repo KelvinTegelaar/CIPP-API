@@ -90,6 +90,10 @@ Describe 'Get-CIPPBrandingPreset' {
             (Get-CIPPBrandingPreset)[0].colour | Should -Be '#F77F00'
         }
 
+        It 'returns empty roleColours, so every role follows the brand colour' {
+            @((Get-CIPPBrandingPreset)[0].roleColours.PSObject.Properties).Count | Should -Be 0
+        }
+
         It 'names an unnamed preset rather than returning a blank chip' {
             $script:Rows = @(New-PresetRow -Overrides @{ name = '' })
             (Get-CIPPBrandingPreset)[0].name | Should -Be 'Untitled preset'
@@ -106,9 +110,11 @@ Describe 'Get-CIPPBrandingPreset' {
                     watermarkText    = 'DRAFT'
                     watermarkEnabled = $true
                     coverStock       = '/reportImages/city.jpg'
+                    roleColours      = '{"headingColour":"#AA0000"}'
                 })
 
             $Preset = (Get-CIPPBrandingPreset)[0]
+            $Preset.roleColours.headingColour | Should -Be '#AA0000'
             $Preset.secondaryColour | Should -Be '#006666'
             $Preset.footerText | Should -Be '[tenantName] — [date]'
             $Preset.showFooter | Should -BeFalse

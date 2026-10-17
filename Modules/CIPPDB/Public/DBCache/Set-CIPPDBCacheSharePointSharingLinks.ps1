@@ -7,7 +7,7 @@
         Enumerates every site in the tenant (SharePoint sites and OneDrive personal sites) and the
         tenant's verified domains, then starts a child orchestration with one activity per site
         (Push-DBCacheSharePointSiteSharingLinks). Each site activity scans its own drives for shared
-        items and writes sharing-link rows straight to the reporting DB as it goes.
+        items and writes sharing-link rows straight to the CippSharingLinks table as it goes.
 
         Site activities are resumable: each checkpoints its delta position after every persisted
         page, so a run killed by a timeout or recycle loses at most one page — re-dispatching the
@@ -15,12 +15,12 @@
         task-level retry mechanism can safely fire a site's task again at any time (large sites
         previously hit the activity timeout, were retried from scratch and never completed).
         Drives that completed a previous scan store their Graph deltaLink and are scanned
-        incrementally — only changed items are processed — with a periodic full rescan
-        (CIPP_SHARINGLINKS_FULLSCAN_DAYS, default 14) bounding any drift.
+        incrementally — only changed items are processed. A drive is rescanned in full only when
+        it has no token, the token is rejected, or it holds fewer rows than it last recorded.
 
         Completion is tracked in the CippSharingLinksState table; the activity that finishes the
         last site runs Push-StoreSharePointSharingLinks to prune rows for drives that no longer
-        exist and refresh the cached count. There is deliberately no PostExecution aggregation:
+        exist and record the tenant's link count. There is deliberately no PostExecution aggregation:
         rows stream to storage per page, so the whole tenant's link set is never held in memory.
 
     .PARAMETER TenantFilter
@@ -41,7 +41,15 @@
     )
 
     try {
-        $TenantFilter = Resolve-CIPPSharingLinksTenantFilter -TenantFilter $TenantFilter
+        # Every row and task is keyed on the default domain; a tenant id is resolved here once.
+        if ($TenantFilter -match '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
+            $TenantFilter = @(Get-Tenants -TenantFilter $TenantFilter -IncludeErrors)[0].defaultDomainName ?? $TenantFilter
+        }
+        $Running = Get-CIPPSharingLinksScanStatus -TenantFilter $TenantFilter
+        if ($Running.inProgress) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links scan already running (started $($Running.startedUtc)); not starting another" -sev Info
+            return
+        }
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Starting SharePoint/OneDrive sharing link collection (per-site fan-out)' -sev Debug
 
         # Verified domains, used by each site activity to tell internal from external recipients.
@@ -53,12 +61,22 @@
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Could not list verified domains for sharing link classification: $($_.Exception.Message)" -sev Warning
         }
 
+        # Lets each site task ask SharePoint which of its libraries hold their own permissions.
+        $SharePointUrl = try { (Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter).SharePointUrl } catch { $null }
+
         # All sites, including OneDrive personal sites. Cheap - just the site list, no drive scan here.
         $Sites = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/getAllSites?`$select=id,displayName,name,webUrl,isPersonalSite&`$top=999" -tenantid $TenantFilter -asapp $true)
 
         if ($Sites.Count -eq 0) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No sites found; writing empty SharePointSharingLinks cache' -sev Debug
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSharingLinks' -Data @() -AddCount
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No sites found; clearing cached sharing links' -sev Debug
+            $null = Remove-CIPPSharingLinksRowsByPrefix -TenantFilter $TenantFilter
+            $SummaryTable = Get-CippTable -tablename 'CippSharingLinksState'
+            $null = Add-CIPPAzDataTableEntity @SummaryTable -Entity @{
+                PartitionKey = $TenantFilter
+                RowKey       = 'summary'
+                LinkCount    = 0
+                CompletedUtc = [string]([DateTimeOffset]::UtcNow.ToString('o'))
+            } -Force
             return
         }
 
@@ -97,6 +115,8 @@
             TotalSites   = [int]$Sites.Count
             FullSweep    = [bool]$FullSweep
             StartedUtc   = [string]([DateTimeOffset]::UtcNow.ToString('o'))
+            QueueId      = [string]$QueueId
+            Phase        = "Listing the libraries of $($Sites.Count) sites"
         } -Force
 
         $Batch = foreach ($Site in $Sites) {
@@ -112,6 +132,7 @@
                 ForceFull       = [bool]$ForceFullSync
                 QueueId         = $QueueId
                 QueueName       = "Sharing Links - $($Site.webUrl)"
+                SharePointScope = if ($SharePointUrl) { "$SharePointUrl/.default" }
             }
         }
 
@@ -124,10 +145,23 @@
             }
         }
 
+        # A user's refresh would otherwise run the whole scan at P1, ahead of every scheduled task.
         $InputObject = [PSCustomObject]@{
             Batch            = @($Batch)
             OrchestratorName = "SharePointSharingLinks_$TenantFilter"
+            AllowCollision   = $false
+            Priority         = [Math]::Max(2, (Resolve-CIPPOrchestratorPriority -OpContext (Get-Variable -Name 'CraftOperationContext' -Scope Global -ValueOnly -ErrorAction SilentlyContinue)))
             SkipLog          = $true
+            PostExecution    = @{
+                FunctionName = 'SharingLinksDispatchDrives'
+                Parameters   = @{
+                    TenantFilter    = $TenantFilter
+                    ScanId          = $ScanId
+                    InternalDomains = @($InternalDomains)
+                    ForceFull       = [bool]$ForceFullSync
+                    QueueId         = $QueueId
+                }
+            }
         }
 
         $null = Start-CIPPOrchestrator -InputObject $InputObject

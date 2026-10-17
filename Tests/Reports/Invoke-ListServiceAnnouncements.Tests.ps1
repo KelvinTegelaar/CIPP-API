@@ -11,7 +11,8 @@ BeforeAll {
         $Accelerators::Add('HttpStatusCode', [System.Net.HttpStatusCode])
     }
 
-    function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$ByTenant) }
+    function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$ByTenant, $Partition) }
+    function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function New-GraphGetRequest { param($uri, $tenantid) }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
@@ -39,6 +40,17 @@ BeforeAll {
 }
 
 Describe 'Service announcement list endpoints' {
+    BeforeEach {
+        # Service health issues are read one tenant partition at a time; $script:Cache maps tenant -> rows
+        $script:Cache = [ordered]@{}
+        Mock Get-Tenants { foreach ($Domain in $script:Cache.Keys) { [pscustomobject]@{ defaultDomainName = $Domain } } }
+        Mock Get-CIPPDbItem { }
+        Mock Get-CIPPDbItem -ParameterFilter { $Type -eq 'ServiceHealthIssues' } {
+            $Key = if ($Partition) { $Partition } else { $TenantFilter }
+            if ($script:Cache.Contains($Key)) { $script:Cache[$Key] }
+        }
+    }
+
     It 'returns cached overviews for one tenant with CacheTimestamp and no Tenant' {
         Mock Get-CIPPDbItem {
             [ordered]@{
@@ -74,19 +86,21 @@ Describe 'Service announcement list endpoints' {
     }
 
     It 'collapses AllTenants issues by id, keeping the newest copy and the tenants it reached' {
-        Mock Get-CIPPDbItem {
-            [ordered]@{
-                'a.com' = [System.Collections.Generic.List[object]]@(
-                    (New-Row 'a.com' '{"id":"EX1","title":"old","lastModifiedDateTime":"2026-09-28T00:00:00Z","details":[{"name":"AffectedChildWorkloads","value":"a-only"}]}')
-                    (New-Row 'a.com' '{"id":"TM1","title":"teams","lastModifiedDateTime":"2026-09-28T00:00:00Z"}')
-                )
-                'b.com' = [System.Collections.Generic.List[object]]@(
-                    (New-Row 'b.com' '{"id":"EX1","title":"new","lastModifiedDateTime":"2026-09-29T00:00:00Z"}' $script:T2)
-                )
-            }
+        $script:Cache = [ordered]@{
+            'b.com' = @(
+                (New-Row 'b.com' '{"id":"EX1","title":"new","lastModifiedDateTime":"2026-09-29T00:00:00Z"}' $script:T2)
+            )
+            'a.com' = @(
+                (New-Row 'a.com' '{"id":"EX1","title":"old","lastModifiedDateTime":"2026-09-28T00:00:00Z","details":[{"name":"AffectedChildWorkloads","value":"a-only"}]}')
+                (New-Row 'a.com' '{"id":"TM1","title":"teams","lastModifiedDateTime":"2026-09-28T00:00:00Z"}')
+            )
         }
 
         $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'AllTenants')
+
+        # One partition read per tenant, in key order, never the whole table
+        Should -Invoke Get-CIPPDbItem -Times 2 -Exactly -ParameterFilter { $Type -eq 'ServiceHealthIssues' }
+        Should -Invoke Get-CIPPDbItem -Times 0 -ParameterFilter { $TenantFilter -eq 'allTenants' }
 
         $Response.Body | Should -HaveCount 2
         $Exchange = $Response.Body | Where-Object id -EQ 'EX1'
@@ -101,12 +115,11 @@ Describe 'Service announcement list endpoints' {
     }
 
     It 'drops resolved issues from the cache when Open is set and keeps the unresolved ones' {
-        Mock Get-CIPPDbItem {
-            [ordered]@{
-                'a.com' = [System.Collections.Generic.List[object]]@(
-                    (New-Row 'a.com' '[{"id":"EX1","isResolved":true},{"id":"TM1","isResolved":false}]')
-                )
-            }
+        $script:Cache = [ordered]@{
+            'a.com' = @(
+                (New-Row 'a.com' '[{"id":"EX1","isResolved":true},{"id":"TM1","isResolved":false}]')
+                (New-Row 'a.com' '{"id":"SP1","isResolved":true}')
+            )
         }
 
         $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'a.com' -UseReportDB -Open)
@@ -118,12 +131,10 @@ Describe 'Service announcement list endpoints' {
     }
 
     It 'keeps resolved issues from the cache when Open is not set' {
-        Mock Get-CIPPDbItem {
-            [ordered]@{
-                'a.com' = [System.Collections.Generic.List[object]]@(
-                    (New-Row 'a.com' '[{"id":"EX1","isResolved":true},{"id":"TM1","isResolved":false}]')
-                )
-            }
+        $script:Cache = [ordered]@{
+            'a.com' = @(
+                (New-Row 'a.com' '[{"id":"EX1","isResolved":true},{"id":"TM1","isResolved":false}]')
+            )
         }
 
         $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'a.com' -UseReportDB)
@@ -133,11 +144,9 @@ Describe 'Service announcement list endpoints' {
 
     It 'under Open, skips the tenant whose cached copy is resolved but still returns the tenant where the issue is open' {
         # Cache rows are written per tenant on different runs, so the same issue can be resolved in one row and open in another.
-        Mock Get-CIPPDbItem {
-            [ordered]@{
-                'a.com' = [System.Collections.Generic.List[object]]@((New-Row 'a.com' '{"id":"EX1","isResolved":true,"lastModifiedDateTime":"2026-09-29T00:00:00Z"}'))
-                'b.com' = [System.Collections.Generic.List[object]]@((New-Row 'b.com' '{"id":"EX1","isResolved":false,"lastModifiedDateTime":"2026-09-28T00:00:00Z"}'))
-            }
+        $script:Cache = [ordered]@{
+            'a.com' = @((New-Row 'a.com' '{"id":"EX1","isResolved":true,"lastModifiedDateTime":"2026-09-29T00:00:00Z"}'))
+            'b.com' = @((New-Row 'b.com' '{"id":"EX1","isResolved":false,"lastModifiedDateTime":"2026-09-28T00:00:00Z"}'))
         }
 
         $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'AllTenants' -Open)

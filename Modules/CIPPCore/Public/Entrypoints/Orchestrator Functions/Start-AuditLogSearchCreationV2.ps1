@@ -1,12 +1,12 @@
 function Start-AuditLogSearchCreationV2 {
     <#
     .SYNOPSIS
-        V2 audit-log search creation timer. Plans non-overlapping 60-minute windows per tenant in the
-        AuditLogCoverage ledger and fans out creation only to tenants that owe a window or have a
+        V2 audit-log search creation timer. Plans 35-minute windows per tenant in the AuditLogCoverage
+        ledger and fans out creation, in chunks of tenants, only to tenants that owe a window or have a
         retry due.
     .DESCRIPTION
-        Replaces Start-AuditLogSearchCreation. Tenant selection is unchanged (WebhookRules Webhookv2,
-        minus excluded, minus auditing-disabled). The key differences:
+        Tenants: those with Webhookv2 WebhookRules, minus excluded, minus auditing-disabled.
+        The key points:
           * Windows are clock-aligned, 35 minutes on a 30-minute stride, so consecutive windows
             OVERLAP by 5 minutes (tracked in AuditLogCoverage). The overlap is deliberate - it
             covers records landing on a boundary - and is safe only because alerting de-duplicates
@@ -15,12 +15,17 @@ function Start-AuditLogSearchCreationV2 {
           * Failed creations are recorded as Planned/Retry ledger rows, so they are retried (and gaps
             backfilled) instead of being silently dropped.
           * "First check what tenants need searches created" - the timer scans the ledger once and
-            only fans out per-tenant activities for tenants that owe a window or have a due retry.
+            only fans out tenants that owe a window or have a due retry.
+          * Tenants are fanned out in chunks of -TenantsPerTask (100). Each activity creates its tenants'
+            searches in one concurrent multi-tenant Graph call, so a few hundred tenants are a handful
+            of tasks rather than one task each.
     .FUNCTIONALITY
         Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    param()
+    param(
+        [int]$TenantsPerTask = 100
+    )
     try {
         # --- Tenant selection (same source as V1) ---
         $ConfigTable = Get-CippTable -TableName 'WebhookRules'
@@ -112,28 +117,36 @@ function Start-AuditLogSearchCreationV2 {
         }
 
         $Now = (Get-Date).ToUniversalTime()
-        $Batch = foreach ($Tenant in $InScope) {
+        $Owing = foreach ($Tenant in $InScope) {
             $Rows = if ($ByTenant.ContainsKey($Tenant.defaultDomainName)) { $ByTenant[$Tenant.defaultDomainName] } else { @() }
             $Owed = Get-CippAuditLogPlannedWindows -ExistingRows $Rows -Now $Now
             $OwedRecon = Get-CippAuditLogReconciliationWindows -ExistingRows $Rows -Now $Now
             $DuePlanned = @($Rows | Where-Object { $_.State -eq 'Planned' -and (-not $_.NextAttemptUtc -or ([datetimeoffset]$_.NextAttemptUtc).UtcDateTime -le $Now) })
             if (($Owed.Count -gt 0) -or ($OwedRecon.Count -gt 0) -or ($DuePlanned.Count -gt 0)) {
                 [PSCustomObject]@{
-                    FunctionName = 'AuditLogSearchCreationV2'
                     TenantFilter = $Tenant.defaultDomainName
                     TenantId     = [string]$Tenant.customerId
                 }
             }
         }
+        $Owing = @($Owing)
+        $Batch = for ($i = 0; $i -lt $Owing.Count; $i += $TenantsPerTask) {
+            [PSCustomObject]@{
+                FunctionName = 'AuditLogSearchCreationV2'
+                Tenants      = @($Owing[$i..([Math]::Min($i + $TenantsPerTask - 1, $Owing.Count - 1))])
+            }
+        }
         $Batch = @($Batch)
 
         if ($Batch.Count -gt 0) {
-            Write-Information "AuditLogV2: $($Batch.Count) tenant(s) need search creation"
+            Write-Information "AuditLogV2: $($Owing.Count) tenant(s) need search creation, in $($Batch.Count) task(s)"
             if ($PSCmdlet.ShouldProcess('Start-AuditLogSearchCreationV2', 'Create audit log searches')) {
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'AuditLogSearchCreationV2'
+                    AllowCollision   = $false
                     Batch            = @($Batch)
                     SkipLog          = $true
+                    Priority         = 3
                 }
                 Start-CIPPOrchestrator -InputObject $InputObject
             }

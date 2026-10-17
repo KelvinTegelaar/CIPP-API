@@ -34,6 +34,22 @@ Describe 'Get-CIPPSharePointDomain' {
 
 Describe 'Get-SharePointAdminLink' {
     Context 'resolving through Graph' {
+        BeforeEach {
+            $script:CIPPSharePointAdminLinks = @{}
+            $script:CIPPSharePointRootSiteFailures = @{}
+        }
+
+        It 'looks the root site up once per tenant and reuses it' {
+            Mock -CommandName New-GraphGetRequest -MockWith {
+                [PSCustomObject]@{ siteCollection = [PSCustomObject]@{ hostname = 'contoso.sharepoint.com' } }
+            }
+
+            $null = Get-SharePointAdminLink -Public $false -TenantFilter 'contoso.onmicrosoft.com'
+            (Get-SharePointAdminLink -Public $false -TenantFilter 'contoso.onmicrosoft.com').AdminUrl |
+                Should -Be 'https://contoso-admin.sharepoint.com'
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly
+        }
+
         It 'takes the domain from the root site host rather than assuming .com' {
             Mock -CommandName New-GraphGetRequest -MockWith {
                 [PSCustomObject]@{

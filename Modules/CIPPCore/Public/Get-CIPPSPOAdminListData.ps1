@@ -9,8 +9,9 @@ function Get-CIPPSPOAdminListData {
     Returns flat admin list Row objects (all pages). Does not join Graph or map browser DTOs.
 
     Dotted numeric props (e.g. StorageUsed.) are an RLD quirk; -NormalizeRows copies them to
-    undotted names when present, coerces StorageUsed / NumOfFiles / StorageQuota to int64, and
-    adds StorageQuotaBytes (admin quota is MB unless already byte-sized).
+    undotted names when present, coerces StorageUsed / NumOfFiles / StorageQuota to int64,
+    and adds StorageQuotaBytes. A numeric dotted StorageQuota. explicitly supplies bytes;
+    infer legacy MB versus bytes only from valid, non-overlapping SharePoint quota ranges.
 
     .PARAMETER TenantFilter
     Tenant to query.
@@ -192,9 +193,36 @@ function Get-CIPPSPOAdminListData {
                     }
                 }
                 if ($null -ne $Props['StorageQuota']) {
-                    $QuotaMb = $Row.StorageQuota
-                    if ($null -ne $QuotaMb -and $QuotaMb -gt 0) {
-                        $QuotaBytes = if ($QuotaMb -lt 1TB) { [int64]($QuotaMb * 1MB) } else { $QuotaMb }
+                    $QuotaValue = $Row.StorageQuota
+                    if ($null -ne $QuotaValue -and $QuotaValue -gt 0) {
+                        # The dotted SPO admin value is a byte count (even for quotas under 1 TB).
+                        # Do not guess its unit from magnitude: that can multiply a small
+                        # byte-valued quota by 1 MB and produce petabytes of false capacity.
+                        $DottedQuotaBytes = if ($null -ne $Props['StorageQuota.']) {
+                            ConvertTo-SPOAdminListInt64 -Raw $Row.'StorageQuota.'
+                        } else {
+                            $null
+                        }
+                        if ($null -ne $DottedQuotaBytes) {
+                            $QuotaBytes = $DottedQuotaBytes
+                        } elseif ($null -ne $Props['StorageQuota.']) {
+                            $QuotaBytes = $null
+                        } else {
+                            # Older RLD responses may omit StorageQuota. altogether. Known
+                            # site quotas include 500 MiB App Catalogs and 1000 MiB team sites,
+                            # below the usual 1 GiB manual quota limit. The supported MB and
+                            # byte ranges remain disjoint even with these real-world values.
+                            # MB: 500 to 26,214,400; bytes: 500 MiB to 25 TiB.
+                            $MaxQuotaMB = [int64](25TB / 1MB)
+                            if ($QuotaValue -ge 500MB -and $QuotaValue -le 25TB) {
+                                $QuotaBytes = $QuotaValue
+                            } elseif ($QuotaValue -ge 500 -and $QuotaValue -le $MaxQuotaMB) {
+                                $QuotaBytes = [int64]($QuotaValue * 1MB)
+                            } else {
+                                # Unknown ranges must not be guessed from magnitude.
+                                $QuotaBytes = $null
+                            }
+                        }
                         $Props.Remove('StorageQuotaBytes')
                         $Props.Add([psnoteproperty]::new('StorageQuotaBytes', $QuotaBytes))
                     }

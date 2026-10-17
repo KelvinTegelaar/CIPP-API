@@ -24,7 +24,9 @@ function Get-NormalizedError {
     # $message.error.innererror.internalException.message
 
     #We need to check if the message is in one of these fields, and if so, return it.
-    if ($JSONMsg.error.innererror.message) {
+    if ($JSONMsg.error.innererror.message -like '*See details*' -and $JSONMsg.error.innererror.details.message) {
+        $message = $JSONMsg.error.innererror.details.message -join ' '
+    } elseif ($JSONMsg.error.innererror.message) {
         Write-Information "innererror.message found: $($JSONMsg.error.innererror.message)"
         $message = $JSONMsg.error.innererror.message
     } elseif ($JSONMsg.error.message) {

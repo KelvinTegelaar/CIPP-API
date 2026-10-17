@@ -15,7 +15,7 @@ function Invoke-AddIntuneTemplate {
     try {
         if ($Request.Body.RawJSON) {
             if (!$Request.Body.displayName) { throw 'You must enter a displayName' }
-            $Validation = Test-CIPPIntuneTemplate -RawJSON $Request.Body.RawJSON -TemplateType $Request.Body.TemplateType -DisplayName $Request.Body.displayName
+            $Validation = Test-CIPPIntuneTemplate -RawJSON $Request.Body.RawJSON -TemplateType $Request.Body.TemplateType -DisplayName $Request.Body.displayName -IncludeCatalogChecks
             if (-not $Validation.IsValid) {
                 throw [System.ArgumentException]::new("The template was not saved because it would not deploy: $($Validation.Errors -join ' ')")
             }

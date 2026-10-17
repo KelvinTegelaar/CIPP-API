@@ -6,7 +6,7 @@ function Invoke-ExecGetPermissionsReportPdf {
         Sharepoint.Site.Read
     .DESCRIPTION
         Server-renders the SharePoint Permissions report as application/pdf bytes. Gathers the same shaped
-        data the Permissions page uses (ListSharePointPermissions, from the CIPP reporting cache), composes
+        data the Permissions page uses (ListSharePointPermissions, from cached scan data), composes
         it through the shared CIPPSharp component kit (Build-CippPermissionsReportTree) and returns the
         finished PDF - the server-side replacement for the client react-pdf PermissionsReportButton.
     #>
@@ -22,7 +22,7 @@ function Invoke-ExecGetPermissionsReportPdf {
         }
         $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
 
-        # The same shaped data the Permissions page reads (from the reporting cache).
+        # The same shaped data the Permissions page reads (from cached scan data).
         $Raw = Get-CIPPSharePointPermissionsReport -TenantFilter $TenantFilter
         $Report = Build-CippPermissionsReportTree -Data @{
             TenantName   = $TenantName

@@ -70,6 +70,9 @@ function Get-SharePointAdminLink {
         # back rather than assuming.
         # A tenant without SharePoint fails the same way for every caller in a run; don't re-request it per call.
         $script:CIPPSharePointRootSiteFailures ??= @{}
+        $script:CIPPSharePointAdminLinks ??= @{}
+        $KnownLink = $script:CIPPSharePointAdminLinks["$TenantFilter"]
+        if ($KnownLink -and $KnownLink.Expires -gt [datetime]::UtcNow) { return $KnownLink.Link }
         $KnownFailure = $script:CIPPSharePointRootSiteFailures["$TenantFilter"]
         if ($KnownFailure -and $KnownFailure.Expires -gt [datetime]::UtcNow) { throw $KnownFailure.Error }
         try {
@@ -97,11 +100,13 @@ function Get-SharePointAdminLink {
     # Commercial cloud is the fallback when the host did not look like a SharePoint one.
     if ([string]::IsNullOrWhiteSpace($SharePointDomain)) { $SharePointDomain = 'sharepoint.com' }
 
-    # Return object with all needed properties
-    return [PSCustomObject]@{
+    $Link = [PSCustomObject]@{
         AdminUrl         = "https://$tenantName-admin.$SharePointDomain"
         TenantName       = $tenantName
         SharePointUrl    = "https://$tenantName.$SharePointDomain"
         SharePointDomain = $SharePointDomain
     }
+    # Chunked SPO helpers ask again per call; one root-site lookup per tenant per invocation is enough.
+    if (-not $Public) { $script:CIPPSharePointAdminLinks["$TenantFilter"] = @{ Link = $Link; Expires = [datetime]::UtcNow.AddMinutes(30) } }
+    return $Link
 }

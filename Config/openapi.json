@@ -11039,7 +11039,7 @@
           "Email-Exchange > Spamfilter"
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -11048,10 +11048,16 @@
                   "name": {
                     "type": "string"
                   },
-                  "state": {
+                  "State": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
                     "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
               }
             }
           }
@@ -11059,6 +11065,14 @@
         "parameters": [
           {
             "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "State",
             "in": "query",
             "required": false,
             "schema": {
@@ -14180,6 +14194,9 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "AlertReNotify": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Command": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -15384,7 +15401,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -15408,6 +15430,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -15416,7 +15448,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -15458,10 +15500,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -15922,7 +15971,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "GET with GUID (or caseId) returns that run: while it is queued or running { Waiting = true, Progress } where Progress is the job status (queued until a worker picks it up, then running) and the per-step state the page renders; { Error, Progress } when it failed; otherwise the results payload with the server-side Score, per-collector Completeness and a Run block. A queued or running run whose progress has not moved for 20 minutes is marked failed by this poll (the worker restarted or the run was abandoned) and returned as { Error }. GET without a GUID returns the user's latest run as { GUID, Status } and starts nothing (GUID is null when the user has no runs). POST with tenantFilter, userid and userName queues a new run and returns its { GUID }. Every run is the full investigation and is kept in the BecReports table; metadata only, never message content.",
+        "description": "GET with GUID (or caseId) returns that run: while it is queued or running { Waiting = true, Progress } where Progress is the job status (queued until a worker picks it up, then running) and the per-step state the page renders; { Error, Progress } when it failed; otherwise the results payload with the server-side Score, per-collector Completeness and a Run block. GET without a GUID returns the user's latest run as { GUID, Status } and starts nothing (GUID is null when the user has no runs). POST with tenantFilter, userid and userName queues a new run and returns its { GUID }. Every run is the full investigation and is kept in the BecReports table; metadata only, never message content.",
         "requestBody": {
           "required": true,
           "content": {
@@ -16651,7 +16700,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -16675,6 +16729,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -16683,7 +16747,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -16725,10 +16799,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -16948,7 +17029,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Revokes all sharing links / external direct grants on one site in bulk, sourced from\nthe SharePointSharingLinks reporting cache. Scope selects which classifications are\nrevoked: Anonymous (anyone links only), External (anonymous + external), or All\n(every cached link on the site, including internal). Because the source is the\nreporting cache, links created after the last sharing sync are not covered.",
+        "description": "Revokes all sharing links / external direct grants on one site in bulk, sourced from\nthe cached sharing links (the sharing links sync). Scope selects which classifications\nare revoked: Anonymous (anyone links only), External (anonymous + external), or All\n(every cached link on the site, including internal). Because the source is the cache,\nlinks created after the last sharing sync are not covered.",
         "requestBody": {
           "required": true,
           "content": {
@@ -18046,7 +18127,8 @@
                     "type": "string"
                   },
                   "ApplicationSecret": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "A pasted secret has no known keyId, so stop attributing any app secret to this instance."
                   },
                   "baselineOption": {
                     "type": "string"
@@ -18089,50 +18171,13 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                   "properties": {
-                    "APIKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ApplicationId": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ApplicationSecret": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "RefreshToken": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
                     },
-                    "RowKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "SASUrl": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "SecretValue": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "severity": {
                       "x-cipp-field-source": "backend"
-                    },
-                    "TenantId": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     }
                   }
                 }
@@ -23281,10 +23326,8 @@
                     "type": "object",
                     "properties": {
                       "roleDefinitionId": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
+                        "type": "string",
+                        "description": "Entra role definition id; a role mapped to more than one group is sent to Graph once"
                       }
                     }
                   }
@@ -23310,56 +23353,13 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the Microsoft Graph entity it queries. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
-                  "properties": {
-                    "accessDetails": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "activatedDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "autoExtendDuration": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "createdDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "customer": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "displayName": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "duration": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "endDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "id": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "lastModifiedDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "status": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    }
-                  }
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -24529,7 +24529,7 @@
         "tags": [
           "Endpoint > MEM"
         ],
-        "description": "Retrieves the Windows LAPS local administrator password for a device, identified by its Entra device GUID. Returns a live credential in plain text; the retrieval is written to the CIPP audit log.",
+        "description": "Retrieves the LAPS local administrator password for a device. Platform selects Windows (the default), where guid is the Entra device ID, or macOS, where guid is the Intune managed device ID. Returns a live credential in plain text; the retrieval is written to the CIPP audit log.",
         "requestBody": {
           "required": true,
           "content": {
@@ -24538,6 +24538,9 @@
                 "type": "object",
                 "properties": {
                   "guid": {
+                    "type": "string"
+                  },
+                  "Platform": {
                     "type": "string"
                   },
                   "TenantFilter": {
@@ -24567,6 +24570,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -24663,7 +24669,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Server-renders the SharePoint Permissions report as application/pdf bytes. Gathers the same shaped\ndata the Permissions page uses (ListSharePointPermissions, from the CIPP reporting cache), composes\nit through the shared CIPPSharp component kit (Build-CippPermissionsReportTree) and returns the\nfinished PDF - the server-side replacement for the client react-pdf PermissionsReportButton.",
+        "description": "Server-renders the SharePoint Permissions report as application/pdf bytes. Gathers the same shaped\ndata the Permissions page uses (ListSharePointPermissions, from cached scan data), composes\nit through the shared CIPPSharp component kit (Build-CippPermissionsReportTree) and returns the\nfinished PDF - the server-side replacement for the client react-pdf PermissionsReportButton.",
         "requestBody": {
           "required": true,
           "content": {
@@ -26482,7 +26488,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -26506,6 +26517,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -26514,7 +26535,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -26553,10 +26584,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -27085,13 +27123,31 @@
       }
     },
     "/api/ExecListBackup": {
-      "get": {
+      "post": {
         "summary": "ExecListBackup",
         "operationId": "ExecListBackup",
         "tags": [
           "CIPP > Core"
         ],
         "description": "Lists stored CIPP backups, optionally narrowed by Type, tenantFilter or BackupName. NameOnly=true returns just the backup names and the items each one contains, without the backup payload.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
         "parameters": [
           {
             "name": "BackupName",
@@ -27192,7 +27248,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -27216,6 +27277,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -27224,7 +27295,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -27266,10 +27347,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -31086,7 +31174,12 @@
                     "Action": {
                       "x-cipp-field-source": "backend"
                     },
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -31110,6 +31203,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -31118,7 +31221,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -31163,10 +31276,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -32740,7 +32860,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Revokes a sharing link (or direct sharing grant) on a SharePoint or OneDrive item by\ndeleting the permission from the drive item. Also removes the revoked link from the\nSharePointSharingLinks reporting cache so the sharing report reflects it immediately.",
+        "description": "Revokes a sharing link (or direct sharing grant) on a SharePoint or OneDrive item by\ndeleting the permission from the drive item. Also removes the revoked link from the\ncached sharing links so the sharing report reflects it immediately.",
         "requestBody": {
           "required": true,
           "content": {
@@ -33354,7 +33474,12 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ApplicationId": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "colour": {
@@ -33378,6 +33503,16 @@
                     "coverUploads": {
                       "x-cipp-field-source": "storage"
                     },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -33386,7 +33521,17 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
                       "x-cipp-field-source": "storage"
                     },
                     "logo": {
@@ -33428,10 +33573,17 @@
                     "secondaryColour": {
                       "x-cipp-field-source": "storage"
                     },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "showFooter": {
                       "x-cipp-field-source": "storage"
                     },
                     "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
                       "x-cipp-field-source": "storage"
                     },
                     "StandardsExcludeAllTenants": {
@@ -34800,6 +34952,215 @@
           }
         ],
         "x-cipp-role": "CIPP.AppSettings.ReadWrite"
+      }
+    },
+    "/api/ExecSAMCredentials": {
+      "post": {
+        "summary": "Health and management of the CIPP-SAM application's secrets, certificates and refresh tokens.",
+        "operationId": "ExecSAMCredentials",
+        "tags": [
+          "CIPP > Setup"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "keyId": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "Actor": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ApplicationId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "colour": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverFooterText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverImage": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverImageId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverImageIds": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverStock": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "coverUploads": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CreatedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Enabled": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedAt": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "FlaggedBy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "footerText": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Label": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "logo": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "logoImageId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "logoImageIds": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "logoUploads": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "MaxDuration": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "reportDefaults": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Resolver": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RetentionDays": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "roleColours": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "secondaryColour": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SecretKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "showFooter": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "showPageNumbers": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "StandardsExcludeAllTenants": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timezone": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "TimezoneSource": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Value": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "watermarkEnabled": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "watermarkText": {
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecSAMRoles": {
@@ -38272,6 +38633,72 @@
         "x-cipp-role": "Tenant.AI.ReadWrite"
       }
     },
+    "/api/ExecSharePointPermissionsSync": {
+      "post": {
+        "summary": "Start a SharePoint permissions report sync",
+        "operationId": "ExecSharePointPermissionsSync",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Queues a refresh of one of the cached datasets the SharePoint permissions report is built from, for a single tenant.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "The cached dataset to refresh.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SharePointPermissions"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Reports.ReadWrite"
+      }
+    },
     "/api/ExecSharePointPerms": {
       "post": {
         "summary": "ExecSharePointPerms",
@@ -38348,6 +38775,142 @@
           }
         ],
         "x-cipp-role": "Sharepoint.Site.ReadWrite"
+      }
+    },
+    "/api/ExecSharePointSharingSync": {
+      "post": {
+        "summary": "Start a SharePoint sharing report sync",
+        "operationId": "ExecSharePointSharingSync",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Queues a refresh of one of the cached datasets the SharePoint sharing report is built from, for a single tenant.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "The cached dataset to refresh.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OneDriveUsage",
+                "SharePointSharingLinks",
+                "SharePointSiteUsage"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Reports.ReadWrite"
+      }
+    },
+    "/api/ExecSharePointStorageSync": {
+      "post": {
+        "summary": "Start a SharePoint storage report sync",
+        "operationId": "ExecSharePointStorageSync",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Queues a refresh of one of the cached datasets the SharePoint storage report is built from, for a single tenant.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "The cached dataset to refresh.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OneDriveUsage",
+                "SharePointSiteUsage",
+                "StorageCleanupScan"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Reports.ReadWrite"
       }
     },
     "/api/ExecSharePointTemplate": {
@@ -39732,6 +40295,90 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecTestMessage": {
+      "post": {
+        "summary": "ExecTestMessage",
+        "operationId": "ExecTestMessage",
+        "tags": [
+          "Email-Exchange > Tools"
+        ],
+        "description": "Runs Exchange Online's Test-Message against a tenant: a test message is pushed through the\nmail flow rule (and optionally unified DLP) evaluation pipeline and Exchange emails a report\nof every rule that matched to the SendReportTo mailbox. Nothing is returned inline. The\nmessage is either an uploaded .eml (MessageFileBase64) or a minimal one CIPP builds from\nSubject and Body. Because the message really enters the pipeline, rule actions such as\nblock, moderate or notify can fire for it. The dropped message's trace carries the rules\nthat acted, so an async deployment job (DeploymentId) waits for it on the queue and\npushes the verdict live; the page follows it through ListAsyncDeployment.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Body": {
+                    "type": "string"
+                  },
+                  "MessageFileBase64": {
+                    "type": "string"
+                  },
+                  "Recipients": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
+                  "Sender": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "SendReportTo": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "Subject": {
+                    "type": "string",
+                    "description": "Minimal RFC 5322 message. CRLF line endings and a Message-ID keep it well-formed for the pipeline; the sender and recipients on the command still decide the envelope."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "TransportRules": {
+                    "type": "boolean"
+                  },
+                  "UnifiedDlpRules": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.TransportRule.ReadWrite"
+      }
+    },
     "/api/ExecTestRefresh": {
       "post": {
         "summary": "ExecTestRefresh",
@@ -40510,10 +41157,47 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "APIKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ApplicationId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ApplicationSecret": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RefreshToken": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
+                    },
+                    "RowKey": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SASUrl": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SecretValue": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "TenantId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
                     }
                   }
                 }
@@ -42629,6 +43313,33 @@
         "description": "Lists Intune app protection policies for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -42700,6 +43411,33 @@
         ],
         "description": "Lists Intune managed applications for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -43039,6 +43777,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -43348,6 +44113,10 @@
                       "Attempts": {
                         "x-cipp-field-source": "storage"
                       },
+                      "CandidateCount": {
+                        "type": "integer",
+                        "x-cipp-field-source": "storage"
+                      },
                       "CreatedUtc": {
                         "x-cipp-field-source": "storage"
                       },
@@ -43382,7 +44151,6 @@
                         "x-cipp-field-source": "storage"
                       },
                       "RowKey": {
-                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "SearchId": {
@@ -43414,11 +44182,9 @@
                         "x-cipp-field-source": "storage,frontend"
                       },
                       "WindowEnd": {
-                        "type": "string",
                         "x-cipp-field-source": "storage,frontend"
                       },
                       "WindowStart": {
-                        "type": "string",
                         "x-cipp-field-source": "storage,frontend"
                       }
                     }
@@ -44923,6 +45689,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -45015,6 +45808,83 @@
           },
           {
             "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.ConditionalAccess.Read"
+      }
+    },
+    "/api/ListCAPolicyImpact": {
+      "get": {
+        "summary": "ListCAPolicyImpact",
+        "operationId": "ListCAPolicyImpact",
+        "tags": [
+          "Tenant > Conditional"
+        ],
+        "description": "Shows how a single Conditional Access policy was evaluated against recent interactive sign-ins, like\nthe Entra portal's Policy impact view: sign-ins per UTC day split by the policy's result (success,\nfailure, not applied and the report-only equivalents), totals for the window, and a capped sample\nof sign-ins per day where the policy's controls were not met. Days is 1, 7 or 30.",
+        "parameters": [
+          {
+            "name": "Days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "GUID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Segment",
             "in": "query",
             "required": false,
             "schema": {
@@ -45829,6 +46699,33 @@
         ],
         "description": "Lists Intune device compliance policies for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -50084,6 +50981,9 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
+                      "AlertReNotify": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Command": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -52327,6 +53227,33 @@
         "description": "Compiles where each Entra group is used (Conditional Access, Intune assignments, group-based\nlicensing, Teams, nested groups, Entra roles, enterprise applications, Exchange transport\nrules) from the CIPP reporting database cache. Always served from cache — no live Graph calls.",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           }
         ],
@@ -52707,6 +53634,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -52814,6 +53768,33 @@
           {
             "name": "InactiveDays",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
             "required": false,
             "schema": {
               "type": "integer"
@@ -53194,6 +54175,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -53282,6 +54290,33 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
@@ -53442,6 +54477,33 @@
         ],
         "description": "Lists Intune device management scripts (Windows, macOS, Linux, and remediation scripts) for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -54741,6 +55803,14 @@
             }
           },
           {
+            "name": "AppId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "BaselineRunId",
             "in": "query",
             "required": false,
@@ -54785,10 +55855,18 @@
           {
             "name": "Filter",
             "in": "query",
-            "description": "When true, the Severity/User/Tenant/API/StartDate/EndDate query filters are applied; otherwise the current day is returned unfiltered.",
+            "description": "When true, the Severity/User/Tenant/API/IP/AppId/StartDate/EndDate query filters are applied; otherwise the current day is returned unfiltered.",
             "required": false,
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "IP",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -55293,6 +56371,33 @@
         "description": "Lists mailbox forwarding rules and configurations for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -55480,6 +56585,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -55645,6 +56777,33 @@
         ],
         "description": "Lists inbox rules configured on mailboxes in a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -56286,6 +57445,33 @@
         ],
         "description": "Lists Microsoft Defender for Endpoint onboarding status for devices in a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance. Automatically uses the reporting database when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -57100,6 +58286,33 @@
         ],
         "description": "Lists OAuth application consent grants and permissions for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -59697,6 +60910,9 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
+                      "AlertReNotify": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Command": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -60649,6 +61865,33 @@
         "description": "Lists shared mailboxes that have direct sign-in enabled (account not disabled), which is a security concern.\nSupports UseReportDB=true to read cached data from the reporting database (required for AllTenants).",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -60886,7 +62129,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Compiles the SharePoint permissions report for a tenant from CACHED data in the CIPP\nreporting database (SharePointPermissions). No live enumeration is performed - refresh the\ndata by syncing that cache (ExecCIPPDBCache). Returns the scan summary, the oversharing\nsignals worth acting on, chart datasets and the individual permission assignments.\n\nSignals reported:\n- Broad claims: grants to Everyone, Everyone except external users, or All Users. A library\n  carrying one of these is reachable by the whole tenant regardless of who was meant to\n  have it, which is the classic oversharing footgun.\n- External grants: permissions held by guest or external identities.\n- Direct Full Control: Full Control held by something other than a SharePoint group, i.e.\n  granted to a user or directory group rather than through the site's Owners group.\n- Unique permission libraries: libraries that no longer inherit from their site, so site\n  level permission changes no longer reach them.\n\nLimited Access assignments (isSystemManaged) are excluded from every signal - SharePoint\ncreates them itself so a user can traverse to an item, and they grant nothing on their own.",
+        "description": "Compiles the SharePoint permissions report for a tenant from CACHED data in the\nCippSharePointPermissions table. No live enumeration is performed - refresh the\ndata by syncing that cache (ExecCIPPDBCache). Returns the scan summary, the oversharing\nsignals worth acting on, chart datasets and the individual permission assignments.\n\nSignals reported:\n- Broad claims: grants to Everyone, Everyone except external users, or All Users. A library\n  carrying one of these is reachable by the whole tenant regardless of who was meant to\n  have it, which is the classic oversharing footgun.\n- External grants: permissions held by guest or external identities.\n- Direct Full Control: Full Control held by something other than a SharePoint group, i.e.\n  granted to a user or directory group rather than through the site's Owners group.\n- Unique permission libraries: libraries that no longer inherit from their site, so site\n  level permission changes no longer reach them.\n\nLimited Access assignments (isSystemManaged) are excluded from every signal - SharePoint\ncreates them itself so a user can traverse to an item, and they grant nothing on their own.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -61168,8 +62411,17 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Compiles the SharePoint & OneDrive sharing report for a tenant from CACHED data in the\nCIPP reporting database (SharePointSharingLinks, SharePointSiteUsage, OneDriveUsage).\nNo live Graph enumeration is performed - refresh the data by syncing those caches\n(ExecCIPPDBCache). Returns environment/file/storage summaries per workload, sharing link\ncounts by classification, chart datasets and the individual sharing link rows.\n\nAlso rolls up the sharing sprawl signals held in the same rows: anonymous links that allow\nediting, anonymous links with no expiry, folder-level external shares (one share exposes\neverything below it), and the busiest libraries and external recipients.",
+        "description": "Compiles the SharePoint & OneDrive sharing report for a tenant from CACHED data: the\ncached sharing links plus the SharePointSiteUsage and OneDriveUsage datasets. No live\nGraph enumeration is performed - refresh the data by syncing those caches\n(ExecCIPPDBCache). Returns environment/file/storage summaries per workload, sharing link\ncounts by classification, chart datasets, the individual sharing link rows, and the state\nof any sharing links scan still running (when it started, its queue and its current phase).\n\nAlso rolls up the sharing sprawl signals held in the same rows: anonymous links that allow\nediting, anonymous links with no expiry, folder-level external shares (one share exposes\neverything below it), and the busiest libraries and external recipients.",
         "parameters": [
+          {
+            "name": "ScanStatusOnly",
+            "in": "query",
+            "description": "Only the running scan's progress, library by library - cheap enough to poll while a scan runs.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
@@ -62386,6 +63638,33 @@
         "description": "Lists SharePoint sites or OneDrive usage for a tenant. Requires a Type parameter (SharePointSiteUsage or OneDriveUsageAccount). SharePoint live data uses SPO admin RLD plus Graph enrichment; OneDrive live data uses Graph usage reports. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -62565,7 +63844,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Explains how one user can reach a SharePoint site or document library: every route that\ngrants them access, and the permission level each route carries. This is the effective\naccess answer that the permission lists cannot give on their own, because those show who\nholds a grant rather than who the grant resolves to.\n\nRoutes checked, live:\n- Site collection administrator (full control over everything in the site)\n- A permission granted straight to the user\n- Membership of a SharePoint group that holds a permission, including the Owners,\n  Members and Visitors groups\n- Membership of an Entra security group or Microsoft 365 group that holds a permission,\n  resolved through transitiveMemberOf so nested groups count\n- A tenant-wide claim (Everyone, Everyone except external users, All Users), which every\n  internal user matches\n- Sharing links and direct item shares the user received, read from the\n  SharePointSharingLinks cache rather than live\n\nWhen a library is given and it still inherits, its permissions are the site's, so the\nsite is evaluated and the result says so.\n\nLimited Access is reported but flagged, because on its own it grants no ability to open\nor list anything - SharePoint adds it so a user can traverse to an item they were given\naccess to further down.",
+        "description": "Explains how one user can reach a SharePoint site or document library: every route that\ngrants them access, and the permission level each route carries. This is the effective\naccess answer that the permission lists cannot give on their own, because those show who\nholds a grant rather than who the grant resolves to.\n\nRoutes checked, live:\n- Site collection administrator (full control over everything in the site)\n- A permission granted straight to the user\n- Membership of a SharePoint group that holds a permission, including the Owners,\n  Members and Visitors groups\n- Membership of an Entra security group or Microsoft 365 group that holds a permission,\n  resolved through transitiveMemberOf so nested groups count\n- A tenant-wide claim (Everyone, Everyone except external users, All Users), which every\n  internal user matches\n- Sharing links and direct item shares the user received, read from the cached\n  sharing links rather than live\n\nWhen a library is given and it still inherits, its permissions are the site's, so the\nsite is evaluated and the result says so.\n\nLimited Access is reported but flagged, because on its own it grants no ability to open\nor list anything - SharePoint adds it so a user can traverse to an item they were given\naccess to further down.",
         "parameters": [
           {
             "name": "ListId",
@@ -63339,7 +64618,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Reads the hold-only StorageCleanupScan CIPPDB cache and rebuilds the scans map expected by\nthe storage report cleanup opportunity helpers. No live enumeration — refresh via\nExecCIPPDBCache Name=StorageCleanupScan. Report-private; not used by other List APIs.",
+        "description": "Reads the StorageCleanupScan rows from the CippStorageCleanupScan table and rebuilds the scans map expected by\nthe storage report cleanup opportunity helpers. No live enumeration — refresh via\nExecCIPPDBCache Name=StorageCleanupScan. Report-private; not used by other List APIs.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -63419,6 +64698,33 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
@@ -63523,6 +64829,33 @@
         ],
         "description": "Lists Microsoft Teams user activity reports for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -63735,6 +65068,33 @@
         ],
         "description": "Lists Microsoft Teams voice and PSTN usage for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -64348,6 +65708,33 @@
         ],
         "description": "Lists Tenant Allow/Block List entries (senders, URLs, file hashes, IPs) from Exchange Online Protection. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -66927,8 +68314,25 @@
         "tags": [
           "Email-Exchange > Spamfilter"
         ],
-        "description": "Lists user reported email threat submissions (Defender Submissions with source 'user') for a tenant.",
+        "description": "Lists user reported messages (Outlook Report button) for a tenant. Source=AuditLog (default) reads the unified\naudit log two weeks per page, Source=Submissions reads the Defender Submissions list from Graph.",
         "parameters": [
+          {
+            "name": "nextLink",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Source",
+            "in": "query",
+            "description": "AuditLog (default) or Submissions",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
@@ -67022,9 +68426,9 @@
                         "type": "string",
                         "x-cipp-field-source": "graph-entity"
                       },
-                      "source": {
+                      "Source": {
                         "type": "object",
-                        "x-cipp-field-source": "graph-entity"
+                        "x-cipp-field-source": "graph-entity,frontend"
                       },
                       "Status": {
                         "type": "object",
@@ -71575,7 +72979,7 @@
           "Email-Exchange > Spamfilter"
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -71583,8 +72987,14 @@
                 "properties": {
                   "name": {
                     "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
               }
             }
           }

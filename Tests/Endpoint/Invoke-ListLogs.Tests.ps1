@@ -209,6 +209,28 @@ Describe 'Invoke-ListLogs pagination' {
         $response.Body.Results[0].Message | Should -Be 'seq 2'
     }
 
+    It 'filters by IP (part of the address, port included) and by exact AppId' {
+        $Base = [datetime]::new(2025, 6, 10, 12, 0, 0, [System.DateTimeKind]::Utc)
+        $Rows = @(
+            New-FakeLogRow $Base.AddSeconds(1) 1
+            New-FakeLogRow $Base.AddSeconds(2) 2
+            New-FakeLogRow $Base.AddSeconds(3) 3
+        )
+        $Rows[0] | Add-Member -NotePropertyName IP -NotePropertyValue '203.0.113.10:51234' -Force
+        $Rows[0] | Add-Member -NotePropertyName AppId -NotePropertyValue 'aaaaaaaa-0000-0000-0000-000000000001' -Force
+        $Rows[1] | Add-Member -NotePropertyName IP -NotePropertyValue '198.51.100.7' -Force
+        $Rows[1] | Add-Member -NotePropertyName AppId -NotePropertyValue 'aaaaaaaa-0000-0000-0000-000000000001' -Force
+        $Rows[2] | Add-Member -NotePropertyName IP -NotePropertyValue '203.0.113.10' -Force
+        $Rows[2] | Add-Member -NotePropertyName AppId -NotePropertyValue '' -Force
+        $script:FakeLogRows = $Rows
+
+        $ByIp = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; StartDate = '20250610'; IP = '203.0.113.10'; manualPagination = 'true'; PageSize = '50' }) -TriggerMetadata $null
+        @($ByIp.Body.Results.Message | Sort-Object) | Should -Be @('seq 1', 'seq 3')
+
+        $ByApp = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; StartDate = '20250610'; AppId = 'aaaaaaaa-0000-0000-0000-000000000001'; manualPagination = 'true'; PageSize = '50' }) -TriggerMetadata $null
+        @($ByApp.Body.Results.Message | Sort-Object) | Should -Be @('seq 1', 'seq 2')
+    }
+
     It 'keeps the legacy unpaginated bare-array shape when manualPagination is absent' {
         $Base = [datetime]::new(2025, 6, 10, 12, 0, 0, [System.DateTimeKind]::Utc)
         $script:FakeLogRows = foreach ($i in 1..5) { New-FakeLogRow $Base.AddSeconds($i) $i }

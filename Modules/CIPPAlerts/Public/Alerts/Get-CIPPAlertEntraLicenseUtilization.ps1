@@ -27,6 +27,7 @@ function Get-CIPPAlertEntraLicenseUtilization {
                 if ($P1Usage -gt $Threshold -and $P1Overage -ge 5) {
                     [PSCustomObject]@{
                         Message          = "Entra ID P1 license utilization is at $P1Usage% (using $P1Used of $P1Entitled licenses, over by $P1Overage)"
+                        Id               = 'EntraLicenseUtilization-P1' # stable identity; Message carries live counts
                         LicenseType      = 'Entra ID P1'
                         UsedLicenses     = $P1Used
                         EntitledLicenses = $P1Entitled
@@ -48,6 +49,7 @@ function Get-CIPPAlertEntraLicenseUtilization {
                 if ($P2Usage -gt $Threshold -and $P2Overage -ge 5) {
                     [PSCustomObject]@{
                         Message          = "Entra ID P2 license utilization is at $P2Usage% (using $P2Used of $P2Entitled licenses, over by $P2Overage)"
+                        Id               = 'EntraLicenseUtilization-P2' # stable identity; Message carries live counts
                         LicenseType      = 'Entra ID P2'
                         UsedLicenses     = $P2Used
                         EntitledLicenses = $P2Entitled

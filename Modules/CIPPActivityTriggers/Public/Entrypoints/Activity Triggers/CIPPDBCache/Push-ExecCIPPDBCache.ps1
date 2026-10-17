@@ -68,9 +68,10 @@ function Push-ExecCIPPDBCache {
         Write-Information "Executing $FullFunctionName with parameters: $(($CacheFunctionParams.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '))"
 
         # Execute the cache function
+        $Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         & $FullFunctionName @CacheFunctionParams
 
-        Write-Information "Completed $Name for tenant $TenantFilter"
+        Write-Information ("  [Single] Completed {0} for {1} - Took {2:N3} seconds" -f $Name, $TenantFilter, $Stopwatch.Elapsed.TotalSeconds)
         return "Successfully executed $Name for tenant $TenantFilter"
 
     } catch {

@@ -28,6 +28,7 @@ function Start-WebhookOrchestrator {
                 FunctionName = 'GetPendingWebhooks'
             }
             SkipLog          = $true
+            AllowCollision   = $false
         }
         if ($PSCmdlet.ShouldProcess('Start-WebhookOrchestrator', 'Starting Webhook Orchestrator')) {
             Start-CIPPOrchestrator -InputObject $InputObject

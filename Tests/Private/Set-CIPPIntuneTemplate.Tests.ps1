@@ -18,6 +18,7 @@ BeforeAll {
     # depending on a payload that happens to produce it.
     function Test-CIPPIntuneTemplate {
         param($RawJSON, $TemplateType, $DisplayName, $TenantFilter, [switch]$IncludeCatalogChecks)
+        $script:CatalogChecked = [bool]$IncludeCatalogChecks
         return $script:Verdict
     }
 
@@ -85,6 +86,19 @@ Describe 'Set-CIPPIntuneTemplate' {
             $Warned = @($script:Logs | Where-Object { $_ -like 'Warning|*' })
             $Warned | Should -Not -BeNullOrEmpty
             ($Warned -join ' ') | Should -Match 'did not change the policy'
+        }
+    }
+
+    # Rules such as a missing required setting need the catalog. A rename skips it, since its verdict only logs.
+    Context 'catalog checks' {
+        It 'runs them on a payload the caller is submitting now' {
+            Set-CIPPIntuneTemplate -RawJSON $script:ValidJson -GUID 'g1' -DisplayName 'Baseline' -templateType 'Catalog' -PayloadChanged
+            $script:CatalogChecked | Should -BeTrue
+        }
+
+        It 'skips them when the payload is unchanged' {
+            Set-CIPPIntuneTemplate -RawJSON $script:ValidJson -GUID 'g1' -DisplayName 'Baseline' -templateType 'Catalog'
+            $script:CatalogChecked | Should -BeFalse
         }
     }
 

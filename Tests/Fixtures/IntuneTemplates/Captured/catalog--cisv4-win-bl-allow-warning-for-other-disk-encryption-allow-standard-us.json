@@ -1,0 +1,33 @@
+{
+  "DisplayName": "CISv4 - WIN - BL - Allow Warning For Other Disk Encryption: Allow  Standard User Encryption",
+  "Description": "This setting allows Admins to enforce \"Require Device Encryption\" policy for scenarios where policy is pushed while current logged-on user is non-admin/standard user. This policy is tied to \"Allow Warning For Other Disk Encryption\" policy being set to \"0\", i.e, Silent encryption is enforced.\nIf \"Allow Warning For Other Disk Encryption\" isn't set, or is set to \"1\", \"Require Device Encryption\" policy won't try to encrypt drive(s) if a standard user is the current logged-on user in the system.\n\nThe recommended state for this setting is: Enabled.",
+  "Type": "Catalog",
+  "Policy": {
+    "name": "CISv4 - WIN - BL - Allow Warning For Other Disk Encryption: Allow  Standard User Encryption",
+    "description": "This setting allows Admins to enforce \"Require Device Encryption\" policy for scenarios where policy is pushed while current logged-on user is non-admin/standard user. This policy is tied to \"Allow Warning For Other Disk Encryption\" policy being set to \"0\", i.e, Silent encryption is enforced.\nIf \"Allow Warning For Other Disk Encryption\" isn't set, or is set to \"1\", \"Require Device Encryption\" policy won't try to encrypt drive(s) if a standard user is the current logged-on user in the system.\n\nThe recommended state for this setting is: Enabled.",
+    "settings": [
+      {
+        "id": "0",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "device_vendor_msft_bitlocker_allowwarningforotherdiskencryption",
+          "settingInstanceTemplateReference": null,
+          "auditRuleInformation": null,
+          "choiceSettingValue": {
+            "settingValueTemplateReference": null,
+            "value": "device_vendor_msft_bitlocker_allowwarningforotherdiskencryption_1",
+            "children": []
+          }
+        }
+      }
+    ],
+    "platforms": "windows10",
+    "technologies": "mdm",
+    "templateReference": {
+      "templateId": "",
+      "templateFamily": "none",
+      "templateDisplayName": null,
+      "templateDisplayVersion": null
+    }
+  }
+}

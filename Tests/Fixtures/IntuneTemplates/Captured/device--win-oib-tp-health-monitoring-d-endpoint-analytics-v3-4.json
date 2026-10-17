@@ -1,0 +1,20 @@
+{
+  "DisplayName": "Win - OIB - TP - Health Monitoring - D - Endpoint Analytics - v3.4",
+  "Description": "OIBID:8DB1261D-2474-43C4-A753-61124D7875B6",
+  "Type": "Device",
+  "Policy": {
+    "@odata.type": "#microsoft.graph.windowsHealthMonitoringConfiguration",
+    "roleScopeTagIds": [
+      "0"
+    ],
+    "deviceManagementApplicabilityRuleOsEdition": null,
+    "deviceManagementApplicabilityRuleOsVersion": null,
+    "deviceManagementApplicabilityRuleDeviceMode": null,
+    "description": "OIBID:8DB1261D-2474-43C4-A753-61124D7875B6",
+    "displayName": "Win - OIB - TP - Health Monitoring - D - Endpoint Analytics - v3.4",
+    "version": 3,
+    "allowDeviceHealthMonitoring": "enabled",
+    "configDeviceHealthMonitoringScope": "bootPerformance",
+    "configDeviceHealthMonitoringCustomScope": null
+  }
+}

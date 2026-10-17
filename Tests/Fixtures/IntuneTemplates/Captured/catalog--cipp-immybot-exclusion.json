@@ -1,0 +1,37 @@
+{
+  "DisplayName": "CIPP: Immybot exclusion",
+  "Description": "",
+  "Type": "Catalog",
+  "Policy": {
+    "name": "CIPP: Immybot exclusion",
+    "description": null,
+    "settings": [
+      {
+        "id": "0",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance",
+          "settingDefinitionId": "device_vendor_msft_policy_config_defender_excludedpaths",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "aaf04adc-c639-464f-b4a7-152e784092e8"
+          },
+          "simpleSettingCollectionValue": [
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "*209a9b9113884860ad18b6cd0587a4c3*"
+            }
+          ]
+        }
+      }
+    ],
+    "platforms": "windows10",
+    "technologies": "mdm,microsoftSense",
+    "templateReference": {
+      "templateId": "45fea5e9-280d-4da1-9792-fb5736da0ca9_1",
+      "templateFamily": "endpointSecurityAntivirus",
+      "templateDisplayName": "Microsoft Defender Antivirus exclusions",
+      "templateDisplayVersion": "Version 1"
+    }
+  }
+}

@@ -28,9 +28,7 @@ function Get-CIPPBecNonInteractiveSignIns {
     )
 
     $SafeId = ConvertTo-CIPPODataFilterValue -Value $UserId -Type Guid
-    $Start = $StartDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $Uri = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userId eq '$SafeId' and signInEventTypes/any(t: t eq 'nonInteractiveUser') and createdDateTime ge $Start&`$top=999&`$orderby=createdDateTime desc"
-    $SignIns = @(New-GraphGetRequest -uri $Uri -tenantid $TenantFilter -AsApp $true)
+    $SignIns = @((Search-CIPPBecSignIn -TenantFilter $TenantFilter -Filter "userId eq '$SafeId' and signInEventTypes/any(t: t eq 'nonInteractiveUser')" -StartDate $StartDate).Rows)
 
     $Rows = foreach ($SignIn in $SignIns) {
         if (-not $SignIn.id) { continue }

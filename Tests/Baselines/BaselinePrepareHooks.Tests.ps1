@@ -431,6 +431,17 @@ Describe 'Get-CIPPBaselineAddDMARCToMOERAState' {
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
     }
 
+    It 'ignores spacing and the trailing semicolon in the record' {
+        Mock New-CIPPDbRequest {
+            @(
+                @{ domain = 'a.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1; p=reject' }
+                @{ domain = 'b.onmicrosoft.com'; hasDmarc = $true; record = 'v=DMARC1;p=reject;' }
+            ) | ConvertTo-Cached
+        }
+        $Prepared = Get-CIPPBaselineAddDMARCToMOERAState -Item $script:Item -TenantFilter $script:Tenant
+        $Prepared.Current.domainsWithoutDmarc | Should -BeNullOrEmpty
+    }
+
     It 'reports a null Current when the cache was never collected' {
         Mock New-CIPPDbRequest { @() }
         Mock Get-CIPPDbItem { $null }

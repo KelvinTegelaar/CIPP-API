@@ -96,11 +96,23 @@ function Invoke-ExecCreateSAMApp {
                     $CertResult = Update-CIPPSAMCertificate -ApplicationId $AppId.appId -Headers @{ authorization = "Bearer $($Token.access_token)" } -ErrorAction Stop
                     Write-Information "Registered SAM certificate for certificate-only setup. Thumbprint: $($CertResult.Thumbprint), storage mode: $($CertResult.StorageMode)"
                 } catch {
+                    $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $false -Force
+                    $env:CertificateAuthMode = $null
                     throw "Certificate-only setup was selected but the SAM certificate could not be registered on the application. Setup cannot continue without a credential. $($_.Exception.Message)"
                 }
+                # The certificate is the only credential, so it must prove it can obtain a token.
+                $Probe = Test-CIPPSAMCertificateAuth -ApplicationId $AppId.appId -TenantId $TenantId
+                if (-not $Probe.Success) {
+                    $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $false -Force
+                    $env:CertificateAuthMode = $null
+                    throw "Certificate-only setup failed: the SAM certificate $($Probe.Thumbprint) could not obtain a token ($($Probe.Error))."
+                }
                 $AppPassword = $null
+                $AppPasswordKeyId = ''
             } else {
-                $AppPassword = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppId.id)/addPassword" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body '{"passwordCredential":{"displayName":"CIPPInstall"}}' -ContentType 'application/json').secretText
+                $NewPassword = Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppId.id)/addPassword" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body '{"passwordCredential":{"displayName":"CIPPInstall"}}' -ContentType 'application/json'
+                $AppPassword = $NewPassword.secretText
+                $AppPasswordKeyId = [string]$NewPassword.keyId
             }
 
             if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
@@ -171,6 +183,7 @@ function Invoke-ExecCreateSAMApp {
                 PartitionKey  = 'AppCache'
                 RowKey        = 'AppCache'
                 ApplicationId = $AppId.appId
+                SecretKeyId   = $AppPasswordKeyId
             }
             Add-CIPPAzDataTableEntity @ConfigTable -Entity $NewConfig -Force | Out-Null
 
@@ -202,7 +215,14 @@ function Invoke-ExecCreateSAMApp {
 
             $CredentialNote = if ($CertificateOnly) { ' This is a certificate-only setup - no client secret was created, and CIPP will authenticate with the SAM certificate.' } else { '' }
             $Results = @{'message' = "Successfully $state the application registration. The application ID is $($AppId.appid).$CredentialNote You may continue to the next step."; severity = 'success' }
-            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Successfully $state CIPP-SAM application registration AppId=$($AppId.appId) (certificate-only=$CertificateOnly)" -Sev 'Info'
+            $Actor = 'CIPP'
+            $SecretNote = ''
+            if ($AppPasswordKeyId) {
+                try { $Actor = Set-CIPPSAMCredentialRecord -KeyId $AppPasswordKeyId -Source 'Setup' -Headers $Headers } catch { Write-Information "Could not record the setup secret's provenance: $($_.Exception.Message)" }
+                $SecretNote = ", new client secret 'CIPPInstall' created (keyId $AppPasswordKeyId)"
+            }
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Setup by $Actor`: $state CIPP-SAM application registration AppId=$($AppId.appId) (certificate-only=$CertificateOnly)$SecretNote" -Sev 'Alert'
+            try { $null = Compare-CIPPSAMCredentialSnapshot -Acknowledge $AppPasswordKeyId } catch { Write-Information "Could not refresh the SAM credential snapshot: $($_.Exception.Message)" }
         }
 
     } catch {

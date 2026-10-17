@@ -37,8 +37,41 @@ function Invoke-ExecGDAPInvite {
     switch ($Action) {
         'Create' {
             $RoleMappings = $Request.Body.roleMappings
+            # Entra role definition id; a role mapped to more than one group is sent to Graph once
+            $RoleIds = @($RoleMappings.roleDefinitionId | Where-Object { $_ } | Sort-Object -Unique)
 
-            if ($RoleMappings.roleDefinitionId -contains '62e90394-69f5-4237-9190-012177145e10') {
+            $Problems = [System.Collections.Generic.List[string]]::new()
+            if ($RoleIds.Count -eq 0) {
+                $Problems.Add('The role template has no roles.')
+            }
+            foreach ($Mapping in @($RoleMappings).Where({ -not $_.roleDefinitionId })) {
+                $Problems.Add("'$($Mapping.RoleName ?? $Mapping.GroupName)' has no role definition id.")
+            }
+            if ($RoleIds.Count -gt 0) {
+                try {
+                    $BuiltInRoleIds = (New-GraphGetRequest -NoAuthCheck $true -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions?$select=id&$filter=isBuiltIn eq true' -tenantid $env:TenantID).id
+                    # Partner Tier1/Tier2 Support exist in every tenant but GDAP cannot delegate them
+                    $NotDelegable = @('4ba39ca4-527c-499a-b93d-d9b492c50246', 'e00e864a-17c5-4a4b-9c06-f5b95a8d5bd8')
+                    foreach ($RoleId in $RoleIds) {
+                        if ($RoleId -notin $BuiltInRoleIds -or $RoleId -in $NotDelegable) {
+                            $RoleName = @($RoleMappings).Where({ $_.roleDefinitionId -eq $RoleId }, 'First')[0].RoleName
+                            $Problems.Add("'$RoleName' ($RoleId) is not a built-in Entra role that GDAP can delegate.")
+                        }
+                    }
+                } catch {
+                    Write-Information "GDAP invite role check skipped: $($_.Exception.Message)"
+                }
+            }
+            if ($Problems.Count -gt 0) {
+                $Message = "The role template cannot be used for an invite. Edit the template and fix: $($Problems -join ' ')"
+                Write-LogMessage -headers $Headers -API $APIName -tenant $env:TenantID -message $Message -Sev 'Error'
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Message = $Message }
+                    })
+            }
+
+            if ($RoleIds -contains '62e90394-69f5-4237-9190-012177145e10') {
                 $AutoExtendDuration = 'PT0S'
             } else {
                 $AutoExtendDuration = 'P180D'
@@ -49,7 +82,7 @@ function Invoke-ExecGDAPInvite {
                 $JSONBody = @{
                     'displayName'        = "CIPP_$((New-Guid).GUID)"
                     'accessDetails'      = @{
-                        'unifiedRoles' = @($RoleMappings | Select-Object roleDefinitionId)
+                        'unifiedRoles' = @($RoleIds | ForEach-Object { @{ roleDefinitionId = $_ } })
                     }
                     'autoExtendDuration' = $AutoExtendDuration
                     'duration'           = 'P730D'

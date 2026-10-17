@@ -74,7 +74,7 @@ function Invoke-CIPPStandardGroupTemplate {
     $GroupTemplates = @($GroupTemplates | Where-Object { "$($_.groupType)" -ne 'dynamicDistribution' })
     if ($SkippedDynamicGroups.Count -gt 0) {
         $SkippedNames = @($SkippedDynamicGroups.displayName) -join ', '
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Group Template: skipped $($SkippedDynamicGroups.Count) Dynamic Distribution Group template(s) ($SkippedNames) - Dynamic Distribution Groups are not supported by CIPP." -sev 'Warn'
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Group Template: skipped $($SkippedDynamicGroups.Count) Dynamic Distribution Group template(s) ($SkippedNames) - Dynamic Distribution Groups are not supported by CIPP." -sev 'Warning'
     }
 
     if ('dynamicDistribution' -in $GroupTemplates.groupType) {

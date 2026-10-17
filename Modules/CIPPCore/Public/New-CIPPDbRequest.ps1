@@ -65,7 +65,13 @@ function New-CIPPDbRequest {
 
         # Rows already read by an AllTenants caller; parsed instead of querying again
         [Parameter(DontShow = $true)]
-        [object[]]$Rows
+        [object[]]$Rows,
+
+        # Read and parse this many rows at a time, emitting records as each page is parsed
+        [ValidateRange(1, 10000)]
+        [int]$PageSize,
+
+        [string]$TableName = 'CippReportingDB'
     )
 
     try {
@@ -78,7 +84,7 @@ function New-CIPPDbRequest {
             throw 'TenantFilter is required.'
         }
 
-        $Table = Get-CippTable -tablename 'CippReportingDB'
+        $Table = Get-CippTable -tablename $TableName
 
         if (-not $script:CIPPDbRequestTenantCache) {
             $script:CIPPDbRequestTenantCache = @{}
@@ -108,13 +114,31 @@ function New-CIPPDbRequest {
             $Filter = "PartitionKey eq '{0}'" -f $SafeTenantFilter
         }
 
+        $Projection = if ($Fields) { [string[]]$Fields } else { $null }
+        if ($PageSize -and $Type -and -not $PSBoundParameters.ContainsKey('Rows')) {
+            $Token = $null
+            do {
+                $Page = Get-CIPPPagedTableRows -Table $Table -PartitionKeys @($Tenant) -RowKeyGe "$Type-" -RowKeyLt "$Type." -PageSize $PageSize -ContinuationToken $Token
+                $Token = $Page.NextToken
+                foreach ($Row in $Page.Rows.Data) {
+                    if ([string]::IsNullOrWhiteSpace($Row)) { continue }
+                    try {
+                        [CIPP.CippJson]::ConvertFromJson($Row, $Projection)
+                    } catch {
+                        Write-Information "Skipping unparseable CippReportingDB row for '$Tenant'/'$Type': $($_.Exception.Message)"
+                    }
+                }
+                $Page = $null
+            } while ($Token)
+            return
+        }
+
         $Results = if ($PSBoundParameters.ContainsKey('Rows')) { $Rows } else { Get-CIPPAzDataTableEntity @Table -Filter $Filter }
 
         # CippJson replaces `$Results.Data | ConvertFrom-Json`. A row whose Data is a JSON array
         # returns object[], which PowerShell unrolls into the output stream — the same shape the
         # pipeline produced before. Bad rows are skipped rather than thrown, matching the
         # -ErrorAction SilentlyContinue this replaced.
-        $Projection = if ($Fields) { [string[]]$Fields } else { $null }
         $Output = foreach ($Row in $Results.Data) {
             if ([string]::IsNullOrWhiteSpace($Row)) { continue }
             try {

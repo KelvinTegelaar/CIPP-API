@@ -302,7 +302,8 @@ function Get-CIPPBecIPVerdicts {
         } elseif ($BaselineOk) {
             & $Add 'NewToUser' (& $Weight 'newToUser' 2) 'Never used by the user before the window'
         }
-        if ($BaselineOk -and $Entry.ASN) {
+        # an audit-log baseline carries no network numbers to compare with
+        if ($BaselineOk -and $Entry.ASN -and $BaselineAsns.Count -gt 0) {
             $KnownAsn = $BaselineAsns[[string]$Entry.ASN]
             if ($KnownAsn -and [double]$KnownAsn.Share -ge $KnownAsnShare) { & $Add 'KnownNetwork' (& $Weight 'knownNetwork' -1) "The user's usual network (AS$($Entry.ASN))" }
             elseif (-not $KnownAsn -and -not $Known) { & $Add 'NewNetwork' (& $Weight 'newNetwork' 1) "A network (AS$($Entry.ASN)) the user never signed in from" }

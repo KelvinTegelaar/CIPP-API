@@ -10,6 +10,7 @@ BeforeAll {
     function New-GraphPostRequest {
         param($tenantid, $Uri, $Type, $Body, $ContentType, $AsApp)
         $script:lastBody = $Body
+        $script:lastUri = $Uri
     }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) $Exception }
@@ -20,7 +21,36 @@ BeforeAll {
 Describe 'Set-CIPPAuthenticationPolicy' {
     BeforeEach {
         $script:lastBody = $null
+        $script:lastUri = $null
         $script:mockCurrentInfo = $null
+    }
+
+    It 'targets an external authentication method (GUID id) to the given groups' {
+        # External methods (Duo, Okta, ...) are keyed by configuration GUID, not a built-in name
+        $script:mockCurrentInfo = [pscustomobject]@{
+            '@odata.type' = '#microsoft.graph.externalAuthenticationMethodConfiguration'
+            id            = '68801234-aaaa-bbbb-cccc-1234567896ea'
+            displayName   = 'Cisco Duo'
+            state         = 'enabled'
+            appId         = '11111111-2222-3333-4444-555555555555'
+            includeTargets = @()
+        }
+
+        $Result = Set-CIPPAuthenticationPolicy -Tenant 'contoso.onmicrosoft.com' -AuthenticationMethodId '68801234-aaaa-bbbb-cccc-1234567896ea' `
+            -Enabled $true -GroupIds @('group-a', 'group-b')
+
+        $script:lastUri | Should -BeLike '*/authenticationMethodConfigurations/68801234-aaaa-bbbb-cccc-1234567896ea'
+        $body = $script:lastBody | ConvertFrom-Json
+        $body.state | Should -Be 'enabled'
+        $body.'@odata.type' | Should -Be '#microsoft.graph.externalAuthenticationMethodConfiguration'
+        @($body.includeTargets).id | Should -Be @('group-a', 'group-b')
+        $Result | Should -BeLike "*external method 'Cisco Duo'*"
+    }
+
+    It 'rejects an id that is neither a built-in method name nor a GUID' {
+        { Set-CIPPAuthenticationPolicy -Tenant 'contoso.onmicrosoft.com' -AuthenticationMethodId 'NotAMethod' -Enabled $true } |
+            Should -Throw -ExpectedMessage '*not a built-in authentication method name*'
+        $script:lastBody | Should -BeNullOrEmpty
     }
 
     It 'writes Temporary Access Pass sub-settings to the PATCH body' {

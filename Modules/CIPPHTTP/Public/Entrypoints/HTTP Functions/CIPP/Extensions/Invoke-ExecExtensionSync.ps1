@@ -86,7 +86,7 @@ Function Invoke-ExecExtensionSync {
             } catch {
                 $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = [pscustomobject]@{'Results' = "Could not start NinjaOne Sync: $($_.Exception.Message)" }
-                Write-LogMessage -API 'Scheduler_Billing' -tenant 'none' -message "Could not start NinjaOne Sync $($_.Exception.Message)" -sev Error
+                Write-LogMessage -API 'NinjaOneSync' -tenant 'none' -message "Could not start NinjaOne Sync $($_.Exception.Message)" -sev Error
             }
         }
         'Hudu' {

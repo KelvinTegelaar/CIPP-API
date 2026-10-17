@@ -10,7 +10,7 @@ function Invoke-ExecAppUpload {
 
     try {
         # Start the orchestrator directly - it handles queuing internally
-        Start-ApplicationOrchestrator
+        Start-ApplicationOrchestrator -AllowCollision
         $Results = [pscustomobject]@{'Results' = 'Application upload job has started. Track the logbook for results.' }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

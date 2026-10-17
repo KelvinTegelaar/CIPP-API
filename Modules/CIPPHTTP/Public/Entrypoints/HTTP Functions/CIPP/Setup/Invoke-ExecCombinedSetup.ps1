@@ -24,22 +24,55 @@ function Invoke-ExecCombinedSetup {
                     $null = Update-CIPPSAMCertificate -ErrorAction Stop
                     $Cert = Get-CIPPSAMCertificate -SkipCache -ErrorAction Stop
                     if (-not $Cert) { throw 'No SAM certificate is available to authenticate with.' }
-                    $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $true -Force
-                    $env:CertificateAuthMode = $true
-                    $Results.add('Enabled certificate authentication. CIPP now authenticates with the SAM certificate instead of the client secret. The client secret is kept as a rollback - disable this option to switch back.')
+                    # Only switch over once the certificate has proven it can obtain a token.
+                    $Probe = Test-CIPPSAMCertificateAuth
+                    if (-not $Probe.Success) {
+                        $Results.add("Could not enable certificate authentication: the SAM certificate $($Probe.Thumbprint) could not obtain a token ($($Probe.Error)). The client secret remains in use.")
+                    } else {
+                        $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $true -Force
+                        $env:CertificateAuthMode = $true
+                        $null = Set-CIPPCredentialVersion
+                        Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message "Manual change: CIPP-SAM authentication switched to the certificate (thumbprint $($Cert.Thumbprint)). The client secret is kept as a rollback." -Sev 'Alert'
+                        $Results.add('Enabled certificate authentication. CIPP now authenticates with the SAM certificate instead of the client secret. The client secret is kept as a rollback - disable this option to switch back.')
+                    }
                 } catch {
                     $Results.add("Could not enable certificate authentication: $($_.Exception.Message). The existing authentication method is unchanged.")
                 }
             } else {
-                # Refuse to disable with no usable secret to fall back to - that would break auth.
+                # Disabling needs a usable secret to fall back to. A certificate-only install has none,
+                # so mint one now while the certificate still authenticates the Graph calls, tracked
+                # like every other rotation. Only switch once the new secret can obtain a token.
                 $SecretPlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
                 $SecretUsable = $env:ApplicationSecret -and $env:ApplicationSecret -notmatch $SecretPlaceholderPattern
+                $Minted = $false
                 if (-not $SecretUsable) {
-                    $Results.add('Certificate authentication cannot be disabled: this install has no client secret to fall back to.')
-                } else {
-                    $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $false -Force
-                    $env:CertificateAuthMode = $null
-                    $Results.add('Disabled certificate authentication. CIPP will use the client secret again.')
+                    try {
+                        $null = Update-CIPPSAMSecret -DisplayName 'UpdateTokens' -Source 'Manual' -Headers $Request.Headers -APIName ($Request.Params.CIPPEndpoint ?? 'CombinedSetup')
+                        $Minted = $true
+                        $SecretUsable = $true
+                    } catch {
+                        $Results.add("Certificate authentication cannot be disabled: this install has no client secret and creating one failed. $($_.Exception.Message)")
+                    }
+                }
+                if ($SecretUsable) {
+                    # A fresh secret takes Entra a few minutes to activate; do not switch until it works.
+                    $Probe = Test-CIPPSAMSecret -IncludeRefreshGrant
+                    for ($Attempt = 0; $Minted -and -not $Probe.ready -and $Probe.reason -eq 'propagating' -and $Attempt -lt 9; $Attempt++) {
+                        Start-Sleep -Seconds 5
+                        $Probe = Test-CIPPSAMSecret -IncludeRefreshGrant
+                    }
+                    if ($Probe.ready) {
+                        $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $false -Force
+                        $env:CertificateAuthMode = $null
+                        $null = Set-CIPPCredentialVersion
+                        $null = Clear-CippTokenCache
+                        Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message "Manual change: CIPP-SAM authentication switched to the client secret$(if ($Minted) { ' (a new secret was created for this)' })." -Sev 'Alert'
+                        $Results.add($(if ($Minted) { 'Created a new client secret and disabled certificate authentication. CIPP now uses the client secret.' } else { 'Disabled certificate authentication. CIPP will use the client secret again.' }))
+                    } elseif ($Probe.reason -eq 'propagating') {
+                        $Results.add($(if ($Minted) { 'Created a new client secret, but Microsoft has not finished activating it. Certificate authentication stays on for now - disable it again in a few minutes.' } else { 'The client secret was rotated recently and Microsoft has not finished activating it. Certificate authentication stays on for now - disable it again in a few minutes.' }))
+                    } else {
+                        $Results.add("Certificate authentication cannot be disabled: the stored client secret does not work ($($Probe.message)). Rotate the secret from the Credentials page first.")
+                    }
                 }
             }
         }
@@ -136,6 +169,19 @@ function Invoke-ExecCombinedSetup {
                 }
             }
 
+            # A pasted secret has no known keyId, so stop attributing any app secret to this instance.
+            if ($Request.Body.applicationSecret) {
+                $ConfigTable = Get-CIPPTable -tablename 'Config'
+                $AppCache = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'AppCache' and RowKey eq 'AppCache'"
+                $null = Add-CIPPAzDataTableEntity @ConfigTable -Entity @{
+                    PartitionKey  = 'AppCache'
+                    RowKey        = 'AppCache'
+                    ApplicationId = [string]($Request.Body.applicationId ?? $AppCache.ApplicationId)
+                    SecretKeyId   = ''
+                } -Force
+                $null = Set-CIPPCredentialVersion
+                Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message 'CIPP-SAM client secret replaced manually; its keyId is unknown to CIPP.' -Sev 'Alert'
+            }
             $Results.add('Manual credentials setup has been completed.')
         }
 

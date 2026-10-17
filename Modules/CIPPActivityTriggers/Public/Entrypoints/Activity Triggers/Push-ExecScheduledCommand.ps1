@@ -29,7 +29,7 @@ function Push-ExecScheduledCommand {
     # Initialize AsyncLocal storage for thread-safe per-invocation context
     # Store task id in CIPPCore module-scoped AsyncLocal storage so Write-LogMessage can read it -
     # global vars are unreliable in Azure Functions
-    Set-CippScheduledTaskContext -TaskId $Item.TaskInfo.RowKey
+    Set-CippScheduledTaskContext -TaskId $Item.TaskInfo.RowKey -AlertReNotify ([string]$Item.TaskInfo.AlertReNotify -eq 'True')
 
     # Store action source + creating user identity (from stored headers) for outbound User-Agent attribution
     Set-CippUserAgentContext -Headers $Item.Parameters.Headers -Source 'scheduled-task' -TaskId $Item.TaskInfo.RowKey
@@ -130,17 +130,12 @@ function Push-ExecScheduledCommand {
             } catch {
                 $ExceptionData = Get-CippException -Exception $_
                 if (!$IsMultiTenantExecution) {
-                    if ($secondsToAdd -gt 0) {
-                        $unixtimeNow = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
-                        if ([int64]$task.ScheduledTime -lt ($unixtimeNow - $secondsToAdd)) {
-                            $task.ScheduledTime = $unixtimeNow
-                        }
-                    }
+                    $NextRun = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
                     $null = Update-AzDataTableEntity -Force @Table -Entity @{
                         PartitionKey  = $task.PartitionKey
                         RowKey        = $task.RowKey
                         Results       = "$($ExceptionData.NormalizedError)"
-                        ScheduledTime = [string]([int64]$task.ScheduledTime + [int64]$secondsToAdd)
+                        ScheduledTime = $NextRun -gt 0 ? [string]$NextRun : [string]$task.ScheduledTime
                         TaskState     = $secondsToAdd -gt 0 ? 'Failed - Planned' : 'Failed'
                     }
                 }
@@ -152,7 +147,7 @@ function Push-ExecScheduledCommand {
             if (-not $DeltaResults.ConditionsMet) {
                 Write-Information "Delta query conditions not met for tenant $Tenant. Skipping execution."
                 # update interval
-                $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
+                $nextRunUnixTime = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
                 $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey  = $task.PartitionKey
                     RowKey        = $task.RowKey
@@ -393,25 +388,8 @@ function Push-ExecScheduledCommand {
         # never less informative than the raw exception message it replaced.
         $ExceptionData = Get-CippException -Exception $_
         $errorMessage = $ExceptionData.NormalizedError
-        #if recurrence is just a number, add it in days.
-        if ($task.Recurrence -match '^\d+$') {
-            $task.Recurrence = $task.Recurrence + 'd'
-        }
-        $secondsToAdd = switch -Regex ($task.Recurrence) {
-            '(\d+)m$' { [int64]$matches[1] * 60 }
-            '(\d+)h$' { [int64]$matches[1] * 3600 }
-            '(\d+)d$' { [int64]$matches[1] * 86400 }
-            default { 0 }
-        }
-
-        if ($secondsToAdd -gt 0) {
-            $unixtimeNow = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
-            if ([int64]$task.ScheduledTime -lt ($unixtimeNow - $secondsToAdd)) {
-                $task.ScheduledTime = $unixtimeNow
-            }
-        }
-
-        $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
+        $nextRunUnixTime = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
+        if ($nextRunUnixTime -eq 0) { $nextRunUnixTime = $task.ScheduledTime }
         if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
         Write-Information "The job is recurring, but failed. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
         if (!$IsMultiTenantExecution) {
@@ -488,25 +466,8 @@ function Push-ExecScheduledCommand {
                 TaskState    = 'Completed'
             }
         } else {
-            #if recurrence is just a number, add it in days.
-            if ($task.Recurrence -match '^\d+$') {
-                $task.Recurrence = $task.Recurrence + 'd'
-            }
-            $secondsToAdd = switch -Regex ($task.Recurrence) {
-                '(\d+)m$' { [int64]$matches[1] * 60 }
-                '(\d+)h$' { [int64]$matches[1] * 3600 }
-                '(\d+)d$' { [int64]$matches[1] * 86400 }
-                default { 0 }
-            }
-
-            if ($secondsToAdd -gt 0) {
-                $unixtimeNow = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
-                if ([int64]$task.ScheduledTime -lt ($unixtimeNow - $secondsToAdd)) {
-                    $task.ScheduledTime = $unixtimeNow
-                }
-            }
-
-            $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
+            $nextRunUnixTime = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
+            if ($nextRunUnixTime -eq 0) { $nextRunUnixTime = $task.ScheduledTime }
             Write-Information "The job is recurring. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
             Update-AzDataTableEntity -Force @Table -Entity @{
                 PartitionKey  = $task.PartitionKey

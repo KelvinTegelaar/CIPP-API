@@ -310,6 +310,11 @@
     "description": "Mailboxes with SMTP AUTH explicitly enabled despite the tenant default"
   },
   {
+    "type": "MailboxMessageConfiguration",
+    "friendlyName": "Mailbox Message Configuration",
+    "description": "Default compose font name, size and colour of every user and shared mailbox (collected on demand)"
+  },
+  {
     "type": "MailboxUsage",
     "friendlyName": "Mailbox Usage",
     "description": "Exchange Online mailbox usage statistics"
@@ -334,6 +339,16 @@
     "type": "OneDriveLongPaths",
     "friendlyName": "OneDrive Long Paths",
     "description": "Per-user counts of OneDrive paths that may exceed Windows 260-character sync limits or the cloud 400-character ceiling (no file or folder names stored)"
+  },
+  {
+    "type": "OneDriveQuotas",
+    "friendlyName": "OneDrive Quotas",
+    "description": "OneDrive storage quota per enabled licensed user, collected on demand for the OneDrive licensed quota baseline"
+  },
+  {
+    "type": "OneDriveRootShortcuts",
+    "friendlyName": "OneDrive Root Shortcuts",
+    "description": "SharePoint library shortcuts still in each enabled member's OneDrive root (summary row of users and shortcuts to move); collected on demand by the MigrateOneDriveShortcuts baseline"
   },
   {
     "type": "SharePointSiteListing",
@@ -484,7 +499,7 @@
   {
     "type": "SPOSites",
     "friendlyName": "SharePoint Site Settings",
-    "description": "Per-site SharePoint admin settings (site owner, sharing controls, lifecycle, version policy, People Picker, unmanaged-device access) for every site collection, keyed by site id"
+    "description": "Per-site SharePoint settings (URL, title, template, guest People Picker suggestions) for every site collection, keyed by site id"
   },
   {
     "type": "PeopleInsights",
@@ -628,6 +643,11 @@
     "description": "Exchange Online Message Encryption (OME) branding configurations"
   },
   {
+    "type": "ExoIRMConfiguration",
+    "friendlyName": "Exchange IRM Configuration",
+    "description": "Exchange Online IRM configuration including Azure RMS licensing and simplified client access"
+  },
+  {
     "type": "ExoMailboxPlans",
     "friendlyName": "Exchange Mailbox Plans",
     "description": "Mailbox plans with recipient limits and send/receive sizes normalized to MB"
@@ -742,5 +762,10 @@
     "type": "RolesAndAssignments",
     "friendlyName": "Roles & Assignments Sources",
     "description": "Refreshes every cache type that feeds the Roles & Assignments page (directory roles, role definitions, role assignments, administrative units, PIM schedules and policies); writes no rows of its own"
+  },
+  {
+    "type": "PlannerUserPolicies",
+    "friendlyName": "Planner User Policies",
+    "description": "Planner tenant-admin UserPolicy (block deleting tasks not created by self) for each enabled Planner-licensed member; collected on demand by the PlannerBlockTaskDelete baseline"
   }
 ]

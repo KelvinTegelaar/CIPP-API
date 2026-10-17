@@ -37,7 +37,9 @@ function Add-CIPPScheduledTask {
             try {
                 $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($RowKey)'"
                 $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
-                $ExistingTask.ScheduledTime = [string][int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+                $Now = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+                $DueSlot = Get-CIPPScheduledTaskNextRun -Recurrence $ExistingTask.Recurrence -ScheduledTime $ExistingTask.ScheduledTime -Due
+                $ExistingTask.ScheduledTime = [string]($DueSlot -gt 0 ? $DueSlot : $Now)
                 $ExistingTask.TaskState = 'Planned'
                 Add-CIPPAzDataTableEntity @Table -Entity $ExistingTask -Force
                 Write-LogMessage -headers $Headers -API 'RunNow' -message "Task $($ExistingTask.Name) scheduled to run now" -Sev 'Info' -Tenant $ExistingTask.Tenant
@@ -253,6 +255,7 @@ function Add-CIPPScheduledTask {
                 PsaTicketStrategy    = [string]($task.PsaTicketStrategy.value ?? $task.PsaTicketStrategy)
                 PsaTicketPriority    = [string]($task.PsaTicketPriority.value ?? $task.PsaTicketPriority)
                 PsaTicketId          = [string]($task.PsaTicketId.value ?? $task.PsaTicketId)
+                AlertReNotify        = [string]$task.AlertReNotify -eq 'True'
             }
 
 

@@ -1,0 +1,72 @@
+{
+  "DisplayName": "CIPP: Configure Controlled Folder Access Exclusions",
+  "Description": "",
+  "Type": "Catalog",
+  "Policy": {
+    "name": "CIPP: Configure Controlled Folder Access Exclusions",
+    "description": "",
+    "settings": [
+      {
+        "id": "0",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance",
+          "settingDefinitionId": "device_vendor_msft_policy_config_defender_controlledfolderaccessallowedapplications",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "e10f2cf5-121a-4890-af23-d4e91e0fab5f"
+          },
+          "simpleSettingCollectionValue": [
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Program Files (x86)\\Dell\\UpdateService\\Service\\InvColPC\\bin\\SSDUpdate.exe"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\drvtmp\\SetupBD.exe"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Program Files\\Intel\\Intel(R) Rapid Storage Technology\\IAStorDataMgrSvc.exe"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\ProgramData\\dell\\drivers\\*\\igxpin.exe"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Windows\\System32\\msiexec.exe"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Windows\\System32\\VSSVC.exe"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "%SystemDrive%\\Users\\*\\Documents\\Communicator-Downloads"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "%SystemDrive%\\Users\\*\\*\\Documents\\Communicator-Downloads"
+            }
+          ]
+        }
+      }
+    ],
+    "platforms": "windows10",
+    "technologies": "mdm,microsoftSense",
+    "templateReference": {
+      "templateId": "e8c053d6-9f95-42b1-a7f1-ebfd71c67a4b_1",
+      "templateFamily": "endpointSecurityAttackSurfaceReduction",
+      "templateDisplayName": "Attack Surface Reduction Rules",
+      "templateDisplayVersion": "Version 1"
+    }
+  }
+}

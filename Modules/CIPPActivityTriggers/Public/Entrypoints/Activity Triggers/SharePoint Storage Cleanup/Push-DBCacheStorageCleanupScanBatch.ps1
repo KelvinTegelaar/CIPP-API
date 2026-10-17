@@ -18,8 +18,8 @@ function Push-DBCacheStorageCleanupScanBatch {
         - Library  one per visible document/page library when collection succeeded
 
         collectionStatus:
-        - Full     libraries were collected; recycle fields may still be null if recycle failed
-        - Skipped  site-level collection failed; no Library rows
+        - Full     every library and the recycle bin were read
+        - Skipped  any read failed; no Library rows (the store restores the site's prior rows)
 
     .FUNCTIONALITY
         Entrypoint
@@ -161,29 +161,18 @@ function Push-DBCacheStorageCleanupScanBatch {
                 $Libraries = @($Lists | Where-Object { $_.list.hidden -ne $true -and $_.list.template -in @('documentLibrary', 'webPageLibrary') })
 
                 foreach ($List in $Libraries) {
-                    $StorageUsed = $null
-                    $FileCount = $null
-                    $FileStreamSize = $null
-                    $MetadataSize = $null
+                    # A failed read fails the site, so the store keeps its prior values instead of blanks.
+                    $Metrics = New-GraphGetRequest -uri "$BaseUri/web/lists(guid'$($List.id)')/RootFolder?`$select=StorageMetrics&`$expand=StorageMetrics" -tenantid $TenantFilter -scope $SpoScope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
+                    $TotalSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalSize
+                    $FileStreamSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalFileStreamSize
+                    $MetadataSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.MetadataSize
+                    $FileCount = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalFileCount
+                    $StorageUsed = $TotalSize
                     $VersionEstimate = $null
-                    try {
-                        $Metrics = New-GraphGetRequest -uri "$BaseUri/web/lists(guid'$($List.id)')/RootFolder?`$select=StorageMetrics&`$expand=StorageMetrics" -tenantid $TenantFilter -scope $SpoScope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
-                        $TotalSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalSize
-                        $FileStreamSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalFileStreamSize
-                        $MetadataSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.MetadataSize
-                        $FileCount = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalFileCount
-                        $StorageUsed = $TotalSize
-                        if ($null -ne $TotalSize) {
-                            $Tip = if ($null -ne $FileStreamSize) { $FileStreamSize } else { [int64]0 }
-                            $Meta = if ($null -ne $MetadataSize) { $MetadataSize } else { [int64]0 }
-                            $VersionEstimate = [Math]::Max([int64]0, $TotalSize - $Tip - $Meta)
-                        }
-                    } catch {
-                        $StorageUsed = $null
-                        $FileCount = $null
-                        $FileStreamSize = $null
-                        $MetadataSize = $null
-                        $VersionEstimate = $null
+                    if ($null -ne $TotalSize) {
+                        $Tip = if ($null -ne $FileStreamSize) { $FileStreamSize } else { [int64]0 }
+                        $Meta = if ($null -ne $MetadataSize) { $MetadataSize } else { [int64]0 }
+                        $VersionEstimate = [Math]::Max([int64]0, $TotalSize - $Tip - $Meta)
                     }
 
                     $LibraryRows.Add([PSCustomObject]@{
@@ -205,13 +194,7 @@ function Push-DBCacheStorageCleanupScanBatch {
                         })
                 }
 
-                $Recycle = $null
-                try {
-                    $Recycle = Get-CIPPRecycleBinSummary -TenantFilter $TenantFilter -SiteUrl $SiteUrl -Scope $SpoScope -JsonAccept $JsonAccept
-                } catch {
-                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "StorageCleanupScan: recycle summary failed for '$SiteUrl': $($_.Exception.Message)" -sev Warning
-                    $Recycle = $null
-                }
+                $Recycle = Get-CIPPRecycleBinSummary -TenantFilter $TenantFilter -SiteUrl $SiteUrl -Scope $SpoScope -JsonAccept $JsonAccept
 
                 $SiteResults.Add([PSCustomObject]@{
                         SiteId           = $SiteId

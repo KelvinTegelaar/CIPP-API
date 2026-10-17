@@ -41,6 +41,7 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
     #$Rerun -Type Standard -Tenant $Tenant -API 'AddDMARCToMOERA' -Settings $Settings
 
     $DesiredValue = $Settings.RecordValue.Value ?? 'v=DMARC1; p=reject;'
+    $DesiredTags = (($DesiredValue -split ';').Trim() -ne '') -join ';'
 
     # Get all fallback domains (onmicrosoft.com domains) and check if the DMARC record is set correctly
     try {
@@ -64,7 +65,7 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
             } else {
                 [PSCustomObject]@{
                     DomainName    = $Domain
-                    Match         = $CurrentRecord -eq $DesiredValue
+                    Match         = ((($CurrentRecord -split ';').Trim() -ne '') -join ';') -eq $DesiredTags
                     CurrentRecord = $CurrentRecord
                 }
             }

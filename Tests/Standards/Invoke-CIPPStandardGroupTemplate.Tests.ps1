@@ -194,7 +194,7 @@ Describe 'Invoke-CIPPStandardGroupTemplate' {
             Mock -CommandName New-ExoRequest -MockWith { }
         }
 
-        It 'skips a dynamic distribution template in remediate mode and logs a Warn' {
+        It 'skips a dynamic distribution template in remediate mode and logs a warning' {
             $Settings = [pscustomobject]@{
                 remediate     = $true
                 report        = $false
@@ -205,7 +205,7 @@ Describe 'Invoke-CIPPStandardGroupTemplate' {
             Should -Invoke -CommandName New-CIPPGroup -Times 0 -Exactly -Because 'DDLs are not supported and must not be created'
             Should -Invoke -CommandName New-ExoRequest -Times 0 -Exactly -Because 'Set-DynamicDistributionGroup must never run for a skipped DDL'
 
-            $Warns = @($script:logs | Where-Object { $_.Sev -eq 'Warn' })
+            $Warns = @($script:logs | Where-Object { $_.Sev -eq 'Warning' })
             $Warns.Count | Should -BeGreaterThan 0
             $Warns[0].Message | Should -Match 'Dynamic Distribution Group.*not supported by CIPP'
         }

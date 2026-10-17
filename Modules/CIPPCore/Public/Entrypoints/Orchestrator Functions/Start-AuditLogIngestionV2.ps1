@@ -7,9 +7,9 @@ function Start-AuditLogIngestionV2 {
         Runs offset 15 minutes from the creation timer and fans out two kinds of work:
 
           1. Download tenants - AuditLogCoverage rows in state 'Created' (a search was created and is
-             awaiting download) and due (not in backoff). Each gets a per-tenant orchestrator:
-                 Batch         = AuditLogDownloadV2  (download succeeded searches -> CacheWebhooks)
-                 PostExecution = AuditLogProcessV2   (enqueue processing if any cache rows are pending)
+             awaiting download) and due (not in backoff). Each gets a per-tenant AuditLogDownloadV2
+             task, which downloads succeeded searches to CacheWebhooks and starts processing itself
+             only when a window was downloaded.
 
           2. Process-only tenants - tenants that have rows sitting in CacheWebhooks (downloaded but
              not yet processed, e.g. left behind by a worker crash mid-processing) but no pending
@@ -37,14 +37,15 @@ function Start-AuditLogIngestionV2 {
 
         $Active = @(Get-CIPPAzDataTableEntity @Ledger `
                 -Filter "State eq 'Created' or State eq 'Downloaded' or State eq 'Processing'" `
-                -Property @('PartitionKey', 'State', 'NextAttemptUtc'))
+                -Property @('PartitionKey', 'State', 'NextAttemptUtc', 'Timestamp'))
+        $Stale = $Now.AddHours(-2)
 
         foreach ($Row in $Active) {
             if (-not $Row.PartitionKey) { continue }
             if ($Row.State -eq 'Created') {
                 if ($Row.NextAttemptUtc -and ([datetimeoffset]$Row.NextAttemptUtc).UtcDateTime -gt $Now) { continue }
                 [void]$DownloadTenants.Add([string]$Row.PartitionKey)
-            } else {
+            } elseif ($Row.State -eq 'Downloaded' -or ($Row.Timestamp -and $Row.Timestamp.UtcDateTime -lt $Stale)) {
                 [void]$CacheTenants.Add([string]$Row.PartitionKey)
             }
         }
@@ -54,14 +55,14 @@ function Start-AuditLogIngestionV2 {
             return
         }
 
-        # 1) Download tenants -> download + post-exec processing in one orchestration.
+        # 1) Download tenants -> the download task starts processing when it has anything to process.
         foreach ($TenantFilter in $DownloadTenants) {
             if ($PSCmdlet.ShouldProcess($TenantFilter, 'Download + process audit logs')) {
                 Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
                         OrchestratorName = "AuditLogIngestV2-$TenantFilter"
                         Batch            = @([PSCustomObject]@{ FunctionName = 'AuditLogDownloadV2'; TenantFilter = $TenantFilter })
-                        PostExecution    = @{ FunctionName = 'AuditLogProcessV2'; Parameters = @{ TenantFilter = $TenantFilter } }
                         SkipLog          = $true
+                        Priority         = 3
                     })
             }
         }
@@ -76,6 +77,7 @@ function Start-AuditLogIngestionV2 {
                         OrchestratorName = "AuditLogProcessV2-$TenantFilter"
                         QueueFunction    = [PSCustomObject]@{ FunctionName = 'AuditLogProcessingBatchV2'; Parameters = @{ TenantFilter = $TenantFilter } }
                         SkipLog          = $true
+                        Priority         = 3
                     })
             }
         }

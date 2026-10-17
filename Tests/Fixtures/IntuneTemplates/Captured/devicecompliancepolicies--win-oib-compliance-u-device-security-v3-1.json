@@ -1,0 +1,72 @@
+{
+  "DisplayName": "Win - OIB - Compliance - U - Device Security - v3.1",
+  "Description": "OIBID:BDE95674-F4F0-4E6E-A49A-D0197BE56560",
+  "Type": "deviceCompliancePolicies",
+  "Policy": {
+    "@odata.context": "https://graph.microsoft.com/beta/$metadata#deviceManagement/deviceCompliancePolicies(scheduledActionsForRule(scheduledActionConfigurations()))/$entity",
+    "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
+    "roleScopeTagIds": [
+      "0"
+    ],
+    "id": "0ce5c137-13fa-4925-bfe9-557be177bd51",
+    "createdDateTime": "2026-08-06T11:43:09.5004134Z",
+    "description": "OIBID:BDE95674-F4F0-4E6E-A49A-D0197BE56560",
+    "lastModifiedDateTime": "2026-08-06T12:37:27.9856986Z",
+    "displayName": "Win - OIB - Compliance - U - Device Security - v3.1",
+    "version": 4,
+    "passwordRequired": false,
+    "passwordBlockSimple": false,
+    "passwordRequiredToUnlockFromIdle": false,
+    "passwordMinutesOfInactivityBeforeLock": null,
+    "passwordExpirationDays": null,
+    "passwordMinimumLength": null,
+    "passwordMinimumCharacterSetCount": null,
+    "passwordRequiredType": "deviceDefault",
+    "passwordPreviousPasswordBlockCount": null,
+    "requireHealthyDeviceReport": false,
+    "osMinimumVersion": null,
+    "osMaximumVersion": null,
+    "mobileOsMinimumVersion": null,
+    "mobileOsMaximumVersion": null,
+    "earlyLaunchAntiMalwareDriverEnabled": false,
+    "bitLockerEnabled": false,
+    "secureBootEnabled": false,
+    "codeIntegrityEnabled": false,
+    "memoryIntegrityEnabled": false,
+    "kernelDmaProtectionEnabled": false,
+    "virtualizationBasedSecurityEnabled": false,
+    "firmwareProtectionEnabled": false,
+    "storageRequireEncryption": false,
+    "activeFirewallRequired": true,
+    "defenderEnabled": false,
+    "defenderVersion": null,
+    "signatureOutOfDate": false,
+    "rtpEnabled": false,
+    "antivirusRequired": true,
+    "antiSpywareRequired": true,
+    "deviceThreatProtectionEnabled": false,
+    "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+    "configurationManagerComplianceRequired": false,
+    "tpmRequired": true,
+    "deviceCompliancePolicyScript": null,
+    "validOperatingSystemBuildRanges": [],
+    "wslDistributions": [],
+    "scheduledActionsForRule@odata.context": "https://graph.microsoft.com/beta/$metadata#deviceManagement/deviceCompliancePolicies('0ce5c137-13fa-4925-bfe9-557be177bd51')/microsoft.graph.windows10CompliancePolicy/scheduledActionsForRule(scheduledActionConfigurations())",
+    "scheduledActionsForRule": [
+      {
+        "id": "0ce5c137-13fa-4925-bfe9-557be177bd51",
+        "ruleName": null,
+        "scheduledActionConfigurations@odata.context": "https://graph.microsoft.com/beta/$metadata#deviceManagement/deviceCompliancePolicies('0ce5c137-13fa-4925-bfe9-557be177bd51')/microsoft.graph.windows10CompliancePolicy/scheduledActionsForRule('0ce5c137-13fa-4925-bfe9-557be177bd51')/scheduledActionConfigurations",
+        "scheduledActionConfigurations": [
+          {
+            "id": "b3226f25-e7e9-48af-82a8-08577ce1e1bc",
+            "gracePeriodHours": 6,
+            "actionType": "block",
+            "notificationTemplateId": "00000000-0000-0000-0000-000000000000",
+            "notificationMessageCCList": []
+          }
+        ]
+      }
+    ]
+  }
+}

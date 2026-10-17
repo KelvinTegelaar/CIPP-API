@@ -5,7 +5,7 @@ function Invoke-ListStorageCleanupScan {
     .ROLE
         Sharepoint.Site.Read
     .DESCRIPTION
-        Reads the hold-only StorageCleanupScan CIPPDB cache and rebuilds the scans map expected by
+        Reads the StorageCleanupScan rows from the CippStorageCleanupScan table and rebuilds the scans map expected by
         the storage report cleanup opportunity helpers. No live enumeration — refresh via
         ExecCIPPDBCache Name=StorageCleanupScan. Report-private; not used by other List APIs.
     #>
@@ -22,7 +22,7 @@ function Invoke-ListStorageCleanupScan {
     }
 
     try {
-        $CacheRows = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'StorageCleanupScan')
+        $CacheRows = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -TableName 'CippStorageCleanupScan')
     } catch {
         $CacheRows = @()
     }
@@ -30,7 +30,7 @@ function Invoke-ListStorageCleanupScan {
     $CleanupSynced = $false
     $LastDataRefresh = $null
     try {
-        $CountRow = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -CountsOnly | Select-Object -First 1
+        $CountRow = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -TableName 'CippStorageCleanupScan' -CountsOnly | Select-Object -First 1
         if ($CountRow) { $CleanupSynced = $true }
         if ($CountRow.Timestamp) { $LastDataRefresh = $CountRow.Timestamp }
     } catch {}

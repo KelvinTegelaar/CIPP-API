@@ -117,12 +117,16 @@ function Invoke-ListLogs {
         }
     }
 
-    # When true, the Severity/User/Tenant/API/StartDate/EndDate query filters are applied; otherwise the current day is returned unfiltered.
+    # When true, the Severity/User/Tenant/API/IP/AppId/StartDate/EndDate query filters are applied; otherwise the current day is returned unfiltered.
     if ($Request.Query.Filter -eq $true) {
         $LogLevel = if ($Request.Query.Severity) { ($Request.Query.Severity).split(',') } else { 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert' }
+        # The UI's Warning option sends 'Warn'; rows are logged as either spelling
+        if ($LogLevel -contains 'Warn') { $LogLevel = @($LogLevel) + 'Warning' | Select-Object -Unique }
         $Username = $Request.Query.User ?? '*'
         $TenantFilter = $Request.Query.Tenant
         $ApiFilter = $Request.Query.API
+        $IpFilter = $Request.Query.IP
+        $AppIdFilter = $Request.Query.AppId
         $StandardFilter = $Request.Query.StandardTemplateId
         $ScheduledTaskFilter = $Request.Query.ScheduledTaskId
         $BaselineRunFilter = $Request.Query.BaselineRunId
@@ -133,6 +137,8 @@ function Invoke-ListLogs {
         $Username = '*'
         $TenantFilter = $null
         $ApiFilter = $null
+        $IpFilter = $null
+        $AppIdFilter = $null
         $StandardFilter = $null
         $ScheduledTaskFilter = $null
         $BaselineRunFilter = $null
@@ -190,6 +196,9 @@ function Invoke-ListLogs {
         ($Username -eq '*' -or $Row.Username -like $Username) -and
         ([string]::IsNullOrEmpty($TenantFilter) -or $TenantFilter -eq 'AllTenants' -or $Row.Tenant -like "*$TenantFilter*" -or $Row.TenantID -eq $TenantFilter) -and
         ([string]::IsNullOrEmpty($ApiFilter) -or $Row.API -match "$ApiFilter") -and
+        # IP is a literal substring (an address may be stored with a port); AppId is an exact match.
+        ([string]::IsNullOrEmpty($IpFilter) -or "$($Row.IP)".IndexOf($IpFilter, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) -and
+        ([string]::IsNullOrEmpty($AppIdFilter) -or "$($Row.AppId)" -eq $AppIdFilter) -and
         ([string]::IsNullOrEmpty($SearchFilter) -or $Row.Message -match [regex]::Escape($SearchFilter)) -and
         ($AllowedTenants -contains 'AllTenants' -or $TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)
     }

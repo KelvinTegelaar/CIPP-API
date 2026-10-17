@@ -90,6 +90,25 @@ Describe 'Get-CIPPDbItem allTenants' {
         $script:Filters | Should -HaveCount 1
     }
 
+    It '-Partition reads that one partition without a tenant lookup' {
+        $script:CippAllowedTenantsStorage.Value = $null
+        Mock Get-Tenants { throw 'no lookup expected' }
+        $Result = Get-CIPPDbItem -Partition 'b.com' -Type 'MailboxRules'
+        $script:Filters | Should -Be @("PartitionKey eq 'b.com' and RowKey ge 'MailboxRules-' and RowKey lt 'MailboxRules.'")
+        @($Result.PartitionKey) | Should -Be @('b.com')
+    }
+
+    It 'the tenant lock overrides -Partition' {
+        Mock Get-Tenants { @($script:TenantA) }
+        $script:CIPPLockedTenant = 'a.com'
+        try {
+            $Result = Get-CIPPDbItem -Partition 'b.com' -Type 'MailboxRules'
+        } finally {
+            $script:CIPPLockedTenant = $null
+        }
+        @($Result.PartitionKey | Sort-Object -Unique) | Should -Be @('a.com')
+    }
+
     AfterAll { $script:CippAllowedTenantsStorage.Value = $null }
 }
 

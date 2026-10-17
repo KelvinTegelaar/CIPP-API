@@ -9,7 +9,7 @@ function Set-CIPPCPVConsent {
     $Results = [System.Collections.Generic.List[string]]::new()
     $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $TenantFilter | Select-Object -First 1
     $TenantName = $Tenant.displayName
-    $User = $Request.Headers
+    $User = $Headers
 
     if ($TenantFilter -eq $env:TenantID) {
         return @('Cannot modify CPV consent on partner tenant')

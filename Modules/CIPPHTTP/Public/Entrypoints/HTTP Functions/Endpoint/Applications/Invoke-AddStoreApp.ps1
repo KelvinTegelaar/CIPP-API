@@ -57,9 +57,9 @@ function Invoke-AddStoreApp {
                 status       = 'Not Deployed yet'
             }
             "Successfully added Store App for $($Tenant) to queue."
-            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Successfully added Store App $($IntuneBody.DisplayName) to queue" -Sev 'Info'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Successfully added Store App $($WinGetData.displayName) to queue" -Sev 'Info'
         } catch {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Failed to add Store App $($IntuneBody.DisplayName) to queue" -Sev 'Error'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Failed to add Store App $($WinGetData.displayName) to queue" -Sev 'Error'
             "Failed to add Store App for $($Tenant) to queue"
         }
     }

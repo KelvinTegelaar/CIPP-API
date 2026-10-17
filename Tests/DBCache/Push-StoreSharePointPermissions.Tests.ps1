@@ -1,7 +1,7 @@
 # Pester tests for Push-StoreSharePointPermissions
 #
 # The store step for the SharePoint permissions scan. These lock the behaviour that keeps a large
-# tenant's report alive instead of letting it expire under the 30-day reporting retention:
+# tenant's report alive when part of a run fails:
 #  - a run where a whole batch failed (sites missing from the fan-in) still writes the sites that
 #    came back and carries the missing ones over from the prior cache, flagged Skipped;
 #  - a run that collected nothing writes nothing, so stale data is not re-stamped as fresh;
@@ -26,7 +26,8 @@ BeforeAll {
             [switch]$AddCount,
             [switch]$Append,
             [switch]$ClearOnEmpty,
-            [string]$RunId
+            [string]$RunId,
+            [string]$TableName
         )
     }
     function Get-CippTable { param($tablename) @{} }
@@ -95,7 +96,7 @@ Describe 'Push-StoreSharePointPermissions' {
 
         # 2 site rows + 3 assignment rows, streamed one per invocation.
         Should -Invoke Add-CIPPDbItem -Times 5 -Exactly -ParameterFilter {
-            $AddCount.IsPresent -and $Type -eq 'SharePointPermissions' -and $TenantFilter -eq 'contoso.onmicrosoft.com'
+            $AddCount.IsPresent -and $Type -eq 'SharePointPermissions' -and $TableName -eq 'CippSharePointPermissions' -and $TenantFilter -eq 'contoso.onmicrosoft.com'
         }
         @($script:Rows | Where-Object { $_.Row.rowType -eq 'Assignment' }).Count | Should -Be 3
         Should -Invoke Get-CIPPAzDataTableEntity -Times 0 -Exactly
@@ -127,6 +128,7 @@ Describe 'Push-StoreSharePointPermissions' {
 
         # Only the missing site is read from the prior cache, by its own RowKey prefix.
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly
+        Should -Invoke Get-CippTable -Times 1 -Exactly -ParameterFilter { $tablename -eq 'CippSharePointPermissions' }
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Warning' -and $message -like '*1 missing (carried over)*' }
     }
 

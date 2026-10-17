@@ -35,12 +35,14 @@ function Add-CIPPDbItem {
         # single-invocation cleanup below does. Omit for the default: a new id per call.
         [string]$RunId,
 
+        [string]$TableName = 'CippReportingDB',
+
         [ValidateRange(0, 60)]
         [int]$SkewMarginMinutes = 5
     )
 
     begin {
-        $Table = Get-CippTable -tablename 'CippReportingDB'
+        $Table = Get-CippTable -tablename $TableName
         $BatchSize = 100
         $Batch = [System.Collections.Generic.List[hashtable]]::new($BatchSize)
         # Track batch duplicates separately from the full authoritative run used for cleanup.
@@ -148,24 +150,23 @@ function Add-CIPPDbItem {
                 $Filter += " and Timestamp lt datetime'{0}'" -f $RunStartUtc.UtcDateTime.ToString('yyyy-MM-ddTHH:mm:ss.fffffffZ')
             }
 
-            # Project all row-level split markers (OriginalEntityId, PartIndex, PartCount) so split
-            # entities reassemble; a subset makes the module drop them. Reassembly is what keeps this
-            # sound - each logical row carries its RunId. Raw rows (no markers) would be wrong: part
-            # rows lack RunId and would look like foreign-run orphans.
-            $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag, OriginalEntityId, RunId, PartIndex, PartCount
+            # Raw physical rows (no split markers projected), deleted with plain batches: a part-aware
+            # delete looks up each orphan's part rows one query at a time, which on a large legacy
+            # backlog never reached its first delete inside the task limit. A split entity's RunId sits
+            # on one of its rows, so rows are grouped under their root key ('<key>-partN' -> '<key>')
+            # and a group is live if any row carries this run's id. A real key ending in -partN can only
+            # be kept by mistake, never deleted.
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, RunId
             if ($Existing) {
-                $Orphans = foreach ($Row in @($Existing)) {
-                    if ($Row.RowKey -eq "$Type-Count") { continue }
-
-                    # Identity is the authority: a row written by this run always carries this
-                    # run's id, no matter how long the run took, how the clocks drift, or what
-                    # the query returned. Anything else - an earlier run's row, or a legacy row
-                    # with no RunId at all - is an orphan by definition of an authoritative
-                    # full-set write.
-                    if ([string]$Row.RunId -ne $RunId) { $Row }
+                $LiveRoots = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+                foreach ($Row in @($Existing)) {
+                    if ([string]$Row.RunId -eq $RunId) { $null = $LiveRoots.Add(($Row.RowKey -replace '-part\d+$')) }
                 }
-                if ($Orphans) {
-                    $null = Remove-CIPPAzDataTableEntity @Table -Entity @($Orphans) -Force
+                $Orphans = @(foreach ($Row in @($Existing)) {
+                        if ($Row.RowKey -ne "$Type-Count" -and -not $LiveRoots.Contains(($Row.RowKey -replace '-part\d+$'))) { $Row }
+                    })
+                if ($Orphans.Count) {
+                    $null = Remove-AzDataTableEntity @Table -Entity $Orphans -Force
                 }
             }
         }

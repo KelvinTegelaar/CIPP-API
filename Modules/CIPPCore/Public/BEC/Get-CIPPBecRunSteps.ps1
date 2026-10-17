@@ -25,7 +25,8 @@ function Get-CIPPBecRunSteps {
         [pscustomobject]@{ Key = 'ReceivedMail'; Title = 'Received mail and Defender verdicts'; Running = 'Reading the received-mail trace and Defender verdicts' }
         [pscustomobject]@{ Key = 'Directory'; Title = 'Directory audits, registered devices and non-interactive sign-ins'; Running = 'Reading directory audits, registered devices and non-interactive sign-ins' }
         [pscustomobject]@{ Key = 'Activity'; Title = 'Mailbox activity and Identity Protection'; Running = 'Reading mailbox activity counts and Identity Protection state' }
-        [pscustomobject]@{ Key = 'IPAnalysis'; Title = 'Attacker IPs: sign-in baseline, IP lists and other accounts'; Running = 'Establishing attacker IPs from the sign-in baseline, IP lists and other accounts' }
+        [pscustomobject]@{ Key = 'IPAnalysis'; Title = 'Attacker IPs: sign-in baseline and IP lists'; Running = 'Establishing attacker IPs from the sign-in baseline and IP lists' }
+        [pscustomobject]@{ Key = 'IPPeers'; Title = 'Attacker IPs: other accounts on the same addresses'; Running = 'Looking up the other accounts that signed in from the case addresses' }
         [pscustomobject]@{ Key = 'AttackerActivity'; Title = 'Attacker activity: mail, files, sharing links, Forms and delegated mailboxes'; Running = 'Reading what the attacker addresses opened, sent, downloaded and shared' }
         [pscustomobject]@{ Key = 'Score'; Title = 'Location analysis, threat score and report'; Running = 'Resolving locations and computing the threat score' }
     )

@@ -15,14 +15,24 @@ BeforeAll {
     function New-GraphBulkRequest { param($Requests, $AsApp, $TenantId) }
     function Get-CippAuditLogSearchResults { param($TenantFilter, $QueryId, [switch]$CountOnly) }
     function Get-CippAuditLogNextAttempt { param($Attempts) }
+    function Get-CIPPAuditLogRuleSet { param($TenantFilter) }
+    function Start-CIPPOrchestrator { param($InputObject) }
+
+    function New-Rule {
+        param([object[]]$Conditions, $Excluded)
+        [pscustomobject]@{ Conditions = (ConvertTo-Json -InputObject @($Conditions) -Depth 5 -Compress); Excluded = $Excluded }
+    }
+    function New-Condition([string]$Property, [string]$Operator, $Value) {
+        @{ Property = @{ label = $Property; value = 'String' }; Operator = @{ label = $Operator; value = $Operator }; Input = @{ value = $Value } }
+    }
 
     function New-AuditRecord {
-        param([string]$Id, [string]$Created = '2026-07-29T09:00:00Z')
+        param([string]$Id, [string]$Created = '2026-07-29T09:00:00Z', [string]$Operation = 'Set-Mailbox')
         [pscustomobject]@{
             id              = $Id
             createdDateTime = $Created
-            operation       = 'Set-Mailbox'
-            auditData       = [pscustomobject]@{ ResultStatus = 'Success' }
+            operation       = $Operation
+            auditData       = [pscustomobject]@{ ResultStatus = 'Success'; Operation = $Operation }
         }
     }
 
@@ -81,6 +91,9 @@ Describe 'Push-AuditLogDownloadV2' {
         }
 
         Mock -CommandName Get-CippAuditLogNextAttempt -MockWith { (Get-Date).ToUniversalTime().AddMinutes(10).ToString('o') }
+        $script:Rules = @(New-Rule @(New-Condition 'ResultStatus' 'eq' 'Success'))
+        Mock -CommandName Get-CIPPAuditLogRuleSet -MockWith { $script:Rules }
+        Mock -CommandName Start-CIPPOrchestrator -MockWith {}
     }
 
     Context 'succeeded search with records' {
@@ -125,6 +138,82 @@ Describe 'Push-AuditLogDownloadV2' {
             $result = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
             $result.Success | Should -BeTrue
             $result.Downloaded | Should -Be 3
+        }
+
+        It 'starts processing for the tenant once' {
+            $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            Should -Invoke Start-CIPPOrchestrator -Times 1 -Exactly -ParameterFilter { $InputObject.QueueFunction.Parameters.TenantFilter -eq 'contoso.com' }
+        }
+    }
+
+    Context 'operation prefilter' {
+        # Dropping a record a rule would have matched loses an alert; keeping one it cannot match only costs storage.
+        BeforeEach {
+            $script:SearchResults = @(
+                New-AuditRecord 'rec-1' -Operation 'Set-Mailbox'
+                New-AuditRecord 'rec-2' -Operation 'UserLoggedIn'
+                New-AuditRecord 'rec-3' -Operation "New-InboxRule$([char]0x200B)"
+            )
+        }
+
+        It 'stores only the records an eq or in rule could match, case-insensitively' {
+            $script:Rules = @(
+                New-Rule @((New-Condition 'Operation' 'eq' 'new-inboxrule'), (New-Condition 'ForwardTo' 'like' '*@*'))
+                New-Rule @(New-Condition 'Operation' 'in' @('Add member to role.', 'set-mailbox'))
+            )
+            $result = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            ($script:CacheWrites.RowKey | Sort-Object) | Should -Be @('rec-1', 'rec-3')
+            $result.Downloaded | Should -Be 2
+            $ledger = $script:LedgerWrites | Where-Object { $_.RowKey -eq 'window-1' } | Select-Object -Last 1
+            $ledger.RecordCount | Should -Be 3
+            $ledger.CandidateCount | Should -Be 2
+            $ledger.State | Should -Be 'Downloaded'
+        }
+
+        It 'keeps every record when a rule tests Operation with <Operator>' -ForEach @(
+            @{ Operator = 'ne' }, @{ Operator = 'notin' }, @{ Operator = 'like' }, @{ Operator = 'match' }
+        ) {
+            $script:Rules = @(
+                New-Rule @(New-Condition 'Operation' 'eq' 'New-InboxRule')
+                New-Rule @(New-Condition 'Operation' $Operator 'Set-Mailbox')
+            )
+            $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            $script:CacheWrites.Count | Should -Be 3
+        }
+
+        It 'ignores rules that exclude the tenant or have only empty conditions' {
+            $script:Rules = @(
+                New-Rule @(New-Condition 'Operation' 'eq' 'UserLoggedIn')
+                New-Rule @(New-Condition 'ResultStatus' 'eq' 'Failed') -Excluded @([pscustomobject]@{ value = 'contoso.com' })
+                New-Rule @(New-Condition 'Operation' 'eq' '')
+            )
+            $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            @($script:CacheWrites.RowKey) | Should -Be @('rec-2')
+        }
+
+        It 'settles a window with no matchable records without processing' {
+            $script:Rules = @()
+            $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            $script:CacheWrites.Count | Should -Be 0
+            ($script:LedgerWrites | Where-Object { $_.RowKey -eq 'window-1' } | Select-Object -Last 1).State | Should -Be 'Processed'
+            Should -Invoke Start-CIPPOrchestrator -Times 0
+        }
+
+        It 'reads the rules once per run' {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                @(
+                    [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = 'window-1'; State = 'Created'; SearchId = 'search-1'; CreatedUtc = (Get-Date).ToUniversalTime().AddMinutes(-5).ToString('o'); Attempts = 0; RetryCount = 0 }
+                    [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = 'window-2'; State = 'Created'; SearchId = 'search-2'; CreatedUtc = (Get-Date).ToUniversalTime().AddMinutes(-5).ToString('o'); Attempts = 0; RetryCount = 0 }
+                )
+            }
+            Mock -CommandName New-GraphBulkRequest -MockWith {
+                @(
+                    [pscustomobject]@{ body = [pscustomobject]@{ id = 'search-1'; status = 'succeeded' } }
+                    [pscustomobject]@{ body = [pscustomobject]@{ id = 'search-2'; status = 'succeeded' } }
+                )
+            }
+            $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            Should -Invoke Get-CIPPAuditLogRuleSet -Times 1 -Exactly
         }
     }
 
@@ -193,6 +282,11 @@ Describe 'Push-AuditLogDownloadV2' {
 
     Context 'succeeded search with no records' {
         BeforeEach { $script:SearchResults = @() }
+
+        It 'does not start processing' {
+            $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            Should -Invoke Start-CIPPOrchestrator -Times 0
+        }
 
         It 'marks an empty window Processed rather than leaving it Downloaded' {
             $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
@@ -263,9 +357,10 @@ Describe 'Push-AuditLogDownloadV2' {
             $ledger.SearchStatus | Should -Be 'running'
         }
 
-        It 'writes no cache rows' {
+        It 'writes no cache rows and starts no processing' {
             $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
             $script:CacheWrites.Count | Should -Be 0
+            Should -Invoke Start-CIPPOrchestrator -Times 0
         }
     }
 
@@ -274,11 +369,44 @@ Describe 'Push-AuditLogDownloadV2' {
             Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { @() }
         }
 
-        It 'returns early without polling graph' {
+        It 'neither polls graph nor starts processing' {
             $result = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
             $result.Success | Should -BeTrue
             $result.Downloaded | Should -Be 0
             Should -Invoke New-GraphBulkRequest -Times 0
+            Should -Invoke Start-CIPPOrchestrator -Times 0
+        }
+    }
+
+    Context 'window downloaded earlier and not yet processed' {
+        BeforeEach {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = 'window-0'; State = 'Downloaded'; SearchId = 'search-0' }
+            }
+        }
+
+        It 'starts processing without polling graph' {
+            $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            Should -Invoke New-GraphBulkRequest -Times 0
+            Should -Invoke Start-CIPPOrchestrator -Times 1 -Exactly
+        }
+    }
+
+    Context 'window still being processed' {
+        It 'leaves a run that is still going alone' {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = 'window-0'; State = 'Processing'; SearchId = 'search-0'; Timestamp = [datetimeoffset]::UtcNow.AddMinutes(-10) }
+            }
+            $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            Should -Invoke Start-CIPPOrchestrator -Times 0
+        }
+
+        It 'restarts processing once the claim has gone stale' {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = 'window-0'; State = 'Processing'; SearchId = 'search-0'; Timestamp = [datetimeoffset]::UtcNow.AddHours(-3) }
+            }
+            $null = Push-AuditLogDownloadV2 -Item @{ TenantFilter = 'contoso.com' }
+            Should -Invoke Start-CIPPOrchestrator -Times 1 -Exactly
         }
     }
 }

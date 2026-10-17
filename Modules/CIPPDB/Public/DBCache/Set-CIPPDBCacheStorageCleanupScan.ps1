@@ -9,8 +9,8 @@ function Set-CIPPDBCacheStorageCleanupScan {
         PostExecution (Push-StoreStorageCleanupScan) aggregates every batch and writes the
         StorageCleanupScan cache once.
 
-        Hold-only / report-private: only the storage report reads this cache. It is not part of
-        nightly CIPPDB collection and is not consumed by ListSites or other List APIs.
+        Report-private: rows live in the CippStorageCleanupScan table, read only by the storage report.
+        It is not part of nightly CIPPDB collection.
 
         Per site the batch collects library StorageMetrics (versionEstimateBytes) and an aggregate
         recycle-bin summary (sizes only — no item titles or paths).
@@ -72,7 +72,7 @@ function Set-CIPPDBCacheStorageCleanupScan {
         $LicenseCheck = Test-CIPPStandardLicense -StandardName 'StorageCleanupScanCache' -TenantFilter $TenantFilter -Preset SharePoint -SkipLog
         if ($LicenseCheck -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have a SharePoint license, skipping StorageCleanupScan cache' -sev Debug
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -TableName 'CippStorageCleanupScan' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
@@ -91,7 +91,7 @@ function Set-CIPPDBCacheStorageCleanupScan {
 
         if ($ExpectedSiteCount -eq 0) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No SharePoint sites found; writing empty StorageCleanupScan cache' -sev Debug
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -Data @() -AddCount
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'StorageCleanupScan' -TableName 'CippStorageCleanupScan' -Data @() -AddCount
             return
         }
 
@@ -133,12 +133,14 @@ function Set-CIPPDBCacheStorageCleanupScan {
             Batch            = @($Batches)
             OrchestratorName = "StorageCleanupScan_$TenantFilter"
             AllowCollision   = $false
+            MaxConcurrency   = 3
             SkipLog          = $true
             PostExecution    = @{
                 FunctionName = 'StoreStorageCleanupScan'
                 Parameters   = @{
                     TenantFilter      = $TenantFilter
                     ExpectedSiteCount = $ExpectedSiteCount
+                    ExpectedSiteIds   = @($Sites.id)
                 }
             }
         }

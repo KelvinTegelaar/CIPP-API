@@ -37,12 +37,12 @@ function Invoke-RemoveIntuneScript {
 
         $null = New-GraphPOSTRequest -uri $URI -type DELETE -tenantid $TenantFilter
         $Result = "Deleted $($ScriptType) script $($DisplayName) with ID: $($ID)"
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $Tenant -message $Result -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to delete $($ScriptType) script $($DisplayName). Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $Tenant -message $Result -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 

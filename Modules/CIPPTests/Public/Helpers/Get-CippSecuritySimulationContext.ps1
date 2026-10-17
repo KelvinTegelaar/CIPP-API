@@ -22,6 +22,7 @@ function Get-CippSecuritySimulationContext {
     $AlignmentTable = Get-CippTable -tablename 'BaselineAlignment'
     $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $Tenant
     $AlignmentRows = @(Get-CIPPAzDataTableEntity @AlignmentTable -Filter "PartitionKey eq '$SafeTenant'")
+    $FreshAfter = [DateTimeOffset]::UtcNow.AddHours(-12).ToUnixTimeSeconds()
     $Context = @{
         Tenant    = $Tenant
         Scenarios = $Scenarios
@@ -47,7 +48,7 @@ function Get-CippSecuritySimulationContext {
         if ($CALicensed) {
             if (-not $Identities.ContainsKey($Persona)) {
                 $Directory ??= @{
-                    Users    = @(Get-CIPPSimulationCache -TenantFilter $Tenant -Type 'Users')
+                    Users    = @(Get-CIPPSimulationCache -TenantFilter $Tenant -Type 'Users' -Fields 'id', 'displayName', 'userPrincipalName', 'accountEnabled', 'userType', 'assignedLicenses')
                     Roles    = @(Get-CIPPSimulationCache -TenantFilter $Tenant -Type 'Roles')
                     Policies = @(Get-CIPPSimulationCache -TenantFilter $Tenant -Type 'ConditionalAccessPolicies')
                 }
@@ -105,6 +106,16 @@ function Get-CippSecuritySimulationContext {
                 '^Skipped - No License$' { $State.status = 'License missing'; $State.compliant = $null }
                 '^$' { $State.status = 'Needs configuration'; $State.detail = 'This standard needs tenant-specific settings, chosen in a baseline, before it can be checked.' }
                 default { $State.status = 'No data'; $State.compliant = $null }
+            }
+        } elseif (@(($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties).Count -eq 0 -and "$($Row.Status)" -in @('Compliant', 'Drift') -and $Row.PendingVerification -ne $true -and [int64]($Row.LastRun ?? 0) -ge $FreshAfter) {
+            # A standard without settings grades the same in every baseline, so a recent verdict replaces a live grade.
+            if ("$($Row.Status)" -eq 'Compliant') {
+                $State.status = 'Compliant'
+                $State.compliant = $true
+            } else {
+                $RowDiff = @(if ("$($Row.Diff)") { [CIPP.CippJson]::ConvertFromJson("$($Row.Diff)") })
+                $DiffProperties = @(@($RowDiff | ForEach-Object { $_.Property }).Where({ $_ }) | Select-Object -Unique)
+                if ($DiffProperties.Count -gt 0) { $State.detail = 'Differs on: {0}' -f ($DiffProperties -join ', ') }
             }
         } else {
             $Candidates = [System.Collections.Generic.List[object]]::new()

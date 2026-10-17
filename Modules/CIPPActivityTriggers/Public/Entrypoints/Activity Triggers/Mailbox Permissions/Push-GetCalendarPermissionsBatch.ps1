@@ -74,7 +74,7 @@ function Push-GetCalendarPermissionsBatch {
             }
 
             Write-Information "Phase 1: Bulk Get-MailboxFolderStatistics for $($CacheMissMailboxes.Count) mailboxes"
-            $FolderStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($FolderStatsRequests) -Select 'Name,FolderType' -MaxConcurrency 5
+            $FolderStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($FolderStatsRequests) -Select 'Name,FolderType' -MaxConcurrency 16
 
             # One call returns EVERY calendar folder flattened under one OperationGuid, so
             # last-wins cached whatever the mailbox listed last - 'United States holidays' for
@@ -107,11 +107,13 @@ function Push-GetCalendarPermissionsBatch {
                 Write-Information "No root calendar folder (FolderType 'Calendar') found for $NoRootCalendar of $($CacheMissMailboxes.Count) cache-miss mailboxes"
             }
 
-            # Persist newly discovered folder names to cache
-            if ($NewCacheEntries.Count -gt 0) {
+            # Persist newly discovered folder names to cache. Table keys reject these characters,
+            # and one bad key fails its whole write batch, so those mailboxes stay uncached.
+            $Cacheable = @($NewCacheEntries.Where({ $_.RowKey -notmatch '[/\\#?\p{Cc}]' }))
+            if ($Cacheable.Count -gt 0) {
                 try {
-                    Add-CIPPAzDataTableEntity @FolderCacheTable -Entity $NewCacheEntries -Force
-                    Write-Information "Cached $($NewCacheEntries.Count) new calendar folder names for $TenantFilter"
+                    Add-CIPPAzDataTableEntity @FolderCacheTable -Entity $Cacheable -Force
+                    Write-Information "Cached $($Cacheable.Count) new calendar folder names for $TenantFilter"
                 } catch {
                     Write-Information "Failed to write folder name cache for $TenantFilter : $($_.Exception.Message)"
                 }
@@ -140,7 +142,7 @@ function Push-GetCalendarPermissionsBatch {
 
         if ($PermissionRequests) {
             Write-Information "Phase 2: Bulk Get-MailboxFolderPermission for $(@($PermissionRequests).Count) mailboxes"
-            $PermissionResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($PermissionRequests) -useSystemMailbox $true -MaxConcurrency 5
+            $PermissionResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($PermissionRequests) -useSystemMailbox $true -Select 'Identity,User,AccessRights,FolderName' -MaxConcurrency 16
 
             foreach ($Perm in $PermissionResults) {
                 if ($Perm.error) {

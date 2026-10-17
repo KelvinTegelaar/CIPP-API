@@ -6,8 +6,10 @@ BeforeAll {
     function Get-CIPPTenantAllowBlockListItems { param($TenantFilter, $ListType) }
     function Get-CIPPIPAllowBlockList { param($TenantFilter) }
     function Get-NormalizedError { param($message) $message }
-    function Search-CIPPBecAuditLog { param($TenantFilter, $StartDate, $EndDate, $Operations, $UserIds, $IPAddresses, $Anchor, $MaxPages) }
-    foreach ($File in @('ConvertTo-CIPPODataFilterValue.ps1', 'Authentication/ConvertTo-CIPPIPRange.ps1', 'BEC/ConvertTo-CIPPBecHostAddress.ps1', 'BEC/New-CIPPBecCollectorResult.ps1', 'BEC/Get-CIPPBecSignInBaseline.ps1', 'BEC/Get-CIPPBecIPPeers.ps1', 'BEC/Get-CIPPBecCorrelatedUserPeers.ps1', 'BEC/Get-CIPPBecIPGuidance.ps1', 'BEC/Get-CIPPBecBlastRadius.ps1')) {
+    function Search-CIPPBecAuditLog { param($TenantFilter, $StartDate, $EndDate, $Operations, $UserIds, $IPAddresses, $RecordType, $Anchor, $MaxPages) }
+    function Get-CIPPGeoIPLocationBatch { param([string[]]$IPs) }
+    function New-AuditLogon { param($User, $IP, $When, $Ok = $true) [pscustomobject]@{ AuditData = [pscustomobject]@{ UserId = $User; Operation = $(if ($Ok) { 'UserLoggedIn' } else { 'UserLoginFailed' }); ClientIP = $IP; CreationTime = $When } } }
+    foreach ($File in @('ConvertTo-CIPPODataFilterValue.ps1', 'Authentication/ConvertTo-CIPPIPRange.ps1', 'BEC/ConvertTo-CIPPBecHostAddress.ps1', 'BEC/New-CIPPBecCollectorResult.ps1', 'BEC/Search-CIPPBecSignIn.ps1', 'BEC/Get-CIPPBecSignInBaseline.ps1', 'BEC/Get-CIPPBecIPPeers.ps1', 'BEC/Get-CIPPBecCorrelatedUserPeers.ps1', 'BEC/Get-CIPPBecIPGuidance.ps1', 'BEC/Get-CIPPBecBlastRadius.ps1')) {
         . (Join-Path $RepoRoot "Modules/CIPPCore/Public/$File")
     }
     function New-SignIn {
@@ -19,17 +21,14 @@ BeforeAll {
 Describe 'Get-CIPPBecSignInBaseline' {
     It 'profiles successful sign-ins by address, network and location across interactive and service sign-ins' {
         Mock New-GraphBulkRequest {
-            @(
-                [pscustomobject]@{ id = 'Interactive'; status = 200; body = [pscustomobject]@{ value = @(
-                            (New-SignIn -IP '203.0.113.10' -When '2026-09-01T01:00:00Z')
-                            (New-SignIn -IP '203.0.113.10' -When '2026-09-02T01:00:00Z')
-                            (New-SignIn -IP '198.51.100.7' -When '2026-09-03T01:00:00Z' -Ok $false -Asn 14061 -City 'Lagos')
-                        ) } }
-                [pscustomobject]@{ id = 'NonInteractive'; status = 200; body = [pscustomobject]@{ value = @(
-                            (New-SignIn -IP '203.0.113.10' -When '2026-09-02T02:00:00Z' -App 'SharePoint Online')
-                            (New-SignIn -IP '192.0.2.44' -When '2026-09-04T01:00:00Z' -City 'Melbourne')
-                        ) } }
-            )
+            foreach ($Request in $Requests) {
+                $Rows = if ($Request.id -ne 's2') { @() } elseif ($Request.url -match 'nonInteractiveUser') {
+                    @((New-SignIn -IP '203.0.113.10' -When '2026-09-02T02:00:00Z' -App 'SharePoint Online'), (New-SignIn -IP '192.0.2.44' -When '2026-09-04T01:00:00Z' -City 'Melbourne'))
+                } else {
+                    @((New-SignIn -IP '203.0.113.10' -When '2026-09-01T01:00:00Z'), (New-SignIn -IP '203.0.113.10' -When '2026-09-02T01:00:00Z'), (New-SignIn -IP '198.51.100.7' -When '2026-09-03T01:00:00Z' -Ok $false -Asn 14061 -City 'Lagos'))
+                }
+                [pscustomobject]@{ id = $Request.id; status = 200; body = [pscustomobject]@{ value = $Rows } }
+            }
         }
         $Result = Get-CIPPBecSignInBaseline -TenantFilter 'contoso.com' -UserId '11111111-1111-1111-1111-111111111111' -StartDate '2026-08-15' -EndDate '2026-09-16'
         $Result.Complete | Should -BeTrue
@@ -43,87 +42,112 @@ Describe 'Get-CIPPBecSignInBaseline' {
         $Office.Apps | Should -Contain 'SharePoint Online'
         ($Result.Data.IPs | Where-Object IP -EQ '198.51.100.7') | Should -BeNullOrEmpty
         ($Result.Data.Locations | Where-Object City -EQ 'Sydney').Share | Should -Be 0.75
-        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { @($Requests).Count -eq 2 -and $Requests[1].url -match "nonInteractiveUser" -and $Requests[0].url -match 'createdDateTime lt ' }
+        # 32 days in 7-day slices, interactive and non-interactive each
+        Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter { @($Requests).Count -eq 5 -and $Requests[0].url -match 'nonInteractiveUser' -and $Requests[4].url -match "createdDateTime lt $(([datetime]'2026-09-16').ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))" }
+        Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter { @($Requests).Count -eq 5 -and $Requests[0].url -notmatch 'nonInteractiveUser' }
     }
 
     It 'reports a failed half and a Graph paging stop without losing the other half' {
         Mock New-GraphBulkRequest {
-            @(
-                [pscustomobject]@{ id = 'Interactive'; status = 200; PagingIncomplete = $true; body = [pscustomobject]@{ value = @(New-SignIn -IP '203.0.113.10' -When '2026-09-01T01:00:00Z') } }
-                [pscustomobject]@{ id = 'NonInteractive'; status = 403; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'Tenant does not have a premium licence' } } }
-            )
+            foreach ($Request in $Requests) {
+                if ($Request.url -match 'nonInteractiveUser') { [pscustomobject]@{ id = $Request.id; status = 403; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'Tenant does not have a premium licence' } } } }
+                elseif ($Request.id -eq 's2') { [pscustomobject]@{ id = $Request.id; status = 200; PagingIncomplete = $true; body = [pscustomobject]@{ value = @(New-SignIn -IP '203.0.113.10' -When '2026-09-01T01:00:00Z') } } }
+                else { [pscustomobject]@{ id = $Request.id; status = 200; body = [pscustomobject]@{ value = @() } } }
+            }
         }
         $Result = Get-CIPPBecSignInBaseline -TenantFilter 'contoso.com' -UserId '11111111-1111-1111-1111-111111111111' -StartDate '2026-08-15' -EndDate '2026-09-16'
         $Result.Complete | Should -BeFalse
         $Result.Error | Should -Match 'NonInteractive sign-ins: Tenant does not have a premium licence'
         $Result.Data.Successful | Should -Be 1
     }
+
+    It 'reads a baseline past the sign-in log''s reach from the user''s audit log logons, with locations from the geo lookup' {
+        Mock New-GraphBulkRequest { throw 'the sign-in log is not read' }
+        Mock Get-CIPPGeoIPLocationBatch { @{ '203.0.113.10' = [pscustomobject]@{ CountryOrRegion = 'AU'; City = 'Sydney' } } }
+        Mock Search-CIPPBecAuditLog {
+            [pscustomobject]@{ Complete = $true; Cap = $null; Records = @(
+                    (New-AuditLogon -User 'victim@contoso.com' -IP '203.0.113.10' -When '2026-08-20T01:00:00')
+                    (New-AuditLogon -User 'victim@contoso.com' -IP '203.0.113.10' -When '2026-08-21T01:00:00')
+                    (New-AuditLogon -User 'victim@contoso.com' -IP '198.51.100.7' -When '2026-08-22T01:00:00' -Ok $false)
+                ) }
+        }
+        $Result = Get-CIPPBecSignInBaseline -TenantFilter 'contoso.com' -UserId '11111111-1111-1111-1111-111111111111' -UserPrincipalName 'victim@contoso.com' -StartDate '2026-08-15' -EndDate '2026-09-16' -FromAuditLog
+        $Result.Complete | Should -BeTrue
+        $Result.Data.Successful | Should -Be 2 -Because 'a failed logon does not make an address known'
+        $Office = $Result.Data.IPs | Where-Object IP -EQ '203.0.113.10'
+        $Office.Days | Should -Be 2
+        $Office.FirstSeen | Should -Be '2026-08-20T01:00:00Z' -Because 'the audit log writes UTC without a zone'
+        $Office.Country | Should -Be 'AU'
+        @($Result.Data.ASNs).Count | Should -Be 0
+        Should -Invoke Search-CIPPBecAuditLog -Times 1 -ParameterFilter { $RecordType -eq 'AzureActiveDirectoryStsLogon' -and @($UserIds) -contains 'victim@contoso.com' -and @($UserIds) -contains '11111111-1111-1111-1111-111111111111' }
+    }
 }
 
 Describe 'Get-CIPPBecIPPeers' {
-    It 'splits other accounts into before and only-in-window, excluding the investigated user, and samples service sign-ins' {
+    BeforeEach {
+        Mock Search-CIPPBecAuditLog { [pscustomobject]@{ Complete = $true; Cap = $null; Records = @() } }
+    }
+
+    It 'splits other accounts into before (audit log) and only-in-window (sign-in log), excluding the investigated user, and marks a full page as sampled' {
         Mock New-GraphBulkRequest {
             @(
-                [pscustomobject]@{ id = 'i0'; status = 200; body = [pscustomobject]@{ value = @(
-                            [pscustomobject]@{ userId = 'me'; userPrincipalName = 'victim@contoso.com'; createdDateTime = '2026-09-01T00:00:00Z' }
-                            [pscustomobject]@{ userId = 'a'; userPrincipalName = 'a@contoso.com'; createdDateTime = '2026-09-01T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
-                            [pscustomobject]@{ userId = 'a'; userPrincipalName = 'a@contoso.com'; createdDateTime = '2026-09-03T00:00:00Z'; status = [pscustomobject]@{ errorCode = 50126 } }
+                [pscustomobject]@{ id = 'w0s0'; status = 200; body = [pscustomobject]@{ '@odata.nextLink' = 'more'; value = @(
+                            [pscustomobject]@{ userId = 'me'; userPrincipalName = 'victim@contoso.com'; createdDateTime = '2026-09-20T00:00:00Z' }
+                            [pscustomobject]@{ userId = 'b'; userPrincipalName = 'b@contoso.com'; createdDateTime = '2026-09-20T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
                         ) } }
-                [pscustomobject]@{ id = 'n0'; status = 200; body = [pscustomobject]@{ '@odata.nextLink' = 'more'; value = @([pscustomobject]@{ userId = 'b'; userPrincipalName = 'b@contoso.com'; createdDateTime = '2026-09-02T00:00:00Z' }) } }
-                [pscustomobject]@{ id = 'i1'; status = 200; body = [pscustomobject]@{ value = @([pscustomobject]@{ userId = 'c'; userPrincipalName = 'c@contoso.com'; createdDateTime = '2026-09-20T00:00:00Z' }) } }
-                [pscustomobject]@{ id = 'n1'; status = 200; body = [pscustomobject]@{ value = @() } }
+                [pscustomobject]@{ id = 'w1s0'; status = 200; body = [pscustomobject]@{ value = @([pscustomobject]@{ userId = 'c'; userPrincipalName = 'c@contoso.com'; createdDateTime = '2026-09-20T00:00:00Z' }) } }
             )
         }
-        $Peers = Get-CIPPBecIPPeers -TenantFilter 'contoso.com' -UserId 'me' -IPs @('203.0.113.10', '198.51.100.7') -StartDate '2026-08-15' -WindowStart '2026-09-16'
-        $Peers['203.0.113.10'].OtherUsersBefore | Should -Be 2
+        Mock Search-CIPPBecAuditLog {
+            [pscustomobject]@{ Complete = $true; Cap = $null; Records = @(
+                    (New-AuditLogon -User 'victim@contoso.com' -IP '203.0.113.10' -When '2026-09-01T00:00:00')
+                    (New-AuditLogon -User 'Not Available' -IP '203.0.113.10' -When '2026-09-01T00:00:00')
+                    (New-AuditLogon -User 'a@contoso.com' -IP '203.0.113.10' -When '2026-09-01T00:00:00')
+                    (New-AuditLogon -User 'a@contoso.com' -IP '203.0.113.10:51000' -When '2026-09-03T00:00:00' -Ok $false)
+                ) }
+        }
+        $Peers = Get-CIPPBecIPPeers -TenantFilter 'contoso.com' -UserId 'me' -UserPrincipalName 'victim@contoso.com' -IPs @('203.0.113.10', '198.51.100.7') -StartDate '2026-08-15T00:00:00Z' -WindowStart '2026-09-16T00:00:00Z'
+        $Peers['203.0.113.10'].OtherUsersBefore | Should -Be 1
+        $Peers['203.0.113.10'].OtherUsersInWindowOnly | Should -Be 1
         $Peers['203.0.113.10'].Users | Should -Not -Contain 'victim@contoso.com'
+        $Peers['203.0.113.10'].Users | Should -Not -Contain 'Not Available'
         $Peers['203.0.113.10'].Sampled | Should -BeTrue
         $A = $Peers['203.0.113.10'].Accounts | Where-Object UserPrincipalName -EQ 'a@contoso.com'
-        $A.UserId | Should -Be 'a'
         $A.Successful | Should -Be 1
         $A.Failed | Should -Be 1
         $A.FirstSeen | Should -Be '2026-09-01T00:00:00Z'
         $A.LastSeen | Should -Be '2026-09-03T00:00:00Z'
-        $Peers['203.0.113.10'].Accounts.UserPrincipalName | Should -Not -Contain 'victim@contoso.com'
         $Peers['198.51.100.7'].OtherUsersInWindowOnly | Should -Be 1
-        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { @($NoPaginateIds) -contains 'n0' -and @($NoPaginateIds) -contains 'n1' -and $Requests[0].url -match "ipAddress eq '203.0.113.10'" }
+        Should -Invoke Search-CIPPBecAuditLog -Times 1 -ParameterFilter { $RecordType -eq 'AzureActiveDirectoryStsLogon' -and @($IPAddresses).Count -eq 2 -and $EndDate -eq ([datetime]'2026-09-16T00:00:00Z').ToUniversalTime() -and $Anchor -eq 'victim@contoso.com' }
+        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter {
+            # the window only, in slices of at most 7 days, both sign-in types, none paged past its first 999
+            @($Requests).Count -eq @($NoPaginateIds).Count -and @($Requests | Where-Object { $_.url -notmatch "t eq 'interactiveUser' or t eq 'nonInteractiveUser'" }).Count -eq 0 -and
+            $Requests[0].url -match "ipAddress eq '203.0.113.10' and createdDateTime ge 2026-09-16T00:00:00Z and createdDateTime lt 2026-09-23T00:00:00Z" -and
+            @($Requests | Where-Object { $_.url -match 'createdDateTime ge 2026-08' }).Count -eq 0
+        }
     }
 
-    It 'reads the non-interactive sign-ins before the window separately, so a busy address still shows its colleagues' {
-        Mock New-GraphBulkRequest {
-            @(
-                [pscustomobject]@{ id = 'i0'; status = 200; body = [pscustomobject]@{ value = @() } }
-                # the in-window page is full of token refreshes...
-                [pscustomobject]@{ id = 'n0'; status = 200; body = [pscustomobject]@{ '@odata.nextLink' = 'more'; value = @([pscustomobject]@{ userId = 'x'; userPrincipalName = 'x@contoso.com'; createdDateTime = '2026-09-20T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }) } }
-                # ...and the colleagues show up in the before-window page
-                [pscustomobject]@{ id = 'b0'; status = 200; body = [pscustomobject]@{ value = @(
-                            [pscustomobject]@{ userId = 'a'; userPrincipalName = 'a@contoso.com'; createdDateTime = '2026-09-01T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
-                            [pscustomobject]@{ userId = 'b'; userPrincipalName = 'b@contoso.com'; createdDateTime = '2026-09-02T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
-                        ) } }
-            )
-        }
+    It 'reports a failed audit log history on the addresses instead of failing the lookup' {
+        Mock New-GraphBulkRequest { @([pscustomobject]@{ id = 'w0s0'; status = 200; body = [pscustomobject]@{ value = @() } }) }
+        Mock Search-CIPPBecAuditLog { throw 'Search-UnifiedAuditLog timed out' }
         $Peers = Get-CIPPBecIPPeers -TenantFilter 'contoso.com' -UserId 'me' -IPs @('203.0.113.10') -StartDate '2026-08-15' -WindowStart '2026-09-16'
-        $Peers['203.0.113.10'].OtherUsersBefore | Should -Be 2
-        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter {
-            $N = $Requests | Where-Object { $_.id -eq 'n0' }; $B = $Requests | Where-Object { $_.id -eq 'b0' }
-            $N.url -notmatch 'createdDateTime lt ' -and $B.url -match 'createdDateTime lt ' -and @($NoPaginateIds) -contains 'b0'
-        }
+        $Peers['203.0.113.10'].Error | Should -Match 'audit log history'
     }
 
     It 'looks an IPv6 address up by its /64 once for all its addresses, and keeps only sign-ins inside it' {
         Mock New-GraphBulkRequest {
-            @([pscustomobject]@{ id = 'i0'; status = 200; body = [pscustomobject]@{ value = @(
-                            [pscustomobject]@{ userId = 'a'; userPrincipalName = 'a@contoso.com'; ipAddress = '2001:db8:1:2::77'; createdDateTime = '2026-09-01T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
-                            [pscustomobject]@{ userId = 'b'; userPrincipalName = 'b@contoso.com'; ipAddress = '2001:db8:1:2:9::1'; createdDateTime = '2026-09-02T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
-                            [pscustomobject]@{ userId = 'z'; userPrincipalName = 'z@contoso.com'; ipAddress = '2001:db8:1:20::1'; createdDateTime = '2026-09-02T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
+            @([pscustomobject]@{ id = 'w0s0'; status = 200; body = [pscustomobject]@{ value = @(
+                            [pscustomobject]@{ userId = 'a'; userPrincipalName = 'a@contoso.com'; ipAddress = '2001:db8:1:2::77'; createdDateTime = '2026-09-20T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
+                            [pscustomobject]@{ userId = 'b'; userPrincipalName = 'b@contoso.com'; ipAddress = '2001:db8:1:2:9::1'; createdDateTime = '2026-09-21T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
+                            [pscustomobject]@{ userId = 'z'; userPrincipalName = 'z@contoso.com'; ipAddress = '2001:db8:1:20::1'; createdDateTime = '2026-09-21T00:00:00Z'; status = [pscustomobject]@{ errorCode = 0 } }
                         ) } })
         }
         $Peers = Get-CIPPBecIPPeers -TenantFilter 'contoso.com' -UserId 'me' -IPs @('2001:db8:1:2::5', '2001:db8:1:2:abcd::1') -StartDate '2026-08-15' -WindowStart '2026-09-16'
         foreach ($IP in @('2001:db8:1:2::5', '2001:db8:1:2:abcd::1')) {
-            $Peers[$IP].OtherUsersBefore | Should -Be 2
+            $Peers[$IP].OtherUsersInWindowOnly | Should -Be 2
             $Peers[$IP].Network | Should -Be '2001:db8:1:2::/64'
         }
-        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { @($Requests).Count -eq 3 -and $Requests[0].url -match "startswith\(ipAddress,'2001:db8:1:2:'\)" }
+        Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter { @($Requests | Where-Object { $_.id -like 'w1s*' }).Count -eq 0 -and $Requests[0].url -match "startswith\(ipAddress,'2001:db8:1:2:'\)" }
     }
 
     It 'returns nothing without calling Graph when there are no addresses' {
@@ -131,7 +155,6 @@ Describe 'Get-CIPPBecIPPeers' {
         (Get-CIPPBecIPPeers -TenantFilter 'contoso.com' -UserId 'me' -IPs @() -StartDate '2026-08-15' -WindowStart '2026-09-16').Count | Should -Be 0
     }
 }
-
 Describe 'Get-CIPPBecCorrelatedUserPeers' {
     It 'matches a colleague on the /64 of an IPv6 case address, before or during the window' {
         Mock New-GraphBulkRequest {

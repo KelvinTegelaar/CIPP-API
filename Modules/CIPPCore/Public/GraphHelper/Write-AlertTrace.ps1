@@ -21,6 +21,9 @@ function Write-AlertTrace {
         again if it ever comes back. Timed snoozes outlive a resolution and keep suppressing
         the item until they expire.
 
+        When the running alert task has AlertReNotify set (Set-CippScheduledTaskContext), Continuing
+        items are returned too, so the alert repeats on every run until resolved. Snoozes still win.
+
         Alerts that fail part-way must not call this, since "could not check" is not "clear".
 
         With -Append the run is treated as a stream of events rather than a full picture: items
@@ -40,6 +43,7 @@ function Write-AlertTrace {
         [switch]$Append
     )
 
+    $ReNotify = [bool]$script:CippAlertReNotifyStorage.Value
     $CmdletName = [string]$cmdletName
     $TenantFilter = [string]$tenantFilter
     $Now = [datetime]::UtcNow
@@ -166,6 +170,7 @@ function Write-AlertTrace {
             } else {
                 $Entity.Status = 'Open'
                 $Counts.Continuing++
+                if ($ReNotify) { $Notify.Add($Item) }
             }
         }
 

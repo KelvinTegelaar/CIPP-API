@@ -28,6 +28,27 @@ function New-GraphBulkRequest {
         }
 
         $URL = "https://graph.microsoft.com/$Version/`$batch"
+        # a $batch lands its sub-requests at once, so the rate limiter can only space whole batches: no batch holds more
+        # sub-requests of one measured budget (CIPPRateLimiter) than its burst
+        $HasBudgets = $null -ne ('CIPP.CIPPRateLimiter' -as [type])
+        $Split = {
+            param($Items)
+            $Batches = [System.Collections.Generic.List[object]]::new()
+            $Current = [System.Collections.Generic.List[object]]::new()
+            $Used = @{}
+            foreach ($Item in @($Items)) {
+                $Budget = if ($HasBudgets) { [CIPP.CIPPRateLimiter]::BatchBudgetFor([string]$Item.url, $Version) }
+                if ($Current.Count -ge 20 -or ($Budget -and [int]$Used[$Budget.Name] -ge $Budget.Burst)) {
+                    $Batches.Add($Current.ToArray())
+                    $Current = [System.Collections.Generic.List[object]]::new()
+                    $Used = @{}
+                }
+                $Current.Add($Item)
+                if ($Budget) { $Used[$Budget.Name] = [int]$Used[$Budget.Name] + 1 }
+            }
+            if ($Current.Count -gt 0) { $Batches.Add($Current.ToArray()) }
+            , $Batches
+        }
 
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
@@ -41,10 +62,9 @@ function New-GraphBulkRequest {
             }
         }
         try {
-            $ReturnedData = for ($i = 0; $i -lt $Requests.count; $i += 20) {
+            $ReturnedData = foreach ($Batch in (& $Split $Requests)) {
                 $req = @{}
-                # Use select to create hashtables of id, method and url for each call
-                $req['requests'] = ($Requests[$i..([Math]::Min($i + 19, $Requests.Count - 1))])
+                $req['requests'] = $Batch
                 $ReqBody = [CIPP.CippJson]::ToJson($req, 100) ?? (ConvertTo-Json -InputObject $req -Compress -Depth 100)
                 $Return = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
                 if ($Return.headers.'retry-after') {
@@ -69,8 +89,8 @@ function New-GraphBulkRequest {
                 Start-Sleep -Seconds ([Math]::Min($Wait, 30))
                 $TransientIds = @($Transient | ForEach-Object { [string]$_.id })
                 $RetryRequests = @($Requests | Where-Object { [string]$_.id -in $TransientIds })
-                for ($j = 0; $j -lt $RetryRequests.Count; $j += 20) {
-                    $RetryBody = ConvertTo-Json -InputObject @{ requests = @($RetryRequests[$j..([Math]::Min($j + 19, $RetryRequests.Count - 1))]) } -Compress -Depth 100
+                foreach ($RetryBatch in (& $Split $RetryRequests)) {
+                    $RetryBody = ConvertTo-Json -InputObject @{ requests = @($RetryBatch) } -Compress -Depth 100
                     $RetryReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $RetryBody
                     foreach ($Fresh in @($RetryReturn.responses)) {
                         foreach ($Batch in @($ReturnedData)) {

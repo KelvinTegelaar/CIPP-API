@@ -113,7 +113,10 @@ function Get-CIPPAuthentication {
                 }
             }
 
-            if (-not $env:SAMCertificate -and $env:SAMCertProvisionAttempted -ne 'true') {
+            $HasRealAppId = $env:ApplicationID -and $env:ApplicationID -notmatch $PlaceholderPattern
+            if (-not $env:SAMCertificate -and -not $HasRealAppId) {
+                Write-Information 'SAM certificate provisioning waits for real application credentials'
+            } elseif (-not $env:SAMCertificate -and $env:SAMCertProvisionAttempted -ne 'true') {
                 # First run on this instance: provision the certificate now, at most once per
                 # process. The guard also breaks a recursion loop: Update-CIPPSAMCertificate
                 # calls Get-GraphToken, which re-enters this function when the AppCache

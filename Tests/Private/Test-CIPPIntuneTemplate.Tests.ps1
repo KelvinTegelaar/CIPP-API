@@ -230,10 +230,81 @@ Describe 'Test-CIPPIntuneTemplate' {
             $Result.Errors | Should -BeNullOrEmpty
         }
 
+        # Intune: "Simple Setting Collection Value should not be empty." / "Choice setting collection id has empty choice setting value collection."
+        It 'rejects an empty <Property>, which Intune refuses' -ForEach @(
+            @{ Property = 'simpleSettingCollectionValue'; Type = 'SimpleSettingCollectionInstance'; Value = '[]' }
+            @{ Property = 'choiceSettingCollectionValue'; Type = 'ChoiceSettingCollectionInstance'; Value = '[]' }
+            @{ Property = 'simpleSettingCollectionValue'; Type = 'SimpleSettingCollectionInstance'; Value = 'null' }
+        ) {
+            $RawJSON = '{"name":"Catalog","technologies":"mdm","settings":[{"settingInstance":{"@odata.type":"#microsoft.graph.deviceManagementConfiguration' + $Type + '","settingDefinitionId":"device_test","' + $Property + '":' + $Value + '}}]}'
+            $Result = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType 'Catalog' -DisplayName 'Catalog'
+            $Result.IsValid | Should -BeFalse
+            Get-Code $Result 'Error' | Should -Contain 'EmptyCollectionValue'
+        }
+
+        It 'accepts a collection holding one empty string, which Intune stores as given' {
+            $RawJSON = '{"name":"Catalog","technologies":"mdm","settings":[{"settingInstance":{"@odata.type":"#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance","settingDefinitionId":"device_test","simpleSettingCollectionValue":[{"@odata.type":"#microsoft.graph.deviceManagementConfigurationStringSettingValue","value":""}]}}]}'
+            $Result = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType 'Catalog' -DisplayName 'Catalog'
+            $Result.IsValid | Should -BeTrue
+            $Result.Findings | Should -BeNullOrEmpty
+        }
+
         It 'warns about an empty settings array rather than failing it' {
             $Result = Test-CIPPIntuneTemplate -RawJSON '{"name":"Catalog","technologies":"mdm","settings":[]}' -TemplateType 'Catalog' -DisplayName 'Catalog'
             $Result.IsValid | Should -BeTrue
             Get-Code $Result 'Warning' | Should -Contain 'EmptySettings'
+        }
+    }
+
+    # Intune refuses an option set without the settings it requires (seen live with the Chrome extension list).
+    Context 'Settings an option requires' {
+        BeforeAll {
+            $Required = [System.Collections.Generic.Dictionary[string, string[]]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            $Required['force_list_1'] = [string[]]@('force_list_ids')
+            $CollectionRequired = [System.Collections.Generic.Dictionary[string, string[]]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            $CollectionRequired['features_a'] = [string[]]@('features_a_level')
+            $script:RequiredIndex = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            $script:RequiredIndex['force_list'] = @{ displayName = 'Force list'; options = $null; requiredChildIds = $Required }
+            $script:RequiredIndex['features'] = @{ displayName = 'Features'; options = $null; requiredChildIds = $CollectionRequired }
+            function Get-CIPPIntuneDefinitionIndex { return $script:RequiredIndex }
+
+            $script:Choice = {
+                param([string]$Value, [string]$Children = '')
+                '{"name":"Chrome","technologies":"mdm","settings":[{"settingInstance":{"@odata.type":"#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance","settingDefinitionId":"force_list","choiceSettingValue":{"value":"' + $Value + '","children":[' + $Children + ']}}}]}'
+            }
+            $script:List = '{"@odata.type":"#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance","settingDefinitionId":"force_list_ids","simpleSettingCollectionValue":[{"@odata.type":"#microsoft.graph.deviceManagementConfigurationStringSettingValue","value":"extension"}]}'
+        }
+
+        It 'refuses an option set without a setting it requires' {
+            $Result = Test-CIPPIntuneTemplate -RawJSON (& $script:Choice 'force_list_1') -TemplateType 'Catalog' -DisplayName 'Chrome' -IncludeCatalogChecks
+            $Result.IsValid | Should -BeFalse
+            Get-Code $Result 'Error' | Should -Contain 'MissingRequiredChild'
+        }
+
+        It 'accepts the option once the setting is there' {
+            $Result = Test-CIPPIntuneTemplate -RawJSON (& $script:Choice 'force_list_1' $script:List) -TemplateType 'Catalog' -DisplayName 'Chrome' -IncludeCatalogChecks
+            $Result.IsValid | Should -BeTrue
+        }
+
+        It 'asks nothing of an option that requires nothing' {
+            $Result = Test-CIPPIntuneTemplate -RawJSON (& $script:Choice 'force_list_0') -TemplateType 'Catalog' -DisplayName 'Chrome' -IncludeCatalogChecks
+            $Result.IsValid | Should -BeTrue
+        }
+
+        It 'leaves a choice held in a CIPP variable to be resolved at deployment' {
+            $Result = Test-CIPPIntuneTemplate -RawJSON (& $script:Choice '%chromeforcelist%') -TemplateType 'Catalog' -DisplayName 'Chrome' -IncludeCatalogChecks
+            Get-Code $Result 'Error' | Should -Not -Contain 'MissingRequiredChild'
+        }
+
+        It 'refuses a choice collection entry without a setting it requires' {
+            $Json = '{"name":"Features","technologies":"mdm","settings":[{"settingInstance":{"@odata.type":"#microsoft.graph.deviceManagementConfigurationChoiceSettingCollectionInstance","settingDefinitionId":"features","choiceSettingCollectionValue":[{"value":"features_b","children":[]},{"value":"features_a","children":[]}]}}]}'
+            $Result = Test-CIPPIntuneTemplate -RawJSON $Json -TemplateType 'Catalog' -DisplayName 'Features' -IncludeCatalogChecks
+            @(Get-Code $Result 'Error').Where({ $_ -eq 'MissingRequiredChild' }).Count | Should -Be 1
+        }
+
+        It 'needs the catalog, so it does not run without catalog checks' {
+            $Result = Test-CIPPIntuneTemplate -RawJSON (& $script:Choice 'force_list_1') -TemplateType 'Catalog' -DisplayName 'Chrome'
+            $Result.IsValid | Should -BeTrue
         }
     }
 

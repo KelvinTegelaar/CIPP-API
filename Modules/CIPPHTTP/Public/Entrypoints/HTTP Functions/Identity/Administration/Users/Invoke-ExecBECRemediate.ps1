@@ -34,7 +34,7 @@ function Invoke-ExecBECRemediate {
         if (-not $TenantFilter) { throw 'tenantFilter is required' }
         if (-not $Username) {
             if (-not $SuspectUser) { throw 'username or userid is required' }
-            $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$SuspectUser?`$select=userPrincipalName" -tenantid $TenantFilter -AsApp $true).userPrincipalName
+            $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($SuspectUser)?`$select=userPrincipalName" -tenantid $TenantFilter -AsApp $true).userPrincipalName
         }
 
         $Catalog = Get-CIPPBecContainmentActions

@@ -86,6 +86,7 @@ function Get-CIPPSAMCertificate {
         Thumbprint  = $Certificate.Thumbprint
         NotBefore   = $Certificate.NotBefore.ToUniversalTime()
         NotAfter    = $Certificate.NotAfter.ToUniversalTime()
+        PfxBase64   = $PfxBase64
     }
 
     if (-not $script:SAMCertificateCache) {

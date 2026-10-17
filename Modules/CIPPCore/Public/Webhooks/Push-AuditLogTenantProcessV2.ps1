@@ -16,8 +16,6 @@ function Push-AuditLogTenantProcessV2 {
 
         Overlap records now appear in two partitions and are processed twice; alerting still fires
         once via Invoke-CippWebhookProcessing's claim-insert.
-
-        Accepts LegacyRowIds for rows written before the partitioning change.
     .FUNCTIONALITY
         Entrypoint
     #>
@@ -27,7 +25,6 @@ function Push-AuditLogTenantProcessV2 {
     $TenantFilter = $Item.TenantFilter
     $SearchId = $Item.SearchId
     $WindowRowKey = $Item.WindowRowKey
-    $LegacyRowIds = $Item.LegacyRowIds
 
     # Rules are re-read per call by Test-CIPPAuditLogRules, so slice large searches rather than
     # calling it per record - and keep the slice at the old batch size so peak parsed memory is
@@ -41,12 +38,12 @@ function Push-AuditLogTenantProcessV2 {
         $ProcessedCount = 0
         $MatchedLogs = 0
 
-        if (-not $LegacyRowIds -and -not $SearchId) {
-            Write-Information "AuditLogV2: batch item for $TenantFilter has neither SearchId nor LegacyRowIds; nothing to do"
+        if (-not $SearchId) {
+            Write-Information "AuditLogV2: batch item for $TenantFilter has no SearchId; nothing to do"
             return $false
         }
 
-        $Partition = if ($LegacyRowIds) { $TenantFilter } else { '{0}|{1}' -f $TenantFilter, $SearchId }
+        $Partition = '{0}|{1}' -f $TenantFilter, $SearchId
         $Poison = [System.Collections.Generic.List[object]]::new()
         $Cursor = $null
         $AnyRows = $false
@@ -60,13 +57,8 @@ function Push-AuditLogTenantProcessV2 {
         # rows as it goes: re-issuing the same query would reshuffle what "next page" means,
         # whereas advancing past the highest RowKey seen is monotonic either way.
         while ($true) {
-            if ($LegacyRowIds) {
-                # Legacy rows are addressed by id, not range - fetch once and exit after one pass.
-                $Entities = @(Get-CippAuditLogLegacyCacheRow -TenantFilter $TenantFilter -RowIds @($LegacyRowIds))
-            } else {
-                $Filter = if ($Cursor) { "PartitionKey eq '$Partition' and RowKey gt '$Cursor'" } else { "PartitionKey eq '$Partition'" }
-                $Entities = @(Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter $Filter -First $SliceSize)
-            }
+            $Filter = if ($Cursor) { "PartitionKey eq '$Partition' and RowKey gt '$Cursor'" } else { "PartitionKey eq '$Partition'" }
+            $Entities = @(Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter $Filter -First $SliceSize)
             if ($Entities.Count -eq 0) { break }
             $AnyRows = $true
             $PageCount = $Entities.Count
@@ -116,16 +108,12 @@ function Push-AuditLogTenantProcessV2 {
             if ($Chunk.Count -gt 0) {
                 # The rule engine deletes the rows it processes, flushing mid-loop so a crash still
                 # makes forward progress. It therefore needs the partition those rows actually live
-                # in - the cache is keyed tenant|searchId, not tenant. Legacy batches keep the old
-                # tenant partition.
+                # in - the cache is keyed tenant|searchId, not tenant.
                 # -CallerSweepsCachePartition lets the engine drop processed rows with the plain
                 # delete instead of the part-aware one, which costs ~2.7x per row because it also
                 # removes the -partN rows of split entities. The sweep after this loop honours that
-                # guarantee. Legacy batches share the tenant partition with other searches and are
-                # never swept, so they keep the part-aware delete.
-                $SweepArgs = @{}
-                if (-not $LegacyRowIds) { $SweepArgs.CallerSweepsCachePartition = $true }
-                $Result = Test-CIPPAuditLogRules -TenantFilter $TenantFilter -Rows $Chunk -CachePartitionKey $Partition @SweepArgs
+                # guarantee.
+                $Result = Test-CIPPAuditLogRules -TenantFilter $TenantFilter -Rows $Chunk -CachePartitionKey $Partition -CallerSweepsCachePartition
                 $MatchedLogs += [int]($Result.MatchedLogs ?? 0)
                 $ProcessedCount += $Chunk.Count
             }
@@ -133,7 +121,6 @@ function Push-AuditLogTenantProcessV2 {
             $Chunk = $null
             $Entities = $null
 
-            if ($LegacyRowIds) { break }
             # A short page is the last page - asking again only costs a round trip.
             if ($PageCount -lt $SliceSize) { break }
         }
@@ -153,7 +140,7 @@ function Push-AuditLogTenantProcessV2 {
         # reports the orphaned parts as corrupt rather than returning them, which is the opposite
         # of what a sweep needs - it wants the literal rows, parts included.
         # Skipped when the cursor stalled, because rows may then be unprocessed.
-        if ($SearchId -and -not $LegacyRowIds -and -not $CursorStalled) {
+        if (-not $CursorStalled) {
             try {
                 $Residue = @(Get-AzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$Partition'" -Property PartitionKey, RowKey)
                 if ($Residue.Count -gt 0) {
@@ -175,7 +162,7 @@ function Push-AuditLogTenantProcessV2 {
             }
         }
 
-        Write-Information "AuditLogV2: processed $ProcessedCount row(s) for $TenantFilter$(if ($SearchId) { " search $SearchId" })"
+        Write-Information "AuditLogV2: processed $ProcessedCount row(s) for $TenantFilter search $SearchId"
 
         # Point write - the batch owns exactly one window, so there is nothing to search for.
         if ($WindowRowKey) {

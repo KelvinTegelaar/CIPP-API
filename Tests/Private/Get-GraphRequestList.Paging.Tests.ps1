@@ -167,6 +167,28 @@ Describe 'Get-GraphRequestList paged AllTenants cache serve' {
         ($Resumed.CippPagedJson | ConvertFrom-Json).id | Should -Be @('cipp1')
     }
 
+    It 'pages in plan order when the store returns span rows out of ordinal order' {
+        # Azurite does not return RowKeys ordinally; resuming after the last row read
+        # instead of the last plan tenant re-served tenants on the next page.
+        $script:TenantBlobs['a.com'] = '[{"id":"a1","pad":"' + ('x' * 300000) + '"}]'
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            if ($Property) {
+                @('c.com', 'b.com', 'a.com' | ForEach-Object { [PSCustomObject]@{ PartitionKey = 'PKHASH'; RowKey = $_ } })
+            } else {
+                $Rows = @(Select-FakeBlobRows -Filter $Filter)
+                [System.Array]::Reverse($Rows)
+                $Rows
+            }
+        }
+
+        $Result = Get-GraphRequestList -TenantFilter 'AllTenants' -Endpoint 'users' -ManualPagination -RawJsonArray -MaxPageBytes 1
+        ($Result.CippPagedJson | ConvertFrom-Json).id | Should -Be @('a1')
+        $Result.CippNextLink | Should -Be 'a.com'
+        $Next = Get-GraphRequestList -TenantFilter 'AllTenants' -Endpoint 'users' -ManualPagination -RawJsonArray -MaxPageBytes 1 -nextLink $Result.CippNextLink
+        ($Next.CippPagedJson | ConvertFrom-Json).id | Should -Be @('b1', 'c1')
+        $Next.CippNextLink | Should -BeNullOrEmpty
+    }
+
     It 'serves many small tenants in one page regardless of tenant count' {
         # The complaint span fetching answers: 60 tiny tenants must not need 60 requests
         # or 60 queries - they share spans and land in a single page.

@@ -10,7 +10,7 @@ function Invoke-ExecListBackup {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $Type = $Request.Query.Type
-    $TenantFilter = $Request.Query.tenantFilter
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $NameOnly = $Request.Query.NameOnly -eq $true
     $BackupName = $Request.Query.BackupName
 

@@ -420,7 +420,7 @@ Describe 'Number variable rendering' {
 Describe 'Invoke-CIPPBaselineExoBulkSweep' {
     BeforeAll {
         . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineExoBulkSweep.ps1')
-        function New-ExoBulkRequest { param($tenantid, $cmdletArray, $useSystemMailbox, $Anchor, $NoAuthCheck, $Select, $ReturnWithCommand, [switch]$Compliance, [switch]$AsApp) }
+        function New-ExoBulkRequest { param($tenantid, $cmdletArray, $useSystemMailbox, $Anchor, $NoAuthCheck, $Select, $ReturnWithCommand, [int]$MaxConcurrency = 1, [switch]$Compliance, [switch]$AsApp) }
         function Set-CIPPDBCacheMailboxes { param($TenantFilter, $Types) }
     }
     BeforeEach {
@@ -447,6 +447,20 @@ Describe 'Invoke-CIPPBaselineExoBulkSweep' {
         $Spec = @{ writes = @(@{ cmdlet = 'Set-Mailbox'; params = @{ Identity = '%id%' } }) } | ConvertTo-Spec
         Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
         Should -Invoke New-ExoBulkRequest -Times 1 -ParameterFilter { @($cmdletArray)[0].OperationGuid -eq 'a@contoso.com' }
+    }
+
+    It 'fans out 16 batches at once unless the write group sets its own concurrency' {
+        $Current = @{ targets = @(@{ id = 'a@contoso.com' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ cmdlet = 'Set-Mailbox'; params = @{ Identity = '%id%' } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter { $MaxConcurrency -eq 16 }
+    }
+
+    It 'passes the write group concurrency through to the bulk request' {
+        $Current = @{ targets = @(@{ id = 'a@contoso.com' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ cmdlet = 'Set-Mailbox'; concurrency = 8; params = @{ Identity = '%id%' } }) } | ConvertTo-Spec
+        Invoke-CIPPBaselineExoBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter { $MaxConcurrency -eq 8 }
     }
 
     It 'does nothing when there is nothing to sweep' {

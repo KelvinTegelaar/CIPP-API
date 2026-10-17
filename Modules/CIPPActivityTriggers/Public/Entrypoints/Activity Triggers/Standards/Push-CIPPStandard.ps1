@@ -72,7 +72,8 @@ function Push-CIPPStandard {
     Set-CippStandardInfoContext -StandardInfo $StandardInfo
 
     # Store action source + template id for outbound User-Agent attribution
-    Set-CippUserAgentContext -Source 'standard' -TemplateId $Item.TemplateId
+    # Tiers merged into one GroupTemplate run carry several template ids
+    Set-CippUserAgentContext -Source 'standard' -TemplateId @($Item.TemplateId)[0]
 
     # ---- Standard execution telemetry ----
     $runId = [guid]::NewGuid().ToString()

@@ -67,25 +67,8 @@ function Push-ScheduledTaskPostExecution {
 
     # Calculate next run time for recurring tasks
     if ($IsRecurring -and !$IsTriggerOnce) {
-        # Convert recurrence to seconds
-        if ($ParentTask.Recurrence -match '^\d+$') {
-            $ParentTask.Recurrence = $ParentTask.Recurrence + 'd'
-        }
-
-        $secondsToAdd = switch -Regex ($ParentTask.Recurrence) {
-            '(\d+)m$' { [int64]$matches[1] * 60 }
-            '(\d+)h$' { [int64]$matches[1] * 3600 }
-            '(\d+)d$' { [int64]$matches[1] * 86400 }
-            default { 0 }
-        }
-
-        if ($secondsToAdd -gt 0) {
-            $unixtimeNow = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
-            if ([int64]$ParentTask.ScheduledTime -lt ($unixtimeNow - $secondsToAdd)) {
-                $ParentTask.ScheduledTime = $unixtimeNow
-            }
-            $nextRunUnixTime = [int64]$ParentTask.ScheduledTime + [int64]$secondsToAdd
-
+        $nextRunUnixTime = Get-CIPPScheduledTaskNextRun -Recurrence $ParentTask.Recurrence -ScheduledTime $ParentTask.ScheduledTime
+        if ($nextRunUnixTime -gt 0) {
             Write-Information "Recurring task: next run scheduled for $nextRunUnixTime"
 
             # Update parent task to 'Planned' state for next execution

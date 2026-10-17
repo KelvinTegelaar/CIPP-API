@@ -11,6 +11,7 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $CollectorPath = Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheDefenderCVEs.ps1'
     $DbItemPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPDbItem.ps1'
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
 
     # -Force MUST be declared [switch] here: without it the real call sites' trailing -Force
     # binds no argument and the resulting error is swallowed by the collector's own catch.
@@ -21,7 +22,7 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force, [switch]$CreateTableIfNotExists) }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property) }
-    function Remove-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
+    function Remove-AzDataTableEntity { param($Context, $Entity, [switch]$Force) }
 
     . $DbItemPath
     . $CollectorPath
@@ -65,7 +66,7 @@ Describe 'Set-CIPPDBCacheDefenderCVEs flush semantics' {
         Mock -CommandName Get-CippException -MockWith { @{ NormalizedError = $Exception.Exception.Message } }
         Mock -CommandName Get-CippTable -MockWith { @{} }
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { @() }
-        Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith { $script:Removed.AddRange(@($Entity)) }
+        Mock -CommandName Remove-AzDataTableEntity -MockWith { $script:Removed.AddRange(@($Entity)) }
         Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { $script:Writes.Add(@($Entity)) }
     }
 
@@ -161,6 +162,6 @@ Describe 'Set-CIPPDBCacheDefenderCVEs flush semantics' {
         { Set-CIPPDBCacheDefenderCVEs -TenantFilter $script:Tenant } | Should -Throw
 
         Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
-        Should -Invoke Remove-CIPPAzDataTableEntity -Times 0 -Exactly
+        Should -Invoke Remove-AzDataTableEntity -Times 0 -Exactly
     }
 }

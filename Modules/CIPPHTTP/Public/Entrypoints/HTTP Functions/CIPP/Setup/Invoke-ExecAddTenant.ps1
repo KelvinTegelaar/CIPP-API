@@ -49,7 +49,7 @@ function Invoke-ExecAddTenant {
 
             $Results = @{'message' = "$($ExistingTenant.displayName) is already onboarded as a GDAP tenant and cannot be converted to a Direct Tenant. To manage it as a Direct Tenant, remove the tenant first under Settings > Tenants, then add it again using the Direct Tenant flow."; 'severity' = 'error' }
             $StatusCode = [HttpStatusCode]::BadRequest
-            Write-LogMessage -tenant $ExistingTenant.defaultDomainName -tenantid $ExistingTenant.customerId -API 'NewTenant' -message "Blocked conversion of GDAP tenant $($ExistingTenant.displayName) to a Direct Tenant, attempted by $ServiceAccount." -Sev 'Warn'
+            Write-LogMessage -tenant $ExistingTenant.defaultDomainName -tenantid $ExistingTenant.customerId -API 'NewTenant' -message "Blocked conversion of GDAP tenant $($ExistingTenant.displayName) to a Direct Tenant, attempted by $ServiceAccount." -Sev 'Warning'
         } elseif ($ExistingTenant) {
             # Existing direct tenant - refresh the stored credentials and service account details.
             $ExistingTenant | Add-Member -NotePropertyName 'directTenantUserPrincipalName' -NotePropertyValue $ServiceAccount -Force

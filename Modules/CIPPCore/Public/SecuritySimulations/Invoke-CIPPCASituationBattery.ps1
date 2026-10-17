@@ -29,7 +29,7 @@ function Invoke-CIPPCASituationBattery {
             }
             $Situation
         })
-    $Users = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'Users')
+    $Users = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'Users' -Fields 'id', 'displayName', 'userPrincipalName', 'accountEnabled', 'userType', 'assignedLicenses')
     $Roles = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'Roles')
     $Policies = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies')
 

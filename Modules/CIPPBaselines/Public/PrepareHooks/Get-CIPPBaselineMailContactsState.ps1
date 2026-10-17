@@ -37,7 +37,7 @@ function Get-CIPPBaselineMailContactsState {
         $Expected | Add-Member -NotePropertyName 'generalContact' -NotePropertyValue "$($V.GeneralContact)"
         $Current | Add-Member -NotePropertyName 'generalContact' -NotePropertyValue "$($Org.privacyProfile.contactEmail)"
     }
-    if (@($Expected.PSObject.Properties).Count -eq 0) { return @{ Current = $null; NoDataReason = 'no contact e-mails are configured on this standard - every field is blank, so there is nothing to grade' } }
+    if (@($Expected.PSObject.Properties).Count -eq 0) { return @{ Current = $null; NoDataReason = 'no contact e-mails are configured on this standard - every field is blank, so there is nothing to grade'; ConfigError = $true } }
 
     # Carried for the executor.
     $Current | Add-Member -NotePropertyName 'organizationId' -NotePropertyValue "$($Org.id)"
