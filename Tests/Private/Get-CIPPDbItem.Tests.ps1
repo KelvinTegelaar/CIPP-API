@@ -72,6 +72,13 @@ Describe 'Get-CIPPDbItem allTenants' {
         Should -Invoke Get-CIPPAzDataTableEntity -Times 2 -Exactly -ParameterFilter { $Property -contains 'DataCount' }
     }
 
+    It 'looks up one type''s count row per managed tenant for an unrestricted caller, never by table scan' {
+        $script:CippAllowedTenantsStorage.Value = $null
+        Mock Get-Tenants { @($script:TenantA, $script:TenantB) }
+        $null = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MailboxRules' -CountsOnly
+        $script:Filters | Should -Be @("PartitionKey eq 'a.com' and RowKey eq 'MailboxRules-Count'", "PartitionKey eq 'b.com' and RowKey eq 'MailboxRules-Count'")
+    }
+
     It '-ByTenant groups data rows by managed tenant, without count rows' {
         $script:CippAllowedTenantsStorage.Value = $null
         Mock Get-Tenants { @($script:TenantA, $script:TenantB) }

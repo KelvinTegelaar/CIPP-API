@@ -68,7 +68,8 @@ function Get-CIPPDbItem {
             }
             $TenantFilter = $Tenant.defaultDomainName
             $Partitions = @($TenantFilter)
-        } elseif ($script:CippAllowedTenantsStorage -and $null -ne $script:CippAllowedTenantsStorage.Value) {
+        } elseif (($script:CippAllowedTenantsStorage -and $null -ne $script:CippAllowedTenantsStorage.Value) -or ($CountsOnly -and $Type)) {
+            # One count row per tenant is a key lookup each; a RowKey-only filter scans the whole table
             $Partitions = @((Get-Tenants -IncludeErrors).defaultDomainName | Where-Object { $_ })
         } elseif ($ByTenant) {
             # A whole-table read also returns rows of tenants no longer managed
