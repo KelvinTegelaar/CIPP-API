@@ -37,7 +37,7 @@ function Invoke-ExecCippFunction {
     }
     $ParamKeys = if ($Params.Keys) { @($Params.Keys) -join ', ' } else { 'none' }
 
-    if (Get-Command -Module CIPPCore -Name $Function -and $BlockList -notcontains $Function) {
+    if ((Get-Command -Module CIPPCore -Name $Function) -and $BlockList -notcontains $Function) {
         try {
             $Results = & $Function @Params
             if (!$Results) {
