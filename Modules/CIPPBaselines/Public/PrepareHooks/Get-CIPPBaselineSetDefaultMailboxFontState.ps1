@@ -19,8 +19,9 @@ function Get-CIPPBaselineSetDefaultMailboxFontState {
     if ([string]::IsNullOrWhiteSpace($FontName) -or [string]::IsNullOrWhiteSpace($FontColor)) {
         return @{ Current = $null; NoDataReason = 'font name and colour must both be set'; ConfigError = $true }
     }
-    if (-not [int]::TryParse("$($Item.Variables.DefaultFontSize)", [ref]$FontSize) -or $FontSize -lt 1 -or $FontSize -gt 7) {
-        return @{ Current = $null; NoDataReason = "'$($Item.Variables.DefaultFontSize)' is not a valid font size. Exchange accepts an integer between 1 and 7"; ConfigError = $true }
+    # 1-7 is the legacy scale Exchange documents (3 = 12pt), but Exchange also stores 8-72 and OWA renders those as point sizes (issue #881)
+    if (-not [int]::TryParse("$($Item.Variables.DefaultFontSize)", [ref]$FontSize) -or $FontSize -lt 1 -or $FontSize -gt 72) {
+        return @{ Current = $null; NoDataReason = "'$($Item.Variables.DefaultFontSize)' is not a valid font size. Exchange accepts an integer between 1 and 72 (1-7 is the legacy scale, 8-72 is a point size)"; ConfigError = $true }
     }
     # Exchange stores #xxxxxx; shorthand would never match the read-back and rewrite every mailbox each run
     if ($FontColor -notmatch '^#[0-9A-Fa-f]{6}$') {
