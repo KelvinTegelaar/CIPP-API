@@ -84,7 +84,9 @@ function New-GraphGetRequest {
 
                     if ($ReturnRawResponse) {
                         $GraphRequest.SkipHttpErrorCheck = $true
-                        $Data = Invoke-WebRequest @GraphRequest
+                        $GraphRequest.StatusCodeVariable = 'RawStatusCode'
+                        $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
+                        $Data = Invoke-CIPPRestMethod @GraphRequest
                     } else {
                         $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
                         $Data = (Invoke-CIPPRestMethod @GraphRequest)
@@ -95,21 +97,13 @@ function New-GraphGetRequest {
                     $RequestSuccessful = $true
 
                     if ($ReturnRawResponse) {
-                        try {
-                            if ($Data.Content -and (Test-Json -Json $Data.Content -ErrorAction Stop)) {
-                                $Content = $Data.Content | ConvertFrom-Json
-                            } else {
-                                $Content = $Data.Content
-                            }
-                        } catch {
-                            $Content = $Data.Content
-                        }
-
+                        $RawHeaders = [System.Collections.Generic.Dictionary[string, System.Collections.Generic.IEnumerable[string]]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                        foreach ($Key in $ResponseHeaders.Keys) { $RawHeaders[$Key] = [string[]]@($ResponseHeaders[$Key]) }
                         [PSCustomObject]@{
-                            StatusCode        = $Data.StatusCode
-                            StatusDescription = $Data.StatusDescription
-                            Content           = $Content
-                            Headers           = $Data.Headers
+                            StatusCode        = $RawStatusCode
+                            StatusDescription = ([System.Net.HttpStatusCode]$RawStatusCode).ToString()
+                            Content           = $Data
+                            Headers           = $RawHeaders
                         }
                         $nextURL = $null
                     } elseif ($CountOnly) {

@@ -323,9 +323,9 @@ namespace CIPP
         //     graceful-recycle churn and cuts the TIME_WAIT tail under steady
         //     load — a small but measurable port saving.
         //
-        //   PooledConnectionIdleTimeout  2 min — idle connections that have
-        //     not been used for 2 minutes are closed and removed from the
-        //     pool. Keeps the pool lean during quiet periods.
+        //   PooledConnectionIdleTimeout  3 min — idle connections are closed
+        //     before the Azure SNAT silently drops an idle flow at 4 minutes,
+        //     so a pooled connection is never reused after its mapping is gone.
         //
         //   MaxConnectionsPerServer — hard cap on simultaneous TCP connections
         //     to a single host:port pair. Requests beyond this limit queue
@@ -352,7 +352,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,   // Graph supports HTTP/2; streams share connections
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -370,7 +370,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -388,7 +388,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 5,
@@ -408,7 +408,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = false,  // 3xx IS the expected response here
             MaxConnectionsPerServer        = MaxConn("ComplianceMaxConnectionsPerServer", 5),
@@ -424,7 +424,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -440,7 +440,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -459,7 +459,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -477,7 +477,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 5,
@@ -497,7 +497,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -516,7 +516,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,

@@ -40695,7 +40695,13 @@
                     "type": "string"
                   },
                   "tokenRequest": {
-                    "type": "string"
+                    "type": "object",
+                    "properties": {
+                      "grant_type": {
+                        "type": "string",
+                        "description": "Only the authorization-code grant is permitted. Any other grant (notably client_credentials) would attach the SAM credential to a caller-chosen request and mint SAM tokens for any tenant."
+                      }
+                    }
                   },
                   "tokenUrl": {
                     "type": "string"
