@@ -3,7 +3,7 @@ function Invoke-AddTestReport {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Dashboard.Read
+        Tenant.Tests.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -31,8 +31,20 @@ function Invoke-AddTestReport {
         $IsUpdate = -not [string]::IsNullOrWhiteSpace([string]$Body.ReportId)
         $ReportTable = Get-CippTable -tablename 'CippReportTemplates'
 
-        # Use existing ReportId for updates, otherwise generate a new ID
-        $ReportId = if ($IsUpdate) { [string]$Body.ReportId } else { [string](New-Guid) }
+        # Use existing ReportId for updates, otherwise generate a new ID. Validate a caller-supplied
+        # ReportId as a GUID so it cannot inject into the table filter or target an arbitrary RowKey.
+        if ($IsUpdate) {
+            try {
+                $ReportId = ConvertTo-CIPPODataFilterValue -Value ([string]$Body.ReportId).ToLowerInvariant() -Type Guid
+            } catch {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = ConvertTo-Json -InputObject @{ Results = 'Failed to save report: Invalid ReportId' }
+                    })
+            }
+        } else {
+            $ReportId = [string](New-Guid)
+        }
         $IdentityTests = $Body.IdentityTests ? ($Body.IdentityTests | ConvertTo-Json -Compress) : '[]'
         $DevicesTests = $Body.DevicesTests ? ($Body.DevicesTests | ConvertTo-Json -Compress) : '[]'
         $CustomTests = $Body.CustomTests ? ($Body.CustomTests | ConvertTo-Json -Compress) : '[]'
