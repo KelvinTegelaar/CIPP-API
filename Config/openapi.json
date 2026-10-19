@@ -7226,8 +7226,7 @@
                     "description": "Validate required fields"
                   },
                   "ReportId": {
-                    "type": "string",
-                    "description": "Use existing ReportId for updates, otherwise generate a new ID"
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -7323,7 +7322,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Dashboard.Read"
+        "x-cipp-role": "Tenant.Tests.ReadWrite"
       }
     },
     "/api/AddTransportRule": {
@@ -8314,11 +8313,17 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
           },
           "500": {
             "description": "Internal server error"
@@ -8329,7 +8334,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Dashboard.Read"
+        "x-cipp-role": "Tenant.Tests.ReadWrite"
       }
     },
     "/api/DeployContactTemplates": {
