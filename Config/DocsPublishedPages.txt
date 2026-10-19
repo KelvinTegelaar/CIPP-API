@@ -342,13 +342,13 @@ user-documentation/teams-share/onedrive
 user-documentation/teams-share/reports
 user-documentation/teams-share/reports/permissions-report
 user-documentation/teams-share/reports/sharing-report
+user-documentation/teams-share/reports/storage-report
 user-documentation/teams-share/reports/teams-activity
 user-documentation/teams-share/sharepoint
 user-documentation/teams-share/sharepoint-templates
 user-documentation/teams-share/sharepoint-templates/add
 user-documentation/teams-share/sharepoint/add-site
 user-documentation/teams-share/sharepoint/bulk-add-site
-user-documentation/teams-share/storage-report
 user-documentation/teams-share/teams
 user-documentation/teams-share/teams/business-voice
 user-documentation/teams-share/teams/list-team
