@@ -32,6 +32,7 @@
     "Command": "Start-ApplicationOrchestrator",
     "Description": "Orchestrator to process application uploads",
     "Cron": "0 30 */12 * * *",
+    "JitterMinutes": 15,
     "Priority": 2,
     "RunOnProcessor": true
   },
@@ -40,6 +41,7 @@
     "Command": "Start-WebhookOrchestrator",
     "Description": "Orchestrator to process webhooks",
     "Cron": "0 */15 * * * *",
+    "JitterMinutes": 1,
     "Priority": 3,
     "RunOnProcessor": true
   },
@@ -48,9 +50,9 @@
     "Command": "Start-StandardsOrchestrator",
     "Description": "Orchestrator to process standards",
     "Cron": "0 0 */12 * * *",
+    "JitterMinutes": 15,
     "Priority": 4,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "PreferredProcessor": "standards"
   },
   {
@@ -58,9 +60,9 @@
     "Command": "Start-DriftStandardsOrchestrator",
     "Description": "Orchestrator to process drift standards",
     "Cron": "0 15 */12 * * *",
+    "JitterMinutes": 15,
     "Priority": 5,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "PreferredProcessor": "standards"
   },
   {
@@ -76,6 +78,7 @@
     "Command": "Set-CIPPGDAPInviteGroups",
     "Description": "Orchestrator to map the groups for GDAP invites",
     "Cron": "0 45 */3 * * *",
+    "JitterMinutes": 5,
     "Priority": 5,
     "RunOnProcessor": true
   },
@@ -84,6 +87,7 @@
     "Command": "Start-TenantDynamicGroupOrchestrator",
     "Description": "Orchestrator to update dynamic tenant groups",
     "Cron": "0 30 */4 * * *",
+    "JitterMinutes": 15,
     "Priority": 6,
     "RunOnProcessor": true
   },
@@ -92,9 +96,9 @@
     "Command": "Start-UpdateTokensTimer",
     "Description": "Orchestrator to update tokens",
     "Cron": "0 0 0 * * 0",
+    "JitterMinutes": 5,
     "Priority": 7,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -102,6 +106,7 @@
     "Command": "Start-SAMCredentialMonitorTimer",
     "Description": "Alert on credentials added to or removed from the CIPP-SAM app",
     "Cron": "0 20 * * * *",
+    "JitterMinutes": 5,
     "Priority": 8,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -111,6 +116,7 @@
     "Command": "Start-CIPPGraphSubscriptionRenewalTimer",
     "Description": "Orchestrator to renew Graph subscriptions",
     "Cron": "0 15 * * * *",
+    "JitterMinutes": 5,
     "Priority": 8,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -119,9 +125,9 @@
     "Id": "c2ebde3f-fa35-45aa-8a6b-91c835050b79",
     "Command": "Start-DomainOrchestrator",
     "Description": "Orchestrator to process domains ahead of the nightly DB cache run",
-    "Cron": "0 30 1 * * *",
+    "Cron": "0 0 1 * * *",
+    "JitterMinutes": 15,
     "Priority": 22,
-    "TZOffset": true,
     "RunOnProcessor": true
   },
   {
@@ -134,7 +140,6 @@
     "Cron": "0 0 23 * * *",
     "Priority": 10,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -142,19 +147,19 @@
     "Command": "Start-UpdatePermissionsOrchestrator",
     "Description": "Orchestrator to update CPV permissions",
     "Cron": "0 0 0 * * *",
+    "JitterMinutes": 15,
     "Priority": 10,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
     "Id": "f3a1c7d2-9b64-4e58-8a07-1d5e2c9b4f36",
     "Command": "Start-CIPPPermissionCheck",
     "Description": "Check the CIPP application for permissions that need to be applied",
-    "Cron": "0 30 0 * * *",
+    "Cron": "0 45 0 * * *",
+    "JitterMinutes": 15,
     "Priority": 10,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -162,8 +167,8 @@
     "Command": "Start-BillingTimer",
     "Description": "Timer to process billing",
     "Cron": "0 0 0 * * *",
+    "JitterMinutes": 15,
     "Priority": 12,
-    "TZOffset": true,
     "RunOnProcessor": true
   },
   {
@@ -171,6 +176,7 @@
     "Command": "Start-ExtensionOrchestrator",
     "Description": "Orchestrator to process extensions",
     "Cron": "0 45 */2 * * *",
+    "JitterMinutes": 30,
     "Priority": 12,
     "RunOnProcessor": true
   },
@@ -179,9 +185,9 @@
     "Command": "Start-CIPPStatsTimer",
     "Description": "Timer to process CIPP stats",
     "Cron": "0 0 0 * * *",
+    "JitterMinutes": 15,
     "Priority": 15,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -189,9 +195,9 @@
     "Command": "Start-TableCleanup",
     "Description": "Timer to cleanup tables",
     "Cron": "0 0 23 * * *",
+    "JitterMinutes": 15,
     "Priority": 20,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -204,74 +210,74 @@
     "Cron": "0 0 0 * * *",
     "Priority": 20,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
     "Id": "b8f3c2e1-5d4a-4f7b-9a2c-1e6d8f3b5a7c",
     "Command": "Start-BackupRetentionCleanup",
     "Description": "Timer to cleanup old backups based on retention policy",
-    "Cron": "0 30 1 * * *",
+    "Cron": "0 0 1 * * *",
+    "JitterMinutes": 15,
     "Priority": 21,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
     "Id": "a9e8d7c6-b5a4-3f2e-1d0c-9b8a7f6e5d4c",
     "Command": "Start-LogRetentionCleanup",
     "Description": "Timer to cleanup old logs based on retention policy",
-    "Cron": "0 30 1 * * *",
+    "Cron": "0 0 1 * * *",
+    "JitterMinutes": 15,
     "Priority": 22,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
     "Id": "9792e664-002b-475e-a1c2-fd5d04b19a3f",
     "Command": "Start-ReportAttachmentRetentionCleanup",
     "Description": "Timer to cleanup report attachments uploaded to blob storage based on retention policy",
-    "Cron": "0 30 1 * * *",
+    "Cron": "0 0 1 * * *",
+    "JitterMinutes": 15,
     "Priority": 23,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
     "Id": "5e8a9b4c-2d6f-4a3e-b7c1-9d0e5f3a8b2c",
     "Command": "Start-IntuneReportExportOrchestrator",
     "Description": "Submit Intune report-export jobs ahead of nightly DB cache run",
-    "Cron": "0 0 1 * * *",
+    "Cron": "0 30 0 * * *",
+    "JitterMinutes": 5,
     "Priority": 22,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
     "Id": "9a7f8e6d-5c4b-3a2d-1e0f-9b8c7d6e5f4a",
     "Command": "Start-CIPPDBCacheOrchestrator",
     "Description": "Timer to collect and cache Microsoft Graph data for all tenants",
-    "Cron": "0 0 2 * * *",
+    "Cron": "0 30 1 * * *",
+    "JitterMinutes": 30,
     "Priority": 23,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
     "Id": "1f2e3d4c-5b6a-7c8d-9e0f-1a2b3c4d5e6f",
     "Command": "Start-TestsOrchestrator",
     "Description": "Timer to run security and compliance tests against cached data",
-    "Cron": "0 0 4 * * *",
+    "Cron": "0 30 3 * * *",
+    "JitterMinutes": 30,
     "Priority": 24,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "IsSystem": true
   },
   {
     "Id": "a3b4c5d6-e7f8-4a9b-8c1d-2e3f4a5b6c7d",
     "Command": "Start-ContainerUpdateCheck",
     "Description": "Check for container image updates and optionally auto-restart",
-    "Cron": "0 0 * * * *",
+    "Cron": "0 50 * * * *",
+    "JitterMinutes": 20,
     "Priority": 30,
     "RunOnProcessor": false,
     "IsSystem": true
@@ -281,6 +287,7 @@
     "Command": "Start-UserSyncTimer",
     "Description": "Sync partner tenant users and group-based roles into allowedUsers table",
     "Cron": "0 */15 * * * *",
+    "JitterMinutes": 1,
     "Priority": 11,
     "RunOnProcessor": false,
     "IsSystem": true
@@ -290,9 +297,9 @@
     "Command": "Start-CIPPBaselineOrchestrator",
     "Description": "Baseline run: graduations, drift detection and remediation for all baselines",
     "Cron": "0 0 */12 * * *",
+    "JitterMinutes": 15,
     "Priority": 3,
     "RunOnProcessor": true,
-    "TZOffset": true,
     "PreferredProcessor": "standards"
   },
   {

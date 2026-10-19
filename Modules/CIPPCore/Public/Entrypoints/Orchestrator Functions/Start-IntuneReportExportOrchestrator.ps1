@@ -1,7 +1,7 @@
 function Start-IntuneReportExportOrchestrator {
     <#
     .SYNOPSIS
-        Submits Intune report-export jobs at 02:00 UTC ahead of the 03:00 cache run.
+        Submits Intune report-export jobs an hour ahead of the nightly cache run.
     .FUNCTIONALITY
         Entrypoint
     #>
