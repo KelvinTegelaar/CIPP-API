@@ -13,6 +13,14 @@ function Invoke-AddDefenderDeployment {
 
     $Tenants = ($Request.Body.selectedTenants).value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants -IncludeErrors).defaultDomainName }
+
+    # Tenant scope: a scoped role must not reach tenants outside its allowed set through selectedTenants/AllTenants.
+    $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+    if ($AllowedTenants -ne 'AllTenants') {
+        $AllowedTenantList = (Get-Tenants -IncludeErrors) | Where-Object { $_.customerId -in $AllowedTenants }
+        $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
+    }
+
     $Compliance = $Request.Body.Compliance
     $PolicySettings = $Request.Body.Policy
     $DefenderExclusions = $Request.Body.Exclusion

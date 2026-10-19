@@ -18,6 +18,14 @@ Function Invoke-AddConnectionFilter {
         Select-Object -Property *, @{Name = 'identity'; Expression = { $_.name } } -ExcludeProperty GUID, comments, name
 
     $Tenants = ($Request.Body.selectedTenants).value
+
+    # Tenant scope: a scoped role must not reach tenants outside its allowed set through selectedTenants.
+    $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+    if ($AllowedTenants -ne 'AllTenants') {
+        $AllowedTenantList = (Get-Tenants -IncludeErrors) | Where-Object { $_.customerId -in $AllowedTenants }
+        $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
+    }
+
     $Failed = 0
     $Result = foreach ($TenantFilter in $Tenants) {
         try {

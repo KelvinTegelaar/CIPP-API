@@ -44,7 +44,18 @@ function Invoke-ExecApiClient {
             $ExistingClientForAuth = $null
             $AuthClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
             if ($AuthClientId) {
-                $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($AuthClientId)'"
+                # Rows are keyed by Graph's canonical lowercase appId. Normalise and validate the ClientId
+                # so a case-variant value cannot miss the lookup and skip the role-grant check while the
+                # write path still resolves the real (canonical) row.
+                try {
+                    $AuthClientId = ConvertTo-CIPPODataFilterValue -Value ([string]$AuthClientId).ToLowerInvariant() -Type Guid
+                } catch {
+                    Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked API client update with invalid ClientId: $AuthClientId" -Sev 'Warning'
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    $Body = @(@{ resultText = 'Invalid ClientId.'; state = 'error' })
+                    break
+                }
+                $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$AuthClientId'"
                 if ($ExistingClientForAuth) {
                     $RolesToAuthorize.Add([string]$ExistingClientForAuth.Role)
                 }
