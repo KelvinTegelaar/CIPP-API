@@ -34,8 +34,12 @@ function Start-CIPPStatsTimer {
         [bool]::TryParse($FunctionOffloading, [ref]$OffloadingEnabled) | Out-Null
         $CIPPNG = $env:CIPPNG -eq 'true'
 
-        # Get counts of various entities across all tenants
-        $counts = Get-CIPPDbItem -TenantFilter AllTenants -CountsOnly
+        # Get counts of various entities across all tenants: one key read per tenant per type, since a count read without a type scans the whole table
+        $IntunePolicyTypes = @(@(Get-CIPPIntunePolicyListDefinitions).CacheType) + @('IntunePolicyGroups', 'IntuneAppProtectionPolicyGroups', 'IntuneAppProtectionManagedAppPolicies', 'IntuneCompliancePolicyGroups') |
+            Where-Object { $_ -match 'Intune' -and $_ -match 'Policies|Policy' } | Sort-Object -Unique
+        $counts = foreach ($Type in @('Users', 'Devices', 'Groups', 'ManagedDevices', 'IntuneApplications') + $IntunePolicyTypes) {
+            Get-CIPPDbItem -TenantFilter AllTenants -CountsOnly -Type $Type
+        }
         $userCount = ($counts | Where-Object { $_.RowKey -eq 'Users-Count' } | Measure-Object -Property DataCount -Sum).Sum
         $deviceCount = ($counts | Where-Object { $_.RowKey -eq 'Devices-Count' } | Measure-Object -Property DataCount -Sum).Sum
         $groupsCount = ($counts | Where-Object { $_.RowKey -eq 'Groups-Count' } | Measure-Object -Property DataCount -Sum).Sum

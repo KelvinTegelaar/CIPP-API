@@ -76,6 +76,15 @@ Describe 'Start-CIPPDBTestsRun tenant selection' {
         }
     }
 
+    It 'reads each tenant''s Users count row by key instead of every count row' {
+        Mock Get-CIPPDbItem { @(New-CountRow -Tenant 'active.onmicrosoft.com') }
+        Mock Get-Tenants { @(New-TenantRow -DefaultDomainName 'active.onmicrosoft.com') }
+
+        Start-CIPPDBTestsRun -TenantFilter 'allTenants' | Out-Null
+
+        Should -Invoke Get-CIPPDbItem -Times 1 -Exactly -ParameterFilter { $TenantFilter -eq 'allTenants' -and $CountsOnly -and $Type -eq 'Users' }
+    }
+
     It 'drops tenants that are no longer managed but still have cached data' {
         # Same failure mode as exclusion: the GDAP relationship is gone, so Get-Tenants no longer
         # returns the tenant, but its cache rows survive until the 30-day table cleanup.
