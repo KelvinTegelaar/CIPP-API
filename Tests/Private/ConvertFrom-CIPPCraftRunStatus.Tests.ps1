@@ -16,6 +16,7 @@ Describe 'ConvertFrom-CIPPCraftRunStatus' {
 
         $Entry.PartitionKey | Should -Be 'CippQueue'
         $Entry.RowKey | Should -Be 'GraphRequestOrchestrator-f761aa95-044c-4b22-8cb4-fb7938aceb95'
+        $Entry.QueueId | Should -Be 'f761aa95-044c-4b22-8cb4-fb7938aceb95'
         $Entry.Name | Should -Be 'Users (All Tenants)'
         $Entry.Link | Should -Be '/identity/administration/users'
         $Entry.Reference | Should -Be 'AllTenants-725f6f8c'
@@ -54,6 +55,7 @@ Describe 'ConvertFrom-CIPPCraftRunStatus' {
         $Entry = ConvertFrom-CIPPCraftRunStatus -Run $Bare
 
         $Entry.Name | Should -Be 'Orch-1'
+        $Entry.QueueId | Should -Be 'Orch-1'
         $Entry.PercentComplete | Should -Be 0
         @($Entry.Tasks).Count | Should -Be 0
     }

@@ -57,7 +57,8 @@ Describe 'Get-GraphRequestList partial AllTenants cache' {
     }
 
     It 'points at the run still filling the cache, so a reloaded page tracks it again' {
-        Mock -CommandName Get-CIPPQueueData -MockWith { [PSCustomObject]@{ RowKey = 'running-queue'; Status = 'Running'; Reference = 'AllTenants-PKHASH' } }
+        # Under Craft the RowKey is the run name; trackers, cancels and owner rows key on the bare queue id
+        Mock -CommandName Get-CIPPQueueData -MockWith { [PSCustomObject]@{ RowKey = 'GraphRequestOrchestrator-running-queue'; QueueId = 'running-queue'; Status = 'Running'; Reference = 'AllTenants-PKHASH' } }
 
         $null = Invoke-Paged
 
@@ -82,7 +83,8 @@ Describe 'Get-GraphRequestList partial AllTenants cache' {
     }
 
     It 'starts nothing while a run is already filling the cache' {
-        Mock -CommandName Get-CIPPQueueData -MockWith { [PSCustomObject]@{ RowKey = 'running-queue'; Status = 'Running'; Reference = 'AllTenants-PKHASH' } }
+        # Under Craft the RowKey is the run name; trackers, cancels and owner rows key on the bare queue id
+        Mock -CommandName Get-CIPPQueueData -MockWith { [PSCustomObject]@{ RowKey = 'GraphRequestOrchestrator-running-queue'; QueueId = 'running-queue'; Status = 'Running'; Reference = 'AllTenants-PKHASH' } }
 
         $null = Invoke-Paged -Extra @{ RefreshCache = $true }
 

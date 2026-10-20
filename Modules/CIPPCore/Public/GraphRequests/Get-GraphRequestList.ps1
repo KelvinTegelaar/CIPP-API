@@ -268,6 +268,8 @@ function Get-GraphRequestList {
         Write-Information $_.InvocationInfo.PositionMessage
     }
 
+    $RunningQueueId = if ($RunningQueue) { @($RunningQueue)[0].QueueId ?? @($RunningQueue)[0].RowKey }
+
     # An AllTenants cache holds one row per tenant, written even when the tenant fails, so a tenant without a row has not finished.
     $StartedQueueId = $null
     if ($TenantFilter -eq 'AllTenants' -and !$SkipCache.IsPresent) {
@@ -322,7 +324,7 @@ function Get-GraphRequestList {
         if ($null -ne $CacheStatus) {
             $CacheStatus.CachedTenants = $CachedTenants.Count
             $CacheStatus.ExpectedTenants = @($Tenants).Count
-            $CacheStatus.QueueId = $StartedQueueId ?? @($RunningQueue.RowKey)[0]
+            $CacheStatus.QueueId = $StartedQueueId ?? $RunningQueueId
         }
     }
 
@@ -360,7 +362,7 @@ function Get-GraphRequestList {
                 } else {
                     [PSCustomObject]@{
                         QueueMessage = if ($StartedQueueId) { 'Loading data for all tenants. Please check back after the job completes' } else { 'Data still processing, please wait' }
-                        QueueId      = $StartedQueueId ?? $RunningQueue.RowKey
+                        QueueId      = $StartedQueueId ?? $RunningQueueId
                         Queued       = $true
                     }
                 }
@@ -377,7 +379,7 @@ function Get-GraphRequestList {
                                 Write-Information ($RunningQueue | ConvertTo-Json)
                                 [PSCustomObject]@{
                                     QueueMessage = 'Data still processing, please wait'
-                                    QueueId      = $RunningQueue.RowKey
+                                    QueueId      = $RunningQueueId
                                     Queued       = $true
                                 }
                             } else {

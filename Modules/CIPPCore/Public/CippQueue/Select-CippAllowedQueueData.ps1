@@ -51,8 +51,7 @@ function Select-CippAllowedQueueData {
 
     foreach ($Queue in $Queues) {
         if (-not $Queue) { continue }
-        # Craft names a queue's run '<Orchestrator>-<QueueId>'
-        $QueueId = if ($Queue.QueueId) { $Queue.QueueId } elseif ($Queue.RowKey -match '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') { $Matches[0] } else { $Queue.RowKey }
+        $QueueId = $Queue.QueueId ?? $Queue.RowKey
         if ($Owned.Contains($QueueId)) {
             $Queue | Select-Object *, @{ n = 'Polled'; e = { $true } } -ExcludeProperty Polled
             continue

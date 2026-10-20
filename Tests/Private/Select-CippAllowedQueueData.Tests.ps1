@@ -15,7 +15,7 @@ BeforeAll {
     $script:Mine = '22222222-2222-2222-2222-222222222222'
     function New-Queue($QueueId, $Name) {
         [PSCustomObject]@{
-            PartitionKey = 'CippQueue'; RowKey = "GraphRequestOrchestrator-$QueueId"; Name = $Name
+            PartitionKey = 'CippQueue'; RowKey = "GraphRequestOrchestrator-$QueueId"; QueueId = $QueueId; Name = $Name
             Link = '/tenant/x?tenantFilter=other.com'; Reference = 'other.com-PKHASH'
             TotalTasks = 3; CompletedTasks = 2; RunningTasks = 1; FailedTasks = 1; PercentComplete = 66.7
             QueuedAhead = 4; RunsAhead = 1; Status = 'Running'; Timestamp = '2026-10-20T00:00:00Z'

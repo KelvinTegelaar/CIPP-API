@@ -27,6 +27,8 @@ function ConvertFrom-CIPPCraftRunStatus {
     [PSCustomObject]@{
         PartitionKey    = 'CippQueue'
         RowKey          = $Run.runName
+        # Craft names a queue's run '<Orchestrator>-<QueueId>'; owner rows, cancels and trackers key on the id
+        QueueId         = if ($Run.runName -match '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') { $Matches[0] } else { $Run.runName }
         Name            = if ($Run.label) { $Run.label } else { $Run.runName }
         Link            = [string]$Run.link
         Reference       = $Run.reference
