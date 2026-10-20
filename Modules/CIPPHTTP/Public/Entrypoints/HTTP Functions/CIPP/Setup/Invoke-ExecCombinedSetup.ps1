@@ -32,6 +32,14 @@ function Invoke-ExecCombinedSetup {
                         $null = Set-CIPPFeatureFlag -Id 'CertificateAuthentication' -Enabled $true -Force
                         $env:CertificateAuthMode = $true
                         $null = Set-CIPPCredentialVersion
+                        # Lock the app to certificate-only: the CIPP exemption policy now blocks adding secrets.
+                        try {
+                            $PolicyStatus = Update-AppManagementPolicy -CertificateOnly $true
+                            if (-not $PolicyStatus -or $PolicyStatus.PolicyAction -like 'Failed*') { throw ($PolicyStatus.PolicyAction ?? 'the policy could not be read') }
+                            Write-Information "App management policy: $($PolicyStatus.PolicyAction)"
+                        } catch {
+                            Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message "Certificate authentication is on, but the CIPP-SAM app management policy could not be set to block client secrets: $($_.Exception.Message). It is retried by the weekly token update." -Sev 'Warning'
+                        }
                         Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message "Manual change: CIPP-SAM authentication switched to the certificate (thumbprint $($Cert.Thumbprint)). The client secret is kept as a rollback." -Sev 'Alert'
                         $Results.add('Enabled certificate authentication. CIPP now authenticates with the SAM certificate instead of the client secret. The client secret is kept as a rollback - disable this option to switch back.')
                     }
@@ -45,6 +53,14 @@ function Invoke-ExecCombinedSetup {
                 $SecretPlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
                 $SecretUsable = $env:ApplicationSecret -and $env:ApplicationSecret -notmatch $SecretPlaceholderPattern
                 $Minted = $false
+                # Allow secrets on the app again before anything tries to mint one.
+                try {
+                    $PolicyStatus = Update-AppManagementPolicy -CertificateOnly $false
+                    if (-not $PolicyStatus -or $PolicyStatus.PolicyAction -like 'Failed*') { throw ($PolicyStatus.PolicyAction ?? 'the policy could not be read') }
+                    Write-Information "App management policy: $($PolicyStatus.PolicyAction)"
+                } catch {
+                    Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint ?? 'CombinedSetup') -tenant 'Global' -message "The CIPP-SAM app management policy could not be set to allow client secrets again: $($_.Exception.Message). Creating a secret may be refused until it is." -Sev 'Warning'
+                }
                 if (-not $SecretUsable) {
                     try {
                         $null = Update-CIPPSAMSecret -DisplayName 'UpdateTokens' -Source 'Manual' -Headers $Request.Headers -APIName ($Request.Params.CIPPEndpoint ?? 'CombinedSetup')

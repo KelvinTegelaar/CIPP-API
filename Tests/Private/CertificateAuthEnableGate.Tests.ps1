@@ -84,6 +84,7 @@ Describe 'Certificate auth enable gate' {
         $null = Invoke-ExecCombinedSetup -Request ([pscustomobject]@{ Body = [pscustomobject]@{ certificateAuth = $true }; Headers = @{} }) -TriggerMetadata $null
 
         Should -Invoke Set-CIPPFeatureFlag -Times 1 -Exactly -ParameterFilter { $Enabled -eq $true }
+        Should -Invoke Update-AppManagementPolicy -Times 1 -Exactly -ParameterFilter { $CertificateOnly -eq $true }
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Alert' -and $message -like '*switched to the certificate*' }
         $env:CertificateAuthMode | Should -Be 'True'
     }
@@ -142,6 +143,7 @@ Describe 'Certificate auth enable gate' {
 
         Should -Invoke Update-CIPPSAMSecret -Times 0 -Exactly
         Should -Invoke Set-CIPPFeatureFlag -Times 1 -Exactly -ParameterFilter { $Enabled -eq $false }
+        Should -Invoke Update-AppManagementPolicy -Times 1 -Exactly -ParameterFilter { $CertificateOnly -eq $false }
     }
 
     It 'keeps certificate auth on while an existing, recently rotated secret is still propagating, without telling the user to rotate again' {

@@ -6,7 +6,7 @@ BeforeAll {
 
     function New-GraphGetRequest { param($uri, $NoAuthCheck, $AsApp) }
     function New-GraphPostRequest { param($uri, $type, $Body, $NoAuthCheck, $AsApp) }
-    function Update-AppManagementPolicy {}
+    function Update-AppManagementPolicy { param($TenantFilter, $ApplicationId, $headers, $CertificateOnly) }
     function Get-CippKeyVaultName {}
     function Set-CippKeyVaultSecret { param($VaultName, $Name, $SecretValue) }
     function Get-CIPPTable { param($tablename) }
@@ -64,6 +64,7 @@ Describe 'Update-CIPPSAMSecret' {
             $Entity.PartitionKey -eq 'AppCache' -and $Entity.SecretKeyId -eq 'new-key-id' -and $Entity.ApplicationId -eq 'cached-app-id'
         }
         Should -Invoke Set-CIPPCredentialVersion -Times 1 -Exactly
+        Should -Invoke Update-AppManagementPolicy -Times 1 -Exactly -ParameterFilter { $CertificateOnly -eq $false }
         Should -Invoke New-GraphPostRequest -Times 0 -Exactly -ParameterFilter { $uri -match 'removePassword' }
         Should -Invoke Set-CIPPSAMCredentialRecord -Times 1 -Exactly -ParameterFilter { $KeyId -eq 'new-key-id' -and $Source -eq 'ScheduledRotation' }
         Should -Invoke Compare-CIPPSAMCredentialSnapshot -Times 1 -Exactly -ParameterFilter { $Acknowledge -contains 'new-key-id' }
