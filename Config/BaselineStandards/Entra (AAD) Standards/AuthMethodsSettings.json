@@ -18,10 +18,8 @@
   "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicy",
   "appliesToTest": [
     "CIS_5_2_3_6",
-    "EIDSCAAG01",
     "EIDSCAAG02",
     "EIDSCAAG03",
-    "SMB1001_2_8",
     "ZTNA21841"
   ],
   "recommendedBy": [],

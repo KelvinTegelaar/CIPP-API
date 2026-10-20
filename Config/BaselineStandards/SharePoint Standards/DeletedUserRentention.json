@@ -12,9 +12,7 @@
   "impactColour": "info",
   "addedDate": "2022-06-15",
   "powershellEquivalent": "Update-MgBetaAdminSharePointSetting",
-  "appliesToTest": [
-    "SMB1001_3_1"
-  ],
+  "appliesToTest": [],
   "recommendedBy": [],
   "requiredCapabilities": [
     "SHAREPOINTWAC",

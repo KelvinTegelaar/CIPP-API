@@ -8,6 +8,11 @@ function Invoke-CippTestZTNA21819 {
     $TestId = 'ZTNA21819'
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset PIM -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Privileged Identity Management. Required capabilities: AAD_PREMIUM_P2, Entra_Identity_Governance.' -Risk 'Low' -Name 'Activation alert for Global Administrator role assignment' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
+            return
+        }
+
         # Get Global Administrator role (template ID: 62e90394-69f5-4237-9190-012177145e10)
         $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
         $GlobalAdminRole = $Roles.Where({ $_.roleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' })
@@ -32,9 +37,9 @@ function Invoke-CippTestZTNA21819 {
         $Recipients = 'N/A'
 
         if ($GlobalAdminPolicy) {
-            # Find the notification rule for requestor end-user assignment
+            # Activation alert sent to admins
             $NotificationRule = $GlobalAdminPolicy.rules.Where({
-                $_.id -like '*Notification_Requestor_EndUser_Assignment*'
+                $_.id -like '*Notification_Admin_EndUser_Assignment*'
             })
 
             if ($NotificationRule) {

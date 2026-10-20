@@ -13,7 +13,6 @@
   "addedDate": "2022-10-20",
   "powershellEquivalent": "Graph API",
   "appliesToTest": [
-    "SMB1001_2_8",
     "ZTNA21858"
   ],
   "recommendedBy": [

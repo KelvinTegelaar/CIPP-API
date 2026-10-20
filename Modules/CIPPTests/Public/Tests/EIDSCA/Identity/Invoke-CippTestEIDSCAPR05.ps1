@@ -8,14 +8,17 @@ function Invoke-CippTestEIDSCAPR05 {
     try {
         $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
 
-        if (-not $Settings) {
+        if (-not $Settings -and -not (Get-CIPPDbItem -TenantFilter $Tenant -Type 'Settings' -CountsOnly)) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAPR05' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Password Rule Settings - Lockout duration in seconds' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Password Policy'
             return
         }
 
         $SettingValue = $Settings.values.Where({ $_.name -eq 'LockoutDurationInSeconds' }).value
 
-        if ([int]$SettingValue -ge 60) {
+        if ($null -eq $SettingValue) {
+            $Status = 'Passed'
+            $Result = 'Smart lockout has not been customised, so the Microsoft default lockout duration of 60 seconds applies'
+        } elseif ([int]$SettingValue -ge 60) {
             $Status = 'Passed'
             $Result = "Lockout duration is set to $SettingValue seconds (minimum 60 seconds required)"
         } else {

@@ -16,7 +16,6 @@ function Invoke-CIPPStandardunmanagedSync {
             "CIS M365 5.0 (7.2.3)"
             "CISA (MS.SPO.2.1v1)"
             "NIST CSF 2.0 (PR.AA-05)"
-            "ZTNA24824"
         EXECUTIVETEXT
             Restricts access to company files from personal or unmanaged devices, ensuring corporate data can only be accessed from properly secured and monitored devices. This critical security control prevents data leaks while allowing controlled access through web browsers when necessary.
         ADDEDCOMPONENT

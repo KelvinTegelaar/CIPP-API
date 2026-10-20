@@ -8,6 +8,11 @@ function Invoke-CippTestZTNA21825 {
     $TestId = 'ZTNA21825'
     #Tested
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset Entra -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Conditional Access. Required capabilities: AAD_PREMIUM, AAD_PREMIUM_P2.' -Risk 'Medium' -Name 'Privileged users have short-lived sign-in sessions' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Access control'
+            return
+        }
+
         # Get privileged roles
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
 
@@ -39,15 +44,15 @@ function Invoke-CippTestZTNA21825 {
             $null = $ResultMarkdown.Append("#### $($Role.displayName)`n`n")
 
             # Get CA policies assigned to this role
-            $AssignedPolicies = $CAPolicies.Where({ $_.conditions.users.includeRoles -contains $Role.id })
+            # includeRoles holds role template ids, not directoryRole instance ids
+            $AssignedPolicies = $CAPolicies.Where({ $_.conditions.users.includeRoles -contains $Role.roleTemplateId })
             $EnabledPolicies = $AssignedPolicies.Where({ $_.state -eq 'enabled' })
 
             if ($EnabledPolicies.Count -gt 0) {
                 # Check if at least one compliant enabled policy covers this role
                 $CompliantForRole = $EnabledPolicies.Where({
-                    $_.sessionControls.signInFrequency -and
-                    $_.sessionControls.signInFrequency.type -eq 'hours' -and
-                    $_.sessionControls.signInFrequency.value -le $RecommendedMaxHours
+                    $F = $_.sessionControls.signInFrequency
+                    $F.isEnabled -and ($F.frequencyInterval -eq 'everyTime' -or ($F.type -eq 'hours' -and $F.value -le $RecommendedMaxHours))
                 })
 
                 $RoleStatus = if ($CompliantForRole.Count -gt 0) {
@@ -64,8 +69,11 @@ function Invoke-CippTestZTNA21825 {
                     $FreqValue = 'Not Configured'
                     $IsCompliant = '❌'
 
-                    if ($Policy.sessionControls.signInFrequency) {
-                        $Freq = $Policy.sessionControls.signInFrequency
+                    $Freq = $Policy.sessionControls.signInFrequency
+                    if ($Freq.isEnabled -and $Freq.frequencyInterval -eq 'everyTime') {
+                        $FreqValue = 'Every time'
+                        $IsCompliant = '✅'
+                    } elseif ($Freq.isEnabled) {
                         $FreqValue = "$($Freq.value) $($Freq.type)"
 
                         if ($Freq.type -eq 'hours' -and $Freq.value -le $RecommendedMaxHours) {

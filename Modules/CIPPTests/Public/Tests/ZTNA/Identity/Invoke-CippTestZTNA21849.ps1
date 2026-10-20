@@ -14,7 +14,10 @@ function Invoke-CippTestZTNA21849 {
 
         $PortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/PasswordProtection/fromNav/'
 
-        if ($null -eq $PasswordRuleSettings) {
+        if (-not $Settings -and -not (Get-CIPPDbItem -TenantFilter $Tenant -Type 'Settings' -CountsOnly)) {
+            $Passed = 'Skipped'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('No data found in database. Directory settings have not been collected yet.')
+        } elseif ($null -eq $PasswordRuleSettings) {
             # Default is 60 seconds
             $Passed = 'Passed'
             $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Smart Lockout duration is configured to 60 seconds or higher (default).`n`n")

@@ -15,8 +15,7 @@
   "powershellEquivalent": "Get-SharingPolicy | Set-SharingPolicy -Enabled $False",
   "appliesToTest": [
     "CISAMSEXO62",
-    "CIS_1_3_3",
-    "ZTNA21803"
+    "CIS_1_3_3"
   ],
   "recommendedBy": [
     "CIS"

@@ -12,6 +12,11 @@ function Invoke-CippTestZTNA21816 {
     $TestId = 'ZTNA21816'
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset PIM -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Privileged Identity Management. Required capabilities: AAD_PREMIUM_P2, Entra_Identity_Governance.' -Risk 'High' -Name 'All Microsoft Entra privileged role assignments are managed with PIM' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Identity'
+            return
+        }
+
         $GlobalAdminRoleId = '62e90394-69f5-4237-9190-012177145e10'
         $PermanentGAUserList = [System.Collections.Generic.List[object]]::new()
         $PermanentGAGroupList = [System.Collections.Generic.List[object]]::new()
@@ -79,9 +84,10 @@ function Invoke-CippTestZTNA21816 {
                         assignmentType    = if ($Assignment) { $Assignment.assignmentType } else { 'Not in PIM' }
                     }
 
+                    # Service principals are covered by ZTNA21836
                     if ($Member.'@odata.type' -eq '#microsoft.graph.user') {
                         $NonPIMPrivilegedUsers.Add($MemberInfo)
-                    } else {
+                    } elseif ($Member.'@odata.type' -eq '#microsoft.graph.group') {
                         $NonPIMPrivilegedGroups.Add($MemberInfo)
                     }
                 }

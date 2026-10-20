@@ -11,8 +11,6 @@
   "addedDate": "2023-10-23",
   "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
   "appliesToTest": [
-    "ZTNA21782",
-    "ZTNA21796",
     "ZTNA21872"
   ],
   "recommendedBy": [],

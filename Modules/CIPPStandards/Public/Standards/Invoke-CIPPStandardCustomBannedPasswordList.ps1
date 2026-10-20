@@ -15,10 +15,6 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
         TAG
             "CIS M365 5.0 (5.2.3.2)"
             "ZTNA21848"
-            "ZTNA21849"
-            "ZTNA21850"
-            "EIDSCAPR01"
-            "EIDSCAPR02"
             "EIDSCAPR03"
             "EIDSCAPR05"
             "EIDSCAPR06"

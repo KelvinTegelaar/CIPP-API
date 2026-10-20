@@ -13,9 +13,7 @@
   "impactColour": "danger",
   "addedDate": "2025-06-13",
   "powershellEquivalent": "Set-SPOTenant -ConditionalAccessPolicy AllowFullAccess | AllowLimitedAccess | BlockAccess",
-  "appliesToTest": [
-    "ZTNA24824"
-  ],
+  "appliesToTest": [],
   "recommendedBy": [
     "CIS"
   ],

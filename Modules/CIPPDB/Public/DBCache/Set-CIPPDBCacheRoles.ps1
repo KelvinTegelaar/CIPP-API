@@ -27,7 +27,7 @@ function Set-CIPPDBCacheRoles {
                 [PSCustomObject]@{
                     id     = $_.id
                     method = 'GET'
-                    url    = "/directoryRoles/$($_.id)/members?`$select=id,displayName,userPrincipalName"
+                    url    = "/directoryRoles/$($_.id)/members?`$select=id,displayName,userPrincipalName,appId"
                 }
             }
         }

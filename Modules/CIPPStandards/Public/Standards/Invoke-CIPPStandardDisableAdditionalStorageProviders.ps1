@@ -15,7 +15,6 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
         TAG
             "CIS M365 5.0 (6.5.3)"
             "exo_storageproviderrestricted"
-            "ZTNA21817"
         EXECUTIVETEXT
             Prevents employees from accessing personal cloud storage services like Dropbox or Google Drive through Outlook on the web, reducing data security risks and ensuring company information stays within approved corporate systems. This helps maintain data governance and prevents accidental data leaks.
         ADDEDCOMPONENT

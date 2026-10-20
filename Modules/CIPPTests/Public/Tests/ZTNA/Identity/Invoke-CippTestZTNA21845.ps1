@@ -23,25 +23,33 @@ function Invoke-CippTestZTNA21845 {
             return
         }
 
-        # Get conditional access policies
-        $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
-        $SecurityInfoPolicies = $CAPolicies.Where({
-            $_.state -eq 'enabled' -and
-            $_.conditions.applications.includeUserActions -contains 'urn:user:registersecurityinfo' -and
-            $null -ne $_.grantControls.authenticationStrength
-        })
-
         $TAPEnabled = $TAPConfig.state -eq 'enabled'
         $TargetsAllUsers = $TAPConfig.includeTargets.Where({ $_.id -eq 'all_users' })
-        $HasConditionalAccessEnforcement = $SecurityInfoPolicies.Count -gt 0
+        $CALicensed = Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset Entra -SkipLog
 
-        # Note: Authentication strength policy validation requires additional API calls not available in cache
-        # Simplified check: verify TAP is enabled, targets all users, and CA policies exist
-        $TAPSupportedInAuthStrength = $HasConditionalAccessEnforcement
+        $HasConditionalAccessEnforcement = $false
+        $TAPSupportedInAuthStrength = $false
+        if ($CALicensed) {
+            $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
+            $SecurityInfoPolicies = $CAPolicies.Where({
+                $_.state -eq 'enabled' -and
+                $_.conditions.applications.includeUserActions -contains 'urn:user:registersecurityinfo' -and
+                $null -ne $_.grantControls.authenticationStrength
+            })
+            $HasConditionalAccessEnforcement = $SecurityInfoPolicies.Count -gt 0
+
+            $TAPStrengthIds = @(@(Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationStrengths').Where({
+                        $_.allowedCombinations -contains 'temporaryAccessPassOneTime' -or $_.allowedCombinations -contains 'temporaryAccessPassMultiUse'
+                    }).id)
+            $TAPSupportedInAuthStrength = $SecurityInfoPolicies.Where({ $TAPStrengthIds -contains $_.grantControls.authenticationStrength.id }).Count -gt 0
+        }
 
         # Determine pass/fail status
         $Passed = 'Failed'
-        if ($TAPEnabled -and $TargetsAllUsers -and $HasConditionalAccessEnforcement -and $TAPSupportedInAuthStrength) {
+        if (-not $CALicensed -and $TAPEnabled -and $TargetsAllUsers) {
+            $Passed = 'Passed'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('Temporary Access Pass is enabled and targets all users. Conditional Access enforcement was not evaluated because the tenant is not licensed for Conditional Access.')
+        } elseif ($TAPEnabled -and $TargetsAllUsers -and $HasConditionalAccessEnforcement -and $TAPSupportedInAuthStrength) {
             $Passed = 'Passed'
             $ResultMarkdown = [System.Text.StringBuilder]::new('Temporary Access Pass is enabled, targeting all users, and enforced with conditional access policies.')
         } elseif ($TAPEnabled -and $TargetsAllUsers -and $HasConditionalAccessEnforcement -and -not $TAPSupportedInAuthStrength) {
@@ -57,10 +65,10 @@ function Invoke-CippTestZTNA21845 {
         $TAPStatus = if ($TAPConfig.state -eq 'enabled') { 'Enabled ✅' } else { 'Disabled ❌' }
         $null = $ResultMarkdown.Append("[Temporary Access Pass](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/AdminAuthMethods/fromNav/Identity): $TAPStatus`n`n")
 
-        $CAStatus = if ($HasConditionalAccessEnforcement) { 'Enabled ✅' } else { 'Not enabled ❌' }
+        $CAStatus = if (-not $CALicensed) { 'Not applicable (requires Microsoft Entra ID P1)' } elseif ($HasConditionalAccessEnforcement) { 'Enabled ✅' } else { 'Not enabled ❌' }
         $null = $ResultMarkdown.Append("[Conditional Access policy for Security info registration](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies/fromNav/Identity): $CAStatus`n`n")
 
-        $AuthStrengthStatus = if ($TAPSupportedInAuthStrength) { 'Enabled ✅' } else { 'Not enabled ❌' }
+        $AuthStrengthStatus = if (-not $CALicensed) { 'Not applicable (requires Microsoft Entra ID P1)' } elseif ($TAPSupportedInAuthStrength) { 'Enabled ✅' } else { 'Not enabled ❌' }
         $null = $ResultMarkdown.Append("[Authentication strength policy for Temporary Access Pass](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/AuthenticationStrength.ReactView/fromNav/Identity): $AuthStrengthStatus`n")
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'Medium' -Name 'Temporary access pass is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'

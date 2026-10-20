@@ -12,6 +12,11 @@ function Invoke-CippTestZTNA21813 {
     $TestId = 'ZTNA21813'
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset PIM -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Privileged Identity Management. Required capabilities: AAD_PREMIUM_P2, Entra_Identity_Governance.' -Risk 'High' -Name 'High Global Administrator to privileged user ratio' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
+            return
+        }
+
         $GlobalAdminRoleId = '62e90394-69f5-4237-9190-012177145e10'
 
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles

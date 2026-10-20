@@ -13,7 +13,8 @@ function Invoke-CIPPDBCacheCollection {
         - ExchangeConfig:       Exchange Online policy/config data
         - ExchangeData:         Mailboxes, CAS mailboxes, usage reports
         - ConditionalAccess:    CA policies and registration details
-        - IdentityProtection:   Risky users/SPs, risk detections, PIM
+        - IdentityProtection:   Risky users/SPs, risk detections (Entra ID P2)
+        - PIM:                  Role eligibility, assignment schedules, role policies (P2 or ID Governance)
         - Intune:               Managed devices, policies, app protection
         - DefenderForOffice365: Safe Links/Attachments, ATP, Teams protection (MDO P1/P2)
         - Defender:             Defender for Endpoint vulnerabilities (TVM/CVE)
@@ -33,7 +34,7 @@ function Invoke-CIPPDBCacheCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'Intune', 'Compliance', 'CopilotUsage', 'SharePoint', 'Teams', 'DefenderForOffice365', 'Defender')]
+        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'PIM', 'Intune', 'Compliance', 'CopilotUsage', 'SharePoint', 'Teams', 'DefenderForOffice365', 'Defender')]
         [string]$CollectionType,
 
         [Parameter(Mandatory = $true)]
@@ -147,6 +148,8 @@ function Invoke-CIPPDBCacheCollection {
             'RiskyServicePrincipals'
             'ServicePrincipalRiskDetections'
             'RiskDetections'
+        )
+        PIM                = @(
             'RoleEligibilitySchedules'
             'RoleAssignmentScheduleInstances'
             'RoleManagementPolicies'

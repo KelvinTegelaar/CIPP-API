@@ -14,7 +14,6 @@ function Invoke-CIPPStandardSpoofWarn {
             Exchange Standards
         TAG
             "CIS M365 5.0 (6.2.3)"
-            "ORCA111"
             "ORCA240"
             "CISAMSEXO71"
         EXECUTIVETEXT

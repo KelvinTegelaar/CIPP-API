@@ -14,8 +14,7 @@
   "addedDate": "2023-05-18",
   "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
   "appliesToTest": [
-    "CIS_5_2_3_10",
-    "EIDSCAAM01"
+    "CIS_5_2_3_10"
   ],
   "recommendedBy": [],
   "requiredCapabilities": [],

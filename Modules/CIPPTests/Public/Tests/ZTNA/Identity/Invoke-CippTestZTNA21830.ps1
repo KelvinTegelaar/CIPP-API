@@ -8,6 +8,11 @@ function Invoke-CippTestZTNA21830 {
     $TestId = 'ZTNA21830'
     #Tested
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset Entra -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Conditional Access. Required capabilities: AAD_PREMIUM, AAD_PREMIUM_P2.' -Risk 'High' -Name 'Conditional Access policies for Privileged Access Workstations are configured' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Application management'
+            return
+        }
+
         # Get Conditional Access policies
         $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
         $EnabledCAPolicies = $CAPolicies.Where({ $_.state -eq 'enabled' })
@@ -28,7 +33,8 @@ function Invoke-CippTestZTNA21830 {
             $TargetsPrivilegedRoles = $false
             if ($Policy.conditions.users.includeRoles) {
                 foreach ($RoleId in $Policy.conditions.users.includeRoles) {
-                    if ($PrivilegedRoles.id -contains $RoleId) {
+                    # includeRoles holds role template ids, not directoryRole instance ids
+                    if ($PrivilegedRoles.roleTemplateId -contains $RoleId) {
                         $TargetsPrivilegedRoles = $true
                         break
                     }

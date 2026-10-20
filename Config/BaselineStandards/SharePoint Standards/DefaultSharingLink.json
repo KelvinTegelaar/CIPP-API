@@ -16,9 +16,7 @@
   "powershellEquivalent": "Set-SPOTenant -DefaultSharingLinkType [Direct|Internal] -DefaultLinkPermission View",
   "appliesToTest": [
     "CIS_7_2_11",
-    "CIS_7_2_7",
-    "ZTNA21803",
-    "ZTNA21804"
+    "CIS_7_2_7"
   ],
   "recommendedBy": [
     "CIS",

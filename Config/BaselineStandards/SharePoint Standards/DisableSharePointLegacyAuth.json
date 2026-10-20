@@ -16,9 +16,7 @@
   "addedDate": "2024-02-05",
   "powershellEquivalent": "Set-SPOTenant -LegacyAuthProtocolsEnabled $false",
   "appliesToTest": [
-    "CIS_7_2_1",
-    "ZTNA21776",
-    "ZTNA21797"
+    "CIS_7_2_1"
   ],
   "recommendedBy": [
     "CIS",

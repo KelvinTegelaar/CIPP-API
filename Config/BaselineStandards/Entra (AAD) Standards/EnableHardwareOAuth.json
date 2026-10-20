@@ -14,11 +14,7 @@
   "impactColour": "info",
   "addedDate": "2023-12-18",
   "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
-  "appliesToTest": [
-    "SMB1001_2_5",
-    "SMB1001_2_6",
-    "SMB1001_2_9"
-  ],
+  "appliesToTest": [],
   "recommendedBy": [],
   "requiredCapabilities": [],
   "secureScoreImpact": 0,

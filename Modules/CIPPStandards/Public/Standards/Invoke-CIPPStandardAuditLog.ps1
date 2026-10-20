@@ -17,7 +17,6 @@ function Invoke-CIPPStandardAuditLog {
             "mip_search_auditlog"
             "NIST CSF 2.0 (DE.CM-09)"
             "CISAMSEXO171"
-            "CISAMSEXO173"
         EXECUTIVETEXT
             Activates comprehensive activity logging across Microsoft 365 services to track user actions, system changes, and security events. This provides essential audit trails for compliance requirements, security investigations, and regulatory reporting.
         ADDEDCOMPONENT

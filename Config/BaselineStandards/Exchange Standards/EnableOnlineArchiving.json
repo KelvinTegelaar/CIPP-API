@@ -14,9 +14,7 @@
   "impactColour": "info",
   "addedDate": "2024-01-20",
   "powershellEquivalent": "Enable-Mailbox -Archive $true",
-  "appliesToTest": [
-    "SMB1001_3_1"
-  ],
+  "appliesToTest": [],
   "recommendedBy": [],
   "requiredCapabilities": [
     "EXCHANGE_S_STANDARD",

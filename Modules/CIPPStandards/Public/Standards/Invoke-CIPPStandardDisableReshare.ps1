@@ -16,8 +16,6 @@ function Invoke-CIPPStandardDisableReshare {
             "CIS M365 5.0 (7.2.5)"
             "CISA (MS.AAD.14.2v1)"
             "CISA (MS.SPO.1.2v1)"
-            "ZTNA21803"
-            "ZTNA21804"
         EXECUTIVETEXT
             Prevents external users from sharing company documents with additional people, maintaining control over document distribution and preventing unauthorized access expansion. This security measure ensures that external sharing remains within intended boundaries set by internal employees.
         ADDEDCOMPONENT

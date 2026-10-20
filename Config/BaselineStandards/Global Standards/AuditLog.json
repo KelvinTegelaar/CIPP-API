@@ -15,7 +15,6 @@
   "powershellEquivalent": "Enable-OrganizationCustomization",
   "appliesToTest": [
     "CISAMSEXO171",
-    "CISAMSEXO173",
     "CIS_3_1_1"
   ],
   "recommendedBy": [
