@@ -48,6 +48,12 @@ function Set-CIPPUserLicense {
         }
     }
 
+    # Graph rejects an assignLicense call with nothing to add or remove
+    foreach ($Request in @($LicenseRequests.Where({ $_.AddLicenses.Count -eq 0 -and $_.RemoveLicenses.Count -eq 0 }))) {
+        $Results.Add([PSCustomObject]@{ resultText = "No license changes needed for user $($Request.UserPrincipalName)"; state = 'success'; UserId = $Request.UserId })
+        $null = $LicenseRequests.Remove($Request)
+    }
+
     # Process Replace operations first (remove all licenses)
     $ReplaceRequests = $LicenseRequests | Where-Object { $_.IsReplace -and $_.RemoveLicenses.Count -gt 0 }
     if ($ReplaceRequests.Count -gt 0) {
@@ -96,7 +102,7 @@ function Set-CIPPUserLicense {
     }
 
     # Execute bulk request
-    $BulkResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests)
+    $BulkResults = if ($LicenseRequests.Count -gt 0) { New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests) }
 
     # Collect users with usage location errors
     $UsageLocationErrors = [System.Collections.Generic.List[object]]::new()
