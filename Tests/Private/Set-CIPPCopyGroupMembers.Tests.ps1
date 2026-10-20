@@ -287,6 +287,62 @@ Describe 'Set-CIPPCopyGroupMembers' {
         }
     }
 
+    Context 'Deferring Exchange adds for a brand-new user' {
+        # New-CIPPUserTask passes -DeferExchange: the recipient cannot exist yet, so the Exchange
+        # adds are never attempted inline and one Exchange-only follow-up is queued instead.
+        It 'copies Graph groups inline and schedules one Exchange-only task for the Exchange groups' {
+            Set-BulkResponse -SourceGroups @(
+                New-Group -Id 'group-sec' -DisplayName 'All-Users'
+                New-Group -Id 'group-dl' -DisplayName 'All Office' -MailEnabled $true
+                New-Group -Id 'group-mes' -DisplayName 'Finance MES' -MailEnabled $true
+            )
+            Mock -CommandName Add-CIPPScheduledTask -MockWith { 'Successfully added task: Copy Exchange Group Membership. It will run in 15 minutes.' }
+            $Expected = [int64](([datetime]::UtcNow).AddMinutes(15) - (Get-Date '1/1/1970')).TotalSeconds
+
+            $Result = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com' -DeferExchange
+
+            Should -Invoke New-ExoRequest -Times 0 -Exactly
+            Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*group-sec*' }
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter {
+                $Task.Command.value -eq 'Set-CIPPCopyGroupMembers' -and
+                $Task.Parameters.UserId -eq 'new.user@contoso.com' -and
+                $Task.Parameters.CopyFromId -eq 'source-guid' -and
+                $Task.Parameters.ExchangeOnly -eq $true -and
+                $Task.TenantFilter -eq 'contoso.com' -and
+                [math]::Abs($Task.ScheduledTime - $Expected) -lt 60
+            }
+            $Result.Success | Should -Contain 'Added user to group: All-Users'
+            $Result.Success | Should -Contain 'Scheduled adding new.user@contoso.com to the Exchange groups All Office, Finance MES in 15 minutes, once Exchange has provisioned the mailbox.'
+            $Result.Error | Should -BeNullOrEmpty
+        }
+
+        It 'schedules nothing when there are no Exchange groups to copy' {
+            Set-BulkResponse -SourceGroups @(New-Group -Id 'group-sec' -DisplayName 'All-Users')
+
+            $null = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com' -DeferExchange
+
+            Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
+        }
+
+        It 'reports an error when the scheduler does not accept the task' {
+            Set-BulkResponse -SourceGroups @(New-Group -Id 'group-dl' -DisplayName 'All Office' -MailEnabled $true)
+            Mock -CommandName Add-CIPPScheduledTask -MockWith { 'Could not add task: table unavailable' }
+
+            $Result = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com' -DeferExchange
+
+            $Result.Error | Should -Contain 'Failed to schedule adding new.user@contoso.com to the Exchange groups All Office: Could not add task: table unavailable'
+        }
+
+        It 'still adds Exchange groups inline in the Exchange-only pass' {
+            Set-BulkResponse -SourceGroups @(New-Group -Id 'group-dl' -DisplayName 'All Office' -MailEnabled $true)
+
+            $null = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com' -ExchangeOnly -DeferExchange
+
+            Should -Invoke New-ExoRequest -Times 1 -Exactly
+            Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
+        }
+    }
+
     Context 'Failure isolation' {
         It 'keeps copying the remaining groups after one fails' {
             Set-BulkResponse -SourceGroups @(

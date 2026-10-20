@@ -80,4 +80,19 @@ Describe 'Add-CIPPScheduledTask hashtable input' {
         $Stored | Should -BeLessOrEqual ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
         (([int64]$script:Future - $Stored) % 3600) | Should -Be 0
     }
+
+    It 'doubles single quotes in the name when checking for a duplicate' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { $null }
+
+        $null = Add-CIPPScheduledTask -DisallowDuplicateName $true -Task ([pscustomobject]@{
+                Name          = "Add Group Member: sseck@contoso.com -> Bob's Team"
+                Command       = @{ value = 'Write-LogMessage' }
+                TenantFilter  = 'contoso.onmicrosoft.com'
+                Parameters    = [pscustomobject]@{ message = 'hi' }
+                ScheduledTime = $script:Future
+            })
+
+        Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $Filter -like "*Name eq 'Add Group Member: sseck@contoso.com -> Bob''s Team' and*" }
+        $script:CapturedEntity.Name | Should -Be "Add Group Member: sseck@contoso.com -> Bob's Team"
+    }
 }

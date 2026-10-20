@@ -64,7 +64,7 @@ function New-CIPPUserTask {
     }
     if ($UserObj.copyFrom.value) {
         Write-Host "Copying from $($UserObj.copyFrom.value)"
-        $CopyFrom = Set-CIPPCopyGroupMembers -Headers $Headers -CopyFromId $UserObj.copyFrom.value -UserID $CreationResults.Username -TenantFilter $UserObj.tenantFilter
+        $CopyFrom = Set-CIPPCopyGroupMembers -Headers $Headers -CopyFromId $UserObj.copyFrom.value -UserID $CreationResults.Username -TenantFilter $UserObj.tenantFilter -DeferExchange
         $CopyFrom.Success | ForEach-Object { $Results.Add($_) }
         $CopyFrom.Error | ForEach-Object { $Results.Add($_) }
         # Groups deliberately left out (dynamic, AD-synced, public, already assigned) are reported
@@ -72,45 +72,51 @@ function New-CIPPUserTask {
         $CopyFrom.Skipped | ForEach-Object { $Results.Add($_) }
     }
 
-    # Add to groups
+    # Add to groups. Exchange-backed groups are always scheduled: a brand-new user is not an Exchange
+    # recipient yet, so an inline Add-DistributionGroupMember would fail. Graph groups are added inline.
     if ($UserObj.AddToGroups) {
-        $ExoGroupTypes = @('Distribution list', 'Mail-Enabled Security')
-        $UserObj.AddToGroups | ForEach-Object {
-            $Group = $_
+        foreach ($Group in @($UserObj.AddToGroups)) {
             $GroupType = $Group.addedFields.groupType
+            $GroupLabel = $Group.label ?? $Group.value
             try {
-                $AddMemberResult = Add-CIPPGroupMember -Headers $Headers -GroupType $GroupType -GroupId $Group.value -Member @($CreationResults.Username) -TenantFilter $UserObj.tenantFilter
-                $Results.Add($AddMemberResult)
-            } catch {
-                # EXO group adds frequently fail right after user creation due to Exchange directory replication lag.
-                # Schedule a delayed retry so the user lands in the group automatically once EXO sees the recipient.
-                # Groups selected from a template often carry no type at all (older templates stored only a label
-                # and a value), and an untyped group is just as likely to be a distribution list as anything else,
-                # so treat unknown the same as Exchange rather than failing the onboarding outright.
-                if (-not $GroupType -or $GroupType -in $ExoGroupTypes) {
-                    try {
-                        $TaskBody = [PSCustomObject]@{
-                            TenantFilter  = $UserObj.tenantFilter
-                            Name          = "Retry Add Group Member: $($CreationResults.Username) -> $($Group.label)"
-                            Command       = @{ value = 'Add-CIPPGroupMember' }
-                            Parameters    = [PSCustomObject]@{
-                                GroupType    = $GroupType
-                                GroupId      = $Group.value
-                                Member       = @($CreationResults.Username)
-                                TenantFilter = $UserObj.tenantFilter
-                                APIName      = 'Add Group Member (Retry)'
-                            }
-                            ScheduledTime = [int64](([datetime]::UtcNow).AddMinutes(15) - (Get-Date '1/1/1970')).TotalSeconds
-                            PostExecution = @{ Webhook = $false; Email = $false; PSA = $false }
+                # The live group wins; saved option types can be missing, stale or in another vocabulary.
+                # No fallback here so an unresolved group is detectable and the option fields decide.
+                $Lookup = Get-CIPPGroupType -GroupId $Group.value -TenantFilter $UserObj.tenantFilter
+                $ResolvedType = if ($Lookup.IsExchangeBacked -or $null -ne $Lookup.GroupObject.mailEnabled -or $null -ne $Lookup.GroupObject.securityEnabled) { $Lookup.GroupType }
+                $IsExchangeGroup = Test-CIPPGroupIsExchangeBacked -AddedFields $Group.addedFields -ResolvedType $ResolvedType
+                # Nothing known about the group: scheduling is the safe default, an inline Exchange add always fails.
+                if (-not $ResolvedType -and -not $Group.addedFields.calculatedGroupType -and -not $Group.addedFields.groupType) {
+                    $IsExchangeGroup = $true
+                }
+
+                if ($IsExchangeGroup) {
+                    $TaskBody = [PSCustomObject]@{
+                        TenantFilter  = $UserObj.tenantFilter
+                        Name          = "Add Group Member: $($CreationResults.Username) -> $GroupLabel"
+                        Command       = @{ value = 'Add-CIPPGroupMember' }
+                        Parameters    = [PSCustomObject]@{
+                            # Add-CIPPGroupMember only uses this to route to Exchange if its own lookup fails.
+                            GroupType    = $ResolvedType ?? 'Distribution List'
+                            GroupId      = $Group.value
+                            Member       = @($CreationResults.Username)
+                            TenantFilter = $UserObj.tenantFilter
+                            APIName      = 'Add Group Member (Onboarding)'
                         }
-                        $null = Add-CIPPScheduledTask -Task $TaskBody -hidden $false -Headers $Headers -DisallowDuplicateName $true
-                        $Results.Add("Could not add $($CreationResults.Username) to $($Group.label) yet (Exchange replication delay). A retry has been scheduled in 15 minutes.")
-                    } catch {
-                        $Results.Add("Failed to add to group $($Group.label): $_")
+                        ScheduledTime = [int64](([datetime]::UtcNow).AddMinutes(15) - (Get-Date '1/1/1970')).TotalSeconds
+                        PostExecution = @{ Webhook = $false; Email = $false; PSA = $false }
+                    }
+                    $ScheduleResult = Add-CIPPScheduledTask -Task $TaskBody -hidden $false -Headers $Headers -DisallowDuplicateName $true
+                    if ($ScheduleResult -like 'Successfully added task:*') {
+                        $Results.Add("Scheduled adding $($CreationResults.Username) to $GroupLabel in 15 minutes, once Exchange has provisioned the mailbox.")
+                    } else {
+                        $Results.Add("Failed to schedule adding to group $($GroupLabel): $ScheduleResult")
                     }
                 } else {
-                    $Results.Add("Failed to add to group $($Group.label): $_")
+                    $AddMemberResult = Add-CIPPGroupMember -Headers $Headers -GroupType ($ResolvedType ?? $GroupType) -GroupId $Group.value -Member @($CreationResults.Username) -TenantFilter $UserObj.tenantFilter
+                    $Results.Add($AddMemberResult)
                 }
+            } catch {
+                $Results.Add("Failed to add to group $($GroupLabel): $_")
             }
         }
     }
