@@ -18,9 +18,9 @@ function Get-CIPPGroupsReport {
         [string]$TenantFilter,
         [int]$PageSize,
         [string]$ContinuationToken,
-        # Return one page as { CippPagedJson; NextToken }: the stored blobs stitched into a
-        # JSON array verbatim, with per-row CacheTimestamp/Tenant spliced in. No member array
-        # is ever deserialized on the read path.
+        # Return one page as { CippPagedJson; NextToken }: the stored blobs rewritten into a
+        # JSON array without their members array, with per-row CacheTimestamp/Tenant added.
+        # No blob is ever deserialized into PowerShell objects on the read path.
         [switch]$AsRawJson,
 
         # Rows already read by the AllTenants path, keyed by cache type
@@ -36,28 +36,33 @@ function Get-CIPPGroupsReport {
 
         if ($AsRawJson) {
             $IsAllTenants = $TenantFilter -eq 'AllTenants'
-            $Builder = [System.Text.StringBuilder]::new()
-            $null = $Builder.Append('[')
-            $First = $true
+            $Stream = [System.IO.MemoryStream]::new()
+            $Writer = [System.Text.Json.Utf8JsonWriter]::new($Stream)
+            $Writer.WriteStartArray()
             foreach ($Item in $Page.Items) {
                 $Blob = [string]$Item.Data
                 if ([string]::IsNullOrWhiteSpace($Blob)) { continue }
-                $Blob = $Blob.Trim()
-                if ($Blob[0] -ne '{') { continue }
-                if (-not $First) { $null = $Builder.Append(',') }
-                $First = $false
-                # Emit the blob verbatim, then splice the two row-level fields onto its closing
-                # brace. membersCsv/ownersCsv already live in the blob (written at cache time).
-                $null = $Builder.Append($Blob, 0, $Blob.Length - 1)
-                $null = $Builder.Append(',"CacheTimestamp":').Append((ConvertTo-Json -InputObject $Item.Timestamp -Compress))
-                if ($IsAllTenants) {
-                    $null = $Builder.Append(',"Tenant":').Append((ConvertTo-Json -InputObject ([string]$Item.PartitionKey) -Compress))
+                try { $Doc = [System.Text.Json.JsonDocument]::Parse($Blob) } catch { continue }
+                try {
+                    if ($Doc.RootElement.ValueKind -ne [System.Text.Json.JsonValueKind]::Object) { continue }
+                    # The list shows membersCsv; the full members array is several times the rest of the row.
+                    $Writer.WriteStartObject()
+                    foreach ($Property in $Doc.RootElement.EnumerateObject()) {
+                        if ($Property.Name -ne 'members') { $Property.WriteTo($Writer) }
+                    }
+                    $Writer.WritePropertyName('CacheTimestamp')
+                    $Writer.WriteRawValue((ConvertTo-Json -InputObject $Item.Timestamp -Compress))
+                    if ($IsAllTenants) { $Writer.WriteString('Tenant', [string]$Item.PartitionKey) }
+                    $Writer.WriteEndObject()
+                } finally {
+                    $Doc.Dispose()
                 }
-                $null = $Builder.Append('}')
             }
-            $null = $Builder.Append(']')
+            $Writer.WriteEndArray()
+            $Writer.Flush()
+            $Writer.Dispose()
             return [PSCustomObject]@{
-                CippPagedJson = $Builder.ToString()
+                CippPagedJson = [System.Text.Encoding]::UTF8.GetString($Stream.GetBuffer(), 0, [int]$Stream.Length)
                 NextToken     = $Page.NextToken
             }
         }

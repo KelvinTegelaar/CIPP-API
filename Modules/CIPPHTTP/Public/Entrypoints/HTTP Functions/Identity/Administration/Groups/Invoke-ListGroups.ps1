@@ -40,9 +40,9 @@ function Invoke-ListGroups {
     if ((-not $GroupID) -and (-not $Members) -and (-not $Owners) -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
         try {
             if ($ManualPagination) {
-                # Rows per page, clamped between 100 and 5000. Defaults to 750: group rows
-                # carry full member arrays and run far heavier than other report types.
-                $PageSize = 750
+                # Rows per page, clamped between 100 and 5000. Defaults to 2000: the stored rows
+                # still carry full member arrays, which the server reads even though the page drops them.
+                $PageSize = 2000
                 if ($Request.Query.PageSize -as [int]) {
                     $PageSize = [Math]::Min([Math]::Max([int]$Request.Query.PageSize, 100), 5000)
                 }

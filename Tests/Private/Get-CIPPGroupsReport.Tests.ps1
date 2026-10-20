@@ -1,6 +1,6 @@
 # Pester tests for Get-CIPPGroupsReport -AsRawJson
-# Validates that a page is stitched from the stored blobs verbatim (no member array is
-# ever deserialized), with per-row CacheTimestamp and (AllTenants only) Tenant spliced in.
+# Validates that a page is rebuilt from the stored blobs without their members array,
+# with per-row CacheTimestamp and (AllTenants only) Tenant added.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -31,7 +31,7 @@ BeforeAll {
 }
 
 Describe 'Get-CIPPGroupsReport -AsRawJson' {
-    It 'stitches blobs verbatim and splices Tenant + CacheTimestamp for AllTenants' {
+    It 'drops members and adds Tenant + CacheTimestamp for AllTenants' {
         $ts = [datetimeoffset]'2024-05-01T10:00:00Z'
         $blobA = New-GroupBlob -Id 'g1' -Upns @('a@contoso.com', 'b@contoso.com')
         $blobB = New-GroupBlob -Id 'g2' -Upns @('c@fabrikam.com')
@@ -47,15 +47,10 @@ Describe 'Get-CIPPGroupsReport -AsRawJson' {
         $result = Get-CIPPGroupsReport -TenantFilter 'AllTenants' -PageSize 100 -AsRawJson
 
         $result.NextToken | Should -Be 'fabrikam.onmicrosoft.com|Groups-xyz'
-        # The stored blob (minus its closing brace) must appear byte-for-byte — proof the
-        # member array was streamed, not parsed and rebuilt. Literal Contains, not -BeLike:
-        # the members array's [ ] are wildcard metacharacters.
-        $result.CippPagedJson.Contains($blobA.Substring(0, $blobA.Length - 1)) | Should -BeTrue
-
         $parsed = $result.CippPagedJson | ConvertFrom-Json
         $parsed | Should -HaveCount 2
-        $parsed[0].members | Should -HaveCount 2
-        $parsed[0].members[0].userPrincipalName | Should -Be 'a@contoso.com'
+        $parsed[0].PSObject.Properties.Name | Should -Not -Contain 'members'
+        $parsed[0].displayName | Should -Be 'Group g1'
         $parsed[0].membersCsv | Should -Be 'a@contoso.com,b@contoso.com'
         $parsed[0].Tenant | Should -Be 'contoso.onmicrosoft.com'
         $parsed[1].Tenant | Should -Be 'fabrikam.onmicrosoft.com'
@@ -84,6 +79,8 @@ Describe 'Get-CIPPGroupsReport -AsRawJson' {
             Items     = @(
                 (New-PageItem -Tenant 'contoso.onmicrosoft.com' -Blob '' -Timestamp ([datetimeoffset]::UtcNow)),
                 (New-PageItem -Tenant 'contoso.onmicrosoft.com' -Blob '   ' -Timestamp ([datetimeoffset]::UtcNow)),
+                (New-PageItem -Tenant 'contoso.onmicrosoft.com' -Blob '{not json' -Timestamp ([datetimeoffset]::UtcNow)),
+                (New-PageItem -Tenant 'contoso.onmicrosoft.com' -Blob '[1]' -Timestamp ([datetimeoffset]::UtcNow)),
                 (New-PageItem -Tenant 'contoso.onmicrosoft.com' -Blob $good -Timestamp ([datetimeoffset]::UtcNow))
             )
             NextToken = $null

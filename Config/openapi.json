@@ -46396,6 +46396,16 @@
           "CIPP > Core"
         ],
         "description": "Lists active and recent CIPP background processing queue items and their status.",
+        "parameters": [
+          {
+            "name": "QueueId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",

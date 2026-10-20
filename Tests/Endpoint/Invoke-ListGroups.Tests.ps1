@@ -119,7 +119,7 @@ Describe 'Invoke-ListGroups report database branch' {
         $body.Results | Should -HaveCount 1
         $body.Metadata.nextLink | Should -BeNullOrEmpty
         $body.PSObject.Properties.Name | Should -Contain 'Metadata'
-        Should -Invoke Get-CIPPGroupsReport -Times 1 -ParameterFilter { $PageSize -eq 750 }
+        Should -Invoke Get-CIPPGroupsReport -Times 1 -ParameterFilter { $PageSize -eq 2000 }
     }
 
     It 'returns InternalServerError when the paged report read fails' {

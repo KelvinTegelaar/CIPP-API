@@ -10,10 +10,10 @@ function Invoke-ListCippQueue {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $QueueData = Get-CIPPQueueData -Request $Request -TriggerMetadata $TriggerMetadata
+    $User = [string]$Request.Headers.'x-ms-client-principal-name'
+    $QueueData = Select-CippAllowedQueueData -Queues (Get-CIPPQueueData -Request $Request -TriggerMetadata $TriggerMetadata) -User $User -OwnOnly:(-not $Request.Query.QueueId)
 
     $Owned = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    $User = [string]$Request.Headers.'x-ms-client-principal-name'
     if ($User -and $env:CIPPNG -eq 'true') {
         $CippQueue = Get-CippTable -TableName CippQueue
         $SafeUser = ConvertTo-CIPPODataFilterValue -Value $User -Type String
@@ -25,7 +25,7 @@ function Invoke-ListCippQueue {
     $Results = foreach ($Queue in $QueueData) {
         # Craft names a queue's run '<Orchestrator>-<QueueId>'
         $QueueId = if ($Queue.RowKey -match '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') { $Matches[0] } else { $Queue.RowKey }
-        $Queue | Select-Object *, @{n = 'QueueId'; e = { $QueueId } }, @{n = 'Cancellable'; e = { $Owned.Contains($QueueId) -and $_.Status -in @('Queued', 'Running') } }
+        $Queue | Select-Object *, @{n = 'QueueId'; e = { $QueueId } }, @{n = 'Cancellable'; e = { $Owned.Contains($QueueId) -and $_.Status -in @('Queued', 'Running') } } -ExcludeProperty QueueId, Cancellable
     }
 
     return ([HttpResponseContext]@{
