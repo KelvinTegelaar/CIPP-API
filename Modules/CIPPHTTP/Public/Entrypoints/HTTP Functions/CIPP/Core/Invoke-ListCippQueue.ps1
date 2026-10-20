@@ -12,8 +12,24 @@ function Invoke-ListCippQueue {
 
     $QueueData = Get-CIPPQueueData -Request $Request -TriggerMetadata $TriggerMetadata
 
+    $Owned = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $User = [string]$Request.Headers.'x-ms-client-principal-name'
+    if ($User -and $env:CIPPNG -eq 'true') {
+        $CippQueue = Get-CippTable -TableName CippQueue
+        $SafeUser = ConvertTo-CIPPODataFilterValue -Value $User -Type String
+        foreach ($Row in Get-CIPPAzDataTableEntity @CippQueue -Filter "PartitionKey eq 'CippQueue' and Owner eq '$SafeUser'" -Property PartitionKey, RowKey) {
+            [void]$Owned.Add($Row.RowKey)
+        }
+    }
+
+    $Results = foreach ($Queue in $QueueData) {
+        # Craft names a queue's run '<Orchestrator>-<QueueId>'
+        $QueueId = if ($Queue.RowKey -match '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') { $Matches[0] } else { $Queue.RowKey }
+        $Queue | Select-Object *, @{n = 'QueueId'; e = { $QueueId } }, @{n = 'Cancellable'; e = { $Owned.Contains($QueueId) -and $_.Status -in @('Queued', 'Running') } }
+    }
+
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($QueueData)
+            Body       = @($Results)
         })
 }

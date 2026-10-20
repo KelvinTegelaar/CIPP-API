@@ -39,6 +39,15 @@ Describe 'ConvertFrom-CIPPCraftRunStatus' {
         @($Entry.Tasks.Status) | Should -Be @('Completed', 'Failed')
     }
 
+    It 'carries how much work from other queues waits ahead of it' {
+        $Waiting = [pscustomobject]@{ runName = 'Orch-2'; status = 'Queued'; total = 10; ahead = 340; runsAhead = 3; tasks = @() }
+
+        $Entry = ConvertFrom-CIPPCraftRunStatus -Run $Waiting
+
+        $Entry.QueuedAhead | Should -Be 340
+        $Entry.RunsAhead | Should -Be 3
+    }
+
     It 'falls back to the run name when no label was registered' {
         $Bare = [pscustomobject]@{ runName = 'Orch-1'; reference = 'Orch-1'; status = 'Queued'; total = 0; tasks = @() }
 

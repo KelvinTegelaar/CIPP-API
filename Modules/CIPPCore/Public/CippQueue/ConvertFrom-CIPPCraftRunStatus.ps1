@@ -38,6 +38,9 @@ function ConvertFrom-CIPPCraftRunStatus {
         PercentComplete = [math]::Round($Done / $Divisor * 100, 1, [MidpointRounding]::AwayFromZero)
         PercentFailed   = [math]::Round([int]$Run.failed / $Divisor * 100, 1, [MidpointRounding]::AwayFromZero)
         PercentRunning  = [math]::Round([int]$Run.running / $Divisor * 100, 1, [MidpointRounding]::AwayFromZero)
+        # Tasks and runs from every user waiting to be picked up before this queue's own
+        QueuedAhead     = [int]$Run.ahead
+        RunsAhead       = [int]$Run.runsAhead
         # Craft names a task by its job name; CIPP's are Function_Tenant and the tracker shows the tenant
         Tasks           = @(foreach ($Task in $Run.tasks) {
                 [PSCustomObject]@{ Timestamp = $Task.at; Name = $Task.name -replace '^[^_]*_(?=.)', ''; Status = $Task.status }
