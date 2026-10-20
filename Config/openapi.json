@@ -52632,6 +52632,15 @@
             }
           },
           {
+            "name": "FillMissing",
+            "in": "query",
+            "description": "AllTenants only: queue just the tenants missing from a partial cache, serving the cached rows meanwhile.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "graphFilter",
             "in": "query",
             "required": false,
@@ -52704,6 +52713,15 @@
           {
             "name": "QueueNameOverride",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "RefreshCache",
+            "in": "query",
+            "description": "AllTenants only: query every tenant again although a cache exists, serving the cached rows until each is replaced.",
             "required": false,
             "schema": {
               "type": "string"
