@@ -354,7 +354,12 @@ function Get-CIPPStandards {
                             $TemplateKey = if ($CurrentStandard.TemplateList.value) { $CurrentStandard.TemplateList.value } else { '' }
                             $Key = "$StandardName|$TemplateKey"
 
-                            $ComputedStandards[$Key] = $CurrentStandard
+                            # Single-instance *Template standards (e.g. GroupTemplate) accumulate across AllTenants templates like the other tiers.
+                            if ($ComputedStandards.ContainsKey($Key)) {
+                                $ComputedStandards[$Key] = Merge-CippStandards -Existing $ComputedStandards[$Key] -New $CurrentStandard -StandardName $StandardName
+                            } else {
+                                $ComputedStandards[$Key] = $CurrentStandard
+                            }
                         }
                     }
                 }
