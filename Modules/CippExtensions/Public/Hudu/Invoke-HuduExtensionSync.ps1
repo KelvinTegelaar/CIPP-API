@@ -60,7 +60,7 @@ function Invoke-HuduExtensionSync {
 
         $CompanyResult.Logs.Add('Starting Hudu Extension Sync')
         if (-not $SyncPasswords -and ($Configuration.IncludeLAPS -or $Configuration.IncludeBitLocker)) {
-            Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Password data excluded for this tenant by mapping' -level 'Information'
+            Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Password data excluded for this tenant by mapping' -sev 'Info'
         }
 
         # Get CIPP URL
@@ -446,6 +446,9 @@ function Invoke-HuduExtensionSync {
                 $LAPSMetadataAvailable = $false
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-Warning "Unable to retrieve LAPS metadata for $($Tenant.defaultDomainName): $($ErrorMessage.NormalizedError)"
+                $MetadataFailureMessage = "Company: LAPS sync skipped for all devices, unable to retrieve LAPS metadata: $($ErrorMessage.NormalizedError)"
+                [void]$CompanyResult.Errors.Add($MetadataFailureMessage)
+                Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message $MetadataFailureMessage -sev 'Warning'
             }
         }
 
@@ -501,6 +504,9 @@ function Invoke-HuduExtensionSync {
                 $BitLockerMetadataAvailable = $false
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-Warning "Unable to retrieve BitLocker key metadata for $($Tenant.defaultDomainName): $($ErrorMessage.NormalizedError)"
+                $MetadataFailureMessage = "Company: BitLocker sync skipped for all devices, unable to retrieve BitLocker key metadata: $($ErrorMessage.NormalizedError)"
+                [void]$CompanyResult.Errors.Add($MetadataFailureMessage)
+                Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message $MetadataFailureMessage -sev 'Warning'
             }
         }
 
@@ -1225,6 +1231,7 @@ function Invoke-HuduExtensionSync {
                     # Exclude the timestamp from the hash so unchanged assets are not rewritten on every sync.
                     $DeviceHashMaterial = [System.Collections.Generic.List[string]]@($DeviceIntuneDetailshtml)
                     $CredentialRetrievalFailed = $false
+                    $CredentialFailureReasons = [System.Collections.Generic.List[string]]::new()
                     $CredentialFieldsChanged = $false
                     $CredentialSyncEnabled = $IncludeLAPS -or $IncludeBitLocker
                     $IsWindowsDevice = $Device.operatingSystem -eq 'Windows'
@@ -1233,6 +1240,7 @@ function Invoke-HuduExtensionSync {
 
                     if ($IsWindowsDevice -and $CredentialSyncEnabled -and [string]::IsNullOrWhiteSpace([string]$Device.azureADDeviceId)) {
                         Write-Warning "Unable to synchronize credentials for $($Device.deviceName): azureADDeviceId is missing."
+                        $CredentialFailureReasons.Add('azureADDeviceId is missing')
                         $CredentialRetrievalFailed = $true
                     } elseif ($IsWindowsDevice -and $CredentialSyncEnabled -and ($IsNewHuduDevice -or $SingleHuduDevice)) {
                         $ExistingLAPSAccount = [string](
@@ -1296,6 +1304,7 @@ function Invoke-HuduExtensionSync {
                             } catch {
                                 $ErrorMessage = Get-CippException -Exception $_
                                 Write-Warning "Unable to retrieve LAPS data for $($Device.deviceName): $($ErrorMessage.NormalizedError)"
+                                $CredentialFailureReasons.Add("LAPS: $($ErrorMessage.NormalizedError)")
                                 $CredentialRetrievalFailed = $true
                             }
                         }
@@ -1324,6 +1333,7 @@ function Invoke-HuduExtensionSync {
                             } catch {
                                 $ErrorMessage = Get-CippException -Exception $_
                                 Write-Warning "Unable to retrieve BitLocker recovery keys for $($Device.deviceName): $($ErrorMessage.NormalizedError)"
+                                $CredentialFailureReasons.Add("BitLocker: $($ErrorMessage.NormalizedError)")
                                 $CredentialRetrievalFailed = $true
                             }
                         }
@@ -1350,10 +1360,16 @@ function Invoke-HuduExtensionSync {
                     $NewHash = Get-StringHash -String ($DeviceHashMaterial -join '')
 
                     if ($CredentialRetrievalFailed) {
-                        $CredentialFailureMessage = "Device $($Device.deviceName): Skipped Hudu asset and cache update because credential retrieval failed."
+                        # Drop every credential field so no partial pair is written; Hudu keeps omitted fields as they are.
+                        foreach ($FieldName in @($DeviceAssetFields.Keys)) {
+                            if ($FieldName -in 'laps_account', 'laps_password', 'laps_backup_date' -or $FieldName -like 'bitlocker_*') {
+                                $DeviceAssetFields.Remove($FieldName)
+                            }
+                        }
+                        $CredentialFieldsChanged = $false
+                        $CredentialFailureMessage = "Device $($Device.deviceName): credential sync skipped, asset updated without credentials: $($CredentialFailureReasons -join '; ')"
                         Write-Warning $CredentialFailureMessage
                         [void]$CompanyResult.Errors.Add($CredentialFailureMessage)
-                        continue
                     }
 
                     if (![string]::IsNullOrEmpty($DeviceLayoutId)) {
@@ -1371,7 +1387,10 @@ function Invoke-HuduExtensionSync {
                                         CompanyId    = [string]$company_id
                                         Hash         = [string]$NewHash
                                     }
-                                    $PendingAssetCache["$($AssetCache.PartitionKey)|$($AssetCache.RowKey)"] = $AssetCache
+                                    # No cache row after a credential failure, so the next run retries the credentials.
+                                    if (-not $CredentialRetrievalFailed) {
+                                        $PendingAssetCache["$($AssetCache.PartitionKey)|$($AssetCache.RowKey)"] = $AssetCache
+                                    }
                                 }
 
                                 if (![string]::IsNullOrEmpty($Device.userPrincipalName)) {
@@ -1414,7 +1433,9 @@ function Invoke-HuduExtensionSync {
                                         CompanyId    = [string]$company_id
                                         Hash         = [string]$NewHash
                                     }
-                                    $PendingAssetCache["$($AssetCache.PartitionKey)|$($AssetCache.RowKey)"] = $AssetCache
+                                    if (-not $CredentialRetrievalFailed) {
+                                        $PendingAssetCache["$($AssetCache.PartitionKey)|$($AssetCache.RowKey)"] = $AssetCache
+                                    }
                                     # Add newly created device to the HuduDevices collection to prevent duplicates
                                     $HuduDevices.Add($CreateHuduDevice)
                                     $NewKeys = Get-HuduDeviceMatchKey -HuduDevice $CreateHuduDevice
@@ -1440,6 +1461,7 @@ function Invoke-HuduExtensionSync {
             & $FlushAssetCache
         } else {
             $CompanyResult.Logs.Add('Skipping Device Processing - No Device Layout ID')
+            Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Skipping Device Processing - No Device Layout ID' -sev 'Warning'
         }
 
 
@@ -1491,14 +1513,14 @@ function Invoke-HuduExtensionSync {
             }
         } catch {
             $CompanyResult.Errors.add("Company: Failed to import domain: $_")
-            Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: Failed to import domain: $_" -level 'Error'
+            Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: Failed to import domain: $_" -sev 'Error'
         }
-        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Company: Completed Sync' -level 'Information'
+        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Company: Completed Sync' -sev 'Info'
         $CompanyResult.Logs.Add('Hudu Sync Completed')
     } catch {
         Write-Warning "Company: A fatal error occured: $_"
         Write-Information $_.InvocationInfo.PositionMessage
-        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: A fatal error occured: $_" -level 'Error'
+        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: A fatal error occured: $_" -sev 'Error'
         $CompanyResult.Errors.add("Company: A fatal error occured: $_")
     }
     return $CompanyResult

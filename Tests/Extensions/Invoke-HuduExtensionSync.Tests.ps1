@@ -35,7 +35,7 @@ BeforeAll {
     function Set-HuduMagicDash { param($Title, $CompanyName, $Message, $Icon, $Content, $Shade) }
     function Get-HuduWebsites { param($Name) }
     function New-HuduWebsite { param($Name, $Notes, $Paused, $CompanyId, $DisableDNS, $DisableSSL, $DisableWhois) }
-    function Write-LogMessage { param($Tenant, $TenantId, $API, $Message, $Level) }
+    function Write-LogMessage { param($Tenant, $TenantId, $API, $Message, $Level, $Sev) }
     function Get-CippException { param($Exception) return [PSCustomObject]@{ NormalizedError = $Exception.Exception.Message } }
     function Get-CippDbRoleMembers { param($TenantFilter, $RoleTemplateId) }
 }
@@ -204,6 +204,30 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
         $script:HuduDevice.fields.Where({ $_.slug -eq 'laps_account' }).value | Should -Be ''
         $script:HuduDevice.fields.Where({ $_.slug -eq 'bitlocker_os_drive_1_recovery_key' }).value | Should -Be ''
         Should -Invoke Write-LogMessage -ParameterFilter { $Message -eq 'Password data excluded for this tenant by mapping' }
+    }
+
+    It 'updates the asset without credentials and skips the cache row when BitLocker retrieval fails' {
+        Mock Get-HuduBitLockerSyncField { throw 'Key vault access denied' }
+        Mock Set-HuduAsset { $script:ObservedDeviceFields = $Fields }
+
+        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com' 3>$null
+
+        Should -Invoke Set-HuduAsset -Times 1 -Exactly
+        $script:ObservedDeviceFields.Keys | Should -Contain 'microsoft_365'
+        @($script:ObservedDeviceFields.Keys | Where-Object { $_ -like 'laps_*' -or $_ -like 'bitlocker_*' }) | Should -HaveCount 0
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly -ParameterFilter { $Entity.PartitionKey -eq 'HuduDevice' }
+        $Result.Errors | Should -Contain 'Device DEVICE-01: credential sync skipped, asset updated without credentials: BitLocker: Key vault access denied'
+    }
+
+    It 'reports a tenant-level error once when the BitLocker cache is not populated' {
+        Mock Get-CIPPDbItem { @() }
+
+        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com' 3>$null
+
+        @($Result.Errors | Where-Object { $_ -like 'Company: BitLocker sync skipped*' }) | Should -HaveCount 1
+        $Result.Errors | Should -Contain 'Company: BitLocker sync skipped for all devices, unable to retrieve BitLocker key metadata: BitLocker key metadata cache has not been populated.'
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Warning' -and $Message -like '*BitLocker key metadata cache has not been populated*' }
+        Should -Invoke Set-HuduAsset -Times 1 -Exactly
     }
 }
 
