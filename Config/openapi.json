@@ -17302,6 +17302,63 @@
         "x-cipp-role": "Tenant.ConditionalAccess.ReadWrite"
       }
     },
+    "/api/ExecCancelCippQueue": {
+      "post": {
+        "summary": "ExecCancelCippQueue",
+        "operationId": "ExecCancelCippQueue",
+        "tags": [
+          "CIPP > Core"
+        ],
+        "description": "Cancels the waiting tasks of a background queue the caller started, such as an All Tenants table load. Tasks already running finish. Only the user who started a queue can cancel it.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "QueueId": {
+                    "type": "string",
+                    "description": "The QueueId a queued list response returned in Metadata.QueueId"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecCAServiceExclusion": {
       "post": {
         "summary": "ExecCAServiceExclusion",
@@ -46348,7 +46405,32 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                    "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "Cancellable": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Name": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "QueueId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Status": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "TotalTasks": {
+                        "x-cipp-field-source": "storage"
+                      }
+                    }
                   }
                 }
               }
