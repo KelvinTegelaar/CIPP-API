@@ -18,7 +18,8 @@ function Get-CIPPAlertTERRL {
         # Get TERRL status
         $TerrlStatus = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-LimitsEnforcementStatus'
 
-        if ($TerrlStatus) {
+        # Threshold is 0 for tenants EXO hasn't computed a TERRL limit for yet; nothing to be near
+        if ($TerrlStatus -and [double]$TerrlStatus.Threshold -gt 0) {
             $UsagePercentage = [math]::Round(($TerrlStatus.ObservedValue / $TerrlStatus.Threshold) * 100, 2)
 
             if ($UsagePercentage -gt $Threshold) {

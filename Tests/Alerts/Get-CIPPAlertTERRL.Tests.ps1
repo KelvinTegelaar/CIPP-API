@@ -47,6 +47,14 @@ Describe 'TERRL alert content hash' {
         Should -Invoke Write-AlertTrace -Times 1 -Exactly
     }
 
+    It 'skips tenants without a computed limit instead of dividing by zero' {
+        Mock New-ExoRequest { [pscustomobject]@{ ObservedValue = 5; Threshold = 0; EnforcementEnabled = $false; Verdict = 'Allow' } }
+        Mock Write-LogMessage {}
+        Get-CIPPAlertTERRL -InputValue 80 -TenantFilter 'contoso.onmicrosoft.com'
+        $script:Captured | Should -BeNullOrEmpty
+        Should -Invoke Write-LogMessage -Times 0 -Exactly
+    }
+
     It 'falls back to an 80% threshold when no input is given' {
         Mock New-ExoRequest { [pscustomobject]@{ ObservedValue = 810; Threshold = 1000; EnforcementEnabled = $false; Verdict = 'Allow' } }
         Get-CIPPAlertTERRL -TenantFilter 'contoso.onmicrosoft.com'
