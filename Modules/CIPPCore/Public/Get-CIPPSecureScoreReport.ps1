@@ -103,7 +103,7 @@ function Get-CIPPSecureScoreReport {
                 TenantName      = $TenantInfo.displayName ?? $Key
                 CurrentScore    = [math]::Round($Current, 2)
                 MaxScore        = $Max
-                PercentageScore = if ($Max -gt 0) { [math]::Round(($Current / $Max) * 100, 1) } else { 0 }
+                PercentageScore = if ($Max -gt 0) { [math]::Round(($Current / $Max) * 100, 2) } else { 0 }
                 CapturedAt      = $Latest.createdDateTime
             }
 
@@ -115,7 +115,7 @@ function Get-CIPPSecureScoreReport {
                             Date            = $_.createdDateTime
                             CurrentScore    = [math]::Round([double]($_.currentScore ?? 0), 2)
                             PercentageScore = if ($PointMax -gt 0) {
-                                [math]::Round(([double]($_.currentScore ?? 0) / $PointMax) * 100, 1)
+                                [math]::Round(([double]($_.currentScore ?? 0) / $PointMax) * 100, 2)
                             } else { 0 }
                         }
                     }
