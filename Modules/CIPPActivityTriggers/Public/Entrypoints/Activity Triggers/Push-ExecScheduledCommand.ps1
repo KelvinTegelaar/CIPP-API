@@ -21,7 +21,7 @@ function Push-ExecScheduledCommand {
     }
 
     $item = $Item | ConvertTo-Json -Depth 100 | ConvertFrom-Json
-    Write-Information "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
+    Write-Information "We are going to be running a scheduled task: $($Item.TaskInfo.Name) ($($Item.TaskInfo.RowKey)), command $($Item.Command), tenant $($Item.TaskInfo.Tenant), recurrence $($Item.TaskInfo.Recurrence), state $($Item.TaskInfo.TaskState)"
 
     # Define orchestrator-based commands that handle their own post-execution and state updates
     $OrchestratorBasedCommands = @('Invoke-CIPPOffboardingJob')
@@ -302,7 +302,9 @@ function Push-ExecScheduledCommand {
                 Write-Information "Failed to process trigger data parameters for individual execution: $($_.Exception.Message)"
             }
             try {
-                Write-Information "Executing command $($Item.Command) for individual matched data item with parameters: $($individualCommandParameters | ConvertTo-Json -Depth 10)"
+                $LoggedParameters = $individualCommandParameters.Clone()
+                $LoggedParameters.Remove('Headers')
+                Write-CippResultLog -Prefix "Executing command $($Item.Command) for individual matched data item with parameters" -Value $LoggedParameters
                 & $Item.Command @individualCommandParameters
                 Write-CippResultLog -Prefix 'Results for individual execution' -Value $results
             } catch {
@@ -320,7 +322,10 @@ function Push-ExecScheduledCommand {
                     $commandParameters['TaskInfo'] = $task
                 }
 
-                Write-Information "Starting task: $($Item.Command) for tenant: $Tenant with parameters: $($commandParameters | ConvertTo-Json -Depth 10)"
+                $LoggedParameters = $commandParameters.Clone()
+                $LoggedParameters.Remove('Headers')
+                $LoggedParameters.Remove('TaskInfo')
+                Write-CippResultLog -Prefix "Starting task: $($Item.Command) for tenant: $Tenant with parameters" -Value $LoggedParameters
                 $results = & $Item.Command @commandParameters
             } catch {
                 $results = "Task Failed: $($_.Exception.Message)"

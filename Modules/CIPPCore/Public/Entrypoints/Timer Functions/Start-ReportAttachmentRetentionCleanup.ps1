@@ -17,6 +17,28 @@ function Start-ReportAttachmentRetentionCleanup {
         $RetentionDays = if ($RetentionSettings.RetentionDays) { [math]::Max(7, [int]$RetentionSettings.RetentionDays) } else { 360 }
         $CutoffDate = (Get-Date).AddDays(-$RetentionDays).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
+        if ($PSCmdlet.ShouldProcess('ReportBuilderReports, ReportBuilderPdfs', 'Delete expired generated reports')) {
+            # Split part rows share their head row's write time, so the Timestamp filter removes them together.
+            $null = Start-CIPPOrchestrator -InputObject @{
+                OrchestratorName = 'ReportBuilderRetentionCleanup'
+                Batch            = @(foreach ($ReportTable in 'ReportBuilderReports', 'ReportBuilderPdfs') {
+                        @{
+                            FunctionName   = 'TableCleanupTask'
+                            Type           = 'CleanupRule'
+                            TableName      = $ReportTable
+                            DataTableProps = @{
+                                Filter   = "Timestamp lt datetime'$CutoffDate'"
+                                First    = 10000
+                                Property = @('PartitionKey', 'RowKey', 'ETag')
+                            }
+                        }
+                    })
+                AllowCollision   = $false
+                Priority         = 8
+                SkipLog          = $true
+            }
+        }
+
         $AttachmentTable = Get-CippTable -tablename 'ReportAttachmentBlobs'
         $OldAttachments = @(Get-CIPPAzDataTableEntity @AttachmentTable -Filter "PartitionKey eq 'ReportAttachment' and Timestamp lt datetime'$CutoffDate'")
         if ($OldAttachments.Count -eq 0 -or -not $PSCmdlet.ShouldProcess('ReportAttachmentBlobs', 'Delete expired report attachments')) { return }
