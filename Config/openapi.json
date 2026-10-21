@@ -43077,7 +43077,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Per-API-client egress usage for this instance against the daily cap. Reads the\nCraftEgressAccounting table that the Craft runtime mirrors its egress accounting into (the same\nstorage account, so this reads it directly): a per-day audit row per client plus an instance\ntotal, and 15-minute buckets for the trend. Returns today's instance summary (used-of-cap,\nenforcing, when the cap was first hit, how many requests were shed), the per-client breakdown,\nthe top endpoints by egress (instance-wide and per client), signed-in user traffic (reported,\nnever capped), and the last-24h instance trend. When the table has no data for today - accounting off, a\nnon-hosted instance, or simply no app-only traffic yet - Enabled is false and the UI hides the\ncard. SuperAdmin only.",
+        "description": "Per-API-client egress usage for this instance against the daily cap. Reads the\nCraftEgressAccounting table that the Craft runtime mirrors its egress accounting into (the same\nstorage account, so this reads it directly): a per-day audit row per client plus an instance\ntotal, and 15-minute buckets for the trend. Returns today's instance summary (used-of-cap,\nenforcing, when the cap was first hit, how many requests were shed), the per-client breakdown,\nthe top endpoints and caller IPs by egress (instance-wide and per client), signed-in user traffic (reported,\nnever capped), and the last-24h instance trend. When the table has no data for today - accounting off, a\nnon-hosted instance, or simply no app-only traffic yet - Enabled is false and the UI hides the\ncard. SuperAdmin only.",
         "parameters": [
           {
             "name": "Hours",
