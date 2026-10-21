@@ -9,11 +9,10 @@ BeforeAll {
     function Write-LogMessage { param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $LogData) }
     # The reports are rendered server-side through the report builder + kit; stub them so the unit test
     # never loads OfficeIMO - the package's job here is collation, not the kit's PDF bytes.
-    function Get-CippReportTenantName { param($TenantFilter, $Branding) }
+    function Get-CippReportTenantName { param($TenantFilter, $BrandingPresetId) }
     function Build-CippBecReportTree { param($UserData, $BecData, $TenantName, $Variant) }
     function ConvertTo-CippReportPdf { param($Blocks, $Variables, $TenantName, $TenantFilter, $ReportName, $Branding, $BrandingPresetId, $GeneratedOn, $PageSize, [switch]$Landscape) }
-    function Get-CIPPBrandingSettings { $script:BrandingSettings }
-    function Get-CIPPBrandingPreset { param($Id) $script:Presets[$Id] }
+    function Get-CIPPBrandingSettings { }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/New-CIPPBecEvidencePackage.ps1')
 
     $script:Run = [pscustomobject]@{
@@ -59,15 +58,8 @@ Describe 'New-CIPPBecEvidencePackage' {
             )
         }
         Mock Write-LogMessage { }
-        $script:BrandingSettings = [pscustomobject]@{ colour = '#F77F00'; reportDefaults = [pscustomobject]@{ bec = 'full'; becSummary = 'summary' } }
-        $script:Presets = @{
-            full = [pscustomobject]@{ colour = '#111111'; tenantLabel = 'alias' }
-            summary = [pscustomobject]@{ colour = '#222222'; tenantLabel = 'domain' }
-        }
-        Mock Get-CIPPBrandingSettings { $script:BrandingSettings }
-        Mock Get-CippReportTenantName {
-            if ($Branding.tenantLabel -eq 'domain') { 'contoso.com' } else { 'Contoso' }
-        }
+        Mock Get-CIPPBrandingSettings { [pscustomobject]@{ reportDefaults = [pscustomobject]@{ bec = 'p-full'; becSummary = 'p-summary' } } }
+        Mock Get-CippReportTenantName { "name-$BrandingPresetId" }
         Mock Build-CippBecReportTree { @{ Blocks = @(@{ type = 'blank' }); Variables = @{ coverlabel = 'Security Incident Report' } } }
         Mock ConvertTo-CippReportPdf { $script:FakePdf }
     }
@@ -93,17 +85,17 @@ Describe 'New-CIPPBecEvidencePackage' {
         Should -Invoke Set-CIPPBecReport -Times 0 -Because 'an export leaves no record on the run'
     }
 
-    It 'uses the distinct report presets for both evidence PDFs' {
+    It 'renders the full and summary PDFs with their own report presets' {
         $null = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
-        Should -Invoke Get-CIPPBrandingSettings -Times 1
-        Should -Invoke ConvertTo-CippReportPdf -Times 1 -ParameterFilter { $Branding.colour -eq '#111111' -and $TenantName -eq 'Contoso' }
-        Should -Invoke ConvertTo-CippReportPdf -Times 1 -ParameterFilter { $Branding.colour -eq '#222222' -and $TenantName -eq 'contoso.com' }
+        Should -Invoke ConvertTo-CippReportPdf -Times 1 -Exactly -ParameterFilter { $BrandingPresetId -eq 'p-full' -and $TenantName -eq 'name-p-full' }
+        Should -Invoke ConvertTo-CippReportPdf -Times 1 -Exactly -ParameterFilter { $BrandingPresetId -eq 'p-summary' -and $TenantName -eq 'name-p-summary' }
     }
 
-    It 'falls back to global branding when the configured presets are unavailable' {
-        $script:Presets = @{}
+    It 'names the tenant once when both PDFs share a preset' {
+        Mock Get-CIPPBrandingSettings { [pscustomobject]@{ reportDefaults = [pscustomobject]@{} } }
         $null = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
-        Should -Invoke ConvertTo-CippReportPdf -Times 2 -ParameterFilter { $Branding.colour -eq '#F77F00' }
+        Should -Invoke Get-CippReportTenantName -Times 1 -Exactly
+        Should -Invoke ConvertTo-CippReportPdf -Times 2 -Exactly -ParameterFilter { $BrandingPresetId -eq '' }
     }
 
     It 'flattens arrays and nested objects into CSV cells' {
@@ -129,8 +121,7 @@ Describe 'New-CIPPBecEvidencePackage' {
         $Log = [System.Text.Encoding]::UTF8.GetString($Entries['logbook.json'])
         $Log | Should -Not -Match 'Hunter2'
         $Log | Should -Match '\[redacted\]'
-        # The log query starts one day before the run, but never earlier than 60 days ago.
-        # Derive the expected partition at runtime so this test does not expire as the fixture ages.
+        # The query starts a day before the run but never before the 60-day floor, which moves with the clock.
         $ExpectedFrom = ([datetime]$script:Run.RequestedAt).ToUniversalTime().AddDays(-1)
         $RetentionFloor = [datetime]::UtcNow.AddDays(-60)
         if ($ExpectedFrom -lt $RetentionFloor) { $ExpectedFrom = $RetentionFloor }
