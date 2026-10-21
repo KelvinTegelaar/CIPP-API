@@ -79,6 +79,10 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AntiPhishPolicy'
 
+    foreach ($Field in @('AuthenticationFailAction', 'SpoofQuarantineTag', 'MailboxIntelligenceProtectionAction', 'MailboxIntelligenceQuarantineTag', 'TargetedUserProtectionAction', 'TargetedUserQuarantineTag', 'TargetedDomainProtectionAction', 'TargetedDomainQuarantineTag')) {
+        if ($null -ne $Settings.$Field.value) { $Settings.$Field = $Settings.$Field.value }
+    }
+
     $TenantCapabilities = Get-CIPPTenantCapabilities -TenantFilter $Tenant
     $MDOLicensed = $TenantCapabilities.ATP_ENTERPRISE -eq $true
     Write-Information "MDOLicensed: $MDOLicensed"

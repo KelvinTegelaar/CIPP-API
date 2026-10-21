@@ -91,9 +91,9 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
             }
         }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @($Groups) -AddCount
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @($ManagedAppPoliciesWithAssignments) -AddCount
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @($MobileAppConfigs) -AddCount
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @($Groups) -AddCount -ClearOnEmpty
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @($ManagedAppPoliciesWithAssignments) -AddCount -ClearOnEmpty
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @($MobileAppConfigs) -AddCount -ClearOnEmpty
 
         $TotalCount = (($ManagedAppPoliciesWithAssignments | Measure-Object).Count + ($MobileAppConfigs | Measure-Object).Count)
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $TotalCount app protection/configuration policies" -sev Debug
