@@ -586,13 +586,19 @@ function Read-MtaStsPolicy {
     .PARAMETER Domain
     Domain to process MTA-STS policy
 
+    .PARAMETER TimeoutSec
+    Seconds to wait for the policy file. Defaults to 10
+
     .EXAMPLE
     PS> Read-MtaStsPolicy -Domain gmail.com
     #>
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true)]
-        [string]$Domain
+        [string]$Domain,
+
+        [Parameter()]
+        [int]$TimeoutSec = 10
     )
 
     $StsPolicyAnalysis = [PSCustomObject]@{
@@ -601,6 +607,7 @@ function Read-MtaStsPolicy {
         Mode             = ''
         Mx               = [System.Collections.Generic.List[string]]::new()
         MaxAge           = ''
+        Exists           = $false
         IsValid          = $false
         HasWarnings      = $false
         ValidationPasses = [System.Collections.Generic.List[string]]::new()
@@ -617,8 +624,9 @@ function Read-MtaStsPolicy {
 
     # Request policy file from domain, only accept text/plain results
     $RequestParams = @{
-        Uri     = ('https://mta-sts.{0}/.well-known/mta-sts.txt' -f $Domain)
-        Headers = @{
+        Uri        = ('https://mta-sts.{0}/.well-known/mta-sts.txt' -f $Domain)
+        TimeoutSec = $TimeoutSec
+        Headers    = @{
             Accept = 'text/plain'
         }
     }
@@ -627,6 +635,11 @@ function Read-MtaStsPolicy {
     try {
         $wr = Invoke-WebRequest @RequestParams -ErrorAction Stop
         $PolicyExists = $true
+        $StsPolicyAnalysis.Exists = $true
+    }
+
+    catch [System.Threading.Tasks.TaskCanceledException], [System.TimeoutException] {
+        $ValidationFails.Add(('MTA-STS policy for {0} did not respond within {1} seconds' -f $Domain, $TimeoutSec)) | Out-Null
     }
 
     catch {
@@ -700,7 +713,7 @@ function Read-MtaStsPolicy {
 
     $StsPolicyAnalysis
 }
-#EndRegion './Public/Policies/Read-MtaStsPolicy.ps1' 126
+#EndRegion './Public/Policies/Read-MtaStsPolicy.ps1' 139
 #Region './Public/Records/Add-MailProvider.ps1' -1
 
 function Add-MailProvider {
@@ -2996,6 +3009,9 @@ function Test-MtaSts {
     .PARAMETER Domain
     Domain to process
 
+    .PARAMETER TimeoutSec
+    Seconds to wait for the MTA-STS policy file. Defaults to 10
+
     .EXAMPLE
     PS> Test-MtaSts -Domain gmail.com
 
@@ -3003,14 +3019,17 @@ function Test-MtaSts {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true)]
-        [string]$Domain
+        [string]$Domain,
+
+        [Parameter()]
+        [int]$TimeoutSec = 10
     )
 
     # MTA-STS test object
     $MtaSts = [PSCustomObject]@{
         Domain           = $Domain
         StsRecord        = (Read-MtaStsRecord -Domain $Domain)
-        StsPolicy        = (Read-MtaStsPolicy -Domain $Domain)
+        StsPolicy        = (Read-MtaStsPolicy -Domain $Domain -TimeoutSec $TimeoutSec)
         TlsRptRecord     = (Read-TlsRptRecord -Domain $Domain)
         ValidationPasses = [System.Collections.Generic.List[string]]::new()
         ValidationWarns  = [System.Collections.Generic.List[string]]::new()
@@ -3024,14 +3043,18 @@ function Test-MtaSts {
 
     # Check results for each test
     if ($MtaSts.StsRecord.IsValid) { $ValidationPasses.Add('MTA-STS Record is valid') | Out-Null }
+    elseif (-not $MtaSts.StsRecord.Record) { $ValidationFails.Add('MTA-STS Record is missing') | Out-Null }
     else { $ValidationFails.Add('MTA-STS Record is not valid') | Out-Null }
     if ($MtaSts.StsRecord.HasWarnings) { $ValidationWarns.Add('MTA-STS Record has warnings') | Out-Null }
 
     if ($MtaSts.StsPolicy.IsValid) { $ValidationPasses.Add('MTA-STS Policy is valid') | Out-Null }
-    else { $ValidationFails.Add('MTA-STS Policy is not valid') | Out-Null }
+    elseif ($MtaSts.StsPolicy.Exists) { $ValidationFails.Add('MTA-STS Policy is not valid') | Out-Null }
+    elseif ($MtaSts.StsRecord.Record) { $ValidationFails.Add('MTA-STS Policy could not be retrieved') | Out-Null }
+    else { $ValidationFails.Add('MTA-STS Policy is missing') | Out-Null }
     if ($MtaSts.StsPolicy.HasWarnings) { $ValidationWarns.Add('MTA-STS Policy has warnings') | Out-Null }
 
     if ($MtaSts.TlsRptRecord.IsValid) { $ValidationPasses.Add('TLSRPT Record is valid') | Out-Null }
+    elseif (-not $MtaSts.TlsRptRecord.Record) { $ValidationFails.Add('TLSRPT Record is missing') | Out-Null }
     else { $ValidationFails.Add('TLSRPT Record is not valid') | Out-Null }
     if ($MtaSts.TlsRptRecord.HasWarnings) { $ValidationWarns.Add('TLSRPT Record has warnings') | Out-Null }
 
@@ -3042,5 +3065,5 @@ function Test-MtaSts {
 
     $MtaSts
 }
-#EndRegion './Public/Tests/Test-MtaSts.ps1' 58
+#EndRegion './Public/Tests/Test-MtaSts.ps1' 68
 

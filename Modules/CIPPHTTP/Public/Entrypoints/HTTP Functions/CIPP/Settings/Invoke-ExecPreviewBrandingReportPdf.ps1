@@ -21,13 +21,14 @@ function Invoke-ExecPreviewBrandingReportPdf {
         bec = 'BEC Analysis Report'; becSummary = 'BEC Executive Summary'; sharing = 'Sharing Report'; permissions = 'Permissions Report'; mailFlow = 'Mail Flow Report'
         licensing = 'Licensing Report'
         baseline = 'Security Baseline Report'
+        domain = 'Domain Security Assessment'
     }
     # Report types that reuse another type's sample file (the BEC C-suite summary is the same
     # investigation as the full report, rendered from the same sample, just a shorter variant).
     $SampleAliases = @{ becSummary = 'bec' }
 
     try {
-        # Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, licensing or baseline.
+        # Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, licensing, baseline or domain.
         $ReportType = [string]($Request.Body.reportType ?? 'executive')
         if (-not $ReportNames.ContainsKey($ReportType)) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = "Unknown report type '$ReportType'. Use one of: $($ReportNames.Keys -join ', ')." })
@@ -55,6 +56,7 @@ function Invoke-ExecPreviewBrandingReportPdf {
             'mailFlow' { Build-CippMailFlowReportTree -Data $Data }
             'licensing' { Build-CippLicenseReportTree -Data $Data }
             'baseline' { Build-CippBaselineWhatIfReportTree -Data $Data }
+            'domain' { Build-CippDomainReportTree -Data $Data }
             default { Build-CippExecutiveReportTree -Data $Data }
         }
 

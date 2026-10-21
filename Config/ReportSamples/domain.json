@@ -1,0 +1,121 @@
+{
+  "IncludeDetails": true,
+  "Domains": [
+    {
+      "Domain": "contoso.com",
+      "DkimSelectors": ["selector1", "selector2"],
+      "Result": {
+        "Domain": "contoso.com",
+        "LastRefresh": "2026-08-05T03:00:00.000Z",
+        "NSRecords": ["ns1-01.azure-dns.com.", "ns2-01.azure-dns.net."],
+        "ExpectedSPFRecord": "spf.protection.outlook.com",
+        "ActualSPFRecord": "v=spf1 include:spf.protection.outlook.com -all",
+        "SPFPassAll": true,
+        "ActualMXRecords": [{ "Priority": 0, "Hostname": "contoso-com.mail.protection.outlook.com." }],
+        "MXPassTest": true,
+        "DMARCPresent": true,
+        "DMARCFullPolicy": "v=DMARC1; p=quarantine; rua=mailto:dmarc@contoso.com",
+        "DMARCActionPolicy": "Quarantine",
+        "DMARCReportingActive": true,
+        "DMARCPercentagePass": true,
+        "DNSSECPresent": false,
+        "MailProvider": "Microsoft 365",
+        "DKIMEnabled": true,
+        "DKIMRecords": [{ "Selector": "selector1", "Record": "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA" }],
+        "MTASTS": "Not configured",
+        "EnterpriseEnrollment": "Correct",
+        "EnterpriseRegistration": "No CNAME",
+        "Score": 130,
+        "MaximumScore": 160,
+        "ScorePercentage": 81,
+        "ScoreExplanation": "DMARC Partially Enforced with quarantine, DNSSEC Not Configured or Enabled, No Enterprise Registration CNAME record found, MTA-STS not configured"
+      },
+      "Checks": {
+        "MX": { "Passes": ["Mail exchanger records record(s) are present for this domain."], "Warns": [], "Fails": [] },
+        "SPF": { "Passes": ["The SPF record ends with a hard fail qualifier (-all).", "Lookup count: 1/10.", "All validation checks passed."], "Warns": [], "Fails": [] },
+        "DMARC": { "Passes": ["Aggregate reports are being sent.", "The domain policy is set to quarantine."], "Warns": ["The domain policy is set to quarantine, reject is best practice."], "Fails": [] },
+        "DNSSEC": { "Passes": [], "Warns": [], "Fails": ["DNSSEC is not set up for this domain."] },
+        "DKIM": { "Passes": ["selector1 - DKIM key validation succeeded.", "Minimum number of valid DKIM records were met 1/1."], "Warns": [], "Fails": [] },
+        "MTASTS": { "Passes": [], "Warns": [], "Fails": ["MTA-STS Record is missing", "MTA-STS Policy is missing", "TLSRPT Record is missing"] }
+      }
+    },
+    {
+      "Domain": "contoso-marketing.com",
+      "DkimSelectors": ["selector1", "selector2"],
+      "Result": {
+        "Domain": "contoso-marketing.com",
+        "LastRefresh": "2026-08-05T03:00:00.000Z",
+        "NSRecords": ["ns1.example-dns.net.", "ns2.example-dns.net."],
+        "ExpectedSPFRecord": "spf.protection.outlook.com",
+        "ActualSPFRecord": "v=spf1 include:spf.protection.outlook.com include:mail.example-mailer.com ~all",
+        "SPFPassAll": true,
+        "ActualMXRecords": [{ "Priority": 0, "Hostname": "contoso-marketing-com.mail.protection.outlook.com." }],
+        "MXPassTest": true,
+        "DMARCPresent": true,
+        "DMARCFullPolicy": "v=DMARC1; p=none; rua=mailto:dmarc@contoso.com",
+        "DMARCActionPolicy": "None",
+        "DMARCReportingActive": true,
+        "DMARCPercentagePass": true,
+        "DNSSECPresent": false,
+        "MailProvider": "Microsoft 365",
+        "DKIMEnabled": false,
+        "DKIMRecords": "",
+        "MTASTS": "Not configured",
+        "EnterpriseEnrollment": "No CNAME",
+        "EnterpriseRegistration": "No CNAME",
+        "Score": 90,
+        "MaximumScore": 160,
+        "ScorePercentage": 56,
+        "ScoreExplanation": "DMARC is not being enforced, DNSSEC Not Configured or Enabled, DKIM Not Configured, MTA-STS not configured"
+      },
+      "Checks": {
+        "MX": { "Passes": ["Mail exchanger records record(s) are present for this domain."], "Warns": [], "Fails": [] },
+        "SPF": { "Passes": ["Lookup count: 3/10.", "All validation checks passed."], "Warns": [], "Fails": [] },
+        "DMARC": { "Passes": ["Aggregate reports are being sent."], "Warns": [], "Fails": ["The domain policy is set to none, no action will be taken."] },
+        "DNSSEC": { "Passes": [], "Warns": [], "Fails": ["DNSSEC is not set up for this domain."] },
+        "DKIM": { "Passes": [], "Warns": [], "Fails": ["0 DKIM record(s) found. The minimum number of valid records (1) was not met."] },
+        "MTASTS": { "Passes": [], "Warns": [], "Fails": ["MTA-STS Record is missing", "MTA-STS Policy is missing", "TLSRPT Record is missing"] }
+      }
+    },
+    {
+      "Domain": "contoso.onmicrosoft.com",
+      "DkimSelectors": ["selector1-contoso-onmicrosoft-com", "selector2-contoso-onmicrosoft-com"],
+      "Result": {
+        "Domain": "contoso.onmicrosoft.com",
+        "LastRefresh": "2026-08-05T03:00:00.000Z",
+        "NSRecords": [],
+        "ExpectedSPFRecord": "spf.protection.outlook.com",
+        "ActualSPFRecord": "v=spf1 include:spf.protection.outlook.com -all",
+        "SPFPassAll": true,
+        "ActualMXRecords": [{ "Priority": 0, "Hostname": "contoso.mail.protection.outlook.com." }],
+        "MXPassTest": true,
+        "DMARCPresent": false,
+        "DMARCFullPolicy": "",
+        "DMARCActionPolicy": "",
+        "DMARCReportingActive": "",
+        "DMARCPercentagePass": "",
+        "DNSSECPresent": false,
+        "MailProvider": "Microsoft 365",
+        "DKIMEnabled": true,
+        "DKIMRecords": [{ "Selector": "selector1-contoso-onmicrosoft-com", "Record": "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA" }],
+        "MTASTS": "Not applicable",
+        "EnterpriseEnrollment": "Correct",
+        "EnterpriseRegistration": "Correct",
+        "Score": 60,
+        "MaximumScore": 140,
+        "ScorePercentage": 43,
+        "ScoreExplanation": "No DMARC Records Found"
+      },
+      "Checks": {
+        "MX": { "Passes": ["Mail exchanger records record(s) are present for this domain."], "Warns": [], "Fails": [] },
+        "SPF": { "Passes": ["All validation checks passed."], "Warns": [], "Fails": [] },
+        "DMARC": { "Passes": [], "Warns": [], "Fails": ["This domain does not have a DMARC record."] },
+        "DNSSEC": { "Passes": [], "Warns": [], "Fails": ["DNSSEC is not set up for this domain."] },
+        "DKIM": { "Passes": ["selector1-contoso-onmicrosoft-com - DKIM key validation succeeded."], "Warns": [], "Fails": [] }
+      }
+    },
+    {
+      "Domain": "contoso.net"
+    }
+  ]
+}

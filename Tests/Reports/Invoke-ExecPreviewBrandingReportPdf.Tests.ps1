@@ -34,7 +34,7 @@ BeforeAll {
 Describe 'Invoke-ExecPreviewBrandingReportPdf' {
     It 'renders the <type> sample against the supplied branding' -ForEach @(
         @{ type = 'executive' }, @{ type = 'reportBuilder' }, @{ type = 'shadowAI' }, @{ type = 'bec' }
-        @{ type = 'sharing' }, @{ type = 'permissions' }, @{ type = 'mailFlow' }, @{ type = 'licensing' }, @{ type = 'baseline' }
+        @{ type = 'sharing' }, @{ type = 'permissions' }, @{ type = 'mailFlow' }, @{ type = 'licensing' }, @{ type = 'baseline' }, @{ type = 'domain' }
     ) {
         $Response = Invoke-Preview @{ reportType = $type; branding = @{ colour = '#0E4C92'; coverStock = 'none'; footerText = '%tenantname% preview' } }
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)

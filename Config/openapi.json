@@ -24344,6 +24344,100 @@
         "x-cipp-role": "Identity.User.Read"
       }
     },
+    "/api/ExecGetDomainReportPdf": {
+      "get": {
+        "summary": "Domain security assessment PDF",
+        "operationId": "ExecGetDomainReportPdf",
+        "tags": [
+          "Tenant > Standards"
+        ],
+        "description": "Server-renders a client-facing domain security assessment (SPF, DKIM, DMARC, MX, DNSSEC, MTA-STS and the Intune\nenrolment records) covering every domain of one tenant as application/pdf bytes, from the stored Domain Analyser\nresults. No DNS lookups are made; run the Domain Analyser to refresh the results first.",
+        "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDetails",
+            "in": "query",
+            "description": "Include the published records and every individual test result for each domain.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "DkimSelectors": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "DomainAnalyser": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "MailProviders": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "TenantDetails": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "TenantId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.DomainAnalyser.Read"
+      }
+    },
     "/api/ExecGetExecutiveReportPdf": {
       "post": {
         "summary": "ExecGetExecutiveReportPdf",
@@ -31954,7 +32048,7 @@
                   },
                   "reportType": {
                     "type": "string",
-                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, licensing or baseline."
+                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, licensing, baseline or domain."
                   },
                   "tenantFilter": {
                     "type": "string",
@@ -50278,6 +50372,9 @@
                         "x-cipp-field-source": "frontend"
                       },
                       "MailProvider": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "MTASTS": {
                         "x-cipp-field-source": "frontend"
                       },
                       "MXPassTest": {

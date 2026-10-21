@@ -31,6 +31,8 @@ function Push-DomainAnalyserDomain {
     Set-DnsResolver -Resolver $Resolver
 
     $Domain = $DomainObject.RowKey
+    # Microsoft hosts the DNS for onmicrosoft.com domains, so DNSSEC and MTA-STS cannot be configured and are not scored
+    $IsMicrosoftDomain = $Domain -like '*.onmicrosoft.com'
 
     try {
         $Tenant = $DomainObject.TenantDetails | ConvertFrom-Json -ErrorAction Stop
@@ -63,8 +65,9 @@ function Push-DomainAnalyserDomain {
         EnterpriseEnrollment   = ''
         EnterpriseRegistration = ''
         AutoDiscover           = ''
+        MTASTS                 = ''
         Score                  = ''
-        MaximumScore           = 160
+        MaximumScore           = $IsMicrosoftDomain ? 140 : 160
         ScorePercentage        = ''
         ScoreExplanation       = ''
     }
@@ -78,8 +81,10 @@ function Push-DomainAnalyserDomain {
         DMARCSetReject       = 30
         DMARCReportingActive = 20
         DMARCPercentageGood  = 20
-        DNSSECPresent        = 20
+        DNSSECPresent        = 10
         DKIMActiveAndWorking = 20
+        MTASTSEnforced       = 10
+        MTASTSTesting        = 5
     }
 
     $ScoreDomain = 0
@@ -112,6 +117,7 @@ function Push-DomainAnalyserDomain {
     #EndRegion MX Check
 
     #Region SPF Check
+    $SPFRecord = $null
     try {
         $SPFRecord = Read-SpfRecord -Domain $Domain -ErrorAction Stop
         if ($SPFRecord.RecordCount -gt 0) {
@@ -136,7 +142,7 @@ function Push-DomainAnalyserDomain {
     $SPFFailCount = $SPFRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
     $Result.SPFPassAll = $false
 
-    if ($SPFFailCount -eq 0) {
+    if ($SPFRecord -and $SPFFailCount -eq 0) {
         $ScoreDomain += $Scores.SPFCorrectAll
         $Result.SPFPassAll = $true
     } else {
@@ -201,10 +207,10 @@ function Push-DomainAnalyserDomain {
         $DNSSECWarnCount = $DNSSECResult.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
         if (($DNSSECFailCount + $DNSSECWarnCount) -eq 0) {
             $Result.DNSSECPresent = $true
-            $ScoreDomain += $Scores.DNSSECPresent
+            if (-not $IsMicrosoftDomain) { $ScoreDomain = $ScoreDomain + $Scores.DNSSECPresent }
         } else {
             $Result.DNSSECPresent = $false
-            $ScoreExplanation.Add('DNSSEC Not Configured or Enabled') | Out-Null
+            if (-not $IsMicrosoftDomain) { $ScoreExplanation.Add('DNSSEC Not Configured or Enabled') | Out-Null }
         }
     } catch {
         $Message = 'DNSSEC Error'
@@ -326,6 +332,35 @@ function Push-DomainAnalyserDomain {
     }
     #EndRegion AutoDiscover Check
 
+    #Region MTA-STS Check
+    $MtaStsResult = $null
+    try {
+        if ($IsMicrosoftDomain) {
+            $Result.MTASTS = 'Not applicable'
+        } else {
+            $MtaStsResult = Test-MtaSts -Domain $Domain
+            $Result.MTASTS = if (-not $MtaStsResult.StsRecord.Record -and -not $MtaStsResult.StsPolicy.Mode) {
+                'Not configured'
+            } elseif ($MtaStsResult.StsRecord.IsValid -and $MtaStsResult.StsPolicy.IsValid) {
+                $MtaStsResult.StsPolicy.Mode -eq 'enforce' ? 'Enforced' : 'Testing'
+            } else {
+                'Invalid'
+            }
+            switch ($Result.MTASTS) {
+                'Enforced' { $ScoreDomain = $ScoreDomain + $Scores.MTASTSEnforced }
+                'Testing' {
+                    $ScoreDomain = $ScoreDomain + $Scores.MTASTSTesting
+                    $ScoreExplanation.Add('MTA-STS policy is in testing mode') | Out-Null
+                }
+                default { $ScoreExplanation.Add("MTA-STS $($Result.MTASTS.ToLower())") | Out-Null }
+            }
+        }
+    } catch {
+        $Result.MTASTS = 'Error'
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "MTA-STS check error for $Domain" -LogData (Get-CippException -Exception $_) -sev Error
+    }
+    #EndRegion MTA-STS Check
+
     #Region MSCNAME DKIM Records
     # Get Microsoft DKIM CNAME selector Records
     # Ugly, but i needed to create a scope/loop i could break out of without breaking the rest of the function
@@ -395,6 +430,16 @@ function Push-DomainAnalyserDomain {
     } else {
         $DomainObject.DomainAnalyser = $Json
     }
+
+    # Per-check DNSHealth messages, kept beside the result so the domain report can explain findings without re-querying DNS
+    $Checks = [ordered]@{ MX = $MXRecord; SPF = $SPFRecord; DMARC = $DMARCPolicy; DNSSEC = $DNSSECResult; DKIM = $DkimRecord; MTASTS = $MtaStsResult }
+    $CheckResults = [ordered]@{}
+    foreach ($Name in @($Checks.Keys)) {
+        if ($Checks[$Name]) {
+            $CheckResults[$Name] = @{ Passes = @($Checks[$Name].ValidationPasses); Warns = @($Checks[$Name].ValidationWarns); Fails = @($Checks[$Name].ValidationFails) }
+        }
+    }
+    $DomainObject | Add-Member -NotePropertyName DomainAnalyserChecks -NotePropertyValue ([string](ConvertTo-Json -InputObject $CheckResults -Depth 4 -Compress)) -Force
 
     try {
         $DomainTable.Entity = $DomainObject
