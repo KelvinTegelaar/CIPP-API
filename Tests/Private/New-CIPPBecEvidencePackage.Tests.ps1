@@ -9,9 +9,11 @@ BeforeAll {
     function Write-LogMessage { param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $LogData) }
     # The reports are rendered server-side through the report builder + kit; stub them so the unit test
     # never loads OfficeIMO - the package's job here is collation, not the kit's PDF bytes.
-    function Get-CippReportTenantName { param($TenantFilter) }
+    function Get-CippReportTenantName { param($TenantFilter, $Branding) }
     function Build-CippBecReportTree { param($UserData, $BecData, $TenantName, $Variant) }
     function ConvertTo-CippReportPdf { param($Blocks, $Variables, $TenantName, $TenantFilter, $ReportName, $Branding, $BrandingPresetId, $GeneratedOn, $PageSize, [switch]$Landscape) }
+    function Get-CIPPBrandingSettings { $script:BrandingSettings }
+    function Get-CIPPBrandingPreset { param($Id) $script:Presets[$Id] }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/New-CIPPBecEvidencePackage.ps1')
 
     $script:Run = [pscustomobject]@{
@@ -57,7 +59,15 @@ Describe 'New-CIPPBecEvidencePackage' {
             )
         }
         Mock Write-LogMessage { }
-        Mock Get-CippReportTenantName { 'Contoso' }
+        $script:BrandingSettings = [pscustomobject]@{ colour = '#F77F00'; reportDefaults = [pscustomobject]@{ bec = 'full'; becSummary = 'summary' } }
+        $script:Presets = @{
+            full = [pscustomobject]@{ colour = '#111111'; tenantLabel = 'alias' }
+            summary = [pscustomobject]@{ colour = '#222222'; tenantLabel = 'domain' }
+        }
+        Mock Get-CIPPBrandingSettings { $script:BrandingSettings }
+        Mock Get-CippReportTenantName {
+            if ($Branding.tenantLabel -eq 'domain') { 'contoso.com' } else { 'Contoso' }
+        }
         Mock Build-CippBecReportTree { @{ Blocks = @(@{ type = 'blank' }); Variables = @{ coverlabel = 'Security Incident Report' } } }
         Mock ConvertTo-CippReportPdf { $script:FakePdf }
     }
@@ -83,6 +93,19 @@ Describe 'New-CIPPBecEvidencePackage' {
         Should -Invoke Set-CIPPBecReport -Times 0 -Because 'an export leaves no record on the run'
     }
 
+    It 'uses the distinct report presets for both evidence PDFs' {
+        $null = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
+        Should -Invoke Get-CIPPBrandingSettings -Times 1
+        Should -Invoke ConvertTo-CippReportPdf -Times 1 -ParameterFilter { $Branding.colour -eq '#111111' -and $TenantName -eq 'Contoso' }
+        Should -Invoke ConvertTo-CippReportPdf -Times 1 -ParameterFilter { $Branding.colour -eq '#222222' -and $TenantName -eq 'contoso.com' }
+    }
+
+    It 'falls back to global branding when the configured presets are unavailable' {
+        $script:Presets = @{}
+        $null = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
+        Should -Invoke ConvertTo-CippReportPdf -Times 2 -ParameterFilter { $Branding.colour -eq '#F77F00' }
+    }
+
     It 'flattens arrays and nested objects into CSV cells' {
         $Package = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
         $Entries = Read-Zip -Bytes $Package.ZipBytes
@@ -106,7 +129,16 @@ Describe 'New-CIPPBecEvidencePackage' {
         $Log = [System.Text.Encoding]::UTF8.GetString($Entries['logbook.json'])
         $Log | Should -Not -Match 'Hunter2'
         $Log | Should -Match '\[redacted\]'
-        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Filter -like "BecCaseId eq 'BEC-20260820120000-ev0001'*" -and $Filter -like "*PartitionKey ge '20260819'*" }
+        # The log query starts one day before the run, but never earlier than 60 days ago.
+        # Derive the expected partition at runtime so this test does not expire as the fixture ages.
+        $ExpectedFrom = ([datetime]$script:Run.RequestedAt).ToUniversalTime().AddDays(-1)
+        $RetentionFloor = [datetime]::UtcNow.AddDays(-60)
+        if ($ExpectedFrom -lt $RetentionFloor) { $ExpectedFrom = $RetentionFloor }
+        $ExpectedPartition = $ExpectedFrom.ToString('yyyyMMdd')
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
+            $Filter -like "BecCaseId eq 'BEC-20260820120000-ev0001'*" -and
+            $Filter -like "*PartitionKey ge '$ExpectedPartition'*"
+        }
     }
 
     It 'refuses an incomplete run' {
