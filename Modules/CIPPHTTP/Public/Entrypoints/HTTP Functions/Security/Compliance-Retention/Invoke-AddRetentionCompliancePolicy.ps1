@@ -22,11 +22,15 @@ Function Invoke-AddRetentionCompliancePolicy {
     }
 
     $Result = foreach ($TenantFilter in $Tenants) {
-        Set-CIPPRetentionCompliancePolicy -TenantFilter $TenantFilter -Template $Template -APIName $APIName -Headers $Headers
+        try {
+            @{ resultText = Set-CIPPRetentionCompliancePolicy -TenantFilter $TenantFilter -Template $Template -APIName $APIName -Headers $Headers; state = 'success' }
+        } catch {
+            @{ resultText = $_.Exception.Message; state = 'error' }
+        }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Result).Count -Failed @($Result).Where({ $_.state -eq 'error' }).Count
             Body       = @{Results = @($Result) }
         })
 }

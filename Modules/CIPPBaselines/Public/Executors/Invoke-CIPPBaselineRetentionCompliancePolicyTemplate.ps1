@@ -24,7 +24,12 @@ function Invoke-CIPPBaselineRetentionCompliancePolicyTemplate {
     $Templates = @($Current.templateBodies | Where-Object { $_ })
     if ($Templates.Count -eq 0) { return }
 
-    foreach ($Template in $Templates) {
-        $null = Set-CIPPRetentionCompliancePolicy -TenantFilter $TenantFilter -Template $Template -APIName 'Baselines'
+    $Failures = foreach ($Template in $Templates) {
+        try {
+            $null = Set-CIPPRetentionCompliancePolicy -TenantFilter $TenantFilter -Template $Template -APIName 'Baselines'
+        } catch {
+            $_.Exception.Message
+        }
     }
+    if ($Failures) { throw (@($Failures) -join ' ') }
 }
