@@ -14,6 +14,7 @@ BeforeAll {
         $Node.Clauses[0].Item1.Extent.Text -like '*!$ExistingAsset -or $ExistingAsset.Hash*'
     }, $true)
     $UpdateCondition = [ScriptBlock]::Create($UpdateIf.Clauses[0].Item1.Extent.Text)
+    function Get-HuduDeviceBody { param($Model, $SyncedAt, $Culture, $TimeZone) 'device body' }
     function Get-CIPPLapsPassword { }
     function Get-CIPPBitLockerKey { }
     function Get-CippException { param($Exception) return [PSCustomObject]@{ NormalizedError = $Exception.Exception.Message } }
