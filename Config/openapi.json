@@ -7475,7 +7475,7 @@
                   },
                   "AddToGroups": {
                     "type": "string",
-                    "description": "Add to groups"
+                    "description": "Add to groups. Exchange-backed groups are always scheduled: a brand-new user is not an Exchange recipient yet, so an inline Add-DistributionGroupMember would fail. Graph groups are added inline."
                   },
                   "businessPhones": {
                     "type": "string"
@@ -11602,6 +11602,9 @@
                         "addedFields": {
                           "type": "object",
                           "properties": {
+                            "calculatedGroupType": {
+                              "type": "string"
+                            },
                             "groupType": {
                               "type": "string"
                             }
@@ -11760,6 +11763,9 @@
                         "addedFields": {
                           "type": "object",
                           "properties": {
+                            "calculatedGroupType": {
+                              "type": "string"
+                            },
                             "groupType": {
                               "type": "string"
                             }
@@ -11916,7 +11922,8 @@
         "x-cipp-role": "Identity.User.ReadWrite",
         "x-cipp-reads-via": [
           "Get-CippException",
-          "Set-CIPPUser"
+          "Set-CIPPUser",
+          "Test-CIPPGroupIsExchangeBacked"
         ]
       }
     },
