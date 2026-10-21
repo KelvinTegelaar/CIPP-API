@@ -5380,11 +5380,17 @@
               }
             }
           },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -24214,6 +24220,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "brandingPresetId": {
+                    "type": "string"
+                  },
                   "caseId": {
                     "type": "string",
                     "description": "The stored run to render. A caseId names it directly; a userId picks the user's newest completed run."
@@ -24244,6 +24253,14 @@
           }
         },
         "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "caseId",
             "in": "query",
@@ -24673,6 +24690,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "brandingPresetId": {
+                    "type": "string"
+                  },
                   "tenantFilter": {
                     "type": "string"
                   }
@@ -24685,6 +24705,14 @@
           }
         },
         "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "days",
             "in": "query",
@@ -24746,6 +24774,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "brandingPresetId": {
+                    "type": "string"
+                  },
                   "tenantFilter": {
                     "type": "string"
                   }
@@ -24758,6 +24789,14 @@
           }
         },
         "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
@@ -24960,6 +24999,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "brandingPresetId": {
+                    "type": "string"
+                  },
                   "sectionConfig": {
                     "type": "array",
                     "items": {
@@ -24978,6 +25020,14 @@
           }
         },
         "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
@@ -25030,6 +25080,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "brandingPresetId": {
+                    "type": "string"
+                  },
                   "tenantFilter": {
                     "type": "string"
                   }
@@ -25042,6 +25095,14 @@
           }
         },
         "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
