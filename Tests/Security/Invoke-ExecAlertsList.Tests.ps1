@@ -13,6 +13,7 @@ BeforeAll {
     }
 
     function New-GraphGetRequest { param($uri, $tenantid) $script:lastGet = $uri; $script:alerts }
+    function Get-GraphRequestList { param($TenantFilter, $Endpoint, $Parameters, $AsApp, $CacheStatus) }
     function New-GraphPOSTRequest { param($uri, $type, $tenantid, $body) $script:lastPatch = @{ Uri = $uri; Type = $type; Body = $body } }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     function Get-CippException { param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
@@ -66,6 +67,35 @@ Describe 'Invoke-ExecAlertsList' {
         $response.Body.Results.NewAlertsCount | Should -Be 1
         $response.Body.Results.InProgressAlertsCount | Should -Be 1
         $response.Body.Results.SeverityHighAlertsCount | Should -Be 1
+    }
+}
+
+Describe 'Invoke-ExecAlertsList for AllTenants' {
+    It 'reads the alerts_v2 graph request cache and keeps each row''s tenant' {
+        Mock Get-GraphRequestList {
+            param($TenantFilter, $Endpoint, $Parameters, $AsApp, $CacheStatus)
+            $CacheStatus.CachedTenants = 2; $CacheStatus.ExpectedTenants = 3
+            [pscustomobject]@{ id = 'b1'; title = 'One'; status = 'new'; severity = 'high'; firstActivityDateTime = '2026-10-01T00:00:00Z'; Tenant = 'a.com'; CippStatus = 'Good' }
+            [pscustomobject]@{ Tenant = 'c.com'; CippStatus = 'Could not connect to tenant.' }
+        }
+        $request = [pscustomobject]@{ Query = [pscustomobject]@{ tenantFilter = 'AllTenants' } }
+
+        $response = Invoke-ExecAlertsList -Request $request -TriggerMetadata $null
+
+        Should -Invoke Get-GraphRequestList -Times 1 -Exactly -ParameterFilter { $TenantFilter -eq 'AllTenants' -and $Endpoint -eq 'security/alerts_v2' }
+        @($response.Body.Results.MSResults).Tenant | Should -Be 'a.com'
+        $response.Body.Results.NewAlertsCount | Should -Be 1
+        ($response.Body.Metadata.CachedTenants, $response.Body.Metadata.ExpectedTenants) | Should -Be @(2, 3)
+    }
+
+    It 'passes the queue message on while the cache is filled' {
+        Mock Get-GraphRequestList { [pscustomobject]@{ Queued = $true; QueueMessage = 'Loading'; QueueId = 'q1' } }
+        $request = [pscustomobject]@{ Query = [pscustomobject]@{ tenantFilter = 'AllTenants' } }
+
+        $response = Invoke-ExecAlertsList -Request $request -TriggerMetadata $null
+
+        ($response.Body.Metadata.QueueMessage, $response.Body.Metadata.QueueId) | Should -Be @('Loading', 'q1')
+        @($response.Body.Results.MSResults).Count | Should -Be 0
     }
 }
 

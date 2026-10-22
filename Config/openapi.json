@@ -13000,7 +13000,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the Microsoft Graph entity it queries, and the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
                   "properties": {
                     "actorDisplayName": {
                       "type": "string",
@@ -13009,10 +13009,6 @@
                     "additionalData": {
                       "type": "object",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "Alert": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     },
                     "alertPolicyId": {
                       "type": "string",
@@ -13066,13 +13062,6 @@
                       "type": "object",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "DurableName": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "EventDateTime": {
                       "x-cipp-field-source": "frontend"
                     },
@@ -13084,16 +13073,9 @@
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "FunctionName": {
-                      "x-cipp-field-source": "backend"
-                    },
                     "id": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "Incident": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     },
                     "incidentId": {
                       "type": "string",
@@ -13118,10 +13100,6 @@
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "MdoAlert": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "mitreTechniques": {
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
@@ -13132,12 +13110,6 @@
                     "NewAlertsCount": {
                       "x-cipp-field-source": "backend"
                     },
-                    "OrchestratorName": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "productName": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
@@ -13146,15 +13118,6 @@
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "QueueFunction": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "QueueId": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "QueueMessage": {
-                      "x-cipp-field-source": "backend"
-                    },
                     "recommendedActions": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
@@ -13162,10 +13125,6 @@
                     "resolvedDateTime": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "RowKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     },
                     "serviceSource": {
                       "type": "object",
@@ -13187,9 +13146,6 @@
                     "SeverityMediumAlertsCount": {
                       "x-cipp-field-source": "backend"
                     },
-                    "SkipLog": {
-                      "x-cipp-field-source": "backend"
-                    },
                     "Status": {
                       "type": "object",
                       "x-cipp-field-source": "graph-entity,frontend"
@@ -13199,15 +13155,11 @@
                       "x-cipp-field-source": "graph-entity"
                     },
                     "Tenant": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage,frontend"
+                      "x-cipp-field-source": "frontend"
                     },
                     "tenantId": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "TenantParams": {
-                      "x-cipp-field-source": "backend"
                     },
                     "threatDisplayName": {
                       "type": "string",
@@ -13216,10 +13168,6 @@
                     "threatFamilyName": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     },
                     "Title": {
                       "type": "string",
@@ -26197,12 +26145,8 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the Microsoft Graph entity it queries, and the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
                   "properties": {
-                    "Alert": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "AssignedTo": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity,frontend"
@@ -26238,17 +26182,9 @@
                       "type": "string",
                       "x-cipp-field-source": "graph-entity,frontend"
                     },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "id": {
+                    "Id": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity,frontend"
-                    },
-                    "Incident": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     },
                     "IncidentUrl": {
                       "x-cipp-field-source": "frontend"
@@ -26265,15 +26201,8 @@
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "MdoAlert": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "Metadata": {
                       "x-cipp-field-source": "backend"
-                    },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
                     },
                     "priorityScore": {
                       "type": "integer",
@@ -26298,10 +26227,6 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     },
-                    "RowKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "Severity": {
                       "type": "object",
                       "x-cipp-field-source": "graph-entity,frontend"
@@ -26322,16 +26247,11 @@
                       "x-cipp-field-source": "frontend"
                     },
                     "Tenant": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage,frontend"
+                      "x-cipp-field-source": "frontend"
                     },
                     "tenantId": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     }
                   }
                 }
@@ -28621,7 +28541,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the Microsoft Graph entity it queries, and the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
                   "properties": {
                     "actorDisplayName": {
                       "type": "string",
@@ -28633,10 +28553,6 @@
                     },
                     "affectedResources": {
                       "x-cipp-field-source": "frontend"
-                    },
-                    "Alert": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     },
                     "alertPolicyId": {
                       "type": "string",
@@ -28690,10 +28606,6 @@
                       "type": "object",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "evidence": {
                       "type": "array",
                       "x-cipp-field-source": "graph-entity,frontend"
@@ -28705,10 +28617,6 @@
                     "id": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "Incident": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     },
                     "incidentId": {
                       "type": "string",
@@ -28730,19 +28638,12 @@
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "MdoAlert": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "Metadata": {
                       "x-cipp-field-source": "backend"
                     },
                     "mitreTechniques": {
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
                     },
                     "productName": {
                       "type": "string",
@@ -28763,10 +28664,6 @@
                     "Results": {
                       "x-cipp-field-source": "backend"
                     },
-                    "RowKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "serviceSource": {
                       "type": "object",
                       "x-cipp-field-source": "graph-entity,frontend"
@@ -28783,9 +28680,8 @@
                       "type": "array",
                       "x-cipp-field-source": "graph-entity"
                     },
-                    "Tenant": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage,frontend"
+                    "tenant": {
+                      "x-cipp-field-source": "frontend"
                     },
                     "tenantId": {
                       "type": "string",
@@ -28798,10 +28694,6 @@
                     "threatFamilyName": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     },
                     "title": {
                       "type": "string",
