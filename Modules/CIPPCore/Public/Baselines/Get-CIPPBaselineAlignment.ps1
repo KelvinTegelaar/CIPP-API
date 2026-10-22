@@ -531,7 +531,8 @@ function Get-CIPPBaselineAlignment {
         if (-not $FilterInfo) {
             try {
                 $TrendTable = Get-CippTable -tablename 'BaselineTrend'
-                $Cutoff = (Get-Date).ToUniversalTime().AddDays(-90).ToString('yyyy-MM-dd')
+                # 29 stored days plus today's live point: 30 points stay legible on the chart axis.
+                $Cutoff = (Get-Date).ToUniversalTime().AddDays(-29).ToString('yyyy-MM-dd')
                 $StandardTrendRows = @(Get-CIPPAzDataTableEntity @TrendTable -Filter ("PartitionKey ge 'standard_' and PartitionKey lt 'standard{0}' and RowKey ge '{1}' and RowKey lt '{2}'" -f [char]0x60, $Cutoff, $Today))
                 foreach ($Point in ($StandardTrendRows | Sort-Object -Property RowKey)) {
                     $StandardKey = "$($Point.PartitionKey)".Substring(9) -replace '~', '#'
