@@ -5,7 +5,8 @@ function Get-AlertContentHash {
     .DESCRIPTION
         Uses a priority list of fields (UserPrincipalName > Id > Message) to produce a
         deterministic identifier. Falls back to full sorted-JSON if none of the priority
-        fields exist. Returns both the hash and the raw key value used.
+        fields exist. Returns the hash, the raw key value used and the field it came from (KeyField,
+        null for the fallback).
     .FUNCTIONALITY
         Internal
     #>
@@ -30,11 +31,15 @@ function Get-AlertContentHash {
 
     # Priority field selection for stable hashing
     $RawKey = $null
+    $KeyField = $null
     if ($ItemHash.ContainsKey('UserPrincipalName') -and -not [string]::IsNullOrWhiteSpace($ItemHash['UserPrincipalName'])) {
+        $KeyField = 'UserPrincipalName'
         $RawKey = $ItemHash['UserPrincipalName'].ToString().Trim().ToLowerInvariant()
     } elseif ($ItemHash.ContainsKey('Id') -and -not [string]::IsNullOrWhiteSpace($ItemHash['Id'])) {
+        $KeyField = 'Id'
         $RawKey = $ItemHash['Id'].ToString().Trim().ToLowerInvariant()
     } elseif ($ItemHash.ContainsKey('Message') -and -not [string]::IsNullOrWhiteSpace($ItemHash['Message'])) {
+        $KeyField = 'Message'
         $RawKey = $ItemHash['Message'].ToString().Trim()
     }
 
@@ -61,6 +66,7 @@ function Get-AlertContentHash {
     return [PSCustomObject]@{
         ContentHash    = $ContentHash
         RawKey         = $RawKey
+        KeyField       = $KeyField
         ContentPreview = if ($RawKey.Length -gt 200) { $RawKey.Substring(0, 200) } else { $RawKey }
     }
 }

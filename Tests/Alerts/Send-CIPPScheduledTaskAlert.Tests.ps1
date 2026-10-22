@@ -145,6 +145,16 @@ Describe 'Send-CIPPScheduledTaskAlert - PSA snooze links' {
             $script:SentAlerts[0].HTMLContent | Should -Match 'Please review these accounts\.'
         }
 
+        It 'puts only the snooze key field in each link, not the whole item' {
+            $script:LinkTicketsToUsers = $false
+
+            Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+            $KeyOnly = [System.Web.HttpUtility]::UrlEncode('{"UserPrincipalName":"user1@contoso.com"}')
+            $script:SentAlerts[0].HTMLContent | Should -Match ([regex]::Escape("data=$KeyOnly&"))
+            $script:SentAlerts[0].HTMLContent | Should -Not -Match 'User\+One'
+        }
+
         It 'honours a per-task consolidated strategy over the global toggle' {
             $script:TaskInfo.PsaTicketStrategy = 'consolidated'
 

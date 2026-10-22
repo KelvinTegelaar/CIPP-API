@@ -97,6 +97,7 @@ function Get-CIPPAlertVulnerabilities {
                 $AffectedDevices = $Bucket.Devices -join ', '
 
                 $VulnerabilityAlert = [PSCustomObject]@{
+                    Id                   = $CveId
                     CVE                  = $CveId
                     Severity             = $FirstVuln.vulnerabilitySeverityLevel
                     FirstSeenTimestamp   = $FirstVuln.firstSeenTimestamp

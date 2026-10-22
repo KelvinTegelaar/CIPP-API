@@ -95,17 +95,20 @@ function Send-CIPPScheduledTaskAlert {
         try {
             $EncodedCmdlet = [System.Web.HttpUtility]::UrlEncode($CmdletName)
             $EncodedTenant = [System.Web.HttpUtility]::UrlEncode($Tenant)
-            $SnoozeLinksHtml = @'
+            $SnoozeLinksHtml = [System.Collections.Generic.List[string]]::new()
+            $SnoozeLinksHtml.Add(@'
 <div style="margin:20px 0;padding:20px;border-left:4px solid #ff9800;">
 <h4 style="margin-top:0;color:#ff9800;">Snooze Individual Alerts</h4>
 <p style="margin:0 0 12px;font-size:13px;">Click a button to snooze that specific alert item. You will need to be signed in to CIPP.</p>
-'@
+'@)
             foreach ($ResultItem in $Items) {
                 $HashResult = Get-AlertContentHash -AlertItem $ResultItem
                 $ItemPreview = [System.Web.HttpUtility]::HtmlEncode($HashResult.ContentPreview)
-                $EncodedData = [System.Web.HttpUtility]::UrlEncode(($ResultItem | ConvertTo-Json -Compress -Depth 5))
+                # The snooze hashes only the key field, so the link carries just that rather than the whole item
+                $LinkItem = if ($HashResult.KeyField) { @{ $HashResult.KeyField = $ResultItem.($HashResult.KeyField) } } else { $ResultItem }
+                $EncodedData = [System.Web.HttpUtility]::UrlEncode(($LinkItem | ConvertTo-Json -Compress -Depth 5))
                 $BaseLink = "${CIPPURL}/cipp/snooze-alert?cmdlet=${EncodedCmdlet}&tenant=${EncodedTenant}&data=${EncodedData}"
-                $SnoozeLinksHtml += @"
+                $SnoozeLinksHtml.Add(@"
 <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:12px;border-bottom:1px solid #e0e0e0;padding-bottom:12px;">
 <tr><td style="font-size:13px;padding:0 0 8px 0;font-weight:600;">$ItemPreview</td></tr>
 <tr><td style="padding:0;">
@@ -117,9 +120,10 @@ function Send-CIPPScheduledTaskAlert {
 </tr></table>
 </td></tr>
 </table>
-"@
+"@)
             }
-            return "$SnoozeLinksHtml</div>"
+            $SnoozeLinksHtml.Add('</div>')
+            return $SnoozeLinksHtml -join ''
         } catch {
             Write-Information "Failed to generate snooze links: $($_.Exception.Message)"
             return ''

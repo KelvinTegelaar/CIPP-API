@@ -50,6 +50,16 @@ Describe 'Get-CIPPAlertVulnerabilities' {
         $A.SoftwareName | Should -Be 'app-2026-02-01'
     }
 
+    It 'keys each row on its CVE, so the lifecycle sees the same item while its age and devices change' {
+        . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-AlertContentHash.ps1')
+        Get-CIPPAlertVulnerabilities -InputValue @{ VulnerabilityAgeHours = 0 } -TenantFilter 'contoso.com'
+        $Before = Get-AlertContentHash -AlertItem $script:Captured[0]
+        Mock Get-DefenderTvmRaw { New-TvmRecord 'CVE-A' 'PC9' '2026-01-01' }
+        Get-CIPPAlertVulnerabilities -InputValue @{ VulnerabilityAgeHours = 0 } -TenantFilter 'contoso.com'
+        $After = Get-AlertContentHash -AlertItem $script:Captured[0]
+        ($Before.KeyField, $After.ContentHash) | Should -Be @('Id', $Before.ContentHash)
+    }
+
     It 'applies the CVSS threshold to the earliest record' {
         Mock Get-DefenderTvmRaw { New-TvmRecord 'CVE-A' 'PC1' '2026-02-01' 5.0; New-TvmRecord 'CVE-A' 'PC2' '2026-03-01' 9.5 }
         Get-CIPPAlertVulnerabilities -InputValue @{ CVSSSeverity = @{ value = 'high' } } -TenantFilter 'contoso.com'
