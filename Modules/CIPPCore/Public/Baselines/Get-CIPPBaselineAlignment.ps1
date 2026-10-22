@@ -4,8 +4,12 @@ function Get-CIPPBaselineAlignment {
         Returns Baseline alignment data from the BaselineAlignment table.
     .DESCRIPTION
         Two view-shaped payloads per the Baseline contract:
-        - -TenantFilter: summary scores, resolved rows (with run history from
-          BaselineHistory), per-baseline stage states, and the deviation feed for one tenant.
+        - -TenantFilter: summary scores, resolved rows, per-baseline stage states, and the
+          deviation feed for one tenant. Run history is read separately with -History.
+        - -TenantFilter -History: run events newest-first, filtered in the table query by
+          -Since (unix seconds), -Standard / -Outcome / -Mode (any of the given values).
+          With -PageSize it returns one page and Metadata.nextLink (the last RowKey); pass that
+          back as -After for the next, older page. Without -PageSize it returns every match.
         - -ByStandard: fleet score, per-standard aggregates, per-tenant summaries, and the
           accepted/suppressed deviation list across all tenants.
     .PARAMETER BaselineId
@@ -25,6 +29,12 @@ function Get-CIPPBaselineAlignment {
         $TenantFilter,
         [switch]$ByStandard,
         [switch]$History,
+        [string[]]$Standard,
+        [string[]]$Outcome,
+        [string[]]$Mode,
+        [long]$Since,
+        [int]$PageSize,
+        [string]$After,
         [string]$BaselineId,
         [int]$Stage
     )
@@ -65,19 +75,92 @@ function Get-CIPPBaselineAlignment {
         $TemplateNameMaps[$MapKey]["$Id"]
     }
 
-    # Historic view: every recorded run event for the tenant, flattened and newest-first.
-    # History partitions are '<tenant>_<standard>', so a partition range scan covers them all.
+    # Historic view: run events for the tenant, newest-first. History partitions are
+    # '<tenant>_<standard>' with an inverted-ticks RowKey, so each partition already lists
+    # newest-first and a RowKey bound is a time bound.
     if ($TenantFilter -and $History) {
         $HistoryTable = Get-CippTable -tablename 'BaselineHistory'
         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
-        $Rows = Get-CIPPAzDataTableEntity @HistoryTable -Filter ("PartitionKey ge '{0}_' and PartitionKey lt '{0}{1}'" -f $SafeTenant, [char]0x60)
+        $DefinitionByName = @{}
+        foreach ($Definition in $Definitions) { $DefinitionByName["$($Definition.name)"] = $Definition }
+        $AnyOf = {
+            param($Property, $Values)
+            '({0})' -f (@(foreach ($Value in $Values) { "$Property eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $Value) }) -join ' or ')
+        }
+        $MaxTicks = [DateTime]::MaxValue.Ticks
+        $SinceKey = if ($Since) { '{0:D19}' -f ($MaxTicks - [DateTimeOffset]::FromUnixTimeSeconds($Since).UtcTicks) }
+        $Filters = @(
+            if ($Outcome) { & $AnyOf 'Outcome' $Outcome }
+            if ($Mode) { & $AnyOf 'Mode' $Mode }
+        )
+        # Inverted ticks: RowKey gt $Older is older than that key, RowKey lt $Newer is newer.
+        $Read = {
+            param($PartitionFilter, $Older, $Newer, $First)
+            $Query = @{
+                Filter = @(
+                    $PartitionFilter
+                    if ($Older) { "RowKey gt '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $Older) }
+                    if ($Newer) { "RowKey lt '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $Newer) }
+                    $Filters
+                ) -join ' and '
+            }
+            if ($First) { $Query.First = $First }
+            Get-CIPPAzDataTableEntity @HistoryTable @Query
+        }
+        $TenantRange = "PartitionKey ge '{0}_' and PartitionKey lt '{0}{1}'" -f $SafeTenant, [char]0x60
+        $Exhausted = $true
+        $Rows = if ($Standard) {
+            foreach ($Name in $Standard) {
+                $SafeHistoryPk = ConvertTo-CIPPODataFilterValue -Value ('{0}_{1}' -f $TenantFilter, ($Name -replace '#', '~'))
+                $PartitionRows = @(& $Read "PartitionKey eq '$SafeHistoryPk'" $After $SinceKey $PageSize)
+                if ($PageSize -and $PartitionRows.Count -ge $PageSize) { $Exhausted = $false }
+                $PartitionRows
+            }
+        } elseif (-not $PageSize) {
+            & $Read $TenantRange $After $SinceKey
+        } else {
+            # A RowKey bound is not indexed across partitions, but the service bills a slice by
+            # the rows it returns, so walk back from the cursor in widening slices until a page
+            # fills, sizing each from the density so far. The last slice is open-ended (or stops
+            # at -Since), so the walk terminates.
+            $CursorTicks = if ($After) { [long]$After.Substring(0, 19) } else { $MaxTicks - [DateTime]::UtcNow.Ticks }
+            $SliceStart = $After
+            $Hours = 24
+            $Collected = [System.Collections.Generic.List[object]]::new()
+            do {
+                $SliceEnd = '{0:D19}' -f ($CursorTicks + [TimeSpan]::FromHours($Hours).Ticks)
+                $LastSlice = $Hours -gt 24 * 180
+                if ($SinceKey -and ($LastSlice -or [string]::CompareOrdinal($SliceEnd, $SinceKey) -ge 0)) {
+                    $SliceEnd = $SinceKey
+                    $LastSlice = $true
+                } elseif ($LastSlice) {
+                    $SliceEnd = $null
+                }
+                foreach ($Row in @(& $Read $TenantRange $SliceStart $SliceEnd)) { $Collected.Add($Row) }
+                $SliceStart = $SliceEnd
+                $Hours = if ($Collected.Count) { [Math]::Max($Hours * 2, [Math]::Ceiling($PageSize * $Hours / $Collected.Count * 1.25)) } else { $Hours * 4 }
+            } until ($Collected.Count -ge $PageSize -or $LastSlice)
+            if (-not $LastSlice) { $Exhausted = $false }
+            $Collected
+        }
+        $Rows = @(@($Rows).Where({ $_ }) | Sort-Object -Property RowKey)
+        if ($PageSize -and $Rows.Count -gt $PageSize) {
+            $Rows = $Rows[0..($PageSize - 1)]
+            $Exhausted = $false
+        }
+        $NextLink = if (-not $Exhausted -and $Rows.Count) { $Rows[-1].RowKey }
         # Multi-instance standards share one definition label; the resolved rows carry
         # each instance's identity (task name / deployed template displayName), so
         # timeline events can show it too.
         $ManualLabels = @{}
-        foreach ($Resolved in @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant'")) {
+        $ResolvedFilter = if ($Standard) {
+            "PartitionKey eq '$SafeTenant' and {0}" -f (& $AnyOf 'StandardName' $Standard)
+        } else {
+            "PartitionKey eq '$SafeTenant'"
+        }
+        foreach ($Resolved in @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter $ResolvedFilter)) {
             $ResolvedBase = ("$($Resolved.StandardName)" -split '#')[0]
-            $ResolvedDefinition = $Definitions | Where-Object { $_.name -eq $ResolvedBase } | Select-Object -First 1
+            $ResolvedDefinition = $DefinitionByName[$ResolvedBase]
             $Suffix = $(try { ($Resolved.Manual | ConvertFrom-Json).taskName } catch { $null })
             if (-not $Suffix -and $ResolvedDefinition.instanceIdentity) {
                 $Suffix = $(try { ($Resolved.ExpectedValue | ConvertFrom-Json).displayName } catch { $null })
@@ -99,11 +182,9 @@ function Get-CIPPBaselineAlignment {
             if ($Suffix) { $ManualLabels[$Resolved.StandardName] = '{0} - {1}' -f ($ResolvedDefinition.label ?? $ResolvedBase), $Suffix }
         }
         $Events = foreach ($Row in $Rows) {
-            if (-not $Row) { continue }
             # Reverse the '#'->'~' key sanitization to recover the instance key.
             $StandardName = "$($Row.PartitionKey)".Substring($TenantFilter.Length + 1) -replace '~', '#'
-            $BaseName = ($StandardName -split '#')[0]
-            $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
+            $Definition = $DefinitionByName[($StandardName -split '#')[0]]
             [PSCustomObject]@{
                 timestamp     = $(if ($Row.Timestamp -is [System.DateTimeOffset]) { $Row.Timestamp.ToUnixTimeSeconds() } else { $Row.Timestamp })
                 standardName  = $StandardName
@@ -118,7 +199,7 @@ function Get-CIPPBaselineAlignment {
                 diff          = $(if ($Row.Diff) { try { $Row.Diff | ConvertFrom-Json } catch { $null } } else { $null })
             }
         }
-        return [PSCustomObject]@{ events = @($Events | Sort-Object -Property timestamp -Descending) }
+        return [PSCustomObject]@{ events = @($Events); Metadata = @{ nextLink = $NextLink } }
     }
 
     $ScoreRows = {
@@ -156,30 +237,6 @@ function Get-CIPPBaselineAlignment {
         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
         $Entities = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant'"
         $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions -ResolveTemplateName $ResolveTemplateName })
-
-        # Attach the last runs from history (§4.3 columns; RowKey is inverted ticks so the
-        # partition lists newest-first).
-        $HistoryTable = Get-CippTable -tablename 'BaselineHistory'
-        foreach ($Row in $Rows) {
-            # History partitions sanitize '#' to '~' (forbidden in Azure Table keys).
-            $SafeHistoryPk = ConvertTo-CIPPODataFilterValue -Value ('{0}_{1}' -f $TenantFilter, ($Row.standardName -replace '#', '~'))
-            $HistoryRows = Get-CIPPAzDataTableEntity @HistoryTable -Filter "PartitionKey eq '$SafeHistoryPk'" -First 5
-            $Row | Add-Member -NotePropertyName 'history' -NotePropertyValue @(
-                $HistoryRows | ForEach-Object {
-                    [PSCustomObject]@{
-                        runId       = $_.RunId
-                        timestamp   = $(if ($_.Timestamp -is [System.DateTimeOffset]) { $_.Timestamp.ToUnixTimeSeconds() } else { $_.Timestamp })
-                        mode        = $_.Mode
-                        triggeredBy = $_.TriggeredBy
-                        outcome     = $_.Outcome
-                        remediated  = [bool]$_.Remediated
-                        detail      = "$($_.Detail)"
-                        alerted     = [bool]$_.Alerted
-                        diff        = if ($_.Diff) { try { $_.Diff | ConvertFrom-Json } catch { $null } } else { $null }
-                    }
-                }
-            ) -Force
-        }
 
         # Stage states for every baseline assigned to this tenant.
         $TenantGroupNames = @()

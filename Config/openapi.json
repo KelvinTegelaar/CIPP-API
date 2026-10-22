@@ -44965,7 +44965,7 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Baseline alignment data. With ?tenantFilter= returns the tenant payload (summary,\nresolved rows with history, stage states, deviation feed); with\n?tenantFilter=&history=true returns the flattened run-event history; with\n?byStandard=true returns the aggregate payload (fleet score, per-standard rollups,\ntenant summaries, trend, and the accepted/denied deviation list). byStandard also\ntakes &baselineId=<GUID> to limit it to one baseline and &stage=<1-based stage number>\nto limit that further to one stage; filtered payloads carry a 'filter' object and a\ntrend of today's live point only.",
+        "description": "Baseline alignment data. With ?tenantFilter= returns the tenant payload (summary,\nresolved rows, stage states, deviation feed); with ?tenantFilter=&history=true\nreturns run events newest-first, filtered server-side by since, standard, outcome and\nmode; with &pageSize=<n> it returns one page plus Metadata.nextLink, which is passed back as\n&nextLink= for the next, older page; with\n?byStandard=true returns the aggregate payload (fleet score, per-standard rollups,\ntenant summaries, trend, and the accepted/denied deviation list). byStandard also\ntakes &baselineId=<GUID> to limit it to one baseline and &stage=<1-based stage number>\nto limit that further to one stage; filtered payloads carry a 'filter' object and a\ntrend of today's live point only.",
         "parameters": [
           {
             "name": "baselineId",
@@ -44992,11 +44992,65 @@
             }
           },
           {
+            "name": "mode",
+            "in": "query",
+            "description": "Comma-separated event types (run, compare, oneoff, triage, ...)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Paging cursor from the previous page's Metadata.nextLink",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "description": "Comma-separated outcomes (Compliant, Drift, Remediated, ...)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "Page size; the response then carries Metadata.nextLink for the next, older page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "description": "Only events at or after this time, in unix seconds",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "name": "stage",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer"
+            }
+          },
+          {
+            "name": "standard",
+            "in": "query",
+            "description": "Comma-separated standard names, instance keys included (ConditionalAccessTemplate#<id>)",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -45017,6 +45071,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
