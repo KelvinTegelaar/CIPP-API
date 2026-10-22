@@ -25,6 +25,7 @@ BeforeAll {
     function Get-GraphBulkResultByID { param($Results, $ID) }
     function Convert-AzureAdObjectIdToSid { param($ObjectID) }
     function Get-NormalizedError { param($Message) $Message }
+    function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Select, $useSystemMailbox) }
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Identity/Administration/Groups/Invoke-ListGroups.ps1'
     $EndpointScript = [ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $EndpointPath -Raw))
@@ -129,5 +130,65 @@ Describe 'Invoke-ListGroups report database branch' {
 
         $response.StatusCode | Should -Be 500
         "$($response.Body)" | Should -Match 'Sync the report data first'
+    }
+}
+
+Describe 'Invoke-ListGroups send permissions for one group' {
+    BeforeEach {
+        Mock -CommandName Convert-AzureAdObjectIdToSid -MockWith { 'S-1-12-1' }
+        Mock -CommandName New-ExoRequest -MockWith {
+            switch ($cmdlet) {
+                'Get-DistributionGroup' { [pscustomobject]@{ RequireSenderAuthenticationEnabled = $true; GrantSendOnBehalfTo = @('keep-guid') } }
+                'Get-RecipientPermission' {
+                    @(
+                        [pscustomobject]@{ Trustee = 'NT AUTHORITY\SELF'; AccessRights = @('SendAs') }
+                        [pscustomobject]@{ Trustee = 'boss@contoso.com'; AccessRights = @('SendAs') }
+                    )
+                }
+            }
+        }
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            @(
+                [pscustomobject]@{ id = 1; body = [pscustomobject]@{ id = 'group-guid'; displayName = 'All Office'; mail = 'all@contoso.com'; mailEnabled = $true; securityEnabled = $false; groupTypes = @() } }
+                [pscustomobject]@{ id = 4; body = [pscustomobject]@{ value = @([pscustomobject]@{ id = 'keep-guid'; displayName = 'Keep'; userPrincipalName = 'keep@contoso.com' }) } }
+            )
+        }
+    }
+
+    It 'returns Send As trustees without the built-in SELF entry and resolves Send on Behalf ids' {
+        $response = Invoke-ListGroups -Request (New-GroupsRequest -Query @{
+                tenantFilter = 'contoso.com'; groupID = 'group-guid'; groupType = 'Distribution List'; sendPermissions = 'true'
+            }) -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 200
+        @($response.Body.sendAs.Trustee) | Should -Be @('boss@contoso.com')
+        # One holder must still be an array: the edit page maps over it
+        $response.Body.sendOnBehalf -is [array] | Should -BeTrue
+        $response.Body.sendOnBehalf[0].userPrincipalName | Should -Be 'keep@contoso.com'
+        Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter {
+            ($Requests | Where-Object { $_.id -eq 4 }).body.ids -contains 'keep-guid'
+        }
+    }
+
+    It 'skips the permission lookups unless sendPermissions is asked for' {
+        $response = Invoke-ListGroups -Request (New-GroupsRequest -Query @{
+                tenantFilter = 'contoso.com'; groupID = 'group-guid'; groupType = 'Distribution List'
+            }) -TriggerMetadata $null
+
+        $response.Body.sendAs | Should -BeNullOrEmpty
+        Should -Invoke New-ExoRequest -Times 0 -Exactly -ParameterFilter { $cmdlet -eq 'Get-RecipientPermission' }
+        Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter { -not ($Requests | Where-Object { $_.id -eq 4 }) }
+    }
+
+    It 'still returns the group when the Send As lookup fails' {
+        Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-RecipientPermission' } -MockWith { throw 'Exchange is unavailable' }
+        Mock -CommandName Write-Warning -MockWith { }
+
+        $response = Invoke-ListGroups -Request (New-GroupsRequest -Query @{
+                tenantFilter = 'contoso.com'; groupID = 'group-guid'; groupType = 'Distribution List'; sendPermissions = 'true'
+            }) -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 200
+        $response.Body.groupInfo.displayName | Should -Be 'All Office'
     }
 }

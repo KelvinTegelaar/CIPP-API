@@ -17,6 +17,8 @@ function Invoke-ListGroups {
     $Members = $Request.Query.members -eq $true
     # Return the owners of the group named by groupID instead of the group list. Requires groupID.
     $Owners = $Request.Query.owners -eq $true
+    # Return who holds Send As and Send on Behalf on the group named by groupID. Mail-enabled groups only.
+    $SendPermissions = $Request.Query.sendPermissions -eq $true
 
     # Expand each listed group's members inline. Graph allows only one expand, and members wins over owners.
     $ExpandMembers = $Request.Query.expandMembers -eq $true
@@ -120,14 +122,49 @@ function Invoke-ListGroups {
         }
     }
 
+    $SendOnBehalfIds = @()
     if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
         # get the outside the organization RequireSenderAuthenticationEnabled setting
-        $OnlyAllowInternal = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled' -useSystemMailbox $true | Select-Object -ExpandProperty RequireSenderAuthenticationEnabled
+        $DistributionGroupInfo = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,GrantSendOnBehalfTo' -useSystemMailbox $true
+        $OnlyAllowInternal = $DistributionGroupInfo.RequireSenderAuthenticationEnabled
+        $SendOnBehalfIds = @($DistributionGroupInfo.GrantSendOnBehalfTo | Where-Object { $_ })
     } elseif ($GroupType -eq 'Microsoft 365') {
-        $UnifiedGroupInfo = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,subscriptionEnabled,AutoSubscribeNewMembers,HiddenFromExchangeClientsEnabled' -useSystemMailbox $true
+        $UnifiedGroupInfo = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,subscriptionEnabled,AutoSubscribeNewMembers,HiddenFromExchangeClientsEnabled,GrantSendOnBehalfTo' -useSystemMailbox $true
         $OnlyAllowInternal = $UnifiedGroupInfo.RequireSenderAuthenticationEnabled
+        $SendOnBehalfIds = @($UnifiedGroupInfo.GrantSendOnBehalfTo | Where-Object { $_ })
     } else {
         $OnlyAllowInternal = $null
+    }
+
+    $IsMailEnabledGroup = $GroupType -in @('Distribution List', 'Mail-Enabled Security', 'Microsoft 365')
+    $SendAs = $null
+    $SendOnBehalf = $null
+    if ($SendPermissions -and $GroupID -and $IsMailEnabledGroup) {
+        # A failed lookup must not take the rest of the edit page down with it
+        try {
+            $SendAs = @(
+                New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-RecipientPermission' -cmdParams @{ Identity = $GroupID } -Select 'Trustee,AccessRights' -ErrorAction Stop |
+                    Where-Object { $_.AccessRights -contains 'SendAs' -and $_.Trustee -and $_.Trustee -notlike 'NT AUTHORITY\*' } |
+                    ForEach-Object { [PSCustomObject]@{ Trustee = $_.Trustee } } |
+                    Sort-Object Trustee
+            )
+        } catch {
+            Write-Warning "Could not read Send As permissions for group $($GroupID): $($_.Exception.Message)"
+        }
+        if ($SendOnBehalfIds.Count -gt 0) {
+            # GrantSendOnBehalfTo holds directory object ids; resolved alongside the other bulk lookups
+            $BulkRequestArrayList.add(@{
+                    id      = 4
+                    method  = 'POST'
+                    url     = 'directoryObjects/getByIds'
+                    body    = @{
+                        ids = @($SendOnBehalfIds)
+                    }
+                    headers = @{
+                        'Content-Type' = 'application/json'
+                    }
+                })
+        }
     }
 
     if ($GroupType -eq 'Microsoft 365') {
@@ -139,6 +176,10 @@ function Invoke-ListGroups {
     try {
         if ($BulkRequestArrayList.Count -gt 0) {
             $RawGraphRequest = New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($BulkRequestArrayList) -asapp $true
+            # Assigned outside the object so a single holder still serialises as an array
+            if ($SendPermissions -and $IsMailEnabledGroup) {
+                $SendOnBehalf = @(($RawGraphRequest | Where-Object { $_.id -eq 4 }).body.value | Where-Object { $_ } | Select-Object id, displayName, userPrincipalName, mail | Sort-Object displayName)
+            }
             $GraphRequest = [PSCustomObject]@{
                 groupInfo              = ($RawGraphRequest | Where-Object { $_.id -eq 1 }).body | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
                 @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true } else { $false } } },
@@ -162,6 +203,8 @@ function Invoke-ListGroups {
                 allowExternal          = (!$OnlyAllowInternal)
                 sendCopies             = $SendCopies
                 hideFromOutlookClients = if ($GroupType -eq 'Microsoft 365') { $UnifiedGroupInfo.HiddenFromExchangeClientsEnabled } else { $null }
+                sendAs                 = $SendAs
+                sendOnBehalf           = $SendOnBehalf
                 SID                    = (Convert-AzureAdObjectIdToSid -ObjectID $((($RawGraphRequest | Where-Object { $_.id -eq 1 }).body).id))
             }
         } else {
