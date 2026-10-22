@@ -121,7 +121,7 @@ function Invoke-HuduExtensionSync {
                         @{ Label = 'Email Address'; Position = 1; ShowInList = $true; FieldType = 'Text' }
                         @{ Label = 'Licenses'; Position = 2; FieldType = 'Text' }
                     )) {
-                    # The layout is fetched again only when a field was added or moved
+                    # The layout is fetched again only when a field was added or changed
                     $LayoutAfter = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -AssetLayout $PeopleLayout @RequiredField
                     if (-not [object]::ReferenceEquals($LayoutAfter, $PeopleLayout)) { $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId }
                 }
@@ -158,7 +158,7 @@ function Invoke-HuduExtensionSync {
                 [void]$RequiredDeviceLayoutFields.Add(@{ Label = 'Microsoft 365'; FieldType = 'RichText'; Position = $(if ($Configuration.IncludeLAPS) { 3 } else { 0 }) })
                 foreach ($RequiredField in $RequiredDeviceLayoutFields) {
                     $CurrentField = $DesktopsLayout.fields | Where-Object { $_.label -eq $RequiredField.Label } | Select-Object -First 1
-                    if (-not $CurrentField -or [string]$CurrentField.field_type -ne $RequiredField.FieldType -or [int]$CurrentField.position -ne [int]$RequiredField.Position) {
+                    if (-not $CurrentField -or [string]$CurrentField.field_type -ne $RequiredField.FieldType) {
                         $null = Add-HuduAssetLayoutField -AssetLayoutId $DeviceLayoutId -Label $RequiredField.Label -FieldType $RequiredField.FieldType -Position $RequiredField.Position -AssetLayout $DesktopsLayout
                         $DeviceLayoutFieldsAdded = $true
                         $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId

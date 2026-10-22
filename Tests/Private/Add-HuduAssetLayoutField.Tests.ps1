@@ -37,23 +37,61 @@ Describe 'Hudu layout field normalization' {
 
         Add-HuduAssetLayoutField -AssetLayoutId 10 -Label 'LAPS Account' -FieldType 'Email' -Position 0
 
-        $script:SentFields[0].id | Should -Be 10
-        $script:SentFields[0].custom_option | Should -Be 'preserve-me'
-        $script:SentFields[0].field_type | Should -Be 'Email'
+        $Account = $script:SentFields | Where-Object { $_.label -eq 'LAPS Account' }
+        $Account.id | Should -Be 10
+        $Account.custom_option | Should -Be 'preserve-me'
+        $Account.field_type | Should -Be 'Email'
     }
 
-    It 'moves the LAPS account above the password and makes it copyable' {
+    It 'fixes the type of an existing field without moving it' {
         $script:Layout = @{ fields = @(
             [PSCustomObject]@{ id = 1; label = 'LAPS Password'; position = 0; field_type = 'Password'; show_in_list = $false }
             [PSCustomObject]@{ id = 2; label = 'LAPS Account'; position = 1; field_type = 'Text'; show_in_list = $false }
         ) }
         Add-HuduAssetLayoutField -AssetLayoutId 10 -Label 'LAPS Account' -FieldType Email -Position 0
-        $script:SentFields[0].label | Should -Be 'LAPS Account'
-        $script:SentFields[0].field_type | Should -Be 'Email'
-        $script:SentFields[1].label | Should -Be 'LAPS Password'
+        $script:SentFields[0].label | Should -Be 'LAPS Password'
+        $script:SentFields[1].label | Should -Be 'LAPS Account'
+        $script:SentFields[1].field_type | Should -Be 'Email'
     }
 
-    It 'migrates credential fields, preserves custom layout data, and is idempotent' {
+    It 'adds missing CIPP fields in order above the existing fields on first sync' {
+        $script:Layout = @{ fields = @(
+            [PSCustomObject]@{ id = 1; label = 'Serial'; position = 0; field_type = 'Text'; show_in_list = $false }
+            [PSCustomObject]@{ id = 2; label = 'Warranty'; position = 1; field_type = 'Date'; show_in_list = $false }
+        ) }
+        foreach ($Field in @(
+                @{ Label = 'LAPS Account'; FieldType = 'Email'; Position = 0 }
+                @{ Label = 'LAPS Password'; FieldType = 'Password'; Position = 1 }
+                @{ Label = 'LAPS Backup Date'; FieldType = 'Text'; Position = 2 }
+                @{ Label = 'Microsoft 365'; FieldType = 'RichText'; Position = 3 }
+            )) { Add-HuduAssetLayoutField -AssetLayoutId 10 @Field }
+        ($script:Layout.fields | Sort-Object position).label | Should -Be @('LAPS Account', 'LAPS Password', 'LAPS Backup Date', 'Microsoft 365', 'Serial', 'Warranty')
+    }
+
+    It 'leaves CIPP fields where the partner moved them' {
+        $script:SentFields = $null
+        $script:Layout = @{ fields = @(
+            [PSCustomObject]@{ id = 1; label = 'Serial'; position = 0; field_type = 'Text'; show_in_list = $false }
+            [PSCustomObject]@{ id = 2; label = 'Warranty'; position = 1; field_type = 'Date'; show_in_list = $false }
+            [PSCustomObject]@{ id = 3; label = 'Microsoft 365'; position = 2; field_type = 'RichText'; show_in_list = $false }
+            [PSCustomObject]@{ id = 4; label = 'LAPS Password'; position = 3; field_type = 'Password'; show_in_list = $false }
+        ) }
+        Add-HuduAssetLayoutField -AssetLayoutId 10 -Label 'Microsoft 365' -FieldType RichText -Position 0
+        Add-HuduAssetLayoutField -AssetLayoutId 10 -Label 'LAPS Password' -FieldType Password -Position 1
+        $script:SentFields | Should -BeNullOrEmpty
+    }
+
+    It 'keeps the relative order when an existing field sits between non-contiguous positions' {
+        $script:Layout = @{ fields = @(
+            [PSCustomObject]@{ id = 1; label = 'Serial'; position = 0; field_type = 'Text'; show_in_list = $false }
+            [PSCustomObject]@{ id = 2; label = 'LAPS Account'; position = 4; field_type = 'Text'; show_in_list = $false }
+            [PSCustomObject]@{ id = 3; label = 'Site Notes'; position = 9; field_type = 'Text'; show_in_list = $false }
+        ) }
+        Add-HuduAssetLayoutField -AssetLayoutId 10 -Label 'LAPS Account' -FieldType Email -Position 0
+        $script:SentFields.label | Should -Be @('Serial', 'LAPS Account', 'Site Notes')
+    }
+
+    It 'adds credential fields, fixes types in place, preserves custom layout data, and is idempotent' {
         $script:Layout = @{ fields = @(
             [PSCustomObject]@{ id = 1; label = 'LAPS Password'; position = 0; field_type = 'Password'; show_in_list = $false }
             [PSCustomObject]@{ id = 2; label = 'LAPS Account'; position = 1; field_type = 'Text'; show_in_list = $false }
@@ -72,9 +110,9 @@ Describe 'Hudu layout field normalization' {
         )
         foreach ($Field in $DesiredFields) { Add-HuduAssetLayoutField -AssetLayoutId 10 @Field }
 
-        $script:Layout.fields[0].label | Should -Be 'LAPS Account'
-        $script:Layout.fields[0].field_type | Should -Be 'Email'
-        $script:Layout.fields[1].label | Should -Be 'LAPS Password'
+        $script:Layout.fields[0].label | Should -Be 'LAPS Password'
+        $script:Layout.fields[1].label | Should -Be 'LAPS Account'
+        $script:Layout.fields[1].field_type | Should -Be 'Email'
         $script:Layout.fields[2].label | Should -Be 'LAPS Backup Date'
         $script:Layout.fields.label | Should -Contain 'BitLocker OS Drive 1 Key ID'
         $script:Layout.fields.label | Should -Contain 'BitLocker OS Drive 1 Recovery Key'
