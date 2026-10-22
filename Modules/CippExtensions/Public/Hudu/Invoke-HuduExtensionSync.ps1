@@ -95,6 +95,23 @@ function Invoke-HuduExtensionSync {
         $PeopleLayoutId = $Mappings | Where-Object { $_.RowKey -eq 'Users' } | Select-Object -ExpandProperty IntegrationId
         $DeviceLayoutId = $Mappings | Where-Object { $_.RowKey -eq 'Devices' } | Select-Object -ExpandProperty IntegrationId
 
+        # Company assets with archived ones included, so an archived copy blocks re-creation.
+        # HuduAPI reports a failed page as a non-terminating error and returns nothing; Stop makes a partial list throw.
+        $GetHuduPeople = {
+            @(
+                Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id -ErrorAction Stop
+                Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id -Archived -ErrorAction Stop
+            ) | Where-Object { $_ } | Sort-Object -Property id -Unique
+        }
+        $GetHuduDevices = {
+            @(
+                Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id -ErrorAction Stop
+                Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id -Archived -ErrorAction Stop
+            ) | Where-Object { $_ } | Sort-Object -Property id -Unique
+        }
+        # Once Hudu holds assets, creating more than half the source records in one run means matching has failed.
+        $CreateLimit = { param($ExistingCount, $SourceCount) if ($ExistingCount -gt 0) { [Math]::Max(10, [Math]::Floor($SourceCount / 2)) } else { [int]::MaxValue } }
+
         try {
             if (![string]::IsNullOrEmpty($PeopleLayoutId)) {
                 # Add required fields to People Layout
@@ -110,8 +127,7 @@ function Invoke-HuduExtensionSync {
                 }
                 $CreateUsers = $Configuration.CreateMissingUsers
                 if ($PeopleLayout.id) {
-                    $PeopleArray = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
-                    $People = [System.Collections.Generic.List[object]]::new([object[]]@($PeopleArray))
+                    $People = [System.Collections.Generic.List[object]]::new([object[]]@(& $GetHuduPeople))
                 } else {
                     $CreateUsers = $false
                     $People = [System.Collections.Generic.List[object]]::new()
@@ -153,8 +169,7 @@ function Invoke-HuduExtensionSync {
                 }
                 $CreateDevices = $Configuration.CreateMissingDevices
                 if ($DesktopsLayout.id) {
-                    $HuduDesktopDevices = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
-                    $HuduDevices = [System.Collections.Generic.List[object]]::new([object[]]@($HuduDesktopDevices))
+                    $HuduDevices = [System.Collections.Generic.List[object]]::new([object[]]@(& $GetHuduDevices))
                 } else {
                     $CreateDevices = $false
                     $HuduDevices = [System.Collections.Generic.List[object]]::new()
@@ -170,24 +185,37 @@ function Invoke-HuduExtensionSync {
             Write-Host "Hudu Devices - Error: $_"
         }
 
-        # Hudu people by the addresses they can match: Email Address field values, primary_mail and ConnectWise Manage email.
+        # Hudu people by the addresses they can match: Email Address field values, primary_mail, and ConnectWise Manage and Halo contact emails.
         $PersonKeys = {
             param($Person, [switch]$NoEmailField)
             if (-not $NoEmailField -and $Person.fields.label -eq 'Email Address') { $Person.fields.value }
             $Person.primary_mail
             if ($Person.cards.integrator_name -eq 'cw_manage' -and $Person.cards.data.communicationItems.communicationType -eq 'Email') { $Person.cards.data.communicationItems.value }
+            @($Person.cards | Where-Object { $_.integrator_name -eq 'halo' }).data.emailaddress | Where-Object { $_ }
         }
-        $PeopleByEmail = [CIPP.CippIndex]::Build($People, @(foreach ($Person in $People) { , ((& $PersonKeys $Person) ?? $null) }))
-        $PeopleByEmailNoField = [CIPP.CippIndex]::Build($People, @(foreach ($Person in $People) { , ((& $PersonKeys $Person -NoEmailField) ?? $null) }))
+        # Halo contacts carry the Entra object id, which matches even when the contact's email differs from the UPN.
+        $PersonObjectIds = { param($Person) @($Person.cards | Where-Object { $_.integrator_name -eq 'halo' }).data.azureoid | Where-Object { $_ } }
+        # Dot-sourced so the indexes land in this scope, both here and after a refetch.
+        $IndexPeople = {
+            $PeopleByObjectId = [CIPP.CippIndex]::Build($People, @(foreach ($IndexedPerson in $People) { , ((& $PersonObjectIds $IndexedPerson) ?? $null) }))
+            $PeopleByEmail = [CIPP.CippIndex]::Build($People, @(foreach ($IndexedPerson in $People) { , ((& $PersonKeys $IndexedPerson) ?? $null) }))
+            $PeopleByEmailNoField = [CIPP.CippIndex]::Build($People, @(foreach ($IndexedPerson in $People) { , ((& $PersonKeys $IndexedPerson -NoEmailField) ?? $null) }))
+        }
+        . $IndexPeople
         $AddPerson = {
             param($Person)
             $People.Add($Person)
             foreach ($Key in @(& $PersonKeys $Person)) { $PeopleByEmail.AddItem($Key, $Person) }
             foreach ($Key in @(& $PersonKeys $Person -NoEmailField)) { $PeopleByEmailNoField.AddItem($Key, $Person) }
+            foreach ($Key in @(& $PersonObjectIds $Person)) { $PeopleByObjectId.AddItem($Key, $Person) }
         }
         $MatchPeople = {
-            param($Upn, [switch]$NoEmailField)
-            if ([string]::IsNullOrEmpty($Upn)) {
+            param($Upn, [switch]$NoEmailField, [switch]$IncludeArchived, $UserId)
+            $ByObjectId = if (-not [string]::IsNullOrEmpty($UserId)) { $PeopleByObjectId.Find($UserId) }
+            # The object id wins only with an active match; an archived one falls back to email and still blocks creation.
+            $Found = if ($ByObjectId | Where-Object { -not $_.archived }) {
+                $ByObjectId
+            } elseif ([string]::IsNullOrEmpty($Upn)) {
                 # An empty address can match people by their own empty values, which only the full filter gets right
                 $People | Where-Object { (-not $NoEmailField -and $_.fields.label -eq 'Email Address' -and $_.fields.value -eq $Upn) -or $_.primary_mail -eq $Upn -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Upn) }
             } elseif ($NoEmailField) {
@@ -195,11 +223,17 @@ function Invoke-HuduExtensionSync {
             } else {
                 $PeopleByEmail.Find($Upn)
             }
+            if (-not $Found) { $Found = $ByObjectId }
+            # Archived people only block creation; they are never updated or related.
+            if ($IncludeArchived) { $Found } else { $Found | Where-Object { -not $_.archived } }
         }
 
-        $HuduDeviceKeys = @(foreach ($HuduDevice in $HuduDevices) { Get-HuduDeviceMatchKey -HuduDevice $HuduDevice })
-        $HuduDevicesBySerial = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $HuduDeviceKeys) { , $Key.Serial }))
-        $HuduDevicesByName = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $HuduDeviceKeys) { , $Key.Name }))
+        $IndexHuduDevices = {
+            $HuduDeviceKeys = @(foreach ($IndexedDevice in $HuduDevices) { Get-HuduDeviceMatchKey -HuduDevice $IndexedDevice })
+            $HuduDevicesBySerial = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $HuduDeviceKeys) { , $Key.Serial }))
+            $HuduDevicesByName = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $HuduDeviceKeys) { , $Key.Name }))
+        }
+        . $IndexHuduDevices
 
         $importDomains = $Configuration.ImportDomains
         $monitordomains = $Configuration.MonitorDomains
@@ -635,6 +669,9 @@ function Invoke-HuduExtensionSync {
             # Permissions are found by list position so a row matching several of a mailbox's identities is listed once, in order
             $PermissionList = @($Permissions)
             $PermissionPositionsByIdentity = [CIPP.CippIndex]::Build([object[]]@(for ($p = 0; $p -lt $PermissionList.Count; $p++) { $p }), @(foreach ($Perm in $PermissionList) { , ($($Perm.Identity) ?? $null) }))
+            $UsersCreated = 0
+            $PeopleRefreshed = $false
+            $MaxUserCreates = & $CreateLimit $People.Count @($licensedUsers).Count
             $OutputUsers = foreach ($user in $licensedUsers) {
                 try {
                     $HuduUser = $null
@@ -728,7 +765,23 @@ function Invoke-HuduExtensionSync {
 
 
 
-                    $HuduUser = & $MatchPeople $user.userPrincipalName
+                    $HuduUser = & $MatchPeople $user.userPrincipalName -UserId $user.id -IncludeArchived
+                    if (-not $HuduUser -and $CreateUsers -eq $true -and -not $PeopleRefreshed) {
+                        # Refetch once before the first create, so a stale or partial list cannot create duplicates.
+                        $PeopleRefreshed = $true
+                        try {
+                            $People = [System.Collections.Generic.List[object]]::new([object[]]@(& $GetHuduPeople))
+                            . $IndexPeople
+                            $MaxUserCreates = & $CreateLimit $People.Count @($licensedUsers).Count
+                            $HuduUser = & $MatchPeople $user.userPrincipalName -UserId $user.id -IncludeArchived
+                            if ($HuduUser) { $CompanyResult.Logs.Add("Found existing $($User.displayName) in Hudu after refreshing people, not creating a new person") }
+                        } catch {
+                            $CreateUsers = $false
+                            [void]$CompanyResult.Errors.Add("Company: Unable to refresh People before creating, no people were created: $_")
+                        }
+                    }
+                    $UserBlockedByArchive = [bool]$HuduUser -and -not ($HuduUser | Where-Object { -not $_.archived })
+                    $HuduUser = $HuduUser | Where-Object { -not $_.archived }
 
                     $PsaLinks = $null
                     if ($HuduUser) {
@@ -784,9 +837,16 @@ function Invoke-HuduExtensionSync {
                             }
 
                         } elseif ($HuduUserCount -eq 0) {
-                            if ($CreateUsers -eq $true) {
+                            if ($UserBlockedByArchive) {
+                                $CompanyResult.Logs.Add("Skipping $($User.displayName), they match an archived person in Hudu")
+                            } elseif ($CreateUsers -eq $true -and $UsersCreated -ge $MaxUserCreates) {
+                                $CreateUsers = $false
+                                [void]$CompanyResult.Errors.Add("Company: Stopped creating people after $UsersCreated new assets this run (limit $MaxUserCreates). Check Hudu for duplicate people before the next sync.")
+                            }
+                            if ($CreateUsers -eq $true -and -not $UserBlockedByArchive) {
                                 $CompanyResult.Logs.Add("Creating $($User.displayName) in Hudu")
                                 $CreateHuduUser = (New-HuduAsset -Name $User.displayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields (& $UserAssetFields)).asset
+                                $UsersCreated++
                                 if (!$CreateHuduUser) {
                                     $CompanyResult.Errors.add("User $($User.userPrincipalName): Unable to create user in Hudu. Check the User asset fields for 'Email Address'")
                                 } else {
@@ -828,6 +888,9 @@ function Invoke-HuduExtensionSync {
         if (![string]::IsNullOrEmpty($DeviceLayoutId)) {
             $CompanyResult.Logs.Add('Starting Device Processing')
             Write-Information "### Processing Devices for $($Tenant.defaultDomainName)"
+            $DevicesCreated = 0
+            $DevicesRefreshed = $false
+            $MaxDeviceCreates = & $CreateLimit $HuduDevices.Count @($Devices).Count
             foreach ($Device in $Devices) {
                 try {
                     $DevicePoliciesTable = foreach ($Policy in $DeviceComplianceDetails) {
@@ -888,6 +951,36 @@ function Invoke-HuduExtensionSync {
                 $DeviceAppsFormatted = $DeviceAppsTable | ConvertTo-Html -Fragment | Out-String
 #>
                     $HuduDevice = Find-HuduDeviceMatch -Device $Device -HuduDevices $HuduDevices -ExcludeSerials $ExcludeSerials -SerialIndex $HuduDevicesBySerial -NameIndex $HuduDevicesByName
+
+                    if ($device.deviceType -in $IntuneDesktopDeviceTypes) {
+                        $CreateLayoutId = $DesktopsLayout.id
+                        $DeviceCreation = $CreateDevices
+                    } else {
+                        $CreateLayoutId = $MobilesLayout.id
+                        $DeviceCreation = $CreateMobileDevices
+                    }
+                    if (-not $HuduDevice -and $DeviceCreation -eq $true -and -not $DevicesRefreshed) {
+                        # Refetch once before the first create, so a stale or partial list cannot create duplicates.
+                        $DevicesRefreshed = $true
+                        try {
+                            $HuduDevices = [System.Collections.Generic.List[object]]::new([object[]]@(& $GetHuduDevices))
+                            . $IndexHuduDevices
+                            $MaxDeviceCreates = & $CreateLimit $HuduDevices.Count @($Devices).Count
+                            $HuduDevice = Find-HuduDeviceMatch -Device $Device -HuduDevices $HuduDevices -ExcludeSerials $ExcludeSerials -SerialIndex $HuduDevicesBySerial -NameIndex $HuduDevicesByName
+                            if ($HuduDevice) { $CompanyResult.Logs.Add("Found existing $($Device.deviceName) in Hudu after refreshing devices, not creating it") }
+                        } catch {
+                            $CreateDevices = $false
+                            $DeviceCreation = $false
+                            [void]$CompanyResult.Errors.Add("Company: Unable to refresh Devices before creating, no devices were created: $_")
+                        }
+                    }
+                    # Archived matches only block creation; they are never written to.
+                    $ActiveHuduDevice = $HuduDevice | Where-Object { -not $_.archived }
+                    if ($HuduDevice -and -not $ActiveHuduDevice) {
+                        $CompanyResult.Logs.Add("Skipping $($Device.deviceName), it matches an archived asset in Hudu")
+                        continue
+                    }
+                    $HuduDevice = $ActiveHuduDevice
 
                     $RmmLinks = [System.Collections.Generic.List[object]]::new()
                     if ($HuduDevice) {
@@ -1082,7 +1175,7 @@ function Invoke-HuduExtensionSync {
                                 }
 
                                 if (![string]::IsNullOrEmpty($Device.userPrincipalName)) {
-                                    $RelHuduUser = & $MatchPeople $Device.userPrincipalName
+                                    $RelHuduUser = & $MatchPeople $Device.userPrincipalName -UserId $Device.userId
 
                                     if ($RelHuduUser) {
                                         # Add() is false when the pair was already related or tried earlier in this run
@@ -1101,16 +1194,16 @@ function Invoke-HuduExtensionSync {
                                 $CompanyResult.Errors.add("Device $($HuduDevice.name): Multiple devices matched on name or serial ($($device.serialNumber -join ', '))")
                             }
                         } else {
-                            if ($device.deviceType -in $IntuneDesktopDeviceTypes) {
-                                $CreateLayoutId = $DesktopsLayout.id
-                                $DeviceCreation = $CreateDevices
-                            } else {
-                                $CreateLayoutId = $MobilesLayout.id
-                                $DeviceCreation = $CreateMobileDevices
+                            if ($DeviceCreation -eq $true -and $DevicesCreated -ge $MaxDeviceCreates) {
+                                $CreateDevices = $false
+                                $CreateMobileDevices = $false
+                                $DeviceCreation = $false
+                                [void]$CompanyResult.Errors.Add("Company: Stopped creating devices after $DevicesCreated new assets this run (limit $MaxDeviceCreates). Check Hudu for duplicate devices before the next sync.")
                             }
                             if ($DeviceCreation -eq $true) {
                                 $CompanyResult.Logs.Add("Creating $($device.deviceName) in Hudu")
                                 $CreateHuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $CreateLayoutId -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
+                                $DevicesCreated++
 
                                 if (!$CreateHuduDevice) {
                                     $CompanyResult.Errors.add("Device $($device.deviceName): Failed to create device in Hudu, check your device asset fields for 'Primary Serial'.")
@@ -1130,7 +1223,7 @@ function Invoke-HuduExtensionSync {
                                     foreach ($Key in $NewKeys.Serial) { $HuduDevicesBySerial.AddItem($Key, $CreateHuduDevice) }
                                     foreach ($Key in $NewKeys.Name) { $HuduDevicesByName.AddItem($Key, $CreateHuduDevice) }
 
-                                    $RelHuduUser = & $MatchPeople $Device.userPrincipalName -NoEmailField
+                                    $RelHuduUser = & $MatchPeople $Device.userPrincipalName -UserId $Device.userId -NoEmailField
                                     if ($RelHuduUser) {
                                         try {
                                             $null = New-HuduRelation -FromableType 'Asset' -FromableID $RelHuduUser.id -ToableType 'Asset' -ToableID $CreateHuduDevice.id -ea stop
