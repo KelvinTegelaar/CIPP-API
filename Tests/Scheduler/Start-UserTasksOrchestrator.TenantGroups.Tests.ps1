@@ -351,3 +351,37 @@ Describe 'Start-UserTasksOrchestrator tenant scope resolution' {
         $Scoped | Should -Not -Contain 'd.onmicrosoft.com'
     }
 }
+
+Describe 'Start-UserTasksOrchestrator pickup state' {
+    # The table service matches the pickup filter per physical row, so a split task whose part row
+    # still carries an old TaskState is returned even though the reassembled task is not runnable.
+    BeforeEach {
+        $script:StartedBatches = [System.Collections.Generic.List[object]]::new()
+        Mock -CommandName Get-CippTable -MockWith { @{ Context = 'stub' } }
+        Mock -CommandName Update-AzDataTableEntity -MockWith { }
+        Mock -CommandName Get-CIPPScheduledTaskNextRun -MockWith { 0 }
+        Mock -CommandName New-CippQueueEntry -MockWith { [pscustomobject]@{ RowKey = 'queue-1' } }
+        Mock -CommandName Get-Tenants -MockWith { New-TenantList }
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Start-CIPPOrchestrator -MockWith {
+            foreach ($Item in @($InputObject.Batch)) { $script:StartedBatches.Add($Item) }
+        }
+    }
+
+    It 'runs <Expected> tenant executions for a <State> task last written <MinutesAgo> minutes ago' -ForEach @(
+        @{ State = 'Completed'; MinutesAgo = 600; Expected = 0 }
+        @{ State = 'Pending'; MinutesAgo = 5; Expected = 0 }
+        @{ State = 'Pending'; MinutesAgo = 120; Expected = 4 }
+        @{ State = 'Running'; MinutesAgo = 60; Expected = 0 }
+        @{ State = 'Running'; MinutesAgo = 300; Expected = 4 }
+        @{ State = 'Planned'; MinutesAgo = 5; Expected = 4 }
+    ) {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            New-TaskRow @{ TaskState = $State; Timestamp = [datetimeoffset]::UtcNow.AddMinutes(-$MinutesAgo) }
+        }
+
+        Start-UserTasksOrchestrator
+
+        Get-ScopedTenants | Should -HaveCount $Expected
+    }
+}
