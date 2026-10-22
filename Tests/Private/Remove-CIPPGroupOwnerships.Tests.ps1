@@ -133,7 +133,8 @@ Describe 'Remove-CIPPGroupOwnerships' {
         Should -Invoke -CommandName Add-CIPPGroupOwner -Times 0 -Exactly -ParameterFilter { $GroupId -eq 'g1' }
         Should -Invoke -CommandName Remove-CIPPGroupOwner -Times 0 -Exactly -ParameterFilter { $GroupId -eq 'g1' }
         Should -Invoke -CommandName Remove-CIPPGroupOwner -Times 1 -Exactly -ParameterFilter { $GroupId -eq 'g2' }
-        ($Result | Where-Object { $_ -match "^Error: Could not change the owners of group 'Sales'" }) | Should -Not -BeNullOrEmpty
+        ($Result | Where-Object { $_ -match "^Skipped changing the owners of group 'Sales'" }) | Should -Not -BeNullOrEmpty
+        @($Result | Where-Object { $_ -match '^\s*(Error|Failed)\b' }) | Should -BeNullOrEmpty
     }
 
     It 'changes nothing when the new owner cannot be found' {

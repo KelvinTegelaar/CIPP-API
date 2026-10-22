@@ -52,7 +52,7 @@ Describe 'Push-CIPPOffboardingTask live progress' {
 
     It 'marks the step failed when the cmdlet returns an error line without throwing' {
         $global:CippTestResult = @(
-            "Error: Could not remove pat@contoso.com from group 'All Users' because it is a Dynamic Group."
+            "Failed to remove pat@contoso.com from group 'All Users': Insufficient privileges"
             "Successfully removed pat@contoso.com from group 'Sales'"
         )
 
@@ -62,8 +62,19 @@ Describe 'Push-CIPPOffboardingTask live progress' {
             $JobId -eq 'job-1' -and $Name -eq 'pat@contoso.com' -and $StepIndex -eq 2 -and $StepStatus -eq 'running'
         }
         Should -Invoke Set-CIPPAsyncDeploymentStep -Times 1 -Exactly -ParameterFilter {
-            $StepStatus -eq 'failed' -and $Message -eq "Error: Could not remove pat@contoso.com from group 'All Users' because it is a Dynamic Group.`nSuccessfully removed pat@contoso.com from group 'Sales'"
+            $StepStatus -eq 'failed' -and $Message -eq "Failed to remove pat@contoso.com from group 'All Users': Insufficient privileges`nSuccessfully removed pat@contoso.com from group 'Sales'"
         }
+    }
+
+    It 'marks the step succeeded when groups were only skipped' {
+        $global:CippTestResult = @(
+            "Skipped removing pat@contoso.com from group 'All Users' because it is a Dynamic Group. Its membership rule will remove the user."
+            "Successfully removed pat@contoso.com from group 'Sales'"
+        )
+
+        $null = Push-CIPPOffboardingTask -Item (New-TaskItem -Cmdlet 'Remove-CIPPGroups')
+
+        Should -Invoke Set-CIPPAsyncDeploymentStep -Times 1 -Exactly -ParameterFilter { $StepStatus -eq 'succeeded' }
     }
 
     It 'marks the step succeeded and keeps every returned line' {
