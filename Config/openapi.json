@@ -56953,12 +56953,11 @@
         "tags": [
           "Email-Exchange > Administration"
         ],
-        "description": "Lists inbox rules configured on mailboxes in a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "description": "Lists inbox rules configured on mailboxes in a tenant, or AllTenants, from the reporting database cache. When manualPagination is set, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
           {
             "name": "manualPagination",
             "in": "query",
-            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -56984,15 +56983,6 @@
           },
           {
             "$ref": "#/components/parameters/tenantFilter"
-          },
-          {
-            "name": "UseReportDB",
-            "in": "query",
-            "description": "Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
           }
         ],
         "responses": {
@@ -57004,14 +56994,10 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
                     "properties": {
                       "Enabled": {
                         "x-cipp-field-source": "frontend"
-                      },
-                      "ETag": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
                       },
                       "From": {
                         "x-cipp-field-source": "frontend"
@@ -57019,27 +57005,11 @@
                       "Name": {
                         "x-cipp-field-source": "frontend"
                       },
-                      "PartitionKey": {
-                        "x-cipp-field-source": "storage"
-                      },
                       "Priority": {
                         "x-cipp-field-source": "frontend"
                       },
-                      "RowKey": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "Rules": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
                       "Tenant": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage,frontend"
-                      },
-                      "Timestamp": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "frontend"
                       },
                       "UserPrincipalName": {
                         "x-cipp-field-source": "frontend"
@@ -57055,9 +57025,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [

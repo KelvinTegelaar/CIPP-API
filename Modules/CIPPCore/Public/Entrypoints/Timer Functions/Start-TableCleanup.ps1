@@ -176,7 +176,7 @@ function Start-TableCleanup {
         @{
             FunctionName = 'TableCleanupTask'
             Type         = 'DeleteTable'
-            Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync', 'cachebpav2', 'CacheWebhookStats', 'FailedAuditLogDownloads', 'cachealertsandincidents')
+            Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync', 'cachebpav2', 'CacheWebhookStats', 'FailedAuditLogDownloads', 'cachealertsandincidents', 'cachembxrules')
         }
     )
 
