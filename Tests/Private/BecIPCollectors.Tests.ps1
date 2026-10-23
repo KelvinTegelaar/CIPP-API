@@ -1,7 +1,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     function New-GraphBulkRequest { param($Requests, $tenantid, $asapp, $Version, $NoPaginateIds) }
-    function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
+    function New-GraphGetRequest { param($uri, $tenantid, $AsApp, [switch]$Stream) }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Anchor) }
     function Get-CIPPTenantAllowBlockListItems { param($TenantFilter, $ListType) }
     function Get-CIPPIPAllowBlockList { param($TenantFilter) }
@@ -20,19 +20,24 @@ BeforeAll {
 
 Describe 'Get-CIPPBecSignInBaseline' {
     It 'profiles successful sign-ins by address, network and location across interactive and service sign-ins' {
-        Mock New-GraphBulkRequest {
-            foreach ($Request in $Requests) {
-                $Rows = if ($Request.id -ne 's2') { @() } elseif ($Request.url -match 'nonInteractiveUser') {
-                    @((New-SignIn -IP '203.0.113.10' -When '2026-09-02T02:00:00Z' -App 'SharePoint Online'), (New-SignIn -IP '192.0.2.44' -When '2026-09-04T01:00:00Z' -City 'Melbourne'))
-                } else {
-                    @((New-SignIn -IP '203.0.113.10' -When '2026-09-01T01:00:00Z'), (New-SignIn -IP '203.0.113.10' -When '2026-09-02T01:00:00Z'), (New-SignIn -IP '198.51.100.7' -When '2026-09-03T01:00:00Z' -Ok $false -Asn 14061 -City 'Lagos'))
-                }
-                [pscustomobject]@{ id = $Request.id; status = 200; body = [pscustomobject]@{ value = $Rows } }
+        $script:Calls = @{}
+        Mock New-GraphGetRequest {
+            $Kind = if ($uri -match 'nonInteractiveUser') { 'NonInteractive' } else { 'Interactive' }
+            $script:Calls[$Kind] = 1 + [int]$script:Calls[$Kind]
+            if ($script:Calls[$Kind] -ne 1) { return }
+            if ($Kind -eq 'NonInteractive') {
+                New-SignIn -IP '203.0.113.10' -When '2026-09-02T02:00:00Z' -App 'SharePoint Online'
+                New-SignIn -IP '192.0.2.44' -When '2026-09-04T01:00:00Z' -City 'Melbourne'
+            } else {
+                New-SignIn -IP '203.0.113.10' -When '2026-09-01T01:00:00Z'
+                New-SignIn -IP '203.0.113.10' -When '2026-09-02T01:00:00Z'
+                New-SignIn -IP '198.51.100.7' -When '2026-09-03T01:00:00Z' -Ok $false -Asn 14061 -City 'Lagos'
             }
         }
         $Result = Get-CIPPBecSignInBaseline -TenantFilter 'contoso.com' -UserId '11111111-1111-1111-1111-111111111111' -StartDate '2026-08-15' -EndDate '2026-09-16'
         $Result.Complete | Should -BeTrue
         $Result.Data.Successful | Should -Be 4 -Because 'the failed spray attempt must not teach the baseline an attacker address'
+        $Result.Data.SignIns | Should -Be 5
         $Office = $Result.Data.IPs | Where-Object IP -EQ '203.0.113.10'
         $Office.SignIns | Should -Be 3
         $Office.Interactive | Should -Be 2
@@ -42,27 +47,29 @@ Describe 'Get-CIPPBecSignInBaseline' {
         $Office.Apps | Should -Contain 'SharePoint Online'
         ($Result.Data.IPs | Where-Object IP -EQ '198.51.100.7') | Should -BeNullOrEmpty
         ($Result.Data.Locations | Where-Object City -EQ 'Sydney').Share | Should -Be 0.75
-        # 32 days in 7-day slices, interactive and non-interactive each
-        Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter { @($Requests).Count -eq 5 -and $Requests[0].url -match 'nonInteractiveUser' -and $Requests[4].url -match "createdDateTime lt $(([datetime]'2026-09-16').ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))" }
-        Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter { @($Requests).Count -eq 5 -and $Requests[0].url -notmatch 'nonInteractiveUser' }
+        # 32 days in 7-day slices, interactive and non-interactive each, streamed newest slice first
+        $End = ([datetime]'2026-09-16').ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        Should -Invoke New-GraphGetRequest -Times 5 -Exactly -ParameterFilter { $Stream -and $uri -like 'https://graph.microsoft.com/beta/auditLogs/signIns*' -and $uri -match 'nonInteractiveUser' }
+        Should -Invoke New-GraphGetRequest -Times 5 -Exactly -ParameterFilter { $Stream -and $uri -notmatch 'nonInteractiveUser' }
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -match 'nonInteractiveUser' -and $uri -match "createdDateTime lt $End" }
     }
 
-    It 'reports a failed half and a Graph paging stop without losing the other half' {
-        Mock New-GraphBulkRequest {
-            foreach ($Request in $Requests) {
-                if ($Request.url -match 'nonInteractiveUser') { [pscustomobject]@{ id = $Request.id; status = 403; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'Tenant does not have a premium licence' } } } }
-                elseif ($Request.id -eq 's2') { [pscustomobject]@{ id = $Request.id; status = 200; PagingIncomplete = $true; body = [pscustomobject]@{ value = @(New-SignIn -IP '203.0.113.10' -When '2026-09-01T01:00:00Z') } } }
-                else { [pscustomobject]@{ id = $Request.id; status = 200; body = [pscustomobject]@{ value = @() } } }
-            }
+    It 'keeps the rows read before a page fails and reports both failed halves' {
+        $script:Calls = @{}
+        Mock New-GraphGetRequest {
+            if ($uri -match 'nonInteractiveUser') { throw 'Tenant does not have a premium licence' }
+            $script:Calls.Interactive = 1 + [int]$script:Calls.Interactive
+            if ($script:Calls.Interactive -eq 1) { New-SignIn -IP '203.0.113.10' -When '2026-09-01T01:00:00Z' } else { throw 'the next page timed out' }
         }
         $Result = Get-CIPPBecSignInBaseline -TenantFilter 'contoso.com' -UserId '11111111-1111-1111-1111-111111111111' -StartDate '2026-08-15' -EndDate '2026-09-16'
         $Result.Complete | Should -BeFalse
         $Result.Error | Should -Match 'NonInteractive sign-ins: Tenant does not have a premium licence'
+        $Result.Error | Should -Match 'Interactive sign-ins: the next page timed out'
         $Result.Data.Successful | Should -Be 1
     }
 
     It 'reads a baseline past the sign-in log''s reach from the user''s audit log logons, with locations from the geo lookup' {
-        Mock New-GraphBulkRequest { throw 'the sign-in log is not read' }
+        Mock New-GraphGetRequest { throw 'the sign-in log is not read' }
         Mock Get-CIPPGeoIPLocationBatch { @{ '203.0.113.10' = [pscustomobject]@{ CountryOrRegion = 'AU'; City = 'Sydney' } } }
         Mock Search-CIPPBecAuditLog {
             [pscustomobject]@{ Complete = $true; Cap = $null; Records = @(

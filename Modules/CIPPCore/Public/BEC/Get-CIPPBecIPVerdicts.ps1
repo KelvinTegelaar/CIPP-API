@@ -174,25 +174,37 @@ function Get-CIPPBecIPVerdicts {
         if (-not $Entry.LastSeen -or $At -gt $Entry.LastSeen) { $Entry.LastSeen = $At }
     }
     $RiskRank = @{ none = 0; hidden = 0; low = 1; medium = 2; high = 3 }
+    # per sign-in work stays inline: a scriptblock or function call per row is most of the cost on a busy user
+    $HostCache = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::Ordinal)
+    $HasTravel = @($TravelWindows | Where-Object { $_ }).Count -gt 0
     foreach ($Set in @(@{ Rows = $SignIns; Interactive = $true }, @{ Rows = $NonInteractiveSignIns; Interactive = $false })) {
-        foreach ($SignIn in @($Set.Rows | Where-Object { $_ })) {
-            $IP = & $HostOf $SignIn.IPAddress
+        foreach ($SignIn in $Set.Rows) {
+            if (-not $SignIn) { continue }
+            $Raw = [string]$SignIn.IPAddress
+            $IP = $HostCache[$Raw]
+            if ($null -eq $IP) { $IP = [string](ConvertTo-CIPPBecHostAddress -Address $Raw); $HostCache[$Raw] = $IP }
             if (-not $IP) { continue }
-            $Entry = & $Touch $IP
+            $Entry = $IPs[$IP]
+            if ($null -eq $Entry) { $Entry = & $Touch $IP }
             if ($Set.Interactive) { $Entry.SignIns++ } else { $Entry.NonInteractive++ }
             if ($SignIn.AppId -and $ServiceApps.Contains([string]$SignIn.AppId)) { $Entry.CippSignIns++ }
             if ($SignIn.Status -eq 'Success') { $Entry.Successful++ } else { $Entry.Failed++ }
             # a non-interactive refresh asks for MFA again with a token, not the password
             if ($Set.Interactive -and $SignIn.Status -ne 'Success' -and [string]$SignIn.ErrorCode -in $PasswordAcceptedCodes) { $Entry.PasswordAccepted++ }
-            & $Seen $Entry $SignIn.CreatedDateTime
+            $When = $SignIn.CreatedDateTime
+            $At = try { if ($When) { ([datetime]$When).ToUniversalTime() } else { $null } } catch { $null }
+            if ($At) {
+                if (-not $Entry.FirstSeen -or $At -lt $Entry.FirstSeen) { $Entry.FirstSeen = $At }
+                if (-not $Entry.LastSeen -or $At -gt $Entry.LastSeen) { $Entry.LastSeen = $At }
+            }
             if (-not $Entry.Country -and $SignIn.Country) { $Entry.Country = [string]$SignIn.Country; $Entry.City = [string]$SignIn.City }
             if (-not $Entry.ASN -and $SignIn.ASN) { $Entry.ASN = [string]$SignIn.ASN }
             $Level = ([string]$SignIn.RiskLevelDuringSignIn).ToLowerInvariant()
             if ([int]($RiskRank[$Level] ?? 0) -gt [int]($RiskRank[$Entry.Risk] ?? 0)) { $Entry.Risk = $Level }
             if ($SignIn.UserAgent -and [string]$SignIn.UserAgent -match $ScriptedAgent) { $Entry.Scripted = $true; $null = $Entry.ScriptedApps.Add([string]$SignIn.AppDisplayName) }
-            if (& $Truthy $SignIn.DeviceCompliant) { $Entry.Compliant = $true }
+            if ($SignIn.DeviceCompliant -eq $true -or [string]$SignIn.DeviceCompliant -eq 'True') { $Entry.Compliant = $true }
             if ($SignIn.SessionId) { $null = $Entry.Sessions.Add("entra:$($SignIn.SessionId)") }
-            if (-not $Entry.Trip) { $Entry.Trip = Find-CIPPBecApprovedTravel -TravelWindows $TravelWindows -Country ([string]$SignIn.Country) -When $SignIn.CreatedDateTime }
+            if ($HasTravel -and -not $Entry.Trip) { $Entry.Trip = Find-CIPPBecApprovedTravel -TravelWindows $TravelWindows -Country ([string]$SignIn.Country) -When $SignIn.CreatedDateTime }
         }
     }
     foreach ($Activity in @($Events | Where-Object { $_ })) {

@@ -54,7 +54,12 @@ function Write-AlertTrace {
     $Table = Get-CIPPTable -tablename 'AlertLifecycle'
     $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
     $SafeCmdlet = ConvertTo-CIPPODataFilterValue -Value $CmdletName -Type String
-    $Existing = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and CmdletName eq '$SafeCmdlet'")
+    $Filter = "PartitionKey eq '$SafeTenant' and CmdletName eq '$SafeCmdlet'"
+    # Resolved rows only feed reopen detection and retention, so their stored item is never read.
+    $Existing = @(
+        Get-CIPPAzDataTableEntity @Table -Filter "$Filter and Status ne 'Resolved'"
+        Get-CIPPAzDataTableEntity @Table -Filter "$Filter and Status eq 'Resolved'" -Property PartitionKey, RowKey, ContentHash, ContentPreview, Status, ReopenCount, ResolvedAt
+    )
 
     $ByHash = @{}
     foreach ($Row in $Existing) {
@@ -113,10 +118,13 @@ function Write-AlertTrace {
     $Writes = [System.Collections.Generic.List[object]]::new()
     $Notify = [System.Collections.Generic.List[object]]::new()
     $Counts = @{ New = 0; Reopened = 0; Continuing = 0; Resolved = 0; Snoozed = 0 }
+    $KeyedItems = 0
+    $UnkeyedItems = 0
 
     foreach ($Item in @($data)) {
         if ($null -eq $Item) { continue }
         $Hash = Get-AlertContentHash -AlertItem $Item
+        if ($Hash.KeyField) { $KeyedItems++ } else { $UnkeyedItems++ }
         if (-not $Seen.Add($Hash.ContentHash)) { continue }
 
         $Snooze = $Snoozes[$Hash.ContentHash]
@@ -179,9 +187,17 @@ function Write-AlertTrace {
 
     $Removals = [System.Collections.Generic.List[object]]::new()
     $SnoozesToDrop = [System.Collections.Generic.List[object]]::new()
+    # A row hashed from the whole item (its preview is the item JSON) can never match again once every item
+    # carries a key field, so it is dropped rather than kept for 90 days and read on every run.
+    $DropWholeItemRows = $KeyedItems -gt 0 -and $UnkeyedItems -eq 0
     foreach ($Row in $Existing) {
         if ($Seen.Contains([string]$Row.ContentHash)) { continue }
         $Status = [string]$Row.Status
+
+        if ($DropWholeItemRows -and $Status -ne 'Snoozed' -and ([string]$Row.ContentPreview).StartsWith('{')) {
+            $Removals.Add($Row)
+            continue
+        }
 
         if ($Status -eq 'Resolved') {
             [datetime]$ResolvedAt = [datetime]::MinValue
@@ -226,13 +242,14 @@ function Write-AlertTrace {
     }
     if ($Removals.Count -gt 0) {
         try {
-            foreach ($Old in $Removals) {
-                Remove-CIPPAzDataTableEntity @Table -Entity @{
+            $RemoveKeys = foreach ($Old in $Removals) {
+                @{
                     PartitionKey = [string]$Old.PartitionKey
                     RowKey       = [string]$Old.RowKey
                     ETag         = '*'
-                } | Out-Null
+                }
             }
+            Remove-CIPPAzDataTableEntity @Table -Entity @($RemoveKeys) | Out-Null
         } catch {
             Write-Information "Could not purge resolved alert rows for $CmdletName / $TenantFilter : $($_.Exception.Message)"
         }

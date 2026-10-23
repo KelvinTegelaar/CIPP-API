@@ -109,7 +109,7 @@ function Search-CIPPBecAuditLog {
         foreach ($Item in $Batch) {
             $Key = if ($Item.Identity) { [string]$Item.Identity } else { "$($Item.CreationDate)|$($Item.Operations)|$($Item.UserIds)|$($Item.AuditData)" }
             if (-not $Seen.Add($Key)) { continue }
-            $AuditData = try { $Item.AuditData | ConvertFrom-Json -ErrorAction Stop } catch { $null }
+            $AuditData = try { [CIPP.CippJson]::ConvertFromJson([string]$Item.AuditData) } catch { $null }
             $Records.Add([pscustomobject]@{
                     Identity     = $Item.Identity
                     CreationDate = $Item.CreationDate
@@ -135,6 +135,7 @@ function Search-CIPPBecAuditLog {
     # A page error is not density, so it does not bisect - it just returns the partial set below.
     $CappedByPages = (-not $Done) -and (-not $Stalled) -and (-not $PageError)
     if ($CappedByPages -and $SliceDepth -lt $MaxSliceDepth -and $WindowMinutes -gt $MinSliceMinutes) {
+        $Records = $null; $Seen = $null; $Batch = $null
         $Mid = $StartDate.AddTicks([long](($EndDate - $StartDate).Ticks / 2))
         $Common = @{
             TenantFilter    = $TenantFilter

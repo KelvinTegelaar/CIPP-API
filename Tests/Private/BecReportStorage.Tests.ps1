@@ -5,6 +5,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property, $First) }
     function Remove-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function New-CIPPAzStorageRequest { param($Service, $Resource, $Method, $Body, $ContentType) throw 'blob storage must not be touched' }
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Set-CIPPBecReport.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecReport.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Remove-CIPPBecReport.ps1')

@@ -50,8 +50,9 @@ function Get-CIPPBecMailActivity {
     $Cap = $null
     $RecordCount = 0
 
-    $Accumulate = {
-        param($Record)
+    # fed from the pipeline: one process block for all the records, not a call per record
+    $Accumulate = { process {
+        $Record = $_
         $AD = $Record.AuditData
         if (-not $AD) { return }
         $Operation = [string]($AD.Operation ?? $Record.Operation)
@@ -90,12 +91,13 @@ function Get-CIPPBecMailActivity {
             if (-not $Group.FirstSeen -or $When -lt $Group.FirstSeen) { $Group.FirstSeen = $When }
             if (-not $Group.LastSeen -or $When -gt $Group.LastSeen) { $Group.LastSeen = $When }
         }
-    }
+    } }
 
     if ($UserOps.Count -gt 0) {
         try {
             $Search = Search-CIPPBecAuditLog -TenantFilter $TenantFilter -StartDate $StartDate -EndDate $EndDate -Operations $UserOps -UserIds @($UserPrincipalName) -Anchor $Anchor -MaxPages $MaxPages
-            foreach ($Record in $Search.Records) { & $Accumulate $Record; $RecordCount++ }
+            $Search.Records | & $Accumulate
+            $RecordCount = $RecordCount + @($Search.Records).Count
             if (-not $Search.Complete) { $Complete = $false; $Cap = $Search.Cap }
         } catch {
             $Errors.Add("user activity search: $((Get-NormalizedError -message $_.Exception.Message))")
@@ -104,13 +106,9 @@ function Get-CIPPBecMailActivity {
     if ($OwnerOps.Count -gt 0) {
         try {
             $Search = Search-CIPPBecAuditLog -TenantFilter $TenantFilter -StartDate $StartDate -EndDate $EndDate -Operations $OwnerOps -Anchor $Anchor -MaxPages $MaxPages
-            foreach ($Record in $Search.Records) {
-                $AD = $Record.AuditData
-                if (-not $AD) { continue }
-                if ($AD.MailboxOwnerUPN -ne $UserPrincipalName -and $AD.UserId -ne $UserPrincipalName) { continue }
-                & $Accumulate $Record
-                $RecordCount++
-            }
+            $Owned = @($Search.Records).Where({ $_.AuditData -and ($_.AuditData.MailboxOwnerUPN -eq $UserPrincipalName -or $_.AuditData.UserId -eq $UserPrincipalName) })
+            $Owned | & $Accumulate
+            $RecordCount = $RecordCount + $Owned.Count
             if (-not $Search.Complete) { $Complete = $false; $Cap = $Search.Cap }
         } catch {
             $Errors.Add("send-as search: $((Get-NormalizedError -message $_.Exception.Message))")

@@ -24,8 +24,9 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Set-CippScheduledTaskContext.ps1')
 
     function New-StoredRow {
-        param($Message, $Status = 'Open', $ReopenCount = '0', $ResolvedAt = '', $LastSeen = '2026-09-20T10:00:00.0000000Z', $SnoozeUntilResolved = '', $SnoozeRowKey = '')
-        $Hash = Get-AlertContentHash -AlertItem @{ Message = $Message }
+        param($Message, $Status = 'Open', $ReopenCount = '0', $ResolvedAt = '', $LastSeen = '2026-09-20T10:00:00.0000000Z', $SnoozeUntilResolved = '', $SnoozeRowKey = '', [hashtable]$Item)
+        if (-not $Item) { $Item = @{ Message = $Message } }
+        $Hash = Get-AlertContentHash -AlertItem $Item
         $Keys = Get-CIPPAlertLifecycleKey -CmdletName 'Get-CIPPAlertSomething' -TenantFilter 'contoso.onmicrosoft.com' -ContentHash $Hash.ContentHash
         [pscustomobject]@{
             PartitionKey        = $Keys.PartitionKey
@@ -34,7 +35,7 @@ BeforeAll {
             Tenant              = 'contoso.onmicrosoft.com'
             ContentHash         = $Hash.ContentHash
             ContentPreview      = $Hash.ContentPreview
-            AlertItem           = (ConvertTo-Json -InputObject @{ Message = $Message } -Compress)
+            AlertItem           = (ConvertTo-Json -InputObject $Item -Compress)
             AlertComment        = ''
             Status              = $Status
             FirstSeen           = '2026-09-18T10:00:00.0000000Z'
@@ -72,7 +73,12 @@ Describe 'Write-AlertTrace' {
         Mock ConvertTo-CIPPODataFilterValue { $Value }
         Mock Get-CIPPActiveAlertSnoozes { $script:Snoozes }
         Mock Get-CIPPAzDataTableEntity {
-            if ($TableName -eq 'AlertLifecycle') { return $script:Existing }
+            if ($TableName -eq 'AlertLifecycle') {
+                $Resolved = $Filter -like "*and Status eq 'Resolved'"
+                $Rows = $script:Existing.Where({ ($_.Status -eq 'Resolved') -eq $Resolved })
+                if ($Property) { return $Rows | Select-Object -Property $Property }
+                return $Rows
+            }
             if ($TableName -eq 'AlertLastRun') { return $script:LastRun }
         }
         Mock Add-CIPPAzDataTableEntity {
@@ -276,6 +282,42 @@ Describe 'Write-AlertTrace' {
             Set-CippScheduledTaskContext -TaskId $null
         }
         ($Empty.Reported, $Empty.New) | Should -Be @($true, 0)
+    }
+
+    It 'drops rows hashed from the whole item once every item in the run has a key field' {
+        $OldResolved = New-StoredRow -Item @{ CVE = 'CVE-2020-1'; HoursOld = 5 } -Status 'Resolved' -ResolvedAt ([datetime]::UtcNow.AddDays(-5).ToString('o'))
+        $OldOpen = New-StoredRow -Item @{ CVE = 'CVE-2020-1'; HoursOld = 6 }
+        $OldSnoozed = New-StoredRow -Item @{ CVE = 'CVE-2020-2'; HoursOld = 6 } -Status 'Snoozed'
+        $script:Existing = @($OldResolved, $OldOpen, $OldSnoozed, (New-StoredRow -Message 'first'))
+
+        $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @([pscustomobject]@{ Message = 'first' })
+
+        @($script:Removed.Entity.RowKey | Sort-Object) | Should -Be @(@($OldResolved.RowKey, $OldOpen.RowKey) | Sort-Object)
+        @($script:Writes.RowKey | Sort-Object) | Should -Be @(@($OldSnoozed.RowKey, (New-StoredRow -Message 'first').RowKey) | Sort-Object)
+    }
+
+    It 'keeps rows hashed from the whole item when the run is empty or has unkeyed items' {
+        $OldResolved = New-StoredRow -Item @{ CVE = 'CVE-2020-1'; HoursOld = 5 } -Status 'Resolved' -ResolvedAt ([datetime]::UtcNow.AddDays(-5).ToString('o'))
+        $OldOpen = New-StoredRow -Item @{ CVE = 'CVE-2020-1'; HoursOld = 6 }
+
+        foreach ($Data in @($null), @([pscustomobject]@{ Message = 'first' }, [pscustomobject]@{ CVE = 'CVE-2020-3' })) {
+            $script:Existing = @($OldResolved, $OldOpen)
+            $script:Removed.Clear()
+            $script:Writes.Clear()
+
+            $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $Data
+
+            $script:Removed.Count | Should -Be 0
+            ($script:Writes | Where-Object RowKey -EQ $OldOpen.RowKey).Status | Should -Be 'Resolved'
+        }
+    }
+
+    It 'reads resolved rows without their stored item' {
+        $script:Existing = @(New-StoredRow -Message 'first' -Status 'Resolved' -ResolvedAt ([datetime]::UtcNow.AddDays(-5).ToString('o')))
+
+        $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $null
+
+        Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $Filter -like "*Status eq 'Resolved'" -and 'AlertItem' -notin $Property -and 'PartitionKey' -in $Property -and 'RowKey' -in $Property }
     }
 
     It 'ignores duplicate items within one run' {

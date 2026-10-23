@@ -35,10 +35,18 @@ function Set-CIPPBecIPVerdictStamp {
         @{ Name = 'SentMessages'; Field = 'FromIP' }
         @{ Name = 'MailActivity'; Field = 'ClientIP' }
     )
+    $HostOf = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::Ordinal)
     foreach ($Section in $Sections) {
-        foreach ($Row in @($Results.($Section.Name) | Where-Object { $_ })) {
-            $IP = ConvertTo-CIPPBecHostAddress -Address ([string]$Row.($Section.Field))
-            if ($IP -and $ByIP.ContainsKey($IP)) { $Row | Add-Member -NotePropertyName 'IPVerdict' -NotePropertyValue $ByIP[$IP] -Force }
+        foreach ($Row in @($Results.($Section.Name))) {
+            if (-not $Row) { continue }
+            $Raw = [string]$Row.($Section.Field)
+            $IP = $HostOf[$Raw]
+            if ($null -eq $IP) { $IP = [string](ConvertTo-CIPPBecHostAddress -Address $Raw); $HostOf[$Raw] = $IP }
+            if ($IP -and $ByIP.ContainsKey($IP)) {
+                $Properties = $Row.PSObject.Properties
+                $Properties.Remove('IPVerdict')
+                $Properties.Add([psnoteproperty]::new('IPVerdict', $ByIP[$IP]))
+            }
         }
     }
 }

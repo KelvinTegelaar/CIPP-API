@@ -1,6 +1,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Anchor) }
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Search-CIPPBecAuditLog.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/ConvertTo-CIPPBecHostAddress.ps1')
 

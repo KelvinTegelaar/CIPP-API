@@ -47,6 +47,7 @@ BeforeAll {
     function Remove-CIPPAzDataTableEntity { param($TableName, $Entity, [switch]$Force) }
     function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers, $TechnicianIPs, $TravelWindows, [switch]$SampleColleagues, [switch]$SkipPeerLookup) }
 
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     # Real pieces under test alongside the run
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/ConvertTo-CIPPBecHostAddress.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/AuditLogs/Resolve-CIPPAuditActor.ps1')
@@ -88,7 +89,9 @@ Describe 'Push-BECRun' {
         Mock Write-LogMessage { }
         Mock Set-CippBecCaseContext { }
         $script:StateRows = [System.Collections.Generic.List[object]]::new()
+        $script:StateWrites = [System.Collections.Generic.List[object]]::new()
         Mock Add-CIPPAzDataTableEntity {
+            $script:StateWrites.Add([pscustomobject]@{ RowKey = $Entity.RowKey; Names = @(($Entity.Data | ConvertFrom-Json).PSObject.Properties.Name) })
             foreach ($Old in @($script:StateRows | Where-Object { $_.PartitionKey -eq $Entity.PartitionKey -and $_.RowKey -eq $Entity.RowKey })) { $null = $script:StateRows.Remove($Old) }
             $script:StateRows.Add([pscustomobject]$Entity)
         }
@@ -203,6 +206,16 @@ Describe 'Push-BECRun' {
         @($script:Saved.Results.IPPeers).Count | Should -Be 1
     }
 
+    It 'stamps the verdict and location on sign-ins saved without those fields, as an older run left them' {
+        Mock Get-CIPPBecNonInteractiveSignIns { New-CIPPBecCollectorResult -Data @([pscustomobject]@{ id = 'n1'; CreatedDateTime = '2026-08-19T04:00:00Z'; Status = 'Success'; IPAddress = '203.0.113.10'; Country = 'NG' }) }
+        Invoke-BecRun -Item $script:Item
+        $R = $script:Saved.Results
+        $R.NonInteractiveSignIns[0].IPVerdict | Should -Be 'LikelyAttacker'
+        $R.NonInteractiveSignIns[0].ForeignLocation | Should -BeTrue -Because 'NG is outside the user''s NL usage location'
+        $R.SuspectUserSignIns[0].ForeignLocation | Should -BeTrue
+        $R.LocationAnalysis.ForeignNonInteractiveSignInCount | Should -Be 1
+    }
+
     It 'keeps the first verdicts when the other-account lookup fails' {
         Mock Invoke-CIPPBecIPAnalysis {
             if ($SampleColleagues) { throw 'The request to graph timed out after 100s.' }
@@ -257,6 +270,7 @@ Describe 'Push-BECRun' {
         $R.IPTechnicians[0].By | Should -Be 'tech@msp.com'
         $R.InboxRuleChanges[0].IPVerdict | Should -Be 'LikelyAttacker'
         $R.SuspectUserSignIns[0].IPVerdict | Should -Be 'LikelyAttacker'
+        @($script:StateWrites | Where-Object { $_.Names -contains 'SuspectUserSignIns' -or $_.Names -contains 'NonInteractiveSignIns' }).RowKey | Should -Be @('02-SignIns', '10-Directory') -Because 'the sign-ins are saved once, not again with their verdict stamps'
         $R.Completeness.SignInBaseline.Complete | Should -BeTrue
         $R.Completeness.IPVerdicts.Count | Should -Be 1
         # the attacker-activity pass gets the verdicts, the raw mailbox records and the known subjects
@@ -545,5 +559,22 @@ Describe 'Push-BECRun' {
         $R.SentMessages[0].ForeignLocation | Should -BeTrue -Because 'the row still says where the address is'
         $R.LocationAnalysis.ForeignSentMessageCount | Should -Be 0
         $R.LocationAnalysis.ForeignRuleChangeCount | Should -Be 0
+    }
+
+    It 'loads every state value a phase reads' {
+        $Ast = [System.Management.Automation.Language.Parser]::ParseFile($FunctionPath.FullName, [ref]$null, [ref]$null)
+        $Lists = $Ast.Find({ param($A) $A -is [System.Management.Automation.Language.AssignmentStatementAst] -and $A.Left.Extent.Text -eq '$StateNames' }, $true)
+        $Phases = $Ast.Find({ param($A) $A -is [System.Management.Automation.Language.SwitchStatementAst] -and $A.Condition.Extent.Text -eq '$Key' -and $A -ne $Lists.Right.Find({ param($B) $B -is [System.Management.Automation.Language.SwitchStatementAst] }, $true) }, $true)
+        foreach ($Step in @(Get-CIPPBecRunSteps).Key | Where-Object { $_ -notin @('AuditLog', 'Score') }) {
+            $Key = $Step
+            $Loaded = @(& ([scriptblock]::Create($Lists.Right.Extent.Text)))
+            $Clause = @($Phases.Clauses | Where-Object { $_.Item1.Extent.Text -eq "'$Step'" -or ($_.Item1.Extent.Text -like '{*' -and (& ([scriptblock]::Create($_.Item1.Extent.Text.Trim('{', '}').Replace('$_', '$Key'))))) })
+            $Clause.Count | Should -Be 1 -Because "phase $Step has one clause"
+            $Reads = @($Clause[0].Item2.FindAll({ param($A)
+                        ($A -is [System.Management.Automation.Language.MemberExpressionAst] -and $A.Expression.Extent.Text -eq '$State') -or
+                        ($A -is [System.Management.Automation.Language.CommandAst] -and $A.CommandElements[0].Extent.Text -eq '$Rows')
+                    }, $true) | ForEach-Object { if ($_ -is [System.Management.Automation.Language.MemberExpressionAst]) { $_.Member.Value } else { $_.CommandElements[1].Value } })
+            foreach ($Read in $Reads) { $Loaded | Should -Contain $Read -Because "phase $Step reads $Read" }
+        }
     }
 }

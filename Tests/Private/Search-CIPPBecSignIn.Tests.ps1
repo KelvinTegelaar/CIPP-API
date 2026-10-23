@@ -1,6 +1,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     function New-GraphBulkRequest { param($Requests, $tenantid, $asapp, $Version, $NoPaginateIds) }
+    function New-GraphGetRequest { param($uri, $tenantid, $AsApp, [switch]$Stream) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Search-CIPPBecSignIn.ps1')
     $script:Start = [datetime]::new(2026, 9, 1, 0, 0, 0, [System.DateTimeKind]::Utc)
     $script:End = [datetime]::new(2026, 10, 1, 0, 0, 0, [System.DateTimeKind]::Utc)
@@ -30,6 +31,14 @@ Describe 'Search-CIPPBecSignIn' {
         $Result = Search-CIPPBecSignIn -TenantFilter 'contoso.com' -Filter "userId eq 'u1'" -StartDate $script:Start -EndDate $script:End
         (@($Result.Rows.id) -join ',') | Should -Be 'new2,new1,mid,old'
         $Result.Incomplete | Should -BeTrue
+    }
+
+    It 'streams the slices one at a time, newest first, from the beta endpoint' {
+        Mock New-GraphBulkRequest { throw 'not batched when streaming' }
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = [regex]::Match($uri, 'createdDateTime ge ([0-9-]+)').Groups[1].Value } }
+        $Rows = @(Search-CIPPBecSignIn -TenantFilter 'contoso.com' -Filter "userId eq 'u1'" -StartDate $script:Start -EndDate $script:End -Select 'ipAddress' -AsApp $false -Stream)
+        (@($Rows.id) -join ',') | Should -Be '2026-09-29,2026-09-22,2026-09-15,2026-09-08,2026-09-01'
+        Should -Invoke New-GraphGetRequest -Times 5 -Exactly -ParameterFilter { $Stream -and $AsApp -eq $false -and $tenantid -eq 'contoso.com' -and $uri -like "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userId eq 'u1' and *&`$top=999&`$select=ipAddress" }
     }
 
     It 'throws when a slice fails, as a single search would' {
