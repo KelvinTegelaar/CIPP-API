@@ -15,7 +15,8 @@ function Invoke-ExecAddTrustedIP {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-    $tenantfilter = $Request.Query.tenantfilter
+    # The body's tenantFilter (the list row's own scope) wins over the query string
+    $tenantfilter = $Request.Body.tenantFilter ?? $Request.Query.tenantfilter
     if (-not $tenantfilter) {
         return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
@@ -63,6 +64,10 @@ function Invoke-ExecAddTrustedIP {
         $Table = Get-CippTable -tablename 'trustedIps'
         foreach ($Range in $Ranges) {
             # '/' is not allowed in a table key: the key carries '_' and the range itself is stored alongside
+            if ($State -eq 'NotTrusted') {
+                Remove-AzDataTableEntity @Table -Entity @{ PartitionKey = $tenantDomain; RowKey = $Range -replace '/', '_' } -Force
+                continue
+            }
             Add-CIPPAzDataTableEntity @Table -Entity @{
                 PartitionKey = $tenantDomain
                 RowKey       = $Range -replace '/', '_'
@@ -71,7 +76,8 @@ function Invoke-ExecAddTrustedIP {
                 Note         = $Note
             } -Force
         }
-        $Result = "Set $($Ranges -join ', ') to $State for $($tenantDomain)"
+        $Result = if ($State -eq 'NotTrusted') { "Removed $($Ranges -join ', ') from the list for $($tenantDomain)" }
+        else { "Set $($Ranges -join ', ') to $State for $($tenantDomain)" }
         Write-LogMessage -headers $Headers -API $APIName -tenant $tenantDomain -message $Result -Sev 'Info'
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK

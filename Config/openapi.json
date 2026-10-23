@@ -12960,7 +12960,7 @@
         ],
         "description": "Sets each IP address or CIDR range (IPv4 or IPv6) to Trusted, Blocked or NotTrusted (neutral) for one tenant, or for every tenant with tenantfilter=AllTenants. A tenant entry overrides an AllTenants entry for the same range, and the most specific range decides an address. The audit-log alerts treat Trusted addresses as known; the BEC investigation uses Trusted and Blocked entries as confirmed-safe and confirmed-compromised IPs.",
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -12980,8 +12980,15 @@
                   "State": {
                     "type": "string",
                     "description": "Trusted, Blocked, or NotTrusted to make the entry neutral again"
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "The body's tenantFilter (the list row's own scope) wins over the query string"
                   }
-                }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
               }
             }
           }
