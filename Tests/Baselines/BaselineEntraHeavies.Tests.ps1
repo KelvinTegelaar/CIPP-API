@@ -72,6 +72,16 @@ Describe 'Get-CIPPBaselineNudgeMFAState' {
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ state = 'enabled'; snoozeDurationInDays = 1; enforceRegistrationAfterAllowedSnoozes = $true; includeTargets = 'Nonexistent Group' } }
         (Get-CIPPBaselineNudgeMFAState -Item $Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
     }
+
+    It 'an exact group name match excludes groups that only share its prefix' {
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'AuthenticationMethodsPolicy') { @($script:Campaign | ConvertTo-Cached) } else { @(@{ id = 'g1'; displayName = 'All Staff' }, @{ id = 'g2'; displayName = 'All Staff Devices' } | ConvertTo-Cached) }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ state = 'enabled'; snoozeDurationInDays = 1; enforceRegistrationAfterAllowedSnoozes = $true; includeTargets = 'All Staff,' } }
+        (Get-CIPPBaselineNudgeMFAState -Item $Item -TenantFilter $script:Tenant).Expected.includeTargetIds | Should -Be @('g1')
+        $Item.Variables.includeTargets = 'All'
+        (Get-CIPPBaselineNudgeMFAState -Item $Item -TenantFilter $script:Tenant).Expected.includeTargetIds | Should -Be @('g1', 'g2')
+    }
 }
 
 Describe 'Get-CIPPBaselineAuthenticationMethodsState' {
