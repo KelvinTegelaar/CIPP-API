@@ -172,8 +172,13 @@ function New-CIPPBaseline {
             $Instances.Add($(if ($Config -is [string]) { $Config } else { $Config.instance ?? $Config.standard }))
         }
     }
+    # Package members resolve as '<Member>#p<package suffix>-<template>' (Expand-CIPPBaselineTemplatePackage).
+    $PackagePrefixes = @($Instances | ForEach-Object { if ($_ -match '#(.+)$') { "#p$($Matches[1])-" } else { '#ppkg-' } })
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
-    $Orphans = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "TemplateId eq '$SafeGuid'" | Where-Object { $Instances -notcontains $_.StandardName })
+    $Orphans = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "TemplateId eq '$SafeGuid'" | Where-Object {
+            $Name = "$($_.StandardName)"
+            $Instances -notcontains $Name -and -not ($PackagePrefixes | Where-Object { $Name.Contains($_) })
+        })
     if ($Orphans) {
         Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $Orphans
     }
