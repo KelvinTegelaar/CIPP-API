@@ -15,6 +15,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Context, $TableName, $Filter, $Property, $First) }
     function Add-CIPPAzDataTableEntity { param($Context, $TableName, $Entity, [switch]$Force) }
     function Remove-CIPPAzDataTableEntity { param($Context, $TableName, $Entity, [switch]$Force) }
+    function Remove-AzDataTableEntity { param($Context, $TableName, $Entity, [switch]$Force) }
     function Update-CIPPAzDataTableEntity { param($Context, $TableName, $Entity, $OperationType, [switch]$Force) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) }
     function Get-CIPPActiveAlertSnoozes { param($CmdletName, $TenantFilter) }
@@ -87,6 +88,7 @@ Describe 'Write-AlertTrace' {
             foreach ($Row in @($Entity)) { $script:Writes.Add($Row) }
         }
         Mock Remove-CIPPAzDataTableEntity { $script:Removed.Add(@{ Table = $TableName; Entity = $Entity }) }
+        Mock Remove-AzDataTableEntity { $script:Removed.Add(@{ Table = $TableName; Entity = $Entity }) }
     }
 
     It 'stores unknown items as Open and returns them for notification' {
@@ -334,6 +336,19 @@ Describe 'Write-AlertTrace' {
         $Merged.Count | Should -Be 1
         $Merged[0].Keys | Sort-Object | Should -Be @('LastChecked', 'PartitionKey', 'ResolvedAt', 'RowKey', 'Status')
         $Merged[0].Status | Should -Be 'Resolved'
+    }
+
+    It 'deletes a purged row with its split part rows and never treats a part row as an item' {
+        $Old = New-StoredRow -Item @{ CVE = 'CVE-2020-1'; HoursOld = 5 } -Status 'Resolved' -ResolvedAt ([datetime]::UtcNow.AddDays(-5).ToString('o'))
+        $Part = [pscustomobject]@{ PartitionKey = $Old.PartitionKey; RowKey = "$($Old.RowKey)-part1" }
+        $Kept = New-StoredRow -Message 'first'
+        $script:Existing = @($Old, $Part, $Kept)
+
+        $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @([pscustomobject]@{ Message = 'first' })
+
+        Should -Invoke Remove-CIPPAzDataTableEntity -Times 0
+        @($script:Removed.Entity.RowKey | Sort-Object) | Should -Be @(@($Old.RowKey, $Part.RowKey) | Sort-Object)
+        $script:Writes.RowKey | Should -Not -Contain $Part.RowKey
     }
 
     It 'ignores duplicate items within one run' {

@@ -55,12 +55,24 @@ function Write-AlertTrace {
     $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
     $SafeCmdlet = ConvertTo-CIPPODataFilterValue -Value $CmdletName -Type String
     # The stored item is never read: seen items are rewritten from this run and resolves merge a few fields.
-    $Filter = "PartitionKey eq '$SafeTenant' and RowKey ge '$SafeCmdlet-' and RowKey lt '$SafeCmdlet.' and CmdletName eq '$SafeCmdlet'"
-    $Existing = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ContentHash, ContentPreview, Status, FirstSeen, LastSeen, ReopenCount, ResolvedAt, SnoozeRowKey, SnoozeUntilResolved)
+    # Without split markers in the projection the rows come back raw, so a split item's "-partN" rows (no ContentHash)
+    # are held aside and deleted with their row, without the large-entity remover's per-row part lookup.
+    $Filter = "PartitionKey eq '$SafeTenant' and RowKey ge '$SafeCmdlet-' and RowKey lt '$SafeCmdlet.'"
+    $Existing = [System.Collections.Generic.List[object]]::new()
+    $PartRows = @{}
+    foreach ($Row in Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ContentHash, ContentPreview, Status, FirstSeen, LastSeen, ReopenCount, ResolvedAt, SnoozeRowKey, SnoozeUntilResolved) {
+        if ($Row.ContentHash) {
+            $Existing.Add($Row)
+        } else {
+            $Owner = [string]$Row.RowKey -replace '-part\d+$', ''
+            if (-not $PartRows[$Owner]) { $PartRows[$Owner] = [System.Collections.Generic.List[object]]::new() }
+            $PartRows[$Owner].Add($Row)
+        }
+    }
 
     $ByHash = @{}
     foreach ($Row in $Existing) {
-        if ($Row.ContentHash) { $ByHash[[string]$Row.ContentHash] = $Row }
+        $ByHash[[string]$Row.ContentHash] = $Row
     }
 
     # One-time seed: the first reconcile for a cmdlet/tenant pair after the upgrade treats the
@@ -242,13 +254,11 @@ function Write-AlertTrace {
     if ($Removals.Count -gt 0) {
         try {
             $RemoveKeys = foreach ($Old in $Removals) {
-                @{
-                    PartitionKey = [string]$Old.PartitionKey
-                    RowKey       = [string]$Old.RowKey
-                    ETag         = '*'
+                foreach ($Physical in @($Old) + @($PartRows[[string]$Old.RowKey])) {
+                    if ($null -ne $Physical) { @{ PartitionKey = [string]$Physical.PartitionKey; RowKey = [string]$Physical.RowKey } }
                 }
             }
-            Remove-CIPPAzDataTableEntity @Table -Entity @($RemoveKeys) | Out-Null
+            Remove-AzDataTableEntity @Table -Entity @($RemoveKeys) -Force | Out-Null
         } catch {
             Write-Information "Could not purge resolved alert rows for $CmdletName / $TenantFilter : $($_.Exception.Message)"
         }
