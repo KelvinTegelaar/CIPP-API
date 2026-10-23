@@ -5,9 +5,9 @@ function New-CIPPBecTargetedCAPolicy {
     .DESCRIPTION
         The softer alternative to blocking sign-in for a VIP who must keep working: a policy scoped to
         the investigated user that requires MFA (optionally plus a compliant device) for every
-        application, enabled or report-only. The policy description carries the case id and expiry,
-        a scheduled task runs Remove-CIPPBecTargetedCAPolicy at the expiry, and an existing policy for
-        the same user is reused rather than duplicated.
+        application, enabled or report-only. The display name carries the expiry, a scheduled task
+        (referenced to the case) runs Remove-CIPPBecTargetedCAPolicy at the expiry, and an existing
+        policy for the same user is reused rather than duplicated.
     .PARAMETER TenantFilter
         Tenant default domain name.
     .PARAMETER UserId
@@ -15,13 +15,13 @@ function New-CIPPBecTargetedCAPolicy {
     .PARAMETER UserPrincipalName
         The user's UPN (for the display name).
     .PARAMETER State
-        enabled or enabledForReportingButNotEnabled.
+        enabled or enabledForReportingButNotEnforced.
     .PARAMETER Controls
         mfa, or mfaAndCompliantDevice.
     .PARAMETER ExpiresHours
         Lifetime in hours (1-168).
     .PARAMETER CaseId
-        The BEC case id recorded in the description.
+        The BEC case id the scheduled removal is referenced to.
     .PARAMETER Headers
         CIPP request headers for logging.
     .PARAMETER APIName
@@ -34,7 +34,7 @@ function New-CIPPBecTargetedCAPolicy {
         [Parameter(Mandatory = $true)][string]$TenantFilter,
         [Parameter(Mandatory = $true)][string]$UserId,
         [Parameter(Mandatory = $true)][string]$UserPrincipalName,
-        [ValidateSet('enabled', 'enabledForReportingButNotEnabled')][string]$State = 'enabled',
+        [ValidateSet('enabled', 'enabledForReportingButNotEnforced')][string]$State = 'enabled',
         [ValidateSet('mfa', 'mfaAndCompliantDevice')][string]$Controls = 'mfa',
         [ValidateRange(1, 168)][int]$ExpiresHours = 24,
         [string]$CaseId,
@@ -42,8 +42,8 @@ function New-CIPPBecTargetedCAPolicy {
         [string]$APIName = 'BECRemediate'
     )
 
-    $Tag = "ManagedBy=CIPP-BEC;Target=$UserId"
-    $Existing = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?$select=id,displayName,description,state&$top=999' -tenantid $TenantFilter -AsApp $true | Where-Object { [string]$_.description -like "*$Tag*" })
+    # Graph has no description on CA policies, so a containment policy is known by its name prefix and target
+    $Existing = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?$select=id,displayName,state,conditions&$top=999' -tenantid $TenantFilter -AsApp $true | Where-Object { [string]$_.displayName -like 'CIPP BEC containment - *' -and @($_.conditions.users.includeUsers) -contains $UserId })
     if ($Existing.Count -gt 0) {
         $Message = "A CIPP BEC containment policy already exists for $UserPrincipalName ('$($Existing[0].displayName)', $($Existing[0].state)); not creating another."
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
@@ -56,7 +56,6 @@ function New-CIPPBecTargetedCAPolicy {
     $Body = ConvertTo-Json -Depth 10 -InputObject @{
         displayName   = $DisplayName
         state         = $State
-        description   = "$Tag;CaseId=$CaseId;ExpiresUtc=$($ExpiresUtc.ToString('o'))"
         conditions    = @{
             users          = @{ includeUsers = @($UserId) }
             applications   = @{ includeApplications = @('All') }
@@ -64,7 +63,7 @@ function New-CIPPBecTargetedCAPolicy {
         }
         grantControls = @{
             operator        = if ($BuiltIn.Count -gt 1) { 'AND' } else { 'OR' }
-            builtInControls = $BuiltIn
+            builtInControls = @($BuiltIn)
         }
     }
     if (-not $PSCmdlet.ShouldProcess($UserPrincipalName, "Create targeted CA policy ($State, $Controls, $ExpiresHours h)")) { return }

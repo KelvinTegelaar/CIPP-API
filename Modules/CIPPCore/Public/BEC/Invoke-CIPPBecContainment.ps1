@@ -296,7 +296,7 @@ function Invoke-CIPPBecContainment {
                     }
                     'TargetedCAPolicy' {
                         $Policy = & $GetParam 'CAPolicy'
-                        $State = if ([string]$Policy.State -in @('enabled', 'enabledForReportingButNotEnabled')) { [string]$Policy.State } elseif ([string]$Policy.State -eq 'reportOnly') { 'enabledForReportingButNotEnabled' } else { 'enabled' }
+                        $State = if ([string]$Policy.State -in @('enabled', 'enabledForReportingButNotEnforced')) { [string]$Policy.State } elseif ([string]$Policy.State -eq 'reportOnly') { 'enabledForReportingButNotEnforced' } else { 'enabled' }
                         $Controls = if ([string]$Policy.Controls -eq 'mfaAndCompliantDevice') { 'mfaAndCompliantDevice' } else { 'mfa' }
                         $Hours = [int]($Policy.ExpiresHours ?? 24)
                         if ($Hours -lt 1 -or $Hours -gt 168) { $Hours = 24 }
