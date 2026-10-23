@@ -51,7 +51,7 @@ function Get-CIPPAlertVulnerabilities {
         $DeviceNames = [System.Collections.Generic.List[string]]::new()
         $Fields = @('cveId', 'deviceName', 'firstSeenTimestamp', 'lastSeenTimestamp', 'cvssScore', 'vulnerabilitySeverityLevel', 'exploitabilityLevel',
             'softwareName', 'softwareVendor', 'softwareVersion', 'recommendedSecurityUpdate', 'recommendedSecurityUpdateId', 'recommendedSecurityUpdateUrl')
-        Get-DefenderTvmRaw -TenantId $TenantFilter -Stream -Property $Fields | ForEach-Object {
+        Get-DefenderTvmRaw -TenantId $TenantFilter -Stream -Property $Fields | & { process {
             if (-not $_.cveId) { return }
             $Bucket = $Buckets[$_.cveId]
             if (-not $Bucket) {
@@ -69,7 +69,7 @@ function Get-CIPPAlertVulnerabilities {
                 $DeviceNames.Add($DeviceName)
             }
             if ($Bucket.Seen.Add($Index)) { $Bucket.Devices.Add($Index) }
-        }
+        } }
 
         if ($Buckets.Count -gt 0) {
             $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
