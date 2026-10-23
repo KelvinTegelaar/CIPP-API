@@ -21,7 +21,7 @@ function Get-CIPPBaselineCATemplateState {
         - users/groups translate GUID->displayName via the Users/Groups caches, then one live
           directoryObjects/getByIds for ids those caches do not hold yet; still-unresolved
           GUIDs stay GUIDs so raw-GUID templates still match
-        - the tenant's 'Vacation Exclusion*' groups are removed from the live excludeGroups
+        - 'Vacation Exclusion*' groups are removed from excludeGroups on both sides
           (New-CIPPCAPolicy re-adds them on every deploy - deliberate, not drift)
         - grantControls.authenticationStrength collapses to @{ displayName } on both sides
           (deploy matches strengths by displayName; ids and allowedCombinations order are
@@ -107,7 +107,7 @@ function Get-CIPPBaselineCATemplateState {
     }
 
     $Normalize = {
-        param($Policy, [bool]$IsLive)
+        param($Policy)
         # Same-depth JSON round trip: a private deep clone both sides share.
         $Policy = $Policy | ConvertTo-Json -Depth 100 -Compress | ConvertFrom-Json -Depth 100
 
@@ -132,8 +132,8 @@ function Get-CIPPBaselineCATemplateState {
                     $Policy.conditions.users.$Side = & $TranslateSet $Policy.conditions.users.$Side
                 }
             }
-            if ($IsLive -and $null -ne $Policy.conditions.users.excludeGroups) {
-                # CIPP re-adds Vacation Exclusion groups on every deploy - tolerated, not drift.
+            if ($null -ne $Policy.conditions.users.excludeGroups) {
+                # CIPP re-adds Vacation Exclusion groups on every deploy - tolerated, and ignored in a template captured with them.
                 $Policy.conditions.users.excludeGroups = @($Policy.conditions.users.excludeGroups | Where-Object { -not "$_".StartsWith('Vacation Exclusion') })
             }
         }
@@ -178,7 +178,7 @@ function Get-CIPPBaselineCATemplateState {
         }
     }
 
-    $Expected = & $Normalize $Template $false
+    $Expected = & $Normalize $Template
 
     if ($Policies.Count -eq 0) {
         # The collector stamps a Count metadata row even for a tenant with zero CA
@@ -202,7 +202,7 @@ function Get-CIPPBaselineCATemplateState {
         }
     }
 
-    $Current = & $Normalize $Live $true
+    $Current = & $Normalize $Live
     # State: the configured state is the expectation; 'donotchange' adopts the live state.
     $Expected.state = if (-not $ConfiguredState -or $ConfiguredState -eq 'donotchange') { $Current.state } else { $ConfiguredState }
 

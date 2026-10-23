@@ -137,5 +137,22 @@ Describe 'Get-CIPPBaselineCATemplateState' {
             @($State.Current.conditions.users.excludeGroups) | Should -Be @('Exclude A')
             $script:GraphLookups.Count | Should -Be 0
         }
+
+        It 'ignores Vacation Exclusion groups in a template captured from a policy that had them' {
+            $script:CachedGroups = @(
+                [pscustomobject]@{ id = $script:GroupA; displayName = 'Exclude A' }
+                [pscustomobject]@{ id = $script:Vacation; displayName = 'Vacation Exclusion - Variable test policy' }
+            )
+            $script:LivePolicy = [pscustomobject]@{
+                displayName = 'Variable test policy'
+                state       = 'disabled'
+                conditions  = [pscustomobject]@{ users = [pscustomobject]@{ includeUsers = @('All'); excludeGroups = @($script:GroupA) } }
+            }
+            $script:TemplateJSON = '{"displayName":"Variable test policy","state":"disabled","conditions":{"users":{"includeUsers":["All"],"excludeGroups":["Exclude A","Vacation Exclusion - Variable test policy"]}}}'
+            $State = Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
+
+            @($State.Expected.conditions.users.excludeGroups) | Should -Be @('Exclude A')
+            @($State.Current.conditions.users.excludeGroups) | Should -Be @('Exclude A')
+        }
     }
 }
