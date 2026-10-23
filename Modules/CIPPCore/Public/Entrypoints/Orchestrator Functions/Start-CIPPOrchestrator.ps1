@@ -38,8 +38,12 @@ function Start-CIPPOrchestrator {
     if ($env:CIPPNG -eq 'true' -and $InputObject) {
         $OrchestratorName = $InputObject.OrchestratorName ?? 'UnnamedOrchestrator'
 
-        # QueueFunction pattern: call the function first to generate batch items
-        if (-not $InputObject.Batch -and $InputObject.QueueFunction) {
+        $AllowCollision = $InputObject.AllowCollision -ne $false
+        $CheckCollision = -not $AllowCollision -and [Craft.Services.OrchestratorBridge].GetMethod('IsRunActive')
+
+        # QueueFunction pattern: call the function first to generate batch items.
+        # Not while a no-collision run is active: the function may claim work (audit log windows) for a run that is then skipped.
+        if (-not $InputObject.Batch -and $InputObject.QueueFunction -and -not ($CheckCollision -and [Craft.Services.OrchestratorBridge]::IsRunActive($OrchestratorName))) {
             $QueueFuncName = "Push-$($InputObject.QueueFunction.FunctionName)"
             Write-Information "Craft: Calling QueueFunction '$QueueFuncName' to build batch for '$OrchestratorName'"
             $QueueItem = [PSCustomObject]$InputObject.QueueFunction
@@ -59,12 +63,10 @@ function Start-CIPPOrchestrator {
         }
 
         # AllowCollision = $false: skip while a run of this name (any queue id suffix) is still going.
-        $AllowCollision = $InputObject.AllowCollision -ne $false
-        if (-not $AllowCollision -and [Craft.Services.OrchestratorBridge].GetMethod('IsRunActive') -and
-            [Craft.Services.OrchestratorBridge]::IsRunActive($OrchestratorName)) {
-            $BatchTenants = @($InputObject.Batch.TenantFilter | Select-Object -Unique)
+        if ($CheckCollision -and [Craft.Services.OrchestratorBridge]::IsRunActive($OrchestratorName)) {
+            $BatchTenants = @(@($InputObject.Batch.TenantFilter) + @($InputObject.QueueFunction.Parameters.TenantFilter) | Select-Object -Unique)
             $LogTenant = if ($BatchTenants.Count -eq 1 -and $BatchTenants[0]) { $BatchTenants[0] } else { 'None' }
-            Write-LogMessage -API 'Orchestrator' -tenant $LogTenant -message "Skipped $OrchestratorName ($(@($InputObject.Batch).Count) tasks): a run with this name is still in progress" -sev Warning
+            Write-LogMessage -API 'Orchestrator' -tenant $LogTenant -message "Skipped $OrchestratorName ($(@($InputObject.Batch).Where({ $null -ne $_ }).Count) tasks): a run with this name is still in progress" -sev Warning
             return "Craft-$OrchestratorName-Skipped"
         }
 

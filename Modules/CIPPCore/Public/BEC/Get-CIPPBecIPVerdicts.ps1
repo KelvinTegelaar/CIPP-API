@@ -20,10 +20,12 @@ function Get-CIPPBecIPVerdicts {
           ipVerdict thresholds.
         Heuristics (weights in BecHeuristics.json ipVerdict.weights) raise the score for an address
         behind a flagged action, a hosting or proxy network, a foreign location, one new to the user's
-        sign-in baseline, a risky sign-in, a scripted client, a failed interactive sign-in that got past
+        sign-in baseline (or, more so, outside the one network the user nearly always uses), a risky
+        sign-in, a scripted client the user never ran from that network, a failed interactive sign-in that got past
         the password (ipVerdict.passwordAcceptedErrorCodes: stopped by MFA or Conditional Access) with
         no successful one, or other accounts appearing on it only during the window; they lower it for
-        an address, network or location the user regularly used before the window, a compliant device,
+        an address, IPv6 /64 or (outside hosting networks) IPv4 /24, network or location the user regularly
+        used before the window (the user's main network more), a compliant device,
         colleagues on it before the window, a trusted named location, the address of a technician who
         ran or reviewed the investigation (most likely the partner's own, so a strong start towards
         trusted - but still judged, since a technician's address can be shared or wrong), or an address
@@ -100,6 +102,8 @@ function Get-CIPPBecIPVerdicts {
     $RegularShare = [double]($Cfg.regularShare ?? 0.05)
     $RegularDays = [int]($Cfg.regularDays ?? 3)
     $KnownAsnShare = [double]($Cfg.knownAsnShare ?? 0.2)
+    $MainAsnShare = [double]($Cfg.mainAsnShare ?? 0.5)
+    $ConcentratedAsnShare = [double]($Cfg.concentratedAsnShare ?? 0.8)
     $KnownLocationShare = [double]($Cfg.knownLocationShare ?? 0.1)
     $ServiceAsn = [string]($Cfg.serviceAsnRegex ?? '(?i)microsoft')
     $ScriptedAgent = [string]($Cfg.scriptedUserAgentRegex ?? '(?i)(python|axios|curl|okhttp|go-http-client|node-fetch|powershell|libwww|java/|httpclient|postman)')
@@ -155,7 +159,7 @@ function Get-CIPPBecIPVerdicts {
         if (-not $IPs.Contains($IP)) {
             $IPs[$IP] = [pscustomobject]@{
                 IP = $IP; SignIns = 0; NonInteractive = 0; Successful = 0; Failed = 0; ResetAttempts = 0; PasswordAccepted = 0; FirstSeen = $null; LastSeen = $null
-                Country = $null; City = $null; ASN = $null; Risk = 'none'; Scripted = $false; Compliant = $false
+                Country = $null; City = $null; ASN = $null; Risk = 'none'; Scripted = $false; ScriptedApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase); Compliant = $false
                 Kinds = [System.Collections.Generic.HashSet[string]]::new(); FlaggedKinds = [System.Collections.Generic.HashSet[string]]::new()
                 Events = 0; ActorKinds = [System.Collections.Generic.HashSet[string]]::new(); Sessions = [System.Collections.Generic.HashSet[string]]::new(); CippSignIns = 0; Trip = $null
             }
@@ -185,7 +189,7 @@ function Get-CIPPBecIPVerdicts {
             if (-not $Entry.ASN -and $SignIn.ASN) { $Entry.ASN = [string]$SignIn.ASN }
             $Level = ([string]$SignIn.RiskLevelDuringSignIn).ToLowerInvariant()
             if ([int]($RiskRank[$Level] ?? 0) -gt [int]($RiskRank[$Entry.Risk] ?? 0)) { $Entry.Risk = $Level }
-            if ($SignIn.UserAgent -and [string]$SignIn.UserAgent -match $ScriptedAgent) { $Entry.Scripted = $true }
+            if ($SignIn.UserAgent -and [string]$SignIn.UserAgent -match $ScriptedAgent) { $Entry.Scripted = $true; $null = $Entry.ScriptedApps.Add([string]$SignIn.AppDisplayName) }
             if (& $Truthy $SignIn.DeviceCompliant) { $Entry.Compliant = $true }
             if ($SignIn.SessionId) { $null = $Entry.Sessions.Add("entra:$($SignIn.SessionId)") }
             if (-not $Entry.Trip) { $Entry.Trip = Find-CIPPBecApprovedTravel -TravelWindows $TravelWindows -Country ([string]$SignIn.Country) -When $SignIn.CreatedDateTime }
@@ -208,22 +212,33 @@ function Get-CIPPBecIPVerdicts {
     $BaselineOk = $Baseline -and [int]$Baseline.Successful -ge $MinBaseline
     $BaselineIPs = @{}
     foreach ($Row in @($Baseline.IPs | Where-Object { $_ })) { $BaselineIPs[[string]$Row.IP] = $Row }
-    # IPv6 devices rotate through privacy addresses inside one /64 (daily or faster), so a new IPv6
-    # address in a /64 the user used before is the user's network, as a known IPv4 address is
+    # IPv6 devices rotate through privacy addresses inside one /64 (daily or faster), and a service the
+    # user runs (a VPN, a hosted connector) rotates through its own IPv4 /24, so a new address in either
+    # is the user's network, as a known address is
+    $NetworkOf = {
+        param($Address)
+        $Net = ConvertTo-CIPPBecHostAddress -Address ([string]$Address) -Network
+        if ($Net -like '*/64') { $Net } elseif ($Net -match '^(\d+\.\d+\.\d+)\.\d+$') { "$($Matches[1]).0/24" }
+    }
     $BaselineNetworks = @{}
     foreach ($Row in @($Baseline.IPs | Where-Object { $_ })) {
-        $Net = ConvertTo-CIPPBecHostAddress -Address ([string]$Row.IP) -Network
-        if ($Net -notlike '*/64') { continue }
-        if (-not $BaselineNetworks.ContainsKey($Net)) { $BaselineNetworks[$Net] = [pscustomobject]@{ IP = $Net; SignIns = 0; Share = 0.0; Days = 0 } }
+        $Net = & $NetworkOf $Row.IP
+        if (-not $Net) { continue }
+        if (-not $BaselineNetworks.ContainsKey($Net)) { $BaselineNetworks[$Net] = [pscustomobject]@{ IP = $Net; SignIns = 0; Share = 0.0; Days = 0; Apps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase) } }
         $Agg = $BaselineNetworks[$Net]
         $Agg.SignIns = $Agg.SignIns + [int]$Row.SignIns
         $Agg.Share = $Agg.Share + [double]$Row.Share
+        foreach ($App in @($Row.Apps | Where-Object { $_ })) { $null = $Agg.Apps.Add([string]$App) }
         # ponytail: the rows carry a day count, not the days, so the busiest address's count stands in
         # (undercounts a /64 used on different days by different addresses; the summed share carries it)
         $Agg.Days = [Math]::Max($Agg.Days, [int]$Row.Days)
     }
     $BaselineAsns = @{}
-    foreach ($Row in @($Baseline.ASNs | Where-Object { $_ })) { $BaselineAsns[[string]$Row.ASN] = $Row }
+    $TopAsnShare = 0.0
+    foreach ($Row in @($Baseline.ASNs | Where-Object { $_ })) {
+        $BaselineAsns[[string]$Row.ASN] = $Row
+        $TopAsnShare = [Math]::Max($TopAsnShare, [double]$Row.Share)
+    }
     $BaselineCountries = @{}
     $BaselinePlaces = @{}
     foreach ($Row in @($Baseline.Locations | Where-Object { $_ })) {
@@ -285,13 +300,23 @@ function Get-CIPPBecIPVerdicts {
         if ($Entry.PasswordAccepted -gt 0 -and $Entry.Successful -eq 0) {
             & $Add 'PasswordAccepted' (& $Weight 'passwordAccepted' 4) "The password was accepted but $($Entry.PasswordAccepted) sign-in(s) were stopped by MFA or Conditional Access"
         }
-        if ($Entry.Scripted) { & $Add 'ScriptedClient' (& $Weight 'scriptedClient' 3) 'A sign-in used a scripting or automation user agent' }
-
         $Known = $BaselineIPs[$IP]
         $KnownWhat = 'address'
         if (-not $Known) {
-            $Net = ConvertTo-CIPPBecHostAddress -Address $IP -Network
-            if ($Net -like '*/64' -and $BaselineNetworks.ContainsKey($Net)) { $Known = $BaselineNetworks[$Net]; $KnownWhat = "IPv6 network ($Net)" }
+            $Net = & $NetworkOf $IP
+            # hosting providers hand neighbouring IPv4 addresses to different customers
+            if ($Net -and $BaselineNetworks.ContainsKey($Net) -and ($Net -like '*/64' -or -not $Hosting)) {
+                $Known = $BaselineNetworks[$Net]
+                $KnownWhat = if ($Net -like '*/64') { "IPv6 network ($Net)" } else { "IPv4 network ($Net)" }
+            }
+        }
+        if ($Entry.Scripted) {
+            $ScriptedApps = @($Entry.ScriptedApps)
+            if ($Known -and $ScriptedApps.Where({ -not $_ -or $_ -notin @($Known.Apps) }).Count -eq 0) {
+                & $Add 'KnownScriptedClient' (& $Weight 'knownScriptedClient' 0) "A scripting or automation client the user already ran from this $KnownWhat ($($ScriptedApps -join ', '))"
+            } else {
+                & $Add 'ScriptedClient' (& $Weight 'scriptedClient' 3) 'A sign-in used a scripting or automation user agent'
+            }
         }
         if ($Known) {
             if ([double]$Known.Share -ge $RegularShare -or [int]$Known.Days -ge $RegularDays) {
@@ -305,7 +330,9 @@ function Get-CIPPBecIPVerdicts {
         # an audit-log baseline carries no network numbers to compare with
         if ($BaselineOk -and $Entry.ASN -and $BaselineAsns.Count -gt 0) {
             $KnownAsn = $BaselineAsns[[string]$Entry.ASN]
-            if ($KnownAsn -and [double]$KnownAsn.Share -ge $KnownAsnShare) { & $Add 'KnownNetwork' (& $Weight 'knownNetwork' -1) "The user's usual network (AS$($Entry.ASN))" }
+            if ($KnownAsn -and [double]$KnownAsn.Share -ge $MainAsnShare) { & $Add 'KnownNetwork' (& $Weight 'mainNetwork' -2) "The user's main network (AS$($Entry.ASN), $([math]::Round([double]$KnownAsn.Share * 100))% of sign-ins)" }
+            elseif ($KnownAsn -and [double]$KnownAsn.Share -ge $KnownAsnShare) { & $Add 'KnownNetwork' (& $Weight 'knownNetwork' -1) "The user's usual network (AS$($Entry.ASN))" }
+            elseif (-not $KnownAsn -and -not $Known -and $TopAsnShare -ge $ConcentratedAsnShare) { & $Add 'NewNetwork' (& $Weight 'newNetworkConcentrated' 2) "A network (AS$($Entry.ASN)) the user never signed in from, though $([math]::Round($TopAsnShare * 100))% of their sign-ins come from one network" }
             elseif (-not $KnownAsn -and -not $Known) { & $Add 'NewNetwork' (& $Weight 'newNetwork' 1) "A network (AS$($Entry.ASN)) the user never signed in from" }
         }
         if ($BaselineOk -and $Country) {
@@ -387,7 +414,8 @@ function Get-CIPPBecIPVerdicts {
             if ($Shared.Count -eq 0) { continue }
             $Points = & $Weight 'sharedSession' 3
             $Row.Reasons.Add([pscustomobject]@{ Code = 'SharedSession'; Weight = $Points; Text = "Shares a $(($Shared[0] -split ':')[0]) session with a likely-attacker address" })
-            $Row.Score = $Row.Score + $Points
+            # at least Suspicious, however much the user's own network weighs against it
+            $Row.Score = [Math]::Max($Row.Score + $Points, $SuspiciousAt)
             $Row.Decision = & $Classify $Row
         }
     }
