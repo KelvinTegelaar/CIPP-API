@@ -154,5 +154,8 @@
     "assignTo": "%AssignTo%"
   },
   "multiple": true,
-  "instanceIdentity": "ProfileName"
+  "instanceIdentity": "ProfileName",
+  "driftManagedNames": [
+    "%ProfileName%"
+  ]
 }

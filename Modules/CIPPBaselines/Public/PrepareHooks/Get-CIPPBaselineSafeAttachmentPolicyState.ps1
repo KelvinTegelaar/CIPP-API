@@ -37,12 +37,14 @@ function Get-CIPPBaselineSafeAttachmentPolicyState {
 
     $Configured = if ([string]::IsNullOrWhiteSpace("$($Item.Variables.name)")) { 'CIPP Default Safe Attachment Policy' } else { "$($Item.Variables.name)" }
     $PolicyCandidates = @($Configured, 'CIPP Default Safe Attachment Policy', 'Default Safe Attachment Policy')
-    $ExistingPolicy = @($Policies | Where-Object { $PolicyCandidates -contains "$($_.Name)" }) | Select-Object -First 1
+    $ExistingPolicy = @(foreach ($Candidate in $PolicyCandidates) { $Policies.Where({ "$($_.Name)" -eq $Candidate }, 'First') })[0]
     $PolicyName = if ($ExistingPolicy.Name) { "$($ExistingPolicy.Name)" } else { $Configured }
 
     $DesiredRuleName = "$PolicyName Rule"
     $RuleCandidates = @($DesiredRuleName, 'CIPP Default Safe Attachment Rule', 'CIPP Default Safe Attachment Policy')
-    $ExistingRule = @($Rules | Where-Object { $RuleCandidates -contains "$($_.Name)" }) | Select-Object -First 1
+    # A rule made in the Defender portal shares the policy's name, so the link is matched first
+    $LinkedRules = $Rules.Where({ "$($_.SafeAttachmentPolicy)" -eq $PolicyName })
+    $ExistingRule = @($LinkedRules.Where({ $RuleCandidates -contains "$($_.Name)" }); $LinkedRules; $Rules.Where({ $RuleCandidates -contains "$($_.Name)" }))[0]
     $RuleName = if ($ExistingRule.Name) { "$($ExistingRule.Name)" } else { $DesiredRuleName }
 
     $Policy = @($Policies | Where-Object { "$($_.Name)" -eq $PolicyName }) | Select-Object -First 1

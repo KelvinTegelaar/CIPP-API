@@ -68,5 +68,8 @@
     "config": "%Config%",
     "sampleSharing": "%SampleSharing%",
     "assignTo": "%AssignTo%"
-  }
+  },
+  "driftManagedNames": [
+    "EDR Configuration"
+  ]
 }

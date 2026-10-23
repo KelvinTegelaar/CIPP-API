@@ -225,5 +225,8 @@
     "blockExesMail": "%BlockExesMail%",
     "blockUnsignedDrivers": "%BlockUnsignedDrivers%",
     "assignTo": "%AssignTo%"
-  }
+  },
+  "driftManagedNames": [
+    "ASR Default rules"
+  ]
 }

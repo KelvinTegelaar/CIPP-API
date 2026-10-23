@@ -146,5 +146,10 @@
     "excludeGroups": "%excludeGroups%",
     "useDetectedBreakGlass": "%useDetectedBreakGlass%"
   },
-  "checkBeforeRun": false
+  "checkBeforeRun": false,
+  "driftManagedNames": [
+    "Global Secure Access - macOS System Extensions",
+    "Global Secure Access - macOS Transparent Proxy",
+    "Global Secure Access - macOS Client Settings"
+  ]
 }

@@ -70,5 +70,8 @@
     "excludedPaths": "%excludedPaths%",
     "excludedProcesses": "%excludedProcesses%",
     "assignTo": "%AssignTo%"
-  }
+  },
+  "driftManagedNames": [
+    "Default AV Exclusion Policy"
+  ]
 }
