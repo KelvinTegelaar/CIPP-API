@@ -151,6 +151,8 @@ function Get-CIPPBaseline {
     foreach ($Tenant in $AllTenants) {
         if ($Tenant.defaultDomainName) { $TenantNames[$Tenant.defaultDomainName] = $Tenant.displayName }
     }
+    # Stored tenant values are customerIds, or domains on older saves: both read as the current default domain.
+    $TenantLookup = Get-CIPPTenantLookup -Tenants $AllTenants
 
     foreach ($RolloutRow in $RolloutRows) {
         # One corrupted baseline must never take down the whole list: log and show the rest.
@@ -164,7 +166,7 @@ function Get-CIPPBaseline {
             $ExpandedExcludedTenants = @($ExcludedTenants | ForEach-Object {
                     $Value = $_
                     $Group = $Groups | Where-Object { $_.Id -eq $Value } | Select-Object -First 1
-                    if ($Group) { $Group.Members.defaultDomainName } else { $Value }
+                    if ($Group) { $Group.Members.defaultDomainName } else { $TenantLookup["$Value"].defaultDomainName ?? $Value }
                 } | Select-Object -Unique)
 
             # The standards per stage come from the delta rows for this baseline.
@@ -200,7 +202,12 @@ function Get-CIPPBaseline {
             # Assignment derives from the delta scopes: unique (scope, scopeId) pairs.
             # scopeId is the stable key (group ID / tenant domain); scopeName is for display.
             $AssignmentScopes = @($Deltas | ForEach-Object {
-                    [PSCustomObject]@{ scope = $_.scope; scopeId = $_.scopeId; scopeName = ($_.scopeName ?? $_.scopeId) }
+                    if ($_.scope -eq 'tenant') {
+                        $Domain = $TenantLookup["$($_.scopeId)"].defaultDomainName ?? $_.scopeId
+                        [PSCustomObject]@{ scope = $_.scope; scopeId = $Domain; scopeName = $Domain }
+                    } else {
+                        [PSCustomObject]@{ scope = $_.scope; scopeId = $_.scopeId; scopeName = ($_.scopeName ?? $_.scopeId) }
+                    }
                 } | Sort-Object -Property scope, scopeId -Unique)
             $AssignedTenants = @($AssignmentScopes | ForEach-Object {
                     if ($_.scope -eq 'allTenants') { 'AllTenants' } else { $_.scopeName }
@@ -212,6 +219,13 @@ function Get-CIPPBaseline {
             try { if ($RolloutRow.assignedTo) { $AssignedTo = @($RolloutRow.assignedTo | ConvertFrom-Json -ErrorAction Stop) } } catch { }
             $ExcludedTo = @()
             try { if ($RolloutRow.excludedTo) { $ExcludedTo = @($RolloutRow.excludedTo | ConvertFrom-Json -ErrorAction Stop) } } catch { }
+            foreach ($Option in @($AssignedTo) + @($ExcludedTo)) {
+                $Tenant = $TenantLookup["$($Option.value)"]
+                if ($Tenant -and $Option.value -ne $Tenant.defaultDomainName) {
+                    $Option.value = $Tenant.defaultDomainName
+                    $Option.label = '{0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName
+                }
+            }
             $Assignments = @($AssignmentScopes | ForEach-Object {
                     if ($_.scope -eq 'allTenants') {
                         [PSCustomObject]@{ value = 'AllTenants'; label = '*All Tenants* (AllTenants)'; type = 'Tenant' }
@@ -254,6 +268,7 @@ function Get-CIPPBaseline {
                 } else { $null }
                 [PSCustomObject]@{
                     tenantFilter       = $TenantDomain
+                    customerId         = $TenantLookup[$TenantDomain].customerId
                     tenantName         = $TenantNames[$TenantDomain] ?? $TenantDomain
                     currentStage       = $CurrentStage
                     totalStages        = $Stages.Count
@@ -272,9 +287,12 @@ function Get-CIPPBaseline {
             # tenant: no state, no work items, no resolved rows.
             $StateRows = Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeGuid'"
             $TenantStates = [System.Collections.Generic.List[object]]::new()
-            foreach ($State in $StateRows) {
+            # customerId-keyed rows first: they win over a row an older save keyed by domain.
+            foreach ($State in @($StateRows | Sort-Object -Property { $TenantLookup["$($_.RowKey)"].customerId -ne "$($_.RowKey)" })) {
                 if ("$($State.RowKey)" -eq 'Exported Template') { continue }
-                $TenantStates.Add((& $NewState $State.RowKey ([int]($State.currentStage ?? 1)) $State.enteredStageAt))
+                $Domain = $TenantLookup["$($State.RowKey)"].defaultDomainName ?? "$($State.RowKey)"
+                if ($TenantStates.tenantFilter -contains $Domain) { continue }
+                $TenantStates.Add((& $NewState $Domain ([int]($State.currentStage ?? 1)) $State.enteredStageAt))
             }
 
             # Every assigned tenant without a state row defaults to stage 1 since assignment.

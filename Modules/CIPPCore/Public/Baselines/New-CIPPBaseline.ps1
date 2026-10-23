@@ -60,9 +60,11 @@ function New-CIPPBaseline {
     # The editor round-trips the tenant selector's own option objects ({label, value,
     # type}) verbatim via assignedTo/excludedTo; the flat excludedTenants values keep
     # the exclusion logic simple. Raw string values are accepted everywhere too.
+    $TenantLookup = Get-CIPPTenantLookup
     $ExcludedValues = @($Baseline.excludedTenants | ForEach-Object {
-            if ($null -eq $_) { } elseif ($_ -is [string]) { $_ } else { "$($_.value)" }
-        } | Where-Object { $_ })
+            $Value = if ($null -eq $_) { } elseif ($_ -is [string]) { $_ } else { "$($_.value)" }
+            if ($Value) { $TenantLookup[$Value].customerId ?? $Value }
+        })
     $RolloutEntity = @{
         PartitionKey    = 'rollout'
         RowKey          = "$GUID"
@@ -120,7 +122,8 @@ function New-CIPPBaseline {
             if ($Group) {
                 @{ scope = 'group'; scopeId = "$($Group.Id)"; scopeName = "$($Group.Name)"; segment = "group_$($Group.Id)" }
             } else {
-                @{ scope = 'tenant'; scopeId = $Value; scopeName = $Value; segment = "tenant_$Value" }
+                $TenantId = $TenantLookup[$Value].customerId ?? $Value
+                @{ scope = 'tenant'; scopeId = $TenantId; scopeName = $TenantLookup[$Value].defaultDomainName ?? $Value; segment = "tenant_$TenantId" }
             }
         }
     }

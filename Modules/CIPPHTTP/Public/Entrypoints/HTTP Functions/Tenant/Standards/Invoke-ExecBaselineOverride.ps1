@@ -30,7 +30,12 @@ function Invoke-ExecBaselineOverride {
         $SafeStandard = ConvertTo-CIPPODataFilterValue -Value $Standard
         # Ad-hoc tenant delta: templateId is empty per the design doc; the RK's last segment
         # is the literal 'adhoc'. '#' is not legal in Azure Table keys.
-        $DeltaRowKey = 'tenant_{0}-{1}-adhoc' -f $TenantFilter, ($Standard -replace '#', '~')
+        $Tenant = @(Get-Tenants -TenantFilter $TenantFilter -IncludeErrors)[0]
+        $TenantId = $Tenant.customerId ?? $TenantFilter
+        $DeltaRowKey = 'tenant_{0}-{1}-adhoc' -f $TenantId, ($Standard -replace '#', '~')
+        # Overrides saved before customerId keys carry one of the tenant's domains instead.
+        $TenantKeys = @($TenantId, $Tenant.defaultDomainName, $Tenant.initialDomainName, $TenantFilter) | Where-Object { $_ }
+        $ExistingDeltas = @(Get-CIPPAzDataTableEntity @DeltaTable -Filter "PartitionKey eq 'standardItem' and templateId eq '' and standardName eq '$SafeStandard'" | Where-Object { $_.scopeId -in $TenantKeys })
 
         $ResolvedEntity = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and StandardName eq '$SafeStandard'"
         if (-not $ResolvedEntity) {
@@ -42,6 +47,8 @@ function Invoke-ExecBaselineOverride {
         switch ($Action) {
             'createOverride' {
                 $Variables = $Request.Body.variables ?? [PSCustomObject]@{}
+                $LegacyDeltas = @($ExistingDeltas | Where-Object { $_.RowKey -ne $DeltaRowKey })
+                if ($LegacyDeltas.Count -gt 0) { Remove-CIPPAzDataTableEntity -Force @DeltaTable -Entity $LegacyDeltas }
                 $DeltaTable.Force = $true
                 Add-CIPPAzDataTableEntity @DeltaTable -Entity @{
                     PartitionKey     = 'standardItem'
@@ -49,7 +56,7 @@ function Invoke-ExecBaselineOverride {
                     standardName     = "$Standard"
                     templateId       = ''
                     scope            = 'tenant'
-                    scopeId          = "$TenantFilter"
+                    scopeId          = "$TenantId"
                     stage            = 1
                     expectedValue    = (ConvertTo-Json -Compress -Depth 100 -InputObject $Variables)
                     remediateEnabled = $true
@@ -102,10 +109,8 @@ function Invoke-ExecBaselineOverride {
                 $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Standard -Mode 'triage' -TriggeredBy $User -Outcome 'Override Created' -Detail 'Created a tenant override - its configured values replace what the baselines apply'
             }
             'deleteOverride' {
-                $SafeDeltaRowKey = ConvertTo-CIPPODataFilterValue -Value $DeltaRowKey
-                $DeltaEntity = Get-CIPPAzDataTableEntity @DeltaTable -Filter "PartitionKey eq 'standardItem' and RowKey eq '$SafeDeltaRowKey'"
-                if ($DeltaEntity) {
-                    Remove-CIPPAzDataTableEntity -Force @DeltaTable -Entity $DeltaEntity
+                if ($ExistingDeltas.Count -gt 0) {
+                    Remove-CIPPAzDataTableEntity -Force @DeltaTable -Entity $ExistingDeltas
                 }
 
                 # An ad-hoc-only resolved row (empty TemplateId) has nothing to fall back to -

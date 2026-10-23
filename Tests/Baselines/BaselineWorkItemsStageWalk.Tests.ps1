@@ -9,6 +9,7 @@ BeforeAll {
 
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Get-TenantGroups { @() }
+    function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) @() }
     function Get-CippTable { param($tablename) @{} }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" -replace "'", "''" }
     function Get-CIPPAzDataTableEntity { param($Filter) @() }
@@ -17,6 +18,7 @@ BeforeAll {
     function Expand-CIPPBaselineTemplatePackage { param($Definition, $Config, $TemplateRows) @() }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineWorkItems.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTenantLookup.ps1')
 
     $script:Definitions = @(
         [PSCustomObject]@{

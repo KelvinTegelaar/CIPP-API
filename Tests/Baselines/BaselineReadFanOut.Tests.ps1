@@ -28,6 +28,7 @@ BeforeAll {
     }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaseline.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTenantLookup.ps1')
 
     $DefinitionRoot = Join-Path $script:RepoRoot 'Config/BaselineStandards'
     $script:Definitions = Get-ChildItem -Path $DefinitionRoot -Recurse -Filter '*.json' | ForEach-Object { Get-Content $_.FullName -Raw | ConvertFrom-Json }

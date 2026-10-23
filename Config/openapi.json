@@ -732,8 +732,7 @@
                     "type": "array",
                     "items": {
                       "$ref": "#/components/schemas/LabelValue"
-                    },
-                    "description": "The editor round-trips the tenant selector's own option objects ({label, value, type}) verbatim via assignedTo/excludedTo; the flat excludedTenants values keep the exclusion logic simple. Raw string values are accepted everywhere too."
+                    }
                   },
                   "GitHub": {
                     "type": "object",

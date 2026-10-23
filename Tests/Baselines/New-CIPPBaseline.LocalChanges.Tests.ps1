@@ -12,8 +12,10 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($Context, $Entity) }
     function Remove-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Get-TenantGroups { @() }
+    function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) @() }
 
     . $FunctionPath
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Get-CIPPTenantLookup.ps1')
 
     function Get-Payload {
         [pscustomobject]@{

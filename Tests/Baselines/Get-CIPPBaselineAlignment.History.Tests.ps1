@@ -10,6 +10,7 @@ BeforeAll {
     function Get-CIPPBaselineDefinition { }
     function Get-CIPPBaseline { param($ID) }
     function Get-TenantGroups { }
+    function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) @() }
     . (Join-Path $BaselinesPath 'Get-CIPPBaselineAlignment.ps1')
     . (Join-Path $BaselinesPath 'Convert-CIPPBaselineResolvedEntity.ps1')
 

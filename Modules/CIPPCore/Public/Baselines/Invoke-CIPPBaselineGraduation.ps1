@@ -120,7 +120,7 @@ function Invoke-CIPPBaselineGraduation {
             $StateTable.Force = $true
             Add-CIPPAzDataTableEntity @StateTable -Entity @{
                 PartitionKey    = "$($Baseline.GUID)"
-                RowKey          = "$($State.tenantFilter)"
+                RowKey          = "$($State.customerId ?? $State.tenantFilter)"
                 currentStage    = ($State.currentStage + 1)
                 enteredStageAt  = $Now
                 firstDeployedAt = $State.firstDeployedAt ?? $State.enteredStageAt ?? $Now

@@ -26,8 +26,11 @@ function Invoke-ExecBaselineStage {
 
         $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
         $SafeTemplate = ConvertTo-CIPPODataFilterValue -Value $TemplateId
-        $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
-        $State = Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeTemplate' and RowKey eq '$SafeTenant'"
+        $Tenant = @(Get-Tenants -TenantFilter $TenantFilter -IncludeErrors)[0]
+        $TenantId = $Tenant.customerId ?? $TenantFilter
+        # Rows saved before customerId keys carry one of the tenant's domains instead.
+        $TenantKeys = @($TenantId, $Tenant.defaultDomainName, $Tenant.initialDomainName, $TenantFilter) | Where-Object { $_ }
+        $State = @(Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeTemplate'" | Where-Object { $_.RowKey -in $TenantKeys } | Sort-Object -Property { $_.RowKey -ne $TenantId })[0]
         $CurrentStage = if ($State) { [int]$State.currentStage } else { 1 }
         if ($CurrentStage -ge $TotalStages) {
             throw "$TenantFilter is already in the final stage of $($Baseline.templateName)."
@@ -57,7 +60,7 @@ function Invoke-ExecBaselineStage {
         $StateTable.Force = $true
         Add-CIPPAzDataTableEntity @StateTable -Entity @{
             PartitionKey    = "$TemplateId"
-            RowKey          = "$TenantFilter"
+            RowKey          = "$TenantId"
             currentStage    = $NewStage
             enteredStageAt  = $Now
             firstDeployedAt = $State.firstDeployedAt ?? $State.enteredStageAt ?? $Now

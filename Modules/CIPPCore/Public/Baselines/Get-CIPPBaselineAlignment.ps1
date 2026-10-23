@@ -376,7 +376,9 @@ function Get-CIPPBaselineAlignment {
         # override replaces the expected value on whichever row shows the standard, or gets
         # its own 'No Data' row when nothing else rolls the standard out to this tenant.
         $DeltaTable = Get-CippTable -tablename 'Baselines'
-        $OverrideDeltas = Get-CIPPAzDataTableEntity @DeltaTable -Filter "PartitionKey eq 'standardItem' and scope eq 'tenant' and scopeId eq '$SafeTenant' and templateId eq ''"
+        $Tenant = @(Get-Tenants -TenantFilter $TenantFilter -IncludeErrors)[0]
+        $TenantKeys = @($Tenant.customerId, $Tenant.defaultDomainName, $Tenant.initialDomainName, $TenantFilter) | Where-Object { $_ }
+        $OverrideDeltas = Get-CIPPAzDataTableEntity @DeltaTable -Filter "PartitionKey eq 'standardItem' and scope eq 'tenant' and templateId eq ''" | Where-Object { $_.scopeId -in $TenantKeys }
         foreach ($Delta in @($OverrideDeltas)) {
             if (-not $Delta) { continue }
             $Variables = if ($Delta.expectedValue) { $Delta.expectedValue | ConvertFrom-Json } else { [PSCustomObject]@{} }
