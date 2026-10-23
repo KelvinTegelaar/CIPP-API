@@ -12,7 +12,7 @@ BeforeAll {
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPScheduledTaskNextRun.ps1')
 
-    function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify) }
+    function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify, $AlertRun) }
     function Set-CippUserAgentContext { param($Headers, $Source, $TaskId) }
     function Get-CippTable { param($tablename) }
     function Get-AzDataTableEntity { param($Context, $Filter) }

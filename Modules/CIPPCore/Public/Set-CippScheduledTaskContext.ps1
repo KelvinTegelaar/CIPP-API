@@ -10,13 +10,17 @@ function Set-CippScheduledTaskContext {
         The scheduled task RowKey. Pass $null or empty to clear.
     .PARAMETER AlertReNotify
         The alert task's re-notify setting, read by Write-AlertTrace. Reset on every call.
+    .PARAMETER AlertRun
+        A hashtable Write-AlertTrace adds the run's item counts to (New, Reopened, Continuing, Resolved,
+        Snoozed) and sets Reported on, so the scheduler can record what the run found. Reset on every call.
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
     param(
         [string]$TaskId,
-        [bool]$AlertReNotify
+        [bool]$AlertReNotify,
+        [hashtable]$AlertRun
     )
 
     if (-not $script:CippScheduledTaskIdStorage) {
@@ -27,4 +31,8 @@ function Set-CippScheduledTaskContext {
         $script:CippAlertReNotifyStorage = [System.Threading.AsyncLocal[bool]]::new()
     }
     $script:CippAlertReNotifyStorage.Value = $AlertReNotify
+    if (-not $script:CippAlertRunStorage) {
+        $script:CippAlertRunStorage = [System.Threading.AsyncLocal[hashtable]]::new()
+    }
+    $script:CippAlertRunStorage.Value = $AlertRun
 }

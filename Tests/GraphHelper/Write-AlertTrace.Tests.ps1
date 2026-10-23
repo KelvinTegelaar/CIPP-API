@@ -253,6 +253,31 @@ Describe 'Write-AlertTrace' {
         Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $Data | Should -BeNullOrEmpty
     }
 
+    It 'adds its counts to the scheduler run holder and marks the run reported, also when it finds nothing' {
+        $script:Existing = @((New-StoredRow -Message 'kept'), (New-StoredRow -Message 'gone'))
+        $Run = @{}
+        try {
+            Set-CippScheduledTaskContext -TaskId 'task1' -AlertRun $Run
+            $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @(
+                [pscustomobject]@{ Message = 'kept' }
+                [pscustomobject]@{ Message = 'new' }
+            )
+        } finally {
+            Set-CippScheduledTaskContext -TaskId $null
+        }
+        ($Run.Reported, $Run.New, $Run.Continuing, $Run.Resolved) | Should -Be @($true, 1, 1, 1)
+
+        $Empty = @{}
+        try {
+            Set-CippScheduledTaskContext -TaskId 'task1' -AlertRun $Empty
+            $script:Existing = @()
+            $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @()
+        } finally {
+            Set-CippScheduledTaskContext -TaskId $null
+        }
+        ($Empty.Reported, $Empty.New) | Should -Be @($true, 0)
+    }
+
     It 'ignores duplicate items within one run' {
         $Result = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @(
             [pscustomobject]@{ Message = 'first' }

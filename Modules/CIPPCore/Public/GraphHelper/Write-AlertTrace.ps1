@@ -254,6 +254,11 @@ function Write-AlertTrace {
     }
 
     Write-Information ("Alert reconcile for {0} / {1}: {2} new, {3} reopened, {4} continuing, {5} resolved, {6} snoozed" -f $CmdletName, $TenantFilter, $Counts.New, $Counts.Reopened, $Counts.Continuing, $Counts.Resolved, $Counts.Snoozed)
+    $AlertRun = $script:CippAlertRunStorage.Value
+    if ($null -ne $AlertRun) {
+        foreach ($Key in $Counts.Keys) { $AlertRun[$Key] = [int]$AlertRun[$Key] + $Counts[$Key] }
+        $AlertRun.Reported = $true
+    }
 
     if ($Notify.Count -gt 0) {
         return @($Notify)

@@ -42522,6 +42522,141 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListAlertRunHistory": {
+      "get": {
+        "summary": "Lists scripted alert runs, newest first.",
+        "operationId": "ListAlertRunHistory",
+        "tags": [
+          "CIPP > Core"
+        ],
+        "description": "One row per scripted alert run per tenant: when it started, how long it took, its outcome (Completed,\nSkipped, Failed or Not reported) and how many alert items were new, reopened, continuing, resolved or\nsnoozed. A run that found nothing still has a row, so this shows that an alert did run. Skipped rows\nare runs the scheduler held back because the alert ran within its minimum interval.",
+        "parameters": [
+          {
+            "name": "Days",
+            "in": "query",
+            "description": "Days of history to return, newest first (default 1, at most 30).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TaskId",
+            "in": "query",
+            "description": "Only runs of this alert, by its scheduled task RowKey.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "Alert": {
+                        "x-cipp-field-source": "storage,backend"
+                      },
+                      "Continuing": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "DurationMs": {
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "New": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Outcome": {
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Reopened": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Resolved": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ScheduledUtc": {
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "Snoozed": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "StartedUtc": {
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "Summary": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "TaskId": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend"
+                      },
+                      "TaskName": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "TenantId": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Alert.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListAlertsQueue": {
       "get": {
         "summary": "ListAlertsQueue",
