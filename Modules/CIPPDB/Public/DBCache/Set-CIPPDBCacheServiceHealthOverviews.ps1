@@ -22,7 +22,7 @@ function Set-CIPPDBCacheServiceHealthOverviews {
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServiceHealthOverviews' -Data @($Overviews) -AddCount -ClearOnEmpty
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached service health overviews successfully' -sev Debug
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache service health overviews: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache service health overviews: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
         throw
     }
 }

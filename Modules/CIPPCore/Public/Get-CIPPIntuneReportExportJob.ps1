@@ -30,13 +30,28 @@ function Get-CIPPIntuneReportExportJob {
         return
     }
 
-    try {
-        $Job = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs/$($JobRow.JobId)" -tenantid $TenantFilter
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $($JobRow.JobId) not retrievable: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
+    # Intune deletes the download 6 hours after the export completes
+    if ($JobRow.SubmittedAt -and [datetimeoffset]$JobRow.SubmittedAt -lt [datetimeoffset]::UtcNow.AddHours(-6)) {
         Remove-CIPPAzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+        $null = New-CIPPIntuneReportExportJob -TenantFilter $TenantFilter -ReportName $ReportName
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $($JobRow.JobId) expired before it was read - submitted a new one" -sev Info
         return
+    }
+
+    foreach ($Attempt in 1..3) {
+        try {
+            $Job = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs/$($JobRow.JobId)" -tenantid $TenantFilter
+            break
+        } catch {
+            if ($Attempt -lt 3) {
+                Start-Sleep -Seconds 5
+                continue
+            }
+            # Intune returns 500 for jobs that read fine seconds later, so the row is kept for the next poll
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $($JobRow.JobId) not retrievable: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
+            return
+        }
     }
 
     if ($Job.status -eq 'completed' -and $Job.url) {

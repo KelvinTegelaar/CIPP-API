@@ -30,6 +30,6 @@ function Set-CIPPDBCacheSecureScore {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached secure score and control profiles successfully' -sev Debug
 
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache secure score: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache secure score: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
     }
 }

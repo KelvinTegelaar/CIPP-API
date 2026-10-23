@@ -22,7 +22,7 @@ function Set-CIPPDBCacheServiceHealthIssues {
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServiceHealthIssues' -Data @($Issues) -AddCount -ClearOnEmpty
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached service health issues successfully' -sev Debug
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache service health issues: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache service health issues: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
         throw
     }
 }

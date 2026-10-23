@@ -237,7 +237,7 @@ function Invoke-CIPPDBCacheCollection {
         # Start the report exports early; DetectedApps and IntuneAppInstallStatus read them last
         foreach ($ReportName in 'AppInvRawData', 'AppInstallStatusAggregate') {
             try { $null = Get-CIPPIntuneReportExportJob -TenantFilter $TenantFilter -ReportName $ReportName }
-            catch { Write-Warning "  [$CollectionType] Could not start the $ReportName export for $TenantFilter : $($_.Exception.Message)" }
+            catch { Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Could not start the $ReportName export: $($_.Exception.Message)" -sev Warning -LogData (Get-CippException -Exception $_) }
         }
     }
 
