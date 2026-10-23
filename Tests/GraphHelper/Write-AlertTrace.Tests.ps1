@@ -15,6 +15,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Context, $TableName, $Filter, $Property, $First) }
     function Add-CIPPAzDataTableEntity { param($Context, $TableName, $Entity, [switch]$Force) }
     function Remove-CIPPAzDataTableEntity { param($Context, $TableName, $Entity, [switch]$Force) }
+    function Update-CIPPAzDataTableEntity { param($Context, $TableName, $Entity, $OperationType, [switch]$Force) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) }
     function Get-CIPPActiveAlertSnoozes { param($CmdletName, $TenantFilter) }
 
@@ -56,8 +57,8 @@ BeforeAll {
 
     function Get-WrittenRow {
         param($Message)
-        $Hash = (Get-AlertContentHash -AlertItem @{ Message = $Message }).ContentHash
-        $script:Writes | Where-Object { $_.ContentHash -eq $Hash } | Select-Object -Last 1
+        $RowKey = (New-StoredRow -Message $Message).RowKey
+        $script:Writes | Where-Object { $_.RowKey -eq $RowKey } | Select-Object -Last 1
     }
 }
 
@@ -74,14 +75,15 @@ Describe 'Write-AlertTrace' {
         Mock Get-CIPPActiveAlertSnoozes { $script:Snoozes }
         Mock Get-CIPPAzDataTableEntity {
             if ($TableName -eq 'AlertLifecycle') {
-                $Resolved = $Filter -like "*and Status eq 'Resolved'"
-                $Rows = $script:Existing.Where({ ($_.Status -eq 'Resolved') -eq $Resolved })
-                if ($Property) { return $Rows | Select-Object -Property $Property }
-                return $Rows
+                if ($Property) { return $script:Existing | Select-Object -Property $Property }
+                return $script:Existing
             }
             if ($TableName -eq 'AlertLastRun') { return $script:LastRun }
         }
         Mock Add-CIPPAzDataTableEntity {
+            foreach ($Row in @($Entity)) { $script:Writes.Add($Row) }
+        }
+        Mock Update-CIPPAzDataTableEntity {
             foreach ($Row in @($Entity)) { $script:Writes.Add($Row) }
         }
         Mock Remove-CIPPAzDataTableEntity { $script:Removed.Add(@{ Table = $TableName; Entity = $Entity }) }
@@ -126,9 +128,8 @@ Describe 'Write-AlertTrace' {
         (Get-WrittenRow -Message 'first').Status | Should -Be 'Resolved'
         (Get-WrittenRow -Message 'first').ResolvedAt | Should -Not -BeNullOrEmpty
         (Get-WrittenRow -Message 'second').Status | Should -Be 'Resolved'
-        # The resolved rows keep every column so the full-row upsert loses nothing.
-        (Get-WrittenRow -Message 'first').AlertItem | Should -Not -BeNullOrEmpty
-        (Get-WrittenRow -Message 'first').Keys | Should -Not -Contain 'ETag'
+        # A resolve is a merge, so the stored item is kept by the store rather than rewritten.
+        (Get-WrittenRow -Message 'first').Keys | Should -Not -Contain 'AlertItem'
     }
 
     It 'reopens a resolved item, bumps the reopen count and returns it again' {
@@ -180,7 +181,7 @@ Describe 'Write-AlertTrace' {
         (Get-WrittenRow -Message 'untilresolved').Status | Should -Be 'Resolved'
         (Get-WrittenRow -Message 'untilresolved').SnoozeRowKey | Should -Be ''
         (Get-WrittenRow -Message 'timed').Status | Should -Be 'Resolved'
-        (Get-WrittenRow -Message 'timed').SnoozeRowKey | Should -Be 'contoso.onmicrosoft.com-timed'
+        (Get-WrittenRow -Message 'timed').Keys | Should -Not -Contain 'SnoozeRowKey'
         $Dropped = @($script:Removed | Where-Object { $_.Table -eq 'AlertSnooze' })
         $Dropped.Count | Should -Be 1
         $Dropped[0].Entity.PartitionKey | Should -Be 'Get-CIPPAlertSomething'
@@ -312,12 +313,27 @@ Describe 'Write-AlertTrace' {
         }
     }
 
-    It 'reads resolved rows without their stored item' {
-        $script:Existing = @(New-StoredRow -Message 'first' -Status 'Resolved' -ResolvedAt ([datetime]::UtcNow.AddDays(-5).ToString('o')))
+    It 'reads only this alert''s key range, without the stored items' {
+        $script:Existing = @(New-StoredRow -Message 'first')
 
         $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $null
 
-        Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $Filter -like "*Status eq 'Resolved'" -and 'AlertItem' -notin $Property -and 'PartitionKey' -in $Property -and 'RowKey' -in $Property }
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
+            $TableName -eq 'AlertLifecycle' -and $Filter -like "*RowKey ge 'Get-CIPPAlertSomething-' and RowKey lt 'Get-CIPPAlertSomething.'*" -and
+            'AlertItem' -notin $Property -and 'PartitionKey' -in $Property -and 'RowKey' -in $Property
+        }
+    }
+
+    It 'resolves by merging only the changed fields' {
+        $script:Existing = @(New-StoredRow -Message 'first')
+
+        $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $null
+
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0
+        $Merged = @($script:Writes)
+        $Merged.Count | Should -Be 1
+        $Merged[0].Keys | Sort-Object | Should -Be @('LastChecked', 'PartitionKey', 'ResolvedAt', 'RowKey', 'Status')
+        $Merged[0].Status | Should -Be 'Resolved'
     }
 
     It 'ignores duplicate items within one run' {

@@ -54,12 +54,9 @@ function Write-AlertTrace {
     $Table = Get-CIPPTable -tablename 'AlertLifecycle'
     $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
     $SafeCmdlet = ConvertTo-CIPPODataFilterValue -Value $CmdletName -Type String
-    $Filter = "PartitionKey eq '$SafeTenant' and CmdletName eq '$SafeCmdlet'"
-    # Resolved rows only feed reopen detection and retention, so their stored item is never read.
-    $Existing = @(
-        Get-CIPPAzDataTableEntity @Table -Filter "$Filter and Status ne 'Resolved'"
-        Get-CIPPAzDataTableEntity @Table -Filter "$Filter and Status eq 'Resolved'" -Property PartitionKey, RowKey, ContentHash, ContentPreview, Status, ReopenCount, ResolvedAt
-    )
+    # The stored item is never read: seen items are rewritten from this run and resolves merge a few fields.
+    $Filter = "PartitionKey eq '$SafeTenant' and RowKey ge '$SafeCmdlet-' and RowKey lt '$SafeCmdlet.' and CmdletName eq '$SafeCmdlet'"
+    $Existing = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ContentHash, ContentPreview, Status, FirstSeen, LastSeen, ReopenCount, ResolvedAt, SnoozeRowKey, SnoozeUntilResolved)
 
     $ByHash = @{}
     foreach ($Row in $Existing) {
@@ -186,6 +183,7 @@ function Write-AlertTrace {
     }
 
     $Removals = [System.Collections.Generic.List[object]]::new()
+    $Resolves = [System.Collections.Generic.List[object]]::new()
     $SnoozesToDrop = [System.Collections.Generic.List[object]]::new()
     # A row hashed from the whole item (its preview is the item JSON) can never match again once every item
     # carries a key field, so it is dropped rather than kept for 90 days and read on every run.
@@ -214,15 +212,13 @@ function Write-AlertTrace {
         }
         if (-not $ResolveIt) { continue }
 
-        # Rewrite the whole row: the upsert replaces rather than merges.
-        $Resolved = @{}
-        foreach ($Prop in $Row.PSObject.Properties) {
-            if ($Prop.Name -in @('ETag', 'Timestamp')) { continue }
-            $Resolved[$Prop.Name] = $Prop.Value
+        $Resolved = @{
+            PartitionKey = [string]$Row.PartitionKey
+            RowKey       = [string]$Row.RowKey
+            Status       = 'Resolved'
+            ResolvedAt   = $NowIso
+            LastChecked  = $NowIso
         }
-        $Resolved.Status = 'Resolved'
-        $Resolved.ResolvedAt = $NowIso
-        $Resolved.LastChecked = $NowIso
         if ($Status -eq 'Snoozed' -and [string]$Row.SnoozeUntilResolved -eq 'True') {
             # An "until resolved" snooze has done its job; drop it so a comeback notifies again.
             $SnoozesToDrop.Add([string]$Row.SnoozeRowKey)
@@ -233,12 +229,15 @@ function Write-AlertTrace {
             $Resolved.SnoozeVisible = ''
             $Resolved.SnoozeUntilResolved = ''
         }
-        $Writes.Add($Resolved)
+        $Resolves.Add($Resolved)
         $Counts.Resolved++
     }
 
     if ($Writes.Count -gt 0) {
         Add-CIPPAzDataTableEntity @Table -Entity @($Writes) -Force | Out-Null
+    }
+    if ($Resolves.Count -gt 0) {
+        Update-CIPPAzDataTableEntity @Table -Entity @($Resolves) | Out-Null
     }
     if ($Removals.Count -gt 0) {
         try {
