@@ -43713,6 +43713,115 @@
         "x-cipp-role": "Endpoint.Application.Read"
       }
     },
+    "/api/ListAppPermissionExposure": {
+      "get": {
+        "summary": "ListAppPermissionExposure",
+        "operationId": "ListAppPermissionExposure",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Lists the apps (service principals) in one tenant holding permissions from CIPP's risky permissions catalog, with a context-aware risk rating and the impact and suspicion of each permission. UseReportDB=true reads the reporting database; otherwise Graph is read live. ServicePrincipalId returns only that app's row (an empty list when it holds no catalogued permission).",
+        "parameters": [
+          {
+            "name": "ServicePrincipalId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "AccountEnabled": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "AppDisplayName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "AppId": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Categories": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "HasAllPrincipalsGrant": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "HighestImpact": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "LastSignInDateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Ownership": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PermissionCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PublisherName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Risk": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "SignInActivity": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Vendor": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "VendorCategory": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "VerifiedPublisher": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.Read"
+      }
+    },
     "/api/ListAppProtectionPolicies": {
       "get": {
         "summary": "ListAppProtectionPolicies",
