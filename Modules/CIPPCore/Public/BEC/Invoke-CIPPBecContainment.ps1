@@ -87,6 +87,9 @@ function Invoke-CIPPBecContainment {
     $AsList = { param($Value) @($Value | Where-Object { $null -ne $_ -and "$_" -ne '' }) }
 
     $Rows = [System.Collections.Generic.List[object]]::new()
+    # Mailbox settings as they were before this run changed them, saved with the history so a release restores them
+    $Before = @{}
+    $GetCas = { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CASMailbox' -cmdParams @{ Identity = $UserPrincipalName } -Anchor $UserPrincipalName | Select-Object -First 1 }
     $Add = {
         param($Action, $Target, $State, $Text, $Copy)
         $Rows.Add([pscustomobject]@{ Action = $Action; Target = $Target; state = $State; resultText = $Text; copyField = $Copy })
@@ -245,6 +248,11 @@ function Invoke-CIPPBecContainment {
                         if ($Unknown.Count -gt 0) { throw "Unknown protocol(s): $($Unknown -join ', ')" }
                         $CasParams = @{ Identity = $UserPrincipalName }
                         foreach ($Protocol in $Protocols) { $CasParams[$ProtocolMap[[string]$Protocol]] = ([string]$Protocol -eq 'SmtpAuth') }
+                        try {
+                            $Cas = & $GetCas
+                            $Before[$Id] = @{}
+                            foreach ($Setting in @($CasParams.Keys | Where-Object { $_ -ne 'Identity' })) { $Before[$Id][$Setting] = $Cas.$Setting }
+                        } catch { Write-Information "BEC containment: could not read the protocol settings of $UserPrincipalName before blocking: $($_.Exception.Message)" }
                         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-CASMailbox' -cmdParams $CasParams -Anchor $UserPrincipalName
                         & $Add $Id $UserPrincipalName 'success' "Disabled $($Protocols -join ', ') for $UserPrincipalName" $null
                     }
@@ -263,6 +271,9 @@ function Invoke-CIPPBecContainment {
                             & $Add $Id $Missing 'error' "No mobile device partnership '$Missing' found on $UserPrincipalName" $null
                         }
                         if ($DeviceRows.Count -eq 0) { if ($Picked.Count -eq 0) { & $Add $Id $UserPrincipalName 'info' 'No mobile device partnerships found' $null }; break }
+                        if ($Id -eq 'BlockMobileDevices') {
+                            try { $Before[$Id] = @{ ActiveSyncBlockedDeviceIDs = @((& $GetCas).ActiveSyncBlockedDeviceIDs | Where-Object { $_ } | ForEach-Object { [string]$_ }) } } catch { Write-Information "BEC containment: could not read the mobile device block list of $UserPrincipalName`: $($_.Exception.Message)" }
+                        }
                         foreach ($Device in $DeviceRows) {
                             $Target = [string]($Device.DeviceID ?? $Device.Guid)
                             try {
@@ -358,8 +369,10 @@ function Invoke-CIPPBecContainment {
                 $Run = Get-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId
                 if ($Run) {
                     $By = if ($Headers -and $Headers.'x-ms-client-principal') { try { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } catch { 'CIPP' } } elseif ($Headers -is [string]) { $Headers } else { 'CIPP' }
-                    $History = @($Run.Containment | Where-Object { $_ }) + @([pscustomobject]@{ At = (Get-Date).ToUniversalTime().ToString('o'); By = [string]$By; Actions = @($Selected.Id); Results = $RedactedRows })
-                    $null = Set-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -Properties @{ Containment = $History; LastContainmentAt = (Get-Date).ToUniversalTime().ToString('o') }
+                    $History = [System.Collections.Generic.List[object]]::new()
+                    foreach ($Entry in @($Run.Containment | Where-Object { $_ })) { $History.Add($Entry) }
+                    $History.Add([pscustomobject]@{ At = (Get-Date).ToUniversalTime().ToString('o'); By = [string]$By; Actions = @($Selected.Id); Results = $RedactedRows; Before = $Before })
+                    $null = Set-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -Properties @{ Containment = @($History);LastContainmentAt = (Get-Date).ToUniversalTime().ToString('o') }
                 }
             } catch {
                 Write-Information "BEC containment: could not append the result to run $CaseId`: $($_.Exception.Message)"

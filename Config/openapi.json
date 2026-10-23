@@ -16277,6 +16277,91 @@
         "x-cipp-role": "Identity.User.ReadWrite"
       }
     },
+    "/api/ExecBECRelease": {
+      "post": {
+        "summary": "Releases a user from the containment run on a BEC case.",
+        "operationId": "ExecBECRelease",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Reverses the lockouts the case's containment placed on the user (see the Release field of ListBECRemediationActions): re-enables sign-in, restores the mailbox protocol settings, unblocks the mobile devices containment blocked, re-enables disabled registered devices and removes the targeted Conditional Access policy. Attacker cleanup is left in place and actions that cannot be undone are listed. Confirmation must equal the user's UPN. The release is recorded on the case.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Actions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "reversible action ids to release; empty releases every one the containment ran"
+                  },
+                  "CaseId": {
+                    "type": "string",
+                    "description": "the BEC case whose containment is released"
+                  },
+                  "Confirmation": {
+                    "type": "string",
+                    "description": "must equal the user's UPN"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "resultText": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "state": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
     "/api/ExecBECRemediate": {
       "post": {
         "summary": "Runs selectable Business Email Compromise containment for a user.",
@@ -45587,7 +45672,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Returns the catalog of containment actions ExecBECRemediate accepts - id, label, description, impact (Low/Medium/High/Critical), whether it is reversible and whether it runs by default (the instance-wide defaults from CIPP settings).",
+        "description": "Returns the catalog of containment actions ExecBECRemediate accepts - id, label, description, impact (Low/Medium/High/Critical), whether it is reversible, whether it runs by default (the instance-wide defaults from CIPP settings) and what ExecBECRelease does with it (Release: Reverse, Keep or Manual).",
         "requestBody": {
           "required": false,
           "content": {
@@ -45629,6 +45714,9 @@
                         "x-cipp-field-source": "backend"
                       },
                       "ParameterName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Release": {
                         "x-cipp-field-source": "backend"
                       },
                       "Reversible": {
