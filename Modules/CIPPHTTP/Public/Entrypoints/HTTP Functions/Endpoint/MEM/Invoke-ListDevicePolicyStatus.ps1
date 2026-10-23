@@ -5,7 +5,7 @@ function Invoke-ListDevicePolicyStatus {
     .ROLE
         Endpoint.MEM.Read
     .DESCRIPTION
-        Lists the configuration and/or compliance policies applied to one Intune managed device and their status, using the same reports as the device page in Intune. report=all returns both in one response, with a per-report error when one fails. Configuration covers device configuration profiles, settings catalog, administrative templates and endpoint security policies.
+        Lists the configuration, compliance and enrollment policies applied to one Intune managed device and their status, using the same reports as the device page in Intune. report=all returns all three in one response, with a per-report error when one fails. Configuration covers device configuration profiles, settings catalog, administrative templates and endpoint security policies.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -49,12 +49,18 @@ function Invoke-ListDevicePolicyStatus {
             Uri    = 'https://graph.microsoft.com/beta/deviceManagement/reports/getDevicePoliciesComplianceReport'
             Filter = "(DeviceId eq '$DeviceGuid')"
         }
+        enrollment    = @{
+            Uri     = 'https://graph.microsoft.com/beta/deviceManagement/reports/getEnrollmentConfigurationPoliciesByDevice'
+            Filter  = "(DeviceId eq '$DeviceGuid')"
+            Select  = @('PolicyId', 'PolicyType', 'ProfileName')
+            OrderBy = @()
+        }
     }
 
     if ($Report -ne 'all' -and -not $Reports.Contains("$Report")) {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
-                Body       = @{ Results = 'report must be configuration, compliance or all.' }
+                Body       = @{ Results = 'report must be configuration, compliance, enrollment or all.' }
             })
     }
 
@@ -67,8 +73,8 @@ function Invoke-ListDevicePolicyStatus {
             $Body = @{
                 top     = $PageSize
                 skip    = $Skip
-                select  = @()
-                orderBy = @('PolicyName')
+                select  = $Definition.Select ?? @()
+                orderBy = $Definition.OrderBy ?? @('PolicyName')
                 search  = ''
                 filter  = $Definition.Filter
             } | ConvertTo-Json -Compress -Depth 5
@@ -107,7 +113,8 @@ function Invoke-ListDevicePolicyStatus {
         $Results = [ordered]@{
             configuration = $Loaded['configuration']
             compliance    = $Loaded['compliance']
-            errors        = $Errors
+            enrollment    = $Loaded['enrollment']
+            errors       = $Errors
         }
     } elseif ($Errors.Count -gt 0) {
         $StatusCode = [HttpStatusCode]::InternalServerError

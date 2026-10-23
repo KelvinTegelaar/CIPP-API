@@ -78,6 +78,18 @@ Describe 'Invoke-ListDevicePolicyStatus' {
         }
     }
 
+    It 'asks the enrollment report for its own columns without a PolicyName sort' {
+        $null = Invoke-ListDevicePolicyStatus -Request (New-PolicyStatusRequest -Query @{ deviceId = $DeviceGuid; report = 'enrollment' }) -TriggerMetadata $null
+
+        Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+            $Sent = $body | ConvertFrom-Json
+            $uri -like '*/reports/getEnrollmentConfigurationPoliciesByDevice' -and
+            $Sent.filter -eq "(DeviceId eq '$DeviceGuid')" -and
+            ($Sent.select -join ',') -eq 'PolicyId,PolicyType,ProfileName' -and
+            @($Sent.orderBy).Count -eq 0
+        }
+    }
+
     It 'rejects a device id that is not a GUID, so nothing reaches the OData filter' {
         $Response = Invoke-ListDevicePolicyStatus -Request (New-PolicyStatusRequest -Query @{ deviceId = "x') or (1 eq 1"; report = 'compliance' }) -TriggerMetadata $null
 
@@ -107,9 +119,11 @@ Describe 'Invoke-ListDevicePolicyStatus' {
         $Response.StatusCode | Should -Be 200
         $Response.Body.Results.configuration | Should -HaveCount 2
         $Response.Body.Results.compliance | Should -HaveCount 2
+        $Response.Body.Results.enrollment | Should -HaveCount 2
         $Response.Body.Results.errors.Count | Should -Be 0
         Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*getConfigurationPoliciesReportForDevice' }
         Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*getDevicePoliciesComplianceReport' }
+        Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*getEnrollmentConfigurationPoliciesByDevice' }
     }
 
     It 'keeps the report that loaded when the other fails, as a 207' {
@@ -123,12 +137,12 @@ Describe 'Invoke-ListDevicePolicyStatus' {
         $Response.Body.Results.errors.compliance | Should -Match 'Failed to load compliance policies'
     }
 
-    It 'returns 500 for report=all when both reports fail' {
+    It 'returns 500 for report=all when every report fails' {
         Mock -CommandName New-GraphPOSTRequest -MockWith { throw 'Forbidden' }
 
         $Response = Invoke-ListDevicePolicyStatus -Request (New-PolicyStatusRequest -Query @{ deviceId = $DeviceGuid; report = 'all' }) -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be 500
-        $Response.Body.Results.errors.Count | Should -Be 2
+        $Response.Body.Results.errors.Count | Should -Be 3
     }
 }

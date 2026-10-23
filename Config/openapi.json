@@ -49772,7 +49772,7 @@
         "tags": [
           "Endpoint > MEM"
         ],
-        "description": "Lists the configuration and/or compliance policies applied to one Intune managed device and their status, using the same reports as the device page in Intune. report=all returns both in one response, with a per-report error when one fails. Configuration covers device configuration profiles, settings catalog, administrative templates and endpoint security policies.",
+        "description": "Lists the configuration, compliance and enrollment policies applied to one Intune managed device and their status, using the same reports as the device page in Intune. report=all returns all three in one response, with a per-report error when one fails. Configuration covers device configuration profiles, settings catalog, administrative templates and endpoint security policies.",
         "parameters": [
           {
             "name": "deviceId",
