@@ -57,6 +57,8 @@ function Invoke-CIPPStandardNudgeMFA {
                     $EscapedName = $Entry -replace "'", "''"
                     $GroupFilter = [System.Uri]::EscapeDataString("startsWith(displayName,'$EscapedName')")
                     $MatchedGroups = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$filter=$GroupFilter" -tenantid $TenantFilter)
+                    $ExactGroups = $MatchedGroups.Where({ $_.displayName -eq $Entry })
+                    if ($ExactGroups.Count -gt 0) { $MatchedGroups = @($ExactGroups) }
                     if ($MatchedGroups.Count -gt 0) {
                         foreach ($Group in $MatchedGroups) { $Resolved.Add(@{ id = $Group.id; targetType = 'group' }) }
                         if ($MatchedGroups.Count -gt 1) {
