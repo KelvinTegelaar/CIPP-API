@@ -28,7 +28,7 @@ BeforeAll {
     $Bucket = 'bkt_{0}T000000Z' -f $Today
 
     $script:DayRows = @(
-        [pscustomobject]@{ PartitionKey = $script:App; RowKey = "day_$Today"; Bytes = 1000; Requests = 4; Shed = 0; Endpoints = '{"ListUsers":[900,3,500,1,0,0],"ListGraphRequest:users":[100,1,100,0,1,0]}'; Ips = '{"203.0.113.7":[900,3,500,1,0,0],"198.51.100.1":[100,1,100,0,1,0]}' }
+        [pscustomobject]@{ PartitionKey = $script:App; RowKey = "day_$Today"; Bytes = 1000; Requests = 4; Shed = 0; Endpoints = '{"ListUsers":[900,3,500,1,0,0,2,700,1,200],"ListGraphRequest:users":[100,1,100,0,1,0]}'; Ips = '{"203.0.113.7":[900,3,500,1,0,0],"198.51.100.1":[100,1,100,0,1,0]}' }
         [pscustomobject]@{ PartitionKey = 'interactive'; RowKey = "day_$Today"; Bytes = 5000; Requests = 2; Shed = 0; Endpoints = '{"ListLogs":[5000,2,4000,0,0,0]}'; Ips = '{"192.0.2.9":[5000,2,4000,0,0,0]}' }
         [pscustomobject]@{ PartitionKey = 'instance-total'; RowKey = "day_$Today"; Bytes = 1000; Requests = 4; Shed = 0; CapBytes = 0; Endpoints = '{"ListUsers":[900,3,500,1,0,0],"ListGraphRequest:users":[100,1,100,0,1,0]}'; Ips = '{"203.0.113.7":[900,3,500,1,0,0],"198.51.100.1":[100,1,100,0,1,0]}' }
     )
@@ -64,6 +64,9 @@ Describe 'Invoke-ListApiEgress endpoint breakdown' {
         $Results.Endpoints[0].CacheHits | Should -Be 1
         $Results.Endpoints[1].Errors | Should -Be 1
         $Results.Clients[0].Endpoints | Should -HaveCount 2
+        $Results.Clients[0].Endpoints[0].BrRequests | Should -Be 2
+        $Results.Clients[0].Endpoints[0].GzipBytes | Should -Be 200
+        $Results.Clients[0].Endpoints[1].BrRequests | Should -BeNullOrEmpty
         $Results.Trend | Should -HaveCount 1
         $Results.Trend[0].TopEndpoints[0].Endpoint | Should -Be 'ListUsers'
     }

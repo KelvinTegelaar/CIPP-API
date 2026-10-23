@@ -71,7 +71,8 @@ function Invoke-ListApiEgress {
             Write-Information "ListApiEgress: ApiClients name lookup failed, using AppIds ($($_.Exception.Message))"
         }
 
-        # Craft stores per-endpoint and per-IP egress as JSON: label -> [Bytes, Requests, MaxBytes, CacheHits, Errors, Shed].
+        # Craft stores per-endpoint and per-IP egress as JSON: label -> [Bytes, Requests, MaxBytes, CacheHits, Errors, Shed,
+        # BrRequests, BrBytes, GzipRequests, GzipBytes]. Rows written before Craft tracked encoding stop at Shed (encoding null).
         $ExpandEndpoints = {
             param($Json, $First = 100, $Key = 'Endpoint')
             $Map = if ($Json) { try { ConvertFrom-Json -InputObject $Json -AsHashtable } catch { $null } }
@@ -86,7 +87,11 @@ function Invoke-ListApiEgress {
                         MaxBytes  = [long]$Values[2]
                         CacheHits = [long]$Values[3]
                         Errors    = [long]$Values[4]
-                        Shed      = [long]$Values[5]
+                        Shed         = [long]$Values[5]
+                        BrRequests   = $Values[6]
+                        BrBytes      = $Values[7]
+                        GzipRequests = $Values[8]
+                        GzipBytes    = $Values[9]
                     }
                 }) | Sort-Object -Property Bytes -Descending | Select-Object -First $First
         }
