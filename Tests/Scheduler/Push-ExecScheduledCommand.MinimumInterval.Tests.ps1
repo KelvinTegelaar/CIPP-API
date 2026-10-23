@@ -17,7 +17,7 @@ BeforeAll {
     function Update-AzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) $Value }
-    function Add-CIPPAlertRunHistory { param($Task, $Tenant, $TenantId, $Outcome, $Summary, $Counts, $StartedUtc, $ScheduledUtc, $DurationMs, [switch]$RecordCompletion) }
+    function Add-CIPPAlertRunHistory { param($Task, $Tenant, $TenantId, $Outcome, $Summary, $Counts, $StartedUtc, $ScheduledTime, $DurationMs, [switch]$RecordCompletion) }
     function Get-Tenants { param($TenantFilter) }
     function Get-CIPPSchedulerBlockedCommands { @() }
     function Write-LogMessage { param($headers, $API, $message, $sev, $tenant, $tenantid, $LogData) }
@@ -63,7 +63,7 @@ Describe 'Push-ExecScheduledCommand minimum alert interval' {
         Mock Send-CIPPScheduledTaskAlert {}
         Mock Add-CIPPAlertRunHistory {}
         Mock Get-AzDataTableEntity { [pscustomobject]@{ PartitionKey = 'ScheduledTask'; RowKey = 'task-1'; TaskState = 'Pending' } }
-        Mock Get-CIPPAzDataTableEntity { if ($script:LastCompleted) { [pscustomobject]@{ LastSlotUtc = $script:LastCompleted.ToString('o') } } }
+        Mock Get-CIPPAzDataTableEntity { if ($script:LastCompleted) { [pscustomobject]@{ ScheduledTime = [string][datetimeoffset]::new($script:LastCompleted).ToUnixTimeSeconds() } } }
         Mock Get-Command { [pscustomobject]@{ Module = 'CIPPAlerts'; Parameters = @{ TenantFilter = 1; InputValue = 1; Headers = 1 } } }
         Mock Get-CIPPAlertBreachAlert { $script:Holder.New = 2; $script:Holder.Continuing = 5; $script:Holder.Reported = $true }
         Mock Get-CIPPAlertNoMinimum {}
@@ -86,7 +86,7 @@ Describe 'Push-ExecScheduledCommand minimum alert interval' {
 
         Should -Invoke Get-CIPPAlertBreachAlert -Times 1 -Exactly
         Should -Invoke Add-CIPPAlertRunHistory -Times 1 -Exactly -ParameterFilter {
-            $Outcome -eq 'Completed' -and $RecordCompletion -and $Summary -like '2 new, 0 reopened, 5 continuing*' -and $ScheduledUtc -eq $script:Slot
+            $Outcome -eq 'Completed' -and $RecordCompletion -and $Summary -like '2 new, 0 reopened, 5 continuing*' -and $ScheduledTime -eq [datetimeoffset]::new($script:Slot).ToUnixTimeSeconds()
         }
     }
 

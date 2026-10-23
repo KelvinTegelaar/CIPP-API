@@ -27,10 +27,10 @@ Describe 'Add-CIPPAlertRunHistory' {
 
     It 'stamps the LastRun marker only when asked, with the scheduled slot rather than the pickup time' {
         $Slot = ([datetime]'2026-10-23T02:00:00Z').ToUniversalTime()
-        Add-CIPPAlertRunHistory -Task $script:Task -Tenant 'contoso.com' -TenantId 'cust-1' -Outcome 'Completed' -StartedUtc $Slot.AddMinutes(20) -ScheduledUtc $Slot -RecordCompletion
+        Add-CIPPAlertRunHistory -Task $script:Task -Tenant 'contoso.com' -TenantId 'cust-1' -Outcome 'Completed' -StartedUtc $Slot.AddMinutes(20) -ScheduledTime ([datetimeoffset]::new($Slot).ToUnixTimeSeconds()) -RecordCompletion
         $script:Writes.Count | Should -Be 2
-        ($script:Writes[1].PartitionKey, $script:Writes[1].RowKey, $script:Writes[1].LastSlotUtc) | Should -Be @('LastRun', 'task-1_cust-1', $Slot.ToString('o'))
-        $script:Writes[0].StartedUtc | Should -Be $Slot.AddMinutes(20).ToString('o')
+        ($script:Writes[1].PartitionKey, $script:Writes[1].RowKey, $script:Writes[1].ScheduledTime) | Should -Be @('LastRun', 'task-1_cust-1', '1792720800')
+        ($script:Writes[0].ExecutedTime, $script:Writes[0].ScheduledTime) | Should -Be @('1792722000', '1792720800')
     }
 
     It 'does not throw when storage fails' {

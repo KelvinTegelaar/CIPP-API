@@ -42541,6 +42541,15 @@
             }
           },
           {
+            "name": "Outcome",
+            "in": "query",
+            "description": "Only runs with these outcomes, comma-separated: Completed, Skipped, Failed, Not reported.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "TaskId",
             "in": "query",
             "description": "Only runs of this alert, by its scheduled task RowKey.",
@@ -42582,6 +42591,9 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
+                      "ExecutedTime": {
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
                       "New": {
                         "x-cipp-field-source": "backend,frontend"
                       },
@@ -42600,14 +42612,11 @@
                       "RowKey": {
                         "x-cipp-field-source": "storage"
                       },
-                      "ScheduledUtc": {
+                      "ScheduledTime": {
                         "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "Snoozed": {
                         "x-cipp-field-source": "backend"
-                      },
-                      "StartedUtc": {
-                        "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "Summary": {
                         "type": "string",

@@ -20,8 +20,8 @@ function Add-CIPPAlertRunHistory {
         [string]$Summary,
         [hashtable]$Counts,
         [datetime]$StartedUtc = [datetime]::UtcNow,
-        # The slot the run was scheduled for (the task's ScheduledTime); defaults to StartedUtc.
-        [Nullable[datetime]]$ScheduledUtc,
+        # The slot the run was scheduled for, in unix seconds (the task's ScheduledTime); defaults to StartedUtc.
+        [int64]$ScheduledTime,
         [int64]$DurationMs = 0,
         [switch]$RecordCompletion
     )
@@ -29,20 +29,22 @@ function Add-CIPPAlertRunHistory {
     try {
         $Table = Get-CIPPTable -tablename 'AlertRunHistory'
         $TenantKey = if ($TenantId) { $TenantId } else { $Tenant }
-        $Slot = $ScheduledUtc ?? $StartedUtc
+        # Unix seconds as strings, as ScheduledTasks stores ScheduledTime and ExecutedTime.
+        $ExecutedTime = [string][datetimeoffset]::new($StartedUtc).ToUnixTimeSeconds()
+        $Slot = if ($ScheduledTime -gt 0) { [string]$ScheduledTime } else { $ExecutedTime }
         $Entity = @{
-            PartitionKey = $StartedUtc.ToString('yyyyMMdd')
-            RowKey       = '{0:D19}_{1}_{2}' -f ([datetime]::MaxValue.Ticks - $StartedUtc.Ticks), $Task.RowKey, $TenantKey
-            TaskId       = [string]$Task.RowKey
-            TaskName     = [string]$Task.Name
-            Alert        = [string]$Task.Command -replace '^Get-CIPPAlert', ''
-            Tenant       = $Tenant
-            TenantId     = [string]$TenantId
-            Outcome      = $Outcome
-            Summary      = [string]$Summary
-            StartedUtc   = $StartedUtc.ToString('o')
-            ScheduledUtc = $Slot.ToString('o')
-            DurationMs   = $DurationMs
+            PartitionKey  = $StartedUtc.ToString('yyyyMMdd')
+            RowKey        = '{0:D19}_{1}_{2}' -f ([datetime]::MaxValue.Ticks - $StartedUtc.Ticks), $Task.RowKey, $TenantKey
+            TaskId        = [string]$Task.RowKey
+            TaskName      = [string]$Task.Name
+            Alert         = [string]$Task.Command -replace '^Get-CIPPAlert', ''
+            Tenant        = $Tenant
+            TenantId      = [string]$TenantId
+            Outcome       = $Outcome
+            Summary       = [string]$Summary
+            ExecutedTime  = $ExecutedTime
+            ScheduledTime = $Slot
+            DurationMs    = $DurationMs
         }
         foreach ($Key in 'New', 'Reopened', 'Continuing', 'Resolved', 'Snoozed') {
             $Entity[$Key] = [int]($Counts.$Key ?? 0)
@@ -50,9 +52,9 @@ function Add-CIPPAlertRunHistory {
         Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
         if ($RecordCompletion) {
             Add-CIPPAzDataTableEntity @Table -Entity @{
-                PartitionKey = 'LastRun'
-                RowKey       = '{0}_{1}' -f $Task.RowKey, $TenantKey
-                LastSlotUtc  = $Slot.ToString('o')
+                PartitionKey  = 'LastRun'
+                RowKey        = '{0}_{1}' -f $Task.RowKey, $TenantKey
+                ScheduledTime = $Slot
             } -Force | Out-Null
         }
     } catch {

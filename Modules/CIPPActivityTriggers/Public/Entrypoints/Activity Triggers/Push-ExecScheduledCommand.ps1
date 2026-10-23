@@ -169,8 +169,8 @@ function Push-ExecScheduledCommand {
     $IsAlert = $Item.Command -like 'Get-CIPPAlert*'
     $MinimumInterval = $null
     $RunStart = [datetime]::UtcNow
-    $SlotSeconds = $task.ScheduledTime -as [int64]
-    $RunSlot = if ($SlotSeconds -gt 0) { [datetimeoffset]::FromUnixTimeSeconds($SlotSeconds).UtcDateTime } else { $RunStart }
+    $RunSlot = $task.ScheduledTime -as [int64]
+    if ($RunSlot -le 0) { $RunSlot = [datetimeoffset]::new($RunStart).ToUnixTimeSeconds() }
     if ($IsAlert) {
         try {
             $AlertName = $Item.Command -replace '^Get-CIPPAlert', ''
@@ -195,12 +195,11 @@ function Push-ExecScheduledCommand {
             $HistoryTable = Get-CippTable -tablename 'AlertRunHistory'
             $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value ('{0}_{1}' -f $task.RowKey, $TenantKey) -Type String
             $LastRun = Get-CIPPAzDataTableEntity @HistoryTable -Filter "PartitionKey eq 'LastRun' and RowKey eq '$SafeRowKey'"
-            [datetime]$LastCompleted = [datetime]::MinValue
-            if ($LastRun -and [datetime]::TryParse([string]$LastRun.LastSlotUtc, [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal, [ref]$LastCompleted) -and
-                ($RunSlot - $LastCompleted).TotalSeconds -lt $MinimumSeconds) {
-                $Summary = 'Skipped: this alert runs at most every {0}, and it last completed for this tenant for the run scheduled at {1:yyyy-MM-dd HH:mm} UTC.' -f $MinimumInterval, $LastCompleted
+            $LastSlot = [int64]($LastRun.ScheduledTime -as [int64])
+            if ($LastSlot -gt 0 -and ($RunSlot - $LastSlot) -lt $MinimumSeconds) {
+                $Summary = 'Skipped: this alert runs at most every {0}, and it last completed for this tenant for the run scheduled at {1:yyyy-MM-dd HH:mm} UTC.' -f $MinimumInterval, [datetimeoffset]::FromUnixTimeSeconds($LastSlot).UtcDateTime
                 Write-Information $Summary
-                Add-CIPPAlertRunHistory -Task $task -Tenant $Tenant -TenantId $TenantInfo.customerId -Outcome 'Skipped' -Summary $Summary -StartedUtc $RunStart -ScheduledUtc $RunSlot
+                Add-CIPPAlertRunHistory -Task $task -Tenant $Tenant -TenantId $TenantInfo.customerId -Outcome 'Skipped' -Summary $Summary -StartedUtc $RunStart -ScheduledTime $RunSlot
                 if (!$IsMultiTenantExecution) {
                     $nextRunUnixTime = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
                     if ($nextRunUnixTime -eq 0) { $nextRunUnixTime = $task.ScheduledTime }
@@ -409,7 +408,7 @@ function Push-ExecScheduledCommand {
                 'Completed' { '{0} new, {1} reopened, {2} continuing, {3} resolved, {4} snoozed' -f [int]$AlertRun.New, [int]$AlertRun.Reopened, [int]$AlertRun.Continuing, [int]$AlertRun.Resolved, [int]$AlertRun.Snoozed }
                 default { 'The alert finished without reporting a result, so the check may not have completed. See the logbook for this tenant.' }
             }
-            Add-CIPPAlertRunHistory -Task $task -Tenant $Tenant -TenantId $TenantInfo.customerId -Outcome $Outcome -Summary $Summary -Counts $AlertRun -StartedUtc $RunStart -ScheduledUtc $RunSlot -DurationMs ([int64]([datetime]::UtcNow - $RunStart).TotalMilliseconds) -RecordCompletion:($Outcome -eq 'Completed' -and [bool]$MinimumInterval)
+            Add-CIPPAlertRunHistory -Task $task -Tenant $Tenant -TenantId $TenantInfo.customerId -Outcome $Outcome -Summary $Summary -Counts $AlertRun -StartedUtc $RunStart -ScheduledTime $RunSlot -DurationMs ([int64]([datetime]::UtcNow - $RunStart).TotalMilliseconds) -RecordCompletion:($Outcome -eq 'Completed' -and [bool]$MinimumInterval)
             $results = @($results)
             $TaskType = 'Alert'
         } else {
