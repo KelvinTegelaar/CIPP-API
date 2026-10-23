@@ -7,18 +7,21 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $AlertPath = Join-Path $RepoRoot 'Modules/CIPPAlerts/Public/Alerts/Get-CIPPAlertVulnerabilities.ps1'
 
-    function Get-DefenderTvmRaw { param($TenantId, [switch]$Stream) }
+    function Get-DefenderTvmRaw { param($TenantId, [switch]$Stream, [string[]]$Property) }
     function Write-AlertTrace { param($cmdletName, $tenantFilter, $data) }
     function Write-LogMessage { param($message, $API, $tenant, $sev) }
 
     . $AlertPath
 
+    # Called from the Get-DefenderTvmRaw mocks, so $Property is the projection the alert asked for: like the
+    # real reader, a field left out of it is never on the record.
     function New-TvmRecord ($CveId, $DeviceName, $FirstSeen, $Cvss = 8.0) {
-        [pscustomobject]@{
+        $Record = [pscustomobject]@{
             cveId = $CveId; deviceName = $DeviceName; firstSeenTimestamp = [datetime]$FirstSeen
             lastSeenTimestamp = [datetime]'2026-09-01'; cvssScore = $Cvss; softwareName = "app-$FirstSeen"
             vulnerabilitySeverityLevel = 'High'; exploitabilityLevel = 'ExploitIsPublic'
         }
+        if ($Property) { $Record | Select-Object -Property $Property } else { $Record }
     }
 }
 
@@ -39,6 +42,13 @@ Describe 'Get-CIPPAlertVulnerabilities' {
     It 'streams the TVM export' {
         Get-CIPPAlertVulnerabilities -InputValue @{ VulnerabilityAgeHours = 0 } -TenantFilter 'contoso.com'
         Should -Invoke Get-DefenderTvmRaw -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
+    }
+
+    It 'asks for every field it reports, so a projected record still fills the row' {
+        Get-CIPPAlertVulnerabilities -InputValue @{ VulnerabilityAgeHours = 0 } -TenantFilter 'contoso.com'
+        Should -Invoke Get-DefenderTvmRaw -Times 1 -Exactly -ParameterFilter { $Property -contains 'cveId' -and $Property -contains 'deviceName' }
+        $A = $script:Captured[0]
+        ($A.CVSSScore, $A.Severity, $A.ExploitabilityLevel, $A.LastSeenTimestamp) | Should -Be @(8.0, 'High', 'ExploitIsPublic', [datetime]'2026-09-01')
     }
 
     It 'emits one row per CVE with the earliest record, record count and unique devices' {
