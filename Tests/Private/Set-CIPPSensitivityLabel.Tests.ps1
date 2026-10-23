@@ -101,3 +101,52 @@ Describe 'Set-CIPPSensitivityLabel encryption rights (issue #775)' {
         $SetLabel.Params['EncryptionRightsDefinitions'] | Should -Be 'target.onmicrosoft.com:VIEW,VIEWRIGHTSDATA,DOCEDIT,EDIT,PRINT,EXTRACT,REPLY,REPLYALL,FORWARD,OBJMODEL'
     }
 }
+
+Describe 'Set-CIPPSensitivityLabel label groups (issue #895)' {
+    BeforeAll {
+        # A captured label group: Get-Label reports ContentType 'None' and the template keep-list drops IsLabelGroup.
+        $script:GroupTemplate = [PSCustomObject]@{
+            DisplayName  = 'Confidential'
+            Name         = 'Confidential'
+            Settings     = @('[isparent, True]', '[contenttype, None]')
+            LabelActions = @()
+            ContentType  = 'None'
+            Tooltip      = 'Sensitive business data'
+            Priority     = 5
+        }
+    }
+
+    BeforeEach {
+        $script:Calls = [System.Collections.Generic.List[object]]::new()
+    }
+
+    It 'creates the group with -IsLabelGroup and without ContentType' {
+        Mock New-ExoRequest {
+            $script:Calls.Add(@{ Cmdlet = $cmdlet; Params = $cmdParams })
+            if ($cmdlet -in @('Get-Label', 'Get-LabelPolicy')) { return @() }
+        }
+
+        $Result = Set-CIPPSensitivityLabel -TenantFilter 'target.onmicrosoft.com' -Template $script:GroupTemplate -APIName 'Test'
+
+        $Result | Should -BeLike 'Created sensitivity label*'
+        $NewLabel = $script:Calls | Where-Object { $_.Cmdlet -eq 'New-Label' } | Select-Object -First 1
+        $NewLabel.Params['IsLabelGroup'] | Should -BeTrue
+        $NewLabel.Params.ContainsKey('ContentType') | Should -BeFalse
+    }
+
+    It 'updates an existing group without ContentType or IsLabelGroup' {
+        Mock New-ExoRequest {
+            $script:Calls.Add(@{ Cmdlet = $cmdlet; Params = $cmdParams })
+            if ($cmdlet -eq 'Get-Label') { return @([PSCustomObject]@{ Name = 'Confidential'; DisplayName = 'Confidential'; Guid = 'abc'; ImmutableId = 'abc' }) }
+            if ($cmdlet -eq 'Get-LabelPolicy') { return @() }
+        }
+
+        $Result = Set-CIPPSensitivityLabel -TenantFilter 'target.onmicrosoft.com' -Template $script:GroupTemplate -APIName 'Test'
+
+        $Result | Should -BeLike 'Updated sensitivity label*'
+        foreach ($Call in @($script:Calls | Where-Object { $_.Cmdlet -eq 'Set-Label' })) {
+            $Call.Params.ContainsKey('ContentType') | Should -BeFalse
+            $Call.Params.ContainsKey('IsLabelGroup') | Should -BeFalse
+        }
+    }
+}
