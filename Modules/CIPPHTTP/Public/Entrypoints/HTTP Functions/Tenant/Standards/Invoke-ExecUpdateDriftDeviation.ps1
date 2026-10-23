@@ -60,8 +60,7 @@ function Invoke-ExecUpdateDriftDeviation {
 
         if ($Request.Body.RemoveDriftCustomization) {
             $Table = Get-CippTable -tablename 'tenantDrift'
-            $Filter = "PartitionKey eq '$TenantFilter'"
-            $ExistingDeviations = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+            $ExistingDeviations = (Get-CIPPTenantDriftState -TenantFilter $TenantFilter).Rows
             foreach ($Deviation in $ExistingDeviations) {
                 Remove-CIPPAzDataTableEntity @Table -Entity $Deviation
             }
@@ -73,6 +72,7 @@ function Invoke-ExecUpdateDriftDeviation {
         } else {
             $Deviations = $Request.Body.deviations
             $Reason = $Request.Body.reason
+            $DriftPartition = $(try { (Get-CIPPTenantLookup)[$TenantFilter].customerId } catch { $null }) ?? $TenantFilter
             $PersistentDeny = [bool]($Request.Body.persistentDeny)
             # Intune multi-admin approval rejects any write that carries no justification header
             # ("Header 'x-msft-approval-justification' is required to request approval"). The header is
@@ -306,7 +306,7 @@ function Invoke-ExecUpdateDriftDeviation {
                     }
 
                     # Task queued / policy gone; a throw above leaves the row untouched.
-                    $Result = Set-CIPPDriftDeviation -TenantFilter $TenantFilter -StandardName $Deviation.standardName -Status $Deviation.status -Reason $Reason -user $username
+                    $Result = Set-CIPPDriftDeviation -TenantFilter $DriftPartition -StandardName $Deviation.standardName -Status $Deviation.status -Reason $Reason -user $username
                     [PSCustomObject]@{
                         success = $true
                         result  = $Result

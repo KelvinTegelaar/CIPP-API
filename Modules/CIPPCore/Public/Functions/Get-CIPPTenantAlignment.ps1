@@ -27,7 +27,6 @@ function Get-CIPPTenantAlignment {
     $TemplateTable = Get-CippTable -tablename 'templates'
     $TemplateFilter = "PartitionKey eq 'StandardsTemplateV2'"
     $TenantGroups = Get-TenantGroups
-    $DriftTable = Get-CippTable -tablename 'tenantDrift'
 
     try {
         # Get all standard templates
@@ -388,12 +387,10 @@ function Get-CIPPTenantAlignment {
                 if ($IsDriftTemplate) {
                     if (-not $TenantDriftStatusesCache.ContainsKey($TenantName)) {
                         try {
-                            $DriftFilter = "PartitionKey eq '$TenantName'"
-                            $DriftEntities = Get-CIPPAzDataTableEntity @DriftTable -Filter $DriftFilter
-                            foreach ($DriftEntity in $DriftEntities) {
-                                if ($DriftEntity.StandardName) {
-                                    $TenantDriftStatuses[$DriftEntity.StandardName] = $DriftEntity.Status
-                                }
+                            $DriftLookup ??= Get-CIPPTenantLookup
+                            $DriftStates = (Get-CIPPTenantDriftState -TenantFilter $TenantName -Lookup $DriftLookup).States
+                            foreach ($DriftName in $DriftStates.Keys) {
+                                $TenantDriftStatuses[$DriftName] = $DriftStates[$DriftName].Status
                             }
                         } catch {
                             Write-Warning "Failed to get drift states for $TenantName $($_.Exception.Message)"

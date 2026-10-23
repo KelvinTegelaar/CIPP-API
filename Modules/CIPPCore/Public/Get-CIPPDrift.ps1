@@ -143,29 +143,49 @@ function Get-CIPPDrift {
 
         # Get existing drift states from the tenantDrift table
         $DriftTable = Get-CippTable -tablename 'tenantDrift'
-        $DriftFilter = "PartitionKey eq '$TenantFilter'"
         $ExistingDriftStates = @{}
         # Set only once every decided status has been read. Without them every deviation looks
         # New, and writing or pruning on that view would replace accepted / customer-specific
         # decisions with New - so both steps below are skipped when the read did not complete.
         $DriftStatesLoaded = $false
         $DriftEntities = @()
+        $DriftPartition = $TenantFilter
         try {
-            $DriftEntities = @(Get-CIPPAzDataTableEntity @DriftTable -Filter $DriftFilter)
-            foreach ($Entity in $DriftEntities) {
-                $EntityKey = [string]$Entity.StandardName
-                if ([string]::IsNullOrWhiteSpace($EntityKey)) {
-                    # A row without a name cannot be matched to a deviation. Skipping it is the only
-                    # option that keeps the rest of the table usable - a null hashtable key throws
-                    # and would abandon every row after it.
-                    Write-Warning "Drift state row '$($Entity.RowKey)' for tenant '$TenantFilter' has no StandardName and was ignored."
-                    continue
-                }
-                $ExistingDriftStates[$EntityKey] = $Entity
-            }
+            $DriftState = Get-CIPPTenantDriftState -TenantFilter $TenantFilter
+            $DriftPartition = $DriftState.PartitionKey
+            $ExistingDriftStates = $DriftState.States
+            $DriftEntities = @($DriftState.Rows | Where-Object { -not $_.PartitionKey -or "$($_.PartitionKey)" -eq $DriftPartition })
             $DriftStatesLoaded = $true
         } catch {
             Write-Warning "Failed to get existing drift states for '$TenantFilter': $($_.Exception.Message). Drift decisions will not be written or pruned this run."
+        }
+
+        # Rows saved under a domain that was the default at the time move to the customerId partition
+        $DomainRows = if ($DriftStatesLoaded) { @($DriftState.Rows | Where-Object { $_.PartitionKey -and "$($_.PartitionKey)" -ne $DriftPartition }) } else { @() }
+        if ($DomainRows.Count -gt 0) {
+            try {
+                $MovedRows = foreach ($Name in @($DomainRows.StandardName | Where-Object { $_ } | Select-Object -Unique)) {
+                    $Winner = $ExistingDriftStates[$Name]
+                    if ("$($Winner.PartitionKey)" -eq $DriftPartition) { continue }
+                    $Moved = @{
+                        PartitionKey = $DriftPartition
+                        RowKey       = "$($Winner.RowKey)"
+                        StandardName = "$($Winner.StandardName)"
+                        Status       = "$($Winner.Status)"
+                        LastModified = "$($Winner.LastModified)"
+                    }
+                    if ($Winner.Reason) { $Moved.Reason = "$($Winner.Reason)" }
+                    if ($Winner.User) { $Moved.User = "$($Winner.User)" }
+                    $Moved
+                }
+                if ($MovedRows) {
+                    Add-CIPPAzDataTableEntity @DriftTable -Entity @($MovedRows) -Force
+                    $DriftEntities = @($DriftEntities; @($MovedRows | ForEach-Object { [PSCustomObject]$_ }))
+                }
+                foreach ($Row in $DomainRows) { Remove-CIPPAzDataTableEntity @DriftTable -Entity $Row }
+            } catch {
+                Write-Warning "Failed to move drift states for '$TenantFilter' to its customerId: $($_.Exception.Message)"
+            }
         }
 
         $Results = [System.Collections.Generic.List[object]]::new()
@@ -566,7 +586,7 @@ function Get-CIPPDrift {
                 if (-not $ExistingDriftStates.ContainsKey($StandardNameValue)) {
                     $RowKey = $StandardNameValue -replace '\.', '_'
                     $NewDriftEntities.Add(@{
-                            PartitionKey = $TenantFilter
+                            PartitionKey = $DriftPartition
                             RowKey       = $RowKey
                             StandardName = $StandardNameValue
                             Status       = 'New'
