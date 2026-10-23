@@ -9309,6 +9309,28 @@
                       }
                     }
                   },
+                  "AddSendAs": {
+                    "type": "string"
+                  },
+                  "AddSendOnBehalf": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "addedFields": {
+                          "type": "object",
+                          "properties": {
+                            "userPrincipalName": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
                   "allowExternal": {
                     "type": "boolean",
                     "description": "Only process allowExternal if it was explicitly sent"
@@ -9425,6 +9447,28 @@
                             "type": "string"
                           },
                           "description": "Keep unresolved ManagedBy entries so a failed lookup cannot strip an owner."
+                        }
+                      }
+                    }
+                  },
+                  "RemoveSendAs": {
+                    "type": "string"
+                  },
+                  "RemoveSendOnBehalf": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "addedFields": {
+                          "type": "object",
+                          "properties": {
+                            "userPrincipalName": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "value": {
+                          "type": "string"
                         }
                       }
                     }
@@ -20502,6 +20546,7 @@
                     "type": "string",
                     "enum": [
                       "createDeviceLogCollectionRequest",
+                      "initiateOnDemandProactiveRemediation",
                       "setDeviceName",
                       "users",
                       "wipe"
@@ -20520,6 +20565,14 @@
                   },
                   "macOsUnlockCode": {
                     "type": "string"
+                  },
+                  "scriptPolicyId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Graph takes only the remediation script id, not the rest of the request body"
                   },
                   "tenantFilter": {
                     "type": "string"
@@ -49562,6 +49615,72 @@
         "x-cipp-role": "Identity.Device.Read"
       }
     },
+    "/api/ListDevicePolicyStatus": {
+      "get": {
+        "summary": "ListDevicePolicyStatus",
+        "operationId": "ListDevicePolicyStatus",
+        "tags": [
+          "Endpoint > MEM"
+        ],
+        "description": "Lists the configuration and/or compliance policies applied to one Intune managed device and their status, using the same reports as the device page in Intune. report=all returns both in one response, with a per-report error when one fails. Configuration covers device configuration profiles, settings catalog, administrative templates and endpoint security policies.",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "query",
+            "description": "Intune managed device id (GUID)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "report",
+            "in": "query",
+            "description": "Which report to read: configuration, compliance, or all for both in one response",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.MEM.Read"
+      }
+    },
     "/api/ListDevices": {
       "get": {
         "summary": "ListDevices",
@@ -53096,6 +53215,15 @@
             }
           },
           {
+            "name": "sendPermissions",
+            "in": "query",
+            "description": "Return who holds Send As and Send on Behalf on the group named by groupID. Mail-enabled groups only.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           },
           {
@@ -53219,7 +53347,13 @@
                         "type": "boolean",
                         "x-cipp-field-source": "graph"
                       },
+                      "sendAs": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "sendCopies": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "sendOnBehalf": {
                         "x-cipp-field-source": "backend"
                       },
                       "SID": {
