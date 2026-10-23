@@ -12,7 +12,7 @@ BeforeAll {
     $Helper = Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper'
 
     function Get-CIPPTable { param($tablename) }
-    function Get-CIPPAzDataTableEntity { param($Context, $TableName, $Filter, $Property, $First) }
+    function Get-CIPPAzDataTableEntity { param($Context, $TableName, $Filter, $Property, $First, [switch]$Stream) }
     function Add-CIPPAzDataTableEntity { param($Context, $TableName, $Entity, [switch]$Force) }
     function Remove-CIPPAzDataTableEntity { param($Context, $TableName, $Entity, [switch]$Force) }
     function Remove-AzDataTableEntity { param($Context, $TableName, $Entity, [switch]$Force) }
@@ -67,6 +67,7 @@ Describe 'Write-AlertTrace' {
     BeforeEach {
         $script:Writes = [System.Collections.Generic.List[object]]::new()
         $script:Removed = [System.Collections.Generic.List[object]]::new()
+        $script:ReadPosition = 0
         $script:Existing = @()
         $script:LastRun = @()
         $script:Snoozes = @{}
@@ -76,8 +77,12 @@ Describe 'Write-AlertTrace' {
         Mock Get-CIPPActiveAlertSnoozes { $script:Snoozes }
         Mock Get-CIPPAzDataTableEntity {
             if ($TableName -eq 'AlertLifecycle') {
-                if ($Property) { return $script:Existing | Select-Object -Property $Property }
-                return $script:Existing
+                # Emits row by row, recording how far the read has got, so a test can see deletes land mid-read.
+                foreach ($Row in $script:Existing) {
+                    $script:ReadPosition++
+                    if ($Property) { $Row | Select-Object -Property $Property } else { $Row }
+                }
+                return
             }
             if ($TableName -eq 'AlertLastRun') { return $script:LastRun }
         }
@@ -88,7 +93,7 @@ Describe 'Write-AlertTrace' {
             foreach ($Row in @($Entity)) { $script:Writes.Add($Row) }
         }
         Mock Remove-CIPPAzDataTableEntity { $script:Removed.Add(@{ Table = $TableName; Entity = $Entity }) }
-        Mock Remove-AzDataTableEntity { $script:Removed.Add(@{ Table = $TableName; Entity = $Entity }) }
+        Mock Remove-AzDataTableEntity { $script:Removed.Add(@{ Table = $TableName; Entity = $Entity; ReadPosition = $script:ReadPosition }) }
     }
 
     It 'stores unknown items as Open and returns them for notification' {
@@ -349,6 +354,39 @@ Describe 'Write-AlertTrace' {
         Should -Invoke Remove-CIPPAzDataTableEntity -Times 0
         @($script:Removed.Entity.RowKey | Sort-Object) | Should -Be @(@($Old.RowKey, $Part.RowKey) | Sort-Object)
         $script:Writes.RowKey | Should -Not -Contain $Part.RowKey
+    }
+
+    It 'deletes dropped rows in batches of 100 while the history is still being read' {
+        $script:Existing = @(1..250 | ForEach-Object { New-StoredRow -Item @{ CVE = "CVE-2020-$_"; HoursOld = $_ } -Status 'Resolved' -ResolvedAt ([datetime]::UtcNow.AddDays(-5).ToString('o')) })
+
+        $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @([pscustomobject]@{ Message = 'first' })
+
+        @($script:Removed | ForEach-Object { @($_.Entity).Count }) | Should -Be @(100, 100, 50)
+        $script:Removed[0].ReadPosition | Should -Be 100
+        Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'AlertLifecycle' -and $Stream }
+    }
+
+    It 'does not seed from AlertLastRun when the only stored rows were dropped' {
+        $script:Existing = @(New-StoredRow -Item @{ CVE = 'CVE-2020-1'; HoursOld = 5 } -Status 'Resolved' -ResolvedAt ([datetime]::UtcNow.AddDays(-5).ToString('o')))
+        $script:LastRun = @([pscustomobject]@{ PartitionKey = '20260920'; RowKey = 'contoso.onmicrosoft.com-Get-CIPPAlertSomething'; LogData = '[{"Message":"first"}]'; AlertComment = '' })
+
+        $Result = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @([pscustomobject]@{ Message = 'first' })
+
+        @($Result).Count | Should -Be 1
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 0 -ParameterFilter { $TableName -eq 'AlertLastRun' }
+    }
+
+    It 'deletes part rows whose row is gone, and keeps the parts of a kept row' {
+        $Kept = New-StoredRow -Message 'first'
+        $script:Existing = @(
+            $Kept
+            [pscustomobject]@{ PartitionKey = $Kept.PartitionKey; RowKey = "$($Kept.RowKey)-part1" }
+            [pscustomobject]@{ PartitionKey = $Kept.PartitionKey; RowKey = 'Get-CIPPAlertSomething-gone-part1' }
+        )
+
+        $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @([pscustomobject]@{ Message = 'first' })
+
+        @($script:Removed.Entity.RowKey) | Should -Be @('Get-CIPPAlertSomething-gone-part1')
     }
 
     It 'ignores duplicate items within one run' {
