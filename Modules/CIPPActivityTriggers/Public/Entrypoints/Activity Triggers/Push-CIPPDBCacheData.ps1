@@ -175,6 +175,14 @@ function Push-CIPPDBCacheData {
                     QueueId        = $QueueId
                     QueueName      = "DB Cache ConditionalAccess - $TenantFilter"
                 })
+            # Own activity: the sign-in activity report is slow and must not hold up the CA collection.
+            $Tasks.Add(@{
+                    FunctionName = 'ExecCIPPDBCache'
+                    Name         = 'ServicePrincipalSignInActivities'
+                    TenantFilter = $TenantFilter
+                    QueueId      = $QueueId
+                    QueueName    = "DB Cache ServicePrincipalSignInActivities - $TenantFilter"
+                })
         } else {
             Write-Host "Skipping Conditional Access data collection for $TenantFilter - no required license"
         }
