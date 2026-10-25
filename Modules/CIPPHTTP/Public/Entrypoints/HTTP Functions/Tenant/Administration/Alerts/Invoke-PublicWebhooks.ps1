@@ -8,7 +8,7 @@ function Invoke-PublicWebhooks {
     param($Request, $TriggerMetadata)
     $Headers = $Request.Headers
     Write-Host 'Received request'
-    $url = ($Headers.'x-ms-original-url').split('/API') | Select-Object -First 1
+    $url = ([string]$Headers.'x-ms-original-url').split('/API') | Select-Object -First 1
     $CIPPURL = [string]$url
     Write-Host $url
 
