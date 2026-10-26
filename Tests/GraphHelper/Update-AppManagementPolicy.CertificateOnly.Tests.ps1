@@ -132,6 +132,51 @@ Describe 'Update-AppManagementPolicy certificate-only exemption' {
         $script:CreatedPolicyBody.restrictions.passwordCredentials.restrictionType | Should -Contain 'passwordAddition'
     }
 
+    It 'moves a secret-based app off the certificate-only SAM policy instead of rewriting it' {
+        # SSO/API apps once shared 'CIPP Exemption Policy'; exempting them rewrote the SAM policy to allow
+        # secrets, silently undoing certificate-only mode. They must get their own policy and leave SAM's alone.
+        $env:CertificateAuthMode = $true
+        $script:SamPolicyPatched = $false
+        $script:Unassigned = $false
+        Mock New-GraphBulkRequest -ParameterFilter { $Requests[0].url -like '*/appliesTo' } {
+            @([pscustomobject]@{ id = 'cipp-policy-id'; body = [pscustomobject]@{ value = @([pscustomobject]@{ appId = 'sso-app-id' }) } })
+        }
+        Mock New-GraphBulkRequest -ParameterFilter { $Requests[0].id -eq 'defaultPolicy' } {
+            @(
+                [pscustomobject]@{ id = 'defaultPolicy'; body = [pscustomobject]@{ applicationRestrictions = [pscustomobject]@{ passwordCredentials = @(); keyCredentials = @() } } }
+                [pscustomobject]@{ id = 'appPolicies'; body = [pscustomobject]@{ value = @([pscustomobject]@{
+                                id = 'cipp-policy-id'; displayName = 'CIPP Exemption Policy'; isEnabled = $true
+                                restrictions = [pscustomobject]@{ passwordCredentials = @([pscustomobject]@{ restrictionType = 'passwordAddition'; state = 'enabled' }, [pscustomobject]@{ restrictionType = 'symmetricKeyAddition'; state = 'enabled' }) }
+                            }) } }
+                [pscustomobject]@{ id = 'appRegistration'; body = [pscustomobject]@{ id = 'sso-obj-id'; appId = 'sso-app-id'; displayName = 'CIPP-SSO' } }
+            )
+        }
+        Mock New-GraphPostRequest -ParameterFilter { $type -eq 'PATCH' -and $uri -like '*/appManagementPolicies/cipp-policy-id' } { $script:SamPolicyPatched = $true }
+        Mock New-GraphPostRequest -ParameterFilter { $type -eq 'DELETE' -and $uri -like '*/sso-obj-id/appManagementPolicies/cipp-policy-id/$ref' } { $script:Unassigned = $true }
+
+        $null = Update-AppManagementPolicy -TenantFilter 'contoso' -ApplicationId 'sso-app-id' -PolicyName 'CIPP SSO and API Exemption Policy'
+
+        $script:SamPolicyPatched | Should -BeFalse
+        $script:Unassigned | Should -BeTrue
+        $script:CreatedPolicyBody.displayName | Should -Be 'CIPP SSO and API Exemption Policy'
+        ($script:CreatedPolicyBody.restrictions.passwordCredentials | Where-Object { $_.restrictionType -eq 'passwordAddition' }).state | Should -Be 'disabled'
+    }
+
+    It 'every non-SAM caller passes its own -PolicyName' {
+        # Static guard: a caller relying on the default name would reuse (and rewrite) the CIPP-SAM policy.
+        $NonSamCallers = @(
+            'Modules/CIPPCore/Public/Authentication/New-CIPPSSOApp.ps1'
+            'Modules/CIPPCore/Public/Authentication/Add-CIPPSSOAppSecret.ps1'
+            'Modules/CIPPCore/Public/Authentication/New-CIPPAPIConfig.ps1'
+            'Modules/CIPPCore/Public/GraphHelper/New-CIPPMFAConnectorToken.ps1'
+        )
+        foreach ($File in $NonSamCallers) {
+            $Calls = Select-String -Path (Join-Path $RepoRoot $File) -Pattern '^\s*\$\w+ = Update-AppManagementPolicy ' | ForEach-Object { $_.Line }
+            $Calls | Should -Not -BeNullOrEmpty -Because "$File should call Update-AppManagementPolicy"
+            foreach ($Call in $Calls) { $Call | Should -Match '-PolicyName ' -Because "$File must not reuse the CIPP-SAM policy" }
+        }
+    }
+
     It 'never creates a policy for the SAM app in a customer tenant' {
         $SavedTenant = $env:TenantID
         $env:TenantID = 'partner-tenant-id'

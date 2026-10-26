@@ -51,7 +51,7 @@ function Add-CIPPSSOAppSecret {
     # Ensure the app is exempt from any credential-addition restriction before adding the secret.
     if ($AppId) {
         try {
-            $PolicyUpdate = Update-AppManagementPolicy -ApplicationId $AppId
+            $PolicyUpdate = Update-AppManagementPolicy -ApplicationId $AppId -PolicyName 'CIPP SSO and API Exemption Policy'
             Write-Information "[SSO-Secret] App management policy: $($PolicyUpdate.PolicyAction)"
         } catch {
             Write-Information "[SSO-Secret] Failed to update app management policy: $($_.Exception.Message)"

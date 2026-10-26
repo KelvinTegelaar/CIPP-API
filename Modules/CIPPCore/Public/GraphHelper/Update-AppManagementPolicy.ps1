@@ -24,7 +24,8 @@ function Update-AppManagementPolicy {
         # Azure MFA client) exist only as a service principal in the tenant, so the exemption must be
         # resolved and assigned via servicePrincipals rather than applications.
         [switch]$ServicePrincipal,
-        # Apps other than CIPP-SAM get their own policy so the shared CIPP-SAM exemption is never rewritten for them.
+        # Apps other than CIPP-SAM MUST pass their own name: the default policy is CIPP-SAM's, and in certificate
+        # mode it blocks secrets, so reusing it for a secret-based app would rewrite it to allow secrets on CIPP-SAM.
         [string]$PolicyName = 'CIPP Exemption Policy',
         [switch]$ExemptPasswordLifetime
     )
