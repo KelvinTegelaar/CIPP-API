@@ -51,17 +51,18 @@ function New-CIPPOneDriveShortCut {
         if ($AbsPath -match '^/(sites|teams)/') {
             $Parts = @($AbsPath.TrimStart('/') -split '/')
             for ($i = $Parts.Length; $i -ge 2; $i--) {
-                $Candidates.Add('/' + ($Parts[0..($i - 1)] -join '/'))
+                $Candidates.Add(':/' + ($Parts[0..($i - 1)] -join '/'))
             }
         } elseif ($AbsPath -match '^(?<od>/personal/[^/]+)') {
-            $Candidates.Add($Matches['od'])
+            $Candidates.Add(':' + $Matches['od'])
         } else {
-            throw "Could not parse a SharePoint site path from URL: $URL"
+            # Tenant root site collection, addressed by hostname alone
+            $Candidates.Add('')
         }
 
         foreach ($Candidate in $Candidates) {
             try {
-                $SiteInfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/${Hostname}:${Candidate}?`$select=id,displayName,webUrl" -tenantid $TenantFilter -asapp $true
+                $SiteInfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/${Hostname}${Candidate}?`$select=id,displayName,webUrl" -tenantid $TenantFilter -asapp $true
                 if ($SiteInfo.id) { break }
             } catch {
                 $SiteInfo = $null
