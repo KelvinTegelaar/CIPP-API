@@ -46,7 +46,7 @@ function Add-CIPPDbItem {
         $BatchSize = 100
         $Batch = [System.Collections.Generic.List[hashtable]]::new($BatchSize)
         # Track batch duplicates separately from the full authoritative run used for cleanup.
-        $SeenInBatch = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $SeenInBatch = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 
         # Every row written this run is stamped with this id, and the cleanup below deletes only
         # rows that do NOT carry it. Identity, not age: a run of any length can never delete its

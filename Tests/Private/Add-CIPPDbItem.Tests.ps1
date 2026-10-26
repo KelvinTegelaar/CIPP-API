@@ -138,6 +138,19 @@ Describe 'Add-CIPPDbItem authoritative empty collections' {
         $DataRows | ForEach-Object { $_.RunId | Should -Not -BeNullOrEmpty }
         ($DataRows.RunId | Sort-Object -Unique).Count | Should -Be 1
     }
+
+    It 'keeps rows whose ids differ only by case' {
+        $script:Flushed = [System.Collections.Generic.List[object]]::new()
+        Mock Add-CIPPAzDataTableEntity { $script:Flushed.AddRange(@($Entity)) }
+        Mock Get-CIPPAzDataTableEntity { @() }
+
+        Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'ExoPhishSimUrlAllowItems' -Data @(
+            [PSCustomObject]@{ Identity = 'RgAAAAIoYjOZAAAA0'; Value = '203.0.113.10' }
+            [PSCustomObject]@{ Identity = 'RgAAAAIoYjOzAAAA0'; Value = 'c21.example.com' }
+        )
+
+        @($script:Flushed | Where-Object { $_.RowKey -ne 'ExoPhishSimUrlAllowItems-Count' }).Count | Should -Be 2
+    }
 }
 
 Describe 'Add-CIPPDbItem row data' {
