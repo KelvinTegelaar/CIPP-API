@@ -168,6 +168,13 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
             $script:SavedEntity.Value | Should -Be '["Site A"]'
         }
 
+        It 'stores lines that start with a bracket as values, not as JSON' {
+            $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'locations' -Value "[HQ] Office Allow`n[HQ] VPN Allow" -VariableType 'list')
+
+            $Response.StatusCode | Should -Be 200
+            $script:SavedEntity.Value | Should -Be '["[HQ] Office Allow","[HQ] VPN Allow"]'
+        }
+
         It 'accepts the {label, value} shape the type selector posts' {
             $Response = Invoke-ExecCippReplacemap -Request (
                 New-SaveRequest -Name 'lockseconds' -Value '300' -VariableType ([pscustomobject]@{ label = 'Integer'; value = 'integer' })
@@ -204,7 +211,7 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
         }
 
         It 'rejects a list that is not a JSON array' {
-            foreach ($Value in @('{"a":1}', '[not json')) {
+            foreach ($Value in @('{"a":1}', '["Site A",')) {
                 $script:SavedEntity = $null
                 $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value $Value -VariableType 'list')
 

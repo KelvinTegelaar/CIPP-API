@@ -196,7 +196,9 @@ function Invoke-ExecCippReplacemap {
                 }
                 'list' {
                     # One value per line is stored as the JSON array the substitution reads.
-                    if (-not $TrimmedValue.StartsWith('[') -and -not $TrimmedValue.StartsWith('{')) {
+                    # A line may start with '[' ('[HQ] Office'), so only parseable or JSON-looking values count as JSON.
+                    $IsJsonArray = $TrimmedValue.StartsWith('[') -and (Test-Json -Json $TrimmedValue -ErrorAction SilentlyContinue)
+                    if (-not $IsJsonArray -and -not $TrimmedValue.StartsWith('{') -and -not $TrimmedValue.StartsWith('["')) {
                         $TrimmedValue = ConvertTo-Json -InputObject @($TrimmedValue -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) -Compress
                         $VariableValue = $TrimmedValue
                     }
