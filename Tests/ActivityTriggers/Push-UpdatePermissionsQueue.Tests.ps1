@@ -300,6 +300,22 @@ Describe 'Push-UpdatePermissionsQueue CPV consent gate' {
         }
     }
 
+    Context 'for the partner tenant' {
+        It 'never consents or counts an attempt, CPV cannot target the partner itself' {
+            $env:TenantID = $script:Item.customerId
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                @([pscustomobject]@{ Tenant = $script:Item.customerId; applicationId = $script:CurrentAppId; LastStatus = 'Failed'; LastError = 'Insufficient privileges to complete the operation.'; ConsentAttempts = '38' })
+            }
+            Mock -CommandName Add-CIPPDelegatedPermission -MockWith { @('Failed to update permissions for Microsoft Graph: Insufficient privileges to complete the operation.') }
+
+            try { Push-UpdatePermissionsQueue -Item $script:Item } finally { $env:TenantID = $null }
+
+            $script:ConsentCalls.Count | Should -Be 0
+            $script:WrittenRow.ConsentAttempts | Should -Be '38'
+            $script:WrittenRow.LastError | Should -Match 'Insufficient privileges'
+        }
+    }
+
     Context 'the record it leaves behind' {
         It 'records the failure status that the gate now reads' {
             Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
