@@ -51,7 +51,8 @@ function Start-CIPPBaselineOrchestrator {
         }
     }
 
-    $WorkItems = @(Get-CIPPBaselineWorkItems -TenantFilter $TenantFilter -StandardName $StandardName -TemplateId $TemplateId)
+    # A manual run by a tenant-restricted role only reaches the tenants that role allows.
+    $WorkItems = @(Get-CIPPBaselineWorkItems -TenantFilter $TenantFilter -StandardName $StandardName -TemplateId $TemplateId | Select-CippAllowedTenantData -TenantProperty 'TenantFilter')
 
     # Scheduled full runs reconcile the resolved store: rows for pairs nothing resolves
     # anymore (standard removed from its baseline, tenant unassigned, override deleted)
