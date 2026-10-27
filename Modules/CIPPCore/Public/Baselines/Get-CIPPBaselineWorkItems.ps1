@@ -145,7 +145,7 @@ function Get-CIPPBaselineWorkItems {
             foreach ($IdentityKey in $StageConfigs.Keys) {
                 foreach ($Config in $StageConfigs[$IdentityKey]) {
                     $InstanceKey = "$($Config.instance ?? $Config.standard)"
-                    if ($StandardName -and $InstanceKey -ne $StandardName) { continue }
+                    if ($StandardName -and $InstanceKey -notin $StandardName) { continue }
                     $Key = '{0}|{1}' -f $Domain, $IdentityKey
                     $Candidate = @{
                         Rank      = $Rank
@@ -220,7 +220,7 @@ function Get-CIPPBaselineWorkItems {
         if (-not $Delta) { continue }
         $OverrideTenant = $TenantLookup["$($Delta.scopeId)"].defaultDomainName ?? "$($Delta.scopeId)"
         if ($TenantFilter -and $OverrideTenant -notin @($TenantFilter)) { continue }
-        if ($StandardName -and $Delta.standardName -ne $StandardName) { continue }
+        if ($StandardName -and $Delta.standardName -notin $StandardName) { continue }
         if ($TemplateId) { continue } # a baseline-scoped run never picks up ad-hoc overrides of other config
         $Variables = $(try { $Delta.expectedValue | ConvertFrom-Json -ErrorAction Stop } catch { [PSCustomObject]@{} }) ?? [PSCustomObject]@{}
         # An override targets a specific resolved instance: find the effective entry whose

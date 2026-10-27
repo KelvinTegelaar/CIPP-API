@@ -18,6 +18,8 @@ function Get-CIPPBaselineCATemplateState {
           one side to strings and reported type-mismatch drift)
         - locations translate GUID->displayName via the template's LocationInfo plus the
           tenant NamedLocations cache; All/AllTrusted pass through
+        - named locations the template defines and the policy references also grade by
+          content (namedLocations), against the location the live policy is bound to
         - users/groups translate GUID->displayName via the Users/Groups caches, then one live
           directoryObjects/getByIds for ids those caches do not hold yet; still-unresolved
           GUIDs stay GUIDs so raw-GUID templates still match
@@ -66,7 +68,8 @@ function Get-CIPPBaselineCATemplateState {
     foreach ($Location in @($Template.LocationInfo)) {
         if ($Location.id -and $Location.displayName) { $NameById["$($Location.id)"] = "$($Location.displayName)" }
     }
-    foreach ($Location in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'NamedLocations' | Where-Object { $_ })) {
+    $TenantLocations = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'NamedLocations' | Where-Object { $_ })
+    foreach ($Location in $TenantLocations) {
         if ($Location.id -and $Location.displayName -and -not $NameById.ContainsKey("$($Location.id)")) { $NameById["$($Location.id)"] = "$($Location.displayName)" }
     }
     $StrengthNameById = @{}
@@ -205,6 +208,37 @@ function Get-CIPPBaselineCATemplateState {
     $Current = & $Normalize $Live
     # State: the configured state is the expectation; 'donotchange' adopts the live state.
     $Expected.state = if (-not $ConfiguredState -or $ConfiguredState -eq 'donotchange') { $Current.state } else { $ConfiguredState }
+
+    # A deploy rewrites every location the template defines, so those the policy references grade by
+    # content, on the copy the live policy is bound to (else the first of that name). Locations the
+    # template only names (a list variable such as %clientallowlocations%) are tenant-managed.
+    $Referenced = @($Template.conditions.locations.includeLocations) + @($Template.conditions.locations.excludeLocations)
+    $BoundIds = @($Live.conditions.locations.includeLocations) + @($Live.conditions.locations.excludeLocations)
+    $Shape = {
+        param($Location)
+        $Shaped = [ordered]@{}
+        foreach ($Key in $Keys) {
+            $Value = if ($Key -eq 'ipRanges') { $Location.ipRanges.cidrAddress } else { $Location.$Key }
+            # One sorted string, so order never drifts and a difference reads as one line.
+            $Shaped[$Key] = $Value -is [array] ? (@($Value | Sort-Object) -join ', ') : $Value
+        }
+        [PSCustomObject]$Shaped
+    }
+    $ExpectedLocations = [ordered]@{}
+    $CurrentLocations = [ordered]@{}
+    foreach ($Location in @($Template.LocationInfo)) {
+        if (-not $Location.displayName -or ($Location.id -notin $Referenced -and $Location.displayName -notin $Referenced)) { continue }
+        Format-CIPPNamedLocationRange -Location $Location
+        $Keys = @('ipRanges', 'isTrusted', 'countriesAndRegions', 'includeUnknownCountriesAndRegions', 'countryLookupMethod').Where({ $null -ne $Location.$_ })
+        $Named = @($TenantLocations.Where({ $_.displayName -eq $Location.displayName }))
+        $Bound = @($Named.Where({ $_.id -in $BoundIds }))[0] ?? $Named[0]
+        $ExpectedLocations[$Location.displayName] = & $Shape $Location
+        $CurrentLocations[$Location.displayName] = if ($Bound) { & $Shape $Bound }
+    }
+    if ($ExpectedLocations.Count -gt 0) {
+        $Expected | Add-Member -NotePropertyName 'namedLocations' -NotePropertyValue ([PSCustomObject]$ExpectedLocations)
+        $Current | Add-Member -NotePropertyName 'namedLocations' -NotePropertyValue ([PSCustomObject]$CurrentLocations)
+    }
 
     return @{ Expected = $Expected; Current = $Current }
 }

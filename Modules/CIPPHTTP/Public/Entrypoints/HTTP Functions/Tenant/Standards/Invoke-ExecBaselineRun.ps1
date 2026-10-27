@@ -47,7 +47,7 @@ function Invoke-ExecBaselineRun {
         $User = $(try { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } catch { $null }) ?? 'manual'
         $Queued = Start-CIPPBaselineOrchestrator -TenantFilter $TenantFilter -StandardName $StandardName -TemplateId $TemplateId -Mode $Mode -TriggeredBy $User -Force
 
-        $Target = $TemplateId ? "baseline $TemplateId" : ("$($StandardName ? "$StandardName on " : '')$($TenantFilter ?? 'all tenants')")
+        $Target = $TemplateId ? "baseline $TemplateId" : ("$($StandardName ? "$($StandardName -join ', ') on " : '')$($TenantFilter ?? 'all tenants')")
         if ([int]$Queued -eq 0) {
             # Never claim a run started when nothing resolved - that is undiagnosable from the UI.
             Write-LogMessage -headers $Request.Headers -API $APIName -message "Baseline $Mode for $Target resolved nothing - no checks queued." -Sev 'Warning'

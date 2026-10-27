@@ -43,6 +43,13 @@ Describe 'Invoke-ExecBaselineRun' {
         Should -Invoke Start-CIPPBaselineOrchestrator -Times 1 -ParameterFilter { $TenantFilter -eq 'contoso.com' }
     }
 
+    It 'deploys several standards to one tenant in one run' {
+        $Response = Invoke-Run @{ mode = 'oneoff'; tenantFilter = 'contoso.com'; standard = @('ConditionalAccessTemplate#a', 'ConditionalAccessTemplate#b') }
+        $Response.StatusCode | Should -Be 200
+        $Response.Body.Results | Should -BeLike 'Started the oneoff: 3 checks queued*'
+        Should -Invoke Start-CIPPBaselineOrchestrator -Times 1 -ParameterFilter { @($StandardName).Count -eq 2 -and $TenantFilter -eq 'contoso.com' }
+    }
+
     It 'returns 400 with <Expected>' -ForEach @(
         @{ Body = @{ mode = 'bogus'; tenantFilter = 'contoso.com' }; Expected = "Unknown mode 'bogus'*" }
         @{ Body = @{ mode = 'oneoff'; tenantFilter = 'contoso.com' }; Expected = 'A oneoff run deploys a single standard*' }
