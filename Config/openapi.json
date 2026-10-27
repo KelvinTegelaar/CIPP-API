@@ -17897,7 +17897,7 @@
           {
             "name": "tenantId",
             "in": "query",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string"
             }
@@ -18454,6 +18454,161 @@
           }
         ],
         "x-cipp-role": "CIPP.TemplateLibrary.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ExecCompareCAPolicy": {
+      "post": {
+        "summary": "ExecCompareCAPolicy",
+        "operationId": "ExecCompareCAPolicy",
+        "tags": [
+          "Tenant > Conditional"
+        ],
+        "description": "Compares a Conditional Access policy against another policy or a stored CA template and returns the differences setting by setting. Users, groups and locations are compared by display name, the same way the Conditional Access drift standard compares them.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sourceA": {
+                    "type": "object",
+                    "properties": {
+                      "tenantFilter": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "sourceB": {
+                    "type": "object",
+                    "properties": {
+                      "tenantFilter": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields written into the storage table it reads. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                  "properties": {
+                    "conditions": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "ContentHash": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "createdDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deletedDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "description": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "grantControls": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "GUID": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "id": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "JSON": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "modifiedDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "Package": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Permissions": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "sessionControls": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "SHA": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SourcePath": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "state": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "TemplateName": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "UpdatedBy": {
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.ConditionalAccess.Read",
         "x-cipp-any-tenant": true
       }
     },

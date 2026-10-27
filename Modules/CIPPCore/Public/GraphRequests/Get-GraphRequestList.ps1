@@ -217,6 +217,8 @@ function Get-GraphRequestList {
     }
     #Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
+    # Unset on the SkipCache path; without this a caller's $Rows is read through dynamic scope
+    $Rows = $null
     try {
         if ($QueueId) {
             $Table = Get-CIPPTable -TableName $TableName
