@@ -12,7 +12,7 @@ BeforeAll {
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
     function New-GraphPostRequest { param($uri, $tenantid, $type, $body, $AsApp, $ContentType, $scope) }
     function Set-CIPPRegistrationCampaign { param($Tenant, $State, $TargetedAuthenticationMethod, $SnoozeDurationInDays, $EnforceRegistrationAfterAllowedSnoozes, $IncludeTargets, $ExcludeTargets, $APIName) }
-    function Set-CIPPAuthenticationPolicy { param($Tenant, $APIName, $AuthenticationMethodId, [bool]$Enabled, $GroupIds, $MicrosoftAuthenticatorSoftwareOathEnabled, $MicrosoftAuthenticatorDisplayAppInfo, $MicrosoftAuthenticatorDisplayLocation, $MicrosoftAuthenticatorCompanionApp, $TAPisUsableOnce, $TAPDefaultLifeTime, $TAPMinimumLifetime, $TAPMaximumLifetime, $TAPDefaultLength, $QRCodeLifetimeInDays, $QRCodePinLength, $EmailAllowExternalIdToUseEmailOtp, $EmailExcludeGroupIds) }
+    function Set-CIPPAuthenticationPolicy { param($Tenant, $APIName, $AuthenticationMethodId, [bool]$Enabled, $GroupIds, $MicrosoftAuthenticatorSoftwareOathEnabled, $MicrosoftAuthenticatorDisplayAppInfo, $MicrosoftAuthenticatorDisplayLocation, $MicrosoftAuthenticatorCompanionApp, $TAPisUsableOnce, $TAPDefaultLifeTime, $TAPMinimumLifetime, $TAPMaximumLifetime, $TAPDefaultLength, $QRCodeLifetimeInDays, $QRCodePinLength, $EmailAllowExternalIdToUseEmailOtp, $ExcludeGroupIds) }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
@@ -128,6 +128,16 @@ Describe 'Get-CIPPBaselineAuthenticationMethodsState' {
         @($Prepared.Current.remediationSets).Count | Should -Be 1
         $Prepared.Current.remediationSets[0].Params.AuthenticationMethodId | Should -Be 'SMS'
         $Prepared.Current.remediationSets[0].Params.Enabled | Should -BeFalse
+    }
+
+    It 'grades and remediates the exclude group on methods other than Email' {
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'AuthenticationMethodsPolicy') { @($script:AuthPolicy | ConvertTo-Cached) } else { @(@{ id = 'g-admins'; displayName = 'Admins' } | ConvertTo-Cached) }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ SMSEnabled = $true; SMSExcludeGroup = 'Admins' } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.methodsOutOfPolicy | Should -Match 'SMS: excludeTargets'
+        $Prepared.Current.remediationSets[0].Params.ExcludeGroupIds | Should -Be @('g-admins')
     }
 
     It 'writes each drifted method through the shared policy helper, compliant ones untouched' {

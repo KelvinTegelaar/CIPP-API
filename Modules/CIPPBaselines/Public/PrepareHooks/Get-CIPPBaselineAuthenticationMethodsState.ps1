@@ -102,6 +102,15 @@ function Get-CIPPBaselineAuthenticationMethodsState {
         if ($Method.Enabled) {
             $Params['GroupIds'] = $(if ($ResolvedGroupIds) { @($ResolvedGroupIds) } else { @('all_users') })
         }
+        if ($Method.Enabled -and -not [string]::IsNullOrWhiteSpace($Method.ExcludeGroupName)) {
+            $ExcludeIds = & $ResolveGroup $Method.ExcludeGroupName
+            if ($ExcludeIds) {
+                $CurrentExcludeIds = @($Config.excludeTargets | ForEach-Object { "$($_.id)" })
+                $Diff = Compare-Object -ReferenceObject @($ExcludeIds | Sort-Object) -DifferenceObject @($CurrentExcludeIds | Sort-Object) -ErrorAction SilentlyContinue
+                if ($Diff) { $Drifts.Add("$($Method.Label): excludeTargets [$($CurrentExcludeIds -join ', ')] should be [$($ExcludeIds -join ', ')]") }
+                $Params['ExcludeGroupIds'] = @($ExcludeIds)
+            }
+        }
         switch ($Method.Id) {
             'MicrosoftAuthenticator' {
                 if ($Method.Enabled) {
@@ -165,15 +174,6 @@ function Get-CIPPBaselineAuthenticationMethodsState {
                     if (-not [string]::IsNullOrWhiteSpace($ExternalOtp)) {
                         if ("$($Config.allowExternalIdToUseEmailOtp)" -ne $ExternalOtp) { $Drifts.Add("$($Method.Label): allowExternalIdToUseEmailOtp should be '$ExternalOtp'") }
                         $Params['EmailAllowExternalIdToUseEmailOtp'] = $ExternalOtp
-                    }
-                    if (-not [string]::IsNullOrWhiteSpace($Method.ExcludeGroupName)) {
-                        $ExcludeIds = & $ResolveGroup $Method.ExcludeGroupName
-                        if ($ExcludeIds) {
-                            $CurrentExcludeIds = @($Config.excludeTargets | ForEach-Object { "$($_.id)" })
-                            $Diff = Compare-Object -ReferenceObject @($ExcludeIds | Sort-Object) -DifferenceObject @($CurrentExcludeIds | Sort-Object) -ErrorAction SilentlyContinue
-                            if ($Diff) { $Drifts.Add("$($Method.Label): excludeTargets [$($CurrentExcludeIds -join ', ')] should be [$($ExcludeIds -join ', ')]") }
-                            $Params['EmailExcludeGroupIds'] = @($ExcludeIds)
-                        }
                     }
                 }
             }
