@@ -246,7 +246,7 @@ function Invoke-ExecApiClient {
         'SaveToAzure' {
             $TenantId = $env:TenantID
             $FunctionAppName = $env:WEBSITE_SITE_NAME
-            $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
+            $AllClients = Get-CIPPAzDataTableEntity @Table | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) -and "$($_.Enabled)" -eq 'True' }
             $ClientIds = $AllClients.RowKey
             # MCPAllowed can round-trip from table storage as a bool or a string; compare on string form.
             $ProtectedAppIds = Get-CippProtectedAppId

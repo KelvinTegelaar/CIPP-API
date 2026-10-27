@@ -201,7 +201,7 @@ function Initialize-CIPPAuth {
         if ($AuthState.HasSAMCredentials -and -not $env:CIPP_SSO_MIGRATION_APPID -and $env:WEBSITE_AUTH_V2_CONFIG_JSON) {
             try {
                 $ApiClientsTable = Get-CippTable -tablename 'ApiClients'
-                $EnabledClients = @(Get-CIPPAzDataTableEntity @ApiClientsTable -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) })
+                $EnabledClients = @(Get-CIPPAzDataTableEntity @ApiClientsTable | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) -and "$($_.Enabled)" -eq 'True' })
 
                 if ($EnabledClients.Count -gt 0) {
                     $EnabledClientIds = @($EnabledClients.RowKey)

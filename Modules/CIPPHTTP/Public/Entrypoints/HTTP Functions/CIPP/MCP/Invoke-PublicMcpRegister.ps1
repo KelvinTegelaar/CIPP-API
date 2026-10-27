@@ -63,8 +63,8 @@ function Invoke-PublicMcpRegister {
     # coexist, each with its own redirects; a connector can pin one with ?client=<appId>
     # on the MCP URL, otherwise the first that resolves in Entra is used.
     $Table = Get-CippTable -tablename 'ApiClients'
-    $McpCandidates = @(Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' |
-            Where-Object { "$($_.MCPAllowed)" -eq 'True' })
+    $McpCandidates = @(Get-CIPPAzDataTableEntity @Table |
+            Where-Object { "$($_.Enabled)" -eq 'True' -and "$($_.MCPAllowed)" -eq 'True' })
     $RequestedClient = "$($Request.Query.client)".Trim()
     if (-not [string]::IsNullOrWhiteSpace($RequestedClient)) {
         $Scoped = @($McpCandidates | Where-Object { "$($_.RowKey)" -eq $RequestedClient })

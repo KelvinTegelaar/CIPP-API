@@ -99,4 +99,20 @@ Describe 'Get-CippApiClient' {
             $Result.ClientId | Should -Be @('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002')
         }
     }
+
+    Context 'Enabled stored as a legacy string' {
+        BeforeEach {
+            $script:Rows = @(
+                [pscustomobject]@{ PartitionKey = 'ApiClients'; RowKey = 'aaaaaaaa-0000-0000-0000-000000000001'; AppName = 'On'; Role = 'readonly'; IPRange = ''; Enabled = 'True'; MCPAllowed = $false }
+                [pscustomobject]@{ PartitionKey = 'ApiClients'; RowKey = 'aaaaaaaa-0000-0000-0000-000000000002'; AppName = 'Off'; Role = 'readonly'; IPRange = ''; Enabled = 'False'; MCPAllowed = $false }
+                [pscustomobject]@{ PartitionKey = 'ApiClients'; RowKey = 'aaaaaaaa-0000-0000-0000-000000000003'; AppName = 'Bool'; Role = 'readonly'; IPRange = ''; Enabled = $true; MCPAllowed = $false }
+            )
+        }
+
+        It 'returns Enabled as a bool' {
+            $Result = @(Get-CippApiClient)
+            $Result.Enabled | Should -Be @($true, $false, $true)
+            $Result.Enabled | ForEach-Object { $_ | Should -BeOfType [bool] }
+        }
+    }
 }
