@@ -12,6 +12,13 @@ function Invoke-ExecCreateDefaultGroups {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    if (@(Test-CippAccess -Request $Request -GroupList) -notcontains 'AllGroups') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = 'You do not have permission to manage tenant groups.' }
+            })
+    }
+
     try {
         $Table = Get-CippTable -tablename 'TenantGroups'
         $Results = [System.Collections.Generic.List[object]]::new()

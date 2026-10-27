@@ -19,7 +19,9 @@ function Invoke-ExecCippReplacemap {
     # partition at once rather than about one tenant - so it is handled before the tenant is
     # resolved, and needs no tenantId.
     if ($Action -eq 'Usage') {
-        $AllRows = Get-CIPPAzDataTableEntity @Table
+        $AllRows = @(Get-CIPPAzDataTableEntity @Table)
+        # Global rows apply to every tenant; a tenant's own rows only reach callers whose roles cover it.
+        $AllRows = @($AllRows.Where({ $_.PartitionKey -eq 'AllTenants' })) + @($AllRows.Where({ $_.PartitionKey -ne 'AllTenants' }) | Select-CippAllowedTenantData -TenantProperty 'PartitionKey')
 
         $TenantLookup = @{}
         foreach ($KnownTenant in (Get-Tenants -IncludeAll)) {
@@ -89,6 +91,14 @@ function Invoke-ExecCippReplacemap {
             })
     }
 
+    # Without a tenantId the lookup below would match every tenant the caller can see.
+    if ([string]::IsNullOrWhiteSpace($TenantId)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Provide tenantId: a tenant ID or domain, or AllTenants for global variables.' }
+            })
+    }
+
     if ($TenantId -eq 'AllTenants') {
         $customerId = $TenantId
     } else {
@@ -99,10 +109,9 @@ function Invoke-ExecCippReplacemap {
 
     if (!$customerId) {
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'customerId is required'
+                StatusCode = [HttpStatusCode]::NotFound
+                Body       = @{ Results = "Tenant '$TenantId' was not found." }
             })
-        return
     }
 
     $StatusCode = [HttpStatusCode]::OK

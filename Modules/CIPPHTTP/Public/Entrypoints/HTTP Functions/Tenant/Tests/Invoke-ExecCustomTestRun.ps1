@@ -27,6 +27,17 @@ function Invoke-ExecCustomTestRun {
         if (-not [string]::IsNullOrWhiteSpace($TenantFilterRaw)) { $TenantFilter = [string]$TenantFilterRaw }
         if ($TenantFilter -eq 'AllTenants') { $TenantFilter = 'allTenants' }
 
+        # An all-tenants run resolves its tenants through Get-Tenants, which is already limited to the caller's tenants.
+        if ($TenantFilter -ne 'allTenants') {
+            $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+            if ($AllowedTenants -notcontains 'AllTenants' -and $AllowedTenants -notcontains @(Get-Tenants -TenantFilter $TenantFilter -IncludeErrors)[0].customerId) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::Forbidden
+                        Body       = [PSCustomObject]@{ Results = "$TenantFilter is outside your access." }
+                    })
+            }
+        }
+
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting Custom test run for: $TenantFilter" -sev Info
         $null = Start-CIPPDBTestsRun -TenantFilter $TenantFilter -Suites 'Custom' -Force
 
