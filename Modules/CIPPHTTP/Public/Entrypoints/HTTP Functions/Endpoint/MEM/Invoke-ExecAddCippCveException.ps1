@@ -26,6 +26,13 @@ function Invoke-ExecAddCippCveException {
             }
         }
 
+        if ($ApplyTo -eq 'Global' -and @(Test-CIPPAccess -Request $Request -TenantList) -notcontains 'AllTenants') {
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = "You don't have access to all tenants, so you can't add an All Tenants (Global) exception. Choose All Affected Tenants to add it for the tenants you can access." }
+            }
+        }
+
         $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
 
         # Load all existing exceptions for this CVE
@@ -46,11 +53,14 @@ function Invoke-ExecAddCippCveException {
                 # confirms the match - the whole cache is never held parsed at once.
                 $AffectedTenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                 $Needle = '"cveId":"{0}"' -f $CveId
-                foreach ($Row in Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'DefenderCVEs') {
+                $AffectedItems = foreach ($Row in Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'DefenderCVEs') {
                     if ($Row.RowKey -eq 'DefenderCVEs-Count' -or -not $Row.Data) { continue }
                     if ($Row.Data.IndexOf($Needle, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) { continue }
                     $Item = $Row.Data | ConvertFrom-Json
-                    if ($Item.cveId -eq $CveId -and $Item.customerId) { [void]$AffectedTenants.Add([string]$Item.customerId) }
+                    if ($Item.cveId -eq $CveId -and $Item.customerId) { $Item }
+                }
+                foreach ($Item in $AffectedItems | Select-CippAllowedTenantData -TenantProperty 'customerId') {
+                    [void]$AffectedTenants.Add([string]$Item.customerId)
                 }
                 @($AffectedTenants)
             }

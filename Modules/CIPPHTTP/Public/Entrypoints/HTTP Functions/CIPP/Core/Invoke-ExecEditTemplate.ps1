@@ -10,11 +10,17 @@ function Invoke-ExecEditTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $StatusCode = [HttpStatusCode]::OK
+    $Type = $Request.Query.Type ?? $Request.Body.Type
+    if ($Type -notin 'IntuneTemplate', 'CATemplate') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{ Results = 'Type must be IntuneTemplate or CATemplate.' }
+            })
+    }
     try {
         $Table = Get-CippTable -tablename 'templates'
         $guid = $request.Body.id ? $request.Body.id : $request.Body.GUID
         $JSON = ConvertTo-Json -Compress -Depth 100 -InputObject ($request.Body | Select-Object * -ExcludeProperty GUID, source, isSynced, package)
-        $Type = $request.Query.Type ?? $Request.Body.Type
 
         if ($Type -eq 'IntuneTemplate') {
             Write-Host 'Intune Template'
