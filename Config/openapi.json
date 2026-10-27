@@ -22125,6 +22125,9 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
@@ -41578,52 +41581,18 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                   "properties": {
-                    "APIKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ApplicationId": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ApplicationSecret": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "RefreshToken": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
-                    },
-                    "RowKey": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "SASUrl": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "SecretValue": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "TenantId": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -68689,12 +68658,11 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Retrieves the profile photo for a specific Entra ID user, returned as a base64-encoded image.",
+        "description": "Retrieves an Entra ID user's profile photo as an image. With tenantFilter and UserID it returns that\nuser's photo, which needs access to the tenant. Without tenantFilter it returns the signed-in user's own photo.",
         "parameters": [
           {
             "name": "tenantFilter",
             "in": "query",
-            "description": "Interact with query parameters or the body of the request.",
             "required": false,
             "schema": {
               "type": "string"
@@ -68703,7 +68671,7 @@
           {
             "name": "UserID",
             "in": "query",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string"
             }
@@ -68723,6 +68691,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
