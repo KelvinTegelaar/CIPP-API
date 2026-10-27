@@ -14,14 +14,15 @@ BeforeAll {
     function Get-AssignedNameMap { }
     function Get-AssignedMap { }
     function Get-CIPPTable { param($TableName) }
-    function Get-CIPPAzDataTableEntity { param($Filter) }
+    function Get-CIPPAzDataTableEntity { param($Filter, $Property) }
     function Get-CippExtensionReportingData { param($TenantFilter, [switch]$IncludeMailboxes, [string[]]$Exclude) }
     function Get-HuduCompanies { param($Id) }
     function Add-HuduAssetLayoutField { param($AssetLayoutId, $Label, $FieldType, $Position, $ShowInList, $AssetLayout) }
     function Get-HuduAssetLayouts { param($Id, $LayoutId) }
     function Get-HuduAssets { [CmdletBinding()] param($CompanyId, $AssetLayoutId, $Name, [switch]$Archived, $PrimarySerial) }
-    function Get-HuduRelations { }
+    function Get-HuduRelations { [CmdletBinding()] param() }
     function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
+    function Remove-AzDataTableEntity { [CmdletBinding()] param($Entity, [switch]$Force) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function New-GraphGetRequest { param($Uri, $TenantId, [switch]$NoAuthCheck) }
     function Get-CIPPDbItem { param($TenantFilter, $Type) }

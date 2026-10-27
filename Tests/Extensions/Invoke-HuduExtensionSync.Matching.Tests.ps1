@@ -12,14 +12,15 @@ BeforeAll {
     function Get-AssignedNameMap { }
     function Get-AssignedMap { }
     function Get-CIPPTable { param($TableName) }
-    function Get-CIPPAzDataTableEntity { param($Filter) }
+    function Get-CIPPAzDataTableEntity { param($Filter, $Property) }
     function Get-CippExtensionReportingData { param($TenantFilter, [switch]$IncludeMailboxes, [string[]]$Exclude) }
     function Get-HuduCompanies { param($Id) }
     function Add-HuduAssetLayoutField { param($AssetLayoutId, $Label, $FieldType, $Position, $ShowInList, $AssetLayout) }
     function Get-HuduAssetLayouts { param($Id, $LayoutId) }
     function Get-HuduAssets { param($CompanyId, $AssetLayoutId) }
-    function Get-HuduRelations { }
+    function Get-HuduRelations { [CmdletBinding()] param() }
     function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
+    function Remove-AzDataTableEntity { [CmdletBinding()] param($Entity, [switch]$Force) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function New-GraphGetRequest { param($Uri, $TenantId, [switch]$NoAuthCheck) }
     function Get-CIPPDbItem { param($TenantFilter, $Type) }
@@ -280,5 +281,66 @@ Describe 'Invoke-HuduExtensionSync matching' {
     It 'creates only the user to device relations that do not already exist' {
         $Created = ($script:NewAssets | Where-Object Name -EQ 'PC-3').Id
         @($script:NewRelations) | Should -Be @('102->202', "103->$Created")
+    }
+
+    Context 'relations cache' {
+        BeforeEach {
+            $script:TableCalls = [System.Collections.Generic.List[string]]::new()
+            $script:CacheFresh = $false
+            $script:CachedRelationRows = @()
+            $script:NewRelations.Clear()
+            Mock Get-CIPPAzDataTableEntity {
+                if ($Filter -like "*PartitionKey eq 'HuduMapping'*") {
+                    return @(
+                        [PSCustomObject]@{ PartitionKey = 'HuduMapping'; RowKey = 'tenant-1'; IntegrationId = 20; IntegrationName = 'Contoso' }
+                        [PSCustomObject]@{ PartitionKey = 'HuduFieldMapping'; RowKey = 'Users'; IntegrationId = 11 }
+                        [PSCustomObject]@{ PartitionKey = 'HuduFieldMapping'; RowKey = 'Devices'; IntegrationId = 12 }
+                    )
+                }
+                if ($Filter -like '*InstanceProperties*') { return [PSCustomObject]@{ Value = 'cipp.example.test' } }
+                if ($Filter -like '*CacheMetadata*' -and $script:CacheFresh) { return [PSCustomObject]@{ LastRefresh = (Get-Date).ToUniversalTime().ToString('o') } }
+                if ($Filter -like "*PartitionKey eq 'HuduRelation'*") { return $script:CachedRelationRows }
+            }
+            Mock Add-CIPPAzDataTableEntity { foreach ($E in @($Entity)) { $script:TableCalls.Add("add:$($E.PartitionKey):$($E.RowKey)") } }
+            Mock Remove-AzDataTableEntity { foreach ($E in @($Entity)) { $script:TableCalls.Add("remove:$($E.RowKey)") } }
+            Mock Get-HuduRelations {
+                $script:TableCalls.Add('fetch')
+                [PSCustomObject]@{ id = 1; fromable_type = 'Asset'; fromable_id = 101; toable_type = 'Asset'; toable_id = 201 }
+                [PSCustomObject]@{ id = 4; fromable_type = 'Asset'; fromable_id = 102; toable_type = 'Asset'; toable_id = 202 }
+                [PSCustomObject]@{ id = 5; fromable_type = 'Website'; fromable_id = 7; toable_type = 'Asset'; toable_id = 201 }
+            }
+        }
+
+        It 'stamps the refresh first, writes only new asset relations and deletes removed ones' {
+            $script:CachedRelationRows = @('1', '2', '3') | ForEach-Object { [PSCustomObject]@{ PartitionKey = 'HuduRelation'; RowKey = $_ } }
+            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
+
+            $script:TableCalls.IndexOf('add:CacheMetadata:LastRefresh') | Should -BeLessThan $script:TableCalls.IndexOf('fetch')
+            @($script:TableCalls -like 'add:HuduRelation:*') | Should -Be @('add:HuduRelation:4')
+            @($script:TableCalls -like 'remove:*') | Should -Be @('remove:2', 'remove:3')
+            @($script:NewRelations) | Should -Not -Contain '102->202'
+        }
+
+        It 'reads relation keys from a fresh cache without calling Hudu' {
+            $script:CacheFresh = $true
+            $script:CachedRelationRows = @([PSCustomObject]@{ PartitionKey = 'HuduRelation'; RowKey = '4'; FromableType = 'Asset'; FromableId = '102'; ToableType = 'Asset'; ToableId = '202' })
+            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
+
+            @($script:TableCalls -like '*HuduRelation*') + @($script:TableCalls -like '*CacheMetadata*') + @($script:TableCalls -eq 'fetch') | Should -BeNullOrEmpty
+            @($script:NewRelations) | Should -Contain '101->201'
+            @($script:NewRelations) | Should -Not -Contain '102->202'
+        }
+
+        It 'deletes nothing when a relations page fails' {
+            $script:CachedRelationRows = @('1', '2') | ForEach-Object { [PSCustomObject]@{ PartitionKey = 'HuduRelation'; RowKey = $_ } }
+            Mock Get-HuduRelations {
+                [PSCustomObject]@{ id = 1; fromable_type = 'Asset'; fromable_id = 101; toable_type = 'Asset'; toable_id = 201 }
+                Write-Error 'page 2 failed'
+            }
+            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com' 2>$null
+
+            @($script:TableCalls -like 'remove:*') | Should -BeNullOrEmpty
+            @($script:NewRelations) | Should -Not -Contain '101->201'
+        }
     }
 }
