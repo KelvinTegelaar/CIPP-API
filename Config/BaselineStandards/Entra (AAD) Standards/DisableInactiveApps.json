@@ -1,0 +1,65 @@
+{
+  "name": "DisableInactiveApps",
+  "label": "Disable enterprise applications that have not signed in for a number of days",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Finds enterprise apps with no sign-in for a set number of days (minimum 30), including apps never used since they were added. Microsoft apps and CIPP are skipped. Exclude external MFA (e.g. Cisco Duo) and GSA traffic forwarding apps. Use in Report mode only; auto-remediation is not recommended. Requires Entra ID P1.",
+  "executiveText": "Identifies third-party and custom apps that are no longer used, so dormant apps with broad permissions can be reviewed and removed before they are abused.",
+  "docsDescription": "Reports enterprise apps with no sign-in for the configured number of days (minimum 30), from the Entra sign-in activity report (Entra ID P1); remediate mode disables them. Apps never signed in count once older than the same window. Microsoft-owned apps, managed identities, CIPP's own app and apps re-enabled in the last 7 days are skipped. Exclusions match display name, app ID or object ID and accept custom variables. Exclude external MFA apps (e.g. Cisco Duo) and GSA traffic forwarding apps (GSA-...), which can show no sign-ins while in use. Recommended in Report mode only, not auto-remediate.",
+  "impactColour": "danger",
+  "addedDate": "2026-10-28",
+  "powershellEquivalent": "Get-MgBetaReportServicePrincipalSignInActivity & Update-MgServicePrincipal -AccountEnabled:$false",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "days": {
+      "type": "number",
+      "label": "Days without a sign-in (minimum 30)",
+      "helperText": "Also applies to apps that have never signed in, counted from when they were added.",
+      "required": true,
+      "default": 180,
+      "validators": {
+        "min": {
+          "value": 30,
+          "message": "Minimum value is 30"
+        }
+      }
+    },
+    "excludedApps": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Excluded apps (display name, app ID or %variable%)"
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "ServicePrincipals"
+  },
+  "prepare": "Get-CIPPBaselineDisableInactiveAppsState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "ServicePrincipals"
+    ],
+    "writes": [
+      {
+        "method": "PATCH",
+        "asApp": true,
+        "uri": "servicePrincipals/%id%",
+        "body": {
+          "accountEnabled": false
+        }
+      }
+    ]
+  }
+}
