@@ -32,6 +32,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $sev, $LogData) }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 
     function New-ExceptionRequest {
         param(

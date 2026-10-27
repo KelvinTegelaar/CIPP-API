@@ -34,11 +34,11 @@ function Invoke-ListFunctionStats {
 
         if (!$PartitionKey) { $PartitionKey = 'Durable' }
         if (![string]::IsNullOrEmpty($TenantFilter) -and $TenantFilter -ne 'AllTenants') {
-            $TenantQuery = " and (tenant eq '{0}' or Tenant eq '{0}' or Tenantid eq '{0}' or tenantid eq '{0}')" -f $TenantFilter
+            $TenantQuery = " and (tenant eq '{0}' or Tenant eq '{0}' or Tenantid eq '{0}' or tenantid eq '{0}')" -f (ConvertTo-CIPPODataFilterValue -Value $TenantFilter)
         } else {
             $TenantQuery = ''
         }
-        $Filter = "PartitionKey eq '{0}' and Start ge datetime'{1}'{2}" -f $PartitionKey, $Timestamp, $TenantQuery
+        $Filter = "PartitionKey eq '{0}' and Start ge datetime'{1}'{2}" -f (ConvertTo-CIPPODataFilterValue -Value $PartitionKey), $Timestamp, $TenantQuery
 
         $Entries = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         $FunctionList = $Entries | Group-Object -Property FunctionName

@@ -19,7 +19,7 @@ function Invoke-ListLicensesReport {
         $Table = Get-CIPPTable -TableName cachelicenses
 
         if ($QueueId) {
-            $Filter = "QueueId eq '{0}'" -f $QueueId
+            $Filter = "QueueId eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $QueueId)
             $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         } else {
             $Timestamp = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')

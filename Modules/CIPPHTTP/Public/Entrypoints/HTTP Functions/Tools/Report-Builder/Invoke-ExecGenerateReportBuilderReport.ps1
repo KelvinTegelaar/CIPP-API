@@ -21,13 +21,13 @@ function Invoke-ExecGenerateReportBuilderReport {
                 throw 'ReportGUID is required for deletion'
             }
             $ReportTable = Get-CippTable -tablename 'ReportBuilderReports'
-            $ExistingEntity = Get-CIPPAzDataTableEntity @ReportTable -Filter "RowKey eq '$($Body.ReportGUID)'"
+            $ExistingEntity = Get-CIPPAzDataTableEntity @ReportTable -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Body.ReportGUID)'"
             if ($ExistingEntity) {
                 Remove-CIPPAzDataTableEntity @ReportTable -Entity $ExistingEntity
                 # The rendered PDF sits in its own table; a large one is split across part rows, so fetch
                 # the raw head + part rows (keys only, no split markers) and hand them all to the remover.
                 $PdfTable = Get-CippTable -tablename 'ReportBuilderPdfs'
-                $PdfRows = @(Get-CIPPAzDataTableEntity @PdfTable -Filter "RowKey eq '$($Body.ReportGUID)' or OriginalEntityId eq '$($Body.ReportGUID)'" -Property PartitionKey, RowKey)
+                $PdfRows = @(Get-CIPPAzDataTableEntity @PdfTable -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Body.ReportGUID)' or OriginalEntityId eq '$(ConvertTo-CIPPODataFilterValue -Value $Body.ReportGUID)'" -Property PartitionKey, RowKey)
                 if ($PdfRows.Count -gt 0) { Remove-CIPPAzDataTableEntity @PdfTable -Entity $PdfRows }
                 Write-LogMessage -headers $Headers -API $APIName -message "Deleted generated report '$($Body.ReportGUID)'" -Sev 'Info'
                 $Result = @{ Results = 'Successfully deleted generated report' }

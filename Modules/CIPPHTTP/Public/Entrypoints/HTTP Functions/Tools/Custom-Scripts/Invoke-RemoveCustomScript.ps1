@@ -22,7 +22,7 @@ function Invoke-RemoveCustomScript {
         $Table = Get-CippTable -tablename 'CustomPowershellScripts'
 
         # Actually delete all versions of the script
-        $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f $ScriptGuid
+        $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $ScriptGuid)
         $Scripts = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $Scripts) {

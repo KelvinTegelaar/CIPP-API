@@ -85,7 +85,7 @@ function Invoke-ExecAppApprovalTemplate {
                 $TemplateId = $Request.Body.TemplateId
 
                 # Get the template to delete
-                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$TemplateId'"
+                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateId)'"
 
                 if ($Template) {
                     $TemplateData = $Template.JSON | ConvertFrom-Json
@@ -117,7 +117,7 @@ function Invoke-ExecAppApprovalTemplate {
             $filter = "PartitionKey eq 'AppApprovalTemplate'"
             if ($Request.Query.TemplateId) {
                 $templateId = $Request.Query.TemplateId
-                $filter = "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$templateId'"
+                $filter = "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $templateId)'"
             }
 
             $Templates = Get-CIPPAzDataTableEntity @Table -Filter $filter

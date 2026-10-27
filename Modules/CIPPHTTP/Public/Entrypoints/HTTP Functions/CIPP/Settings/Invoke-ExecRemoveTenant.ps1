@@ -16,7 +16,7 @@ function Invoke-ExecRemoveTenant {
         $StatusCode = [HttpStatusCode]::BadRequest
     } else {
         $Table = Get-CippTable -tablename 'Tenants'
-        $Tenant = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($Request.Body.TenantID)'" -Property RowKey, PartitionKey, customerId, displayName
+        $Tenant = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Tenants' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Request.Body.TenantID)'" -Property RowKey, PartitionKey, customerId, displayName
         if ($Tenant) {
             try {
                 Remove-CIPPAzDataTableEntity -Force @Table -Entity $Tenant

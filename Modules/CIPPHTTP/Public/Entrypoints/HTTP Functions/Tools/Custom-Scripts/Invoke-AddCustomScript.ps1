@@ -23,7 +23,7 @@ function Invoke-AddCustomScript {
             }
 
             $Table = Get-CippTable -tablename 'CustomPowershellScripts'
-            $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f $ScriptGuid
+            $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $ScriptGuid)
             $ExistingVersions = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
             if (-not $ExistingVersions -or $ExistingVersions.Count -eq 0) {
                 $FailCode = [HttpStatusCode]::NotFound
@@ -88,7 +88,7 @@ function Invoke-AddCustomScript {
             }
 
             $Table = Get-CippTable -tablename 'CustomPowershellScripts'
-            $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f $ScriptGuid
+            $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $ScriptGuid)
             $ExistingScripts = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
             $TargetScript = $ExistingScripts | Where-Object { $_.Version -eq $RestoreToVersion }
@@ -191,7 +191,7 @@ function Invoke-AddCustomScript {
             $Table = Get-CippTable -tablename 'CustomPowershellScripts'
 
             if ($ScriptGuid) {
-                $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f $ScriptGuid
+                $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $ScriptGuid)
                 $ExistingVersions = Get-CIPPAzDataTableEntity @Table -Filter $Filter
                 if (-not $ExistingVersions) {
                     $FailCode = [HttpStatusCode]::NotFound

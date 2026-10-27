@@ -68,7 +68,7 @@ function Invoke-ListLogs {
         } else {
             $LocalNow.ToString('yyyyMMdd')
         }
-        $Filter = "RowKey eq '{0}' and PartitionKey eq '{1}'" -f $LogEntryId, $DateFilter
+        $Filter = "RowKey eq '{0}' and PartitionKey eq '{1}'" -f (ConvertTo-CIPPODataFilterValue -Value $LogEntryId), (ConvertTo-CIPPODataFilterValue -Value $DateFilter)
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         Write-Host "Getting single log entry for RowKey: $LogEntryId"
 

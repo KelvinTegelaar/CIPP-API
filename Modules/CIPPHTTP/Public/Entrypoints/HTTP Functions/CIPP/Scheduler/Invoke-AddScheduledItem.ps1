@@ -16,7 +16,7 @@ function Invoke-AddScheduledItem {
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
 
     if ($Request.Body.RowKey) {
-        $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($Request.Body.RowKey)'"
+        $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Request.Body.RowKey)'"
         $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
     }
 

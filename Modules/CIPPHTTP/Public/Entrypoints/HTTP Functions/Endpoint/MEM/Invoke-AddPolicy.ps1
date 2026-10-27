@@ -49,7 +49,7 @@ function Invoke-AddPolicy {
                 # the user picked. The selected RowKey must win whenever the request carries one.
                 # String rather than Guid: built-in templates are stored with their filename as RowKey.
                 $SelectedTemplateId = ConvertTo-CIPPODataFilterValue -Value ($Request.Body.TemplateID ?? $Request.Body.TemplateId ?? $Request.Body.TemplateGuid ?? $Request.Body.TemplateGUID ?? $Request.Body.TemplateList.value) -Type String
-                $templateEntity = Get-CIPPAzDataTableEntity @templatesTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$SelectedTemplateId'" | Select-Object -First 1
+                $templateEntity = Get-CIPPAzDataTableEntity @templatesTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $SelectedTemplateId)'" | Select-Object -First 1
                 if (-not $templateEntity -and $DisplayName) {
                     $templateEntity = Get-CIPPAzDataTableEntity @templatesTable -Filter "PartitionKey eq 'IntuneTemplate'" | Where-Object { ($_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue).Displayname -eq $DisplayName } | Select-Object -First 1
                 }

@@ -25,7 +25,7 @@ function Invoke-ExecRunTenantGroupRule {
 
     try {
         $GroupTable = Get-CippTable -tablename 'TenantGroups'
-        $Group = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$GroupId'"
+        $Group = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $GroupId)'"
 
         if (-not $Group) { $Body = @{ Results = 'Group not found' } }
 

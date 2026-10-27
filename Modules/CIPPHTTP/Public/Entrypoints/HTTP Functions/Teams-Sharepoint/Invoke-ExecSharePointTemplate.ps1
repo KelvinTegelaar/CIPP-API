@@ -39,7 +39,7 @@ function Invoke-ExecSharePointTemplate {
                     $Existing = $null
                 } else {
                     $GUID = [string]$GUID
-                    $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$GUID'"
+                    $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $GUID)'"
                 }
 
                 # Never trust client-supplied audit fields.
@@ -90,7 +90,7 @@ function Invoke-ExecSharePointTemplate {
         'Delete' {
             try {
                 $TemplateId = $Request.Body.TemplateId ?? $Request.Query.TemplateId
-                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$TemplateId'"
+                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateId)'"
 
                 if ($Template) {
                     $TemplateName = ($Template.JSON | ConvertFrom-Json).templateName
@@ -117,7 +117,7 @@ function Invoke-ExecSharePointTemplate {
             $Filter = "PartitionKey eq 'SharePointTemplate'"
             if ($Request.Query.TemplateId) {
                 $TemplateId = $Request.Query.TemplateId
-                $Filter = "PartitionKey eq 'SharePointTemplate' and RowKey eq '$TemplateId'"
+                $Filter = "PartitionKey eq 'SharePointTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateId)'"
             }
 
             $Templates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
@@ -163,7 +163,7 @@ function Invoke-ExecSharePointTemplate {
                     break
                 }
 
-                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$TemplateId'"
+                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateId)'"
                 if (-not $Template) {
                     $Body = @{ Results = 'Failed to queue template deployment: No template found with the provided ID' }
                     $StatusCode = [HttpStatusCode]::NotFound

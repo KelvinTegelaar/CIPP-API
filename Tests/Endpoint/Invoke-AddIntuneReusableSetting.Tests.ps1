@@ -22,6 +22,7 @@ BeforeAll {
     function Get-CippException { param($Exception) $Exception }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 }
 
 Describe 'Invoke-AddIntuneReusableSetting' {

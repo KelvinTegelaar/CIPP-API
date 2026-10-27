@@ -29,7 +29,7 @@ function Invoke-ExecAddCippCveException {
         $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
 
         # Load all existing exceptions for this CVE
-        $AllCveExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$CveId'"
+        $AllCveExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $CveId)'"
 
         $TenantsToUpdate = switch ($ApplyTo) {
             'CurrentTenant' {

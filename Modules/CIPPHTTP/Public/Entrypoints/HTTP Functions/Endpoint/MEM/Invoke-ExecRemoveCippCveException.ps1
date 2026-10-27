@@ -26,7 +26,7 @@ function Invoke-ExecRemoveCippCveException {
         $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
 
         # Load all exceptions for this CVE
-        $AllCveExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$CveId'"
+        $AllCveExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $CveId)'"
 
         $ExceptionsToRemove = switch ($RemoveScope) {
             'CurrentTenant' {

@@ -61,7 +61,7 @@ function Invoke-ListDomainHealth {
         if ($Request.Query.Action) {
             if ($Request.Query.Domain -match '^(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9\-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$') {
                 $DomainTable = Get-CIPPTable -Table 'Domains'
-                $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
+                $Filter = "RowKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $Request.Query.Domain)
                 $DomainInfo = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
 
                 # AnyTenant: the Domains row is per-tenant data; hide it from out-of-scope callers.

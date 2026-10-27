@@ -37,7 +37,7 @@ function Invoke-AddIntuneReusableSetting {
 
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'IntuneReusableSettingTemplate' and RowKey eq '$TemplateId'"
+        $Filter = "PartitionKey eq 'IntuneReusableSettingTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateId)'"
         $TemplateEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if (-not $TemplateEntity) {
             return ([HttpResponseContext]@{
