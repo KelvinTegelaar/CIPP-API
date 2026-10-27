@@ -19,6 +19,10 @@ function Invoke-ExecBaselineMigrate {
     $APIName = $Request.Params.CIPPEndpoint
     try {
         $Action = $Request.Body.action ?? 'preview'
+        # Migration converts every classic template, whatever tenants it targets.
+        if ($Action -eq 'commit' -and $null -ne (Get-CippRequestContext).AllowedTenants) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = @{ Results = 'Migrating templates to baselines needs access to all tenants.' } })
+        }
         $User = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
         $Splat = @{
             TemplateIds        = $(if ($Request.Body.templateIds) { @($Request.Body.templateIds) } else { $null })

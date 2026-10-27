@@ -74,7 +74,7 @@ function Send-CIPPAlert {
             }
         }
         $Summary = "Push sent to $Sent of $($Subscriptions.Count) device(s) for $TargetUser"
-        if ($Pruned) { $Summary += " ($Pruned expired subscription(s) removed)" }
+        if ($Pruned) { $Summary = "$Summary ($Pruned expired subscription(s) removed)" }
         return $Summary
     }
 

@@ -211,7 +211,7 @@ function Get-SlackAlertBlocks {
         }
 
         $FieldBatch = [system.collections.generic.list[object]]::new()
-        for ($i = 0; $i -lt $Fields.Count; $i += 10) {
+        for ($i = 0; $i -lt $Fields.Count; $i = $i + 10) {
             $FieldBatch.Add($Fields[$i..[math]::Min($i + 9, $Fields.Count - 1)])
         }
         foreach ($Batch in $FieldBatch) {
@@ -245,7 +245,7 @@ function Get-SlackAlertBlocks {
             }
             # add fields to section in groups of 10
             $LocationFieldBatch = [system.collections.generic.list[object]]::new()
-            for ($i = 0; $i -lt $LocationFields.Count; $i += 10) {
+            for ($i = 0; $i -lt $LocationFields.Count; $i = $i + 10) {
                 $LocationFieldBatch.Add($LocationFields[$i..[math]::Min($i + 9, $LocationFields.Count - 1)])
             }
             foreach ($Batch in $LocationFieldBatch) {

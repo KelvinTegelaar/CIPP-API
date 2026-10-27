@@ -109,7 +109,7 @@ function Write-AlertTrace {
             $Purge.Add(@{ PartitionKey = [string]$Part.PartitionKey; RowKey = [string]$Part.RowKey })
         }
     }
-    for ($i = 0; $i -lt $Purge.Count; $i += 100) {
+    for ($i = 0; $i -lt $Purge.Count; $i = $i + 100) {
         $Chunk = $Purge.GetRange($i, [Math]::Min(100, $Purge.Count - $i)).ToArray()
         try {
             Remove-AzDataTableEntity @Table -Entity $Chunk -Force | Out-Null

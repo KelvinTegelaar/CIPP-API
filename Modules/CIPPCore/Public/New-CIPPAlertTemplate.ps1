@@ -69,18 +69,12 @@ function New-CIPPAlertTemplate {
             'Remediated' = '<strong style="color:#067647">Fixed automatically</strong>'
             'Conflict'   = '<strong style="color:#b54708">Conflict</strong>'
         }
-        $SummaryHTML = '<table class="table-modern"><tr><th>Standard</th><th>Status</th></tr>'
-        foreach ($Alert in $Alerts) {
+        $SummaryRows = foreach ($Alert in $Alerts) {
             $BaselineNote = "$($Alert.Baseline)$(if ($Alert.Stage) { " · stage $($Alert.Stage)" })"
-            $SummaryHTML += ('<tr><td><strong>{0}</strong><br /><span style="{1}">{2}</span></td><td>{3}</td></tr>' -f `
-                (& $Encode $Alert.Label), $MutedStyle, (& $Encode $BaselineNote), ($StatusCell[[string]$Alert.Event] ?? (& $Encode $Alert.Event)))
+            '<tr><td><strong>{0}</strong><br /><span style="{1}">{2}</span></td><td>{3}</td></tr>' -f `
+                (& $Encode $Alert.Label), $MutedStyle, (& $Encode $BaselineNote), ($StatusCell[[string]$Alert.Event] ?? (& $Encode $Alert.Event))
         }
-        $SummaryHTML += '</table>'
-        $IntroText = "<p>You've set your baseline to alert when a tenant moves away from it. Here is what changed on <strong>$(& $Encode $Tenant)</strong>:</p>$SummaryHTML"
-
-        if ($RemediatedAlerts.Count -gt 0) {
-            $IntroText += "<p>CIPP has already put the automatically fixed standard$(if ($RemediatedAlerts.Count -ne 1) { 's' }) back to the agreed value - those need no action.</p>"
-        }
+        $SummaryHTML = '<table class="table-modern"><tr><th>Standard</th><th>Status</th></tr>{0}</table>' -f (-join $SummaryRows)
         $FormatDiffValue = {
             param($Value)
             if ($null -eq $Value -or "$Value" -eq '') { return '(not set)' }
@@ -91,40 +85,45 @@ function New-CIPPAlertTemplate {
         }
         $DetailAlerts = @($DriftAlerts + $ConflictAlerts)
         $DetailShown = 0
-        foreach ($Alert in $DetailAlerts) {
+        $DetailHTML = foreach ($Alert in $DetailAlerts) {
             if ($DetailShown -eq 0) {
-                $IntroText += '<h2 style="margin-bottom:0">What needs your attention</h2>'
+                '<h2 style="margin-bottom:0">What needs your attention</h2>'
             }
             if ($DetailShown -ge 6) {
-                $IntroText += "<p>...and $($DetailAlerts.Count - $DetailShown) more - the alignment page shows every difference.</p>"
+                "<p>...and $($DetailAlerts.Count - $DetailShown) more - the alignment page shows every difference.</p>"
                 break
             }
-            $IntroText += "<h3 style=`"margin-bottom:2px`">$(& $Encode $Alert.Label)</h3>"
+            "<h3 style=`"margin-bottom:2px`">$(& $Encode $Alert.Label)</h3>"
             if (![string]::IsNullOrWhiteSpace($Alert.Description)) {
-                $IntroText += "<p style=`"$MutedStyle;margin:2px 0 8px 0`">$(& $Encode $Alert.Description)</p>"
+                "<p style=`"$MutedStyle;margin:2px 0 8px 0`">$(& $Encode $Alert.Description)</p>"
             }
             if ($Alert.Event -eq 'Conflict') {
-                $IntroText += "<p>Two baselines configure this standard with different settings ($(& $Encode (@($Alert.ConflictWith) -join ' and '))). CIPP cannot pick a side, so nothing runs for it until one of them changes.</p>"
+                "<p>Two baselines configure this standard with different settings ($(& $Encode (@($Alert.ConflictWith) -join ' and '))). CIPP cannot pick a side, so nothing runs for it until one of them changes.</p>"
                 $DetailShown++
                 continue
             }
             $Differences = @($Alert.Differences)
             if ($Differences.Count -gt 0) {
-                $DiffHTML = '<table class="table-modern"><tr><th>Setting</th><th>Should be</th><th>Is now</th></tr>'
-                foreach ($Difference in ($Differences | Select-Object -First 8)) {
-                    $DiffHTML += ('<tr><td>{0}</td><td><strong>{1}</strong></td><td>{2}</td></tr>' -f `
-                        (& $Encode $Difference.Property), (& $FormatDiffValue $Difference.ExpectedValue), (& $FormatDiffValue $Difference.ReceivedValue))
+                $DiffRows = foreach ($Difference in ($Differences | Select-Object -First 8)) {
+                    '<tr><td>{0}</td><td><strong>{1}</strong></td><td>{2}</td></tr>' -f `
+                        (& $Encode $Difference.Property), (& $FormatDiffValue $Difference.ExpectedValue), (& $FormatDiffValue $Difference.ReceivedValue)
                 }
-                $DiffHTML += '</table>'
-                $IntroText += $DiffHTML
+                '<table class="table-modern"><tr><th>Setting</th><th>Should be</th><th>Is now</th></tr>{0}</table>' -f (-join $DiffRows)
                 if ($Differences.Count -gt 8) {
-                    $IntroText += "<p>...and $($Differences.Count - 8) more difference$(if (($Differences.Count - 8) -ne 1) { 's' }) on this standard.</p>"
+                    "<p>...and $($Differences.Count - 8) more difference$(if (($Differences.Count - 8) -ne 1) { 's' }) on this standard.</p>"
                 }
             } else {
-                $IntroText += '<p>This standard no longer matches its agreed configuration.</p>'
+                '<p>This standard no longer matches its agreed configuration.</p>'
             }
             $DetailShown++
         }
+        $IntroText = -join @(
+            "<p>You've set your baseline to alert when a tenant moves away from it. Here is what changed on <strong>$(& $Encode $Tenant)</strong>:</p>$SummaryHTML"
+            if ($RemediatedAlerts.Count -gt 0) {
+                "<p>CIPP has already put the automatically fixed standard$(if ($RemediatedAlerts.Count -ne 1) { 's' }) back to the agreed value - those need no action.</p>"
+            }
+            $DetailHTML
+        )
 
         $ButtonUrl = "$CIPPURL/tenant/baselines/alignment?tenantFilter=$($Tenant)"
         $ButtonText = 'Review baseline alignment'
@@ -150,12 +149,6 @@ function New-CIPPAlertTemplate {
 
         $DataHTML = ($Data | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
         $IntroText = "<p>You've configured CIPP to send you alerts based on the logbook. The following alerts match your configured rules</p>$dataHTML"
-
-        # Add alert comment if provided
-        if ($AlertComment) {
-            $IntroText = "$IntroText<div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$AlertComment</p></div>"
-        }
-
         $ButtonUrl = "$CIPPURL/cipp/logs"
         $ButtonText = 'Check logbook information'
     }
@@ -196,22 +189,20 @@ function New-CIPPAlertTemplate {
             }
         }
         $SummaryHTML = ($SummaryRows | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
-        $IntroText = "<p>You're receiving this because you enabled failure alerts for one or more custom tests. The following custom test(s) on tenant <strong>$($Tenant)</strong> need attention:</p>$SummaryHTML"
-
-        foreach ($Alert in $Alerts) {
-            $IntroText += "<h3>$($Alert.ScriptName) — $($Alert.Status)</h3>"
+        $DetailHTML = foreach ($Alert in $Alerts) {
+            "<h3>$($Alert.ScriptName) — $($Alert.Status)</h3>"
             if (![string]::IsNullOrWhiteSpace($Alert.ErrorMessage)) {
-                $IntroText += "<p>The test failed to execute: $($Alert.ErrorMessage)</p>"
+                "<p>The test failed to execute: $($Alert.ErrorMessage)</p>"
             } elseif (![string]::IsNullOrWhiteSpace($Alert.ResultMarkdown)) {
-                $IntroText += "<div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0; white-space: pre-wrap;'>$($Alert.ResultMarkdown)</div>"
+                "<div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0; white-space: pre-wrap;'>$($Alert.ResultMarkdown)</div>"
             } elseif ($Alert.FailedRows) {
                 # Normalize string rows to objects so ConvertTo-Html renders a message column
                 # instead of the string's Length property.
                 $Rows = foreach ($r in @($Alert.FailedRows)) { if ($r -is [string]) { [PSCustomObject]@{ message = $r } } else { $r } }
-                $DetailHTML = ($Rows | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText += "<p>Results:</p>$DetailHTML"
+                '<p>Results:</p>' + ($Rows | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             }
         }
+        $IntroText = "<p>You're receiving this because you enabled failure alerts for one or more custom tests. The following custom test(s) on tenant <strong>$($Tenant)</strong> need attention:</p>$SummaryHTML$(-join $DetailHTML)"
         $ButtonUrl = "$CIPPURL/tools/custom-tests"
         $ButtonText = 'View custom test results'
     }
@@ -434,6 +425,11 @@ function New-CIPPAlertTemplate {
                 if ($Distinct.Count -eq 1) { $Distinct[0] } else { $Match.Value }
             })
         $Title = '{0} - {1}' -f $Tenant, $ResolvedSubject
+    }
+
+    if ($AlertComment) {
+        $CommentHtml = $AlertComment -replace '(?<![="''>])(https?://[^\s<"'']*[^\s<"''.,;:!?)])', '<a href="$1">$1</a>' -replace '\r?\n', '<br>'
+        $IntroText = "$IntroText<div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$CommentHtml</p></div>"
     }
 
     if ($Format -eq 'html') {

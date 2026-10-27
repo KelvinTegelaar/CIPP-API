@@ -50,7 +50,7 @@ Describe 'Send-CIPPScheduledTaskAlert - PSA snooze links' {
             Name              = 'Users without MFA'
             Command           = 'Get-CIPPAlertNoCAConfig'
             PostExecution     = 'psa'
-            AlertComment      = 'Please review these accounts.'
+            AlertComment      = "Please review these accounts.`nSee http://intranet/kb/42."
             PsaTicketStrategy = ''
             Parameters        = '{}'
         }
@@ -143,6 +143,7 @@ Describe 'Send-CIPPScheduledTaskAlert - PSA snooze links' {
             $script:SentAlerts[0].HTMLContent | Should -Match 'user1@contoso.com'
             $script:SentAlerts[0].HTMLContent | Should -Match 'user2@contoso.com'
             $script:SentAlerts[0].HTMLContent | Should -Match 'Please review these accounts\.'
+            $script:SentAlerts[0].HTMLContent | Should -Match ([regex]::Escape('accounts.<br>See <a href="http://intranet/kb/42">http://intranet/kb/42</a>.'))
         }
 
         It 'puts only the snooze key field in each link, not the whole item' {

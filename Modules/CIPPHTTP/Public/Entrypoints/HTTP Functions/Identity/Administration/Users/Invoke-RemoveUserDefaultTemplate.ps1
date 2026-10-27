@@ -19,6 +19,13 @@ function Invoke-RemoveUserDefaultTemplate {
         $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if ($Template) {
+            $TemplateData = $Template.JSON | ConvertFrom-Json -Depth 100
+            if (-not ($TemplateData | Select-CippAllowedTenantData -TenantProperty 'tenantFilter')) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::Forbidden
+                        Body       = @{ Results = "This template is for $($TemplateData.tenantFilter -eq 'AllTenants' ? 'all tenants' : $TemplateData.tenantFilter), which is outside your access." }
+                    })
+            }
             Remove-CIPPAzDataTableEntity @Table -Entity $Template
             $Result = "Successfully deleted User Default Template with ID: $ID"
             Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
