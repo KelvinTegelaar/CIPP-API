@@ -33,9 +33,9 @@ Describe 'Start-ReportAttachmentRetentionCleanup' {
         Mock Start-CIPPOrchestrator {}
     }
 
-    It 'defaults to 360 days and deletes each expired blob and its row' {
+    It 'defaults to 90 days and deletes each expired blob and its row' {
         Start-ReportAttachmentRetentionCleanup
-        $Expected = (Get-Date).AddDays(-360).ToUniversalTime().ToString('yyyy-MM-dd')
+        $Expected = (Get-Date).AddDays(-90).ToUniversalTime().ToString('yyyy-MM-dd')
         Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'ReportAttachmentBlobs' -and $Filter -like "*Timestamp lt datetime'$Expected*" }
         Should -Invoke New-CIPPAzStorageRequest -Times 2 -Exactly -ParameterFilter { $Method -eq 'DELETE' }
         Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { @($Entity.RowKey) -join ',' -eq 'a,b' }
@@ -53,6 +53,14 @@ Describe 'Start-ReportAttachmentRetentionCleanup' {
         Start-ReportAttachmentRetentionCleanup
         $Expected = (Get-Date).AddDays(-30).ToUniversalTime().ToString('yyyy-MM-dd')
         Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'ReportAttachmentBlobs' -and $Filter -like "*datetime'$Expected*" }
+    }
+
+    It 'caps a longer saved retention at 180 days' {
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'Config' } { [pscustomobject]@{ RetentionDays = '360' } }
+        Start-ReportAttachmentRetentionCleanup
+        $Expected = (Get-Date).AddDays(-180).ToUniversalTime().ToString('yyyy-MM-dd')
+        Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'ReportAttachmentBlobs' -and $Filter -like "*datetime'$Expected*" }
+        Should -Invoke Start-CIPPOrchestrator -ParameterFilter { @($InputObject.Batch).Where({ $_.DataTableProps.Filter -like "Timestamp lt datetime'$Expected*" }).Count -eq 2 }
     }
 
     It 'queues one keys-only cleanup rule per generated report table at the same cutoff' {

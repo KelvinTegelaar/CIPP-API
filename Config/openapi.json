@@ -17398,6 +17398,84 @@
         "x-cipp-role": "Tenant.ConditionalAccess.ReadWrite"
       }
     },
+    "/api/ExecCalendarTimeZoneMigration": {
+      "post": {
+        "summary": "Move a mailbox and its calendar events to a new time zone",
+        "operationId": "ExecCalendarTimeZoneMigration",
+        "tags": [
+          "Email-Exchange > Administration"
+        ],
+        "description": "Sets the mailbox and working hours time zone, then runs Invoke-CalendarEventMigration so future meetings the mailbox organises keep their local time in the new zone, for example Pacific Standard Time to British Columbia Standard Time.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "FromTimeZone": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Windows time zone ID the events are currently in, e.g. Pacific Standard Time"
+                  },
+                  "Identity": {
+                    "type": "string",
+                    "description": "Mailbox ExchangeGuid"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "ToTimeZone": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Windows time zone ID to move the mailbox and events to, e.g. British Columbia Standard Time"
+                  },
+                  "UPN": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.ReadWrite"
+      }
+    },
     "/api/ExecCancelCippQueue": {
       "post": {
         "summary": "ExecCancelCippQueue",
@@ -52789,7 +52867,6 @@
                     "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
                       "Blocks": {
-                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "ETag": {
@@ -52806,9 +52883,6 @@
                       "RowKey": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
-                      },
-                      "Sections": {
-                        "x-cipp-field-source": "frontend"
                       },
                       "Settings": {
                         "x-cipp-field-source": "storage"

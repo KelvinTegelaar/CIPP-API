@@ -133,3 +133,28 @@ Describe 'Get-CIPPBaselineAlignment -ByStandard' {
         { Get-CIPPBaselineAlignment -ByStandard -Stage 1 } | Should -Throw '*requires BaselineId*'
     }
 }
+
+Describe 'Get-CIPPBaselineAlignment -TenantScores' {
+    BeforeEach {
+        Mock Get-CIPPBaselineDefinition { }
+        Mock Get-CIPPAzDataTableEntity { if ($TableName -eq 'BaselineAlignment') { $script:Entities } }
+    }
+
+    It 'scores every tenant from a three-column projection, matching ByStandard' {
+        $Scores = @(Get-CIPPBaselineAlignment -TenantScores)
+        $Full = @((Get-CIPPBaselineAlignment -ByStandard).tenants)
+
+        Should -Invoke Get-CIPPBaselineDefinition -Times 1 -Exactly
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $TableName -eq 'BaselineAlignment' -and $Property -contains 'PartitionKey' -and $Property -contains 'RowKey' -and $Property -contains 'Status'
+        }
+        $Scores.Count | Should -Be 3
+        foreach ($Tenant in $Full) {
+            $Score = $Scores | Where-Object tenantFilter -EQ $Tenant.tenantFilter
+            $Score.alignedPercentage | Should -Be $Tenant.alignedPercentage
+            $Score.drift | Should -Be $Tenant.drift
+            $Score.applicable | Should -Be $Tenant.applicable
+        }
+        ($Scores | Where-Object tenantFilter -EQ 't3.com').alignedPercentage | Should -Be 100
+    }
+}

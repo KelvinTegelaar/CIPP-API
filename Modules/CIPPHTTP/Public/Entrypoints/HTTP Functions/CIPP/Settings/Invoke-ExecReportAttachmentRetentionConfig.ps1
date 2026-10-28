@@ -14,8 +14,8 @@ function Invoke-ExecReportAttachmentRetentionConfig {
         $RetentionDays = $Request.Body.RetentionDays -as [int]
         $ValidationError = if ($RetentionDays -lt 7) {
             'Retention days must be at least 7 days'
-        } elseif ($RetentionDays -gt 365) {
-            'Retention days must be at most 365 days'
+        } elseif ($RetentionDays -gt 180) {
+            'Retention days must be at most 180 days'
         }
         if ($ValidationError) {
             return ([HttpResponseContext]@{
@@ -32,11 +32,12 @@ function Invoke-ExecReportAttachmentRetentionConfig {
             if (!$RetentionSettings) {
                 # Return default values if not set
                 @{
-                    RetentionDays = 360
+                    RetentionDays = 90
                 }
             } else {
+                # Older saves allowed up to 365 days; cleanup caps them at 180, so show that
                 @{
-                    RetentionDays = [int]$RetentionSettings.RetentionDays
+                    RetentionDays = [math]::Min(180, [int]$RetentionSettings.RetentionDays)
                 }
             }
         } else {

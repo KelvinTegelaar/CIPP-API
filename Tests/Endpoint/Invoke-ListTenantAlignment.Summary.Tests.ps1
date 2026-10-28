@@ -23,7 +23,7 @@ BeforeAll {
 
     function Get-CIPPTenantAlignment { [CmdletBinding()] param() }
     function Get-CIPPFeatureFlag { [CmdletBinding()] param($Id) }
-    function Get-CIPPBaselineAlignment { [CmdletBinding()] param([switch]$ByStandard) }
+    function Get-CIPPBaselineAlignment { [CmdletBinding()] param([switch]$TenantScores) }
     function Get-CippTable { [CmdletBinding()] param($tablename) @{ Table = $tablename } }
     function Get-CIPPAzDataTableEntity { [CmdletBinding()] param($Table, $Filter, $Property) @() }
     function Get-Tenants { [CmdletBinding()] param($TenantFilter, [switch]$IncludeErrors, [switch]$IncludeAll) }
@@ -123,14 +123,12 @@ Describe 'Invoke-ListTenantAlignment summary mode' {
         BeforeEach {
             Mock -CommandName Get-CIPPFeatureFlag -MockWith { [pscustomobject]@{ Id = 'Baselines'; Enabled = $true } }
             Mock -CommandName Get-CIPPBaselineAlignment -MockWith {
-                [pscustomobject]@{
-                    tenants = @(
+                @(
                         [pscustomobject]@{ tenantFilter = 'alpha.onmicrosoft.com'; displayName = 'Alpha'; applicable = 10; alignedPercentage = 92; drift = 1 }
                         [pscustomobject]@{ tenantFilter = 'beta.onmicrosoft.com'; displayName = 'Beta'; applicable = 10; alignedPercentage = 40; drift = 6 }
                         # Nothing resolved yet: not scored, so it cannot drag the estate into the bottom bucket.
                         [pscustomobject]@{ tenantFilter = 'gamma.onmicrosoft.com'; displayName = 'Gamma'; applicable = 0; alignedPercentage = 0; drift = 0 }
-                    )
-                }
+                )
             }
         }
 
