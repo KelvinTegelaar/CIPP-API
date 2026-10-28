@@ -15,31 +15,27 @@ function Start-UserTasksOrchestrator {
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
 
+    $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $1HourAgo = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     if ($TaskId) {
         $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$TaskId'"
-        $task = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-
-        if (-not $task.RowKey) {
-            Write-Warning "No scheduled task found with ID: $TaskId"
-            return
-        } else {
-            Write-Information "Starting orchestrator for scheduled task: $($task.Name) with ID: $TaskId"
-            $tasks = @($task)
-        }
     } else {
-        $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        $1HourAgo = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         # Pending = orchestrator claimed but executor not yet started, Running = actively executing
         # Pick up: Planned, Failed-Planned, stuck Pending (>1hr - orphaned claim), or stuck Running/Processing (>4hr for large AllTenants tasks)
         $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$1HourAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
-        # Disabled is filtered client side: an OData comparison excludes rows that lack the property, which is every task created before the flag existed
-        # The state is re-checked on the reassembled task: the service matches each physical row, so a stale TaskState on a split task's part row also matches
-        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object {
-            $_.Disabled -ne $true -and (
-                $_.TaskState -in @('Planned', 'Failed - Planned') -or
-                ($_.TaskState -eq 'Pending' -and $_.Timestamp -lt [datetimeoffset]$1HourAgo) -or
-                ($_.TaskState -in @('Running', 'Processing') -and $_.Timestamp -lt [datetimeoffset]$4HoursAgo))
-        }
+    }
+    # Disabled is filtered client side: an OData comparison excludes rows that lack the property, which is every task created before the flag existed
+    # The state is re-checked on the reassembled task: the service matches each physical row, so a stale TaskState on a split task's part row also matches
+    # A run-now (TaskId) claim honours the same states: its starter can run after the timer has already claimed or finished the task
+    $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object {
+        ($TaskId -or $_.Disabled -ne $true) -and (
+            $_.TaskState -in @('Planned', 'Failed - Planned') -or
+            ($_.TaskState -eq 'Pending' -and $_.Timestamp -lt [datetimeoffset]$1HourAgo) -or
+            ($_.TaskState -in @('Running', 'Processing') -and $_.Timestamp -lt [datetimeoffset]$4HoursAgo))
+    }
+    if ($TaskId -and -not $tasks) {
+        Write-Information "Scheduled task $TaskId is missing or already claimed. Skipping."
+        return
     }
 
     $Batch = [System.Collections.Generic.List[object]]::new()
@@ -67,6 +63,8 @@ function Start-UserTasksOrchestrator {
                     Write-Information "Task $($task.Name) already being processed by another orchestrator instance. Skipping."
                     continue
                 }
+                # The executor compares this with the row, so a dispatch from a superseded claim stands down
+                $task | Add-Member -NotePropertyName ExecutedTime -NotePropertyValue "$currentUnixTime" -Force
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
                 if (!$task.Parameters) { $task.Parameters = @{} }
 

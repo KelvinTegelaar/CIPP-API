@@ -77,17 +77,11 @@ function Push-ExecScheduledCommand {
     # deadlocked tasks and blocked the orchestrator's stuck-task recovery. ScheduledTime is the
     # single source of truth.
 
-    # One-time task rerun protection based on ExecutedTime (the task's own field, not a cache)
-    if ((!$task.Recurrence -or $task.Recurrence -eq '0') -and $task.ExecutedTime -and !$IsMultiTenantExecution) {
-        $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
-        $timeSinceExecution = $currentUnixTime - [int64]$task.ExecutedTime
-
-        # If executed within last 15 minutes, skip (likely a duplicate pickup)
-        if ($timeSinceExecution -lt 900) {
-            Write-Information "One-time task $($task.Name) for tenant $Tenant was recently executed ($timeSinceExecution seconds ago). Skipping to prevent duplicate execution."
-            Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
-            return
-        }
+    # Each claim stamps ExecutedTime on its dispatch; a newer value on the row means this dispatch was superseded (e.g. a stale Pending reclaim)
+    if (!$IsMultiTenantExecution -and $task.ExecutedTime -and [string]$CurrentTask.ExecutedTime -ne [string]$task.ExecutedTime) {
+        Write-Information "Task $($task.Name) for tenant $Tenant was claimed again after this dispatch. Skipping to prevent duplicate execution."
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+        return
     }
 
     if ($task.Trigger) {

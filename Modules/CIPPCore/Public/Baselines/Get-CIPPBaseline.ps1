@@ -206,7 +206,10 @@ function Get-CIPPBaseline {
                         $Domain = $TenantLookup["$($_.scopeId)"].defaultDomainName ?? $_.scopeId
                         [PSCustomObject]@{ scope = $_.scope; scopeId = $Domain; scopeName = $Domain }
                     } else {
-                        [PSCustomObject]@{ scope = $_.scope; scopeId = $_.scopeId; scopeName = ($_.scopeName ?? $_.scopeId) }
+                        # A group keeps its ID through a rename, so its current name wins over the one saved with the baseline
+                        $ScopeId = $_.scopeId
+                        $CurrentName = if ($_.scope -eq 'group') { $Groups.Where({ $_.Id -eq $ScopeId }, 'First')[0].Name }
+                        [PSCustomObject]@{ scope = $_.scope; scopeId = $ScopeId; scopeName = ($CurrentName ?? $_.scopeName ?? $ScopeId) }
                     }
                 } | Sort-Object -Property scope, scopeId -Unique)
             $AssignedTenants = @($AssignmentScopes | ForEach-Object {
@@ -224,6 +227,10 @@ function Get-CIPPBaseline {
                 if ($Tenant -and $Option.value -ne $Tenant.defaultDomainName) {
                     $Option.value = $Tenant.defaultDomainName
                     $Option.label = '{0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName
+                }
+                if ($Option.type -eq 'Group') {
+                    $GroupName = $Groups.Where({ $_.Id -eq $Option.value }, 'First')[0].Name
+                    if ($GroupName) { $Option.label = $GroupName }
                 }
             }
             $Assignments = @($AssignmentScopes | ForEach-Object {
