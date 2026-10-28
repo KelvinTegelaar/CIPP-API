@@ -7480,7 +7480,7 @@
                   },
                   "AddToGroups": {
                     "type": "string",
-                    "description": "Add to groups. Exchange-backed groups are always scheduled: a brand-new user is not an Exchange recipient yet, so an inline Add-DistributionGroupMember would fail. Graph groups are added inline."
+                    "description": "Add to groups. Exchange-backed groups are always scheduled: a brand-new user is not an Exchange recipient yet, so an inline Add-DistributionGroupMember would fail. Graph groups are added inline, and scheduled too if the new user cannot be found yet."
                   },
                   "businessPhones": {
                     "type": "string"

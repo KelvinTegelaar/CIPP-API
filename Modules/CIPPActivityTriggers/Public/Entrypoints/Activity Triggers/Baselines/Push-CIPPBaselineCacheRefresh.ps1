@@ -32,7 +32,8 @@ function Push-CIPPBaselineCacheRefresh {
         $Impacted = @{}
         foreach ($ActivityResult in @($Item.Results)) {
             foreach ($Record in @($ActivityResult)) {
-                if ($Record -and $Record.CacheType -and $Record.TenantFilter) {
+                # Family types (IntuneDeviceConfigurations, ...) have no collector of their own; their umbrella cacheType refreshes them.
+                if ($Record -and $Record.CacheType -and $Record.TenantFilter -and (Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$($Record.CacheType)")) {
                     $Impacted[('{0}|{1}' -f $Record.TenantFilter, $Record.CacheType)] = $Record
                 }
             }
