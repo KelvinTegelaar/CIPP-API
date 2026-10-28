@@ -1262,7 +1262,7 @@ function Invoke-HuduExtensionSync {
         # Remove this tenant's dashes left under an earlier title
         if ($DashSet) {
             try {
-                $StaleDashes = @(Get-HuduStaleMagicDash -Dashes (Get-HuduMagicDashes -CompanyId $company_id -ErrorAction Stop) -CurrentTitle $DashTitle -TenantId $Tenant.customerId)
+                $StaleDashes = @(Get-HuduStaleMagicDash -Dashes (Get-HuduMagicDashes -CompanyId $company_id) -CurrentTitle $DashTitle -TenantId $Tenant.customerId)
                 foreach ($StaleDash in $StaleDashes) {
                     try {
                         Remove-HuduMagicDash -Id $StaleDash.id -Confirm:$false -ErrorAction Stop

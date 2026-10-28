@@ -13,7 +13,7 @@ function Invoke-ListAppPermissionExposure {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     $TenantFilter = $Request.Query.tenantFilter
-    $UseReportDB = $Request.Query.UseReportDB -eq 'true'
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     $ServicePrincipalId = [string]$Request.Query.ServicePrincipalId
 
     if ([string]::IsNullOrWhiteSpace($TenantFilter)) {

@@ -22,7 +22,7 @@ function Invoke-ExecGetDomainReportPdf {
 
     try {
         # Include the published records and every individual test result for each domain.
-        $IncludeDetails = [string]$Request.Query.includeDetails -ne 'false'
+        $IncludeDetails = $Request.Query.includeDetails -ne $false
         $BrandingPresetId = [string]$Request.Query.brandingPresetId
 
         $Tenant = @(Get-Tenants -TenantFilter $TenantFilter)[0]

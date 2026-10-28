@@ -35,6 +35,7 @@ BeforeAll {
         )
     }
     function Test-CIPPAutopilotProfileName { }
+    function Test-CippAccess { param($Request, [switch]$TenantList) 'AllTenants' }
 
     . $FunctionPath
 }

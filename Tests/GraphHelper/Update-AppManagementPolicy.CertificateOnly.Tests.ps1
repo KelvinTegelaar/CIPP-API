@@ -16,8 +16,8 @@ Describe 'Update-AppManagementPolicy certificate-only exemption' {
     BeforeEach {
         $script:CreatedPolicyBody = $null
         $script:SavedEnv = @{}
-        foreach ($Name in 'CertificateAuthMode', 'ApplicationID') { $script:SavedEnv[$Name] = [Environment]::GetEnvironmentVariable($Name) }
-        Remove-Item env:CertificateAuthMode -ErrorAction SilentlyContinue
+        foreach ($Name in 'CertificateAuthMode', 'ApplicationID', 'TenantID') { $script:SavedEnv[$Name] = [Environment]::GetEnvironmentVariable($Name) }
+        Remove-Item env:CertificateAuthMode, env:TenantID -ErrorAction SilentlyContinue
         $env:ApplicationID = 'sam-app-id'
 
         # Default tenant policy blocks BOTH password addition and asymmetric key lifetime.
