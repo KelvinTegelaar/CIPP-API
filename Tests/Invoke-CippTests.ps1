@@ -29,6 +29,9 @@
 .PARAMETER Coverage
     Also collect code coverage over Modules/**/Public and write Tests/coverage.xml.
 
+.PARAMETER Shard
+    Run only slice 'i/n' of the test files (round-robin over the sorted paths), like vitest --shard.
+
 .EXAMPLE
     pwsh CIPP-API/Tests/Invoke-CippTests.ps1
     Runs the whole suite with detailed console output.
@@ -43,7 +46,9 @@ param(
     [string[]]$Tag,
     [switch]$CI,
     [switch]$NoExitCode,
-    [switch]$Coverage
+    [switch]$Coverage,
+    [ValidatePattern('^[1-9]\d*/[1-9]\d*$')]
+    [string]$Shard
 )
 
 $ErrorActionPreference = 'Stop'
@@ -69,6 +74,13 @@ $runPaths = if ($Path) {
     }
 } else {
     $TestsRoot
+}
+
+if ($Shard) {
+    $ShardIndex, $ShardCount = [int[]]($Shard -split '/')
+    if ($ShardIndex -gt $ShardCount) { throw "Shard $Shard is out of range." }
+    $Files = @(Get-ChildItem -Path $runPaths -Filter '*.Tests.ps1' -Recurse -File | Sort-Object FullName)
+    $runPaths = for ($i = $ShardIndex - 1; $i -lt $Files.Count; $i += $ShardCount) { $Files[$i].FullName }
 }
 
 $config = New-PesterConfiguration
