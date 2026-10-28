@@ -199,7 +199,9 @@ function Get-Tenants {
                         $RequiresRefresh = $true
                         $KeepCached = $ExistingTenantInfo.defaultDomainName -and $ExistingTenantInfo.defaultDomainName -notlike '*.onmicrosoft.com'
                         $defaultDomainName = if ($KeepCached) { $ExistingTenantInfo.defaultDomainName } else { $Domain }
-                        $initialDomainName = if ($KeepCached) { $ExistingTenantInfo.initialDomainName } else { $Domain }
+                        # The fallback only knows the default domain, which is a custom one for most tenants. Portal
+                        # links pass initialDomainName as delegatedOrg, so keep a cached .onmicrosoft.com one over it.
+                        $initialDomainName = if ($ExistingTenantInfo.initialDomainName -like '*.onmicrosoft.com') { $ExistingTenantInfo.initialDomainName } else { $Domain }
                     }
                 }
                 Write-Host 'finished getting domain'
