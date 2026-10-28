@@ -24695,7 +24695,7 @@
             "description": "Include the published records and every individual test result for each domain.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "boolean"
             }
           },
           {
@@ -43940,7 +43940,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "boolean"
             }
           }
         ],
