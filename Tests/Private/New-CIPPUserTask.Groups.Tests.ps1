@@ -86,6 +86,7 @@ Describe 'New-CIPPUserTask - Add to Groups' {
             }
         }
         Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Start-Sleep -MockWith { }
         Mock -CommandName Add-CIPPScheduledTask -MockWith { 'Successfully added task: Add Group Member. It will run in 15 minutes.' }
         Mock -CommandName Add-CIPPGroupMember -MockWith { 'Successfully added user sseck@contoso.com to group Contoso Group.' }
         Set-LiveGroupTypes @{}
@@ -138,8 +139,38 @@ Describe 'New-CIPPUserTask - Add to Groups' {
             Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
         }
 
-        It 'reports a plain failure for a directory group instead of scheduling a retry' {
-            # Graph adds do not suffer the Exchange replication delay, so a failure there is real.
+        It 'schedules a retry when the new user has not replicated to the directory yet' {
+            Set-LiveGroupTypes @{ 'group-1' = 'Security' }
+            Mock -CommandName Add-CIPPGroupMember -MockWith { throw 'Failed to add sseck@contoso.com to group All-Users - Failed to add sseck@contoso.com (directory object not found).' }
+            $UserObj = New-TestUserObj -AddToGroups @(New-GroupOption -Label 'All-Users' -Value 'group-1' -GroupType 'Security')
+
+            $Result = New-CIPPUserTask -UserObj $UserObj
+
+            Should -Invoke Add-CIPPGroupMember -Times 3 -Exactly
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter {
+                $Task.Parameters.GroupId -eq 'group-1' -and $Task.Parameters.GroupType -eq 'Security'
+            }
+            $Result.Results | Should -Contain 'Scheduled adding sseck@contoso.com to All-Users in 15 minutes, once the new account has replicated.'
+        }
+
+        It 'adds inline when the new user shows up on a retry' {
+            Set-LiveGroupTypes @{ 'group-1' = 'Security' }
+            $script:AddAttempts = 0
+            Mock -CommandName Add-CIPPGroupMember -MockWith {
+                $script:AddAttempts++
+                if ($script:AddAttempts -lt 2) { throw 'Failed to add sseck@contoso.com (directory object not found).' }
+                'Successfully added user sseck@contoso.com to group Contoso Group.'
+            }
+            $UserObj = New-TestUserObj -AddToGroups @(New-GroupOption -Label 'All-Users' -Value 'group-1' -GroupType 'Security')
+
+            $Result = New-CIPPUserTask -UserObj $UserObj
+
+            Should -Invoke Add-CIPPGroupMember -Times 2 -Exactly
+            Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
+            $Result.Results | Should -Contain 'Successfully added user sseck@contoso.com to group Contoso Group.'
+        }
+
+        It 'reports any other directory group failure without scheduling a retry' {
             Set-LiveGroupTypes @{ 'group-1' = 'Security' }
             Mock -CommandName Add-CIPPGroupMember -MockWith { throw 'Insufficient privileges' }
             $UserObj = New-TestUserObj -AddToGroups @(New-GroupOption -Label 'All-Users' -Value 'group-1' -GroupType 'Security')
