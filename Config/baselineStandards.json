@@ -902,7 +902,7 @@
     "cat": "Entra (AAD) Standards",
     "tag": [],
     "helpText": "Manages the enabled state, group targeting and per-method settings of every authentication method the baseline configures. Methods left unconfigured are never touched.",
-    "docsDescription": "Grades each configured method: enabled state, include targeting (a named group or all users), and method-specific settings - Microsoft Authenticator feature states, Temporary Access Pass lifetimes, QR code settings, Email OTP external access and exclusions. The graded value is one list naming every drift. Remediation writes only the drifted methods through the shared authentication policy helper.",
+    "docsDescription": "Grades each configured method: enabled state, include targeting (a named group or all users), an optional exclude group, and method-specific settings - Microsoft Authenticator feature states, Temporary Access Pass lifetimes, QR code settings and Email OTP external access. The graded value is one list naming every drift. Remediation writes only the drifted methods through the shared authentication policy helper.",
     "executiveText": "Standardizes which sign-in methods are available and to whom - enabling phishing-resistant methods and retiring weak ones consistently across the fleet.",
     "label": "Configure Authentication Methods",
     "impact": "High Impact",
@@ -1183,8 +1183,62 @@
         "type": "textField"
       },
       {
+        "name": "standards.AuthenticationMethods.MicrosoftAuthenticatorExcludeGroup",
+        "label": "Microsoft Authenticator: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.FIDO2ExcludeGroup",
+        "label": "FIDO2 Security Keys: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.TAPExcludeGroup",
+        "label": "Temporary Access Pass: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.SoftwareOathExcludeGroup",
+        "label": "Software OATH Tokens: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.HardwareOathExcludeGroup",
+        "label": "Hardware OATH Tokens: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.SMSExcludeGroup",
+        "label": "SMS: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.VoiceExcludeGroup",
+        "label": "Voice Call: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
         "name": "standards.AuthenticationMethods.EmailExcludeGroup",
         "label": "Email OTP: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.x509CertificateExcludeGroup",
+        "label": "Certificate-Based Authentication: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.QRCodePinExcludeGroup",
+        "label": "QR Code Pin: exclude group",
         "omitWhenBlank": true,
         "type": "textField"
       },
@@ -4458,6 +4512,48 @@
         "type": "switch",
         "label": "Disable accounts that have not yet signed in",
         "default": false
+      }
+    ]
+  },
+  {
+    "name": "standards.DisableInactiveApps",
+    "cat": "Entra (AAD) Standards",
+    "tag": [],
+    "helpText": "Finds enterprise apps with no sign-in for a set number of days (minimum 30), including apps never used since they were added. Microsoft apps and CIPP are skipped. Exclude external MFA (e.g. Cisco Duo) and GSA traffic forwarding apps. Use in Report mode only; auto-remediation is not recommended. Requires Entra ID P1.",
+    "docsDescription": "Reports enterprise apps with no sign-in for the configured number of days (minimum 30), from the Entra sign-in activity report (Entra ID P1); remediate mode disables them. Apps never signed in count once older than the same window. Microsoft-owned apps, managed identities, CIPP's own app and apps re-enabled in the last 7 days are skipped. Exclusions match display name, app ID or object ID and accept custom variables. Exclude external MFA apps (e.g. Cisco Duo) and GSA traffic forwarding apps (GSA-...), which can show no sign-ins while in use. Recommended in Report mode only, not auto-remediate.",
+    "executiveText": "Identifies third-party and custom apps that are no longer used, so dormant apps with broad permissions can be reviewed and removed before they are abused.",
+    "label": "Disable enterprise applications that have not signed in for a number of days",
+    "impact": "High Impact",
+    "impactColour": "danger",
+    "addedDate": "2026-10-28",
+    "powershellEquivalent": "Get-MgBetaReportServicePrincipalSignInActivity & Update-MgServicePrincipal -AccountEnabled:$false",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "AAD_PREMIUM",
+      "AAD_PREMIUM_P2"
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.DisableInactiveApps.days",
+        "type": "number",
+        "label": "Days without a sign-in (minimum 30)",
+        "helperText": "Also applies to apps that have never signed in, counted from when they were added.",
+        "required": true,
+        "default": 180,
+        "validators": {
+          "min": {
+            "value": 30,
+            "message": "Minimum value is 30"
+          }
+        }
+      },
+      {
+        "name": "standards.DisableInactiveApps.excludedApps",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "omitWhenBlank": true,
+        "label": "Excluded apps (display name, app ID or %variable%)"
       }
     ]
   },
