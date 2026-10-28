@@ -72,6 +72,22 @@ function Select-CIPPIntuneAvailableSetting {
     $FilteredSettings = [System.Collections.Generic.List[psobject]]::new()
 
     foreach ($setting in $Policy.settings) {
+        # Settings added in the template editor carry no template reference, so match them by definition id
+        if (-not $setting.settingInstance.settingInstanceTemplateReference.settingInstanceTemplateId) {
+            $Match = @($AvailableSettings).Where({ $_.settingInstanceTemplate.settingDefinitionId -eq $setting.settingInstance.settingDefinitionId }, 'First')[0]
+            if ($Match) {
+                $Properties = $setting.settingInstance.PSObject.Properties
+                $Properties.Remove('settingInstanceTemplateReference')
+                $Properties.Add([psnoteproperty]::new('settingInstanceTemplateReference', [PSCustomObject]@{ settingInstanceTemplateId = $Match.settingInstanceTemplate.settingInstanceTemplateId }))
+                $ValueTemplateId = $Match.settingInstanceTemplate.choiceSettingValueTemplate.settingValueTemplateId
+                if ($ValueTemplateId -and $setting.settingInstance.choiceSettingValue -and -not $setting.settingInstance.choiceSettingValue.settingValueTemplateReference) {
+                    $ValueProperties = $setting.settingInstance.choiceSettingValue.PSObject.Properties
+                    $ValueProperties.Remove('settingValueTemplateReference')
+                    $ValueProperties.Add([psnoteproperty]::new('settingValueTemplateReference', [PSCustomObject]@{ settingValueTemplateId = $ValueTemplateId; useTemplateDefault = $false }))
+                }
+            }
+        }
+
         if ($setting.settingInstance.settingInstanceTemplateReference.settingInstanceTemplateId -in $AvailableSettings.settingInstanceTemplate.settingInstanceTemplateId) {
             $AvailableSetting = $AvailableSettings | Where-Object { $_.settingInstanceTemplate.settingInstanceTemplateId -eq $setting.settingInstance.settingInstanceTemplateReference.settingInstanceTemplateId }
 

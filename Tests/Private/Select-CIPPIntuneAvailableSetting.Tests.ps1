@@ -113,6 +113,46 @@ Describe 'Select-CIPPIntuneAvailableSetting -ThrowOnMissingRequired' {
         }
     }
 
+    Context 'a setting added without a template reference' {
+        It 'keeps it and attaches the matching template reference' {
+            $Policy = New-AdePolicy -IncludeInstanceIds @('inst-affinity')
+            $Policy.technologies = 'mdm,microsoftSense'
+            $Policy.templateReference.templateFamily = 'endpointSecurityAttackSurfaceReduction'
+            $Added = [PSCustomObject]@{
+                settingInstance = [PSCustomObject]@{
+                    settingDefinitionId          = 'ade_appleconfiguratorcertificates'
+                    simpleSettingCollectionValue = @([PSCustomObject]@{ value = 'C:\Temp\Exclusion.txt' })
+                }
+            }
+            $Policy.settings = @($Policy.settings) + $Added
+
+            $Result = Select-CIPPIntuneAvailableSetting -Policy $Policy -TenantFilter $script:Tenant
+            @($Result.settings).Count | Should -Be 2
+            $Result.settings[1].settingInstance.settingInstanceTemplateReference.settingInstanceTemplateId | Should -Be 'inst-certs'
+        }
+
+        It 'attaches the value template reference to a choice setting' {
+            $Policy = New-AdePolicy -IncludeInstanceIds @()
+            $Policy.settings = @([PSCustomObject]@{
+                    settingInstance = [PSCustomObject]@{
+                        settingDefinitionId = 'ade_useraffinity'
+                        choiceSettingValue  = [PSCustomObject]@{ value = 'ade_useraffinity_1'; children = @() }
+                    }
+                })
+
+            $Result = Select-CIPPIntuneAvailableSetting -Policy $Policy -TenantFilter $script:Tenant
+            $Result.settings[0].settingInstance.choiceSettingValue.settingValueTemplateReference.settingValueTemplateId | Should -Be 'inst-affinity-val'
+        }
+
+        It 'still drops a setting the template does not contain' {
+            $Policy = New-AdePolicy -IncludeInstanceIds @('inst-affinity')
+            $Policy.settings = @($Policy.settings) + [PSCustomObject]@{ settingInstance = [PSCustomObject]@{ settingDefinitionId = 'not_in_template' } }
+
+            $Result = Select-CIPPIntuneAvailableSetting -Policy $Policy -TenantFilter $script:Tenant
+            @($Result.settings).Count | Should -Be 1
+        }
+    }
+
     Context 'the setting template lookup returns nothing' {
         It 'returns the policy untouched rather than throwing' {
             Mock -CommandName New-GraphGETRequest -MockWith { @() }
