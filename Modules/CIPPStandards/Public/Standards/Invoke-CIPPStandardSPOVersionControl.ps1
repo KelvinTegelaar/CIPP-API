@@ -17,8 +17,8 @@ function Invoke-CIPPStandardSPOVersionControl {
             Controls how SharePoint Online manages file version history at the tenant level. Automatic trimming lets Microsoft optimize storage by cleaning up old versions intelligently. Manual limits give administrators precise control over the maximum number of versions retained and their expiration, ensuring predictable storage usage and compliance with data retention policies.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.SPOVersionControl.EnableAutoTrim","label":"Enable Automatic Version Trimming (Microsoft managed)"}
-            {"type":"number","name":"standards.SPOVersionControl.MajorVersionLimit","label":"Maximum Major Versions (when auto trim is off)","default":50}
-            {"type":"number","name":"standards.SPOVersionControl.ExpireVersionsAfterDays","label":"Expire Versions After Days (0 = never, otherwise 30-36500, when auto trim is off)","default":0,"validators":{"min":{"value":0,"message":"Use 0 for never, or 30 or more days"},"max":{"value":36500,"message":"Maximum value is 36500"}}}
+            {"type":"number","name":"standards.SPOVersionControl.MajorVersionLimit","label":"Maximum Major Versions (when auto trim is off)","required":false,"default":50}
+            {"type":"number","name":"standards.SPOVersionControl.ExpireVersionsAfterDays","label":"Expire Versions After Days (0 = never, otherwise 30-36500, when auto trim is off)","required":false,"default":0,"validators":{"min":{"value":0,"message":"Use 0 for never, or 30 or more days"},"max":{"value":36500,"message":"Maximum value is 36500"}}}
             {"type":"switch","name":"standards.SPOVersionControl.ApplyToExistingSites","label":"Apply to all existing sites and document libraries"}
         IMPACT
             Medium Impact

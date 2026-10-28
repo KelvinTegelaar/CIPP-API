@@ -32,7 +32,7 @@ function Invoke-SetAuthMethod {
         $OptionalSettings = @(
             'TAPisUsableOnce', 'TAPMinimumLifetime', 'TAPMaximumLifetime', 'TAPDefaultLifeTime', 'TAPDefaultLength'
             'MicrosoftAuthenticatorSoftwareOathEnabled', 'MicrosoftAuthenticatorDisplayAppInfo', 'MicrosoftAuthenticatorDisplayLocation', 'MicrosoftAuthenticatorCompanionApp'
-            'EmailAllowExternalIdToUseEmailOtp', 'EmailExcludeGroupIds'
+            'EmailAllowExternalIdToUseEmailOtp', 'EmailExcludeGroupIds', 'ExcludeGroupIds'
             'QRCodeLifetimeInDays', 'QRCodePinLength'
             'FIDO2AttestationEnforced', 'FIDO2SelfServiceRegistration', 'VoiceIsOfficePhoneAllowed'
             'SmsIsUsableForSignIn'
