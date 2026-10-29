@@ -103,6 +103,7 @@ function Start-CIPPStatsTimer {
             Gradient               = $RawExt.Gradient.Enabled
             NinjaOne               = $RawExt.NinjaOne.Enabled
             haloPSA                = $RawExt.haloPSA.Enabled
+            Syncro                 = $RawExt.Syncro.Enabled
             HIBP                   = $RawExt.HIBP.Enabled
             PWPush                 = $RawExt.PWPush.Enabled
             CFZTNA                 = $RawExt.CFZTNA.Enabled

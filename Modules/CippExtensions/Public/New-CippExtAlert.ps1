@@ -113,6 +113,37 @@ function New-CippExtAlert {
                     New-HaloPSATicket @TicketParams
                 }
             }
+            'Syncro' {
+                if ($Configuration.Syncro.enabled) {
+                    # First step of the Syncro PSA integration: one new ticket per alert with the
+                    # right priority. The ticket reference, affected-user and consolidation
+                    # fields on the alert are HaloPSA features and are not read here yet.
+                    $MappingFile = Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq 'SyncroMapping'"
+                    $TenantId = (Get-Tenants -TenantFilter $Alert.TenantId).customerId
+                    $MappedId = ($MappingFile | Where-Object { $_.RowKey -eq $TenantId }).IntegrationId
+                    if (!$MappedId) {
+                        # Syncro has no safe default customer, so an unmapped tenant is a failure
+                        # the pipeline reports rather than a ticket on the wrong customer.
+                        $Message = "No Syncro customer mapping for tenant $($Alert.TenantId) - no ticket was raised. Map the tenant under Settings > Integrations > Syncro."
+                        Write-LogMessage -API 'SyncroTicket' -tenant $Alert.TenantId -message $Message -sev Error
+                        "Failed to send ticket to Syncro: $Message"
+                    } else {
+                        Write-Information "Syncro customer for tenant $($Alert.TenantId): $MappedId"
+                        $SyncroParams = @{
+                            Title       = $Alert.AlertTitle
+                            Description = $Alert.AlertText
+                            Client      = $MappedId
+                        }
+                        # Per-alert priority beats the integration-wide DefaultPriority. A value
+                        # that is not a Syncro priority (a HaloPSA id, when both are enabled) is
+                        # skipped inside New-SyncroPSATicket, so passing it through is safe.
+                        if ($Alert.PsaTicketPriority) {
+                            $SyncroParams.TicketPriority = $Alert.PsaTicketPriority
+                        }
+                        New-SyncroPSATicket @SyncroParams
+                    }
+                }
+            }
             'Gradient' {
                 if ($Configuration.Gradient.enabled) {
                     New-GradientAlert -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $Alert.TenantId
