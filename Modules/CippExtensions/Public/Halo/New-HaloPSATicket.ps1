@@ -171,7 +171,7 @@ function New-HaloPSATicket {
         # Halo reads the ticket as the API application's login agent, so a ticket outside that agent's
         # teams, ticket types or clients looks the same as one that does not exist.
         $Detail = if ($LookupError) { " ($LookupError)" } else { '' }
-        Write-LogMessage -message "HaloPSA ticket $TargetTicketId could not be found$Detail - the update was raised as a new ticket instead. Check the ticket number, and that the agent the HaloPSA API application logs in as can see that ticket." -API 'HaloPSATicket' -sev Warning
+        Write-LogMessage -message "HaloPSA ticket $TargetTicketId could not be found$Detail - the update was raised as a new ticket instead. Check the ticket number, and that the agent the HaloPSA API application logs in as has 'Can view Tickets that are assigned to other Agents' and 'Can Edit Tickets Which Are Not Assigned To Them'." -API 'HaloPSATicket' -sev Warning
       }
     }
   }
