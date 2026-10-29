@@ -17,7 +17,7 @@ BeforeAll {
 
     $McpRoot = Join-Path $BackendRoot 'Modules/CIPPCore/Public/MCP'
     foreach ($Leaf in 'Get-CippDocLink.ps1', 'ConvertTo-CippDocToken.ps1', 'ConvertFrom-CippDocMarkdown.ps1',
-        'Get-CippDocsIndex.ps1', 'Find-CippDoc.ps1') {
+        'Get-CippDocsIndex.ps1', 'Find-CippDoc.ps1', 'Get-CippDoc.ps1') {
         . (Join-Path $McpRoot $Leaf)
     }
 
