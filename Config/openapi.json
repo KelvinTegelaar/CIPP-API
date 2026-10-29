@@ -56722,7 +56722,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories, fetching a single entry, and server-side pagination via manualPagination/nextLink. Pass Search to filter rows by a case-insensitive substring of the log Message. Pass summaryOnly=true (or countsOnly=true) to get per-API and per-severity counts across the requested range with the heavy LogData dropped, instead of the full rows.",
+        "description": "Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories and fetching a single entry. Log lists are always paged: each response is { Results, Metadata }, and Metadata.nextLink is passed back as nextLink for the next page. Pass Search to filter rows by a case-insensitive substring of the log Message. Pass summaryOnly=true (or countsOnly=true) to get per-API and per-severity counts across the requested range with the heavy LogData dropped, instead of the full rows.",
         "parameters": [
           {
             "name": "API",
@@ -56811,15 +56811,6 @@
             "name": "logentryid",
             "in": "query",
             "description": "Return single log entry by RowKey. RowKeys are either legacy GUIDs or the inverted-ticks format Write-LogMessage writes; both use only hex digits and hyphens.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "manualPagination",
-            "in": "query",
-            "description": "Return one page per request plus a continuation token in Metadata.nextLink, which the frontend passes back as nextLink to fetch the next page. Pages walk the requested date range newest-day-first and, within a day, in RowKey order (newest-first for entries written with the inverted-ticks RowKey scheme).",
             "required": false,
             "schema": {
               "type": "string"
@@ -56982,9 +56973,6 @@
                         "x-cipp-field-source": "storage"
                       },
                       "Standard": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "StandardInfo": {
                         "x-cipp-field-source": "backend"
                       },
                       "TemplateName": {

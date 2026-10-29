@@ -1,7 +1,7 @@
 # Pester tests for Invoke-ListLogs
-# Validates the manualPagination contract (page shape, keyset continuation, split-row guard,
-# cross-day walk, query budget), the client-side severity/user filters, the legacy
-# unpaginated shape, and single-entry lookup including tick-derived partitions.
+# Validates the paging contract (page shape, keyset continuation, split-row guard,
+# cross-day walk, query budget, no unpaged range read), the client-side severity/user
+# filters, and single-entry lookup including tick-derived partitions.
 
 BeforeAll {
     # Resolve by name under Modules/ so the test survives the function moving between modules.
@@ -99,7 +99,7 @@ Describe 'Invoke-ListLogs pagination' {
 
         $response = Invoke-ListLogs -Request (New-LogsRequest -Query @{
                 Filter = 'true'; StartDate = '20250610'; EndDate = '20250610'
-                manualPagination = 'true'; PageSize = '50'
+                PageSize = '50'
             }) -TriggerMetadata $null
 
         $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
@@ -124,7 +124,7 @@ Describe 'Invoke-ListLogs pagination' {
 
         $PageOne = Invoke-ListLogs -Request (New-LogsRequest -Query @{
                 Filter = 'true'; StartDate = '20250610'; EndDate = '20250610'
-                manualPagination = 'true'; PageSize = '50'
+                PageSize = '50'
             }) -TriggerMetadata $null
         $BoundaryKey = $PageOne.Body.Results[49].RowKey
         # A split-entity continuation row for the boundary entity sorts right after it and
@@ -135,7 +135,7 @@ Describe 'Invoke-ListLogs pagination' {
 
         $PageTwo = Invoke-ListLogs -Request (New-LogsRequest -Query @{
                 Filter = 'true'; StartDate = '20250610'; EndDate = '20250610'
-                manualPagination = 'true'; PageSize = '50'
+                PageSize = '50'
                 nextLink = $PageOne.Body.Metadata.nextLink
             }) -TriggerMetadata $null
 
@@ -156,7 +156,7 @@ Describe 'Invoke-ListLogs pagination' {
 
         $response = Invoke-ListLogs -Request (New-LogsRequest -Query @{
                 Filter = 'true'; StartDate = '20250607'; EndDate = '20250610'
-                manualPagination = 'true'; PageSize = '50'
+                PageSize = '50'
             }) -TriggerMetadata $null
 
         $response.Body.Results | Should -HaveCount 15
@@ -172,7 +172,7 @@ Describe 'Invoke-ListLogs pagination' {
 
         $PageOne = Invoke-ListLogs -Request (New-LogsRequest -Query @{
                 Filter = 'true'; StartDate = '20250527'; EndDate = '20250610'
-                manualPagination = 'true'; PageSize = '50'
+                PageSize = '50'
             }) -TriggerMetadata $null
 
         $PageOne.Body.Results | Should -HaveCount 0
@@ -182,7 +182,7 @@ Describe 'Invoke-ListLogs pagination' {
 
         $PageTwo = Invoke-ListLogs -Request (New-LogsRequest -Query @{
                 Filter = 'true'; StartDate = '20250527'; EndDate = '20250610'
-                manualPagination = 'true'; PageSize = '50'
+                PageSize = '50'
                 nextLink = $PageOne.Body.Metadata.nextLink
             }) -TriggerMetadata $null
 
@@ -202,7 +202,7 @@ Describe 'Invoke-ListLogs pagination' {
         $response = Invoke-ListLogs -Request (New-LogsRequest -Query @{
                 Filter = 'true'; StartDate = '20250610'; EndDate = '20250610'
                 Severity = 'Error'; User = 'alice*'
-                manualPagination = 'true'; PageSize = '50'
+                PageSize = '50'
             }) -TriggerMetadata $null
 
         $response.Body.Results | Should -HaveCount 1
@@ -224,33 +224,29 @@ Describe 'Invoke-ListLogs pagination' {
         $Rows[2] | Add-Member -NotePropertyName AppId -NotePropertyValue '' -Force
         $script:FakeLogRows = $Rows
 
-        $ByIp = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; StartDate = '20250610'; IP = '203.0.113.10'; manualPagination = 'true'; PageSize = '50' }) -TriggerMetadata $null
+        $ByIp = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; StartDate = '20250610'; IP = '203.0.113.10'; PageSize = '50' }) -TriggerMetadata $null
         @($ByIp.Body.Results.Message | Sort-Object) | Should -Be @('seq 1', 'seq 3')
 
-        $ByApp = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; StartDate = '20250610'; AppId = 'aaaaaaaa-0000-0000-0000-000000000001'; manualPagination = 'true'; PageSize = '50' }) -TriggerMetadata $null
+        $ByApp = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; StartDate = '20250610'; AppId = 'aaaaaaaa-0000-0000-0000-000000000001'; PageSize = '50' }) -TriggerMetadata $null
         @($ByApp.Body.Results.Message | Sort-Object) | Should -Be @('seq 1', 'seq 2')
     }
 
-    It 'keeps the legacy unpaginated bare-array shape when manualPagination is absent' {
-        $Base = [datetime]::new(2025, 6, 10, 12, 0, 0, [System.DateTimeKind]::Utc)
-        $script:FakeLogRows = foreach ($i in 1..5) { New-FakeLogRow $Base.AddSeconds($i) $i }
+    It 'pages a multi-week range without being asked and never reads the range in one query' {
+        $script:FakeLogRows = foreach ($Day in 0..20) {
+            $Base = [datetime]::new(2025, 6, 25, 12, 0, 0, [System.DateTimeKind]::Utc).AddDays($Day)
+            foreach ($i in 1..100) { New-FakeLogRow $Base.AddSeconds($i) ($Day * 100 + $i) }
+        }
 
         $response = Invoke-ListLogs -Request (New-LogsRequest -Query @{
-                Filter = 'true'; StartDate = '20250610'; EndDate = '20250610'
+                Filter = 'true'; StartDate = '20250625'; EndDate = '20250715'; PageSize = '50'
             }) -TriggerMetadata $null
 
-        # Bare array of entries - no Results/Metadata wrapper - with the same record shape
-        # as the paged path.
-        $response.Body | Should -HaveCount 5
-        $response.Body[0].PSObject.Properties.Name | Should -Be @(
-            'DateTime', 'Tenant', 'API', 'Message', 'User', 'Severity', 'LogData',
-            'TenantID', 'AppId', 'IP', 'RowKey', 'StandardInfo', 'DateFilter')
-        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
-            $Filter -match "PartitionKey ge '20250610' and PartitionKey le '20250610'"
-        }
+        $response.Body.Results | Should -HaveCount 50
+        $response.Body.Metadata.nextLink | Should -Match '^20250715\|'
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 0 -Exactly -ParameterFilter { $Filter -match 'PartitionKey ge' }
     }
 
-    It 'widens a filtered query without dates to the last N days via Days, on both paths' {
+    It 'widens a filtered query without dates to the last N days via Days' {
         # The scoped log drawers pass Days=N so a run that finished last night is still
         # visible early the next day. Timezone is pinned to UTC by the harness.
         $script:FakeLogRows = @()
@@ -258,13 +254,8 @@ Describe 'Invoke-ListLogs pagination' {
         $From = $Today.AddDays(-6).ToString('yyyyMMdd')
         $To = $Today.ToString('yyyyMMdd')
 
-        $null = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; Days = '7' }) -TriggerMetadata $null
-        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
-            $Filter -match "PartitionKey ge '$From' and PartitionKey le '$To'"
-        }
-
-        # Paged: the day walk covers the same seven partitions (all empty here) and completes.
-        $response = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; Days = '7'; manualPagination = 'true' }) -TriggerMetadata $null
+        # The day walk covers the seven partitions (all empty here) and completes.
+        $response = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; Days = '7' }) -TriggerMetadata $null
         $response.Body.Metadata.nextLink | Should -BeNullOrEmpty
         Should -Invoke Get-CIPPAzDataTableEntity -Times 7 -Exactly -ParameterFilter { $Filter -match "PartitionKey eq '" }
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Filter -match "PartitionKey eq '$From'" }
