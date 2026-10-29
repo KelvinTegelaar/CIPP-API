@@ -57104,12 +57104,12 @@
         "tags": [
           "Email-Exchange > Administration"
         ],
-        "description": "Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+        "description": "Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. AllTenants reads, and any read with manualPagination set, return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
           {
             "name": "manualPagination",
             "in": "query",
-            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only. Always on for AllTenants.",
             "required": false,
             "schema": {
               "type": "string"

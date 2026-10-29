@@ -1,6 +1,6 @@
 # Pester tests for Invoke-ListMailboxes
-# Validates the reporting-database branch: the legacy bare-array shape, and the
-# manualPagination contract ({ Results, Metadata } pages chained via Metadata.nextLink).
+# Validates the reporting-database branch: the per-tenant bare-array shape, and the
+# paged contract ({ Results, Metadata } via Metadata.nextLink) for manualPagination and AllTenants.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -78,6 +78,21 @@ Describe 'Invoke-ListMailboxes report database branch' {
         Should -Invoke Get-CIPPMailboxesReport -Times 1 -ParameterFilter {
             $TenantFilter -eq 'AllTenants' -and $PageSize -eq 9999 -and $ContinuationToken -eq 'prev|token'
         }
+    }
+
+    It 'pages AllTenants reads without being asked' {
+        Mock -CommandName Get-CIPPMailboxesReport -MockWith {
+            [PSCustomObject]@{ Items = @([pscustomobject]@{ displayName = 'Box One' }); NextToken = 'next' }
+        }
+
+        $response = Invoke-ListMailboxes -Request (New-MailboxRequest -Query @{
+                tenantFilter = 'AllTenants'; UseReportDB = 'true'
+            }) -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 200
+        $response.Body.Results | Should -HaveCount 1
+        $response.Body.Metadata.nextLink | Should -Be 'next'
+        Should -Invoke Get-CIPPMailboxesReport -Times 1 -ParameterFilter { $TenantFilter -eq 'AllTenants' -and $PageSize -eq 5000 }
     }
 
     It 'omits nextLink on the final page but keeps the paged shape' {
