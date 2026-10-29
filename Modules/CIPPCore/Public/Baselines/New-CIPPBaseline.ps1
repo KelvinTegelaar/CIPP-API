@@ -183,5 +183,36 @@ function New-CIPPBaseline {
         Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $Orphans
     }
 
+    # Tenant progress is stored as a stage number. When stages were removed, reordered or inserted, keep each
+    # tenant only as far as the leading stages it had already reached, so it never gains a stage it has not met.
+    $SourceStages = @($Baseline.stages | ForEach-Object { $_.sourceStage })
+    if ($ExistingRollout -and @($SourceStages.Where({ $_ })).Count -gt 0) {
+        $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
+        $StateTable.Force = $true
+        foreach ($State in @(Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeGuid'")) {
+            $OldStage = [int]($State.currentStage ?? 1)
+            $NewStage = 0
+            foreach ($Source in $SourceStages) {
+                if (-not $Source -or [int]$Source -gt $OldStage) { break }
+                $NewStage++
+            }
+            $NewStage = [Math]::Max($NewStage, 1)
+            $SameStage = [int]$SourceStages[$NewStage - 1] -eq $OldStage
+            if ($NewStage -eq $OldStage -and $SameStage) { continue }
+            Add-CIPPAzDataTableEntity @StateTable -Entity @{
+                PartitionKey    = "$GUID"
+                RowKey          = "$($State.RowKey)"
+                currentStage    = $NewStage
+                enteredStageAt  = $(if ($SameStage) { $State.enteredStageAt } else { $Now })
+                firstDeployedAt = $State.firstDeployedAt ?? $State.enteredStageAt ?? $Now
+            }
+            if ($SameStage) { continue }
+            $TenantDomain = $TenantLookup["$($State.RowKey)"].defaultDomainName ?? "$($State.RowKey)"
+            $StageName = $Baseline.stages[$NewStage - 1].name
+            $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantDomain -Standard $Baseline.templateName -Mode 'stage' -TriggeredBy $User -Outcome 'Stage Moved Back' -Detail "Moved back to stage $NewStage ($StageName) - its previous stage was removed or reordered"
+            Write-LogMessage -API 'Baselines' -tenant $TenantDomain -message "Moved $TenantDomain back to stage $NewStage ($StageName) of baseline $($Baseline.templateName) after its stages changed." -Sev 'Info'
+        }
+    }
+
     @{ GUID = $GUID; DeltaCount = $DeltaCount }
 }

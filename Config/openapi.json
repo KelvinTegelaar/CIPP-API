@@ -771,6 +771,10 @@
                         "name": {
                           "type": "string"
                         },
+                        "sourceStage": {
+                          "type": "string",
+                          "description": "Tenant progress is stored as a stage number. When stages were removed, reordered or inserted, keep each tenant only as far as the leading stages it had already reached, so it never gains a stage it has not met."
+                        },
                         "standards": {
                           "type": "string"
                         }
@@ -15889,7 +15893,7 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Advances a tenant to the next stage of a baseline (manual stage approval), or with\naction 'evaluate' re-checks the next stage's conditions now instead of waiting for the\nscheduled run. The tenant receives all standards from the new stage on the next engine run.",
+        "description": "Advances a tenant to the next stage of a baseline (manual stage approval), with action\n'previous' moves it back one stage, or with action 'evaluate' re-checks the next stage's\nconditions now instead of waiting for the scheduled run. The tenant receives the standards\nof every stage up to its new one on the next engine run.",
         "requestBody": {
           "required": true,
           "content": {
@@ -15899,7 +15903,11 @@
                 "properties": {
                   "action": {
                     "type": "string",
-                    "description": "evaluate: re-check the next stage's conditions now; anything else is a manual advance"
+                    "description": "evaluate: re-check the next stage's conditions now; anything else is a manual advance",
+                    "x-cipp-observed-values": [
+                      "evaluate",
+                      "previous"
+                    ]
                   },
                   "templateId": {
                     "type": "string"
@@ -15937,9 +15945,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
