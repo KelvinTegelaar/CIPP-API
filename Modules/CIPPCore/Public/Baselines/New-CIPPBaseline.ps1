@@ -47,7 +47,7 @@ function New-CIPPBaseline {
             [PSCustomObject]@{
                 name       = $_.name
                 logic      = $_.logic ?? 'and'
-                conditions = @($_.conditions)
+                conditions = @($_.conditions | Where-Object { $_.type })
             }
         })
     $RolloutTable = Get-CippTable -tablename 'BaselineRollouts'

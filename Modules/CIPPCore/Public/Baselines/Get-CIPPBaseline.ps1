@@ -191,7 +191,7 @@ function Get-CIPPBaseline {
                 [PSCustomObject]@{
                     name            = $StageDefinition.name
                     logic           = $StageDefinition.logic
-                    conditions      = @($StageDefinition.conditions)
+                    conditions      = @($StageDefinition.conditions | Where-Object { $_.type })
                     # Enumerated explicitly: member access on an empty array yields a lone $null.
                     standards       = @($StageConfigs | ForEach-Object { $_.instance })
                     standardsConfig = @($StageConfigs)
