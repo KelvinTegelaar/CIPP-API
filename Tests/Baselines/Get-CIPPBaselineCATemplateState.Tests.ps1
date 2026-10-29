@@ -86,6 +86,50 @@ Describe 'Get-CIPPBaselineCATemplateState' {
         @($State.Expected.conditions.locations.excludeLocations) | Should -Be @('Site A', 'Site B')
     }
 
+    Context 'template user names the tenant does not have' {
+        BeforeAll { $script:SavedPolicy = $script:LivePolicy }
+        AfterAll {
+            $script:LivePolicy = $script:SavedPolicy
+            $script:LiveDirectory = @()
+        }
+
+        It 'grades without a user name deploy drops, so the deployed policy does not drift' {
+            $script:LivePolicy = [pscustomobject]@{
+                displayName = 'Variable test policy'
+                state       = 'disabled'
+                conditions  = [pscustomobject]@{ users = [pscustomobject]@{ includeUsers = @('All'); excludeUsers = @($script:UserId) } }
+            }
+            $script:TemplateJSON = '{"displayName":"Variable test policy","state":"disabled","conditions":{"users":{"includeUsers":["All"],"excludeUsers":["Break Glass","admin"]}}}'
+            $State = Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
+
+            @($State.Expected.conditions.users.excludeUsers) | Should -Be @('Break Glass')
+            @($State.Expected.conditions.users.includeUsers) | Should -Be @('All')
+            @(Compare-CIPPIntuneObject -ReferenceObject $State.Expected -DifferenceObject $State.Current | Where-Object { $_ }) | Should -BeNullOrEmpty
+        }
+
+        It 'keeps a user the Users cache does not hold yet but the live policy already excludes' {
+            $NewUserId = '10000000-0000-0000-0000-000000000002'
+            $script:LiveDirectory = @([pscustomobject]@{ id = $NewUserId; displayName = 'New Admin' })
+            $script:LivePolicy = [pscustomobject]@{
+                displayName = 'Variable test policy'
+                state       = 'disabled'
+                conditions  = [pscustomobject]@{ users = [pscustomobject]@{ includeUsers = @('All'); excludeUsers = @($NewUserId) } }
+            }
+            $script:TemplateJSON = '{"displayName":"Variable test policy","state":"disabled","conditions":{"users":{"includeUsers":["All"],"excludeUsers":["New Admin"]}}}'
+            $State = Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
+
+            @($State.Expected.conditions.users.excludeUsers) | Should -Be @('New Admin')
+        }
+
+        It 'keeps a raw GUID even when the tenant has no such user' {
+            $Unknown = '10000000-0000-0000-0000-0000000000ff'
+            $script:TemplateJSON = '{{"displayName":"Variable test policy","state":"disabled","conditions":{{"users":{{"includeUsers":["All"],"excludeUsers":["{0}"]}}}}}}' -f $Unknown
+            $State = Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
+
+            @($State.Expected.conditions.users.excludeUsers) | Should -Be @($Unknown)
+        }
+    }
+
     Context 'excludeGroups the Groups cache does not hold yet' {
         BeforeAll {
             $script:GroupA = '20000000-0000-0000-0000-00000000000a'
