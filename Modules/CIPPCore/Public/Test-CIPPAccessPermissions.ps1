@@ -10,6 +10,8 @@ function Test-CIPPAccessPermissions {
     Write-LogMessage -Headers $User -API $APINAME -message 'Started permissions check' -Sev 'Debug'
     $Messages = [System.Collections.Generic.List[string]]::new()
     $ErrorMessages = [System.Collections.Generic.List[string]]::new()
+    $WarningMessages = [System.Collections.Generic.List[string]]::new()
+    $UngrantedPermissions = [System.Collections.Generic.List[object]]::new()
     $MissingPermissions = [System.Collections.Generic.List[string]]::new()
     $Links = [System.Collections.Generic.List[object]]::new()
     $AccessTokenDetails = [PSCustomObject]@{
@@ -162,6 +164,29 @@ function Test-CIPPAccessPermissions {
         $ApplicationToken = Get-GraphToken -returnRefresh $true -SkipCache $true -AsApp $true
         $ApplicationTokenDetails = Read-JwtAccessDetails -Token $ApplicationToken.access_token -erroraction SilentlyContinue | Select-Object
 
+        # The table records what CIPP asked for; the tokens show what the partner tenant actually granted.
+        $GraphSamPermissions = $GraphPermissions.Permissions.'00000003-0000-0000-c000-000000000000'
+        $TokenChecks = @(
+            @{ Type = 'Application'; Label = 'application'; Wanted = $GraphSamPermissions.applicationPermissions.value; Granted = $ApplicationTokenDetails.Roles; Token = $ApplicationTokenDetails.AppId }
+            @{ Type = 'Delegated'; Label = 'delegated'; Wanted = $GraphSamPermissions.delegatedPermissions.value; Granted = $AccessTokenDetails.Scope; Token = $AccessTokenDetails.AppId }
+        )
+        foreach ($Check in $TokenChecks) {
+            if (-not $Check.Token -or -not $Check.Wanted) { continue }
+            $Ungranted = @($Check.Wanted | Where-Object { $_ -and $_ -notin @('openid', 'profile', 'email', 'offline_access') -and $Check.Granted -notcontains $_ } | Sort-Object -Unique)
+            if ($Ungranted.Count -gt 0) {
+                $WarningMessages.Add("$($Ungranted.Count) Microsoft Graph $($Check.Label) permission(s) are not granted to CIPP-SAM in your tenant, so features that use them will fail.") | Out-Null
+                foreach ($Permission in $Ungranted) { $UngrantedPermissions.Add([PSCustomObject]@{ Type = $Check.Type; Permission = $Permission }) }
+            } else {
+                $Messages.Add("All Microsoft Graph $($Check.Label) permissions are granted to CIPP-SAM in your tenant.") | Out-Null
+            }
+        }
+        if ($UngrantedPermissions.Count -gt 0) {
+            $Links.Add([PSCustomObject]@{
+                    Text = 'Permissions not granted in your tenant'
+                    Href = 'https://docs.cipp.app/user-documentation/cipp/settings/permissions#permissions-not-granted-in-your-tenant'
+                }) | Out-Null
+        }
+
         # CIPP auto-rotates the SAM app secret within 30 days of expiry (Start-UpdateTokensTimer).
         # Only warn when the credential stored in Key Vault (or DevSecrets) is inside that window -5 days. This should not happen. But sometimes it does.
         $RotationThresholdDays = 25
@@ -266,6 +291,8 @@ function Test-CIPPAccessPermissions {
         ApplicationTokenDetails = $ApplicationTokenDetails
         Messages                = @($Messages)
         ErrorMessages           = @($ErrorMessages)
+        WarningMessages         = @($WarningMessages)
+        UngrantedPermissions    = @($UngrantedPermissions)
         MissingPermissions      = @($MissingPermissions)
         CPVRefreshList          = @($CPVRefreshList)
         Links                   = @($Links)
