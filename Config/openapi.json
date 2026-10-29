@@ -755,7 +755,15 @@
                       "type": "object",
                       "properties": {
                         "conditions": {
-                          "type": "string"
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string"
+                              }
+                            }
+                          }
                         },
                         "logic": {
                           "type": "string"
