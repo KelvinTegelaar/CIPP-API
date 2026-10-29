@@ -1,7 +1,7 @@
-function Get-HuduDeviceAttentionItems {
+function Get-CippExtensionDeviceAttentionItems {
     <#
         .SYNOPSIS
-        Lists what needs a human on a device, from a Get-HuduDeviceViewModel model.
+        Lists what needs a human on a device, from a Get-CippExtensionDeviceViewModel model.
 
         .DESCRIPTION
         Returns plain sentences; **text** marks emphasis. Storage tone and staleness use the thresholds the model was

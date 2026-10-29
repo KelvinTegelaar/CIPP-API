@@ -1,7 +1,7 @@
-function Get-HuduUserViewModel {
+function Get-CippExtensionUserViewModel {
     <#
         .SYNOPSIS
-        Turns one user's data into a display-ready model for Get-HuduUserBody.
+        Turns one user's data into a display-ready model for Get-CippExtensionUserBody.
 
         .DESCRIPTION
         The model holds plain strings, numbers, bools and lists only, never HTML; the renderer encodes every value.
@@ -30,15 +30,15 @@ function Get-HuduUserViewModel {
     )
 
     $Inv = [cultureinfo]::InvariantCulture
-    $Now = ConvertTo-HuduUiDate $AsOf
+    $Now = ConvertTo-CippExtensionUiDate $AsOf
     $Domain = $Tenant.defaultDomainName
     $Dot = [string][char]0x00B7
-    $DatePattern = Get-HuduUiDatePattern $Culture
+    $DatePattern = Get-CippExtensionUiDatePattern $Culture
     # Timestamps are shown in the instance time zone; date-only values are not converted. Staleness is worked out in UTC.
     $fmtDate = {
         param($v)
         if ($v -is [string] -and $v -match '^\d{4}-\d{2}-\d{2}$') { return ([datetime]::ParseExact($v, 'yyyy-MM-dd', $Inv)).ToString($DatePattern, $Culture) }
-        $d = ConvertTo-HuduUiDate $v
+        $d = ConvertTo-CippExtensionUiDate $v
         if ($d) { [TimeZoneInfo]::ConvertTimeFromUtc($d, $TimeZone).ToString($DatePattern, $Culture) } else { '' }
     }
     $fmtGb = { param([double]$bytes) ([math]::Round($bytes / 1GB, 2)).ToString('#,##0.##', $Culture) }
@@ -113,7 +113,7 @@ function Get-HuduUserViewModel {
                     Who     = [string]$_.Name
                     IsOwner = ($_.Name -eq $Owner)
                     Rights  = @($_.Group.AccessRights | ForEach-Object { $_ -split ',\s*' } | Where-Object { $_ } | Select-Object -Unique | ForEach-Object {
-                            switch ($_) { 'FullAccess' { 'Full access' } 'SendAs' { 'Send as' } 'SendOnBehalf' { 'Send on behalf' } default { Get-HuduUiHumanized $_ } }
+                            switch ($_) { 'FullAccess' { 'Full access' } 'SendAs' { 'Send as' } 'SendOnBehalf' { 'Send on behalf' } default { Get-CippExtensionUiHumanized $_ } }
                         })
                 }
             } | Sort-Object { $_.IsOwner }, { $_.Who })
@@ -178,7 +178,7 @@ function Get-HuduUserViewModel {
     # Service plans, one entry per service with the most recent assignment date
     $PlanRows = foreach ($P in @($User.assignedplans | Where-Object { $_.capabilityStatus -eq 'Enabled' } | Select-Object service, assignedDateTime -Unique)) {
         $Name = $AssignedNameMap.($P.service)
-        if ($Name) { [pscustomobject]@{ Name = [string]$Name; Date = ConvertTo-HuduUiDate $P.assignedDateTime } }
+        if ($Name) { [pscustomobject]@{ Name = [string]$Name; Date = ConvertTo-CippExtensionUiDate $P.assignedDateTime } }
     }
     $PlanItems = @($PlanRows | Group-Object Name | Sort-Object Name | ForEach-Object {
             $Latest = ($_.Group.Date | Sort-Object -Descending | Select-Object -First 1)
@@ -198,9 +198,9 @@ function Get-HuduUserViewModel {
                 '^enabled$' { @('On', 'ok', 0) }
                 '^enabledForReportingButNotEnforced$' { @('Report-only', 'info', 1) }
                 '^disabled$' { @('Off', 'neutral', 2) }
-                default { @((Get-HuduUiHumanized $Pol.state), 'neutral', 3) }
+                default { @((Get-CippExtensionUiHumanized $Pol.state), 'neutral', 3) }
             }
-            $Apps = (([string]$Pol.clientAppTypes -split ',\s*') | Where-Object { $_ } | ForEach-Object { if ($AppNames.ContainsKey($_)) { $AppNames[$_] } else { Get-HuduUiHumanized $_ } }) -join ', '
+            $Apps = (([string]$Pol.clientAppTypes -split ',\s*') | Where-Object { $_ } | ForEach-Object { if ($AppNames.ContainsKey($_)) { $AppNames[$_] } else { Get-CippExtensionUiHumanized $_ } }) -join ', '
             $Conds = [System.Collections.Generic.List[string]]::new()
             if ($Pol.userRiskLevels -and $Pol.userRiskLevels -ne 'None') { $Conds.Add("User risk: $($Pol.userRiskLevels)") }
             if ($Pol.signInRiskLevels -and $Pol.signInRiskLevels -ne 'None') { $Conds.Add("Sign-in risk: $($Pol.signInRiskLevels)") }
@@ -225,15 +225,15 @@ function Get-HuduUserViewModel {
     }
 
     # Devices. Staleness is a flag rather than a day count so the body does not change every day.
-    $DevItems = @(foreach ($D in @($Devices | Where-Object { $_ } | Sort-Object { ConvertTo-HuduUiDate $_.lastSyncDateTime } -Descending)) {
-            $Last = ConvertTo-HuduUiDate $D.lastSyncDateTime
+    $DevItems = @(foreach ($D in @($Devices | Where-Object { $_ } | Sort-Object { ConvertTo-CippExtensionUiDate $_.lastSyncDateTime } -Descending)) {
+            $Last = ConvertTo-CippExtensionUiDate $D.lastSyncDateTime
             $Days = if ($Last) { [int]($Now.Date - $Last.Date).Days } else { $null }
             $Comp = switch -Regex ([string]$D.complianceState) {
                 '^compliant$' { @('Compliant', 'ok') }
                 '^noncompliant$' { @('Non-compliant', 'err') }
                 '^ingraceperiod$' { @('In grace period', 'warn') }
-                '^error$|^conflict$' { @((Get-HuduUiHumanized $D.complianceState), 'warn') }
-                default { @((Get-HuduUiHumanized $D.complianceState), 'neutral') }
+                '^error$|^conflict$' { @((Get-CippExtensionUiHumanized $D.complianceState), 'warn') }
+                default { @((Get-CippExtensionUiHumanized $D.complianceState), 'neutral') }
             }
             [ordered]@{
                 Name           = [string]$D.deviceName
@@ -244,7 +244,7 @@ function Get-HuduUserViewModel {
                 Tone           = $Comp[1]
                 IsCompliant    = ($Comp[1] -eq 'ok')
                 IsNonCompliant = ([string]$D.complianceState -eq 'noncompliant')
-                Owner          = (Get-HuduUiHumanized $D.managedDeviceOwnerType)
+                Owner          = (Get-CippExtensionUiHumanized $D.managedDeviceOwnerType)
                 Os             = [string]$D.operatingSystem
                 OsVersion      = [string]$D.osVersion
                 LastSync       = (& $fmtDate $Last)

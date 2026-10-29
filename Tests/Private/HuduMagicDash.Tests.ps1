@@ -1,5 +1,5 @@
 BeforeAll {
-    Get-ChildItem "$PSScriptRoot/../../Modules/CippExtensions/Private/Hudu/*.ps1" | ForEach-Object { . $_.FullName }
+    Get-ChildItem "$PSScriptRoot/../../Modules/CippExtensions/Private/Documentation/*.ps1", "$PSScriptRoot/../../Modules/CippExtensions/Private/Hudu/*.ps1" | ForEach-Object { . $_.FullName }
 
     $script:AsOf = [datetime]::new(2026, 10, 20, 22, 57, 0, [System.DateTimeKind]::Utc)
     $script:GaTemplate = '62e90394-69f5-4237-9190-012177145e10'

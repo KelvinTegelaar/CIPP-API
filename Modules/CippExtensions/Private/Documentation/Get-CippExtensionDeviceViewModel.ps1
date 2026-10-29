@@ -1,7 +1,7 @@
-function Get-HuduDeviceViewModel {
+function Get-CippExtensionDeviceViewModel {
     <#
         .SYNOPSIS
-        Turns one Intune device's data into a display-ready model for Get-HuduDeviceBody.
+        Turns one Intune device's data into a display-ready model for Get-CippExtensionDeviceBody.
 
         .DESCRIPTION
         The model holds plain strings, numbers, bools and lists only, never HTML; the renderer encodes every value.
@@ -12,7 +12,7 @@ function Get-HuduDeviceViewModel {
         Compliance policy statuses for the device: Name, Status, LastReported and GraceExpiry.
 
         .PARAMETER RmmLinks
-        Links from the matched Hudu asset's integration cards, each with Label, Tip and Url.
+        Links from the matched documentation record's integration cards, each with Label, Tip and Url.
     #>
     [CmdletBinding()]
     param(
@@ -30,24 +30,24 @@ function Get-HuduDeviceViewModel {
     )
 
     $Inv = [cultureinfo]::InvariantCulture
-    $Now = ConvertTo-HuduUiDate $AsOf
-    $DatePattern = Get-HuduUiDatePattern $Culture
+    $Now = ConvertTo-CippExtensionUiDate $AsOf
+    $DatePattern = Get-CippExtensionUiDatePattern $Culture
     # Timestamps are shown in the instance time zone; staleness is worked out in UTC
-    $fmtDate = { param($v) $d = ConvertTo-HuduUiDate $v; if ($d) { [TimeZoneInfo]::ConvertTimeFromUtc($d, $TimeZone).ToString($DatePattern, $Culture) } else { '' } }
+    $fmtDate = { param($v) $d = ConvertTo-CippExtensionUiDate $v; if ($d) { [TimeZoneInfo]::ConvertTimeFromUtc($d, $TimeZone).ToString($DatePattern, $Culture) } else { '' } }
     $fmtGb = { param([double]$bytes) ([math]::Round($bytes / 1GB, 2)).ToString('#,##0.##', $Culture) }
     $Compliance = { param($State)
         switch -Regex ([string]$State) {
             '^compliant$' { @('Compliant', 'ok') }
             '^noncompliant$' { @('Non-compliant', 'err') }
             '^ingraceperiod$' { @('In grace period', 'warn') }
-            '^error$|^conflict$' { @((Get-HuduUiHumanized $State), 'warn') }
-            default { @((Get-HuduUiHumanized $State), 'neutral') }
+            '^error$|^conflict$' { @((Get-CippExtensionUiHumanized $State), 'warn') }
+            default { @((Get-CippExtensionUiHumanized $State), 'neutral') }
         }
     }
     $Bool = { param($v) if ($null -eq $v -or "$v" -eq '') { '' } elseif ($v -eq $true -or "$v" -eq 'True') { 'Yes' } else { 'No' } }
 
     $D = $Device
-    $Last = ConvertTo-HuduUiDate $D.lastSyncDateTime
+    $Last = ConvertTo-CippExtensionUiDate $D.lastSyncDateTime
     $Days = if ($Last) { [int]($Now.Date - $Last.Date).Days } else { $null }
     $State = & $Compliance $D.complianceState
 
@@ -70,7 +70,7 @@ function Get-HuduDeviceViewModel {
     }
 
     $Details = [ordered]@{
-        Owner           = (Get-HuduUiHumanized $(if ($D.ownerType) { $D.ownerType } else { $D.managedDeviceOwnerType }))
+        Owner           = (Get-CippExtensionUiHumanized $(if ($D.ownerType) { $D.ownerType } else { $D.managedDeviceOwnerType }))
         Enrolled        = (& $fmtDate $D.enrolledDateTime)
         LastSync        = (& $fmtDate $D.lastSyncDateTime)
         ManagementAgent = $(switch ([string]$D.managementAgent) {
@@ -82,7 +82,7 @@ function Get-HuduDeviceViewModel {
                 'intuneClient' { 'Intune client' }
                 'jamf' { 'Jamf' }
                 'googleCloudDevicePolicyController' { 'Google Cloud device policy controller' }
-                default { Get-HuduUiHumanized $_ }
+                default { Get-CippExtensionUiHumanized $_ }
             })
     }
 
@@ -104,7 +104,7 @@ function Get-HuduDeviceViewModel {
     }
     $Hardware = [ordered]@{
         Serial       = [string]$D.serialNumber
-        Chassis      = (Get-HuduUiHumanized $D.chassisType)
+        Chassis      = (Get-CippExtensionUiHumanized $D.chassisType)
         Model        = [string]$D.model
         Manufacturer = [string]$D.manufacturer
         Storage      = $Storage
@@ -112,13 +112,13 @@ function Get-HuduDeviceViewModel {
 
     $Hw = $D.hardwareinformation
     $Enrollment = [ordered]@{
-        EnrollmentType    = (Get-HuduUiHumanized $D.deviceEnrollmentType)
-        JoinType          = (Get-HuduUiHumanized $D.joinType)
-        RegistrationState = (Get-HuduUiHumanized $D.deviceRegistrationState)
+        EnrollmentType    = (Get-CippExtensionUiHumanized $D.deviceEnrollmentType)
+        JoinType          = (Get-CippExtensionUiHumanized $D.joinType)
+        RegistrationState = (Get-CippExtensionUiHumanized $D.deviceRegistrationState)
         Autopilot         = (& $Bool $D.autopilotEnrolled)
-        DeviceGuard       = (Get-HuduUiHumanized $Hw.deviceGuardVirtualizationBasedSecurityHardwareRequirementState)
-        Vbs               = (Get-HuduUiHumanized $Hw.deviceGuardVirtualizationBasedSecurityState)
-        CredentialGuard   = (Get-HuduUiHumanized $Hw.deviceGuardLocalSystemAuthorityCredentialGuardState)
+        DeviceGuard       = (Get-CippExtensionUiHumanized $Hw.deviceGuardVirtualizationBasedSecurityHardwareRequirementState)
+        Vbs               = (Get-CippExtensionUiHumanized $Hw.deviceGuardVirtualizationBasedSecurityState)
+        CredentialGuard   = (Get-CippExtensionUiHumanized $Hw.deviceGuardLocalSystemAuthorityCredentialGuardState)
     }
 
     $PolicyItems = @(foreach ($P in @($Policies | Where-Object { $_ })) {

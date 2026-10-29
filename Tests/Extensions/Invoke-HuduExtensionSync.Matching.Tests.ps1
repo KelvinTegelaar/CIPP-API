@@ -3,7 +3,7 @@ BeforeAll {
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Find-HuduDeviceMatch.ps1"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Get-HuduDeviceMatchKey.ps1"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Invoke-HuduExtensionSync.ps1"
-    Get-ChildItem "$PSScriptRoot/../../Modules/CippExtensions/Private/Hudu/*.ps1" | ForEach-Object { . $_.FullName }
+    Get-ChildItem "$PSScriptRoot/../../Modules/CippExtensions/Private/Documentation/*.ps1", "$PSScriptRoot/../../Modules/CippExtensions/Private/Hudu/*.ps1" | ForEach-Object { . $_.FullName }
     . "$PSScriptRoot/../../Modules/CippExtensions/Private/Get-CippExtensionCulture.ps1"
 
     function Connect-HuduAPI { param($Configuration) }
@@ -35,8 +35,8 @@ BeforeAll {
     function Get-CippException { param($Exception) [PSCustomObject]@{ NormalizedError = $Exception.Exception.Message } }
     function Get-CippDbRoleMembers { param($TenantFilter, $RoleTemplateId) }
 
-    function Get-HuduUserViewModel { param($User, $Tenant, $Groups, $Policies, $MailSettings, $Devices, $OneDrive, $LicenseNames, $AssignedNameMap, $CippUrl, $EnableCIPP, $PsaLinks, $Culture, $TimeZone) }
-    function Get-HuduUserBody { param($Model, $SyncedAt, $Culture, $TimeZone) }
+    function Get-CippExtensionUserViewModel { param($User, $Tenant, $Groups, $Policies, $MailSettings, $Devices, $OneDrive, $LicenseNames, $AssignedNameMap, $CippUrl, $EnableCIPP, $PsaLinks, $Culture, $TimeZone) }
+    function Get-CippExtensionUserBody { param($Model, $SyncedAt, $Culture, $TimeZone) }
 }
 
 # Pins how users, groups, policies, mailboxes, permissions, devices, compliance statuses, Hudu people, Hudu devices
@@ -146,11 +146,11 @@ Describe 'Invoke-HuduExtensionSync matching' {
         Mock Get-CIPPDbItem { if ($Type -eq 'IntuneDeviceCompliancePolicies_cp1') { foreach ($S in $Statuses) { [PSCustomObject]@{ RowKey = "x-$($S.id)"; Data = ($S | ConvertTo-Json -Compress) } } } }
         # Device assets: capture the matched data handed to the view model, keyed by device name
         $script:DeviceInputs = @{}
-        Mock Get-HuduDeviceViewModel {
+        Mock Get-CippExtensionDeviceViewModel {
             $script:DeviceInputs[$Device.deviceName] = @{ Policies = @($Policies); Groups = @($Groups) }
             [ordered]@{ Name = $Device.deviceName }
         }
-        Mock Get-HuduDeviceBody { "device-$($Model.Name)" }
+        Mock Get-CippExtensionDeviceBody { "device-$($Model.Name)" }
         Mock Get-StringHash { [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($String))) }
         Mock Set-HuduAsset { $script:SetAssets.Add([PSCustomObject]@{ Id = $asset_id; Body = $Fields.microsoft_365 }) }
         Mock New-HuduAsset {
@@ -163,11 +163,11 @@ Describe 'Invoke-HuduExtensionSync matching' {
         Mock Get-HuduMagicDashes { @() }
         # People assets: capture the matched data handed to the view model, keyed by UPN
         $script:UserInputs = @{}
-        Mock Get-HuduUserViewModel {
+        Mock Get-CippExtensionUserViewModel {
             $script:UserInputs[$User.userPrincipalName] = @{ Groups = @($Groups); Policies = @($Policies); MailSettings = $MailSettings; OneDrive = $OneDrive }
             [ordered]@{ Upn = $User.userPrincipalName }
         }
-        Mock Get-HuduUserBody { "body-$($Model.Upn)" }
+        Mock Get-CippExtensionUserBody { "body-$($Model.Upn)" }
         Mock Get-CippDbRoleMembers { if ($RoleTemplateId -eq 'T-1') { [PSCustomObject]@{ id = 'U-1'; displayName = 'Alice'; userPrincipalName = 'alice@contoso.com'; AssignmentType = 'Direct' } } }
         Mock Write-LogMessage { }
 

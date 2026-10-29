@@ -1,4 +1,4 @@
-function ConvertTo-HuduUiDate {
+function ConvertTo-CippExtensionUiDate {
     <#
         .SYNOPSIS
         Parses a Graph date value to UTC, or returns $null when it is empty or unparseable.

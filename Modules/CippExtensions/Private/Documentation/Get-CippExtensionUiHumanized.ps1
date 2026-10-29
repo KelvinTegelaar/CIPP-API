@@ -1,4 +1,4 @@
-function Get-HuduUiHumanized {
+function Get-CippExtensionUiHumanized {
     <#
         .SYNOPSIS
         Turns a camelCase API value into sentence case, for example inGracePeriod or hybridAzureADJoined.

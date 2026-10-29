@@ -800,14 +800,14 @@ function Invoke-HuduExtensionSync {
                         Culture         = $Culture
                         TimeZone        = $TimeZone
                     }
-                    $UserModel = Get-HuduUserViewModel @UserModelParams
-                    $UserBody = Get-HuduUserBody -Model $UserModel -Culture $Culture -TimeZone $TimeZone
+                    $UserModel = Get-CippExtensionUserViewModel @UserModelParams
+                    $UserBody = Get-CippExtensionUserBody -Model $UserModel -Culture $Culture -TimeZone $TimeZone
 
                     if (![string]::IsNullOrEmpty($PeopleLayoutId)) {
                         # Hash is calculated before the timestamp is added, otherwise every asset would be rewritten on every sync
                         $NewHash = Get-StringHash -String $UserBody
                         $UserAssetFields = { @{
-                            microsoft_365 = Get-HuduUserBody -Model $UserModel -SyncedAt (Get-Date) -Culture $Culture -TimeZone $TimeZone
+                            microsoft_365 = Get-CippExtensionUserBody -Model $UserModel -SyncedAt (Get-Date) -Culture $Culture -TimeZone $TimeZone
                             email_address = $user.userPrincipalName
                             licenses      = $userLicenses
                         } }
@@ -998,12 +998,12 @@ function Invoke-HuduExtensionSync {
                         Culture  = $Culture
                         TimeZone = $TimeZone
                     }
-                    $DeviceModel = Get-HuduDeviceViewModel @DeviceModelParams
+                    $DeviceModel = Get-CippExtensionDeviceViewModel @DeviceModelParams
                     $DeviceAssetFields = @{
-                        microsoft_365 = Get-HuduDeviceBody -Model $DeviceModel -SyncedAt (Get-Date) -Culture $Culture -TimeZone $TimeZone
+                        microsoft_365 = Get-CippExtensionDeviceBody -Model $DeviceModel -SyncedAt (Get-Date) -Culture $Culture -TimeZone $TimeZone
                     }
                     # Exclude the timestamp from the hash so unchanged assets are not rewritten on every sync.
-                    $DeviceHashMaterial = [System.Collections.Generic.List[string]]@(Get-HuduDeviceBody -Model $DeviceModel -Culture $Culture -TimeZone $TimeZone)
+                    $DeviceHashMaterial = [System.Collections.Generic.List[string]]@(Get-CippExtensionDeviceBody -Model $DeviceModel -Culture $Culture -TimeZone $TimeZone)
                     $CredentialRetrievalFailed = $false
                     $CredentialFailureReasons = [System.Collections.Generic.List[string]]::new()
                     $CredentialFieldsChanged = $false

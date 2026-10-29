@@ -1,7 +1,7 @@
-function Get-HuduUserAttentionItems {
+function Get-CippExtensionUserAttentionItems {
     <#
         .SYNOPSIS
-        Lists what needs a human on a user, from a Get-HuduUserViewModel model.
+        Lists what needs a human on a user, from a Get-CippExtensionUserViewModel model.
 
         .DESCRIPTION
         Returns plain sentences; **text** marks emphasis. Storage tones and device

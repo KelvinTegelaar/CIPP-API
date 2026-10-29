@@ -1,4 +1,4 @@
-function ConvertTo-HuduUiText {
+function ConvertTo-CippExtensionUiText {
     <#
         .SYNOPSIS
         HTML-encodes a value for use in element text or a quoted attribute.

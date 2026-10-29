@@ -1,4 +1,4 @@
-function Get-HuduUiDatePattern {
+function Get-CippExtensionUiDatePattern {
     <#
         .SYNOPSIS
         A short month-name date pattern in the culture's own day and month order, for example d MMM yyyy.

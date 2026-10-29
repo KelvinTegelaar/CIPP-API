@@ -1,4 +1,4 @@
-function Get-HuduUiTone {
+function Get-CippExtensionUiTone {
     <#
         .SYNOPSIS
         Fill, border and bar colours for a status tone.

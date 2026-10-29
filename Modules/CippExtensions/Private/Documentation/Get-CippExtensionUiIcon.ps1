@@ -1,4 +1,4 @@
-function Get-HuduUiIcon {
+function Get-CippExtensionUiIcon {
     <#
         .SYNOPSIS
         Returns the markup for an icon.

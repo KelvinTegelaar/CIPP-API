@@ -1,11 +1,11 @@
-function Get-HuduUiTableStyle {
+function Get-CippExtensionUiTableStyle {
     <#
         .SYNOPSIS
         Inline styles for tables, header cells and body cells, and for label/value rows.
 
         .DESCRIPTION
         Hudu's rich text CSS gives tables a full grid, header fill, margins and (in some versions) fixed layout and nowrap cells; these reset them inline.
-        Row is the table New-HuduUiCard wraps label/value rows in; RowCell, RowLabel and RowValue style their cells and RowSep separates them.
+        Row is the table New-CippExtensionUiCard wraps label/value rows in; RowCell, RowLabel and RowValue style their cells and RowSep separates them.
     #>
     $Cell = 'border-width:0 0 1px;background:transparent;vertical-align:top'
     $Bare = 'border:0;background:transparent;vertical-align:top'
