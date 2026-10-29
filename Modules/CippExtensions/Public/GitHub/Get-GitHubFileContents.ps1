@@ -15,6 +15,10 @@ function Get-GitHubFileContents {
         $Path = "repos/$($FullName)/contents/$($Path)?ref=$($Branch)"
         #Write-Information $Path
         $File = Invoke-GitHubApiRequest -Path $Path -Method GET
+        # The contents API omits the body of files over 1 MB; the blob API returns them up to 100 MB
+        if ($File.encoding -eq 'none') {
+            $File.content = (Invoke-GitHubApiRequest -Path "repos/$($FullName)/git/blobs/$($File.sha)" -Method GET).content
+        }
         $content = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($File.content))
         #If the first character is a BOM, remove it
         if ($content[0] -eq [char]65279) { $content = $content.Substring(1) }

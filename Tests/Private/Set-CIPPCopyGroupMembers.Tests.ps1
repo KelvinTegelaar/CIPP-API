@@ -239,6 +239,7 @@ Describe 'Set-CIPPCopyGroupMembers' {
             Set-BulkResponse -SourceGroups @(New-Group -Id 'group-dl' -DisplayName 'All Office' -MailEnabled $true) `
                 -AssignedLicenses @([pscustomobject]@{ skuId = 'sku-1' })
             Mock -CommandName New-ExoRequest -MockWith { throw 'Ex94914C the recipient could not be found' }
+            Mock -CommandName Add-CIPPScheduledTask -MockWith { 'Successfully added task: Copy Exchange Group Membership.' }
 
             $Result = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com'
 
@@ -249,7 +250,7 @@ Describe 'Set-CIPPCopyGroupMembers' {
                 $Task.Parameters.ExchangeOnly -eq $true -and
                 $Task.TenantFilter -eq 'contoso.com'
             }
-            $Result.Error | Should -Contain "We've scheduled a task to add new.user@contoso.com to the Exchange group All Office"
+            $Result.Success | Should -Contain 'Scheduled adding new.user@contoso.com to the Exchange groups All Office in 15 minutes, once Exchange has provisioned the mailbox.'
         }
 
         It 'reports the failure instead of scheduling when the user has no licenses' {
@@ -340,6 +341,45 @@ Describe 'Set-CIPPCopyGroupMembers' {
 
             Should -Invoke New-ExoRequest -Times 1 -Exactly
             Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
+        }
+    }
+
+    Context 'Exchange not ready across several groups' {
+        BeforeEach {
+            Set-BulkResponse -SourceGroups @(
+                New-Group -Id 'group-dl1' -DisplayName 'All Office' -MailEnabled $true
+                New-Group -Id 'group-sec' -DisplayName 'All-Users'
+                New-Group -Id 'group-dl2' -DisplayName 'Finance' -MailEnabled $true
+                New-Group -Id 'group-dl3' -DisplayName 'Sales' -MailEnabled $true
+            ) -AssignedLicenses @([pscustomobject]@{ skuId = 'sku-1' })
+            Mock -CommandName New-ExoRequest -MockWith { throw 'Ex94914C the recipient could not be found' }
+            Mock -CommandName Add-CIPPScheduledTask -MockWith { 'Successfully added task: Copy Exchange Group Membership.' }
+        }
+
+        It 'queues one Exchange-only task scoped to the groups that missed' {
+            $Result = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com'
+
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter {
+                $Task.Parameters.ExchangeOnly -eq $true -and
+                (@($Task.Parameters.GroupIds) -join ',') -eq 'group-dl1,group-dl2,group-dl3'
+            }
+            $Result.Success | Should -Contain 'Added user to group: All-Users'
+        }
+
+        It 'only adds the scoped groups when the queued task runs' {
+            Mock -CommandName New-ExoRequest -MockWith { }
+
+            $null = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com' -ExchangeOnly -GroupIds @('group-dl2')
+
+            Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter { $cmdParams.Identity -eq 'group-dl2' }
+        }
+
+        It 'names the group in the failure log' {
+            Mock -CommandName New-ExoRequest -MockWith { throw 'Insufficient permissions' }
+
+            $null = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com'
+
+            Should -Invoke Write-LogMessage -ParameterFilter { $message -like 'Group adding failed for group Finance:*' } -Times 1 -Exactly
         }
     }
 

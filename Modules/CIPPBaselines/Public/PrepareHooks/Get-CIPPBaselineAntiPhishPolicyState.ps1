@@ -132,19 +132,23 @@ function Get-CIPPBaselineAntiPhishPolicyState {
     # the graded Expected above, so grade and write can never disagree - these fifteen
     # were graded but never written, drifting forever. Blank optional actions/tags are
     # omitted: sending an empty enum errors, and the operator has not expressed intent.
-    $ExtraPolicyParams = [ordered]@{
-        EnableMailboxIntelligence           = $true
-        EnableMailboxIntelligenceProtection = $true
-        EnableTargetedDomainsProtection     = $true
-        EnableTargetedUserProtection        = $true
-        EnableOrganizationDomainsProtection = $true
-        EnableSimilarUsersSafetyTips        = [bool]($V.EnableSimilarUsersSafetyTips -eq $true)
-        EnableSimilarDomainsSafetyTips      = [bool]($V.EnableSimilarDomainsSafetyTips -eq $true)
-        EnableUnusualCharactersSafetyTips   = [bool]($V.EnableUnusualCharactersSafetyTips -eq $true)
-    }
-    if (-not [string]::IsNullOrWhiteSpace("$($V.PhishThresholdLevel)")) { $ExtraPolicyParams['PhishThresholdLevel'] = [int]"$($V.PhishThresholdLevel)" }
-    foreach ($ActionParam in @('MailboxIntelligenceProtectionAction', 'MailboxIntelligenceQuarantineTag', 'TargetedUserProtectionAction', 'TargetedUserQuarantineTag', 'TargetedDomainProtectionAction', 'TargetedDomainQuarantineTag')) {
-        if (-not [string]::IsNullOrWhiteSpace("$($V.$ActionParam)")) { $ExtraPolicyParams[$ActionParam] = "$($V.$ActionParam)" }
+    # Exchange rejects these on a tenant without Defender for Office 365.
+    $ExtraPolicyParams = [ordered]@{}
+    if ($MDOLicensed) {
+        $ExtraPolicyParams = [ordered]@{
+            EnableMailboxIntelligence           = $true
+            EnableMailboxIntelligenceProtection = $true
+            EnableTargetedDomainsProtection     = $true
+            EnableTargetedUserProtection        = $true
+            EnableOrganizationDomainsProtection = $true
+            EnableSimilarUsersSafetyTips        = [bool]($V.EnableSimilarUsersSafetyTips -eq $true)
+            EnableSimilarDomainsSafetyTips      = [bool]($V.EnableSimilarDomainsSafetyTips -eq $true)
+            EnableUnusualCharactersSafetyTips   = [bool]($V.EnableUnusualCharactersSafetyTips -eq $true)
+        }
+        if (-not [string]::IsNullOrWhiteSpace("$($V.PhishThresholdLevel)")) { $ExtraPolicyParams['PhishThresholdLevel'] = [int]"$($V.PhishThresholdLevel)" }
+        foreach ($ActionParam in @('MailboxIntelligenceProtectionAction', 'MailboxIntelligenceQuarantineTag', 'TargetedUserProtectionAction', 'TargetedUserQuarantineTag', 'TargetedDomainProtectionAction', 'TargetedDomainQuarantineTag')) {
+            if (-not [string]::IsNullOrWhiteSpace("$($V.$ActionParam)")) { $ExtraPolicyParams[$ActionParam] = "$($V.$ActionParam)" }
+        }
     }
     $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]$ExtraPolicyParams)
 
