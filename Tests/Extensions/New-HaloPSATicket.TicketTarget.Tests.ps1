@@ -42,8 +42,9 @@ BeforeAll {
     # runs in Pester's own scope, not this function's, so the switches have to travel as script-scoped
     # variables rather than closure captures.
     function Set-RestMock {
-        param([bool]$TicketExists = $true, [bool]$Closed = $false, [switch]$NoteFails)
+        param([bool]$TicketExists = $true, [bool]$Closed = $false, [switch]$NoteFails, [string]$LookupThrows)
         $script:Calls = [System.Collections.Generic.List[object]]::new()
+        $script:MockLookupThrows = $LookupThrows
         $script:MockTicketExists = $TicketExists
         $script:MockClosed = $Closed
         $script:MockNoteFails = [bool]$NoteFails
@@ -51,6 +52,7 @@ BeforeAll {
             param($Uri, $ContentType, $Method, $Body, $Headers, [switch]$SkipHttpErrorCheck)
             $script:Calls.Add([pscustomobject]@{ Uri = $Uri; Method = $Method; Body = $Body })
             if ($Method -eq 'Get') {
+                if ($script:MockLookupThrows) { throw $script:MockLookupThrows }
                 if (-not $script:MockTicketExists) { return @{} }
                 return @{ id = 1380; hasbeenclosed = $script:MockClosed }
             }
@@ -140,6 +142,16 @@ Describe 'New-HaloPSATicket - targeting a referenced ticket' {
 
             Get-CreateCall | Should -Not -BeNullOrEmpty
             Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Warning' -and $message -like '*could not be found*' }
+        }
+
+        It 'says what HaloPSA answered when the ticket lookup fails' {
+            Set-RestMock -LookupThrows 'Response status code does not indicate success: 403 (Forbidden).'
+
+            $null = New-HaloPSATicket -title 'Test alert' -description '<p>body</p>' -client 19 -TicketId 1380
+
+            Get-NoteCall | Should -BeNullOrEmpty
+            Get-CreateCall | Should -Not -BeNullOrEmpty
+            Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Warning' -and $message -like '*1380 could not be found (*403 (Forbidden)*' }
         }
 
         It 'creates a new ticket when the note is rejected' {

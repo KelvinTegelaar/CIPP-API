@@ -83,7 +83,13 @@ function New-HaloPSATicket {
   }
 
   if ($TargetTicketId) {
-    $Ticket = Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/Tickets/$($TargetTicketId)?includedetails=true&includelastaction=false&nocache=undefined&includeusersassets=false&isdetailscreen=true" -ContentType 'application/json; charset=utf-8' -Method Get -Headers @{Authorization = "Bearer $($token.access_token)" } -SkipHttpErrorCheck
+    $LookupError = $null
+    $Ticket = try {
+      Invoke-RestMethod -UserAgent $UserAgent -Uri "$($Configuration.ResourceURL)/Tickets/$($TargetTicketId)?includedetails=true&includelastaction=false&nocache=undefined&includeusersassets=false&isdetailscreen=true" -ContentType 'application/json; charset=utf-8' -Method Get -Headers @{Authorization = "Bearer $($token.access_token)" }
+    }
+    catch {
+      $LookupError = (@($_.Exception.Message, $_.ErrorDetails.Message) | Where-Object { $_ }) -join ' '
+    }
     if ($Ticket.id) {
       if (!$Ticket.hasbeenclosed) {
         Write-Information 'Ticket is still open, adding new note'
@@ -162,7 +168,10 @@ function New-HaloPSATicket {
     else {
       Write-Information 'Existing ticket could not be found. Creating a new ticket instead.'
       if ($TicketId -gt 0) {
-        Write-LogMessage -message "HaloPSA ticket $TargetTicketId could not be found - the update was raised as a new ticket instead. Check the reference on the scheduled task." -API 'HaloPSATicket' -sev Warning
+        # Halo reads the ticket as the API application's login agent, so a ticket outside that agent's
+        # teams, ticket types or clients looks the same as one that does not exist.
+        $Detail = if ($LookupError) { " ($LookupError)" } else { '' }
+        Write-LogMessage -message "HaloPSA ticket $TargetTicketId could not be found$Detail - the update was raised as a new ticket instead. Check the ticket number, and that the agent the HaloPSA API application logs in as can see that ticket." -API 'HaloPSATicket' -sev Warning
       }
     }
   }
