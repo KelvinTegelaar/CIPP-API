@@ -29,9 +29,14 @@ function Get-NinjaOneOrgFieldBody {
     $Table = $TableStyle.Table
     $Inv = [cultureinfo]::InvariantCulture
     $Muted = '<span style="opacity:.55">&ndash;</span>'
+    # A card may be a string or @{ Html; Class } to take its own column width
     $Columns = {
         param($Cards, $Classes = 'col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex')
-        $Cells = @(foreach ($c in $Cards) { if ($c) { "<div class=`"$Classes`">$($c -replace '^<div ', '<div class="flex-grow-1" ')</div>" } }) -join ''
+        $Cells = @(foreach ($c in $Cards) {
+                $Html = if ($c -is [System.Collections.IDictionary]) { $c.Html } else { $c }
+                $Class = if ($c -is [System.Collections.IDictionary]) { "$($c.Class) col-md-12 col-sm-12 d-flex" } else { $Classes }
+                if ($Html) { "<div class=`"$Class`">$($Html -replace '^<div ', '<div class="flex-grow-1" ')</div>" }
+            }) -join ''
         "<div class=`"row g-3`" style=`"margin-top:0`">$Cells</div>"
     }
     $Open = { param($Url, $Tip) if ($Url) { New-CippExtensionUiLink -Url $Url -Label 'Open' -Tip $Tip -Variant button } }
@@ -129,7 +134,7 @@ function Get-NinjaOneOrgFieldBody {
             $StdBody = if (@($Std.Items).Count) {
                 $Rows = -join @(foreach ($i in $Std.Items) {
                         $Actions = @(foreach ($a in @($i.Actions)) { if ($a) { New-CippExtensionUiChip -Text $a -Small } }) -join ' '
-                        "<tr><td style=`"$Td`">$(ConvertTo-CippExtensionUiText $i.Standard)</td><td style=`"$Td`">$(if ($i.Template) { ConvertTo-CippExtensionUiText $i.Template } else { $Muted })</td><td style=`"$Td;white-space:nowrap`">$(if ($Actions) { $Actions } else { $Muted })</td></tr>"
+                        "<tr><td style=`"$Td`">$(ConvertTo-CippExtensionUiText $i.Standard)</td><td style=`"$Td`">$(if ($i.Template) { ConvertTo-CippExtensionUiText $i.Template } else { $Muted })</td><td style=`"$Td`">$(if ($Actions) { $Actions } else { $Muted })</td></tr>"
                     })
                 & $Grid @('Standard', 'Template', 'Actions') $Rows
             } else { "<div style=`"font-size:13px;opacity:.7`">$(ConvertTo-CippExtensionUiText $(if ($Std.Error) { $Std.Error } else { 'No standards applied' }))</div>" }
@@ -153,7 +158,16 @@ function Get-NinjaOneOrgFieldBody {
             $Usr = $m.Users
             $UsrCard = New-CippExtensionUiCard -Title 'User Details' -Icon 'users' -Flag (& $Open $Usr.Url 'Open users in CIPP') -Body (-join @(foreach ($c in $Usr.Charts) { & $Chart $c.Title $c.Items }))
 
-            "<div style=`"overflow:hidden`">$TilesHtml$Header$(& $Columns @($DetailsCard, $LicCard, $DevCard, $StdCard, $SsCard, $UsrCard))</div>"
+            # Tables need half the width or their first column wraps word by word
+            $Cards = @(
+                @{ Html = $DetailsCard; Class = 'col-xl-4 col-lg-6' }
+                @{ Html = $LicCard; Class = 'col-xl-8 col-lg-6' }
+                @{ Html = $StdCard; Class = 'col-xl-6 col-lg-6' }
+                @{ Html = $SsCard; Class = 'col-xl-6 col-lg-6' }
+                @{ Html = $DevCard; Class = 'col-xl-6 col-lg-6' }
+                @{ Html = $UsrCard; Class = 'col-xl-6 col-lg-6' }
+            )
+            "<div style=`"overflow:hidden`">$TilesHtml$Header$(& $Columns $Cards)</div>"
         }
 
         'UsersSummary' {

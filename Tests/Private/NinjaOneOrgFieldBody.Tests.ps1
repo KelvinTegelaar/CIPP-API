@@ -62,7 +62,10 @@ Describe 'Get-NinjaOneOrgFieldBody' {
             '11111111-2222-4333-8444-555555555555', 'Synced 20 Oct 2026 12:00 UTC', 'fabrikam.onmicrosoft.com', 'Ada Admin', 'Device Operating Systems', 'Turn on MFA', '62.5%', 'Baseline', '>Remediate<') {
             $Body | Should -Match ([regex]::Escape($Text))
         }
-        [regex]::Matches($Body, 'class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex"').Count | Should -Be 6
+        # Tables take half the width, the details card a third and the licence table the rest
+        [regex]::Matches($Body, 'class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex"').Count | Should -Be 1
+        [regex]::Matches($Body, 'class="col-xl-8 col-lg-6 col-md-12 col-sm-12 d-flex"').Count | Should -Be 1
+        [regex]::Matches($Body, 'class="col-xl-6 col-lg-6 col-md-12 col-sm-12 d-flex"').Count | Should -Be 4
         [regex]::Matches($Body, 'class="col-xl-2 col-lg-3 col-md-4 col-sm-6 d-flex"').Count | Should -Be 3
         $Body | Should -Match 'color:#F04438">4</div>'
         $Body | Should -Match 'href="https://security\.microsoft\.com/securescore"[^>]*>Open'
@@ -81,7 +84,7 @@ Describe 'Get-NinjaOneOrgFieldBody' {
         $Body | Should -Match ([regex]::Escape('width:75%;height:8px;border:4px solid #10B981'))
         $Body | Should -Match ([regex]::Escape('width:25%;height:8px;border:4px solid #F04438'))
         $Body | Should -Match ([regex]::Escape('width:50%;height:8px;border:4px solid #10B981'))
-        $Os = [regex]::Match($Body, 'Device Operating Systems.*?CIPP Applied Standards').Value
+        $Os = [regex]::Match($Body, 'Device Operating Systems.*?User Status').Value
         $Widths = [regex]::Matches($Os, 'display:inline-block;vertical-align:top;width:([\d.]+)%').Groups | Where-Object Name -EQ '1' | ForEach-Object { [double]$_.Value }
         $Widths | Should -Be @(75, 25)
         $Os | Should -Match 'Android <span style="font-weight:600">0</span>'
