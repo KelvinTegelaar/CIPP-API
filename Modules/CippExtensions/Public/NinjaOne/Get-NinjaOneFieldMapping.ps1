@@ -145,12 +145,14 @@ function Get-NinjaOneFieldMapping {
     }
 
     # Write-only fields are absent from the NinjaOne listing, so mapped ones are kept as options or the page would drop them.
+    # The page only offers options whose type matches the CIPP field, so each takes the type of the field it is mapped to.
     $Listed = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($Field in $NinjaCustomFieldsOrg) { [void]$Listed.Add([string]$Field.value) }
     foreach ($Field in $NinjaCustomFieldsNode) { [void]$Listed.Add([string]$Field.value) }
     foreach ($Mapping in @($Mappings)) {
         if (-not [string]::IsNullOrEmpty($Mapping.IntegrationId) -and $Listed.Add([string]$Mapping.IntegrationId)) {
-            $NinjaCustomFieldsNode.Add([PSCustomObject]@{ name = $Mapping.IntegrationName; value = $Mapping.IntegrationId; type = 'WRITE_ONLY'; FieldType = 'Device' })
+            $CippField = $CIPPFields | Where-Object { $_.FieldName -eq $Mapping.RowKey } | Select-Object -First 1
+            $NinjaCustomFieldsNode.Add([PSCustomObject]@{ name = $Mapping.IntegrationName; value = $Mapping.IntegrationId; type = [string]@($CippField.Type)[0]; FieldType = 'Device' })
         }
     }
 

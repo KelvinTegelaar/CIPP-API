@@ -5,14 +5,22 @@ function Initialize-NinjaOneCredentialField {
     .DESCRIPTION
         Only fields whose global switch is on and that are not mapped yet are handled; existing mappings are never changed.
         A field with the canonical fieldName is adopted, otherwise it is created. Adds every mapped field to MappedFields.
+        Without Token and MappedFields, as when called from the settings save, the current mapping is read and a token requested.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]$Configuration,
-        [Parameter(Mandatory = $true)]$Token,
-        [Parameter(Mandatory = $true)]$MappedFields,
+        $Token,
+        $MappedFields,
         $WebSession
     )
+
+    if (-not $MappedFields) {
+        $MappedFields = [pscustomobject]@{}
+        foreach ($Row in @(Get-ExtensionMapping -Extension 'NinjaOneField' | Where-Object { $_.IntegrationId })) {
+            $MappedFields | Add-Member -NotePropertyName $Row.RowKey -NotePropertyValue $Row.IntegrationId -Force
+        }
+    }
 
     $Definitions = @(
         @{ Name = 'LAPSAccount'; Switch = 'IncludeLAPS'; FieldName = 'cippLapsAccount'; Label = 'Windows LAPS Account'; Type = 'TEXT' }
@@ -24,6 +32,7 @@ function Initialize-NinjaOneCredentialField {
     $Needed = @($Definitions | Where-Object { [bool]$Configuration.($_.Switch) -and -not $MappedFields.($_.Name) })
     if ($Needed.Count -eq 0) { return }
 
+    if (-not $Token) { $Token = Get-NinjaOneToken -configuration $Configuration -WebSession $WebSession }
     $Request = @{ Headers = @{ Authorization = "Bearer $($Token.access_token)" }; ContentType = 'application/json; charset=utf-8' }
     if ($WebSession) { $Request.WebSession = $WebSession }
     $ListUri = "https://$($Configuration.Instance)/api/v2/device-custom-fields?scopes=node"

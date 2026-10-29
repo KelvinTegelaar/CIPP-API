@@ -4,6 +4,8 @@ BeforeAll {
     function Get-CIPPTable { param($TableName) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Write-LogMessage { param($API, $message, $Sev) }
+    function Get-ExtensionMapping { param($Extension) }
+    function Get-NinjaOneToken { param($configuration, $WebSession) }
 
     $script:Config = [pscustomobject]@{ Instance = 'app.ninjarmm.com'; IncludeLAPS = $true; IncludeBitLocker = $false }
     $script:Token = [pscustomobject]@{ access_token = 'x' }
@@ -86,6 +88,31 @@ Describe 'Initialize-NinjaOneCredentialField' {
         Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter { $Method -eq 'GET' }
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { @($Entity).Count -eq 3 }
         Should -Invoke Write-LogMessage -Times 0 -Exactly
+    }
+
+    It 'reads the current mapping and requests a token when called without them' {
+        Mock Get-ExtensionMapping { @([pscustomobject]@{ RowKey = 'LAPSAccount'; IntegrationId = 'myAccountField' }, [pscustomobject]@{ RowKey = 'TenantLinks'; IntegrationId = 'links' }) }
+        Mock Get-NinjaOneToken { $Token }
+        Mock Invoke-WebRequest -ParameterFilter { $Method -eq 'GET' } { & $List @() }
+        Mock Invoke-WebRequest -ParameterFilter { $Method -eq 'POST' } { throw '{"resultCode":"duplicate_attribute_names_detected"}' }
+
+        Initialize-NinjaOneCredentialField -Configuration $Config
+
+        Should -Invoke Get-ExtensionMapping -Times 1 -Exactly -ParameterFilter { $Extension -eq 'NinjaOneField' }
+        Should -Invoke Get-NinjaOneToken -Times 1 -Exactly
+        Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter { $Method -eq 'POST' -and (($Body | ConvertFrom-Json).customFields.fieldName | Sort-Object) -join ',' -eq 'cippLapsBackupDate,cippLapsPassword' }
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { @($Entity).Count -eq 2 -and 'LAPSAccount' -notin $Entity.RowKey }
+    }
+
+    It 'requests no token when every switched-on field is already mapped' {
+        Mock Get-ExtensionMapping { @([pscustomobject]@{ RowKey = 'LAPSAccount'; IntegrationId = 'a' }, [pscustomobject]@{ RowKey = 'LAPSPassword'; IntegrationId = 'b' }, [pscustomobject]@{ RowKey = 'LAPSBackupDate'; IntegrationId = 'c' }) }
+        Mock Get-NinjaOneToken { }
+        Mock Invoke-WebRequest { }
+
+        Initialize-NinjaOneCredentialField -Configuration $Config
+
+        Should -Invoke Get-NinjaOneToken -Times 0 -Exactly
+        Should -Invoke Invoke-WebRequest -Times 0 -Exactly
     }
 
     It 'warns and maps nothing when the create fails and the fields are still absent' {
