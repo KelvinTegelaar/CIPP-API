@@ -268,6 +268,7 @@ function Send-CIPPScheduledTaskAlert {
             '*psa*' {
                 $PsaSplitSent = $false
                 $TaskAffectedUser = $null
+                $TaskAffectedDevice = $null
                 # Per-task PSA ticket priority (configured on the alert) overrides the global
                 # HaloPSA.DefaultPriority. Empty on tasks saved before this field existed, in which
                 # case New-HaloPSATicket falls back to the integration default. Read here rather
@@ -289,8 +290,10 @@ function Send-CIPPScheduledTaskAlert {
                     $ExtConfigTable = Get-CIPPTable -TableName Extensionsconfig
                     $ExtConfig = (Get-CIPPAzDataTableEntity @ExtConfigTable).config | ConvertFrom-Json -ErrorAction SilentlyContinue
                     $HaloConfig = $ExtConfig.HaloPSA
+                    $NinjaConfig = $ExtConfig.NinjaOne
+                    $PsaLinkingAvailable = ($HaloConfig -and $HaloConfig.Enabled) -or ($NinjaConfig.Enabled -and $NinjaConfig.TicketingEnabled)
 
-                    if ($HaloConfig -and $HaloConfig.Enabled) {
+                    if ($PsaLinkingAvailable) {
                         # Resolve an affected user from the scheduled task's own parameters first.
                         # User-targeted tasks (Edit user, license changes, sign-in state) carry the
                         # user in Parameters while their results often have no UPN column. A UPN-like
@@ -336,6 +339,24 @@ function Send-CIPPScheduledTaskAlert {
                             }
                         }
 
+                        # Device-targeted tasks (device actions, LAPS and recovery key retrieval) carry
+                        # the Intune managed device id as GUID or DeviceId, sometimes with a serial or name.
+                        $DeviceIntuneId = $null
+                        foreach ($DeviceKey in @('GUID', 'DeviceId', 'ManagedDeviceId', 'DeviceID')) {
+                            $DeviceValue = $TaskParameters.$DeviceKey
+                            if ($DeviceValue -isnot [string] -and $null -ne $DeviceValue.value -and $DeviceValue.value -is [string]) { $DeviceValue = $DeviceValue.value }
+                            if ($DeviceValue -is [string] -and $DeviceValue -match $GuidPattern) { $DeviceIntuneId = $DeviceValue; break }
+                        }
+                        $DeviceSerial = @('SerialNumber', 'serialNumber') | ForEach-Object { $TaskParameters.$_ } | Where-Object { $_ -is [string] -and -not [string]::IsNullOrWhiteSpace($_) -and $_ -notmatch '%' } | Select-Object -First 1
+                        $DeviceName = @('DeviceName', 'deviceName') | ForEach-Object { $TaskParameters.$_ } | Where-Object { $_ -is [string] -and -not [string]::IsNullOrWhiteSpace($_) -and $_ -notmatch '%' } | Select-Object -First 1
+                        if ($DeviceIntuneId -or $DeviceSerial) {
+                            $TaskAffectedDevice = [pscustomobject]@{
+                                IntuneId     = $DeviceIntuneId
+                                SerialNumber = $DeviceSerial
+                                DisplayName  = $DeviceName
+                            }
+                        }
+
                         # Per-task PsaTicketStrategy (configured on the task) overrides the global
                         # HaloPSA.LinkTicketsToUsers toggle. Lets MSPs decide on a per-task basis
                         # whether a wide result set (e.g. "users without MFA") should produce one
@@ -344,7 +365,7 @@ function Send-CIPPScheduledTaskAlert {
                         $ShouldSplit = switch ($TaskStrategy) {
                             'split' { $true }
                             'consolidated' { $false }
-                            default { [bool]$HaloConfig.LinkTicketsToUsers }
+                            default { [bool]($HaloConfig.LinkTicketsToUsers -or $NinjaConfig.LinkTicketsToUsers) }
                         }
 
                         if ($ShouldSplit -and $Results -is [array] -and $Results.Count -gt 0 -and $Results[0] -isnot [string]) {
@@ -373,6 +394,7 @@ function Send-CIPPScheduledTaskAlert {
                                         # task-level affected user if one was resolved.
                                         $GroupParams = @{ Type = 'psa'; Title = $title; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId; PSAConsolidationKey = $PsaConsolidationKey }
                                         if ($TaskAffectedUser) { $GroupParams.AffectedUser = $TaskAffectedUser }
+                                        if ($TaskAffectedDevice) { $GroupParams.AffectedDevice = $TaskAffectedDevice }
                                         if ($TaskPsaPriority) { $GroupParams.PsaTicketPriority = $TaskPsaPriority }
                                         $Outcomes.Add([pscustomobject]@{ Channel = 'PSA'; Result = [string]((Send-CIPPAlert @GroupParams) -join ' ') })
                                     } else {
@@ -385,6 +407,7 @@ function Send-CIPPScheduledTaskAlert {
                                         }
                                         $UserParams = @{ Type = 'psa'; Title = $UserTitle; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter; AffectedUser = $AffectedUser; PSAReference = $PsaReference; PSATicketId = $PsaTicketId; PSAConsolidationKey = $(if ($PsaConsolidationKey) { "$PsaConsolidationKey|$GroupKey" }) }
                                         if ($TaskPsaPriority) { $UserParams.PsaTicketPriority = $TaskPsaPriority }
+                                        if ($TaskAffectedDevice) { $UserParams.AffectedDevice = $TaskAffectedDevice }
                                         $Outcomes.Add([pscustomobject]@{ Channel = 'PSA'; Result = [string]((Send-CIPPAlert @UserParams) -join ' ') })
                                     }
                                 }
@@ -399,6 +422,7 @@ function Send-CIPPScheduledTaskAlert {
                 if (-not $PsaSplitSent) {
                     $PsaParams = @{ Type = 'psa'; Title = $title; HTMLContent = (ConvertTo-PSAHtml -Html $HTML); TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId; PSAConsolidationKey = $PsaConsolidationKey }
                     if ($TaskAffectedUser) { $PsaParams.AffectedUser = $TaskAffectedUser }
+                    if ($TaskAffectedDevice) { $PsaParams.AffectedDevice = $TaskAffectedDevice }
                     if ($TaskPsaPriority) { $PsaParams.PsaTicketPriority = $TaskPsaPriority }
                     $Outcomes.Add([pscustomobject]@{ Channel = 'PSA'; Result = [string]((Send-CIPPAlert @PsaParams) -join ' ') })
                 }

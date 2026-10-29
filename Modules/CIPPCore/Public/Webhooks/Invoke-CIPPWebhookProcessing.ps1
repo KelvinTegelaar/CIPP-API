@@ -226,6 +226,33 @@ function Invoke-CippWebhookProcessing {
         }
     }
 
+    # Device the record is about, for PSA extensions that can attach one. The GUID mapper replaces
+    # a device object id with the Entra device record ({id, displayName, deviceId}) under a CIPP-
+    # prefixed property; sign-in records carry the device in DeviceProperties instead. Groups and
+    # service principals also map to objects, so only a record carrying deviceId counts.
+    $AffectedDevice = $null
+    foreach ($Property in $Data.PSObject.Properties) {
+        if ($Property.Name -notlike 'CIPP*' -or $null -eq $Property.Value -or $Property.Value -is [string]) { continue }
+        $Candidate = $Property.Value
+        if ($Candidate.PSObject.Properties['deviceId'] -and $Candidate.deviceId) {
+            $AffectedDevice = [pscustomobject]@{
+                EntraDeviceId = "$($Candidate.deviceId)"
+                DisplayName   = $Candidate.displayName
+            }
+            break
+        }
+    }
+    if (-not $AffectedDevice -and $Data.CIPPDeviceProperties) {
+        $DeviceProps = try { $Data.CIPPDeviceProperties | ConvertFrom-Json -ErrorAction Stop } catch { $null }
+        $SignInDeviceId = ($DeviceProps | Where-Object { $_.Name -eq 'Id' } | Select-Object -First 1).Value
+        if ($SignInDeviceId -match $GuidRegex) {
+            $AffectedDevice = [pscustomobject]@{
+                EntraDeviceId = $SignInDeviceId
+                DisplayName   = ($DeviceProps | Where-Object { $_.Name -eq 'DisplayName' } | Select-Object -First 1).Value
+            }
+        }
+    }
+
     Write-Host 'Going to create the content'
     foreach ($action in $ActionList ) {
         switch ($action) {
@@ -251,6 +278,9 @@ function Invoke-CippWebhookProcessing {
                 }
                 if ($AffectedUser) {
                     $CIPPAlert.AffectedUser = $AffectedUser
+                }
+                if ($AffectedDevice) {
+                    $CIPPAlert.AffectedDevice = $AffectedDevice
                 }
                 # Per-alert priority rides on the record rather than a function parameter, the same
                 # way CustomSubject does above - this function has a second caller

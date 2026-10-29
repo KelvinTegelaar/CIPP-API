@@ -19,6 +19,7 @@ function Invoke-ExecExtensionsConfig {
 
     $Body = [PSCustomObject]$Request.Body
     $NinjaOneSettings = $Body.NinjaOne
+    $HaloSettings = $Body.HaloPSA
     $StatusCode = [HttpStatusCode]::OK
     $Results = try {
         # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
@@ -99,6 +100,14 @@ function Invoke-ExecExtensionsConfig {
             } catch {
                 $AddedText = "$AddedText NinjaOne credential fields were not prepared: $($_.Exception.Message)"
             }
+        }
+        # Alerts go to every ticketing integration that is on, so two on at once means two tickets per alert.
+        $TicketingOn = [System.Collections.Generic.List[string]]::new()
+        if ($HaloSettings.Enabled -eq $true) { $TicketingOn.Add('HaloPSA') }
+        if ($Body.Syncro.Enabled -eq $true) { $TicketingOn.Add('Syncro') }
+        if ($NinjaOneSettings.Enabled -eq $true -and $NinjaOneSettings.TicketingEnabled -eq $true) { $TicketingOn.Add('NinjaOne') }
+        if ($TicketingOn.Count -gt 1) {
+            $AddedText = "$AddedText Warning: $($TicketingOn -join ' and ') ticketing are all enabled, so every alert will raise a ticket in each. Keep one enabled."
         }
         $Result = "Successfully saved the extension configuration. $AddedText"
         Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result.Trim() -Sev 'Info'

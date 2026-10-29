@@ -144,6 +144,47 @@ function New-CippExtAlert {
                     }
                 }
             }
+            'NinjaOne' {
+                if ($Configuration.NinjaOne.Enabled -and $Configuration.NinjaOne.TicketingEnabled) {
+                    $TenantId = (Get-Tenants -TenantFilter $Alert.TenantId).customerId
+                    $Mapping = Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq 'NinjaOneMapping' and RowKey eq '$TenantId'"
+                    if ($Mapping.IntegrationId) {
+                        # PsaTicketId and Reference are HaloPSA ticket ids, so they are not passed on.
+                        $TicketParams = @{
+                            Title          = $Alert.AlertTitle
+                            Description    = $Alert.AlertText
+                            Client         = $Mapping.IntegrationId
+                            TicketPriority = $Alert.PsaTicketPriority
+                        }
+                        if ($Alert.PSAConsolidationKey) { $TicketParams.ConsolidationKey = $Alert.PSAConsolidationKey }
+                        if ($Alert.AffectedUser -and $Configuration.NinjaOne.LinkTicketsToUsers) {
+                            $UPN = $Alert.AffectedUser.UPN
+                            $Display = $Alert.AffectedUser.DisplayName
+                            # NinjaOne matches on email only, so an alert that carries just the object id
+                            # needs the UPN from Graph first. Best effort: a miss just skips the link.
+                            if (-not $UPN -and $Alert.AffectedUser.AzureOID) {
+                                try {
+                                    $GraphUser = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Alert.AffectedUser.AzureOID)?`$select=userPrincipalName,displayName" -tenantid $Alert.TenantId -AsApp $true
+                                    $UPN = $GraphUser.userPrincipalName
+                                    if (-not $Display) { $Display = $GraphUser.displayName }
+                                } catch {
+                                    Write-Information "Could not resolve Graph user $($Alert.AffectedUser.AzureOID) in tenant $($Alert.TenantId): $($_.Exception.Message)"
+                                }
+                            }
+                            if ($UPN) { $TicketParams.UserUPN = $UPN }
+                            if ($Display) { $TicketParams.DisplayName = $Display }
+                        }
+                        if ($Alert.AffectedDevice) {
+                            $TicketParams.AffectedDevice = $Alert.AffectedDevice
+                            $TicketParams.TenantCustomerId = $TenantId
+                        }
+                        New-NinjaOneTicket @TicketParams
+                    } else {
+                        Write-LogMessage -API 'NinjaOneTicket' -tenant $Alert.TenantId -message "No NinjaOne organisation mapping for tenant $($Alert.TenantId) - no NinjaOne ticket was raised. Map the tenant under Settings > Integrations > NinjaOne." -sev Warning
+                        "Skipped NinjaOne ticket: tenant $($Alert.TenantId) is not mapped to a NinjaOne organisation"
+                    }
+                }
+            }
             'Gradient' {
                 if ($Configuration.Gradient.enabled) {
                     New-GradientAlert -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $Alert.TenantId

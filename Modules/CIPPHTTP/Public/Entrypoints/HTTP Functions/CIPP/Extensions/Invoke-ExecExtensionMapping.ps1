@@ -54,6 +54,9 @@ Function Invoke-ExecExtensionMapping {
           'Priorities'  = $Priorities
         }
       }
+      'NinjaOneTicketFields' {
+        $Result = Get-NinjaOneTicketFields
+      }
       'HaloPSARequestSources' {
         # Request sources are instance-wide rather than scoped to a ticket type, so they get their
         # own List key instead of joining HaloPSAFields. That key is fetched once per dropdown and
