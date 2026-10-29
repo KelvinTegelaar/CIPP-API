@@ -4,7 +4,7 @@
   "cat": "Exchange Standards",
   "tag": [],
   "impact": "Low Impact",
-  "helpText": "Enables Microsoft Purview Message Encryption by turning on Azure RMS licensing for Exchange Online, and turns on simplified client access so the Encrypt button appears in Outlook on the web and the new Outlook. The optional settings default to \"Do not change\", which leaves the tenant's current value alone and out of the drift check. Branding is configured in the Set Encrypted Message Branding (OME) standard.",
+  "helpText": "Requires Azure Rights Management (Business Premium, E3/E5, A1-A5, G3/G5 or an Azure Information Protection P1 add-on); tenants without it are skipped as unlicensed. Enables Microsoft Purview Message Encryption by turning on Azure RMS licensing for Exchange Online, and turns on simplified client access so the Encrypt button appears in Outlook on the web and the new Outlook. The optional settings default to \"Do not change\", which leaves the tenant's current value alone and out of the drift check. Branding is configured in the Set Encrypted Message Branding (OME) standard.",
   "executiveText": "Turns on the built-in encryption that lets staff send protected email to anyone, including recipients outside the organization. Uses licensing the organization already owns, removing the need for a separate secure-email product.",
   "docsDescription": "Grades AzureRMSLicensingEnabled and SimplifiedClientAccessEnabled as true, plus EnablePdfEncryption, DecryptAttachmentForEncryptOnly, SimplifiedClientAccessDoNotForwardDisabled, SimplifiedClientAccessEncryptOnlyDisabled and TransportDecryptionSetting when the baseline picks a value. Remediation sends the graded values in one Set-IRMConfiguration call.",
   "impactColour": "info",
@@ -12,11 +12,17 @@
   "powershellEquivalent": "Set-IRMConfiguration -AzureRMSLicensingEnabled $true -SimplifiedClientAccessEnabled $true",
   "recommendedBy": [],
   "requiredCapabilities": [
-    "EXCHANGE_S_STANDARD",
-    "EXCHANGE_S_ENTERPRISE",
-    "EXCHANGE_S_STANDARD_GOV",
-    "EXCHANGE_S_ENTERPRISE_GOV",
-    "EXCHANGE_LITE"
+    [
+      "EXCHANGE_S_STANDARD",
+      "EXCHANGE_S_ENTERPRISE",
+      "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_ENTERPRISE_GOV",
+      "EXCHANGE_LITE"
+    ],
+    [
+      "RMS_S_ENTERPRISE",
+      "RMS_S_ENTERPRISE_GOV"
+    ]
   ],
   "disabledFeatures": {
     "report": false,

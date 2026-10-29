@@ -38,10 +38,10 @@ function New-BreachTenantSearch {
     if ($usersResults) {
         try {
             $null = Add-CIPPAzDataTableEntity @Table -Entity $usersResults -Force
-            return $LatestBreach.Group
         } catch {
             Write-Error "Failed to add breaches to table: $($_.Exception.Message)"
-            return $null
         }
     }
+    # Always the full current list: the breach alert resolves anything it is not handed
+    return $LatestBreach.Group
 }

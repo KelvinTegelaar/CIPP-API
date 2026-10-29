@@ -47,6 +47,10 @@ function Invoke-CIPPStandardMessageEncryption {
         return $true
     }
 
+    # Set-IRMConfiguration fails without Azure Rights Management (Business Premium, E3/E5, AIP P1); Business Standard's RMS_S_BASIC is not enough.
+    $RmsTestResult = Test-CIPPStandardLicense -StandardName 'MessageEncryption' -TenantFilter $Tenant -RequiredCapabilities @('RMS_S_ENTERPRISE', 'RMS_S_ENTERPRISE_GOV')
+    if ($RmsTestResult -eq $false) { return $true }
+
     try {
         $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-IRMConfiguration' | Select-Object -First 1
     } catch {
