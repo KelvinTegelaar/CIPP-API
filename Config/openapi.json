@@ -22982,7 +22982,8 @@
                 "HuduFields",
                 "NinjaOne",
                 "NinjaOneFields",
-                "Sherweb"
+                "Sherweb",
+                "Syncro"
               ]
             }
           },
@@ -22996,7 +22997,8 @@
               "enum": [
                 "HaloPSA",
                 "Hudu",
-                "NinjaOne"
+                "NinjaOne",
+                "Syncro"
               ]
             }
           },
@@ -23014,8 +23016,10 @@
                 "HuduFields",
                 "NinjaOne",
                 "NinjaOneFields",
+                "NinjaOneTicketFields",
                 "PWPushFields",
-                "Sherweb"
+                "Sherweb",
+                "Syncro"
               ]
             }
           },
@@ -23111,6 +23115,93 @@
           }
         ],
         "x-cipp-role": "CIPP.Extension.ReadWrite"
+      }
+    },
+    "/api/ExecExtensionOAuth": {
+      "post": {
+        "summary": "ExecExtensionOAuth",
+        "operationId": "ExecExtensionOAuth",
+        "tags": [
+          "CIPP > Extensions"
+        ],
+        "description": "Authorization-code sign-in for an extension that needs a user-context token. Action is one of\nstart (returns the vendor authorize URL), exchange (code + state to a stored refresh token),\nstatus (who is connected) or disconnect. The browser side is the /authredirect popup relay.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "enum": [
+                      "disconnect",
+                      "exchange",
+                      "start",
+                      "status"
+                    ]
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "Extension": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Extension",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Extension.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecExtensionsConfig": {
@@ -23252,7 +23343,7 @@
         "tags": [
           "CIPP > Extensions"
         ],
-        "description": "Tests the stored credentials for a configured third-party integration and reports whether CIPP can connect. extensionName selects which one: HaloPSA, Gradient, NinjaOne, PWPush, Hudu, Sherweb, HIBP or GitHub.",
+        "description": "Tests the stored credentials for a configured third-party integration and reports whether CIPP can connect. extensionName selects which one: HaloPSA, Syncro, Gradient, NinjaOne, PWPush, Hudu, Sherweb, HIBP or GitHub.",
         "parameters": [
           {
             "name": "extensionName",
@@ -23269,7 +23360,8 @@
                 "Hudu",
                 "NinjaOne",
                 "PWPush",
-                "Sherweb"
+                "Sherweb",
+                "Syncro"
               ]
             }
           }
@@ -40576,6 +40668,63 @@
           }
         ],
         "x-cipp-role": "Endpoint.MEM.ReadWrite"
+      }
+    },
+    "/api/ExecSyncroTestTicket": {
+      "post": {
+        "summary": "Create a Syncro test ticket so admins can check the integration works without waiting\nfor a real alert to fire. Covers auth, tenant mapping, problem type and default priority.\n\nCalls New-SyncroPSATicket directly rather than going through Send-CIPPAlert, so the\n[CIPP] title prefix the alert pipeline adds is not exercised here.",
+        "operationId": "ExecSyncroTestTicket",
+        "tags": [
+          "CIPP > Extensions"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "Results": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Extension.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecSyncVPP": {
@@ -59041,6 +59190,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "AffectedDevice": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "AffectedUser": {
                         "x-cipp-field-source": "storage"
                       },
@@ -70395,6 +70547,9 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "AffectedDevice": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "AffectedUser": {
                         "x-cipp-field-source": "storage"
                       },
@@ -74722,6 +74877,9 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "AffectedDevice": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "AffectedUser": {
                       "x-cipp-field-source": "storage"
                     },
