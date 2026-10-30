@@ -188,8 +188,9 @@ function New-CIPPBaseline {
     $SourceStages = @($Baseline.stages | ForEach-Object { $_.sourceStage })
     if ($ExistingRollout -and @($SourceStages.Where({ $_ })).Count -gt 0) {
         $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
+        $States = @(Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeGuid'")
         $StateTable.Force = $true
-        foreach ($State in @(Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeGuid'")) {
+        foreach ($State in $States) {
             $OldStage = [int]($State.currentStage ?? 1)
             $NewStage = 0
             foreach ($Source in $SourceStages) {

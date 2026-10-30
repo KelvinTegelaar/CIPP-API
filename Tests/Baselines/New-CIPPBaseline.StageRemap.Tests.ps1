@@ -3,7 +3,8 @@ BeforeAll {
 
     function Get-CippTable { param($tablename) @{ Context = "stub-$tablename" } }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }
-    function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
+    # Advanced, so a stray -Force splatted from the table hashtable throws as it does on the real helper.
+    function Get-CIPPAzDataTableEntity { [CmdletBinding()] param($Context, $Filter) }
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Remove-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Add-CIPPBaselineHistoryEvent { param($TenantFilter, $Standard, $Mode, $TriggeredBy, $Outcome, $Detail) }
