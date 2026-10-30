@@ -40,6 +40,10 @@ function Invoke-ExecBaselineStage {
         if (-not $MovingBack -and $CurrentStage -ge $TotalStages) {
             throw [System.ArgumentException]::new("$TenantFilter is already in the final stage of $($Baseline.templateName).")
         }
+        $TenantState = @($Baseline.tenantStates).Where({ $_.tenantFilter -eq $Tenant.defaultDomainName }, 'First')[0]
+        if (-not $MovingBack -and $TenantState -and -not $TenantState.nextStage) {
+            throw [System.ArgumentException]::new("Stage $($CurrentStage + 1) of $($Baseline.templateName) requires a tenant group $TenantFilter is not a member of.")
+        }
 
         $User = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
 

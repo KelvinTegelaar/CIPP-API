@@ -267,7 +267,17 @@ function Get-CIPPBaseline {
                 } elseif ("$EnteredStageAt") {
                     [int64]$EnteredStageAt
                 } else { $null }
-                $NextStageDef = if ($CurrentStage -lt $Stages.Count) { $Stages[$CurrentStage] } else { $null }
+                # A tenant outside the group an AND stage requires never reaches that stage or any after it.
+                $TotalStages = $Stages.Count
+                for ($i = 1; $i -lt $Stages.Count -and $TotalStages -eq $Stages.Count; $i++) {
+                    if ($Stages[$i].logic -eq 'or') { continue }
+                    foreach ($Condition in @($Stages[$i].conditions).Where({ $_.type -eq 'group' })) {
+                        $GroupKey = "$($Condition.group.value ?? $Condition.group)"
+                        $Group = $Groups.Where({ $_.Id -eq $GroupKey -or $_.Name -eq $GroupKey }, 'First')[0]
+                        if (@($Group.Members.defaultDomainName) -notcontains $TenantDomain) { $TotalStages = [Math]::Max($i, $CurrentStage) }
+                    }
+                }
+                $NextStageDef = if ($CurrentStage -lt $TotalStages) { $Stages[$CurrentStage] } else { $null }
                 $TimeCondition = $NextStageDef.conditions | Where-Object { $_.type -eq 'time' } | Select-Object -First 1
                 $EstimatedAdvanceAt = if ($TimeCondition -and $EnteredStageAt) {
                     $Multiplier = if ($TimeCondition.unit -eq 'weeks') { 7 } else { 1 }
@@ -278,7 +288,7 @@ function Get-CIPPBaseline {
                     customerId         = $TenantLookup[$TenantDomain].customerId
                     tenantName         = $TenantNames[$TenantDomain] ?? $TenantDomain
                     currentStage       = $CurrentStage
-                    totalStages        = $Stages.Count
+                    totalStages        = $TotalStages
                     stageName          = $Stages[$CurrentStage - 1].name
                     enteredStageAt     = $EnteredStageAt
                     nextStage          = $NextStageDef

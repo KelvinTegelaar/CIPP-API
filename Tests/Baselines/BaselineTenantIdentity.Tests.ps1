@@ -128,6 +128,20 @@ Describe 'Baseline tenant identity (#941)' {
         $States[0].customerId | Should -Be $script:CustomerId
     }
 
+    It 'counts a stage gated on group <Group> only for its members (member: <Member>)' -ForEach @(
+        @{ Group = 'g1'; Member = $true }
+        @{ Group = 'other'; Member = $false }
+    ) {
+        $Stages = '[{"name":"One"},{"name":"Two","conditions":[{"type":"manual"},{"type":"group","group":{"value":"' + $Group + '"}}]}]'
+        $script:Rollouts = @((New-Rollout 'b-gated' -Stages $Stages))
+        $script:Deltas = @((New-Delta 'b-gated' 'group' 'g1' $false))
+
+        $State = @((Get-CIPPBaseline -ID 'b-gated').tenantStates)[0]
+
+        $State.totalStages | Should -Be $(if ($Member) { 2 } else { 1 })
+        [bool]$State.nextStage | Should -Be $Member
+    }
+
     It 'stores tenant assignments and exclusions by customerId' {
         $script:Rollouts = @()
         $Baseline = [pscustomobject]@{
