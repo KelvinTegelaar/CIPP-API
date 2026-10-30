@@ -7,6 +7,7 @@ BeforeAll {
 
     function Get-ExtensionAPIKey { param([string]$Extension, [switch]$Force) }
     function Get-CippUserAgent { 'CIPP/test' }
+    function Invoke-CIPPRestMethod { param($Uri, $Method, $Body, $Headers, $ContentType) }
 
     . (Join-Path $BackendRoot 'Modules/CippExtensions/Public/Syncro/Get-SyncroSubdomain.ps1')
     . (Join-Path $BackendRoot 'Modules/CippExtensions/Public/Syncro/Invoke-SyncroRequest.ps1')
@@ -19,7 +20,7 @@ Describe 'Get-SyncroCustomer' {
     BeforeEach {
         $script:Requested = [System.Collections.Generic.List[string]]::new()
         Mock Get-ExtensionAPIKey { 'secret-key' }
-        Mock Invoke-RestMethod {
+        Mock Invoke-CIPPRestMethod {
             $script:Requested.Add($Uri)
             $Page = [int]([regex]::Match($Uri, 'page=(\d+)').Groups[1].Value)
             [pscustomobject]@{
@@ -41,13 +42,13 @@ Describe 'Get-SyncroCustomer' {
         $null = Get-SyncroCustomer -Configuration $script:Config
 
         $script:Requested[0] | Should -Be 'https://contoso.syncromsp.com/api/v1/customers?page=1'
-        Should -Invoke Invoke-RestMethod -ParameterFilter {
-            $Headers.Authorization -eq 'Bearer secret-key' -and $Method -eq 'GET' -and $UserAgent -eq 'CIPP/test'
+        Should -Invoke Invoke-CIPPRestMethod -ParameterFilter {
+            $Headers.Authorization -eq 'Bearer secret-key' -and $Method -eq 'GET' -and $Headers.'User-Agent' -eq 'CIPP/test'
         }
     }
 
     It 'stops after one page when meta carries no page count' {
-        Mock Invoke-RestMethod { [pscustomobject]@{ customers = @([pscustomobject]@{ id = 9 }) } }
+        Mock Invoke-CIPPRestMethod { [pscustomobject]@{ customers = @([pscustomobject]@{ id = 9 }) } }
 
         @(Get-SyncroCustomer -Configuration $script:Config).Count | Should -Be 1
     }
@@ -67,7 +68,7 @@ Describe 'Invoke-SyncroRequest' {
     It 'serialises an object body as JSON and leaves a string body alone' {
         Mock Get-ExtensionAPIKey { 'secret-key' }
         $script:Bodies = [System.Collections.Generic.List[string]]::new()
-        Mock Invoke-RestMethod { $script:Bodies.Add($Body); @{} }
+        Mock Invoke-CIPPRestMethod { $script:Bodies.Add($Body); @{} }
 
         $null = Invoke-SyncroRequest -Configuration $script:Config -Endpoint '/tickets' -Method POST -Body @{ subject = 'x' }
         $null = Invoke-SyncroRequest -Configuration $script:Config -Endpoint '/tickets' -Method POST -Body '{"subject":"y"}'

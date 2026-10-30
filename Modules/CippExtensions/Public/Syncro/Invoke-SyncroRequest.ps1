@@ -58,13 +58,13 @@ function Invoke-SyncroRequest {
         Headers     = @{
             Authorization = "Bearer $APIKey"
             Accept        = 'application/json'
+            'User-Agent'  = Get-CippUserAgent
         }
         ContentType = 'application/json; charset=utf-8'
-        UserAgent   = Get-CippUserAgent
     }
     if ($null -ne $Body) {
         $RequestParams.Body = if ($Body -is [string]) { $Body } else { ConvertTo-Json -InputObject $Body -Depth 10 -Compress }
     }
 
-    return Invoke-RestMethod @RequestParams
+    return Invoke-CIPPRestMethod @RequestParams
 }
