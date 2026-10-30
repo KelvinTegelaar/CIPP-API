@@ -114,6 +114,14 @@ function Invoke-ExecCippReplacemap {
             })
     }
 
+    $AllowedPermissions = Get-CippRequestAllowedPermissions
+    if ($customerId -eq 'AllTenants' -and $Action -in @('AddEdit', 'Delete') -and $AllowedPermissions -notcontains 'Tenant.GlobalVariables.ReadWrite') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = 'Changing global variables requires the Tenant.GlobalVariables.ReadWrite permission.' }
+            })
+    }
+
     $StatusCode = [HttpStatusCode]::OK
     switch ($Action) {
         'List' {

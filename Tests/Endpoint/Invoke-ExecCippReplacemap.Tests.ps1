@@ -36,8 +36,11 @@ BeforeAll {
     function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) $script:RemovedEntity = $Entity }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
+    $script:CallerPermissions = @('Tenant.Config.ReadWrite', 'Tenant.GlobalVariables.ReadWrite')
+    function Get-CippRequestAllowedPermissions { , @($script:CallerPermissions) }
 
     . $FunctionPath
+    . (Join-Path (Split-Path -Parent $FunctionPath) 'Invoke-ExecCippGlobalReplacemap.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Select-CippAllowedTenantData.ps1')
 
     function New-SaveRequest {
@@ -298,6 +301,59 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
             $Response.StatusCode | Should -Be 200
             $script:RemovedEntity.RowKey | Should -Be 'wallpaperpath'
         }
+    }
+}
+
+Describe 'Global variables need Tenant.GlobalVariables.ReadWrite' {
+    BeforeEach {
+        $script:SavedEntity = $null
+        $script:RemovedEntity = $null
+        $script:ExistingEntity = [pscustomobject]@{ PartitionKey = 'AllTenants'; RowKey = 'wallpaperpath' }
+        $script:CallerPermissions = @('Tenant.Config.ReadWrite')
+        Mock -CommandName Get-Tenants -MockWith { [pscustomobject]@{ customerId = '11111111-1111-1111-1111-111111111111' } }
+    }
+    AfterEach { $script:CallerPermissions = @('Tenant.Config.ReadWrite', 'Tenant.GlobalVariables.ReadWrite') }
+
+    It 'refuses a global <Action> without it' -ForEach @(@{ Action = 'AddEdit' }, @{ Action = 'Delete' }) {
+        $Request = New-SaveRequest
+        $Request.Body.Action = $Action
+
+        $Response = Invoke-ExecCippReplacemap -Request $Request
+
+        $Response.StatusCode | Should -Be 403
+        $script:SavedEntity | Should -BeNullOrEmpty
+        $script:RemovedEntity | Should -BeNullOrEmpty
+    }
+
+    It 'still saves a tenant variable without it' {
+        $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -TenantId 'contoso.onmicrosoft.com')
+
+        $Response.StatusCode | Should -Be 200
+        $script:SavedEntity.PartitionKey | Should -Be '11111111-1111-1111-1111-111111111111'
+    }
+
+    It 'still lists global variables without it' {
+        $Request = [pscustomobject]@{ Params = @{ CIPPEndpoint = 'ExecCippReplacemap' }; Headers = @{}; Query = @{ Action = 'List'; tenantId = 'AllTenants' }; Body = $null }
+
+        (Invoke-ExecCippReplacemap -Request $Request).StatusCode | Should -Be 200
+    }
+
+    It 'saves through ExecCippGlobalReplacemap with it' {
+        $script:CallerPermissions = @('Tenant.GlobalVariables.ReadWrite')
+
+        $Response = Invoke-ExecCippGlobalReplacemap -Request (New-SaveRequest)
+
+        $Response.StatusCode | Should -Be 200
+        $script:SavedEntity.PartitionKey | Should -Be 'AllTenants'
+    }
+
+    It 'keeps ExecCippGlobalReplacemap to global writes' {
+        $script:CallerPermissions = @('Tenant.GlobalVariables.ReadWrite')
+
+        $Response = Invoke-ExecCippGlobalReplacemap -Request (New-SaveRequest -TenantId 'contoso.onmicrosoft.com')
+
+        $Response.StatusCode | Should -Be 400
+        $script:SavedEntity | Should -BeNullOrEmpty
     }
 }
 

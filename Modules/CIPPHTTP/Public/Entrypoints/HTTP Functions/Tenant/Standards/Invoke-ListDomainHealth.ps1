@@ -109,7 +109,8 @@ function Invoke-ListDomainHealth {
                             # Analyser write endpoints already require, not on role names: a role-name check
                             # skipped superadmin and custom roles that grant the permission (issue #898).
                             # Restricted callers may only persist selectors onto an in-scope row.
-                            $CanWriteSelectors = @(Get-CippRequestAllowedPermissions) -contains 'Tenant.DomainAnalyser.ReadWrite'
+                            $AllowedPermissions = Get-CippRequestAllowedPermissions
+                            $CanWriteSelectors = $AllowedPermissions -contains 'Tenant.DomainAnalyser.ReadWrite'
                             if ($CanWriteSelectors -and (-not $Restricted -or $DomainInfo)) {
                                 $DkimSelectors = [string]($DkimQuery.Selectors | ConvertTo-Json -Compress)
                                 if ($DomainInfo) {

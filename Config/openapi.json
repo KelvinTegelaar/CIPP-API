@@ -17824,6 +17824,84 @@
         "x-cipp-role": "CIPP.SuperAdmin.ReadWrite"
       }
     },
+    "/api/ExecCippGlobalReplacemap": {
+      "post": {
+        "summary": "Adds, edits or deletes global custom variables.",
+        "operationId": "ExecCippGlobalReplacemap",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Global variables apply to every tenant, so they are changed through this endpoint and its own\npermission, separate from the per-tenant custom variables managed through ExecCippReplacemap.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "AddEdit or Delete."
+                  },
+                  "tenantId": {
+                    "type": "string",
+                    "description": "Must be AllTenants: this endpoint only changes global variables."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "description": "AddEdit or Delete.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "Must be AllTenants: this endpoint only changes global variables.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalVariables.ReadWrite"
+      }
+    },
     "/api/ExecCippLogsSas": {
       "post": {
         "summary": "Generate a read-only SAS token for the CippLogs table",
