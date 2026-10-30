@@ -8,7 +8,7 @@ function Get-CIPPBaselineCATemplateState {
         engine's verdict is the only verdict. Both sides normalize to one canonical
         vocabulary; every rule below closes a documented false-drift source from the old
         standards engine:
-        - id/GUID/*time*/templateId/@odata/LocationInfo/AuthContextInfo stripped everywhere
+        - id/GUID/*time*/templateId/tenantFilter/@odata/LocationInfo/AuthContextInfo stripped everywhere
           (GUID and AuthContextInfo were NOT excluded by the shared compare and drifted
           forever; AuthContextInfo carries source-tenant descriptions)
         - null-valued properties stripped on BOTH sides, sessionControls scrubbed on BOTH
@@ -99,7 +99,7 @@ function Get-CIPPBaselineCATemplateState {
         param($Node)
         if ($Node -isnot [System.Management.Automation.PSCustomObject]) { return }
         foreach ($Property in @($Node.PSObject.Properties)) {
-            if ($Property.Name -in @('id', 'GUID', 'templateId', 'LocationInfo', 'AuthContextInfo') -or
+            if ($Property.Name -in @('id', 'GUID', 'templateId', 'tenantFilter', 'LocationInfo', 'AuthContextInfo') -or
                 $Property.Name -like '*time*' -or $Property.Name -like '*@odata*' -or $null -eq $Property.Value) {
                 $Node.PSObject.Properties.Remove($Property.Name)
                 continue

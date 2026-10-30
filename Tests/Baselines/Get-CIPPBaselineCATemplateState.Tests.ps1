@@ -80,6 +80,12 @@ Describe 'Get-CIPPBaselineCATemplateState' {
         @($State.Expected.conditions.locations.excludeLocations) | Should -Be @('Site A')
     }
 
+    It 'drops the tenantFilter a template imported from a tenant carries' {
+        $script:TemplateJSON = '{"displayName":"Variable test policy","state":"disabled","tenantFilter":"source.example.com","conditions":{"users":{"includeUsers":["All"]}}}'
+        $State = Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
+        $State.Expected.PSObject.Properties.Name | Should -Not -Contain 'tenantFilter'
+    }
+
     It 'resolves custom variables on the expected side' {
         $State = Get-State '"%breakglass%"' '"%sites%"'
         @($State.Expected.conditions.users.excludeUsers) | Should -Be @('Break Glass')
