@@ -10,7 +10,9 @@ function Set-CIPPDBCacheRoleAssignments {
         in the Roles cache only cover built-in roles at directory scope).
 
         Principals are resolved in bulk through directoryObjects/getByIds and stored on each record
-        as 'principal', the same shape the PIM schedule caches get from $expand=principal.
+        as 'principal', the same shape the PIM schedule caches get from $expand=principal. When the
+        principal is a (role-assignable) group, its service principal members are stored as
+        'servicePrincipalMembers': they hold the role through the group.
 
     .PARAMETER TenantFilter
         The tenant to cache role assignments for
@@ -38,13 +40,27 @@ function Set-CIPPDBCacheRoleAssignments {
             foreach ($Principal in @($Resolved.value)) { $Principals[$Principal.id] = $Principal }
         }
 
+        $AppMembers = @{}
+        $GroupRequests = [System.Collections.Generic.List[object]]::new()
+        foreach ($PrincipalId in $PrincipalIds) {
+            if ($Principals[$PrincipalId].'@odata.type' -eq '#microsoft.graph.group') {
+                $GroupRequests.Add(@{ id = $PrincipalId; method = 'GET'; url = "groups/$PrincipalId/members/microsoft.graph.servicePrincipal?`$select=id,displayName,appId&`$top=999" })
+            }
+        }
+        if ($GroupRequests.Count -gt 0) {
+            foreach ($Response in @(New-GraphBulkRequest -tenantid $TenantFilter -Requests $GroupRequests.ToArray())) {
+                if ([int]$Response.status -eq 200) { $AppMembers[[string]$Response.id] = @($Response.body.value) }
+            }
+        }
+
         $Records = foreach ($Assignment in $Assignments) {
             [PSCustomObject]@{
-                id               = $Assignment.id
-                principalId      = $Assignment.principalId
-                roleDefinitionId = $Assignment.roleDefinitionId
-                directoryScopeId = $Assignment.directoryScopeId
-                principal        = $Principals[$Assignment.principalId]
+                id                      = $Assignment.id
+                principalId             = $Assignment.principalId
+                roleDefinitionId        = $Assignment.roleDefinitionId
+                directoryScopeId        = $Assignment.directoryScopeId
+                principal               = $Principals[$Assignment.principalId]
+                servicePrincipalMembers = $AppMembers[[string]$Assignment.principalId]
             }
         }
 

@@ -12,7 +12,7 @@ function Invoke-CIPPDBCacheCollection {
         - Graph:                Core tenant data (no special license needed)
         - ExchangeConfig:       Exchange Online policy/config data
         - ExchangeData:         Mailboxes, CAS mailboxes, usage reports
-        - ConditionalAccess:    CA policies and registration details
+        - ConditionalAccess:    CA policies, registration details and app credential, role and grant changes (Entra ID P1)
         - IdentityProtection:   Risky users/SPs, risk detections (Entra ID P2)
         - PIM:                  Role eligibility, assignment schedules, role policies (P2 or ID Governance)
         - Intune:               Managed devices, policies, app protection
@@ -142,6 +142,9 @@ function Invoke-CIPPDBCacheCollection {
         ConditionalAccess  = @(
             'ConditionalAccessPolicies'
             'UserRegistrationDetails'
+            'AppCredentialChanges'
+            'ServicePrincipalRoleChanges'
+            'DelegatedGrantChanges'
         )
         IdentityProtection = @(
             'RiskyUsers'
