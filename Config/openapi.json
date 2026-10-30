@@ -17798,36 +17798,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
-                  "properties": {
-                    "Command": {
-                      "x-cipp-field-source": "frontend"
-                    },
-                    "Cron": {
-                      "x-cipp-field-source": "frontend"
-                    },
-                    "ErrorMsg": {
-                      "x-cipp-field-source": "frontend"
-                    },
-                    "LastOccurrence": {
-                      "x-cipp-field-source": "frontend"
-                    },
-                    "NextOccurrence": {
-                      "x-cipp-field-source": "frontend"
-                    },
-                    "Parameters": {
-                      "x-cipp-field-source": "frontend"
-                    },
-                    "PreferredProcessor": {
-                      "x-cipp-field-source": "frontend"
-                    },
-                    "Priority": {
-                      "x-cipp-field-source": "frontend"
-                    },
-                    "Status": {
-                      "x-cipp-field-source": "frontend"
-                    }
-                  }
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -22528,6 +22499,146 @@
           }
         ],
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
+      }
+    },
+    "/api/ExecEnterpriseAppPermission": {
+      "post": {
+        "summary": "ExecEnterpriseAppPermission",
+        "operationId": "ExecEnterpriseAppPermission",
+        "tags": [
+          "Tenant > Administration > Application Approval"
+        ],
+        "description": "Adds or removes API permissions on an enterprise application (service principal). Application permissions are\napp role assignments. Delegated permissions are added to the tenant-wide (AllPrincipals) consent grant; removing\na delegated scope strips it from every grant the app holds for that API, per-user grants included, and deletes\ngrants left without scopes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "ResourceId": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "ServicePrincipalId": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Type": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.ReadWrite"
+      }
+    },
+    "/api/ExecEnterpriseAppRole": {
+      "post": {
+        "summary": "ExecEnterpriseAppRole",
+        "operationId": "ExecEnterpriseAppRole",
+        "tags": [
+          "Tenant > Administration > Application Approval"
+        ],
+        "description": "Adds or removes Entra directory role assignments held by an enterprise application (service principal).\nRoles are assigned tenant-wide; removal takes the role assignment ids, so assignments scoped to an\nadministrative unit can be removed too. The CIPP-SAM application's own roles are refused.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "ServicePrincipalId": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
       }
     },
     "/api/ExecExchangeRoleRepair": {
@@ -44130,6 +44241,9 @@
                         "x-cipp-field-source": "frontend"
                       },
                       "Categories": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "DirectoryRoleCount": {
                         "x-cipp-field-source": "frontend"
                       },
                       "HasAllPrincipalsGrant": {
