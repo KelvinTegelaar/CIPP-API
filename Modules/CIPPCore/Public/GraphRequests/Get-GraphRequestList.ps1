@@ -430,7 +430,17 @@ function Get-GraphRequestList {
                         }
 
                         $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller $Caller -ErrorAction Stop
-                        $GraphRequestResults = $GraphRequestResults | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
+                        # Graph records are parsed fresh, so tag them in place instead of copying every record
+                        $GraphRequestResults = foreach ($Result in $GraphRequestResults) {
+                            if ($Result.PSObject.BaseObject -is [System.Management.Automation.PSCustomObject]) {
+                                $ResultProperties = $Result.PSObject.Properties
+                                if ($null -eq $ResultProperties['Tenant']) { $ResultProperties.Add([psnoteproperty]::new('Tenant', $TenantFilter)) }
+                                if ($null -eq $ResultProperties['CippStatus']) { $ResultProperties.Add([psnoteproperty]::new('CippStatus', 'Good')) }
+                                $Result
+                            } else {
+                                $Result | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
+                            }
+                        }
 
                         if ($UseBatchExpand.IsPresent -and ![string]::IsNullOrEmpty($BatchExpandQuery)) {
                             if ($BatchExpandQuery -match '' -and ![string]::IsNullOrEmpty($GraphRequestResults.id)) {
@@ -589,7 +599,7 @@ function Get-GraphRequestList {
         foreach ($Row in $Rows) {
             if ($Row.Data) {
                 try {
-                    $Row.Data | ConvertFrom-Json -ErrorAction Stop
+                    [CIPP.CippJson]::ConvertFromJson($Row.Data)
                 } catch {
                     Write-Warning "Could not convert data to JSON: $($_.Exception.Message)"
                     #Write-Information ($Row | ConvertTo-Json)

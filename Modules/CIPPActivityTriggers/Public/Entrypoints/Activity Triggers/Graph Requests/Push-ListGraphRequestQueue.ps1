@@ -64,7 +64,10 @@ function Push-ListGraphRequestQueue {
                 CippException = [string]($CippException | ConvertTo-Json -Depth 10 -Compress)
             }
         }
-        $Json = ConvertTo-Json -Depth 10 -Compress -InputObject $RawGraphRequest
+        $Json = [CIPP.CippJson]::ToJson($RawGraphRequest)
+        # Release the records so only the JSON is held during the table write
+        $Results = $null
+        $RawGraphRequest = $null
         $GraphResults = [PSCustomObject]@{
             PartitionKey = [string]$PartitionKey
             RowKey       = [string]$Item.TenantFilter

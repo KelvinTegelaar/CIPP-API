@@ -10,6 +10,7 @@ BeforeAll {
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Push-ListGraphRequestQueue.ps1' -File -ErrorAction SilentlyContinue |
         Select-Object -First 1 -ExpandProperty FullName
     if (-not $FunctionPath) { throw 'Could not locate Push-ListGraphRequestQueue.ps1 under Modules/' }
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
 
     # Stubs so Mock has commands to replace.
     function Get-CIPPTable { param($TableName) }
