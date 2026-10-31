@@ -21,7 +21,8 @@ function Push-ListGraphRequestQueue {
         Write-Information "Queue Table: $TableName"
         $Table = Get-CIPPTable -TableName $TableName
 
-        $Filter = "PartitionKey eq '{0}' and (RowKey eq '{1}' or OriginalEntityId eq '{1}')" -f $PartitionKey, $Item.TenantFilter
+        # The tenant's head row plus its page rows ('<tenant>|00001'...)
+        $Filter = "PartitionKey eq '{0}' and (RowKey eq '{1}' or OriginalEntityId eq '{1}' or (RowKey ge '{1}|' and RowKey lt '{1}}}'))" -f $PartitionKey, $Item.TenantFilter
         Write-Information "Filter: $Filter"
         # Project NONE of the split-entity markers (OriginalEntityId, PartIndex, PartCount,
         # SplitOverProps, chunk properties): excluding them all makes Get-AzDataTableLargeEntity
@@ -47,33 +48,38 @@ function Push-ListGraphRequestQueue {
             SkipCache                   = $true
         }
 
-        $RawGraphRequest = try {
-            $Results = Get-GraphRequestList @GraphRequestParams
-            if ($null -eq $Results) {
-                , @()
-            } elseif ($Results[-1].PSObject.Properties.Name -contains 'nextLink') {
-                $Results | Select-Object -First ($Results.Count - 1)
-            } else {
-                $Results
+        # Each Graph page is stored as it arrives, so a task holds one page however large the tenant is
+        $Pages = 0
+        $HeadData = '[]'
+        try {
+            Get-GraphRequestList @GraphRequestParams -JsonPages | ForEach-Object {
+                $Pages++
+                $PageRow = [PSCustomObject]@{
+                    PartitionKey = [string]$PartitionKey
+                    RowKey       = '{0}|{1:D5}' -f $Item.TenantFilter, $Pages
+                    QueueId      = [string]$Item.QueueId
+                    QueueType    = [string]$Item.QueueType
+                    Data         = [string]$_
+                }
+                Add-CIPPAzDataTableEntity @Table -Entity $PageRow -Force | Out-Null
             }
         } catch {
             $CippException = Get-CippException -Exception $_
-            [PSCustomObject]@{
-                Tenant        = $Item.TenantFilter
-                CippStatus    = "Could not connect to tenant. $($CippException.NormalizedError)"
-                CippException = [string]($CippException | ConvertTo-Json -Depth 10 -Compress)
-            }
+            $Pages = 0
+            $HeadData = [CIPP.CippJson]::ToJson([PSCustomObject]@{
+                    Tenant        = $Item.TenantFilter
+                    CippStatus    = "Could not connect to tenant. $($CippException.NormalizedError)"
+                    CippException = [string]($CippException | ConvertTo-Json -Depth 10 -Compress)
+                })
         }
-        $Json = [CIPP.CippJson]::ToJson($RawGraphRequest)
-        # Release the records so only the JSON is held during the table write
-        $Results = $null
-        $RawGraphRequest = $null
+        # Written last: until the head row exists the tenant reads as still loading, and only its first Pages page rows count
         $GraphResults = [PSCustomObject]@{
             PartitionKey = [string]$PartitionKey
             RowKey       = [string]$Item.TenantFilter
             QueueId      = [string]$Item.QueueId
             QueueType    = [string]$Item.QueueType
-            Data         = [string]$Json
+            Pages        = [int]$Pages
+            Data         = [string]$HeadData
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
 

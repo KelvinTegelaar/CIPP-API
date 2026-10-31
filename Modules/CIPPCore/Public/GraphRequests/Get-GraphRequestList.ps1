@@ -66,6 +66,9 @@ function Get-GraphRequestList {
     .PARAMETER CacheStatus
     AllTenants: filled with CachedTenants, ExpectedTenants and the QueueId of the run filling the cache, if any
 
+    .PARAMETER JsonPages
+    Single tenant: emit one JSON array string per Graph page as it is fetched and processed, so no more than a page is held
+
     #>
     [CmdletBinding()]
     param(
@@ -94,7 +97,8 @@ function Get-GraphRequestList {
         [int]$MaxPageBytes,
         [switch]$FillMissing,
         [switch]$RefreshCache,
-        [hashtable]$CacheStatus
+        [hashtable]$CacheStatus,
+        [switch]$JsonPages
     )
 
     $SingleTenantThreshold = 8000
@@ -219,6 +223,7 @@ function Get-GraphRequestList {
 
     # Unset on the SkipCache path; without this a caller's $Rows is read through dynamic scope
     $Rows = $null
+    $AllowedTenantNames = $null
     try {
         if ($QueueId) {
             $Table = Get-CIPPTable -TableName $TableName
@@ -235,35 +240,63 @@ function Get-GraphRequestList {
                 if ($TenantFilter -eq 'AllTenants') {
                     $Filter = "PartitionKey eq '{0}' and Timestamp ge datetime'{1}'" -f $PartitionKey, $Timestamp
                 } else {
-                    $Filter = "PartitionKey eq '{0}' and (RowKey eq '{1}' or OriginalEntityId eq '{1}') and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
+                    $Filter = "PartitionKey eq '{0}' and (RowKey eq '{1}' or OriginalEntityId eq '{1}' or (RowKey ge '{1}|' and RowKey lt '{1}}}')) and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
                 }
                 $Tenants = Get-Tenants -IncludeErrors
+                $AllowedTenantNames = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Tenants.defaultDomainName), [StringComparer]::OrdinalIgnoreCase)
+                $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
+                $RunningQueue = Get-CIPPQueueData -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' -and $_.Reference -eq $QueueReference }
                 # Paged AllTenants serve: key scan here, bounded blob fetches in the serve branch.
                 $PagedAllTenants = $TenantFilter -eq 'AllTenants' -and $ManualPagination.IsPresent -and $RawJsonArray.IsPresent
                 if ($PagedAllTenants) {
-                    # Keys only, and none of the split-entity markers: projecting a subset of them
-                    # (e.g. OriginalEntityId alone) makes reassembly fail and drops split tenants.
-                    $KeyRows = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-                    # Physical rows per tenant ('-part<n>' rows fold into their head); sizes the spans below.
+                    # Keys (and a head's page count) only, none of the split-entity markers: projecting a subset of
+                    # them (e.g. OriginalEntityId alone) makes reassembly fail and drops split rows.
+                    $KeyRows = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, Pages
+                    # Physical rows per logical row ('-part<n>' rows fold into their row); sizes the spans below.
                     $PagedTenantRowCounts = [System.Collections.Generic.Dictionary[string, int]]::new([StringComparer]::Ordinal)
+                    $HeadPageCounts = [System.Collections.Generic.Dictionary[string, int]]::new([StringComparer]::OrdinalIgnoreCase)
+                    $FoundPageCounts = [System.Collections.Generic.Dictionary[string, int]]::new([StringComparer]::OrdinalIgnoreCase)
                     foreach ($KeyRow in @($KeyRows)) {
-                        $TenantKey = [string]$KeyRow.RowKey -replace '-part\d+$', ''
-                        if ($TenantKey) {
-                            $PagedTenantRowCounts[$TenantKey] = 1 + $(if ($PagedTenantRowCounts.ContainsKey($TenantKey)) { $PagedTenantRowCounts[$TenantKey] } else { 0 })
+                        $PhysicalKey = [string]$KeyRow.RowKey
+                        $RowKeyName = $PhysicalKey -replace '-part\d+$', ''
+                        if (-not $RowKeyName) { continue }
+                        $PagedTenantRowCounts[$RowKeyName] = 1 + $(if ($PagedTenantRowCounts.ContainsKey($RowKeyName)) { $PagedTenantRowCounts[$RowKeyName] } else { 0 })
+                        if ($RowKeyName -cne $PhysicalKey) { continue }
+                        $Sep = $RowKeyName.IndexOf('|')
+                        if ($Sep -lt 0) {
+                            $HeadPageCounts[$RowKeyName] = [int]$KeyRow.Pages
+                        } else {
+                            $PageTenant = $RowKeyName.Substring(0, $Sep)
+                            $FoundPageCounts[$PageTenant] = 1 + $(if ($FoundPageCounts.ContainsKey($PageTenant)) { $FoundPageCounts[$PageTenant] } else { 0 })
                         }
                     }
-                    # Ordinal, to match the resume comparison below (a culture sort re-served tenants).
-                    $PagedTenantPlan = [string[]]@($PagedTenantRowCounts.Keys | Where-Object { $_ -in $Tenants.defaultDomainName })
+                    # A tenant is served once its head row is written and all its pages are present; pages without a
+                    # head and no run still filling the cache are a tenant that never finished, served as failed.
+                    $PagedFailedTenants = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+                    $PlanKeys = foreach ($RowKeyName in $PagedTenantRowCounts.Keys) {
+                        $Sep = $RowKeyName.IndexOf('|')
+                        $PlanTenant = if ($Sep -lt 0) { $RowKeyName } else { $RowKeyName.Substring(0, $Sep) }
+                        if (-not $AllowedTenantNames.Contains($PlanTenant) -or -not $HeadPageCounts.ContainsKey($PlanTenant)) { continue }
+                        $ExpectedPages = $HeadPageCounts[$PlanTenant]
+                        $FoundPages = if ($FoundPageCounts.ContainsKey($PlanTenant)) { $FoundPageCounts[$PlanTenant] } else { 0 }
+                        if ($FoundPages -lt $ExpectedPages) { continue }
+                        if ($Sep -lt 0 -or [int]$RowKeyName.Substring($Sep + 1) -le $ExpectedPages) { $RowKeyName }
+                    }
+                    $FailedKeys = if (-not $RunningQueue) {
+                        foreach ($PageTenant in $FoundPageCounts.Keys) {
+                            if ($AllowedTenantNames.Contains($PageTenant) -and -not $HeadPageCounts.ContainsKey($PageTenant) -and $PagedFailedTenants.Add($PageTenant)) { $PageTenant }
+                        }
+                    }
+                    # Ordinal, to match the resume comparison below (a culture sort re-served rows).
+                    $PagedTenantPlan = [string[]]@(@($PlanKeys) + @($FailedKeys))
                     [System.Array]::Sort($PagedTenantPlan, [System.Collections.IComparer][StringComparer]::Ordinal)
                     # $Rows gates queue-vs-serve below; an empty plan queues like an empty fetch.
                     $Rows = $PagedTenantPlan
                 } else {
-                    $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.OriginalEntityId -in $Tenants.defaultDomainName -or $_.RowKey -in $Tenants.defaultDomainName }
+                    $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
                 }
                 $Type = 'Cache'
                 Write-Information "Table: $TableName | PK: $PartitionKey | Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
-                $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-                $RunningQueue = Get-CIPPQueueData -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' -and $_.Reference -eq $QueueReference }
             }
         }
     } catch {
@@ -272,14 +305,58 @@ function Get-GraphRequestList {
 
     $RunningQueueId = if ($RunningQueue) { @($RunningQueue)[0].QueueId ?? @($RunningQueue)[0].RowKey }
 
-    # An AllTenants cache holds one row per tenant, written even when the tenant fails, so a tenant without a row has not finished.
+    # A tenant is a head row ('<tenant>', written last with its Pages count) and its page rows ('<tenant>|00001'...).
+    # Only tenants whose head is written and whose pages are all present are served, head then pages in order; pages
+    # without a head and no run still filling the cache are a tenant that never finished, served as a failed status.
+    if ($Rows -and -not $PagedAllTenants) {
+        $Heads = [System.Collections.Generic.List[object]]::new()
+        $PageRows = [System.Collections.Generic.Dictionary[string, object]]::new([StringComparer]::OrdinalIgnoreCase)
+        foreach ($Row in $Rows) {
+            $RowKeyName = [string]$(if ($Row.OriginalEntityId) { $Row.OriginalEntityId } else { $Row.RowKey })
+            $Sep = $RowKeyName.IndexOf('|')
+            if ($Sep -lt 0) { $Heads.Add($Row); continue }
+            $PageTenant = $RowKeyName.Substring(0, $Sep)
+            if (-not $PageRows.ContainsKey($PageTenant)) { $PageRows[$PageTenant] = [System.Collections.Generic.SortedList[int, object]]::new() }
+            $PageRows[$PageTenant][[int]$RowKeyName.Substring($Sep + 1)] = $Row
+        }
+        $HeadTenants = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        $Rows = @(
+            foreach ($Head in $Heads) {
+                $HeadTenant = [string]$(if ($Head.OriginalEntityId) { $Head.OriginalEntityId } else { $Head.RowKey })
+                if ($AllowedTenantNames -and -not $AllowedTenantNames.Contains($HeadTenant)) { continue }
+                [void]$HeadTenants.Add($HeadTenant)
+                $ExpectedPages = [int]$Head.Pages
+                $TenantPages = $PageRows[$HeadTenant]
+                $FoundPages = if ($TenantPages) { @($TenantPages.Keys.Where({ $_ -le $ExpectedPages })).Count } else { 0 }
+                if ($FoundPages -lt $ExpectedPages) { continue }
+                $Head
+                if ($ExpectedPages -gt 0) {
+                    foreach ($Page in $TenantPages.GetEnumerator()) { if ($Page.Key -le $ExpectedPages) { $Page.Value } }
+                }
+            }
+            if (-not $RunningQueue) {
+                foreach ($PageTenant in $PageRows.Keys) {
+                    if ($HeadTenants.Contains($PageTenant) -or ($AllowedTenantNames -and -not $AllowedTenantNames.Contains($PageTenant))) { continue }
+                    [PSCustomObject]@{
+                        PartitionKey = $PartitionKey
+                        RowKey       = $PageTenant
+                        Data         = [CIPP.CippJson]::ToJson([PSCustomObject]@{ Tenant = $PageTenant; CippStatus = 'Could not finish loading this tenant. Reload it to try again.' })
+                    }
+                }
+            }
+        )
+    }
+
+    # Every tenant that finished writes a head row, even when it fails, so a tenant without one has not finished.
     $StartedQueueId = $null
     if ($TenantFilter -eq 'AllTenants' -and !$SkipCache.IsPresent) {
         $Tenants ??= Get-Tenants -IncludeErrors
         $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
         $CachedTenants = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
         foreach ($Row in $Rows) {
-            [void]$CachedTenants.Add([string]$(if ($PagedAllTenants) { $Row } elseif ($Row.OriginalEntityId) { $Row.OriginalEntityId } else { $Row.RowKey }))
+            $CachedKey = [string]$(if ($PagedAllTenants) { $Row } elseif ($Row.OriginalEntityId) { $Row.OriginalEntityId } else { $Row.RowKey })
+            $Sep = $CachedKey.IndexOf('|')
+            [void]$CachedTenants.Add($(if ($Sep -lt 0) { $CachedKey } else { $CachedKey.Substring(0, $Sep) }))
         }
         $QueueTenants = @()
         if (-not $RunningQueue) {
@@ -429,77 +506,104 @@ function Get-GraphRequestList {
                             $GraphRequest.uri = $nextLink
                         }
 
-                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller $Caller -ErrorAction Stop
-                        # Graph records are parsed fresh, so tag them in place instead of copying every record
-                        $GraphRequestResults = foreach ($Result in $GraphRequestResults) {
-                            if ($Result.PSObject.BaseObject -is [System.Management.Automation.PSCustomObject]) {
-                                $ResultProperties = $Result.PSObject.Properties
-                                if ($null -eq $ResultProperties['Tenant']) { $ResultProperties.Add([psnoteproperty]::new('Tenant', $TenantFilter)) }
-                                if ($null -eq $ResultProperties['CippStatus']) { $ResultProperties.Add([psnoteproperty]::new('CippStatus', 'Good')) }
-                                $Result
-                            } else {
-                                $Result | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
+                        # Tags, expands and looks up one set of records: the whole result, or one Graph page at a time with -JsonPages
+                        $TenantInfoById = [System.Collections.Generic.Dictionary[string, object]]::new([StringComparer]::OrdinalIgnoreCase)
+                        $ProcessRecords = {
+                            param($GraphRequestResults)
+                            # Graph records are parsed fresh, so tag them in place instead of copying every record
+                            $GraphRequestResults = foreach ($Result in $GraphRequestResults) {
+                                if ($Result.PSObject.BaseObject -is [System.Management.Automation.PSCustomObject]) {
+                                    $ResultProperties = $Result.PSObject.Properties
+                                    if ($null -eq $ResultProperties['Tenant']) { $ResultProperties.Add([psnoteproperty]::new('Tenant', $TenantFilter)) }
+                                    if ($null -eq $ResultProperties['CippStatus']) { $ResultProperties.Add([psnoteproperty]::new('CippStatus', 'Good')) }
+                                    $Result
+                                } else {
+                                    $Result | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
+                                }
                             }
-                        }
 
-                        if ($UseBatchExpand.IsPresent -and ![string]::IsNullOrEmpty($BatchExpandQuery)) {
-                            if ($BatchExpandQuery -match '' -and ![string]::IsNullOrEmpty($GraphRequestResults.id)) {
-                                # Convert $expand format to actual batch query e.g. members($select=id,displayName) to members?$select=id,displayName
-                                $BatchExpandQuery = $BatchExpandQuery -replace '\(\$?([^=]+)=([^)]+)\)', '?$$$1=$2' -replace ';', '&'
+                            if ($UseBatchExpand.IsPresent -and ![string]::IsNullOrEmpty($BatchExpandQuery)) {
+                                if ($BatchExpandQuery -match '' -and ![string]::IsNullOrEmpty($GraphRequestResults.id)) {
+                                    # Convert $expand format to actual batch query e.g. members($select=id,displayName) to members?$select=id,displayName
+                                    $BatchExpandQuery = $BatchExpandQuery -replace '\(\$?([^=]+)=([^)]+)\)', '?$$$1=$2' -replace ';', '&'
 
-                                # Extract property name from expand
-                                $Property = $BatchExpandQuery -replace '\?.*$', '' -replace '^.*\/', ''
-                                Write-Information "Performing batch expansion for property '$Property'..."
+                                    # Extract property name from expand
+                                    $Property = $BatchExpandQuery -replace '\?.*$', '' -replace '^.*\/', ''
+                                    Write-Information "Performing batch expansion for property '$Property'..."
 
-                                if ($Property -eq 'assignedLicenses') {
-                                    $LicenseDetails = Get-CIPPLicenseOverview -TenantFilter $TenantFilter
-                                    $GraphRequestResults = foreach ($GraphRequestResult in $GraphRequestResults) {
-                                        $NewLicenses = [system.collections.generic.list[string]]::new()
-                                        foreach ($License in $GraphRequestResult.assignedLicenses) {
-                                            $LicenseInfo = $LicenseDetails | Where-Object { $_.skuId -eq $License.skuId } | Select-Object -First 1
-                                            if ($LicenseInfo) {
-                                                $NewLicenses.Add($LicenseInfo.License)
+                                    if ($Property -eq 'assignedLicenses') {
+                                        $LicenseDetails = Get-CIPPLicenseOverview -TenantFilter $TenantFilter
+                                        $GraphRequestResults = foreach ($GraphRequestResult in $GraphRequestResults) {
+                                            $NewLicenses = [system.collections.generic.list[string]]::new()
+                                            foreach ($License in $GraphRequestResult.assignedLicenses) {
+                                                $LicenseInfo = $LicenseDetails | Where-Object { $_.skuId -eq $License.skuId } | Select-Object -First 1
+                                                if ($LicenseInfo) {
+                                                    $NewLicenses.Add($LicenseInfo.License)
+                                                }
+                                            }
+                                            $GraphRequestResult | Add-Member -MemberType NoteProperty -Name $Property -Value @($NewLicenses) -Force
+                                            $GraphRequestResult
+                                        }
+                                    } else {
+
+                                        $Uri = "$Endpoint/{0}/$BatchExpandQuery"
+
+                                        $Requests = foreach ($Result in $GraphRequestResults) {
+                                            @{
+                                                id     = $Result.id
+                                                url    = $Uri -f $Result.id
+                                                method = 'GET'
                                             }
                                         }
-                                        $GraphRequestResult | Add-Member -MemberType NoteProperty -Name $Property -Value @($NewLicenses) -Force
-                                        $GraphRequestResult
+                                        $BatchResults = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -NoAuthCheck $NoAuthCheck.IsPresent -asapp $AsApp
+
+                                        $GraphRequestResults = foreach ($Result in $GraphRequestResults) {
+                                            $PropValue = $BatchResults | Where-Object { $_.id -eq $Result.id } | Select-Object -ExpandProperty body
+                                            $Result | Add-Member -MemberType NoteProperty -Name $Property -Value ($PropValue.value ?? $PropValue)
+                                            $Result
+                                        }
                                     }
-                                } else {
+                                }
+                            }
 
-                                    $Uri = "$Endpoint/{0}/$BatchExpandQuery"
-
-                                    $Requests = foreach ($Result in $GraphRequestResults) {
+                            if ($ReverseTenantLookup -and $GraphRequestResults) {
+                                # Each tenant id is looked up once per request, however many pages it appears on
+                                $LookupIds = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+                                foreach ($Result in $GraphRequestResults) {
+                                    $LookupId = $Result.$ReverseTenantLookupProperty
+                                    if ($null -ne $LookupId -and -not $TenantInfoById.ContainsKey([string]$LookupId)) { [void]$LookupIds.Add([string]$LookupId) }
+                                }
+                                if ($LookupIds.Count -gt 0) {
+                                    $ReverseLookupRequests = foreach ($LookupId in $LookupIds) {
                                         @{
-                                            id     = $Result.id
-                                            url    = $Uri -f $Result.id
+                                            id     = $LookupId
+                                            url    = "tenantRelationships/findTenantInformationByTenantId(tenantId='$LookupId')"
                                             method = 'GET'
                                         }
                                     }
-                                    $BatchResults = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -NoAuthCheck $NoAuthCheck.IsPresent -asapp $AsApp
-
-                                    $GraphRequestResults = foreach ($Result in $GraphRequestResults) {
-                                        $PropValue = $BatchResults | Where-Object { $_.id -eq $Result.id } | Select-Object -ExpandProperty body
-                                        $Result | Add-Member -MemberType NoteProperty -Name $Property -Value ($PropValue.value ?? $PropValue)
-                                        $Result
+                                    $TenantInfo = New-GraphBulkRequest -Requests @($ReverseLookupRequests) -tenantid $env:TenantID -NoAuthCheck $true -asapp $true
+                                    foreach ($LookupId in $LookupIds) { $TenantInfoById[$LookupId] = $null }
+                                    foreach ($Info in @($TenantInfo)) {
+                                        if ($null -ne $Info.id) { $TenantInfoById[[string]$Info.id] = $Info.body }
                                     }
                                 }
+
+                                $GraphRequestResults | Select-Object @{n = 'TenantInfo'; e = { $LookupId = $_.$ReverseTenantLookupProperty; if ($null -ne $LookupId) { $TenantInfoById[[string]$LookupId] } } }, *
+
+                            } else {
+                                $GraphRequestResults
                             }
                         }
 
-                        if ($ReverseTenantLookup -and $GraphRequestResults) {
-                            $ReverseLookupRequests = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
-                                @{
-                                    id     = $_
-                                    url    = "tenantRelationships/findTenantInformationByTenantId(tenantId='$_')"
-                                    method = 'GET'
-                                }
+                        if ($JsonPages.IsPresent) {
+                            New-GraphGetRequest @GraphRequest -Caller $Caller -Stream -SkipValueExtraction -ErrorAction Stop | ForEach-Object {
+                                $Records = if ($null -ne $_ -and $null -ne $_.PSObject.Properties['value']) { $_.value } else { $_ }
+                                $PageJson = [CIPP.CippJson]::ToJson(@(& $ProcessRecords $Records))
+                                if ($null -eq $PageJson) { throw 'Could not serialise a page of Graph results' }
+                                if ($PageJson.Length -gt 2) { $PageJson }
                             }
-                            $TenantInfo = New-GraphBulkRequest -Requests @($ReverseLookupRequests) -tenantid $env:TenantID -NoAuthCheck $true -asapp $true
-
-                            $GraphRequestResults | Select-Object @{n = 'TenantInfo'; e = { Get-GraphBulkResultByID -Results @($TenantInfo) -ID $_.$ReverseTenantLookupProperty } }, *
-
                         } else {
-                            $GraphRequestResults
+                            & $ProcessRecords (New-GraphGetRequest @GraphRequest -Caller $Caller -ErrorAction Stop)
                         }
                     }
 
@@ -512,11 +616,13 @@ function Get-GraphRequestList {
     } else {
         if ($RawJsonArray.IsPresent) {
             if ($PagedAllTenants) {
-                # One page of whole tenant blobs, ended by the byte budget alone (never a tenant
-                # count); tenants are fetched in RowKey-range spans so split blobs reassemble.
+                # One page of whole rows (a tenant's head and page rows), ended by the byte budget alone; rows are
+                # fetched in RowKey-range spans so split rows reassemble.
                 $MaxPageChars = if ($MaxPageBytes -gt 0) { [Math]::Min([Math]::Max($MaxPageBytes, 262144), 8388608) } else { 4000000 }
-                # Rows are <= ~1MB each, so a row cap bounds a span's worst-case fetch.
-                $SpanRowCap = 40
+                # Rows are <= ~1MB each, so a row cap bounds a span's worst-case fetch. After the first span each span is
+                # sized from the rows served so far, so little is fetched past the budget only to be discarded.
+                $SpanRowCap = 4
+                $ServedRows = 0
                 $StartAfter = if ($nextLink) { $nextLink } else { $null }
 
                 $Remaining = [System.Collections.Generic.List[string]]::new()
@@ -524,13 +630,13 @@ function Get-GraphRequestList {
                     if (-not $StartAfter -or [string]::CompareOrdinal($TenantKey, $StartAfter) -gt 0) { $Remaining.Add($TenantKey) }
                 }
 
-                $JsonParts = [System.Collections.Generic.List[string]]::new()
                 $Chars = 0
                 $Queries = 0
                 $LastEmitted = $null
                 $BudgetReached = $false
                 $Index = 0
-                while ($Index -lt $Remaining.Count -and -not $BudgetReached) {
+                # Pieces are emitted, not added to a list: a large string passed to a .NET method is copied
+                $JsonParts = while ($Index -lt $Remaining.Count -and -not $BudgetReached) {
                     # Build the next span: consecutive plan tenants until the row cap fills.
                     $SpanStart = $Index
                     $SpanRows = 0
@@ -545,9 +651,9 @@ function Get-GraphRequestList {
                     }
                     $SpanFirst = ConvertTo-CIPPODataFilterValue -Value $Remaining[$SpanStart] -Type String
                     $SpanLast = ConvertTo-CIPPODataFilterValue -Value $Remaining[$Index - 1] -Type String
-                    # le '<last>~' keeps the last tenant's '-partN' rows in range; non-member rows
-                    # the range also catches are dropped below.
-                    $SpanFilter = "PartitionKey eq '{0}' and RowKey ge '{1}' and RowKey le '{2}~' and Timestamp ge datetime'{3}'" -f $PartitionKey, $SpanFirst, $SpanLast, $Timestamp
+                    # le '<last>-part~' keeps the last row's '-partN' rows in range but not, when it is a head row, the
+                    # tenant's page rows ('|' sorts before '~'); non-member rows the range also catches are dropped below.
+                    $SpanFilter = "PartitionKey eq '{0}' and RowKey ge '{1}' and RowKey le '{2}-part~' and Timestamp ge datetime'{3}'" -f $PartitionKey, $SpanFirst, $SpanLast, $Timestamp
                     # Budget is enforced per whole tenant; the rest of a span past it is discarded
                     # and re-fetched by the next page.
                     $SpanData = [System.Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
@@ -557,43 +663,55 @@ function Get-GraphRequestList {
                     # Emit in plan order: the store's row order is not ordinal (Azurite), and the token resumes by plan order.
                     for ($SpanIndex = $SpanStart; $SpanIndex -lt $Index -and -not $BudgetReached; $SpanIndex++) {
                         $LastEmitted = $Remaining[$SpanIndex]
+                        if ($PagedFailedTenants.Contains($LastEmitted)) {
+                            $FailedJson = [CIPP.CippJson]::ToJson([PSCustomObject]@{ Tenant = $LastEmitted; CippStatus = 'Could not finish loading this tenant. Reload it to try again.' })
+                            $FailedJson
+                            $Chars += $FailedJson.Length
+                            if ($Chars -ge $MaxPageChars) { $BudgetReached = $true }
+                            continue
+                        }
                         $Row = $null
                         if (-not $SpanData.TryGetValue($LastEmitted, [ref]$Row)) { continue }
+                        $ServedRows += $PagedTenantRowCounts[$LastEmitted]
                         if ($Row.Data) {
                             $d = $Row.Data.Trim()
-                            if ($d.Length -gt 2 -and $d[0] -eq '[' -and $d[-1] -eq ']') {
-                                $JsonParts.Add($d.Substring(1, $d.Length - 2))
+                            if ($d.Length -gt 2 -and $d.StartsWith('[') -and $d.EndsWith(']')) {
+                                $d.Substring(1, $d.Length - 2)
                                 $Chars += $d.Length
                             } elseif ($d.Length -gt 0 -and $d -ne '[]') {
-                                $JsonParts.Add($d)
+                                $d
                                 $Chars += $d.Length
                             }
                         }
                         if ($Chars -ge $MaxPageChars) { $BudgetReached = $true }
                     }
                     $Queries++
+                    if ($Chars -gt 0 -and $ServedRows -gt 0) {
+                        $SpanRowCap = [Math]::Max(1, [Math]::Min(40, [int][Math]::Ceiling(($MaxPageChars - $Chars) / ($Chars / $ServedRows))))
+                    }
                 }
                 # A drained plan is complete even if the last tenant landed on the budget.
                 $MoreRemain = $BudgetReached -and $null -ne $LastEmitted -and [string]::CompareOrdinal($LastEmitted, $Remaining[$Remaining.Count - 1]) -lt 0
                 Write-Information "Paged AllTenants cache serve: $Queries spans, $Chars chars, last: $LastEmitted, more: $MoreRemain"
+                $Pieces = @(foreach ($Part in $JsonParts) { ','; $Part }; ']')
                 return [PSCustomObject]@{
-                    CippPagedJson = '[' + ($JsonParts -join ',') + ']'
+                    CippPagedJson = if ($Pieces.Count -gt 1) { $Pieces[0] = '['; [string]::Concat([string[]]$Pieces) } else { '[]' }
                     CippNextLink  = if ($MoreRemain) { $LastEmitted } else { $null }
                 }
             }
             # Fast path: concatenate raw JSON strings without deserialization. This is much faster and uses less memory when no post-processing is needed, especially for large datasets.
-            $JsonParts = [System.Collections.Generic.List[string]]::new()
-            foreach ($Row in $Rows) {
+            $JsonParts = foreach ($Row in $Rows) {
                 if ($Row.Data) {
                     $d = $Row.Data.Trim()
-                    if ($d.Length -gt 2 -and $d[0] -eq '[' -and $d[-1] -eq ']') {
-                        $JsonParts.Add($d.Substring(1, $d.Length - 2))
+                    if ($d.Length -gt 2 -and $d.StartsWith('[') -and $d.EndsWith(']')) {
+                        $d.Substring(1, $d.Length - 2)
                     } elseif ($d.Length -gt 0 -and $d -ne '[]') {
-                        $JsonParts.Add($d)
+                        $d
                     }
                 }
             }
-            return '[' + ($JsonParts -join ',') + ']'
+            $Pieces = @(foreach ($Part in $JsonParts) { ','; $Part }; ']')
+            return $(if ($Pieces.Count -gt 1) { $Pieces[0] = '['; [string]::Concat([string[]]$Pieces) } else { '[]' })
         }
 
         foreach ($Row in $Rows) {

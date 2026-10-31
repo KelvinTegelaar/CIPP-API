@@ -17,7 +17,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property) }
     function Remove-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
-    function Get-GraphRequestList { param($TenantFilter, $Endpoint, $Parameters, $NoPagination, $ReverseTenantLookupProperty, $ReverseTenantLookup, $AsApp, $Caller, $SkipCache) }
+    function Get-GraphRequestList { param($TenantFilter, $Endpoint, $Parameters, $NoPagination, $ReverseTenantLookupProperty, $ReverseTenantLookup, $AsApp, $Caller, $SkipCache, [switch]$JsonPages) }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
 
     . $FunctionPath
@@ -48,7 +48,7 @@ Describe 'Push-ListGraphRequestQueue pre-write cleanup' {
     BeforeEach {
         $script:Removed = $null
         Mock -CommandName Get-CIPPTable -MockWith { @{ Context = 'stub' } }
-        Mock -CommandName Get-GraphRequestList -MockWith { @([pscustomobject]@{ id = '1' }) }
+        Mock -CommandName Get-GraphRequestList -MockWith { '[{"id":"1"}]' }
         Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { }
         Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith { $script:Removed = $Entity }
     }
@@ -68,6 +68,16 @@ Describe 'Push-ListGraphRequestQueue pre-write cleanup' {
                 $Property -notcontains 'PartCount' -and
                 $Property -notcontains 'SplitOverProps'
             )
+        }
+    }
+
+    It 'looks up the tenant''s page rows for the delete as well as its head row' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { @() }
+
+        Push-ListGraphRequestQueue -Item $script:Item
+
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
+            $Filter -like "*RowKey eq 'contoso.com'*" -and $Filter -like "*RowKey ge 'contoso.com|' and RowKey lt 'contoso.com}'*"
         }
     }
 
@@ -118,9 +128,10 @@ Describe 'Push-ListGraphRequestQueue empty and failed tenants' {
 
     BeforeEach {
         $script:Written = $null
+        $script:AllWritten = [System.Collections.Generic.List[object]]::new()
         Mock -CommandName Get-CIPPTable -MockWith { @{ Context = 'stub' } }
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { @() }
-        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { $script:Written = $Entity }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { $script:Written = $Entity; $script:AllWritten.Add($Entity) }
     }
 
     It 'writes an empty result set when the query matches nothing in the tenant' {
@@ -128,7 +139,31 @@ Describe 'Push-ListGraphRequestQueue empty and failed tenants' {
 
         Push-ListGraphRequestQueue -Item $script:Item | Should -BeTrue
 
+        $script:AllWritten.Count | Should -Be 1
         $script:Written.Data | Should -Be '[]'
+        $script:Written.Pages | Should -Be 0
+        Should -Invoke Get-GraphRequestList -ParameterFilter { $JsonPages }
+    }
+
+    It 'stores each Graph page as it arrives, then the head row with the page count' {
+        Mock -CommandName Get-GraphRequestList -MockWith { '[{"id":"1"},{"id":"2"}]'; '[{"id":"3"}]' }
+
+        Push-ListGraphRequestQueue -Item $script:Item | Should -BeTrue
+
+        $script:AllWritten.RowKey | Should -Be @('contoso.com|00001', 'contoso.com|00002', 'contoso.com')
+        $script:AllWritten[1].Data | Should -Be '[{"id":"3"}]'
+        $script:Written.Pages | Should -Be 2
+        $script:Written.Data | Should -Be '[]'
+    }
+
+    It 'writes a failed head row with no pages when Graph fails part way through' {
+        Mock -CommandName Get-GraphRequestList -MockWith { '[{"id":"1"}]'; throw 'Throttled' }
+
+        Push-ListGraphRequestQueue -Item $script:Item | Should -BeTrue
+
+        $script:Written.RowKey | Should -Be 'contoso.com'
+        $script:Written.Pages | Should -Be 0
+        ($script:Written.Data | ConvertFrom-Json).CippStatus | Should -Be 'Could not connect to tenant. Throttled'
     }
 
     It 'writes a status row when Graph fails for the tenant' {

@@ -184,8 +184,7 @@ function Invoke-ListGraphRequest {
     # Use raw JSON passthrough for AllTenants cached results when no post-processing is needed.
     $UseRawJson = $Request.Query.TenantFilter -eq 'AllTenants' -and
                   -not $Request.Query.ListProperties -and
-                  -not $Request.Query.Sort -and
-                  -not $Request.Query.QueueId
+                  -not $Request.Query.Sort
 
     try {
         if ($UseRawJson) {
