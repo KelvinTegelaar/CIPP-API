@@ -69,7 +69,7 @@ function Invoke-ListGroups {
         return ([HttpResponseContext]@{ StatusCode = $StatusCode; Body = @($GraphRequest) })
     }
 
-    $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,assignedLicenses,userPrincipalName,licenseProcessingState'
+    $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,assignedLicenses,userPrincipalName,licenseProcessingState,membershipRuleProcessingState'
     # Graph allows only one navigational $expand on groups; members wins if both are requested
     if ($ExpandMembers) {
         $SelectString = '{0}&$expand=members($select=userPrincipalName)' -f $SelectString

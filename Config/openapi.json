@@ -54222,6 +54222,10 @@
                         "type": "string",
                         "x-cipp-field-source": "graph"
                       },
+                      "membershipRuleProcessingState": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph"
+                      },
                       "onPremisesSamAccountName": {
                         "type": "string",
                         "x-cipp-field-source": "graph"
