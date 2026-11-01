@@ -5897,6 +5897,43 @@
     ]
   },
   {
+    "name": "standards.EnrollmentRestrictionTemplate",
+    "cat": "Templates",
+    "tag": [],
+    "helpText": "Deploy enrollment (device type) restrictions for specific groups from CIPP templates, with their platform settings and group assignment. An existing restriction with the same name and platform is updated.",
+    "docsDescription": "Deploy an enrollment (device type) restriction from a CIPP template. Grades whether every object the platform needs exists (two for Android), the platform settings, and the assignment as all users or the set of groups matching the template's group names. Priority is applied when the restriction is created and is not graded afterwards. Remediation creates or patches the restriction through Set-CIPPEnrollmentRestriction.",
+    "executiveText": "Applies the same rules about which devices staff can enrol, such as allowing personal Android phones only through a work profile or blocking personal iPhones, to the right groups in every tenant.",
+    "label": "Enrollment Restriction Template",
+    "impact": "High Impact",
+    "impactColour": "danger",
+    "addedDate": "2026-10-29",
+    "powershellEquivalent": "Graph: POST or PATCH deviceManagement/deviceEnrollmentConfigurations, then setPriority and assign",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "INTUNE_A",
+      "MDM_Services",
+      "EMS",
+      "SCCM",
+      "MICROSOFTINTUNEPLAN1"
+    ],
+    "multiple": true,
+    "addedComponent": [
+      {
+        "name": "standards.EnrollmentRestrictionTemplate.enrollmentRestrictionTemplate",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Select Enrollment Restriction Template",
+        "required": true,
+        "api": {
+          "url": "/api/ListEnrollmentRestrictionTemplates",
+          "labelField": "displayName",
+          "valueField": "GUID",
+          "queryKey": "ListEnrollmentRestrictionTemplates"
+        }
+      }
+    ]
+  },
+  {
     "name": "standards.EnrollmentWindowsHelloForBusinessConfiguration",
     "cat": "Intune Standards",
     "tag": [],

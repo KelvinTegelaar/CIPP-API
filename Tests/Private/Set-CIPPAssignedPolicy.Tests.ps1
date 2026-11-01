@@ -122,6 +122,17 @@ Describe 'Set-CIPPAssignedPolicy' {
         }
     }
 
+    Context 'an enrollment configuration' {
+        It 'sends the assignments under enrollmentConfigurationAssignments, the name its assign action takes' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'Sales Users' -PolicyId 'acc_SinglePlatformRestriction' -Type 'deviceEnrollmentConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $uri -like "*/deviceEnrollmentConfigurations('acc_SinglePlatformRestriction')/assign" -and
+                ($body | ConvertFrom-Json).enrollmentConfigurationAssignments.target.groupId -eq $script:SalesId
+            }
+        }
+    }
+
     Context 'broad targets on an App Protection policy' {
         # The MAM service rejects any assign carrying a target class other than group/exclusion, so
         # the whole assignment fails - which is how a remediated policy ended up with none at all.

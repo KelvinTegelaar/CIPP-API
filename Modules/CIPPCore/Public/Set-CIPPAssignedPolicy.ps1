@@ -223,6 +223,7 @@ function Set-CIPPAssignedPolicy {
             'deviceManagementScripts' { 'deviceManagementScriptAssignments' }
             'deviceShellScripts' { 'deviceManagementScriptAssignments' }
             'hardwareConfigurations' { 'hardwareConfigurationAssignments' }
+            'deviceEnrollmentConfigurations' { 'enrollmentConfigurationAssignments' }
             default { 'assignments' }
         }
 
