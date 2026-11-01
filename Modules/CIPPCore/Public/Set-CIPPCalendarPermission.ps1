@@ -12,7 +12,9 @@ function Set-CIPPCalendarPermission {
         $Permissions,
         [bool]$CanViewPrivateItems,
         [bool]$SendNotificationToUser = $false,
-        [switch]$AutoResolveFolderName
+        [switch]$AutoResolveFolderName,
+        # Shared per request by bulk callers so the cache sync reads the tenant's cache once
+        [hashtable]$CacheContext
     )
 
     try {
@@ -54,7 +56,7 @@ function Set-CIPPCalendarPermission {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
 
                 # Sync cache
-                Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $RemoveAccess -Action 'Remove'
+                Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $RemoveAccess -Action 'Remove' -CacheContext $CacheContext
             }
         } else {
             if ($PSCmdlet.ShouldProcess("$UserID\$FolderName", "Set permissions for $LoggingName to $Permissions")) {
@@ -80,7 +82,7 @@ function Set-CIPPCalendarPermission {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
 
                 # Sync cache
-                Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $UserToGetPermissions -Permissions $Permissions -Action 'Add'
+                Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $UserToGetPermissions -Permissions $Permissions -Action 'Add' -CacheContext $CacheContext
             }
         }
     } catch {

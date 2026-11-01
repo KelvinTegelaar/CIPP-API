@@ -25,6 +25,10 @@ function Sync-CIPPCalendarPermissionCache {
     .PARAMETER Action
         Whether to 'Add' or 'Remove' the permission
 
+    .PARAMETER CacheContext
+        Optional hashtable shared across calls in one request. The tenant's mailbox lookups and cached
+        calendar permission rows are loaded into it once, instead of once per permission change.
+
     .EXAMPLE
         Sync-CIPPCalendarPermissionCache -TenantFilter 'contoso.com' -MailboxIdentity 'user@contoso.com' -FolderName 'Calendar' -User 'guest@contoso.com' -Permissions 'Editor' -Action 'Add'
     #>
@@ -47,25 +51,45 @@ function Sync-CIPPCalendarPermissionCache {
 
         [Parameter(Mandatory = $true)]
         [ValidateSet('Add', 'Remove')]
-        [string]$Action
+        [string]$Action,
+
+        [Parameter(Mandatory = $false)]
+        [hashtable]$CacheContext
     )
 
     try {
         $CalendarIdentity = "$MailboxIdentity`:\$FolderName"
+        # Bulk callers share one context per request so the tenant's cache is read once, not per grant
+        $Context = $CacheContext ?? @{}
+
+        if (-not $Context.Mailboxes -and ($Action -eq 'Remove' -or $User -match '@')) {
+            $ByAddress = @{}
+            $ById = @{}
+            $ByExternalId = @{}
+            foreach ($Item in Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_.RowKey -ne 'Mailboxes-Count' }) {
+                $Mailbox = $Item.Data | ConvertFrom-Json
+                $Info = @{
+                    UPN                       = if ($Mailbox.UPN) { $Mailbox.UPN } else { $Mailbox.primarySmtpAddress }
+                    Id                        = $Mailbox.Id
+                    ExternalDirectoryObjectId = $Mailbox.ExternalDirectoryObjectId
+                    DisplayName               = $Mailbox.displayName
+                }
+                if ($Mailbox.UPN) { $ByAddress[$Mailbox.UPN.ToLower()] = $Info }
+                if ($Mailbox.primarySmtpAddress) { $ByAddress[$Mailbox.primarySmtpAddress.ToLower()] = $Info }
+                if ($Mailbox.Id) { $ById[$Mailbox.Id] = $Mailbox.UPN }
+                if ($Mailbox.ExternalDirectoryObjectId) { $ByExternalId[$Mailbox.ExternalDirectoryObjectId] = $Mailbox.UPN }
+            }
+            $Context.Mailboxes = @{ ByAddress = $ByAddress; ById = $ById; ByExternalId = $ByExternalId }
+        }
 
         # Resolve user to display name if a UPN was provided
         # Calendar permissions use display names, not UPNs
         $UserToCache = $User
         if ($User -match '@') {
-            # Try to get display name from mailbox cache
-            $MailboxItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_.RowKey -ne 'Mailboxes-Count' }
-            foreach ($Item in $MailboxItems) {
-                $Mailbox = $Item.Data | ConvertFrom-Json
-                if ($Mailbox.UPN -eq $User -or $Mailbox.primarySmtpAddress -eq $User) {
-                    $UserToCache = $Mailbox.displayName
-                    Write-Information "Resolved $User to display name: $UserToCache" -InformationAction Continue
-                    break
-                }
+            $Resolved = $Context.Mailboxes.ByAddress[$User.ToLower()].DisplayName
+            if ($Resolved) {
+                $UserToCache = $Resolved
+                Write-Information "Resolved $User to display name: $UserToCache" -InformationAction Continue
             }
         }
 
@@ -81,6 +105,8 @@ function Sync-CIPPCalendarPermissionCache {
 
             # Add to cache using Append to not clear existing entries
             $PermissionObject | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' -Append
+            # The shared row list no longer matches the table, so reload it on the next removal
+            $Context.Remove('CalendarPermissionRows')
 
             Write-LogMessage -API 'CalendarPermissionCache' -tenant $TenantFilter `
                 -message "Added calendar permission cache entry: $UserToCache on $CalendarIdentity with $Permissions" -sev Debug
@@ -88,40 +114,12 @@ function Sync-CIPPCalendarPermissionCache {
         } else {
             # Remove from cache - need to find the item by Identity and User combination
             try {
-                $Table = Get-CippTable -tablename 'CippReportingDB'
-
-                # Build mailbox lookup for flexible Identity matching (same as report function)
-                $MailboxItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_.RowKey -ne 'Mailboxes-Count' }
-                $MailboxLookup = @{}
-                $MailboxByIdLookup = @{}
-                $MailboxByExternalIdLookup = @{}
-
-                foreach ($Item in $MailboxItems) {
-                    $Mailbox = $Item.Data | ConvertFrom-Json
-                    if ($Mailbox.UPN) {
-                        $MailboxLookup[$Mailbox.UPN.ToLower()] = @{
-                            UPN = $Mailbox.UPN
-                            Id = $Mailbox.Id
-                            ExternalDirectoryObjectId = $Mailbox.ExternalDirectoryObjectId
-                        }
-                    }
-                    if ($Mailbox.primarySmtpAddress) {
-                        $MailboxLookup[$Mailbox.primarySmtpAddress.ToLower()] = @{
-                            UPN = if ($Mailbox.UPN) { $Mailbox.UPN } else { $Mailbox.primarySmtpAddress }
-                            Id = $Mailbox.Id
-                            ExternalDirectoryObjectId = $Mailbox.ExternalDirectoryObjectId
-                        }
-                    }
-                    if ($Mailbox.Id) {
-                        $MailboxByIdLookup[$Mailbox.Id] = $Mailbox.UPN
-                    }
-                    if ($Mailbox.ExternalDirectoryObjectId) {
-                        $MailboxByExternalIdLookup[$Mailbox.ExternalDirectoryObjectId] = $Mailbox.UPN
-                    }
-                }
+                $Mailboxes = $Context.Mailboxes
 
                 # Get all possible identifiers for the target mailbox
-                $TargetMailboxInfo = $MailboxLookup[$MailboxIdentity.ToLower()]
+                # Callers such as ExecModifyCalPerms pass the Entra object id, but cached rows are keyed by UPN
+                $ResolvedUPN = $Mailboxes.ByExternalId[$MailboxIdentity] ?? $Mailboxes.ById[$MailboxIdentity]
+                $TargetMailboxInfo = $Mailboxes.ByAddress[($ResolvedUPN ?? $MailboxIdentity).ToLower()]
                 $PossibleIdentities = @($MailboxIdentity)
                 if ($TargetMailboxInfo) {
                     if ($TargetMailboxInfo.Id) { $PossibleIdentities += $TargetMailboxInfo.Id }
@@ -132,32 +130,31 @@ function Sync-CIPPCalendarPermissionCache {
                 # Build all possible calendar identities (combining each mailbox identifier with folder name)
                 $PossibleCalendarIdentities = $PossibleIdentities | ForEach-Object { "$_`:\$FolderName" }
 
-                # Query for all CalendarPermissions for this tenant
-                $Filter = "PartitionKey eq '{0}' and RowKey ge 'CalendarPermissions-' and RowKey lt 'CalendarPermissions0'" -f $TenantFilter
-                $AllPermissions = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.RowKey -ne 'CalendarPermissions-Count' }
-
-                # Find the specific permission entry that matches
-                foreach ($CachedPerm in $AllPermissions) {
-                    # Skip entries with null or empty Data
-                    if ([string]::IsNullOrEmpty($CachedPerm.Data)) {
-                        continue
+                # Read and parse all CalendarPermissions for this tenant once per context
+                if ($null -eq $Context.CalendarPermissionRows) {
+                    $Table = Get-CippTable -tablename 'CippReportingDB'
+                    $Filter = "PartitionKey eq '{0}' and RowKey ge 'CalendarPermissions-' and RowKey lt 'CalendarPermissions0'" -f $TenantFilter
+                    $Rows = [System.Collections.Generic.List[object]]::new()
+                    foreach ($CachedPerm in Get-CIPPAzDataTableEntity @Table -Filter $Filter) {
+                        # Skip the count row and entries with null or empty Data
+                        if ($CachedPerm.RowKey -eq 'CalendarPermissions-Count' -or [string]::IsNullOrEmpty($CachedPerm.Data)) { continue }
+                        $Rows.Add([PSCustomObject]@{ RowKey = $CachedPerm.RowKey; Data = $CachedPerm.Data | ConvertFrom-Json })
                     }
+                    $Context.CalendarPermissionRows = $Rows
+                }
 
-                    $PermData = $CachedPerm.Data | ConvertFrom-Json
+                # Find the specific permission entry that matches on Identity (flexible) and User
+                $Match = $Context.CalendarPermissionRows | Where-Object { $PossibleCalendarIdentities -contains $_.Data.Identity -and $_.Data.User -eq $User } | Select-Object -First 1
+                if ($Match) {
+                    # Extract ItemId from RowKey (format: "Type-ItemId")
+                    Write-Information "Removing calendar permission cache entry: $User on $CalendarIdentity (matched via $($Match.Data.Identity))" -InformationAction Continue
+                    $ItemId = $Match.RowKey -replace '^CalendarPermissions-', ''
+                    Remove-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' -ItemId $ItemId
+                    $null = $Context.CalendarPermissionRows.Remove($Match)
 
-                    # Match on Identity (flexible) and User
-                    if ($PossibleCalendarIdentities -contains $PermData.Identity -and $PermData.User -eq $User) {
-
-                        # Extract ItemId from RowKey (format: "Type-ItemId")
-                        Write-Information "Removing calendar permission cache entry: $User on $CalendarIdentity (matched via $($PermData.Identity))" -InformationAction Continue
-                        $ItemId = $CachedPerm.RowKey -replace '^CalendarPermissions-', ''
-                        Remove-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' -ItemId $ItemId
-
-                        Write-Information "Removed calendar permission cache entry: $User on $CalendarIdentity" -InformationAction Continue
-                        Write-LogMessage -API 'CalendarPermissionCache' -tenant $TenantFilter `
-                            -message "Removed calendar permission cache entry: $User on $CalendarIdentity" -sev Debug
-                        break
-                    }
+                    Write-Information "Removed calendar permission cache entry: $User on $CalendarIdentity" -InformationAction Continue
+                    Write-LogMessage -API 'CalendarPermissionCache' -tenant $TenantFilter `
+                        -message "Removed calendar permission cache entry: $User on $CalendarIdentity" -sev Debug
                 }
             } catch {
                 Write-LogMessage -API 'CalendarPermissionCache' -tenant $TenantFilter `
