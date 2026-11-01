@@ -1834,12 +1834,12 @@ function Invoke-NinjaOneTenantSync {
                 },
                 @{
                     Name = 'Create User'
-                    Link = "https://$CIPPUrl/identity/administration/users/add?tenantFilter=$($Customer.defaultDomainName)"
+                    Link = "https://$CIPPUrl/identity/administration/users?tenantFilter=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-user-plus'
                 },
                 @{
                     Name = 'Create Group'
-                    Link = "https://$CIPPUrl/identity/administration/groups/add?tenantFilter=$($Customer.defaultDomainName)"
+                    Link = "https://$CIPPUrl/identity/administration/groups?tenantFilter=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-user-group'
                 }
             )
